@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from agentic_workspace.config import WorkspaceUsageError
+from agentic_workspace.reporting_support import communication_contract_payload, compact_communication_contract_payload
 from agentic_workspace.runtime_source_review import (
     tiny_generated_cli_freshness_payload,
     tiny_runtime_source_edit_review_payload,
@@ -689,6 +690,7 @@ def _implement_payload(
     payload = {
         "kind": "implementer-context/v1",
         "target": target_root.as_posix(),
+        "communication_contract": communication_contract_payload(surface="implementation"),
         "workflow_sufficiency": _workflow_sufficiency_payload(
             surface="implement",
             decision=planning_safety_gate["decision"]
@@ -1085,6 +1087,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     projected = {
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
+        "communication_contract": compact_communication_contract_payload(surface="implementation"),
         "action_signals": _compact_action_signals_payload(
             surface="implement",
             allowed_next_action=str(next_action),

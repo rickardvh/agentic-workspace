@@ -74,6 +74,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `health` | string | yes |  | Overall workspace health signal for quick routing. |  |  |
 | `report_profile` | object | yes |  | Report profile metadata, including which sections are decision-grade. |  |  |
 | `output_contract` | object | yes |  | Output contract details used by this contract. |  |  |
+| `communication_contract` | object | yes |  | Compact communication and reasoning-economy contract for decision-first, state-backed report output. |  |  |
 | `operating_posture` | object | yes |  | Current operating posture for agent work in this repository. |  |  |
 | `repo_posture` | object | yes |  | Effective repo posture ref, digest, provenance route, reorientation triggers, and closeout/report adherence visibility. |  |  |
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional report-visible dynamic instruction packet with selected posture, module contributions, and provenance. |  |  |

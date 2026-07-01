@@ -129,6 +129,26 @@ impact = "advisory"
     assert "local_overlay=1" in payload["action_signals"]["changed_signals"]
 
 
+def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "README.md", "# Project\n")
+
+    assert cli.main(["implement", "--target", str(tmp_path), "--changed", "README.md", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    contract = payload["communication_contract"]
+    assert contract["kind"] == "agentic-workspace/communication-contract/v1"
+    assert contract["surface"] == "implementation"
+    assert contract["default_posture"] == "decision_first_state_backed"
+    assert "implementation" in contract["phase_ids"]
+    assert contract["cost_evaluation"]["reduce"] == [
+        "low_value_narration",
+        "repeated_rereads",
+        "context_reconstruction",
+    ]
+
+
 def _write_architecture_principles(target_root: Path) -> None:
     _write(
         target_root / ".agentic-workspace" / "system-intent" / "intent.toml",
@@ -2386,6 +2406,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert set(payload) <= {
         "kind",
         "target",
+        "communication_contract",
         "action_signals",
         "decision_packet",
         "next",

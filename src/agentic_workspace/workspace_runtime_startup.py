@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
+from agentic_workspace.reporting_support import communication_contract_payload, compact_communication_contract_payload
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
     _active_intent_contract_payload,
@@ -197,6 +198,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "rule": "This tiny profile is the first-contact answer; run detail commands only when the next action says why.",
             "detail_commands": detail_commands,
         },
+        "communication_contract": compact_communication_contract_payload(surface="startup"),
         "feature_tier": {
             "active": compact_active_tier,
             "detail_command": feature_tier.get("detail_command", "agentic-workspace modules --target ./repo --format json")
@@ -648,6 +650,7 @@ def _start_payload(
             cli_invoke=config.cli_invoke,
             target_root=target_root,
         ),
+        "communication_contract": communication_contract_payload(surface="startup"),
         "memory_consult": _memory_consult_payload(
             target_root=target_root, changed_paths=changed_paths, compact=True, cli_invoke=config.cli_invoke
         ),
@@ -1637,6 +1640,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "verbose_planning_detail": "detail_omitted",
             },
         ),
+        "communication_contract": compact_communication_contract_payload(surface="startup"),
         "skills": _startup_skills_projection(
             payload=payload,
             next_safe_action=next_safe_action,

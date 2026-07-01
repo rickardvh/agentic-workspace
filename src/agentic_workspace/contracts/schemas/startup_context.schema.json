@@ -17,6 +17,11 @@
       "type": "string",
       "description": "Resolved target repository for the startup decision."
     },
+    "communication_contract": {
+      "type": "object",
+      "description": "Compact communication and reasoning-economy contract for decision-first, state-backed agent output.",
+      "additionalProperties": true
+    },
     "workflow_participation": {
       "type": "object",
       "description": "Compact reminder that enabled Agentic Workspace workflow participation is mandatory; advisory fields only guide choices inside that workflow.",

@@ -18,6 +18,7 @@
     "health",
     "report_profile",
     "output_contract",
+    "communication_contract",
     "operating_posture",
     "repo_posture",
     "maintainer_mode",
@@ -174,6 +175,11 @@
     "output_contract": {
       "type": "object",
       "description": "Output contract details used by this contract."
+    },
+    "communication_contract": {
+      "type": "object",
+      "description": "Compact communication and reasoning-economy contract for decision-first, state-backed report output.",
+      "additionalProperties": true
     },
     "operating_posture": {
       "type": "object",

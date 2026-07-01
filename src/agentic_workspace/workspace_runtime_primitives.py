@@ -114,6 +114,7 @@ from agentic_workspace.contract_tooling import (
     workspace_surfaces_manifest,
 )
 from agentic_workspace.reporting_support import (
+    communication_contract_payload,
     output_contract_payload,
     repo_friction_payload,
     report_profile_payload,
@@ -8841,6 +8842,7 @@ def _run_report_command(
             bias_payload=_optimization_bias_payload(config.optimization_bias),
             surface="report",
         ),
+        "communication_contract": communication_contract_payload(surface="report"),
         "operating_posture": _operating_posture_payload(config=config, surface="report"),
         "repo_posture": repo_posture,
         "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root),
@@ -13112,6 +13114,7 @@ def _run_report_router_command(
             bias_payload=_optimization_bias_payload(config.optimization_bias),
             surface="report",
         ),
+        "communication_contract": communication_contract_payload(surface="report"),
         "operating_posture": _operating_posture_payload(config=config, surface="report"),
         "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root, compact=True),
         "report_profile": _report_profile_payload(cli_invoke=config.cli_invoke),

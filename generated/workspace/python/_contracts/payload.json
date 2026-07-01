@@ -783,6 +783,167 @@
       "proof_route": "agentic-workspace proof --target ./repo --route <id> --format json"
     }
   },
+  "communication_contract": {
+    "canonical_doc": ".agentic-workspace/docs/compact-contract-profile.md",
+    "command": "agentic-workspace defaults --section communication_contract --format json",
+    "kind": "agentic-workspace/communication-contract/defaults/v1",
+    "rule": "Use compact AW state to produce decision-first, evidence-backed, phase-appropriate output; expand only when safety, proof, user request, or continuation value requires it.",
+    "default_posture": "decision_first_state_backed",
+    "narration_budget": "minimal",
+    "required_order": [
+      "decision_or_finding",
+      "why_it_matters",
+      "evidence_or_proof_route",
+      "residue_or_boundary",
+      "next_safe_action"
+    ],
+    "include": [
+      "decision_or_finding",
+      "current_intent_relevance",
+      "evidence_or_proof_route",
+      "unresolved_residue_or_safety_boundary",
+      "next_safe_action"
+    ],
+    "suppress_by_default": [
+      "chronological_tool_call_narration",
+      "repeated_context_reconstruction",
+      "generic_caveats_that_do_not_change_action_safety",
+      "broad_rationale_when_decisive_state_and_boundary_are_enough"
+    ],
+    "expand_when": [
+      "ambiguous_action_safety",
+      "irreversible_or_destructive_change",
+      "stale_missing_or_failed_proof",
+      "user_requests_detail",
+      "rejected_alternative_prevents_rediscovery",
+      "handoff_or_review_needs_continuation_context"
+    ],
+    "phase_expectations": {
+      "startup": {
+        "primary_question": "What is the next safe action?",
+        "include": [
+          "decision",
+          "blocking_or_allowed_action",
+          "required_skill_or_command",
+          "state_boundary"
+        ],
+        "default_detail": "action-first routing plus selector-backed detail routes"
+      },
+      "shaping": {
+        "primary_question": "What is the smallest safe workflow shape?",
+        "include": [
+          "scope_decision",
+          "why_it_matters",
+          "promotion_or_planning_boundary",
+          "next_safe_action"
+        ],
+        "default_detail": "state the bounded slice and non-goals when needed"
+      },
+      "implementation": {
+        "primary_question": "What narrow working set is safe to touch now?",
+        "include": [
+          "changed_paths",
+          "proof_route",
+          "acceptance_boundary",
+          "residue_owner"
+        ],
+        "default_detail": "name only action-changing warnings and selected proof"
+      },
+      "proof": {
+        "primary_question": "What evidence is required before the claim?",
+        "include": [
+          "required_commands",
+          "proof_gap_or_pass",
+          "claim_boundary",
+          "rerun_or_record_route"
+        ],
+        "default_detail": "summarize proof state without raw logs unless failure lines are needed"
+      },
+      "closeout": {
+        "primary_question": "Can this completion claim be trusted?",
+        "include": [
+          "intent_satisfaction",
+          "proof_receipts",
+          "residue",
+          "safe_claim_level"
+        ],
+        "default_detail": "compact claim, evidence, residue, and closure boundary"
+      },
+      "handoff_review": {
+        "primary_question": "What must the next agent or reviewer know without replaying chat?",
+        "include": [
+          "finding_or_change",
+          "evidence_ref",
+          "risk_or_residue",
+          "next_owner"
+        ],
+        "default_detail": "findings first for reviews; handoff facts only when continuation matters"
+      }
+    },
+    "state_usage_rule": "Use compact AW fields as the evidence source first; cite or expand raw docs only when selectors, proof gaps, or safety boundaries require it.",
+    "adapter_route": {
+      "startup": "agentic-workspace start --task \"<task>\" --format json exposes communication_contract",
+      "known_paths": "agentic-workspace implement --changed <paths> --task \"<task>\" --format json exposes communication_contract",
+      "diagnostics": "agentic-workspace report --target ./repo --format json exposes communication_contract and report.output_contract.communication_contract"
+    },
+    "cost_evaluation": {
+      "question": "Did structured state reduce rereads, narration, or reconstruction without weakening proof, residue, or action clarity?",
+      "preserve": [
+        "evidence",
+        "proof_boundary",
+        "unresolved_residue",
+        "next_safe_action"
+      ],
+      "reduce": [
+        "low_value_narration",
+        "repeated_rereads",
+        "context_reconstruction"
+      ],
+      "dogfooding_comparison": [
+        {
+          "workflow": "startup for issue #1942",
+          "compact_state_already_exposed": [
+            "next_safe_action",
+            "action_signals",
+            "decision_packet",
+            "skills",
+            "memory_consult"
+          ],
+          "observed_overhead": "The agent still had to infer concise output rules from scattered prose and output-contract density fields.",
+          "ideal_output": "Decision, issue-scope boundary, evidence route, unresolved proof requirement, and next safe action.",
+          "classified_failure": "field exists indirectly but is not routed prominently as a communication contract",
+          "product_change": "Expose communication_contract through defaults, start, implement, and report."
+        },
+        {
+          "workflow": "known changed-path implementation",
+          "compact_state_already_exposed": [
+            "action_signals",
+            "next",
+            "decision_packet",
+            "proof",
+            "context.scope"
+          ],
+          "observed_overhead": "Without an explicit contract, implement output could still invite retelling inspect/proof context rather than using the packet order.",
+          "ideal_output": "Changed-path decision, selected proof, acceptance boundary, residue owner, next action.",
+          "classified_failure": "model may ignore existing state without a stronger contract",
+          "product_change": "Add communication_contract to implementer full and tiny payloads."
+        },
+        {
+          "workflow": "report/router diagnostics",
+          "compact_state_already_exposed": [
+            "report_profile",
+            "output_contract",
+            "decision_packet",
+            "section_hints"
+          ],
+          "observed_overhead": "Rendering density was visible, but reasoning-economy expectations were not a first-class queryable contract.",
+          "ideal_output": "Finding or diagnostic first, source compact section, residue boundary, next action.",
+          "classified_failure": "missing compact field",
+          "product_change": "Embed communication_contract in output_contract and mirror a compact report-level field."
+        }
+      ]
+    }
+  },
   "completion": {
     "prefer_surfaces": [
       ".agentic-workspace/planning/state.toml",

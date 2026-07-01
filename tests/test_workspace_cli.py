@@ -736,6 +736,28 @@ def test_start_flags_over_budget_local_footprint_as_advisory_selector(tmp_path: 
     assert selected["detail_command"].endswith("report --target ./repo --section local_footprint --format json")
 
 
+def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Fix one docs typo", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    contract = payload["communication_contract"]
+    assert contract["kind"] == "agentic-workspace/communication-contract/v1"
+    assert contract["default_posture"] == "decision_first_state_backed"
+    assert contract["narration_budget"] == "minimal"
+    assert "startup" in contract["phase_ids"]
+    assert "stale_missing_or_failed_proof" in contract["expand_when"]
+    assert contract["cost_evaluation"]["preserve"] == [
+        "evidence",
+        "proof_boundary",
+        "unresolved_residue",
+        "next_safe_action",
+    ]
+
+
 def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyword(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -3137,6 +3159,35 @@ def test_report_ordinary_agent_path_is_phase_question_first(tmp_path: Path, caps
     assert ordinary_path["phase_questions"][3]["phase"] == "implementation_context"
     assert ordinary_path["phase_questions"][6]["question"] == "How can a future agent resume without replaying chat?"
     assert ordinary_path["lane_completion_model"]["detail_section"] == "report_profile"
+
+
+def test_report_exposes_communication_contract_in_router_and_output_contract(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    router = json.loads(capsys.readouterr().out)
+    contract = router["communication_contract"]
+    assert contract["kind"] == "agentic-workspace/communication-contract/v1"
+    assert contract["surface"] == "report"
+    assert contract["default_posture"] == "decision_first_state_backed"
+    assert "handoff_review" in contract["phase_ids"]
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "output_contract", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)["answer"]
+    assert selected["communication_contract"]["phase_expectations"]["handoff_review"]["include"] == [
+        "finding_or_change",
+        "evidence_ref",
+        "risk_or_residue",
+        "next_owner",
+    ]
+    assert selected["communication_contract"]["required_order"] == [
+        "decision_or_finding",
+        "why_it_matters",
+        "evidence_or_proof_route",
+        "residue_or_boundary",
+        "next_safe_action",
+    ]
 
 
 def test_report_ordinary_agent_path_carries_lane_completion_model(tmp_path: Path, capsys) -> None:
