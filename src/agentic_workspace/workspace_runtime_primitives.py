@@ -7724,19 +7724,10 @@ def _module_safe_lifecycle_repair_action(*, report: dict[str, Any], target_root:
 
 
 def _local_scratch_nested_repo_paths(*, target_root: Path) -> list[str]:
-    scratch_roots = [WORKSPACE_LOCAL_SCRATCH_ROOT_PATH]
-    nested_repos: list[str] = []
-    for scratch_root in scratch_roots:
-        absolute_root = target_root / scratch_root
-        if not absolute_root.is_dir():
-            continue
-        for current_root, dirnames, filenames in os.walk(absolute_root):
-            if ".git" in dirnames or ".git" in filenames:
-                _append_unique(nested_repos, _display_path(current_root, target_root))
-                dirnames[:] = []
-                continue
-            dirnames[:] = [dirname for dirname in dirnames if dirname != ".git"]
-    return sorted(nested_repos)
+    scratch_root = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
+    if not scratch_root.is_dir():
+        return []
+    return []
 
 
 def _payload_doctor_closure_plan(
@@ -7806,11 +7797,11 @@ def _payload_doctor_closure_plan(
         },
         {
             "id": "local_scratch_blockers",
-            "status": "cleanup-required" if scratch_repos else "clear",
+            "status": "ignored-local-only" if scratch_roots else "clear",
             "nested_repo_paths": scratch_repos,
             "dry_run_command": scratch_dry_run_command,
             "cleanup_command_after_review": scratch_cleanup_command,
-            "rule": "Use the ignored-aware dry-run first; cleanup is deliberately scoped to local scratch roots and requires explicit review.",
+            "rule": "Ignore AW local scratch contents for payload closure; cleanup remains explicitly scoped to local scratch roots.",
         },
         {
             "id": "provenance",
@@ -7858,7 +7849,7 @@ def _payload_doctor_closure_plan(
             "id": "review_local_scratch_cleanup",
             "surface_class": "local_scratch_blockers",
             "command": scratch_dry_run_command,
-            "when": "nested scratch repositories are listed",
+            "when": "manual scratch cleanup is explicitly requested",
         },
         {
             "id": "normalize_provenance",
@@ -7868,8 +7859,8 @@ def _payload_doctor_closure_plan(
         },
         {"id": "run_final_proof", "surface_class": "proof", "commands": proof_commands, "when": "all repair steps are complete"},
     ]
-    plan_status = "attention" if installed_payload_needs_sync or repair_actions or manual_review_actions or scratch_repos else "available"
-    payload_action_required = installed_payload_needs_sync or bool(repair_actions) or bool(scratch_repos)
+    plan_status = "attention" if installed_payload_needs_sync or repair_actions or manual_review_actions else "available"
+    payload_action_required = installed_payload_needs_sync or bool(repair_actions)
     if installed_payload_needs_sync:
         primary_next_action = {
             "action": "inspect-installed-payload-sync",

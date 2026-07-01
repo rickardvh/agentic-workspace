@@ -12,7 +12,8 @@ Ordinary route:
 1. Use `uv run python scripts/run_agentic_workspace.py start --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions.
 2. Use `uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task "<task>" --format json` when changed paths are already known.
 3. Follow `next_safe_action`, `action_signals`, and `skills` before opening raw `.agentic-workspace` files or running drill-down commands.
-4. When implementing an issue, satisfy the intended end state in the ordinary path; ask for clarification instead of closing with a partial path when the full outcome appears larger than the issue safely permits.
+4. Use the returned `communication_contract` for decision-first, evidence-backed, compact output; expand only for its safety/proof/detail triggers.
+5. When implementing an issue, satisfy the intended end state in the ordinary path; ask for clarification instead of closing with a partial path when the full outcome appears larger than the issue safely permits.
 
 Boundaries:
 - The effective invocation comes from `.agentic-workspace/config.toml` `[workspace].cli_invoke`; `.agentic-workspace/config.local.toml` may override it.

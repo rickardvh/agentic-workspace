@@ -333,12 +333,14 @@ def test_doctor_compact_payload_closure_plan_names_full_repair_lane(monkeypatch,
     assert surface_classes["generated_payload_projections"]["refresh_command"] == (
         "uv run python scripts/generate/generate_command_packages.py"
     )
-    assert surface_classes["local_scratch_blockers"]["nested_repo_paths"] == [
-        ".agentic-workspace/local/scratch/one/repo",
-    ]
+    assert surface_classes["local_scratch_blockers"]["status"] == "ignored-local-only"
+    assert surface_classes["local_scratch_blockers"]["nested_repo_paths"] == []
     assert surface_classes["local_scratch_blockers"]["dry_run_command"] == ("git clean -ndx -- .agentic-workspace/local/scratch")
     assert surface_classes["local_scratch_blockers"]["cleanup_command_after_review"] == (
         "git clean -fdx -- .agentic-workspace/local/scratch"
+    )
+    assert surface_classes["local_scratch_blockers"]["rule"] == (
+        "Ignore AW local scratch contents for payload closure; cleanup remains explicitly scoped to local scratch roots."
     )
     assert surface_classes["provenance"]["hygiene_check"] == "make absolute-paths"
     proof_commands = surface_classes["proof"]["commands"]
