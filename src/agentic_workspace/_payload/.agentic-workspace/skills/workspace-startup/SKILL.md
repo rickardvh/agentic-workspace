@@ -1,23 +1,35 @@
 ---
 name: workspace-startup
-description: Orient through compact Agentic Workspace commands before opening raw planning, memory, or docs surfaces.
+description: Use the main Agentic Workspace operating loop in an installed AW repo. Start from the configured compact router, preserve routed actions and proof boundaries, and load specialized AW skills only when routed.
 ---
 
-# Workspace Startup
+# Workspace Startup / Operating Loop
 
-Use this skill when the task is about ordinary startup, task routing, config obligations, proof selection, closeout, or module boundaries in an installed Agentic Workspace repo.
-When Agentic Workspace is enabled, this skill is inside mandatory workflow participation; advisory skill routing and `implementation_allowed` never mean startup, planning gates, proof, or closeout can be skipped.
+Use this skill for ordinary AW startup, resume, changed-path implementation, proof approach, closeout, or routed fallback in an installed Agentic Workspace repo.
+When Agentic Workspace is enabled, this is the canonical main operating skill. Advisory skill routing and `implementation_allowed` never bypass startup, Planning gates, proof, or closeout.
 
-## Route
+Do not use this as a broad manual. Load specialized AW subskills only when the compact router, task shape, or this skill names their narrower job.
 
-1. Run `agentic-workspace start --target . --task "<task>" --format json` for ordinary first contact.
-2. If changed paths are already known, run `agentic-workspace implement --target . --changed <paths> --format json`.
-3. Run `agentic-workspace preflight --target . --format json` only for takeover, recovery, or uncertain state.
-4. Run `agentic-workspace summary --target . --format json` when active work, planning, handoff, or continuation matters.
-5. Run `agentic-workspace config --target . --format json` when local posture, configured obligations, startup file, or CLI invocation matters; use `--verbose` only when the tiny answer is insufficient.
-6. Run `agentic-workspace proof --target . --changed <paths> --format json` before claiming validation.
+## Configured Invocation
 
-Open raw `.agentic-workspace/` files only after a compact command points there.
+Use the configured AW invocation exposed by the repo adapter, config, or compact startup/config output. In an installed repo this may look like `agentic-workspace ...`; in a source checkout or dev-dependency install it may be a repo-local command. Do not prefer a bare selector when adapter/config names a different invocation.
+
+## Procedure
+
+1. Run the configured invocation with `start --target . --task "<task>" --format json` for ordinary first contact.
+2. If changed paths are already known, run the configured invocation with `implement --target . --changed <paths> --task "<task>" --format json`.
+3. Preserve `module_slot`, `next_safe_action`, `allowed_actions`, `forbidden_actions`, `proof_required`, and `completion_claim_allowed`.
+4. Follow `next_safe_action` before opening raw `.agentic-workspace/` files or running drill-down commands.
+5. Keep direct work direct when the router allows no-artifact work; do not create Planning, Memory, review, or handoff artifacts just to show work.
+6. Load specialized subskills only for routed intent/shape, proof, setup, or fallback/reference needs.
+7. Before claiming completion, reconcile intent, proof, residue, issue/PR closure, and next owner separately.
+
+## Subskill Routes
+
+- `workspace-intent-discovery`: ambiguous human intent, vague outcome prompts, or direct/bounded/lane/epic work-shape decisions.
+- `workspace-proof-selection`: proof selection or interpretation for task, slice, lane, epic, skipped, warning, retry, crash, or negative evidence.
+- `workspace-setup-jumpstart`: newly installed or adopted AW in a lived-in repo that needs bounded post-bootstrap seeding.
+- `workspace-operating-loop` / `workspace-transition-gates`: reference support only when `module_slot`, `forbidden_actions`, preferred invocation fallback, or transition gate details need interpretation.
 
 ## Red Flags
 
@@ -25,13 +37,13 @@ Red flag:
   I can inspect raw planning or memory files first because the request seems simple.
 
 Use instead:
-  Run `agentic-workspace start --target . --task "<task>" --format json`, or the known dedicated AW command when the request already names one, then follow `next_safe_action`.
+  Run the configured invocation with `start --target . --task "<task>" --format json`, or the known dedicated AW command when the request already names one, then follow `next_safe_action`.
 
 ## SkillSpec Pilot
 
 This skill is the hand-authored startup pilot for the `startup-router` SkillSpec contract in `src/agentic_workspace/contracts/skill_specs.json`.
 
-- Preferred CLI: `agentic-workspace start --target . --task "<task>" --format json`.
+- Preferred route: configured AW invocation with `start --target . --task "<task>" --format json`.
 - Interpreted fields: `workflow_participation`, `immediate_next_allowed_action`, `next_safe_action`, `planning_safety_gate`, `skill_routing.preferred_routes`, and `detail_commands`.
 - Direct work: if compact startup does not require planning and proof is obvious, keep the work direct and avoid planning, review, Memory, or handoff artifacts.
 - Planning work: if `planning_safety_gate.implementation_allowed` is false, run the named planning command before implementation.

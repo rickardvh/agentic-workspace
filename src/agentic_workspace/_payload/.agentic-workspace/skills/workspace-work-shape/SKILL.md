@@ -1,27 +1,22 @@
 ---
 name: workspace-work-shape
-description: Classify work shape and route direct, bounded, lane, or epic work before implementation.
+description: Reference the direct, bounded, lane, and epic vocabulary only when workspace-intent-discovery or compact routing needs work-shape details interpreted.
 ---
 
-# Workspace Work Shape
+# Workspace Work Shape Reference
 
-Use this skill before implementation when task size, proof cost, handoff needs, or the user's intended outcome are unclear.
-This skill does not make AW optional: when AW is enabled, work-shape judgment happens after `start`/`implement` routing, and `implementation_allowed` only applies inside that routed workflow.
+Do not use this as an independently invoked subskill. `workspace-intent-discovery` owns the merged intent/shape procedure after the main AW operating skill routes there.
+When AW is enabled, this reference preserves the same routed workflow boundary as the main skill; it does not make work-shape judgment a bypass around startup, planning or proof gates.
 
-## Route
+This reference exists so compact output, reviews, or issue discussions can name the work-shape vocabulary without reloading the full intent protocol.
 
-1. Run `agentic-workspace start --target . --task "<task>" --format json`.
-2. If changed paths are known, run `agentic-workspace implement --target . --changed <paths> --format json`.
-3. Run `agentic-workspace preflight --target . --format json` only for takeover, recovery, or uncertain state.
-4. For vague outcome prompts, resolve the intended outcome before naming a solution:
-   - What user-visible failure or cost should be reduced?
-   - What would count as satisfaction?
-   - Which repo-visible surface should preserve that intent for the next pass?
-5. Classify the request as `direct`, `bounded`, `lane`, or `epic`.
-6. For `direct` work, keep workspace overhead minimal and prove with the obvious narrow command.
-7. For `bounded` work, use compact planning or proof output when continuation, risk, or non-obvious validation matters.
-8. For `lane` or `epic` work, stop before coding and create or continue checked-in Planning state.
+## Vocabulary
 
-## Output
+- `direct`: target and proof are obvious; answer or edit with the narrowest proof and no durable artifact unless routed.
+- `bounded`: finite implementation with meaningful proof, continuation, or issue-linkage risk; use compact implement/proof routing.
+- `lane`: multi-slice or issue-lane work; checked-in Planning state owns sequencing before implementation.
+- `epic`: multiple lanes, high assurance, or unclear decomposition; shape before implementation.
 
-Report the inferred intended outcome, the shape, why that shape fits, the first repo-visible surface to inspect or update, the satisfaction evidence, the required next command, and whether Planning state is optional, recommended, or required.
+## Reference Output
+
+When this reference is explicitly requested, report the inferred intended outcome, work shape, why that shape fits, the first repo-visible surface to inspect or update, satisfaction evidence, required next route, and whether Planning state is optional, recommended, or required.

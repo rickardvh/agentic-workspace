@@ -1,13 +1,13 @@
 ---
 name: workspace-transition-gates
-description: Apply SkillSpec-backed gates to workspace transitions. Use when moving between startup, planning, implementation, proof, closeout, memory residue, or issue/PR routing and the agent needs explicit allowed actions, forbidden actions, preferred CLI, interpreted fields, and fallback behavior.
+description: Reference SkillSpec-backed transition gates only when the main AW operating skill or compact router names allowed actions, forbidden actions, preferred invocation, interpreted fields, or fallback behavior that need interpretation.
 ---
 
-# Workspace Transition Gates
+# Workspace Transition Gates Reference
 
 This is a package-managed workspace skill installed under `.agentic-workspace/skills/`.
 
-Use it to make workflow transitions inspectable instead of relying on ambient judgement.
+Do not use it as an ordinary startup, implementation, proof, or closeout entrypoint. Start with `workspace-startup`; use this reference only when a routed transition packet needs explicit gate interpretation.
 When AW is enabled, these gates are mandatory workflow boundaries. Advisory routing explains agent-owned choices inside the workflow; it is not permission to skip `start`, `implement`, Planning gates, proof, or closeout.
 
 Each gate is a compact SkillSpec-shaped record:
@@ -25,7 +25,7 @@ Each gate is a compact SkillSpec-shaped record:
 ### Startup To Work
 
 - Trigger: first contact, takeover, or uncertain task shape.
-- Preferred CLI: `agentic-workspace start --task "<task>" --format json`.
+- Preferred route: configured AW invocation with `start --task "<task>" --format json`.
 - Interpreted fields: `workflow_participation`, `immediate_next_allowed_action`, `workflow_sufficiency`, `next_safe_action`, `skill_routing`.
 - Allowed: follow `next_safe_action.preferred_cli`, request a selector, or continue direct work when the packet says enough.
 - Forbidden: open broad raw planning files before the compact summary when the packet forbids it; treat advisory routing or `implementation_allowed` as a bypass around enabled-AW workflow participation.
@@ -34,7 +34,7 @@ Each gate is a compact SkillSpec-shaped record:
 ### Work To Planning
 
 - Trigger: lane/epic shape, active planning pressure, durable sequencing, or issue-linked execution.
-- Preferred CLI: `agentic-workspace summary --format json`, then Planning commands named by the packet.
+- Preferred route: configured AW invocation with `summary --format json`, then Planning commands named by the packet.
 - Interpreted fields: active item, active execplan, continuation owner, stop conditions.
 - Allowed: create or continue the active planning artifact through package commands.
 - Forbidden: hand-edit planning state or claim completion from a local slice.
@@ -43,7 +43,7 @@ Each gate is a compact SkillSpec-shaped record:
 ### Work To Proof
 
 - Trigger: changed paths are known or a completion claim is near.
-- Preferred CLI: `agentic-workspace implement --changed <paths> --format json` or `agentic-workspace proof --changed <paths> --format json`.
+- Preferred route: configured AW invocation with `implement --changed <paths> --format json` or `proof --changed <paths> --format json`.
 - Interpreted fields: required commands, proof burden, acceptance guidance, completion-claim boundary.
 - Allowed: run the selected narrow proof and classify gaps.
 - Forbidden: substitute passing commands for intent satisfaction.
@@ -52,7 +52,7 @@ Each gate is a compact SkillSpec-shaped record:
 ### Work To Memory Residue
 
 - Trigger: repeated correction, durable lesson, closeout residue, or improvement signal.
-- Preferred CLI: `agentic-workspace memory route --files <paths...> --format json`, `agentic-workspace memory promotion-report --mode remediation --format json`.
+- Preferred route: configured AW invocation with `memory route --files <paths...> --format json` or `memory promotion-report --mode remediation --format json`.
 - Interpreted fields: `memory_consultation_status`, `durable_residue_decision`, `improvement_signal_status`.
 - Allowed: capture only durable anti-rediscovery knowledge or route to the owning surface.
 - Forbidden: write task logs, plan history, or one-off chat residue to Memory.

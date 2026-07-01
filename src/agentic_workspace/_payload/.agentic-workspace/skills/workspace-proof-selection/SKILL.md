@@ -1,13 +1,13 @@
 ---
 name: workspace-proof-selection
-description: Select proof that matches the task, slice, lane, or epic before claiming completion. Use when validation evidence, skips, warnings, retries, crashes, or negative proof need to be interpreted separately from whether the requested intent is satisfied.
+description: Select and interpret proof for a routed claim level. Use when validation evidence, skips, warnings, retries, crashes, or negative proof need proof-specific interpretation.
 ---
 
 # Workspace Proof Selection
 
 This is a package-managed workspace skill installed under `.agentic-workspace/skills/`.
 
-Use it to choose and interpret proof before closeout. It is not a test-running checklist; it is the decision layer that says what evidence is meaningful for the claim being made.
+Use it after the main AW operating skill or compact router points at proof selection. It is not a test-running checklist or a general completion policy; it decides what evidence is meaningful for the claim being made.
 
 ## Workflow
 
@@ -17,10 +17,10 @@ Use it to choose and interpret proof before closeout. It is not a test-running c
    - lane
    - epic
    - regression guard
-2. Read the structured proof route before broad inspection:
-   - `agentic-workspace implement --changed <paths> --format json` when changed paths are known
-   - `agentic-workspace proof --changed <paths> --format json` for proof-only selection
-   - `agentic-workspace summary --format json` when an active plan or lane determines the claim level
+2. Read the structured proof route before broad inspection using the configured AW invocation:
+   - `implement --changed <paths> --format json` when changed paths are known
+   - `proof --changed <paths> --format json` for proof-only selection
+   - `summary --format json` when an active plan or lane determines the claim level
 3. Select proof for both behavior and intent:
    - command success for changed behavior
    - targeted tests for the touched surface
@@ -36,9 +36,10 @@ Use it to choose and interpret proof before closeout. It is not a test-running c
    - `not_run`
    - `incomplete`
    - `negative_proof_found`
-5. Decide whether completion is allowed separately from command status:
-   - `completion_claim_allowed=true` only when the proof covers the actual claim level and requested intent
-   - `completion_claim_allowed=false` when proof is missing, stale, too narrow, skipped without justification, or contradicts the intended outcome
+5. Report proof adequacy separately from completion permission:
+   - proof can support the claim level only when it covers the changed behavior and requested intent
+   - proof is insufficient when it is missing, stale, too narrow, skipped without justification, or contradicts the intended outcome
+   - completion permission still belongs to the routed closeout/claim boundary, not this subskill alone
 6. Route gaps instead of hiding them:
    - run the missing focused proof
    - narrow the completion claim to a slice
