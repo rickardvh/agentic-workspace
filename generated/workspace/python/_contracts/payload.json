@@ -898,49 +898,6 @@
         "low_value_narration",
         "repeated_rereads",
         "context_reconstruction"
-      ],
-      "dogfooding_comparison": [
-        {
-          "workflow": "startup for issue #1942",
-          "compact_state_already_exposed": [
-            "next_safe_action",
-            "action_signals",
-            "decision_packet",
-            "skills",
-            "memory_consult"
-          ],
-          "observed_overhead": "The agent still had to infer concise output rules from scattered prose and output-contract density fields.",
-          "ideal_output": "Decision, issue-scope boundary, evidence route, unresolved proof requirement, and next safe action.",
-          "classified_failure": "field exists indirectly but is not routed prominently as a communication contract",
-          "product_change": "Expose communication_contract through defaults, start, implement, and report."
-        },
-        {
-          "workflow": "known changed-path implementation",
-          "compact_state_already_exposed": [
-            "action_signals",
-            "next",
-            "decision_packet",
-            "proof",
-            "context.scope"
-          ],
-          "observed_overhead": "Without an explicit contract, implement output could still invite retelling inspect/proof context rather than using the packet order.",
-          "ideal_output": "Changed-path decision, selected proof, acceptance boundary, residue owner, next action.",
-          "classified_failure": "model may ignore existing state without a stronger contract",
-          "product_change": "Add communication_contract to implementer full and tiny payloads."
-        },
-        {
-          "workflow": "report/router diagnostics",
-          "compact_state_already_exposed": [
-            "report_profile",
-            "output_contract",
-            "decision_packet",
-            "section_hints"
-          ],
-          "observed_overhead": "Rendering density was visible, but reasoning-economy expectations were not a first-class queryable contract.",
-          "ideal_output": "Finding or diagnostic first, source compact section, residue boundary, next action.",
-          "classified_failure": "missing compact field",
-          "product_change": "Embed communication_contract in output_contract and mirror a compact report-level field."
-        }
       ]
     }
   },

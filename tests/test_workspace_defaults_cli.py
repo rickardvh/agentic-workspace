@@ -1045,13 +1045,14 @@ def test_defaults_section_selector_returns_communication_contract(capsys) -> Non
         "unresolved_residue",
         "next_safe_action",
     ]
-    comparisons = answer["cost_evaluation"]["dogfooding_comparison"]
-    assert {item["workflow"] for item in comparisons} == {
-        "startup for issue #1942",
-        "known changed-path implementation",
-        "report/router diagnostics",
-    }
-    assert all(item["product_change"] for item in comparisons)
+    assert answer["cost_evaluation"]["reduce"] == [
+        "low_value_narration",
+        "repeated_rereads",
+        "context_reconstruction",
+    ]
+    assert answer["cost_evaluation"]["question"].startswith("Did structured state reduce")
+    assert "dogfooding_comparison" not in answer["cost_evaluation"]
+    assert "#1942" not in json.dumps(answer)
 
 
 def test_defaults_setup_section_selector_returns_compact_contract_answer(capsys) -> None:
