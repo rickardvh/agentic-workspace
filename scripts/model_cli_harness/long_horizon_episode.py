@@ -14,6 +14,16 @@ import run_model_cli_harness as harness
 
 EPISODE_KIND = "agentic-workspace/long-horizon-episode/v1"
 EVALUATION_KIND = "agentic-workspace/long-horizon-evaluation/v1"
+EVALUATOR_TEXT_LIMIT = 12_000
+EVALUATOR_PATH_LIST_LIMIT = 40
+EVALUATOR_NOISY_PATH_PREFIXES = (
+    ".venv/",
+    "venv/",
+    ".tox/",
+    ".pytest_cache/",
+    ".mypy_cache/",
+    "__pycache__/",
+)
 DEFAULT_EPISODE = harness.REPO_ROOT / "tools" / "model-cli-harness" / "episodes" / "intent-proof-packaging-specifier.json"
 DEFAULT_OUTPUT_ROOT = harness.DEFAULT_OUTPUT_ROOT / "long-horizon"
 AW_MODE_FIXTURE = harness.REPO_ROOT / "tools" / "model-cli-harness" / "fixtures" / "aw-minimal-host-repo"
@@ -456,8 +466,167 @@ def _effective_phase(*, phase: dict[str, Any], mode: dict[str, Any]) -> dict[str
     return {**phase, **override}
 
 
+def _compact_text_for_evaluator(value: Any, *, limit: int = EVALUATOR_TEXT_LIMIT) -> dict[str, Any]:
+    text = str(value or "")
+    if len(text) <= limit:
+        return {"text": text, "char_count": len(text), "truncated": False}
+    half = max(1, limit // 2)
+    return {
+        "text": text[:half] + "\n[...truncated for evaluator prompt...]\n" + text[-half:],
+        "char_count": len(text),
+        "truncated": True,
+    }
+
+
+def _compact_command_result_for_evaluator(result: dict[str, Any]) -> dict[str, Any]:
+    compact: dict[str, Any] = {}
+    for key in ("status", "returncode", "timed_out"):
+        if key in result:
+            compact[key] = result[key]
+    for key in ("final_message", "stdout", "stderr"):
+        if key in result:
+            compact[key] = _compact_text_for_evaluator(result.get(key))
+    return compact
+
+
+def _compact_validation_results_for_evaluator(results: Any) -> list[dict[str, Any]]:
+    if not isinstance(results, list):
+        return []
+    compact_results: list[dict[str, Any]] = []
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        compact_item = {
+            key: item[key]
+            for key in ("command", "original_command", "cwd", "returncode", "status", "timed_out")
+            if key in item
+        }
+        for key in ("stdout", "stderr"):
+            if key in item:
+                compact_item[key] = _compact_text_for_evaluator(item.get(key), limit=4_000)
+        compact_results.append(compact_item)
+    return compact_results
+
+
+def _is_noisy_evaluator_path(value: str) -> bool:
+    normalized = value.replace("\\", "/")
+    return any(normalized == prefix.rstrip("/") or normalized.startswith(prefix) for prefix in EVALUATOR_NOISY_PATH_PREFIXES)
+
+
+def _compact_path_list_for_evaluator(values: list[Any]) -> Any:
+    paths = [str(item) for item in values]
+    noisy_paths = [path for path in paths if _is_noisy_evaluator_path(path)]
+    signal_paths = [path for path in paths if not _is_noisy_evaluator_path(path)]
+    if len(paths) <= EVALUATOR_PATH_LIST_LIMIT and not noisy_paths:
+        return paths
+    selected = signal_paths[:EVALUATOR_PATH_LIST_LIMIT]
+    return {
+        "items": selected,
+        "item_count": len(paths),
+        "omitted_count": max(0, len(paths) - len(selected)),
+        "omitted_noisy_count": len(noisy_paths),
+        "sample_noisy": noisy_paths[:5],
+        "truncated": len(paths) > len(selected),
+    }
+
+
+def _compact_mutation_summary_for_evaluator(value: Any) -> Any:
+    if not isinstance(value, dict):
+        return value
+    compact: dict[str, Any] = {}
+    for key, item in value.items():
+        if isinstance(item, list):
+            compact[key] = _compact_path_list_for_evaluator(item)
+        else:
+            compact[key] = item
+    return compact
+
+
+def _compact_phase_for_evaluator(phase: dict[str, Any]) -> dict[str, Any]:
+    compact = {
+        key: phase[key]
+        for key in (
+            "phase_id",
+            "adapter_id",
+            "model",
+            "prompt_transport",
+            "prior_transcript_included",
+            "hide_transcript_for_resume",
+            "preflight",
+            "sandbox",
+            "artifact_capture",
+            "sandbox_failure",
+            "continuation_contribution",
+            "continuation_contribution_detail",
+            "checkpoint",
+        )
+        if key in phase
+    }
+    compact["prompt"] = _compact_text_for_evaluator(phase.get("prompt"), limit=4_000)
+    compact["command"] = phase.get("command", [])
+    compact["execution_command"] = phase.get("execution_command", [])
+    result = phase.get("result")
+    compact["result"] = _compact_command_result_for_evaluator(result if isinstance(result, dict) else {})
+    compact["mutation_summary"] = _compact_mutation_summary_for_evaluator(phase.get("mutation_summary"))
+    compact["validation_results"] = _compact_validation_results_for_evaluator(phase.get("validation_results"))
+    return compact
+
+
+def _compact_mode_result_for_evaluator(mode_result: dict[str, Any]) -> dict[str, Any]:
+    compact = {
+        key: mode_result[key]
+        for key in (
+            "mode_id",
+            "aw_enabled",
+            "repo_path",
+            "run_root",
+            "setup_results",
+        )
+        if key in mode_result
+    }
+    compact["setup_mutation_summary"] = _compact_mutation_summary_for_evaluator(mode_result.get("setup_mutation_summary"))
+    phases = mode_result.get("phases")
+    compact["phases"] = [_compact_phase_for_evaluator(phase) for phase in phases if isinstance(phase, dict)] if isinstance(phases, list) else []
+    return compact
+
+
+def _evaluation_response_contract(*, episode: dict[str, Any], mode_result: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "kind": EVALUATION_KIND,
+        "scenario": str(episode.get("id", "")),
+        "mode": str(mode_result.get("mode_id", "")),
+        "result": {
+            "intent_satisfied": "yes|partial|no",
+            "scope_respected": True,
+            "proof_sufficient": False,
+            "proof_matches_intent": False,
+            "restartable_from_repo_state": False,
+            "completion_claim_honest": True,
+        },
+        "mistake_classes": [],
+        "aw_effect": {
+            "helped": [],
+            "hurt_or_overhead": [],
+            "missed_affordance": [],
+        },
+        "evidence": [
+            {
+                "kind": "file|command|transcript|summary",
+                "ref": "repo-relative path, command, or artifact name",
+                "why": "short reason this supports the score",
+            }
+        ],
+        "human_review_required": False,
+        "recommended_followup": {
+            "type": "issue|none",
+            "summary": "short follow-up or none",
+        },
+    }
+
+
 def _evaluation_prompt(*, episode: dict[str, Any], mode_result: dict[str, Any]) -> str:
     hidden_oracle = episode.get("hidden_oracle")
+    response_contract = _evaluation_response_contract(episode=episode, mode_result=mode_result)
     evidence_bundle = {
         "kind": "agentic-workspace/long-horizon-evidence-bundle/v1",
         "episode": {
@@ -468,11 +637,20 @@ def _evaluation_prompt(*, episode: dict[str, Any], mode_result: dict[str, Any]) 
             "expected_mistake_classes": episode.get("expected_mistake_classes", []),
             "evaluation_contract": episode.get("evaluation_contract", {}),
         },
-        "mode_result": mode_result,
+        "mode_result": _compact_mode_result_for_evaluator(mode_result),
         "hidden_oracle_excluded": hidden_oracle is not None,
+        "compaction": {
+            "kind": "agentic-workspace/long-horizon-evaluator-compaction/v1",
+            "rule": "Evaluator prompts include compact phase evidence, not raw transcripts or full command stdout.",
+            "text_limit": EVALUATOR_TEXT_LIMIT,
+        },
     }
-    return f"Review this long-horizon episode evidence and return only a JSON object matching {EVALUATION_KIND}.\n\n" + json.dumps(
-        evidence_bundle, indent=2, sort_keys=True
+    return (
+        f"Review this long-horizon episode evidence and return only one JSON object matching {EVALUATION_KIND}.\n"
+        "The response must include every field in this exact top-level contract; use the supplied scenario and mode values:\n"
+        + json.dumps(response_contract, indent=2, sort_keys=True)
+        + "\n\nEvidence bundle:\n"
+        + json.dumps(evidence_bundle, indent=2, sort_keys=True)
     )
 
 
@@ -569,7 +747,7 @@ def _sandbox_failure_summary(
     }
 
 
-def _parse_evaluation(text: str) -> dict[str, Any]:
+def _parse_evaluation(text: str, *, scenario: str = "", mode: str = "") -> dict[str, Any]:
     payload = harness._json_document(text.strip())
     if payload is None:
         match = None
@@ -581,6 +759,16 @@ def _parse_evaluation(text: str) -> dict[str, Any]:
             payload = harness._json_document(match)
     if payload is None:
         raise ValueError("evaluator did not return a JSON object")
+    repairs: list[str] = []
+    if isinstance(payload, dict) and payload.get("kind") == EVALUATION_KIND:
+        if "scenario" not in payload and scenario:
+            payload["scenario"] = scenario
+            repairs.append("filled missing scenario from episode context")
+        if "mode" not in payload and mode:
+            payload["mode"] = mode
+            repairs.append("filled missing mode from mode context")
+        if repairs:
+            payload["harness_repairs"] = repairs
     validate_evaluation_result(payload)
     return payload
 
@@ -864,7 +1052,12 @@ def run_episode(
                 "prompt": phase_prompt,
             }
             phase_adapter_id = adapter_override or str(phase.get("adapter") or episode.get("default_adapter") or "copilot")
-            phase_model = model_override or (phase.get("model") if isinstance(phase.get("model"), str) else None)
+            if model_override:
+                phase_model = model_override
+            elif adapter_override:
+                phase_model = None
+            else:
+                phase_model = phase.get("model") if isinstance(phase.get("model"), str) else None
             command, resolved_model, adapter, prompt_transport, command_replacements = _adapter_command(
                 suite=suite,
                 adapter_id=phase_adapter_id,
@@ -983,9 +1176,12 @@ def run_episode(
                 or episode.get("default_adapter")
                 or "copilot"
             )
-            evaluator_model = evaluator_model_override or (
-                evaluator_config.get("model") if isinstance(evaluator_config.get("model"), str) else None
-            )
+            if evaluator_model_override:
+                evaluator_model = evaluator_model_override
+            elif evaluator_adapter_override:
+                evaluator_model = None
+            else:
+                evaluator_model = evaluator_config.get("model") if isinstance(evaluator_config.get("model"), str) else None
             command, resolved_model, adapter, prompt_transport, command_replacements = _adapter_command(
                 suite=suite,
                 adapter_id=evaluator_adapter_id,
@@ -1015,7 +1211,7 @@ def run_episode(
                     evaluator_result["final_message"] = evaluator_share.read_text(encoding="utf-8")
                 text = str(evaluator_result.get("final_message") or evaluator_result.get("stdout") or "")
                 try:
-                    evaluation_payload = _parse_evaluation(text)
+                    evaluation_payload = _parse_evaluation(text, scenario=str(episode["id"]), mode=str(mode["id"]))
                     evaluation_status = "valid"
                 except ValueError as exc:
                     evaluation_payload = {"error": str(exc)}

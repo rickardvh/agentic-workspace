@@ -12,10 +12,10 @@ work_items = []
 execplans = []
 
 [todo]
-active_items = [
-  { id = "open-issues-stacked-lanes", title = "Implement current open issues by stacked PR lane", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/open-issues-stacked-lanes.plan.json", why_now = "Created by new-plan scaffold.", owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "Tighten scaffold fields, touched paths, and validation before implementation starts.", done_when = "Implement current open issues by stacked PR lane is implemented, validated, and closed out honestly.", proof = "Run the proof selected by implement --changed before claiming completion." },
+active_items = []
+queued_items = [
+  { id = "open-issues-stacked-lanes", title = "Implement current open issues by stacked PR lane", maturity = "ready", status = "next", surface = ".agentic-workspace/planning/execplans/open-issues-stacked-lanes.plan.json", why_now = "Created by new-plan scaffold.", owner_role = "implementation", review_role = "validation", handoff_ready = true, next_action = "Tighten scaffold fields, touched paths, and validation before implementation starts.", done_when = "Implement current open issues by stacked PR lane is implemented, validated, and closed out honestly.", proof = "Run the proof selected by implement --changed before claiming completion.", switched_from_active_by = "long-horizon-improvement-cycles-2026-07-01", switch_reason = "Switched active lane to Run three long-horizon improvement cycles." },
 ]
-queued_items = []
 
 [roadmap]
 lanes = []

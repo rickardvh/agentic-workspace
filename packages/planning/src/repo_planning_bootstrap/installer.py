@@ -10935,6 +10935,7 @@ def create_execplan_scaffold(
         result.add("manual review", record_path, f"scaffold did not validate against planning-execplan.schema.json: {'; '.join(findings)}")
         return result
 
+    demoted_record_updates: list[tuple[Path, dict[str, Any]]] = []
     state = _read_state_from_toml(target_root) or {
         "kind": PLANNING_STATE_KIND,
         "schema_version": PLANNING_STATE_SCHEMA_VERSION,
@@ -10966,6 +10967,12 @@ def create_execplan_scaffold(
             )
             return result
         if activate and switch_active and items:
+            demoted_record_updates = _switched_active_execplan_record_updates(
+                target_root=target_root,
+                active_items=items,
+                switched_from_active_by=slug,
+                switch_reason=source_text or f"Switched active lane to {plan_title}.",
+            )
             switched_items: list[Any] = []
             for item in items:
                 if not isinstance(item, dict):
@@ -10973,7 +10980,7 @@ def create_execplan_scaffold(
                     continue
                 switched_item = copy.deepcopy(item)
                 switched_item["maturity"] = "ready"
-                switched_item["status"] = "queued"
+                switched_item["status"] = "next"
                 switched_item["switched_from_active_by"] = slug
                 switched_item["switch_reason"] = source_text or f"Switched active lane to {plan_title}."
                 switched_items.append(switched_item)
@@ -11004,6 +11011,20 @@ def create_execplan_scaffold(
         todo.setdefault("queued_items", [])
         updated_state["todo"] = todo
 
+    for demoted_path, demoted_record in demoted_record_updates:
+        try:
+            demoted_findings = _json_schema_findings(payload=demoted_record, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+        except Exception as exc:  # pragma: no cover - defensive guard around schema loading
+            result.add("manual review", demoted_path, f"could not validate demoted execplan record against schema: {exc}")
+            return result
+        if demoted_findings:
+            result.add(
+                "manual review",
+                demoted_path,
+                f"demoted execplan record did not validate against planning-execplan.schema.json: {'; '.join(demoted_findings)}",
+            )
+            return result
+
     if dry_run:
         result.add("would create" if not record_path.exists() else "would update", record_path, "schema-valid execplan scaffold")
         state_todo = state.get("todo")
@@ -11012,6 +11033,8 @@ def create_execplan_scaffold(
             active_count = len(state_active_items)
             if active_count:
                 result.add("would update", state_path, f"demote {active_count} active planning item(s) into todo.queued_items")
+        for demoted_path, _demoted_record in demoted_record_updates:
+            result.add("would update", demoted_path, "demote displaced active execplan milestone to planned")
         if activate or queue:
             result.add("would update", state_path, f"register '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
         result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --verbose --format json`")
@@ -11019,8 +11042,12 @@ def create_execplan_scaffold(
         return result
 
     _write_execplan_record(record_path=record_path, record=plan_record)
+    for demoted_path, demoted_record in demoted_record_updates:
+        _write_execplan_record(record_path=demoted_path, record=demoted_record)
     detail = "schema-valid prep-only execplan scaffold" if prep_only else "schema-valid execplan scaffold"
     result.add("created" if not overwrite else "updated", record_path, detail)
+    for demoted_path, _demoted_record in demoted_record_updates:
+        result.add("updated", demoted_path, "demoted displaced active execplan milestone to planned")
     if activate or queue:
         _write_state_to_toml(target_root, updated_state)
         result.add("updated", state_path, f"registered '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
@@ -11033,6 +11060,55 @@ def create_execplan_scaffold(
             "after summary verification, stop; do not create README, package, source, public, schema, database, or app scaffold files",
         )
     return result
+
+
+def _switched_active_execplan_record_updates(
+    *,
+    target_root: Path,
+    active_items: list[Any],
+    switched_from_active_by: str,
+    switch_reason: str,
+) -> list[tuple[Path, dict[str, Any]]]:
+    updates: list[tuple[Path, dict[str, Any]]] = []
+    seen: set[Path] = set()
+    inactive_statuses = {"complete", "completed", "done", "closed", "planned", "pending", "not-started"}
+    for item in active_items:
+        if not isinstance(item, dict):
+            continue
+        surface = _active_execplan_reference(item)
+        if not surface:
+            continue
+        plan_path = _resolve_execplan_path(target_root, surface)
+        if plan_path is None:
+            continue
+        record_path = _canonical_execplan_record_path(plan_path).resolve()
+        if record_path in seen or not record_path.exists():
+            continue
+        seen.add(record_path)
+        record = _load_execplan_record(record_path)
+        milestone = _record_section_dict(record, "active_milestone")
+        if record is None or milestone is None:
+            continue
+        status = str(milestone.get("status", "")).strip().lower()
+        if not status or status in inactive_statuses:
+            continue
+        updated = copy.deepcopy(record)
+        updated_milestone = dict(updated.get("active_milestone") or {})
+        updated_milestone["status"] = "planned"
+        updated_milestone["ready"] = "queued"
+        updated_milestone["blocked"] = "none"
+        updated_milestone["switched_from_active_by"] = switched_from_active_by
+        updated_milestone["switch_reason"] = switch_reason
+        updated["active_milestone"] = updated_milestone
+        drift_log = updated.get("drift_log")
+        if not isinstance(drift_log, list):
+            drift_log = []
+        updated["drift_log"] = [
+            *[str(item) for item in drift_log],
+            f"{date.today().isoformat()}: Demoted from active by agentic-planning new-plan --switch-active ({switched_from_active_by}).",
+        ]
+        updates.append((record_path, updated))
+    return updates
 
 
 def _new_plan_tightening_checklist(*, prep_only: bool) -> str:

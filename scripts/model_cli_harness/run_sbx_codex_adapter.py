@@ -35,7 +35,7 @@ def _returncode(command: list[str]) -> int:
 
 def _prompt_from_args(args: argparse.Namespace) -> str:
     if args.prompt_file:
-        return Path(args.prompt_file).read_text(encoding="utf-8")
+        return ""
     return args.prompt or ""
 
 
@@ -53,28 +53,44 @@ def _codex_exec_command(
     prompt: str,
     sandbox_repo: str,
     sandbox_share_path: str,
+    sandbox_prompt_path: str | None = None,
 ) -> list[str]:
     exec_command = [args.sbx, "exec"]
     for env_value in args.exec_env:
         exec_command.extend(["-e", env_value])
+    codex_command = [
+        "codex",
+        "exec",
+        "--model",
+        args.model,
+        "--cd",
+        sandbox_repo,
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--skip-git-repo-check",
+        "--output-last-message",
+        sandbox_share_path,
+        "--json",
+    ]
+    if sandbox_prompt_path:
+        shell_command = " ".join(shlex.quote(part) for part in [*codex_command, "-"])
+        shell_command = f"{shell_command} < {shlex.quote(sandbox_prompt_path)}"
+        exec_command.extend([args.sandbox_name, "sh", "-lc", shell_command])
+        return exec_command
+    codex_command.append(prompt)
     exec_command.extend(
         [
             args.sandbox_name,
-            "codex",
-            "exec",
-            "--model",
-            args.model,
-            "--cd",
-            sandbox_repo,
-            "--dangerously-bypass-approvals-and-sandbox",
-            "--skip-git-repo-check",
-            "--output-last-message",
-            sandbox_share_path,
-            "--json",
-            prompt,
+            *codex_command,
         ]
     )
     return exec_command
+
+
+def _sandbox_prompt_path(prompt_file: str | None) -> str | None:
+    if not prompt_file:
+        return None
+    prompt_name = Path(prompt_file).name or "prompt.txt"
+    return posixpath.join(posixpath.sep, "tmp", "agentic-workspace-model-cli-harness", prompt_name)
 
 
 def _windows_command_line_length(command: list[str]) -> int:
@@ -113,11 +129,13 @@ def main(argv: list[str] | None = None) -> int:
     prompt = _prompt_from_args(args)
     sandbox_repo = _sandbox_path(args.repo)
     sandbox_share_path = _sandbox_path(args.share_path)
+    sandbox_prompt_path = _sandbox_prompt_path(args.prompt_file)
     exec_command = _codex_exec_command(
         args=args,
         prompt=prompt,
         sandbox_repo=sandbox_repo,
         sandbox_share_path=sandbox_share_path,
+        sandbox_prompt_path=sandbox_prompt_path,
     )
     command_length_error = _windows_command_length_error(exec_command, prompt_file=args.prompt_file)
     if command_length_error:
@@ -140,6 +158,9 @@ def main(argv: list[str] | None = None) -> int:
 
     return_code = 1
     try:
+        mkdir_paths = [posixpath.dirname(sandbox_share_path)]
+        if sandbox_prompt_path:
+            mkdir_paths.append(posixpath.dirname(sandbox_prompt_path))
         mkdir = _returncode(
             [
                 args.sbx,
@@ -147,11 +168,17 @@ def main(argv: list[str] | None = None) -> int:
                 args.sandbox_name,
                 "sh",
                 "-lc",
-                f"mkdir -p {shlex.quote(posixpath.dirname(sandbox_share_path))}",
+                "mkdir -p " + " ".join(shlex.quote(path) for path in mkdir_paths),
             ]
         )
         if mkdir != 0:
             return_code = mkdir
+        elif sandbox_prompt_path and args.prompt_file:
+            copy_prompt = _returncode([args.sbx, "cp", args.prompt_file, f"{args.sandbox_name}:{sandbox_prompt_path}"])
+            if copy_prompt != 0:
+                return_code = copy_prompt
+            else:
+                return_code = _returncode(exec_command)
         else:
             return_code = _returncode(exec_command)
     finally:

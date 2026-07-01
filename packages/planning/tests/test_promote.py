@@ -1050,6 +1050,8 @@ candidates = []
 
 def test_planning_cli_new_plan_switch_active_demotes_existing_active_items(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
+    current_record_path = tmp_path / ".agentic-workspace/planning/execplans/current-plan.plan.json"
+    _write_execplan_record(current_record_path, item_id="current-plan", status="active")
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
         """
@@ -1058,7 +1060,7 @@ active_items = [
   { id = "current-plan", title = "Current Plan", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/current-plan.plan.json", why_now = "Already active." },
 ]
 queued_items = [
-  { id = "queued-plan", title = "Queued Plan", maturity = "ready", status = "queued", surface = ".agentic-workspace/planning/execplans/queued-plan.plan.json", why_now = "Already queued." },
+  { id = "queued-plan", title = "Queued Plan", maturity = "ready", status = "next", surface = ".agentic-workspace/planning/execplans/queued-plan.plan.json", why_now = "Already queued." },
 ]
 
 [roadmap]
@@ -1089,13 +1091,22 @@ candidates = []
     )
     payload = json.loads(capsys.readouterr().out)
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    current_record = installer_mod._load_execplan_record(current_record_path)
 
     assert any(action["kind"] == "updated" and "active_items" in action["detail"] for action in payload["actions"])
+    assert any(action["kind"] == "updated" and action["path"].endswith("current-plan.plan.json") for action in payload["actions"])
     assert [item["id"] for item in state["todo"]["active_items"]] == ["next-plan"]
     assert [item["id"] for item in state["todo"]["queued_items"]] == ["current-plan", "queued-plan"]
-    assert state["todo"]["queued_items"][0]["status"] == "queued"
+    assert state["todo"]["queued_items"][0]["status"] == "next"
     assert state["todo"]["queued_items"][0]["maturity"] == "ready"
     assert state["todo"]["queued_items"][0]["switched_from_active_by"] == "next-plan"
+    assert current_record["active_milestone"]["status"] == "planned"
+    assert current_record["active_milestone"]["ready"] == "queued"
+    assert current_record["active_milestone"]["switched_from_active_by"] == "next-plan"
+    summary = planning_summary(target=tmp_path, profile="compact")
+    assert summary["planning_surface_health"]["warning_count"] == 0
+    assert summary["execplans"]["active_count"] == 1
+    assert summary["execplans"]["active_execplans"][0]["path"].endswith("next-plan.plan.json")
 
 
 def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: Path, capsys) -> None:

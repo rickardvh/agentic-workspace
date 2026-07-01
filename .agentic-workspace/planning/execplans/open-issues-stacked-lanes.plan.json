@@ -155,11 +155,13 @@
   "references": [],
   "active_milestone": {
     "id": "open-issues-stacked-lanes",
-    "status": "active",
+    "status": "planned",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
-    "ready": "ready",
+    "ready": "queued",
     "blocked": "none",
-    "optional_deps": "none"
+    "optional_deps": "none",
+    "switched_from_active_by": "long-horizon-improvement-cycles-2026-07-01",
+    "switch_reason": "Switched active lane to Run three long-horizon improvement cycles."
   },
   "immediate_next_action": [
     "Review draft PRs, mark ready when acceptable, and merge in stack order (#1894, #1895, #1896, #1897)."
