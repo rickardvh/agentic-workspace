@@ -36237,6 +36237,40 @@ def _repo_looks_setup_mature(*, target_root: Path) -> bool:
     return all((path.exists() for path in _setup_orientation_surfaces(target_root=target_root)))
 
 
+def _host_repo_orientation_payload(*, target_root: Path) -> dict[str, Any]:
+    candidates: list[dict[str, Any]] = []
+
+    def _add(path: str, *, reason: str, confidence: float) -> None:
+        surface = target_root / path
+        if not surface.exists():
+            return
+        candidates.append(
+            {
+                "surface": path,
+                "reason": reason,
+                "confidence": confidence,
+                "refs": [path],
+            }
+        )
+
+    _add("README.md", reason="host repo overview and setup context", confidence=0.94)
+    _add("docs/architecture.md", reason="host architecture and ownership context", confidence=0.9)
+    _add("docs", reason="host documentation directory", confidence=0.82)
+    _add("pyproject.toml", reason="Python project metadata and test or tooling hints", confidence=0.88)
+    _add("package.json", reason="Node project metadata and script hints", confidence=0.88)
+    _add("Cargo.toml", reason="Rust project metadata and test or tooling hints", confidence=0.88)
+    _add("go.mod", reason="Go module metadata and test or tooling hints", confidence=0.88)
+    _add("src", reason="host source tree", confidence=0.78)
+    _add("tests", reason="host test suite", confidence=0.78)
+
+    return {
+        "status": "present" if candidates else "absent",
+        "candidate_count": len(candidates),
+        "candidates": candidates,
+        "rule": "Host orientation candidates are read-only setup hints; setup must not seed Memory, Planning, assurance, or verification state from them without agent judgment.",
+    }
+
+
 def _setup_payload(
     *,
     target_root: Path,
@@ -36273,6 +36307,7 @@ def _setup_payload(
     )
     proof_route_hints = _load_proof_route_hints(target_root=target_root)
     findings_input = _setup_findings_input_payload(target_root=target_root)
+    host_orientation = _host_repo_orientation_payload(target_root=target_root)
     assurance_onboarding = _assurance_onboarding_payload(assurance=config.assurance)
     verification_guidance = _verification_enablement_guidance(target_root=target_root, config=config)
     onboarding_routes = {
@@ -36359,6 +36394,7 @@ def _setup_payload(
             "rule": "Accept agent-produced setup findings as optional input, preserve only the classes that reduce rediscovery, and keep low-value or weakly grounded findings transient.",
         },
         "analysis_input": findings_input,
+        "host_orientation": host_orientation,
         "proof_route_hints": {
             "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
             "status": proof_route_hints["status"],
@@ -36402,6 +36438,10 @@ def _emit_setup(
         print(f"- surface: {payload['orientation']['surface']}")
     if payload["orientation"].get("reason"):
         print(f"- reason: {payload['orientation']['reason']}")
+    if payload.get("host_orientation", {}).get("candidates"):
+        print("Host orientation candidates:")
+        for item in payload["host_orientation"]["candidates"]:
+            print(f"- {item['surface']}: {item['reason']}")
     print(f"- next action: {payload['next_action']['summary']}")
     for command in payload["next_action"]["commands"]:
         print(f"  - {command}")
