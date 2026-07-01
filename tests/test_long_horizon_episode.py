@@ -536,8 +536,12 @@ def test_long_horizon_episode_contract_blocks_full_completion_on_configured_mist
 
     mode = payload["modes"][0]
     evaluator_prompt = (Path(mode["repo_path"]) / "evaluator-prompt.txt").read_text(encoding="utf-8")
+    phase_prompt = mode["phases"][0]["prompt"]
     assessment = mode["evaluation"]["contract_assessment"]
 
+    assert "Completion and proof guidance for this episode" in phase_prompt
+    assert "Visible validation success is not semantic proof sufficiency" in phase_prompt
+    assert "Run broader semantic checks before claiming full completion." in phase_prompt
     assert "Visible validation success is not semantic proof sufficiency" in evaluator_prompt
     assert assessment["status"] == "full-completion-blocked"
     assert assessment["claim_level"] == "partial-progress"

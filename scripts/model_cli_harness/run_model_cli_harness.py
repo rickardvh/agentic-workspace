@@ -56,6 +56,12 @@ HARNESS_SETUP_MUTATION_PATHS = (
     "scripts/run_agentic_workspace.py",
 )
 SANDBOX_ADAPTER_KIND = "agentic-workspace/model-cli-sandbox-adapter/v1"
+LOCAL_AW_WHEEL_PACKAGES = {
+    "agentic-workspace": "agentic_workspace",
+    "agentic-memory": "agentic_memory",
+    "agentic-planning": "agentic_planning",
+    "agentic-verification": "agentic_verification",
+}
 FINAL_ANSWER_PATH_RULE = (
     "Final answer path rule: cite changed files and evidence using repo-relative paths only. "
     "Before writing the final answer, convert any absolute cwd, fixture, run_root, session, prompt-file, "
@@ -494,7 +500,19 @@ def _patch_local_aw_wheelhouse(*, source_wheelhouse: Path, target_wheelhouse: Pa
     )
 
 
-def _fixture_local_wheel_dependencies(*, repo_path: Path, source_wheelhouse: Path, adapter: dict[str, Any]) -> list[str]:
+def _relative_project_source_path(*, path: Path, repo_path: Path) -> str:
+    try:
+        return path.relative_to(repo_path).as_posix()
+    except ValueError:
+        return path.resolve().as_posix()
+
+
+def _fixture_local_wheel_metadata(
+    *,
+    repo_path: Path,
+    source_wheelhouse: Path,
+    adapter: dict[str, Any],
+) -> tuple[list[str], dict[str, Any]]:
     version = _local_aw_version()
     target_wheelhouse = repo_path / ".agentic-workspace" / "local" / "model-cli-harness" / "wheelhouse"
     sandbox = adapter.get("sandbox")
@@ -503,24 +521,23 @@ def _fixture_local_wheel_dependencies(*, repo_path: Path, source_wheelhouse: Pat
         sandbox_wheelhouse = target_wheelhouse / "sandbox"
         if target_wheelhouse.exists():
             shutil.rmtree(target_wheelhouse)
-        _patch_local_aw_wheelhouse(
-            source_wheelhouse=source_wheelhouse,
-            target_wheelhouse=host_wheelhouse,
-            release_asset_base_url=_host_file_url(host_wheelhouse),
-            version=version,
-        )
-        _patch_local_aw_wheelhouse(
-            source_wheelhouse=source_wheelhouse,
-            target_wheelhouse=sandbox_wheelhouse,
-            release_asset_base_url=_sandbox_file_url(sandbox_wheelhouse),
-            version=version,
-        )
-        host_root_wheel = _find_wheel(host_wheelhouse, "agentic_workspace", version)
-        sandbox_root_wheel = _find_wheel(sandbox_wheelhouse, "agentic_workspace", version)
-        return [
-            f"agentic-workspace @ {_host_file_url(host_root_wheel)} ; sys_platform == 'win32'",
-            f"agentic-workspace @ {_sandbox_file_url(sandbox_root_wheel)} ; sys_platform != 'win32'",
-        ]
+        shutil.copytree(source_wheelhouse, host_wheelhouse)
+        shutil.copytree(source_wheelhouse, sandbox_wheelhouse)
+        uv_sources: dict[str, Any] = {}
+        for package_name, wheel_prefix in LOCAL_AW_WHEEL_PACKAGES.items():
+            host_wheel = _find_wheel(host_wheelhouse, wheel_prefix, version)
+            sandbox_wheel = _find_wheel(sandbox_wheelhouse, wheel_prefix, version)
+            uv_sources[package_name] = [
+                {
+                    "path": _relative_project_source_path(path=host_wheel, repo_path=repo_path),
+                    "marker": "sys_platform == 'win32'",
+                },
+                {
+                    "path": _relative_project_source_path(path=sandbox_wheel, repo_path=repo_path),
+                    "marker": "sys_platform != 'win32'",
+                },
+            ]
+        return list(LOCAL_AW_WHEEL_PACKAGES), uv_sources
 
     release_asset_base_url = _fixture_file_url(target_wheelhouse, adapter=adapter)
     _patch_local_aw_wheelhouse(
@@ -530,7 +547,12 @@ def _fixture_local_wheel_dependencies(*, repo_path: Path, source_wheelhouse: Pat
         version=version,
     )
     root_wheel = _find_wheel(target_wheelhouse, "agentic_workspace", version)
-    return [f"agentic-workspace @ {_fixture_file_url(root_wheel, adapter=adapter)}"]
+    return [f"agentic-workspace @ {_fixture_file_url(root_wheel, adapter=adapter)}"], {}
+
+
+def _fixture_local_wheel_dependencies(*, repo_path: Path, source_wheelhouse: Path, adapter: dict[str, Any]) -> list[str]:
+    dependencies, _sources = _fixture_local_wheel_metadata(repo_path=repo_path, source_wheelhouse=source_wheelhouse, adapter=adapter)
+    return dependencies
 
 
 def _fixture_local_wheel_dependency(*, repo_path: Path, source_wheelhouse: Path, adapter: dict[str, Any]) -> str:
@@ -560,13 +582,19 @@ def _prepare_fixture(
         raise FileNotFoundError(f"fixture not found: {fixture}")
     paths.run_root.mkdir(parents=True, exist_ok=False)
     shutil.copytree(fixture_path, paths.repo_path)
+    uv_sources = None
     if local_aw_wheelhouse is not None:
-        dependency_specs = _fixture_local_wheel_dependencies(
+        dependency_specs, uv_sources = _fixture_local_wheel_metadata(
             repo_path=paths.repo_path,
             source_wheelhouse=local_aw_wheelhouse,
             adapter=adapter,
         )
-    _prepare_source_checkout_invocation(paths.repo_path, dependency_specs=dependency_specs, source_checkout_path=source_checkout_path)
+    _prepare_source_checkout_invocation(
+        paths.repo_path,
+        dependency_specs=dependency_specs,
+        source_checkout_path=source_checkout_path,
+        uv_sources=uv_sources,
+    )
     _prepare_fixture_git_repository(paths.repo_path)
 
 
@@ -625,6 +653,7 @@ def _prepare_source_checkout_invocation(
     *,
     dependency_specs: list[str] | None = None,
     source_checkout_path: str | None = None,
+    uv_sources: dict[str, Any] | None = None,
 ) -> None:
     if not (repo_path / ".agentic-workspace").exists():
         return
@@ -662,12 +691,15 @@ def _prepare_source_checkout_invocation(
             "]",
             "",
         ]
+        source_entries = dict(uv_sources or {})
         if source_checkout_path:
             source_checkout_path = source_checkout_path.replace("\\", "/")
+            source_entries["agentic-workspace"] = {"path": source_checkout_path, "editable": True}
+        if source_entries:
             lines.extend(
                 [
                     "[tool.uv.sources]",
-                    f'agentic-workspace = {{ path = "{source_checkout_path}", editable = true }}',
+                    *[f"{package} = {_uv_source_toml_value(source)}" for package, source in sorted(source_entries.items())],
                     "",
                 ]
             )
@@ -676,6 +708,17 @@ def _prepare_source_checkout_invocation(
     local_config = repo_path / ".agentic-workspace" / "config.local.toml"
     if not local_config.exists():
         local_config.write_text('schema_version = 1\n\n[workspace]\ncli_invoke = "uv run agentic-workspace"\n', encoding="utf-8")
+
+
+def _uv_source_toml_value(source: Any) -> str:
+    def inline_table(item: dict[str, Any]) -> str:
+        return "{ " + ", ".join(f"{key} = {json.dumps(value)}" for key, value in item.items()) + " }"
+
+    if isinstance(source, list):
+        return "[" + ", ".join(inline_table(item) for item in source if isinstance(item, dict)) + "]"
+    if isinstance(source, dict):
+        return inline_table(source)
+    return json.dumps(source)
 
 
 def _terminate_process_tree(pid: int) -> None:

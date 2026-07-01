@@ -727,7 +727,9 @@ queued_items = []
 
 [roadmap]
 lanes = []
-candidates = []
+candidates = [
+  { id = "github-1883-workspace-provide-bounded-chat-agent-output-prof", maturity = "candidate", status = "next", priority = "P2", refs = "GitHub #1883", title = "[Workspace]: Provide bounded chat-agent output profiles for ordinary AW routing", outcome = "Route the upstream issue into a bounded Agentic Workspace slice before implementation.", reason = "Open prioritized upstream issue from refreshed external intent evidence.", promotion_signal = "Promote when this issue is selected for implementation or grouped into a bounded lane.", suggested_first_slice = "Inspect the issue body, choose the smallest workflow shape, and record exact proof before closeout." },
+]
 """,
     )
 
@@ -754,6 +756,21 @@ candidates = []
     assert any(action["kind"] == "closeout distillation" for action in archive_payload["actions"])
     assert not record_path.exists()
     assert "compact-cli" not in state_text
+    state = tomllib.loads(state_text)
+    assert state["roadmap"]["candidates"] == [
+        {
+            "id": "github-1883-workspace-provide-bounded-chat-agent-output-prof",
+            "maturity": "candidate",
+            "status": "next",
+            "priority": "P2",
+            "refs": "GitHub #1883",
+            "title": "[Workspace]: Provide bounded chat-agent output profiles for ordinary AW routing",
+            "outcome": "Route the upstream issue into a bounded Agentic Workspace slice before implementation.",
+            "reason": "Open prioritized upstream issue from refreshed external intent evidence.",
+            "promotion_signal": "Promote when this issue is selected for implementation or grouped into a bounded lane.",
+            "suggested_first_slice": "Inspect the issue body, choose the smallest workflow shape, and record exact proof before closeout.",
+        }
+    ]
 
 
 def test_archive_prepare_closeout_allows_direct_slice_scope(tmp_path: Path) -> None:
