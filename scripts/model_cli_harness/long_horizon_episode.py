@@ -276,13 +276,29 @@ def _prepare_mode_repo(
     def effective_dependency_specs(repo_path: Path) -> list[str] | None:
         if local_aw_wheelhouse is None or adapter is None:
             return dependency_specs
-        return [
-            harness._fixture_local_wheel_dependency(
-                repo_path=repo_path,
-                source_wheelhouse=local_aw_wheelhouse,
-                adapter=adapter,
-            )
-        ]
+        return harness._fixture_local_wheel_dependencies(
+            repo_path=repo_path,
+            source_wheelhouse=local_aw_wheelhouse,
+            adapter=adapter,
+        )
+
+    def git_longpaths_enabled() -> bool:
+        result = harness._run_command(["git", "config", "--get", "core.longpaths"], cwd=paths.run_root, timeout_seconds=30)
+        if result.get("returncode") != 0:
+            return False
+        return str(result.get("stdout") or "").strip().lower() == "true"
+
+    def preflight_windows_clone_path(*, repo_url: str) -> None:
+        if os.name != "nt":
+            return
+        target = str(paths.repo_path.resolve())
+        if len(target) < 180 or git_longpaths_enabled():
+            return
+        raise RuntimeError(
+            "git clone path-length preflight failed for external long-horizon repo "
+            f"{repo_url}: target path is {len(target)} characters. "
+            "Set `git config --global core.longpaths true` or use a shorter --output-root before running the Docker episode."
+        )
 
     paths.run_root.mkdir(parents=True, exist_ok=False)
     setup_before: dict[str, dict[str, Any]] | None = None
@@ -331,6 +347,7 @@ def _prepare_mode_repo(
                 source_checkout_path=source_checkout_path,
             )
         return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
+    preflight_windows_clone_path(repo_url=repo_url)
     result = harness._run_command(["git", "clone", repo_url, str(paths.repo_path)], cwd=paths.run_root, timeout_seconds=900)
     if result["returncode"] != 0:
         raise RuntimeError(f"git clone failed for {repo_url}: {result['stderr']}")
@@ -508,6 +525,50 @@ def _post_score_reference_payload(*, episode: dict[str, Any], evaluation_status:
     }
 
 
+def _sandbox_failure_summary(
+    *,
+    phase_id: str,
+    sandbox_report: dict[str, Any] | None,
+    result: dict[str, Any],
+    artifact_capture: dict[str, Any],
+    checkpoint: dict[str, str],
+) -> dict[str, Any] | None:
+    if not sandbox_report or not sandbox_report.get("enabled"):
+        return None
+    runtime_status = str(sandbox_report.get("runtime_status") or result.get("status") or "")
+    returncode = result.get("returncode")
+    if runtime_status in {"completed", "dry-run"} and (returncode in {0, None}):
+        return None
+    stderr = str(result.get("stderr") or "")
+    runtime_error = str(sandbox_report.get("runtime_error") or "").strip()
+    timeout_text = f"{runtime_status}\n{stderr}\n{runtime_error}".lower()
+    timed_out = bool(result.get("timed_out")) or "context deadline" in timeout_text or "deadline exceeded" in timeout_text
+    failure_class = "sandbox-timeout" if timed_out else "sandbox-runtime-failed"
+    share_path = checkpoint.get("share_path", "")
+    transcript_path = checkpoint.get("transcript_path", "")
+    share_artifact_exists = bool(result.get("final_message")) or bool(artifact_capture.get("share_captured"))
+    if not share_artifact_exists and share_path:
+        share_artifact_exists = Path(share_path).is_file()
+    transcript_exists = bool(transcript_path) and Path(transcript_path).is_file()
+    return {
+        "kind": "agentic-workspace/long-horizon-sandbox-failure/v1",
+        "status": "present",
+        "failure_class": failure_class,
+        "boundary": "sandbox-executor-timeout" if timed_out else "sandbox-adapter-runtime",
+        "phase_id": phase_id,
+        "sandbox": sandbox_report.get("identity", ""),
+        "sandbox_name": sandbox_report.get("sandbox_name", ""),
+        "runtime_status": runtime_status,
+        "runtime_returncode": returncode,
+        "timed_out": timed_out,
+        "runtime_error": runtime_error or (stderr.strip().splitlines()[0][:500] if stderr.strip() else ""),
+        "share_artifact_exists": share_artifact_exists,
+        "transcript_exists": transcript_exists,
+        "agent_performance_finding": False,
+        "rule": "Sandbox runtime failures are harness/executor evidence until a model transcript or share artifact proves agent behavior.",
+    }
+
+
 def _parse_evaluation(text: str) -> dict[str, Any]:
     payload = harness._json_document(text.strip())
     if payload is None:
@@ -529,16 +590,69 @@ def _comparison_summary(mode_results: list[dict[str, Any]], *, episode: dict[str
     aw_effect_by_mode: dict[str, dict[str, list[str]]] = {}
     post_score_reference_by_mode: dict[str, dict[str, Any]] = {}
     contract_assessment_by_mode: dict[str, dict[str, Any]] = {}
+    invalid_evaluations_by_mode: dict[str, dict[str, Any]] = {}
+    sandbox_runtime_failures_by_mode: dict[str, list[dict[str, Any]]] = {}
     human_review_required = False
     followups: list[dict[str, Any]] = []
     for result in mode_results:
         mode_id = result["mode_id"]
+        sandbox_failures = [
+            phase.get("sandbox_failure")
+            for phase in result.get("phases", [])
+            if isinstance(phase, dict)
+            and isinstance(phase.get("sandbox_failure"), dict)
+            and phase["sandbox_failure"].get("status") == "present"
+        ]
         evaluation_result = result.get("evaluation", {})
+        if isinstance(evaluation_result, dict) and isinstance(evaluation_result.get("sandbox_failure"), dict):
+            evaluator_sandbox_failure = evaluation_result["sandbox_failure"]
+            if evaluator_sandbox_failure.get("status") == "present":
+                sandbox_failures.append(evaluator_sandbox_failure)
+        if sandbox_failures:
+            sandbox_runtime_failures_by_mode[mode_id] = sandbox_failures
+            human_review_required = True
+            for failure in sandbox_failures:
+                followups.append(
+                    {
+                        "mode": mode_id,
+                        "type": "rerun-executor",
+                        "summary": "Rerun the Docker sandbox phase before scoring agent behavior.",
+                        "phase_id": failure.get("phase_id", ""),
+                        "failure_class": failure.get("failure_class", ""),
+                        "boundary": failure.get("boundary", ""),
+                        "sandbox": failure.get("sandbox", ""),
+                        "sandbox_name": failure.get("sandbox_name", ""),
+                        "share_artifact_exists": bool(failure.get("share_artifact_exists")),
+                        "transcript_exists": bool(failure.get("transcript_exists")),
+                        "aw_improvement_scope": "separate-from-agent-performance-finding",
+                    }
+                )
         if isinstance(evaluation_result, dict) and isinstance(evaluation_result.get("post_score_reference"), dict):
             post_score_reference_by_mode[mode_id] = evaluation_result["post_score_reference"]
         if isinstance(evaluation_result, dict) and isinstance(evaluation_result.get("contract_assessment"), dict):
             contract_assessment_by_mode[mode_id] = evaluation_result["contract_assessment"]
+        evaluation_status = str(evaluation_result.get("status") or "") if isinstance(evaluation_result, dict) else ""
         evaluation = evaluation_result.get("payload") if isinstance(evaluation_result, dict) else None
+        if evaluation_status == "invalid":
+            schema_errors = []
+            if isinstance(evaluation, dict) and isinstance(evaluation.get("error"), str):
+                schema_errors.append(evaluation["error"])
+            invalid_evaluations_by_mode[mode_id] = {
+                "status": "invalid",
+                "mode": mode_id,
+                "schema_errors": schema_errors,
+                "post_score_reference": post_score_reference_by_mode.get(mode_id, {}),
+            }
+            human_review_required = True
+            followups.append(
+                {
+                    "mode": mode_id,
+                    "type": "evaluation-harness",
+                    "summary": "Primary evaluator payload was invalid; rerun or fix evaluator schema handling before treating this mode as scored.",
+                    "schema_errors": schema_errors,
+                    "primary_evaluation_status": evaluation_status,
+                }
+            )
         if not isinstance(evaluation, dict):
             continue
         mistake_classes_by_mode[mode_id] = list(evaluation.get("mistake_classes", []))
@@ -559,6 +673,14 @@ def _comparison_summary(mode_results: list[dict[str, Any]], *, episode: dict[str
         for mode_id, assessment in contract_assessment_by_mode.items()
         if assessment.get("status") == "full-completion-blocked"
     ]
+    if mode_results and len(invalid_evaluations_by_mode) == len(mode_results):
+        claim_gate_status = "invalid-primary-evaluation"
+    elif invalid_evaluations_by_mode:
+        claim_gate_status = "primary-evaluation-with-invalid-modes"
+    elif blocking_modes:
+        claim_gate_status = "full-completion-blocked"
+    else:
+        claim_gate_status = "primary-evaluation"
     return {
         "kind": "agentic-workspace/long-horizon-comparison/v1",
         "status": "present" if mode_results else "absent",
@@ -568,12 +690,16 @@ def _comparison_summary(mode_results: list[dict[str, Any]], *, episode: dict[str
         "aw_effect_by_mode": aw_effect_by_mode,
         "human_review_required": human_review_required,
         "recommended_followups": followups,
+        "invalid_evaluations_by_mode": invalid_evaluations_by_mode,
+        "sandbox_runtime_failures_by_mode": sandbox_runtime_failures_by_mode,
         "continuation_comparison": _continuation_comparison(mode_results),
         "post_score_reference_by_mode": post_score_reference_by_mode,
         "contract_assessment_by_mode": contract_assessment_by_mode,
         "claim_gate": {
-            "status": "full-completion-blocked" if blocking_modes else "primary-evaluation",
+            "status": claim_gate_status,
             "blocking_modes": blocking_modes,
+            "invalid_modes": sorted(invalid_evaluations_by_mode),
+            "sandbox_failure_modes": sorted(sandbox_runtime_failures_by_mode),
             "contract_present": bool(isinstance(episode, dict) and episode.get("evaluation_contract")),
             "rule": (
                 "Episode evaluation contracts downgrade full-completion claims when configured mistake classes appear; "
@@ -797,6 +923,18 @@ def run_episode(
             final_message = str(result.get("final_message") or result.get("stdout") or "")
             if final_message.strip():
                 prior_context.append(f"{phase['id']} final message:\n{final_message.strip()}")
+            checkpoint = {
+                "transcript_path": str(phase_transcript),
+                "share_path": str(phase_share),
+                "repo_path": str(paths.repo_path),
+            }
+            sandbox_failure = _sandbox_failure_summary(
+                phase_id=str(phase["id"]),
+                sandbox_report=sandbox_report,
+                result=result,
+                artifact_capture=artifact_capture,
+                checkpoint=checkpoint,
+            )
             phase_results.append(
                 {
                     "phase_id": phase["id"],
@@ -811,16 +949,13 @@ def run_episode(
                     "preflight": preflight,
                     "sandbox": sandbox_report or {"enabled": False},
                     "artifact_capture": artifact_capture,
+                    "sandbox_failure": sandbox_failure or {"status": "absent"},
                     "result": result,
                     "mutation_summary": mutation_summary,
                     "continuation_contribution": contribution["kind"],
                     "continuation_contribution_detail": contribution,
                     "validation_results": validation_results,
-                    "checkpoint": {
-                        "transcript_path": str(phase_transcript),
-                        "share_path": str(phase_share),
-                        "repo_path": str(paths.repo_path),
-                    },
+                    "checkpoint": checkpoint,
                 }
             )
         mode_result: dict[str, Any] = {
@@ -898,6 +1033,18 @@ def run_episode(
                 evaluation_payload = {"status": "not-run"}
                 evaluation_status = "not-run"
             contract_assessment = _contract_assessment(episode=episode, evaluation_payload=evaluation_payload)
+            evaluator_checkpoint = {
+                "transcript_path": "",
+                "share_path": str(evaluator_share),
+                "repo_path": str(paths.repo_path),
+            }
+            sandbox_failure = _sandbox_failure_summary(
+                phase_id="evaluator",
+                sandbox_report=sandbox_report,
+                result=evaluator_result,
+                artifact_capture=artifact_capture,
+                checkpoint=evaluator_checkpoint,
+            )
             mode_result["evaluation"] = {
                 "status": evaluation_status,
                 "adapter_id": evaluator_adapter_id,
@@ -908,6 +1055,7 @@ def run_episode(
                 "execution_command": execution_command if execution_command != command else [],
                 "preflight": preflight,
                 "sandbox": sandbox_report or {"enabled": False},
+                "sandbox_failure": sandbox_failure or {"status": "absent"},
                 "artifact_capture": artifact_capture,
                 "result": evaluator_result,
                 "payload": evaluation_payload,
