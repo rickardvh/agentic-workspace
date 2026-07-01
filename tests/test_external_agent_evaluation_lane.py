@@ -887,9 +887,17 @@ def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_uris(
         for item in source_wheelhouse.iterdir():
             (target_wheelhouse / item.name).write_text(item.read_text(encoding="utf-8"), encoding="utf-8")
 
+    def fake_host_file_url(path: Path) -> str:
+        return f"file:///{'C:'}/awlh/wheelhouse/{path.name}"
+
+    def fake_sandbox_file_url(path: Path) -> str:
+        return module._windows_host_path_as_sandbox_file_url(f"{'C:'}/awlh/wheelhouse/{path.name}")
+
     monkeypatch.setattr(module.os, "name", "nt")
     monkeypatch.setattr(module, "_local_aw_version", lambda: "1.2.3")
     monkeypatch.setattr(module, "_patch_local_aw_wheelhouse", fake_patch)
+    monkeypatch.setattr(module, "_host_file_url", fake_host_file_url)
+    monkeypatch.setattr(module, "_sandbox_file_url", fake_sandbox_file_url)
 
     dependencies = module._fixture_local_wheel_dependencies(
         repo_path=tmp_path / "repo",
@@ -900,10 +908,19 @@ def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_uris(
     assert len(dependencies) == 2
     assert "sys_platform == 'win32'" in dependencies[0]
     assert "sys_platform != 'win32'" in dependencies[1]
-    assert "file:///" in dependencies[0]
-    assert "file:///c/" in dependencies[1].lower()
-    assert patched_urls[0].startswith("file:///")
+    assert f"file:///{'C:'}/awlh/wheelhouse/agentic_workspace-1.2.3-py3-none-any.whl" in dependencies[0]
+    assert "file:///c/awlh/wheelhouse/agentic_workspace-1.2.3-py3-none-any.whl" in dependencies[1]
+    assert patched_urls[0] == "file:///C:/awlh/wheelhouse/host"
     assert patched_urls[1].lower().startswith("file:///c/")
+
+
+def test_model_cli_harness_windows_host_sandbox_file_url_requires_drive_path() -> None:
+    module = _load_harness_module()
+
+    assert module._windows_host_path_as_sandbox_file_url("C:" + r"\awlh\repo\wheelhouse") == "file:///c/awlh/repo/wheelhouse"
+    assert module._windows_host_path_as_sandbox_file_url("D:" + "/runs/wheelhouse") == "file:///d/runs/wheelhouse"
+    with pytest.raises(ValueError, match="drive-qualified Windows host path"):
+        module._windows_host_path_as_sandbox_file_url("/" + "tmp/runs/wheelhouse")
 
 
 def test_model_cli_harness_prompt_file_transport_uses_absolute_path(

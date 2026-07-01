@@ -440,12 +440,16 @@ def _build_local_aw_wheelhouse(output_root: Path) -> Path:
 def _sandbox_file_url(path: Path) -> str:
     resolved = path.resolve()
     if os.name == "nt":
-        rendered = resolved.as_posix()
-        drive_match = re.match(r"^([A-Za-z]):/(.*)$", rendered)
-        if drive_match:
-            rendered = f"/{drive_match.group(1).lower()}/{drive_match.group(2)}"
-        return "file://" + rendered
+        return _windows_host_path_as_sandbox_file_url(resolved.as_posix())
     return resolved.as_uri()
+
+
+def _windows_host_path_as_sandbox_file_url(path: str) -> str:
+    rendered = path.replace("\\", "/")
+    drive_match = re.match(r"^([A-Za-z]):/(.*)$", rendered)
+    if not drive_match:
+        raise ValueError(f"expected a drive-qualified Windows host path for Docker sandbox file URL: {path}")
+    return f"file:///{drive_match.group(1).lower()}/{drive_match.group(2)}"
 
 
 def _host_file_url(path: Path) -> str:
