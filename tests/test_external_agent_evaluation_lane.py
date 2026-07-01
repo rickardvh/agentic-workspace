@@ -7,6 +7,7 @@ import posixpath
 import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -872,8 +873,11 @@ def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tm
     monkeypatch.setattr(module, "_build_local_aw_wheelhouse", lambda output_root: wheelhouse)
     monkeypatch.setattr(
         module,
-        "_fixture_local_wheel_dependencies",
-        lambda *, repo_path, source_wheelhouse, adapter: ["agentic-workspace @ file:///fixture-wheelhouse/agentic_workspace.whl"],
+        "_fixture_local_wheel_metadata",
+        lambda *, repo_path, source_wheelhouse, adapter: (
+            ["agentic-workspace"],
+            {"agentic-workspace": {"path": "fixture-wheelhouse/agentic_workspace.whl"}},
+        ),
     )
 
     payload = module.run_suite(
@@ -888,7 +892,10 @@ def test_model_cli_harness_local_wheelhouse_mode_overrides_release_dependency(tm
     )
 
     pyproject_text = (Path(payload["results"][0]["repo_path"]) / "pyproject.toml").read_text(encoding="utf-8")
+    pyproject = tomllib.loads(pyproject_text)
     assert "fixture-wheelhouse/agentic_workspace.whl" in pyproject_text
+    assert pyproject["project"]["dependencies"] == ["agentic-workspace"]
+    assert pyproject["tool"]["uv"]["sources"]["agentic-workspace"]["path"] == "fixture-wheelhouse/agentic_workspace.whl"
     assert "releases/download/v0.4.3" not in pyproject_text
 
 
@@ -920,17 +927,25 @@ def test_model_cli_harness_local_wheelhouse_windows_docker_uses_platform_uris(
     monkeypatch.setattr(module, "_host_file_url", fake_host_file_url)
     monkeypatch.setattr(module, "_sandbox_file_url", fake_sandbox_file_url)
 
-    dependencies = module._fixture_local_wheel_dependencies(
+    dependencies, uv_sources = module._fixture_local_wheel_metadata(
         repo_path=tmp_path / "repo",
         source_wheelhouse=source,
         adapter={"sandbox": {"backend": "docker-sandbox"}},
     )
 
-    assert len(dependencies) == 2
-    assert "sys_platform == 'win32'" in dependencies[0]
-    assert "sys_platform != 'win32'" in dependencies[1]
-    assert f"file:///{'C:'}/awlh/wheelhouse/agentic_workspace-1.2.3-py3-none-any.whl" in dependencies[0]
-    assert "file:///c/awlh/wheelhouse/agentic_workspace-1.2.3-py3-none-any.whl" in dependencies[1]
+    assert dependencies == ["agentic-workspace"]
+    assert uv_sources == {
+        "agentic-workspace": [
+            {
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/host/agentic_workspace-1.2.3-py3-none-any.whl",
+                "marker": "sys_platform == 'win32'",
+            },
+            {
+                "path": ".agentic-workspace/local/model-cli-harness/wheelhouse/sandbox/agentic_workspace-1.2.3-py3-none-any.whl",
+                "marker": "sys_platform != 'win32'",
+            },
+        ]
+    }
     assert patched_urls[0] == "file:///C:/awlh/wheelhouse/host"
     assert patched_urls[1].lower().startswith("file:///c/")
 

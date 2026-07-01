@@ -236,6 +236,7 @@ def _bootstrap_aw_mode(
     *,
     dependency_specs: list[str] | None = None,
     source_checkout_path: str | None = None,
+    uv_sources: dict[str, Any] | None = None,
 ) -> None:
     source_workspace = AW_MODE_FIXTURE / ".agentic-workspace"
     target_workspace = repo_path / ".agentic-workspace"
@@ -253,6 +254,7 @@ def _bootstrap_aw_mode(
         repo_path,
         dependency_specs=dependency_specs,
         source_checkout_path=source_checkout_path,
+        uv_sources=uv_sources,
     )
 
 
@@ -283,10 +285,10 @@ def _prepare_mode_repo(
     local_aw_wheelhouse: Path | None = None,
     source_checkout_path: str | None = None,
 ) -> dict[str, Any]:
-    def effective_dependency_specs(repo_path: Path) -> list[str] | None:
+    def effective_dependency_config(repo_path: Path) -> tuple[list[str] | None, dict[str, Any] | None]:
         if local_aw_wheelhouse is None or adapter is None:
-            return dependency_specs
-        return harness._fixture_local_wheel_dependencies(
+            return dependency_specs, None
+        return harness._fixture_local_wheel_metadata(
             repo_path=repo_path,
             source_wheelhouse=local_aw_wheelhouse,
             adapter=adapter,
@@ -320,19 +322,21 @@ def _prepare_mode_repo(
         if not fixture_path.exists():
             raise FileNotFoundError(f"fixture not found: {fixture}")
         shutil.copytree(fixture_path, paths.repo_path)
-        prepared_dependency_specs = effective_dependency_specs(paths.repo_path)
+        prepared_dependency_specs, prepared_uv_sources = effective_dependency_config(paths.repo_path)
         if mode.get("aw_enabled"):
             setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
             _bootstrap_aw_mode(
                 paths.repo_path,
                 dependency_specs=prepared_dependency_specs,
                 source_checkout_path=source_checkout_path,
+                uv_sources=prepared_uv_sources,
             )
         else:
             harness._prepare_source_checkout_invocation(
                 paths.repo_path,
                 dependency_specs=prepared_dependency_specs,
                 source_checkout_path=source_checkout_path,
+                uv_sources=prepared_uv_sources,
             )
         return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
     repo_url = mode.get("repo_url")
@@ -342,19 +346,21 @@ def _prepare_mode_repo(
     if not execute:
         paths.repo_path.mkdir(parents=True)
         (paths.repo_path / "PINNED-REPO.txt").write_text(f"{repo_url}\n{base_commit}\n", encoding="utf-8")
-        prepared_dependency_specs = effective_dependency_specs(paths.repo_path)
+        prepared_dependency_specs, prepared_uv_sources = effective_dependency_config(paths.repo_path)
         if mode.get("aw_enabled"):
             setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
             _bootstrap_aw_mode(
                 paths.repo_path,
                 dependency_specs=prepared_dependency_specs,
                 source_checkout_path=source_checkout_path,
+                uv_sources=prepared_uv_sources,
             )
         else:
             harness._prepare_source_checkout_invocation(
                 paths.repo_path,
                 dependency_specs=prepared_dependency_specs,
                 source_checkout_path=source_checkout_path,
+                uv_sources=prepared_uv_sources,
             )
         return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
     preflight_windows_clone_path(repo_url=repo_url)
@@ -364,19 +370,21 @@ def _prepare_mode_repo(
     checkout = harness._run_command(["git", "checkout", base_commit], cwd=paths.repo_path, timeout_seconds=120)
     if checkout["returncode"] != 0:
         raise RuntimeError(f"git checkout failed for {base_commit}: {checkout['stderr']}")
-    prepared_dependency_specs = effective_dependency_specs(paths.repo_path)
+    prepared_dependency_specs, prepared_uv_sources = effective_dependency_config(paths.repo_path)
     if mode.get("aw_enabled"):
         setup_before = harness._file_snapshot(paths.repo_path, include_ignored=True)
         _bootstrap_aw_mode(
             paths.repo_path,
             dependency_specs=prepared_dependency_specs,
             source_checkout_path=source_checkout_path,
+            uv_sources=prepared_uv_sources,
         )
     else:
         harness._prepare_source_checkout_invocation(
             paths.repo_path,
             dependency_specs=prepared_dependency_specs,
             source_checkout_path=source_checkout_path,
+            uv_sources=prepared_uv_sources,
         )
     return _setup_mutation_summary(setup_before=setup_before, repo_path=paths.repo_path)
 
@@ -453,12 +461,52 @@ def _phase_prompt(*, episode: dict[str, Any], mode: dict[str, Any], phase: dict[
         f"Mode: {mode['id']}.",
         str(phase["prompt"]).strip(),
     ]
+    proof_guidance = _agent_facing_proof_guidance(episode)
+    if proof_guidance:
+        prompt_parts.append(proof_guidance)
     include_prior = bool(prior_context) and not bool(phase.get("hide_transcript_for_resume"))
     if include_prior:
         prompt_parts.append("Prior phase context:\n" + "\n\n".join(prior_context))
     elif prior_context:
         prompt_parts.append("Resume from repository state only. Do not assume prior chat history.")
     return "\n\n".join(prompt_parts) + "\n", include_prior
+
+
+def _agent_facing_proof_guidance(episode: dict[str, Any]) -> str:
+    guidance: dict[str, Any] = {"kind": "agentic-workspace/long-horizon-agent-proof-guidance/v1"}
+    rubric = episode.get("rubric")
+    if isinstance(rubric, dict):
+        for key in ("intent_satisfied", "proof_required", "closeout_expectation"):
+            value = str(rubric.get(key) or "").strip()
+            if value:
+                guidance[key] = value
+    contract = episode.get("evaluation_contract")
+    if isinstance(contract, dict):
+        for key in ("agent_facing_claim_boundary", "required_reconciliation"):
+            value = contract.get(key)
+            if isinstance(value, str) and value.strip():
+                guidance[key] = value.strip()
+            elif isinstance(value, list):
+                values = [str(item).strip() for item in value if str(item).strip()]
+                if values:
+                    guidance[key] = values
+        blocked = contract.get("blocked_full_completion_when")
+        if isinstance(blocked, list):
+            guidance["blocked_full_completion_when"] = [
+                {
+                    "mistake_class": str(item.get("mistake_class", "")).strip(),
+                    "reason": str(item.get("reason", "")).strip(),
+                }
+                for item in blocked
+                if isinstance(item, dict) and str(item.get("mistake_class", "")).strip()
+            ]
+    if len(guidance) == 1:
+        return ""
+    return (
+        "Completion and proof guidance for this episode:\n"
+        + json.dumps(guidance, indent=2, sort_keys=True)
+        + "\nUse this guidance when deciding whether visible validation is enough for a full completion claim."
+    )
 
 
 def _effective_phase(*, phase: dict[str, Any], mode: dict[str, Any]) -> dict[str, Any]:
