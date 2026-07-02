@@ -676,7 +676,7 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
         },
         "recommended_confidence_checks": {
             "status": recommended.get("status", "unknown"),
-            "commands": recommended.get("commands", []),
+            **({"commands": recommended.get("commands", [])} if required_commands is None else {}),
             "rule": recommended.get("rule", ""),
         },
         "completion_claim_rule": value.get("completion_claim_rule", ""),

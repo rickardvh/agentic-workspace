@@ -1006,7 +1006,7 @@ def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, An
         }
         for item in value.get("suggested_updates", [])
         if isinstance(item, dict)
-    ][:3]
+    ][:1]
     return {
         "kind": value.get("kind", "proof-route-maintenance/v1"),
         "status": value.get("status", "unknown"),
@@ -1024,11 +1024,19 @@ def _implement_tiny_proof_narrowness_payload(value: Any) -> dict[str, Any]:
     packet = value if isinstance(value, dict) else {}
     if not _include_tiny_proof_narrowness(packet):
         return {}
+    compact = {"status": packet.get("status", "unknown")}
     if packet.get("status") == "broad_required":
-        return {}
-    return {
-        "status": packet.get("status", "unknown"),
-    }
+        raw_triggers = packet.get("expansion_triggers")
+        expansion_triggers: list[Any] = raw_triggers if isinstance(raw_triggers, list) else []
+        first_trigger = next((item for item in expansion_triggers if isinstance(item, dict) and item.get("lane")), {})
+        boundary = _as_dict(packet.get("broad_suite_boundary"))
+        compact.update(
+            {
+                "expansion_trigger_lane": str(first_trigger.get("lane", "")) if first_trigger else "",
+                "broad_suite_boundary_status": str(boundary.get("status", "")),
+            }
+        )
+    return {key: payload for key, payload in compact.items() if payload not in ("", [], {}, None)}
 
 
 def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
