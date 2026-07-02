@@ -381,6 +381,71 @@ proof = [
     )
 
 
+def test_implement_compact_surfaces_proof_narrowness_before_validation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / "Makefile",
+        "test-planning:\n\t@echo ok\nlint-planning:\n\t@echo ok\ntypecheck-planning:\n\t@echo ok\n",
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--task",
+                "Update planning package installer",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    narrowness = payload["proof"]["proof_narrowness"]
+    assert narrowness["status"] == "narrow_required"
+
+
+def test_implement_compact_surfaces_broad_proof_narrowness_before_validation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(tmp_path / "Makefile", "test-workspace:\n\t@echo ok\nlint-workspace:\n\t@echo ok\n")
+    _write(tmp_path / "scripts" / "run_agentic_workspace.py", "print('ok')\n")
+    _write(tmp_path / "scripts" / "check" / "check_generated_command_packages.py", "print('ok')\n")
+    _write(tmp_path / "scripts" / "check" / "run_operation_conformance_tests.py", "print('ok')\n")
+    _write(tmp_path / "tests" / "test_workspace_cli.py", "def test_ok():\n    assert True\n")
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/workspace/python/cli.py",
+                "--task",
+                "Update generated workspace CLI projection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    narrowness = payload["proof"]["proof_narrowness"]
+    assert narrowness["status"] == "broad_required"
+    assert narrowness["broad_suite_boundary_status"] == "required_acceptance_boundary"
+    assert narrowness["expansion_trigger_lane"] in {"workspace_cli", "generated_command_packages"}
+
+
 def test_operating_loop_schema_rejects_unknown_enum_values() -> None:
     schema_path = Path("src/agentic_workspace/contracts/schemas/implementer_context.schema.json")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))

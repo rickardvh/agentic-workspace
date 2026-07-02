@@ -75,6 +75,14 @@
       },
       "description": "Optional proof-kind classifications keyed by validation lane id."
     },
+    "broad_acceptance_lanes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Validation lane whose selected commands are broad proof for the current acceptance boundary."
+      },
+      "description": "Lanes where broad proof is required when selected, even if the lane remains a targeted-test kind."
+    },
     "docs_only_reducer": {
       "type": "object",
       "required": [

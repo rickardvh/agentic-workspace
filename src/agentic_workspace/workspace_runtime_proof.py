@@ -162,6 +162,39 @@ def _compact_tiny_intent_proof(intent_proof: Any) -> dict[str, Any]:
     return compact
 
 
+def _compact_tiny_proof_narrowness(value: Any) -> dict[str, Any]:
+    packet = value if isinstance(value, dict) else {}
+    if not packet:
+        return {}
+    required_items = [item for item in _list_payload(packet.get("required")) if isinstance(item, dict)]
+    trigger_items = [item for item in _list_payload(packet.get("expansion_triggers")) if isinstance(item, dict)]
+    first_required = required_items[0] if required_items else {}
+    first_trigger = trigger_items[0] if trigger_items else {}
+    compact = {
+        "status": packet.get("status", "unknown"),
+        "expansion_trigger_lane": str(first_trigger.get("lane", "")) if first_trigger.get("lane") else "",
+        "broad_suite_boundary_status": _as_dict(packet.get("broad_suite_boundary")).get("status", ""),
+    }
+    if first_required and packet.get("status") != "broad_required":
+        compact["required_reason_sample"] = {
+            "why_required": str(first_required.get("why_required", "")),
+            "acceptance_boundary": first_required.get("acceptance_boundary", True),
+        }
+    return {key: payload for key, payload in compact.items() if payload not in ("", [], {}, None)}
+
+
+def _include_tiny_proof_narrowness(value: Any) -> bool:
+    packet = value if isinstance(value, dict) else {}
+    status = str(packet.get("status", ""))
+    if status == "broad_required":
+        return True
+    if status != "narrow_required":
+        return False
+    return any(
+        isinstance(item, dict) and str(item.get("proof_kind", "")) != "diff-review" for item in _list_payload(packet.get("required"))
+    )
+
+
 def _compact_tiny_high_risk_overlay(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict) or value.get("status") != "active":
         return {}
@@ -233,6 +266,12 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
             )
             if include_intent_proof:
                 next_decision["intent_proof"] = _compact_tiny_intent_proof(answer["intent_proof"])
+            raw_proof_narrowness = answer.get("proof_narrowness")
+            proof_narrowness = (
+                _compact_tiny_proof_narrowness(raw_proof_narrowness) if _include_tiny_proof_narrowness(raw_proof_narrowness) else {}
+            )
+            if proof_narrowness:
+                next_decision["proof_narrowness"] = proof_narrowness
             local_overlay = _compact_tiny_local_overlay(answer.get("local_overlay"))
             if local_overlay:
                 next_decision["local_overlay"] = local_overlay
@@ -277,6 +316,13 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
             },
             "required_commands": required_commands,
             **({"intent_proof": _compact_tiny_intent_proof(answer["intent_proof"])} if include_intent_proof else {}),
+            **(
+                {"proof_narrowness": _compact_tiny_proof_narrowness(answer.get("proof_narrowness"))}
+                if isinstance(answer, dict)
+                and answer.get("proof_narrowness")
+                and _include_tiny_proof_narrowness(answer.get("proof_narrowness"))
+                else {}
+            ),
             **({"local_overlay": local_overlay} if local_overlay else {}),
             **({"high_risk_overlay": high_risk_overlay} if high_risk_overlay else {}),
             **(
@@ -630,7 +676,7 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
         },
         "recommended_confidence_checks": {
             "status": recommended.get("status", "unknown"),
-            "commands": recommended.get("commands", []),
+            **({"commands": recommended.get("commands", [])} if required_commands is None else {}),
             "rule": recommended.get("rule", ""),
         },
         "completion_claim_rule": value.get("completion_claim_rule", ""),
@@ -1889,6 +1935,120 @@ def _proof_obligations_payload(
     }
 
 
+def _lane_activation_summary(lane: dict[str, Any]) -> str:
+    applies_because = _list_payload(lane.get("applies_because"))
+    if applies_because:
+        return str(applies_because[0])
+    when = _list_payload(lane.get("when"))
+    if when:
+        return str(when[0])
+    matched_paths = _list_payload(lane.get("matched_paths"))
+    if matched_paths:
+        return "changed path matched " + ", ".join(str(path) for path in matched_paths[:3])
+    return "selected by changed-path proof routing"
+
+
+def _proof_narrowness_payload(
+    *,
+    selected_lanes: list[dict[str, Any]],
+    selected_commands: list[dict[str, Any]],
+    required_commands: list[str],
+    optional_commands: list[str],
+    broaden_when: list[str],
+    escalate_when: list[str],
+    manual_verification: dict[str, Any] | None,
+) -> dict[str, Any]:
+    lane_by_id = {str(lane.get("id", "")): lane for lane in selected_lanes}
+    broad_acceptance_lanes = {str(lane_id) for lane_id in _list_payload(_PROOF_SELECTION_RULES.get("broad_acceptance_lanes"))}
+    command_tiers = _proof_command_tiers(selected_commands=selected_commands, required_commands=required_commands)
+    tier_by_command = {
+        str(item.get("command", "")): str(tier.get("id", ""))
+        for tier in _list_payload(command_tiers.get("tiers"))
+        if isinstance(tier, dict)
+        for item in _list_payload(tier.get("commands"))
+        if isinstance(item, dict)
+    }
+    required: list[dict[str, Any]] = []
+    for command in selected_commands:
+        command_text = str(command.get("command", ""))
+        if command_text not in required_commands:
+            continue
+        lane_id = str(command.get("lane", ""))
+        lane = lane_by_id.get(lane_id, {})
+        proof_kind = str(lane.get("proof_kind") or command.get("proof_kind") or "")
+        command_tier = tier_by_command.get(command_text, "")
+        required.append(
+            {
+                "command": command_text,
+                "lane": lane_id,
+                "proof_kind": proof_kind,
+                "command_tier": command_tier,
+                "why_required": _lane_activation_summary(lane),
+                "authority": str(command.get("route_authority") or command.get("selected_from") or "proof-route-selection"),
+                "acceptance_boundary": True,
+                "claim_boundary": "Required proof must pass or be explicitly reconciled before completion is claimed.",
+            }
+        )
+    optional = [
+        {
+            "command": str(command),
+            "why_optional": "Confidence or orientation check; not selected as the completion proof gate for these changed paths.",
+            "acceptance_boundary": False,
+        }
+        for command in optional_commands
+    ]
+    expansion_triggers: list[dict[str, Any]] = []
+    for lane in selected_lanes:
+        lane_id = str(lane.get("id", ""))
+        proof_kind = str(lane.get("proof_kind", ""))
+        if proof_kind == "full-test" or lane_id in broad_acceptance_lanes:
+            expansion_triggers.append(
+                {
+                    "trigger": "selected lane requires broad proof",
+                    "lane": lane_id,
+                    "why": _lane_activation_summary(lane),
+                    "effect": "broad proof is part of required_commands, not optional confidence",
+                }
+            )
+    for condition in broaden_when:
+        expansion_triggers.append({"trigger": "broaden_when", "why": str(condition), "effect": "broaden proof before closeout"})
+    for condition in escalate_when:
+        expansion_triggers.append({"trigger": "escalate_when", "why": str(condition), "effect": "escalate proof or review before closeout"})
+    broad_required = (
+        any(item.get("proof_kind") == "full-test" for item in required)
+        or any(item.get("command_tier") in {"generated_contract", "environmental"} for item in required)
+        or any(item.get("lane") in broad_acceptance_lanes for item in required)
+    )
+    if manual_verification is not None and not required_commands:
+        status = "manual_required"
+    elif broad_required:
+        status = "broad_required"
+    elif required_commands:
+        status = "narrow_required"
+    else:
+        status = "no_required_proof"
+    return {
+        "kind": "agentic-workspace/proof-narrowness/v1",
+        "status": status,
+        "required_command_count": len(required_commands),
+        "required": required,
+        "optional_confidence_check_count": len(optional_commands),
+        "optional_confidence_checks": optional,
+        "expansion_triggers": expansion_triggers,
+        "broad_suite_boundary": {
+            "status": "required_acceptance_boundary" if broad_required else "not_required_acceptance_boundary",
+            "rule": (
+                "Broad suite results are part of the acceptance boundary only when selected as required proof before validation runs; "
+                "otherwise they are confidence evidence the final report may mention without treating them as required."
+            ),
+        },
+        "final_report_rule": (
+            "Report required proof as the acceptance boundary. Report optional checks as confidence or residue unless a visible trigger "
+            "promoted them to required proof before they ran."
+        ),
+    }
+
+
 def _host_domain_proof_lanes_for_changed_paths(
     *,
     config: WorkspaceConfig | None,
@@ -3002,6 +3162,15 @@ def _proof_selection_for_changed_paths(
         )
         for command in optional_commands
     ]
+    proof_narrowness = _proof_narrowness_payload(
+        selected_lanes=selected_lanes,
+        selected_commands=selected_commands,
+        required_commands=required_commands,
+        optional_commands=optional_commands,
+        broaden_when=broaden_when,
+        escalate_when=escalate_when,
+        manual_verification=manual_verification,
+    )
     proof_obligations = _proof_obligations_payload(
         required_commands=required_commands,
         optional_commands=optional_commands,
@@ -3138,6 +3307,7 @@ def _proof_selection_for_changed_paths(
         "legacy_aliases": {"proof_route_decision": "proof_route_selection"},
         "proof_next_decision": proof_next_decision,
         "proof_command_tiers": _proof_command_tiers(selected_commands=selected_commands, required_commands=required_commands),
+        "proof_narrowness": proof_narrowness,
         "proof_obligations": proof_obligations,
         "transient_validation_retry": _transient_validation_retry_guidance(required_commands=required_commands),
         "tiny_surface_compatibility_review": _tiny_surface_compatibility_review(changed_paths),

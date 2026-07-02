@@ -118,6 +118,7 @@ from agentic_workspace.workspace_runtime_planning import (
     _planning_safety_gate_payload,
 )
 from agentic_workspace.workspace_runtime_proof import (
+    _include_tiny_proof_narrowness,
     _proof_selection_for_changed_paths,
     _tiny_proof_obligations_payload,
     _verification_report_payload,
@@ -1005,7 +1006,7 @@ def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, An
         }
         for item in value.get("suggested_updates", [])
         if isinstance(item, dict)
-    ][:3]
+    ][:1]
     return {
         "kind": value.get("kind", "proof-route-maintenance/v1"),
         "status": value.get("status", "unknown"),
@@ -1017,6 +1018,25 @@ def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, An
         "sample_suggested_updates": suggestions,
         "closeout_rule": value.get("closeout_rule", ""),
     }
+
+
+def _implement_tiny_proof_narrowness_payload(value: Any) -> dict[str, Any]:
+    packet = value if isinstance(value, dict) else {}
+    if not _include_tiny_proof_narrowness(packet):
+        return {}
+    compact = {"status": packet.get("status", "unknown")}
+    if packet.get("status") == "broad_required":
+        raw_triggers = packet.get("expansion_triggers")
+        expansion_triggers: list[Any] = raw_triggers if isinstance(raw_triggers, list) else []
+        first_trigger = next((item for item in expansion_triggers if isinstance(item, dict) and item.get("lane")), {})
+        boundary = _as_dict(packet.get("broad_suite_boundary"))
+        compact.update(
+            {
+                "expansion_trigger_lane": str(first_trigger.get("lane", "")) if first_trigger else "",
+                "broad_suite_boundary_status": str(boundary.get("status", "")),
+            }
+        )
+    return {key: payload for key, payload in compact.items() if payload not in ("", [], {}, None)}
 
 
 def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -1242,6 +1262,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
             )
             if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("proof_obligations"), dict)
+            else {},
+            "proof_narrowness": _implement_tiny_proof_narrowness_payload(payload.get("proof", {}).get("proof_narrowness", {}))
+            if isinstance(payload.get("proof"), dict)
             else {},
             "proof_route_maintenance": _tiny_proof_route_maintenance_payload(payload.get("proof", {}).get("proof_route_maintenance", {}))
             if isinstance(payload.get("proof"), dict)
@@ -1558,6 +1581,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     generated_cli_freshness = projected["proof"].get("generated_cli_freshness", {})
     if not (isinstance(generated_cli_freshness, dict) and generated_cli_freshness.get("kind")):
         projected["proof"].pop("generated_cli_freshness", None)
+    proof_narrowness = projected["proof"].get("proof_narrowness", {})
+    if not (isinstance(proof_narrowness, dict) and proof_narrowness.get("status")):
+        projected["proof"].pop("proof_narrowness", None)
     runtime_source_review = projected["proof"].get("runtime_source_edit_review", {})
     if not (
         isinstance(runtime_source_review, dict)

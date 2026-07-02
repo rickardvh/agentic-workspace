@@ -15,6 +15,7 @@ Rules for selecting validation lanes from changed paths and task scope.
 | `rules` | array of object | yes |  | Policy rules that explain this contract behavior. |  |  |
 | `lane_proof_kinds` | object | no |  | Optional proof-kind classifications keyed by validation lane id. |  |  |
 | `lane_proof_kinds.<name>` | enum `"diff-review"`, `"surface-check"`, `"targeted-test"`, `"full-test"` | no |  | Proof kind for one validation lane. |  |  |
+| `broad_acceptance_lanes` | array of string | no |  | Lanes where broad proof is required when selected, even if the lane remains a targeted-test kind. |  |  |
 | `docs_only_reducer` | object | no |  | Second-stage classifier that can downgrade docs-only path-prefix matches to review proof. |  |  |
 | `docs_only_reducer.lane` | string | yes |  | Lane to use after reducing an eligible docs-only match. |  |  |
 | `docs_only_reducer.source_lanes` | array of string | yes |  | Matched lanes that may be reduced when the changed path is docs-only. |  |  |
