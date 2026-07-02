@@ -783,6 +783,7 @@ def _start_payload(
             reason=planning_safety_gate["reason"],
             required_next_action=planning_safety_gate["required_next_action"],
             evidence_required=["active planning ownership evidence"],
+            hard_gate=True,
         )
         payload["immediate_next_allowed_action"] = {
             "action": planning_safety_gate["required_next_action"],

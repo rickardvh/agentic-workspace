@@ -3353,8 +3353,12 @@ def test_implement_task_allows_narrow_single_issue_context(tmp_path: Path, capsy
 
     payload = json.loads(capsys.readouterr().out)
     assert "task_routing" not in payload
+    assert payload["workflow_sufficiency"]["decision_maturity"]["level"] == "evidence_seeking"
+    assert payload["workflow_sufficiency"]["decision_maturity"]["missing_evidence"] == ["changed paths"]
     assert payload["planning_safety_gate"]["status"] == "attention"
     assert payload["planning_safety_gate"]["gate_result"] == "external-issue-scope-unknown"
+    assert payload["planning_safety_gate"]["decision_maturity"]["level"] == "evidence_seeking"
+    assert payload["planning_safety_gate"]["decision_maturity"]["missing_evidence"] == ["external issue intent evidence"]
     assert payload["planning_safety_gate"]["implementation_allowed"] is True
     assert payload["planning_safety_gate"]["issue_scope_evidence"]["missing_issue_refs"] == ["#424"]
     assert payload["planning_safety_gate"]["work_shape_guidance"]["scope_factors"]["issue_refs"] == ["#424"]
@@ -4701,7 +4705,14 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
 
     payload = json.loads(capsys.readouterr().out)
     assert "architecture_principles=1" in payload["action_signals"]["changed_signals"]
-    assert payload["context"]["absence_states"]["architecture_principles"] == "hidden_behind_detail_route"
+    assert payload["context"]["absence_states"]["architecture_principles"] == "present"
+    compact_packet = payload["context"]["architecture_principles"]
+    assert compact_packet["matched_count"] == 1
+    compact_principle = compact_packet["matched_principles"][0]
+    assert compact_principle["guardrails"][0]["id"] == "non-enum-keyword-routing"
+    assert "explicit structured facts" in compact_principle["allowed_sources"]
+    assert "package-owned assumptions about prose keywords" in compact_principle["forbidden_sources"]
+    assert "routing" in compact_principle["affected_decisions"]
     assert (
         cli.main(
             [
@@ -4767,6 +4778,27 @@ def test_implement_architecture_principle_uses_structured_path_not_task_keywords
     assert packet["status"] == "clear"
     assert packet["matched_count"] == 0
     assert packet["matched_principles"] == []
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Avoid keyword routing and non-enum marker phrases in workflow ownership",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    tiny_payload = json.loads(capsys.readouterr().out)
+    assert "architecture_principles" not in tiny_payload["context"]
+    assert tiny_payload["context"]["absence_states"]["architecture_principles"] == "hidden_behind_detail_route"
 
 
 def test_implement_architecture_principle_selector_reports_multiple_matches(tmp_path: Path, capsys) -> None:

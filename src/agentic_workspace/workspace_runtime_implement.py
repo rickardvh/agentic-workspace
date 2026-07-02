@@ -713,6 +713,7 @@ def _implement_payload(
             else ["proof execution evidence before closeout"]
             if normalized_paths
             else ["changed paths"],
+            hard_gate=not planning_safety_gate["workflow_sufficient"],
         ),
         "adaptive_routing": _adaptive_routing_payload(
             surface="implement",
@@ -1511,15 +1512,15 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         remove_available_selector("context.intent_satisfaction_matrix")
     tiny_context = projected.get("context", {})
     if isinstance(tiny_context, dict):
-        tiny_context["absence_states"] = {
+        absence_states = {
             **_as_dict(tiny_context.get("absence_states")),
             "adaptive_routing": "detail_omitted",
             "architecture_principles": "hidden_behind_detail_route",
             "work_shape_guidance": "detail_omitted",
         }
+        tiny_context["absence_states"] = absence_states
         tiny_context.pop("adaptive_routing", None)
         tiny_context.pop("guidance", None)
-        tiny_context.pop("architecture_principles", None)
         parent_packet = tiny_context.get("parent_intent_status", {})
         parent_status = str(parent_packet.get("status") or "").strip() if isinstance(parent_packet, dict) else ""
         if parent_status in {"", "guidance-only", "not-recorded", "needs-planning"}:
@@ -1543,6 +1544,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     advisory_selectors = advisory_detail.get("selectors", [])
                     if isinstance(advisory_selectors, list):
                         advisory_detail["selectors"] = [item for item in advisory_selectors if item != "architecture_principles"]
+        else:
+            absence_states["architecture_principles"] = "present"
     generated_surface_trust = payload.get("generated_surface_trust", {})
     if isinstance(generated_surface_trust, dict) and generated_surface_trust.get("status") == "present":
         projected["generated_surface_trust"] = _tiny_generated_surface_trust(generated_surface_trust)

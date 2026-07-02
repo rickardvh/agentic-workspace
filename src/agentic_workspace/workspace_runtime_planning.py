@@ -29,6 +29,7 @@ from agentic_workspace.workspace_runtime_core import (
     _candidate_with_canonical_route,
     _capability_structural_hints,
     _command_with_expected_planning_revision,
+    _decision_maturity_payload,
     _emit_payload,
     _ensure_external_intent_cache_if_available,
     _external_intent_status_by_ref,
@@ -810,6 +811,14 @@ def _planning_safety_gate_payload(
         reason = "No AW-owned hard blocker was detected; the agent owns soft work-shape judgment."
         required_next_action = "continue-direct"
         workflow_sufficient = True
+    hard_gate = decision in {
+        "delegation-decision-required",
+        "parent-decomposition-decision-required",
+        "lane-owner-artifact-required",
+        "implementation-owner-missing",
+        "candidate-lane-promotion-required",
+        "planning-escalation-required",
+    }
     candidates = (
         [
             _candidate_with_canonical_route(candidate)
@@ -873,6 +882,25 @@ def _planning_safety_gate_payload(
         "decision": decision,
         "workflow_sufficient": workflow_sufficient,
         "reason": reason,
+        "decision_maturity": _decision_maturity_payload(
+            decision=decision,
+            workflow_sufficient=workflow_sufficient,
+            required_next_action=required_next_action,
+            evidence_basis=[
+                f"active_planning_present={active_planning_present}",
+                f"dirty_shape={path_classification.get('dirty_shape')}",
+                f"candidate_pressure={candidate_pressure.get('status')}",
+                f"issue_ref_count={len(issue_refs)}",
+            ],
+            missing_evidence=(
+                ["external issue intent evidence"]
+                if decision == "external-issue-scope-unknown"
+                else ["changed-path scope decision"]
+                if decision == "agent-work-shape-decision-required"
+                else []
+            ),
+            hard_gate=hard_gate,
+        ),
         "authority_boundary": authority_boundary,
         "required_next_action": required_next_action,
         "active_planning_present": active_planning_present,
