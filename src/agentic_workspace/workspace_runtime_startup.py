@@ -18,8 +18,10 @@ from agentic_workspace.reporting_support import communication_contract_payload, 
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
     _active_intent_contract_payload,
+    _active_plan_touched_scope_paths,
     _applicable_intent_status_payload,
     _apply_lane_shaping_gate_to_start_payload,
+    _architecture_principles_forecast_payload,
     _assurance_requirements_report_payload,
     _attach_start_router_fields,
     _authority_markers_for_startup,
@@ -257,6 +259,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "repo_posture": _compact_repo_posture_projection(payload.get("repo_posture", {})),
         "delegation_decision": _compact_start_delegation_decision(payload.get("delegation_decision", {})),
         **({"task_path_references": payload["task_path_references"]} if isinstance(payload.get("task_path_references"), dict) else {}),
+        **(
+            {"architecture_principles_forecast": payload["architecture_principles_forecast"]}
+            if isinstance(payload.get("architecture_principles_forecast"), dict)
+            else {}
+        ),
         **({"pre_test_evidence_guardrail": payload["pre_test_evidence_guardrail"]} if "pre_test_evidence_guardrail" in payload else {}),
         **({"pr_comment_attention": payload["pr_comment_attention"]} if isinstance(payload.get("pr_comment_attention"), dict) else {}),
         **(
@@ -724,6 +731,23 @@ def _start_payload(
     task_path_references = _task_path_reference_payload(task_text=task_text, detected_paths=task_mentioned_paths)
     if task_path_references["status"] == "present":
         payload["task_path_references"] = task_path_references
+    forecast_paths = []
+    forecast_scope_source = ""
+    if task_path_references.get("path_reference_kind") == "path-scoped-work":
+        forecast_paths = _list_payload(task_path_references.get("path_scoped_paths")) or task_mentioned_paths
+        forecast_scope_source = "task_path_references.path_scoped_paths"
+    elif active_planning_present:
+        forecast_paths = _active_plan_touched_scope_paths(active_parent_record)
+        forecast_scope_source = "active_planning_record.touched_scope"
+    if forecast_paths and not changed_paths and not _is_config_posture_task(task_text):
+        architecture_forecast = _architecture_principles_forecast_payload(
+            target_root=target_root,
+            planned_paths=forecast_paths,
+            scope_source=forecast_scope_source,
+            cli_invoke=config.cli_invoke,
+        )
+        if architecture_forecast.get("status") == "provisional-match":
+            payload["architecture_principles_forecast"] = architecture_forecast
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation
@@ -1417,6 +1441,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     task_path_references = payload.get("task_path_references", {})
     if isinstance(task_path_references, dict) and task_path_references.get("status") == "present":
         context["task_path_references"] = task_path_references
+    architecture_forecast = payload.get("architecture_principles_forecast", {})
+    if isinstance(architecture_forecast, dict) and architecture_forecast.get("status") == "provisional-match":
+        context["architecture_principles_forecast"] = architecture_forecast
     pr_comment_attention = payload.get("pr_comment_attention", {})
     if isinstance(pr_comment_attention, dict) and pr_comment_attention.get("status") not in {None, "", "not_applicable"}:
         context["pr_comment_attention"] = {
