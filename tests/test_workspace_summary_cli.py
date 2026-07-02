@@ -127,6 +127,111 @@ candidates = []
     assert loop["safe_claim"] in {"full", "partial", "blocked", "none"}
 
 
+def _closeout_report_with_installed_state(tmp_path: Path, *, changed_surfaces: str, requested_outcome: str) -> dict[str, object]:
+    config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
+    installed_state = {
+        "status": "payload-upgrade-required",
+        "action_effect": {
+            "force": "required_before_claim",
+            "resolution_command": "agentic-workspace upgrade --target . --dry-run --format json",
+            "claim_boundary": "do not claim installed payload freshness",
+        },
+    }
+    active_record = {
+        "execution_run": {
+            "what happened": "Finished the slice.",
+            "changed surfaces": changed_surfaces,
+        },
+        "delegated_judgment": {"requested outcome": requested_outcome},
+        "proof_report": {
+            "validation proof": "uv run pytest tests/test_workspace_summary_cli.py",
+            "proof achieved now": "yes",
+        },
+        "closure_check": {"closure decision": "archive-and-close"},
+    }
+    return workspace_runtime_core._derived_continuation_projection_payloads(
+        target_root=tmp_path,
+        config=config,
+        source_payload={
+            "closeout_trust": {},
+            "installed_state_compatibility": installed_state,
+            "architecture_principles": {},
+        },
+        active_planning_record=active_record,
+        assurance_requirements={},
+        verification={},
+        external_work_delta={"status": "not-evaluated"},
+        external_work_reconciliation={"status": "not-evaluated"},
+    )["closeout_report"]
+
+
+def test_closeout_report_routes_unrelated_installed_state_drift_as_residue(tmp_path: Path) -> None:
+    report = _closeout_report_with_installed_state(
+        tmp_path,
+        changed_surfaces="docs/typo.md",
+        requested_outcome="Fix one docs typo.",
+    )
+
+    residue = report["installed_state_residue"]
+    assert residue["status"] == "separate_maintenance_residue"
+    assert residue["current_task_proof_effect"] == "not_blocking_narrow_task_proof"
+    assert residue["residue"]["owner"] == "installed-payload-sync"
+    assert residue["triage"]["status"] == "waived_for_narrow_work"
+    assert report["gaps_and_residual_risk"]["installed_state_residue"]["status"] == "separate_maintenance_residue"
+
+
+def test_closeout_report_keeps_installed_state_drift_blocking_for_owned_surfaces(tmp_path: Path) -> None:
+    report = _closeout_report_with_installed_state(
+        tmp_path,
+        changed_surfaces="src/agentic_workspace/workspace_runtime_core.py",
+        requested_outcome="Verify payload freshness before release.",
+    )
+
+    residue = report["installed_state_residue"]
+    assert residue["status"] == "current_task_blocking"
+    assert residue["current_task_proof_effect"] == "blocking"
+    assert residue["triage"]["claim_relevant"] is True
+    assert residue["changed_paths_considered"] == ["src/agentic_workspace/workspace_runtime_core.py"]
+
+
+def test_closeout_report_section_reads_installed_state_residue(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_bootstrap(target=tmp_path)
+
+    def fake_installed_state_compatibility(**_: object) -> dict[str, object]:
+        return {
+            "status": "payload-upgrade-required",
+            "action_effect": {
+                "force": "required_before_claim",
+                "resolution_command": "agentic-workspace upgrade --target . --dry-run --format json",
+                "claim_boundary": "do not claim installed payload freshness",
+            },
+        }
+
+    monkeypatch.setattr(workspace_runtime_core, "_installed_state_compatibility_payload", fake_installed_state_compatibility)
+    monkeypatch.setattr(
+        workspace_runtime_core,
+        "_active_planning_record_for_report_section",
+        lambda target_root: {
+            "execution_run": {
+                "what happened": "Finished the docs slice.",
+                "changed surfaces": "docs/typo.md",
+            },
+            "delegated_judgment": {"requested outcome": "Fix one docs typo."},
+            "proof_report": {"validation proof": "uv run pytest tests/test_workspace_summary_cli.py"},
+        },
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "closeout_report", "--format", "json"]) == 0
+
+    report = json.loads(capsys.readouterr().out)["answer"]
+    residue = report["installed_state_residue"]
+    assert residue["status"] == "separate_maintenance_residue"
+    assert residue["current_task_proof_effect"] == "not_blocking_narrow_task_proof"
+    assert residue["residue"]["owner"] == "installed-payload-sync"
+
+
 def test_report_local_aw_state_classifies_ignored_policy_and_cache(tmp_path: Path, capsys) -> None:
     subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
     _write(tmp_path / ".gitignore", ".agentic-workspace/local/\n.agentic-workspace/verification/\n")
