@@ -3577,7 +3577,8 @@ def test_report_exposes_reasoning_economy_evidence_section(tmp_path: Path, capsy
         "residue_or_boundary",
         "next_action_or_closure_status",
     ]
-    assert answer["ledger_refs"] == ["PR #1955", "PR #1960", "PR #1961", "PR #1962"]
+    assert answer["ledger_refs"] == []
+    assert "PR #1955" not in json.dumps(answer)
     fixture_results = {item["id"]: item for item in answer["fixture_results"]}
     assert fixture_results["visible-closeout-artifact"]["result"] == "pass"
     assert fixture_results["tool-chronology-without-claim-boundary"]["result"] == "flag"
@@ -3594,6 +3595,42 @@ def test_report_exposes_reasoning_economy_evidence_section(tmp_path: Path, capsy
         "closeout_report",
         "handoff summary",
     ]
+    assert full["reasoning_economy"]["evidence_ledger_source"]["status"] == "absent"
+
+
+def test_report_reasoning_economy_reads_repo_owned_evidence_ledger(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    ledger_path = tmp_path / ".agentic-workspace" / "verification" / "reasoning-economy-evidence.json"
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    ledger_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/reasoning-economy-evidence-ledger/v1",
+                "owner": "test-repo",
+                "entries": [
+                    {
+                        "ref": "PR #1955",
+                        "evidence_class": "direct",
+                        "visible_artifact_signal": "Visible closeout preserved proof and residue.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "reasoning_economy", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["ledger_refs"] == ["PR #1955"]
+    assert answer["detail_selector"] == "reasoning_economy"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--verbose", "--format", "json"]) == 0
+    full = json.loads(capsys.readouterr().out)
+    source = full["reasoning_economy"]["evidence_ledger_source"]
+    assert source["status"] == "loaded"
+    assert source["path"] == ".agentic-workspace/verification/reasoning-economy-evidence.json"
+    assert full["reasoning_economy"]["evidence_ledger"][0]["ref"] == "PR #1955"
 
 
 def test_report_ordinary_agent_path_carries_lane_completion_model(tmp_path: Path, capsys) -> None:

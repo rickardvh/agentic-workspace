@@ -28,6 +28,7 @@ REPO_FRICTION_SCAN_SUFFIXES = {
 REPO_FRICTION_REGENERABLE_CACHE_PREFIXES = (".agentic-workspace/local/cache/", "scratch/")
 
 STANDING_INTENT_CANONICAL_DOC = ".agentic-workspace/docs/standing-intent-contract.md"
+REASONING_ECONOMY_EVIDENCE_LEDGER_PATH = ".agentic-workspace/verification/reasoning-economy-evidence.json"
 
 REPORT_SECTION_ALIASES = {
     "active_work": "current_work",
@@ -129,7 +130,66 @@ def compact_communication_contract_payload(*, surface: str) -> dict[str, Any]:
     }
 
 
-def reasoning_economy_evidence_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+def _load_reasoning_economy_evidence_ledger(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {
+            "status": "absent",
+            "path": REASONING_ECONOMY_EVIDENCE_LEDGER_PATH,
+            "entries": [],
+            "rule": "Repo-specific evidence is optional and must be supplied by the target repository.",
+        }
+    ledger_path = target_root / REASONING_ECONOMY_EVIDENCE_LEDGER_PATH
+    if not ledger_path.is_file():
+        return {
+            "status": "absent",
+            "path": REASONING_ECONOMY_EVIDENCE_LEDGER_PATH,
+            "entries": [],
+            "rule": "Repo-specific evidence is optional and must be supplied by the target repository.",
+        }
+    try:
+        payload = json.loads(ledger_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "status": "invalid",
+            "path": REASONING_ECONOMY_EVIDENCE_LEDGER_PATH,
+            "entries": [],
+            "error": str(exc),
+        }
+    entries = payload.get("entries", [])
+    if not isinstance(entries, list):
+        return {
+            "status": "invalid",
+            "path": REASONING_ECONOMY_EVIDENCE_LEDGER_PATH,
+            "entries": [],
+            "error": "entries must be a list",
+        }
+    normalized_entries = [
+        {
+            key: item[key]
+            for key in (
+                "ref",
+                "evidence_class",
+                "adjacent_support",
+                "visible_artifact_signal",
+                "source",
+            )
+            if isinstance(item, dict) and key in item
+        }
+        for item in entries
+        if isinstance(item, dict)
+    ]
+    return {
+        "status": "loaded",
+        "path": REASONING_ECONOMY_EVIDENCE_LEDGER_PATH,
+        "kind": payload.get("kind", "agentic-workspace/reasoning-economy-evidence-ledger/v1"),
+        "entry_count": len(normalized_entries),
+        "entries": normalized_entries,
+        "owner": payload.get("owner", "target-repository"),
+        "rule": "Repo-specific evidence is target-owned; package runtime only defines generic evidence classes and checks.",
+    }
+
+
+def reasoning_economy_evidence_payload(*, target_root: Path | None = None, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     required_visible_fields = [
         "decision_or_finding",
         "proof_boundary",
@@ -166,10 +226,12 @@ def reasoning_economy_evidence_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) 
                 "negative_signal_detected": "low_value_tool_chronology" if low_value_chronology else "",
             }
         )
+    evidence_ledger_source = _load_reasoning_economy_evidence_ledger(target_root=target_root)
     return {
         "kind": "agentic-workspace/reasoning-economy-evidence/v1",
         "status": "available",
         "scope": "visible_external_artifacts_only",
+        "evidence_ledger_source": evidence_ledger_source,
         "non_goals": [
             "hidden chain-of-thought grading",
             "semantic scoring of private reasoning",
@@ -203,29 +265,7 @@ def reasoning_economy_evidence_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) 
                 "negative_signals": ["tests_only", "tool_chronology_only", "private_reasoning_claim", "brevity_without_boundary"],
             },
         },
-        "evidence_ledger": [
-            {
-                "ref": "PR #1955",
-                "evidence_class": "direct",
-                "visible_artifact_signal": "Parent decision-maturity model preserved installed-payload caveat and separated proof from residue.",
-            },
-            {
-                "ref": "PR #1960",
-                "evidence_class": "direct",
-                "visible_artifact_signal": "Closeout led with decision, proof, residue, and closure instead of implementation narration.",
-            },
-            {
-                "ref": "PR #1961",
-                "evidence_class": "direct",
-                "adjacent_support": "runtime and doctor surfaces made the compact closeout cheaper to trust",
-                "visible_artifact_signal": "Verbose runtime evidence compressed into claim boundary plus unresolved residue.",
-            },
-            {
-                "ref": "PR #1962",
-                "evidence_class": "direct",
-                "visible_artifact_signal": "Merge-conflict closeout separated proof boundary from remaining installed-payload residue.",
-            },
-        ],
+        "evidence_ledger": evidence_ledger_source.get("entries", []),
         "behavior_check": {
             "kind": "agentic-workspace/visible-artifact-behavior-check/v1",
             "applies_to": ["PR body", "review closeout", "report section", "closeout_report", "handoff summary"],

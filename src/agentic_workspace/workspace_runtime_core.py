@@ -8784,7 +8784,7 @@ def _run_report_command(
         "decision_pressure": decision_pressure,
         "closeout_trust": closeout_trust,
         "successful_completion_cost": _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke),
-        "reasoning_economy": reasoning_economy_evidence_payload(cli_invoke=config.cli_invoke),
+        "reasoning_economy": reasoning_economy_evidence_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "external_work_reconciliation": external_work_reconciliation,
         "external_work_delta": external_work_delta,
         "next_action": next_action,
@@ -13147,7 +13147,7 @@ def _run_lazy_report_section_command(
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "reasoning_economy":
-        payload["reasoning_economy"] = reasoning_economy_evidence_payload(cli_invoke=config.cli_invoke)
+        payload["reasoning_economy"] = reasoning_economy_evidence_payload(target_root=target_root, cli_invoke=config.cli_invoke)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "closeout_trust":

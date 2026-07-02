@@ -1,0 +1,31 @@
+{
+  "kind": "agentic-workspace/reasoning-economy-evidence-ledger/v1",
+  "owner": "agentic-workspace-source-repo",
+  "entries": [
+    {
+      "ref": "PR #1955",
+      "evidence_class": "direct",
+      "source": "https://github.com/rickardvh/agentic-workspace/pull/1955",
+      "visible_artifact_signal": "Parent decision-maturity model preserved installed-payload caveat and separated proof from residue."
+    },
+    {
+      "ref": "PR #1960",
+      "evidence_class": "direct",
+      "source": "https://github.com/rickardvh/agentic-workspace/pull/1960",
+      "visible_artifact_signal": "Closeout led with decision, proof, residue, and closure instead of implementation narration."
+    },
+    {
+      "ref": "PR #1961",
+      "evidence_class": "direct",
+      "source": "https://github.com/rickardvh/agentic-workspace/pull/1961",
+      "adjacent_support": "runtime and doctor surfaces made the compact closeout cheaper to trust",
+      "visible_artifact_signal": "Verbose runtime evidence compressed into claim boundary plus unresolved residue."
+    },
+    {
+      "ref": "PR #1962",
+      "evidence_class": "direct",
+      "source": "https://github.com/rickardvh/agentic-workspace/pull/1962",
+      "visible_artifact_signal": "Merge-conflict closeout separated proof boundary from remaining installed-payload residue."
+    }
+  ]
+}
