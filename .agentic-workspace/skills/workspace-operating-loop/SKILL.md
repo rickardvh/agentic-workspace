@@ -1,26 +1,26 @@
 ---
 name: workspace-operating-loop
-description: Use the core Agentic Workspace operating loop and module slot contract. Use when deciding which module owns startup, planning, implementation, proof, closeout, memory consultation, residue routing, or no-artifact direct answers.
+description: Reference the Agentic Workspace module-slot contract only when the main AW operating skill or compact router names module ownership details that need interpretation.
 ---
 
-# Workspace Operating Loop
+# Workspace Operating Loop Reference
 
 This is a package-managed workspace skill installed under `.agentic-workspace/skills/`.
 
-Use it to keep module ownership visible while preserving compact CLI-first operation.
+Do not use it as an ordinary startup or implementation entrypoint. Start with `workspace-startup`; use this reference only when `module_slot`, module ownership, or no-artifact direct-answer behavior needs interpretation after compact routing.
 
 ## Module Slot Contract
 
 `workspace`
 
 - Owns startup, config, ownership, lifecycle, module map, skill routing, proof routing, and package composition.
-- Preferred CLI: `agentic-workspace start`, `implement`, `proof`, `skills`, `report`, `doctor`, `status`.
+- Preferred route: configured AW invocation with `start`, `implement`, `proof`, `skills`, `report`, `doctor`, or `status`.
 - No-CLI fallback: `.agentic-workspace/WORKFLOW.md`, `.agentic-workspace/docs/module-map.md`, then only the named surface.
 
 `planning`
 
 - Owns active execution state, todo promotion, execplans, decomposition, closeout, issue linkage, and continuation.
-- Preferred CLI: `agentic-workspace summary`, `agentic-workspace planning ...`.
+- Preferred route: configured AW invocation with `summary` or `planning ...`.
 - No-CLI fallback: read the compact summary first when possible; open the active execplan only when routed there.
 
 `planning.closeout`
@@ -32,18 +32,18 @@ Use it to keep module ownership visible while preserving compact CLI-first opera
 `workspace.proof`
 
 - Owns proof selection and proof result interpretation, not broader intent by itself.
-- Preferred CLI: `agentic-workspace proof --changed <paths> --format json`.
+- Preferred route: configured AW invocation with `proof --changed <paths> --format json`.
 - No-CLI fallback: select the narrowest existing test, lint, contract, or inspection route.
 
 `memory`
 
 - Owns durable anti-rediscovery knowledge, consultation status, durable residue, and improvement-signal routing.
-- Preferred CLI: `agentic-workspace memory route`, `capture-note`, `promotion-report`.
+- Preferred route: configured AW invocation with `memory route`, `capture-note`, or `promotion-report`.
 - No-CLI fallback: read the Memory index and already-routed notes only.
 
 ## Loop
 
-1. Start with the compact router.
+1. Start with the compact router through `workspace-startup`.
 2. Preserve the returned `module_slot`, `preferred_cli`, `forbidden_actions`, `proof_required`, and `completion_claim_allowed`.
 3. Move to the owning module slot only when the current packet routes there.
 4. Use the module's preferred CLI before raw files.

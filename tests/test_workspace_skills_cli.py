@@ -133,14 +133,17 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     assert all(entry["registration"] == "explicit" for entry in payload["skills"])
     workspace_entries = {entry["id"]: entry for entry in payload["skills"] if entry["source_kind"] == "installed-workspace-skills"}
     assert {skill_id for skill_id, entry in workspace_entries.items() if entry["visibility"] == "ordinary-default"} == {
-        "workspace-intent-discovery",
-        "workspace-work-shape",
+        "workspace-startup",
     }
-    assert workspace_entries["workspace-startup"]["scope"] == "routed-projection"
+    assert workspace_entries["workspace-startup"]["scope"] == "main-operating-skill"
+    assert workspace_entries["workspace-intent-discovery"]["scope"] == "specialized-subskill"
+    assert workspace_entries["workspace-intent-discovery"]["visibility"] == "routed-on-demand"
     assert workspace_entries["workspace-proof-selection"]["visibility"] == "routed-on-demand"
-    assert workspace_entries["workspace-transition-gates"]["visibility"] == "routed-on-demand"
-    assert workspace_entries["workspace-operating-loop"]["scope"] == "routed-projection"
-    assert workspace_entries["workspace-setup-jumpstart"]["scope"] == "routed-support"
+    assert workspace_entries["workspace-transition-gates"]["visibility"] == "reference-only"
+    assert workspace_entries["workspace-transition-gates"]["scope"] == "reference-support"
+    assert workspace_entries["workspace-operating-loop"]["scope"] == "reference-support"
+    assert workspace_entries["workspace-work-shape"]["scope"] == "reference-support"
+    assert workspace_entries["workspace-setup-jumpstart"]["scope"] == "specialized-subskill"
     workspace_startup = next(entry for entry in payload["skills"] if entry["id"] == "workspace-startup")
     assert workspace_startup["source_kind"] == "installed-workspace-skills"
     assert "workspace startup" in workspace_startup["activation_hints"]["phrases"]
@@ -372,7 +375,7 @@ def test_skills_command_recommends_setup_jumpstart_for_mature_repo_seeding(tmp_p
     payload = json.loads(capsys.readouterr().out)
     assert payload["recommendations"][0]["id"] == "workspace-setup-jumpstart"
     assert payload["recommendations"][0]["source_kind"] == "installed-workspace-skills"
-    assert payload["recommendations"][0]["scope"] == "routed-support"
+    assert payload["recommendations"][0]["scope"] == "specialized-subskill"
     assert "pre-write and pre-seed discovery" in Path("docs/jumpstart-contract.md").read_text(encoding="utf-8")
     skill_text = Path(".agentic-workspace/skills/workspace-setup-jumpstart/SKILL.md").read_text(encoding="utf-8")
     assert "defaults --section assurance_onboarding" in skill_text
@@ -408,6 +411,66 @@ def test_skills_command_recommends_jumpstart_for_assurance_verification_populati
     nouns = jumpstart["activation_hints"]["nouns"]
     assert "assurance onboarding" in nouns
     assert "verification onboarding" in nouns
+
+
+def test_workspace_skill_hierarchy_activation_matrix(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    cases = [
+        {
+            "task": "start work on this AW repo and orient for task X",
+            "expected_top": "workspace-startup",
+            "absent": {"workspace-intent-discovery", "workspace-proof-selection", "workspace-setup-jumpstart"},
+        },
+        {
+            "task": "implement issue 1234 with a clear target",
+            "expected_top": "workspace-startup",
+            "absent": {"workspace-intent-discovery", "workspace-proof-selection", "workspace-setup-jumpstart"},
+        },
+        {
+            "task": "large vague feature request classify shape before implementation",
+            "expected_top": "workspace-intent-discovery",
+            "absent": {"workspace-work-shape", "workspace-proof-selection", "workspace-setup-jumpstart"},
+        },
+        {
+            "task": "select proof before completion claim allowed after passed with warning validation",
+            "expected_top": "workspace-proof-selection",
+            "absent": {"workspace-intent-discovery", "workspace-setup-jumpstart"},
+        },
+        {
+            "task": "populate surfaces after newly installed workspace in a lived-in repo",
+            "expected_top": "workspace-setup-jumpstart",
+            "absent": {"workspace-intent-discovery", "workspace-proof-selection"},
+        },
+        {
+            "task": "interpret forbidden actions from a routed transition gate packet",
+            "expected_top": "workspace-transition-gates",
+            "absent": {"workspace-proof-selection", "workspace-setup-jumpstart"},
+        },
+    ]
+
+    for case in cases:
+        assert cli.main(["skills", "--target", str(target), "--task", case["task"], "--format", "json"]) == 0
+        payload = json.loads(capsys.readouterr().out)
+        recommendation_ids = [entry["id"] for entry in payload["recommendations"]]
+        assert recommendation_ids, case["task"]
+        assert recommendation_ids[0] == case["expected_top"]
+        assert not (set(recommendation_ids) & case["absent"])
+
+    assert cli.main(["skills", "--target", str(target), "--task", "fix typo in README", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert not {
+        "workspace-intent-discovery",
+        "workspace-proof-selection",
+        "workspace-setup-jumpstart",
+        "workspace-transition-gates",
+        "workspace-operating-loop",
+    } & {entry["id"] for entry in payload["recommendations"]}
 
 
 def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:
@@ -567,7 +630,7 @@ def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: 
     capsys.readouterr()
 
     cases = [
-        ("large vague feature request classify shape before implementation", "workspace-work-shape"),
+        ("large vague feature request classify shape before implementation", "workspace-intent-discovery"),
         ("clarify human intent with candidate interpretations before planning", "workspace-intent-discovery"),
         ("decompose an epic into lanes before execplans", "planning-decompose"),
         ("tighten a new execplan before coding", "planning-new-plan-tighten"),
@@ -575,8 +638,8 @@ def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: 
         ("high assurance planning lifecycle preserve intent satisfaction across a whole epic", "planning-high-assurance-lifecycle"),
         ("verify parent intent and negative invariants before completion claim", "planning-intent-verification"),
         ("select proof before completion claim allowed after passed with warning validation", "workspace-proof-selection"),
-        ("apply SkillSpec-backed transition gate with preferred CLI forbidden actions and no-CLI fallback", "workspace-transition-gates"),
-        ("use module slot contract for planning memory workspace operating loop without creating an artifact", "workspace-operating-loop"),
+        ("apply SkillSpec-backed gate reference with preferred CLI forbidden actions and no-CLI fallback", "workspace-transition-gates"),
+        ("use module slot contract reference for planning memory workspace loop without creating an artifact", "workspace-operating-loop"),
         ("closeout trust and residue distillation after implementation", "planning-closeout-trust"),
     ]
     for task, expected in cases:

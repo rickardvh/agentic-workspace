@@ -6,41 +6,50 @@
     {
       "id": "workspace-startup",
       "path": "workspace-startup/SKILL.md",
-      "scope": "routed-projection",
+      "scope": "main-operating-skill",
       "stability": "contract-backed-projection",
-      "visibility": "routed-on-demand",
-      "summary": "orient through compact workspace commands before opening raw planning, memory, or docs surfaces",
+      "visibility": "ordinary-default",
+      "summary": "main AW operating loop for compact routing, configured invocation, routed gates, proof boundaries, and subskill handoff",
       "activation_hints": {
-        "verbs": ["start", "orient", "route", "preflight", "bootstrap", "closeout", "prove"],
-        "nouns": ["workspace", "startup", "workflow", "config", "proof", "closeout", "module map"],
+        "verbs": ["start", "orient", "route", "resume", "implement", "closeout"],
+        "nouns": ["workspace", "startup", "workflow", "config", "proof", "closeout", "AW repo"],
         "phrases": [
           "workspace startup",
+          "main aw operating loop",
+          "start work on this aw repo",
+          "implement issue",
           "orient in the workspace",
           "route this task",
-          "what should I do first",
-          "proof and closeout"
+          "what should I do first"
         ],
         "when": [
           "first contact with an installed workspace",
-          "task shape or proof route is unclear",
-          "agent is tempted to scan raw workspace docs"
+          "ordinary AW work starts or resumes",
+          "agent is tempted to scan raw workspace docs",
+          "a compact router should decide next safe action before source inspection"
         ]
       }
     },
     {
       "id": "workspace-intent-discovery",
       "path": "workspace-intent-discovery/SKILL.md",
-      "scope": "bundled",
+      "scope": "specialized-subskill",
       "stability": "package-managed",
-      "visibility": "ordinary-default",
-      "summary": "run bounded human intent discovery before vague or high-stakes prompts become Planning or implementation",
+      "visibility": "routed-on-demand",
+      "summary": "clarify ambiguous human intent and classify direct, bounded, lane, or epic work after main AW routing",
       "activation_hints": {
-        "verbs": ["ask", "clarify", "discover", "resolve", "brainstorm", "extract", "capture"],
+        "verbs": ["ask", "clarify", "discover", "resolve", "classify", "shape", "triage"],
         "nouns": [
           "intent discovery",
           "human intent",
           "vague prompt",
+          "vague outcome",
           "candidate interpretations",
+          "work shape",
+          "direct task",
+          "bounded task",
+          "lane",
+          "epic",
           "non-goals",
           "first slice",
           "stakes if wrong",
@@ -48,8 +57,14 @@
         ],
         "phrases": [
           "intent-discovery dialogue",
+          "intent and shape",
           "clarify human intent with candidate interpretations before planning",
           "clarify human intent",
+          "classify work shape",
+          "shape this work",
+          "vague outcome prompt",
+          "large vague feature request",
+          "direct bounded lane epic",
           "candidate interpretations",
           "ask before implementation",
           "ask before planning",
@@ -60,6 +75,9 @@
         "when": [
           "prompt is vague or under-specified",
           "stakes_if_wrong is high and inferred_intent_confidence is low",
+          "task size is unclear",
+          "the user describes an outcome rather than a solution",
+          "broad work needs routing before planning",
           "agent might silently choose a convenient implementation slice",
           "why, desired outcome, non-goals, or acceptable first slice are missing"
         ]
@@ -68,65 +86,38 @@
     {
       "id": "workspace-work-shape",
       "path": "workspace-work-shape/SKILL.md",
-      "scope": "bundled",
+      "scope": "reference-support",
       "stability": "package-managed",
-      "visibility": "ordinary-default",
-      "summary": "classify work shape and route direct, bounded, lane, or epic work before implementation",
+      "visibility": "reference-only",
+      "summary": "reference vocabulary for direct, bounded, lane, and epic work shapes; merged procedure lives in workspace-intent-discovery",
       "activation_hints": {
-        "verbs": ["classify", "triage", "shape", "route", "decide", "infer", "resolve"],
+        "verbs": ["reference"],
         "nouns": [
-          "work shape",
-          "direct task",
-          "bounded task",
-          "lane",
-          "epic",
-          "vague request",
-          "vague outcome",
-          "intended outcome",
-          "intent",
-          "trust",
-          "rework",
-          "handoff trust",
-          "what I meant",
-          "satisfaction evidence"
+          "work shape reference",
+          "direct bounded lane epic vocabulary",
+          "shape vocabulary",
+          "shape taxonomy"
         ],
         "phrases": [
-          "classify work shape",
-          "shape this work",
-          "infer intended outcome",
-          "resolve intended outcome",
-          "vague outcome prompt",
-          "feel more trustworthy",
-          "agents hand work back",
-          "agents keep making me repeat",
-          "what I meant",
-          "long task handoff",
-          "before naming a solution",
-          "how to know intent is satisfied",
-          "large vague feature request",
-          "before implementation",
-          "direct bounded lane epic"
+          "work shape reference",
+          "direct bounded lane epic vocabulary",
+          "what does lane shape mean"
         ],
         "when": [
-          "task size is unclear",
-          "the user describes an outcome rather than a solution",
-          "the user names a desired quality such as trust, less rework, or safer handoff",
-          "intent needs to be preserved before implementation",
-          "satisfaction criteria are unclear",
-          "agent may jump straight to implementation",
-          "broad work needs routing before planning"
+          "a compact packet or review explicitly asks for work-shape vocabulary",
+          "workspace-intent-discovery has already handled the procedure"
         ]
       }
     },
     {
       "id": "workspace-proof-selection",
       "path": "workspace-proof-selection/SKILL.md",
-      "scope": "routed-projection",
+      "scope": "specialized-subskill",
       "stability": "contract-backed-projection",
       "visibility": "routed-on-demand",
       "summary": "select and interpret proof for task, slice, lane, or epic completion claims",
       "activation_hints": {
-        "verbs": ["prove", "validate", "verify", "classify", "select"],
+        "verbs": ["prove", "validate", "verify", "select"],
         "nouns": [
           "proof selection",
           "completion claim",
@@ -155,12 +146,12 @@
     {
       "id": "workspace-transition-gates",
       "path": "workspace-transition-gates/SKILL.md",
-      "scope": "routed-support",
+      "scope": "reference-support",
       "stability": "contract-backed-projection",
-      "visibility": "routed-on-demand",
-      "summary": "apply SkillSpec-backed gates to startup, planning, proof, memory, and closeout transitions",
+      "visibility": "reference-only",
+      "summary": "reference SkillSpec-backed transition gate details when compact routed fields need interpretation",
       "activation_hints": {
-        "verbs": ["gate", "transition", "route", "preserve", "fallback"],
+        "verbs": ["reference", "interpret"],
         "nouns": [
           "SkillSpec",
           "transition gate",
@@ -171,12 +162,11 @@
           "no-CLI fallback"
         ],
         "phrases": [
-          "SkillSpec-backed gate",
-          "transition gate",
-          "allowed actions",
-          "forbidden actions",
-          "preferred CLI",
-          "no-CLI fallback"
+          "SkillSpec-backed gate reference",
+          "transition gate reference",
+          "interpret forbidden actions",
+          "interpret allowed actions",
+          "no-CLI fallback reference"
         ],
         "when": [
           "moving between workspace, planning, proof, memory, or closeout",
@@ -188,12 +178,12 @@
     {
       "id": "workspace-operating-loop",
       "path": "workspace-operating-loop/SKILL.md",
-      "scope": "routed-projection",
+      "scope": "reference-support",
       "stability": "contract-backed-projection",
-      "visibility": "routed-on-demand",
-      "summary": "apply the core operating loop and module slot contract across workspace, planning, proof, closeout, and memory",
+      "visibility": "reference-only",
+      "summary": "reference module-slot ownership and no-artifact direct-answer details after main AW routing",
       "activation_hints": {
-        "verbs": ["orchestrate", "slot", "route", "own", "preserve"],
+        "verbs": ["reference", "interpret"],
         "nouns": [
           "operating loop",
           "module slot",
@@ -204,12 +194,10 @@
           "direct answer"
         ],
         "phrases": [
-          "operating loop",
-          "module slot contract",
-          "module slot",
-          "answer directly no artifact",
-          "planning memory workspace loop",
-          "completion claim allowed"
+          "module slot contract reference",
+          "module slot reference",
+          "interpret module slot",
+          "answer directly no artifact reference"
         ],
         "when": [
           "module ownership is unclear",
@@ -221,12 +209,12 @@
     {
       "id": "workspace-setup-jumpstart",
       "path": "workspace-setup-jumpstart/SKILL.md",
-      "scope": "routed-support",
+      "scope": "specialized-subskill",
       "stability": "contract-backed-projection",
       "visibility": "routed-on-demand",
       "summary": "route newly installed or adopted Agentic Workspace in a lived-in repo through bounded setup and jumpstart discovery before seeding durable surfaces",
       "activation_hints": {
-        "verbs": ["setup", "jumpstart", "populate", "seed", "adopt", "install", "orient"],
+        "verbs": ["setup", "jumpstart", "populate", "seed", "adopt", "install"],
         "nouns": [
           "lived-in repo",
           "mature repo",
