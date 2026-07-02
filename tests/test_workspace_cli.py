@@ -1574,6 +1574,62 @@ def test_start_forecasts_architecture_principle_for_path_scoped_task_before_edit
     assert forecast["decision_maturity"]["level"] == "evidence_seeking"
 
 
+def test_start_surfaces_architecture_principle_scope_probe_when_planned_scope_missing(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_cli_architecture_principles(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement the architecture principle forecast update",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    forecast = payload["context"]["architecture_principles_forecast"]
+    assert forecast["status"] == "needs-planned-scope"
+    assert forecast["planned_scope"] == {"source": "missing_planned_scope", "paths": []}
+    assert forecast["decision_maturity"]["level"] == "evidence_seeking"
+    assert forecast["decision_maturity"]["missing_evidence"] == ["planned paths or changed paths"]
+    assert "implement --changed <paths>" in forecast["decision_maturity"]["safe_probe"]
+    assert "--select architecture_principles" in forecast["decision_maturity"]["safe_probe"]
+    assert "does not classify arbitrary task prose" in forecast["rule"]
+
+
+def test_start_keeps_architecture_principle_scope_probe_quiet_when_not_configured(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement the architecture principle forecast update",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert "architecture_principles_forecast" not in payload["context"]
+
+
 def test_start_forecasts_architecture_principle_from_active_plan_scope_before_edits(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0

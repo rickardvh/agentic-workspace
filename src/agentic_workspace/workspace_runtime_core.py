@@ -16301,6 +16301,22 @@ def _architecture_principles_payload(
     return payload
 
 
+def _architecture_principles_configured(target_root: Path | None) -> bool:
+    if target_root is None:
+        return False
+    path = target_root / ".agentic-workspace/system-intent/intent.toml"
+    if not path.is_file():
+        return False
+    try:
+        document = tomllib.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+        return False
+    return any(
+        isinstance(principle, dict) and str(principle.get("id", "")).strip()
+        for principle in _list_payload(document.get("architecture_principles"))
+    )
+
+
 def _architecture_principles_forecast_payload(
     *,
     target_root: Path | None,
@@ -16310,6 +16326,12 @@ def _architecture_principles_forecast_payload(
 ) -> dict[str, Any]:
     normalized_paths = _normalize_changed_paths(planned_paths or [])
     if not normalized_paths:
+        if not _architecture_principles_configured(target_root):
+            return {
+                "kind": "agentic-workspace/architecture-principles-forecast/v1",
+                "status": "not-configured",
+                "matched_count": 0,
+            }
         command = _command_with_cli_invoke(
             command="agentic-workspace implement --changed <paths> --select architecture_principles --format json",
             cli_invoke=cli_invoke,
@@ -16319,6 +16341,10 @@ def _architecture_principles_forecast_payload(
             "status": "needs-planned-scope",
             "matched_count": 0,
             "planned_scope": {"source": scope_source, "paths": []},
+            "rule": (
+                "Forecast cannot decide architecture-principle relevance until planned paths or changed paths are known; "
+                "it does not classify arbitrary task prose."
+            ),
             "decision_maturity": {
                 "level": "evidence_seeking",
                 "decision": "architecture-principle-forecast",
@@ -24514,14 +24540,22 @@ def _start_tiny_payload_fast(
     elif active_planning_present:
         forecast_paths = _active_plan_touched_scope_paths(active_parent_record)
         forecast_scope_source = "active_planning_record.touched_scope"
-    if forecast_paths and not changed_paths and not _is_config_posture_task(task_text):
+    forecast_missing_scope = (
+        bool(task_intent.get("status") == "present")
+        and not forecast_paths
+        and not changed_paths
+        and not _is_config_posture_task(task_text)
+        and read_only_response.get("status") != "read-only-reporting"
+        and not _is_prep_only_handoff_task(task_text)
+    )
+    if (forecast_paths or forecast_missing_scope) and not changed_paths and not _is_config_posture_task(task_text):
         architecture_forecast = _architecture_principles_forecast_payload(
             target_root=target_root,
             planned_paths=forecast_paths,
-            scope_source=forecast_scope_source,
+            scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
-        if architecture_forecast.get("status") == "provisional-match":
+        if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"}:
             payload["architecture_principles_forecast"] = architecture_forecast
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:

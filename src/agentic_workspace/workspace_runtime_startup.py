@@ -739,14 +739,22 @@ def _start_payload(
     elif active_planning_present:
         forecast_paths = _active_plan_touched_scope_paths(active_parent_record)
         forecast_scope_source = "active_planning_record.touched_scope"
-    if forecast_paths and not changed_paths and not _is_config_posture_task(task_text):
+    forecast_missing_scope = (
+        bool(task_intent.get("status") == "present")
+        and not forecast_paths
+        and not changed_paths
+        and not _is_config_posture_task(task_text)
+        and read_only_response.get("status") != "read-only-reporting"
+        and not _is_prep_only_handoff_task(task_text)
+    )
+    if (forecast_paths or forecast_missing_scope) and not changed_paths and not _is_config_posture_task(task_text):
         architecture_forecast = _architecture_principles_forecast_payload(
             target_root=target_root,
             planned_paths=forecast_paths,
-            scope_source=forecast_scope_source,
+            scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
-        if architecture_forecast.get("status") == "provisional-match":
+        if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"}:
             payload["architecture_principles_forecast"] = architecture_forecast
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
@@ -1442,7 +1450,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(task_path_references, dict) and task_path_references.get("status") == "present":
         context["task_path_references"] = task_path_references
     architecture_forecast = payload.get("architecture_principles_forecast", {})
-    if isinstance(architecture_forecast, dict) and architecture_forecast.get("status") == "provisional-match":
+    if isinstance(architecture_forecast, dict) and architecture_forecast.get("status") in {
+        "provisional-match",
+        "needs-planned-scope",
+    }:
         context["architecture_principles_forecast"] = architecture_forecast
     pr_comment_attention = payload.get("pr_comment_attention", {})
     if isinstance(pr_comment_attention, dict) and pr_comment_attention.get("status") not in {None, "", "not_applicable"}:
