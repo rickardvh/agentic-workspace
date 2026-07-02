@@ -691,6 +691,7 @@ def _closeout_report_payload(
     workflow_compliance_summary: dict[str, Any],
     verification: dict[str, Any],
     architecture_principles: dict[str, Any] | None = None,
+    installed_state_closeout_residue: dict[str, Any] | None = None,
     config: WorkspaceConfig,
 ) -> dict[str, Any]:
     active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
@@ -698,6 +699,7 @@ def _closeout_report_payload(
     completion_contract = completion_contract if isinstance(completion_contract, dict) else {}
     verification = verification if isinstance(verification, dict) else {}
     architecture_principles = architecture_principles if isinstance(architecture_principles, dict) else {}
+    installed_state_closeout_residue = installed_state_closeout_residue if isinstance(installed_state_closeout_residue, dict) else {}
     execution = _as_dict(active_planning_record.get("execution_run"))
     proof_report = _as_dict(active_planning_record.get("proof_report"))
     closure_check = _as_dict(active_planning_record.get("closure_check"))
@@ -968,6 +970,7 @@ def _closeout_report_payload(
         "parent_intent_status": parent_intent_status,
         "applicable_intent_status": applicable_intent_status,
         "architecture_principles_status": architecture_principles,
+        "installed_state_residue": installed_state_closeout_residue,
         "changes": {
             "changed_surfaces": changed_surfaces,
             "scope_touched": str(execution.get("scope touched") or "").strip(),
@@ -990,6 +993,7 @@ def _closeout_report_payload(
             "task_posture_followthrough": task_posture_followthrough,
             "residual_risk": residual_risk,
             "durable_residue_action": closeout_trust.get("durable_residue_action", {}),
+            "installed_state_residue": installed_state_closeout_residue,
             "workflow_trust_impact": workflow_compliance_summary.get("trust_impact", "unknown")
             if isinstance(workflow_compliance_summary, dict)
             else "unknown",

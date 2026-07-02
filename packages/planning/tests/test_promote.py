@@ -1393,8 +1393,17 @@ candidates = []
     )
 
     summary = planning_summary(target=tmp_path, profile="tiny")
+    active_item = summary["todo"]["active_items"][0]
     view = summary["continuation_view"]
 
+    assert active_item["next_action"] == "Use the fresher execplan action."
+    assert active_item["projection_freshness"] == "superseded-state-field"
+    assert active_item["projection_overrides"][0]["field"] == "next_action"
+    assert active_item["projection_overrides"][0]["stale_value"] == "Stale todo action."
+    assert summary["planning_surface_health"]["recommended_next_action"] == "Use the fresher execplan action."
+    assert summary["execution_readiness"]["recommendation"]["summary"] == "Use the fresher execplan action."
+    assert summary["current_execution_pressure"]["recommended_next_action"] == "Use the fresher execplan action."
+    assert summary["decision_packet"]["next_action"] == "Use the fresher execplan action."
     assert view["answers"]["preserved_intent"] == "Preserve the active intent."
     assert view["answers"]["next_safe_action"] == "Use the fresher execplan action."
     assert view["resume_predicate"]["status"] == "pass"

@@ -13,7 +13,7 @@
     "python_executable": ".venv/Scripts/python.exe",
     "source": "local-source",
     "source_class": "source-checkout",
-    "source_identity": "git:0bfa5f527eb5",
+    "source_identity": "git:346cd4f34bc1",
     "version": "0.15.2"
   },
   "kind": "agentic-workspace/payload-provenance/v1",
