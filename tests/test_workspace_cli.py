@@ -1036,7 +1036,10 @@ def test_start_routes_high_assurance_milestone_to_planning_before_implementation
     assert payload["next_safe_action"]["implementation_allowed"] is False
     assert "continue implementation without active planning ownership" in payload["next_safe_action"]["forbidden_actions"]
     assert payload["action_signals"]["allowed_next_action"] == "create-or-promote-active-execplan"
-    assert payload["context"]["planning"]["workflow_sufficiency"]["sufficiency_result"] == "planning-escalation-required"
+    sufficiency = payload["context"]["planning"]["workflow_sufficiency"]
+    assert sufficiency["sufficiency_result"] == "planning-escalation-required"
+    assert sufficiency["decision_maturity"]["level"] == "hard_gate"
+    assert payload["context"]["planning"]["planning_safety_gate"]["decision_maturity"]["level"] == "hard_gate"
 
 
 def test_start_reconciles_unrelated_active_plan_with_explicit_maintenance_task(tmp_path: Path, capsys) -> None:
@@ -1996,6 +1999,10 @@ def test_start_issue_reference_wording_keeps_issue_scope_warning(tmp_path: Path,
     )
     payload = json.loads(capsys.readouterr().out)
     assert payload["next_safe_action"]["next_safe_action"] == "refresh-external-issue-intent"
+    gate = payload["context"]["planning"]["planning_safety_gate"]
+    assert gate["decision_maturity"]["level"] == "evidence_seeking"
+    assert gate["decision_maturity"]["missing_evidence"] == ["external issue intent evidence"]
+    assert gate["decision_maturity"]["safe_probe"] == "refresh-external-intent-or-state-bounded-slice"
     assert payload["context"]["issue_reference_intent"]["issue_refs"] == ["#103"]
     effect = payload["context"]["issue_reference_intent"]["action_effect"]
     assert effect["force"] == "required_before_claim"

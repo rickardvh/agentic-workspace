@@ -13692,6 +13692,40 @@ def _successful_completion_cost_router_payload(*, cli_invoke: str) -> dict[str, 
     }
 
 
+def _decision_maturity_payload(
+    *,
+    decision: str,
+    workflow_sufficient: bool,
+    required_next_action: str | None = None,
+    evidence_required: list[str] | None = None,
+    evidence_basis: list[str] | None = None,
+    missing_evidence: list[str] | None = None,
+    hard_gate: bool = False,
+) -> dict[str, Any]:
+    evidence_required = [item for item in (evidence_required or []) if str(item).strip()]
+    missing_evidence = [item for item in (missing_evidence or []) if str(item).strip()]
+    evidence_basis = [item for item in (evidence_basis or []) if str(item).strip()]
+    if hard_gate:
+        level = "hard_gate"
+    elif evidence_required or missing_evidence or decision in {"external-issue-scope-unknown", "agent-work-shape-decision-required"}:
+        level = "evidence_seeking"
+    elif not workflow_sufficient:
+        level = "provisional_gate"
+    else:
+        level = "provisional_gate"
+    payload = {
+        "kind": "agentic-workspace/decision-maturity/v1",
+        "level": level,
+        "decision": decision,
+        "evidence_basis": evidence_basis,
+        "missing_evidence": missing_evidence or evidence_required,
+        "safe_probe": required_next_action or "",
+    }
+    if missing_evidence or evidence_required:
+        payload["reconsider_after"] = missing_evidence or evidence_required
+    return {key: value for key, value in payload.items() if value not in (None, "", [], {})}
+
+
 def _workflow_sufficiency_payload(
     *,
     surface: str,
@@ -13700,6 +13734,7 @@ def _workflow_sufficiency_payload(
     required_next_action: str | None = None,
     evidence_required: list[str] | None = None,
     drill_down: dict[str, str] | None = None,
+    hard_gate: bool = False,
 ) -> dict[str, Any]:
     evidence_required = evidence_required or []
     authority_boundary = _authority_boundary_payload(
@@ -13721,6 +13756,15 @@ def _workflow_sufficiency_payload(
         "legacy_aliases": {"decision": "sufficiency_result"},
         "rule": "Do not hide proof, ownership, or closeout obligations.",
     }
+    if surface in {"start", "implement"}:
+        payload["decision_maturity"] = _decision_maturity_payload(
+            decision=decision,
+            workflow_sufficient=not evidence_required,
+            required_next_action=required_next_action,
+            evidence_required=evidence_required,
+            evidence_basis=["workflow state", "required evidence"],
+            hard_gate=hard_gate,
+        )
     if required_next_action:
         payload["required_next_action"] = required_next_action
     if not evidence_required:
@@ -16217,6 +16261,10 @@ def _architecture_principles_payload(
                     "title": item["title"],
                     "owner": item["owner"],
                     "authority": item["authority"],
+                    "summary": item["summary"],
+                    "allowed_sources": item["allowed_sources"],
+                    "forbidden_sources": item["forbidden_sources"],
+                    "affected_decisions": item["affected_decisions"],
                     "matched_paths": item["matched_paths"],
                     "matcher": item["matcher"],
                     "guardrail_refs": item["guardrail_refs"],
@@ -23029,6 +23077,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "gate_result": gate.get("gate_result") or gate.get("decision"),
         "workflow_sufficient": gate.get("workflow_sufficient"),
         "reason": gate.get("reason"),
+        "decision_maturity": _tiny_decision_maturity(gate.get("decision_maturity")),
         "required_next_action": gate.get("required_next_action"),
         "active_planning_present": gate.get("active_planning_present"),
         "issue_refs": gate.get("issue_refs", []),
@@ -24566,6 +24615,7 @@ def _start_tiny_payload_fast(
             reason=planning_safety_gate["reason"],
             required_next_action=planning_safety_gate["required_next_action"],
             evidence_required=["active planning ownership evidence"],
+            hard_gate=True,
         )
         payload["immediate_next_allowed_action"] = {
             "action": planning_safety_gate["required_next_action"],
@@ -30145,12 +30195,21 @@ def _tiny_work_shape_guidance(value: Any) -> dict[str, Any]:
     }
 
 
+def _tiny_decision_maturity(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        key: value.get(key) for key in ("level", "decision", "missing_evidence", "safe_probe") if value.get(key) not in (None, "", [], {})
+    }
+
+
 def _tiny_workflow_sufficiency(value: Any) -> dict[str, Any]:
     if not isinstance(value, dict):
         return {}
-    keys = ("kind", "surface", "sufficiency_result", "required_next_action", "evidence_required")
+    keys = ("kind", "surface", "sufficiency_result", "required_next_action", "evidence_required", "decision_maturity")
     compact = {key: value.get(key) for key in keys if value.get(key) not in (None, "", [])}
     compact.setdefault("sufficiency_result", value.get("decision"))
+    compact["decision_maturity"] = _tiny_decision_maturity(value.get("decision_maturity"))
     compact["authority_boundary"] = _compact_authority_boundary(value.get("authority_boundary"))
     return {key: item for key, item in compact.items() if item not in (None, "", {})}
 
