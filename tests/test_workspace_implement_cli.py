@@ -381,6 +381,37 @@ proof = [
     )
 
 
+def test_implement_compact_surfaces_proof_narrowness_before_validation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / "Makefile",
+        "test-planning:\n\t@echo ok\nlint-planning:\n\t@echo ok\ntypecheck-planning:\n\t@echo ok\n",
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--task",
+                "Update planning package installer",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    narrowness = payload["proof"]["proof_narrowness"]
+    assert narrowness["status"] == "narrow_required"
+
+
 def test_operating_loop_schema_rejects_unknown_enum_values() -> None:
     schema_path = Path("src/agentic_workspace/contracts/schemas/implementer_context.schema.json")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))

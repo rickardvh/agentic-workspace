@@ -3072,6 +3072,74 @@ def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, ca
     assert "missing" not in payload
 
 
+def test_proof_compact_surfaces_narrowness_for_bounded_package_change(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / "Makefile",
+        "test-planning:\n\t@echo ok\nlint-planning:\n\t@echo ok\ntypecheck-planning:\n\t@echo ok\n",
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    narrowness = payload["proof_narrowness"]
+    assert narrowness["status"] == "narrow_required"
+    assert narrowness["required_reason_sample"]["acceptance_boundary"] is True
+    assert "package-local planning source" in narrowness["required_reason_sample"]["why_required"]
+    assert narrowness["broad_suite_boundary_status"] == "not_required_acceptance_boundary"
+
+
+def test_proof_narrowness_marks_generated_surface_broad_proof_required(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(tmp_path / "Makefile", "test-workspace:\n\t@echo ok\nlint-workspace:\n\t@echo ok\n")
+    _write(tmp_path / "scripts" / "run_agentic_workspace.py", "print('ok')\n")
+    _write(tmp_path / "scripts" / "check" / "check_generated_command_packages.py", "print('ok')\n")
+    _write(tmp_path / "scripts" / "check" / "run_operation_conformance_tests.py", "print('ok')\n")
+    _write(tmp_path / "tests" / "test_workspace_cli.py", "def test_ok():\n    assert True\n")
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/workspace/python/cli.py",
+                "--select",
+                "proof_narrowness",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    narrowness = payload["values"]["proof_narrowness"]
+    assert narrowness["status"] == "broad_required"
+    assert narrowness["broad_suite_boundary"]["status"] == "required_acceptance_boundary"
+    assert any(trigger["trigger"] == "selected lane requires broad proof" for trigger in narrowness["expansion_triggers"])
+    assert all(item["acceptance_boundary"] is False for item in narrowness["optional_confidence_checks"])
+    assert "optional checks as confidence" in narrowness["final_report_rule"]
+
+
 def test_report_sections_expose_authority_and_compliance_boundaries(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

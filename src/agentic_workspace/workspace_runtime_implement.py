@@ -118,6 +118,7 @@ from agentic_workspace.workspace_runtime_planning import (
     _planning_safety_gate_payload,
 )
 from agentic_workspace.workspace_runtime_proof import (
+    _include_tiny_proof_narrowness,
     _proof_selection_for_changed_paths,
     _tiny_proof_obligations_payload,
     _verification_report_payload,
@@ -1019,6 +1020,17 @@ def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, An
     }
 
 
+def _implement_tiny_proof_narrowness_payload(value: Any) -> dict[str, Any]:
+    packet = value if isinstance(value, dict) else {}
+    if not _include_tiny_proof_narrowness(packet):
+        return {}
+    if packet.get("status") == "broad_required":
+        return {}
+    return {
+        "status": packet.get("status", "unknown"),
+    }
+
+
 def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     target_root = Path(str(payload.get("target", ".")))
     config = _load_workspace_config(target_root=target_root)
@@ -1242,6 +1254,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
             )
             if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("proof_obligations"), dict)
+            else {},
+            "proof_narrowness": _implement_tiny_proof_narrowness_payload(payload.get("proof", {}).get("proof_narrowness", {}))
+            if isinstance(payload.get("proof"), dict)
             else {},
             "proof_route_maintenance": _tiny_proof_route_maintenance_payload(payload.get("proof", {}).get("proof_route_maintenance", {}))
             if isinstance(payload.get("proof"), dict)
@@ -1558,6 +1573,9 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     generated_cli_freshness = projected["proof"].get("generated_cli_freshness", {})
     if not (isinstance(generated_cli_freshness, dict) and generated_cli_freshness.get("kind")):
         projected["proof"].pop("generated_cli_freshness", None)
+    proof_narrowness = projected["proof"].get("proof_narrowness", {})
+    if not (isinstance(proof_narrowness, dict) and proof_narrowness.get("status")):
+        projected["proof"].pop("proof_narrowness", None)
     runtime_source_review = projected["proof"].get("runtime_source_edit_review", {})
     if not (
         isinstance(runtime_source_review, dict)

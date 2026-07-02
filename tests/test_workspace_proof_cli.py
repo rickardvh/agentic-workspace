@@ -661,11 +661,14 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
         "manual_verification",
         "warnings",
         "intent_proof",
+        "proof_narrowness",
         "detail_command",
         "detail_command_template",
         "proof_route_selection",
     }
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
+    assert payload["proof_narrowness"]["status"] == "broad_required"
+    assert payload["proof_narrowness"]["broad_suite_boundary_status"] == "required_acceptance_boundary"
     assert payload["next"]["action"] == "run-validation-command"
     assert payload["next"]["command"] == "make test-workspace"
     assert "make lint-workspace" in payload["required_commands"]

@@ -478,6 +478,7 @@
           "_architecture_principles_payload",
           "_closeout_intent_evidence_payload",
           "_compact_continuation_state_contract",
+          "_decision_maturity_payload",
           "_compact_intent_evidence",
           "_compact_start_delegation_decision",
           "_compact_start_prep_only_handoff",

@@ -12,6 +12,10 @@
     "planning_surfaces": "surface-check",
     "maintainer_surfaces": "surface-check"
   },
+  "broad_acceptance_lanes": [
+    "generated_command_packages",
+    "workspace_cli"
+  ],
   "docs_only_reducer": {
     "lane": "repo_docs_review",
     "source_lanes": [
