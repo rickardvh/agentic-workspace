@@ -1886,6 +1886,65 @@ def test_start_pr_reference_wording_does_not_route_as_unknown_issue_scope(tmp_pa
     assert payload.get("missing") == ["issue_reference_intent"]
 
 
+def test_start_github_comment_report_correction_does_not_force_planning(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Correct the #1942 follow-up report format after PR #1950 review fix",
+                "--select",
+                "planning_safety_gate,issue_reference_intent",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["values"]["planning_safety_gate"]
+
+    assert gate["workflow_sufficient"] is True
+    assert gate["issue_refs"] == []
+    assert gate["external_reporting_context"]["refs"] == ["#1942"]
+    assert gate["pr_context"]["refs"] == ["#1950"]
+    assert payload.get("missing") == ["issue_reference_intent"]
+
+
+def test_start_mixed_issue_implementation_and_report_target_splits_refs(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement issue #1951 and make a better report on #1942",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
+
+    assert gate["workflow_sufficient"] is True
+    assert gate["issue_refs"] == ["#1951"]
+    assert gate["external_reporting_context"]["refs"] == ["#1942"]
+
+
 def test_start_issue_reference_wording_keeps_issue_scope_warning(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

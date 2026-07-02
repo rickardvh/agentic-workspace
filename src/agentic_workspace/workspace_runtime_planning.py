@@ -32,6 +32,7 @@ from agentic_workspace.workspace_runtime_core import (
     _emit_payload,
     _ensure_external_intent_cache_if_available,
     _external_intent_status_by_ref,
+    _external_reporting_context_refs_from_task,
     _fast_planning_active_summary,
     _fast_planning_lane_records,
     _issue_scope_evidence_payload,
@@ -670,7 +671,9 @@ def _planning_safety_gate_payload(
     path_classification = _planning_safety_path_classification(changed_paths)
     numeric_refs = sorted(set(re.findall("#\\d+", task_text or "")))
     pr_context_refs = _pr_context_refs_from_task(task_text)
-    issue_refs = [ref for ref in numeric_refs if ref not in set(pr_context_refs)]
+    reporting_context_refs = _external_reporting_context_refs_from_task(task_text)
+    context_refs = {*pr_context_refs, *reporting_context_refs}
+    issue_refs = [ref for ref in numeric_refs if ref not in context_refs]
     path_classification = _allow_ancillary_memory_feedback_path(path_classification)
     path_classification = _allow_issue_scoped_planning_state_reconciliation(path_classification, issue_refs=issue_refs)
     path_classification = _allow_completed_archive_publication_residue(path_classification, target_root=target_root)
@@ -886,6 +889,14 @@ def _planning_safety_gate_payload(
             "refs": pr_context_refs,
             "rule": "PR/review/merge-conflict wording is provider context, not unknown issue scope. Fetch PR/review state when needed.",
             "provider_requirement": "provider-aware; GitHub is one possible source, not assumed as the only provider.",
+        },
+        "external_reporting_context": {
+            "status": "reporting-target-detected" if reporting_context_refs else "not-detected",
+            "refs": reporting_context_refs,
+            "rule": (
+                "Issue or PR refs used as report/comment destinations are external reporting targets, not implementation "
+                "issue scope by themselves."
+            ),
         },
         "issue_scope_evidence": issue_scope_evidence,
         "candidate_pressure": candidate_pressure,

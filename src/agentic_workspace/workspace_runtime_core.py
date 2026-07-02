@@ -25319,6 +25319,9 @@ def _pr_context_refs_from_task(task_text: str | None) -> list[str]:
     refs = sorted(set(re.findall(r"#\d+\b", text)), key=lambda value: int(value.lstrip("#")))
     if not refs:
         return []
+    explicit_pr_refs = {f"#{match}" for match in re.findall(r"\b(?:pr|pull request)\s+#?(\d+)\b", text, flags=re.IGNORECASE)}
+    if explicit_pr_refs:
+        return sorted(explicit_pr_refs, key=lambda value: int(value.lstrip("#")))
     pr_terms = (
         " pr ",
         " pull request",
@@ -25338,6 +25341,29 @@ def _pr_context_refs_from_task(task_text: str | None) -> list[str]:
     if any(term in padded for term in pr_terms):
         return refs
     return []
+
+
+def _external_reporting_context_refs_from_task(task_text: str | None) -> list[str]:
+    text = " ".join(str(task_text or "").lower().split())
+    if not text:
+        return []
+    reporting_refs: set[str] = set()
+    for match in re.finditer(r"#\d+\b", text):
+        ref = match.group(0)
+        before = text[max(0, match.start() - 80) : match.start()]
+        after = text[match.end() : match.end() + 80]
+        if re.search(
+            r"(?:report|reported|reporting|comment|reply|evidence|note|post|posted|hub|under|on|in)\s+(?:the\s+)?$",
+            before,
+        ):
+            reporting_refs.add(ref)
+            continue
+        if re.search(
+            r"^\s+(?:follow-up\s+)?(?:report|reported|reporting|comment|reply|evidence|note|format|hub)\b",
+            after,
+        ):
+            reporting_refs.add(ref)
+    return sorted(reporting_refs, key=lambda value: int(value.lstrip("#")))
 
 
 def _issue_reference_intent_payload(*, issue_scope_evidence: dict[str, Any], cli_invoke: str) -> dict[str, Any]:
@@ -30979,7 +31005,9 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
             "posture": {},
             "reason": "No task text or changed paths were provided, so execution posture cannot infer task capability safely.",
         }
-    issue_refs = re.findall("#\\d+", task_text or "")
+    numeric_refs = sorted(set(re.findall("#\\d+", task_text or "")))
+    context_refs = {*_pr_context_refs_from_task(task_text), *_external_reporting_context_refs_from_task(task_text)}
+    issue_refs = [ref for ref in numeric_refs if ref not in context_refs]
     judgment_terms = (
         "architecture",
         "contract",
