@@ -12901,6 +12901,11 @@ def _derived_continuation_projection_payloads(
         target_root=target_root,
     )
     architecture_principles = _as_dict(source_payload.get("architecture_principles"))
+    installed_state_closeout_residue = _installed_state_closeout_residue_payload(
+        installed_state=_as_dict(source_payload.get("installed_state_compatibility")),
+        active_planning_record=closeout_planning_record,
+        cli_invoke=config.cli_invoke,
+    )
     closeout_report = _closeout_report_payload(
         active_planning_record=closeout_planning_record,
         closeout_trust=source_payload.get("closeout_trust", {}),
@@ -12908,6 +12913,7 @@ def _derived_continuation_projection_payloads(
         workflow_compliance_summary=workflow_compliance_summary,
         verification=verification,
         architecture_principles=architecture_principles,
+        installed_state_closeout_residue=installed_state_closeout_residue,
         config=config,
     )
     return {
@@ -13187,6 +13193,14 @@ def _run_lazy_report_section_command(
             payload["closeout_trust"] = closeout_trust
         payload["external_work_delta"] = external_work_delta
         payload["external_work_reconciliation"] = external_work_reconciliation
+        cli_compatibility = _cli_compatibility_payload(config=config, compact=True)
+        payload["installed_state_compatibility"] = _installed_state_compatibility_payload(
+            config=config,
+            selected_modules=selected_modules,
+            installed_modules=[str(module_name) for module_name in payload.get("installed_modules", [])],
+            cli_compatibility=cli_compatibility,
+            compact=True,
+        )
         payload["architecture_principles"] = _architecture_principles_payload(
             target_root=target_root,
             changed_paths=[],
@@ -23512,6 +23526,72 @@ def _compact_installed_state_drift_triage(triage: Any) -> dict[str, Any]:
             "detail_visibility",
         )
         if key in triage and triage.get(key) not in (None, "", [], {})
+    }
+
+
+def _closeout_changed_surface_paths(active_planning_record: Any) -> list[str]:
+    execution = _as_dict(_as_dict(active_planning_record).get("execution_run"))
+    raw_values = [
+        execution.get("changed surfaces"),
+        execution.get("changed_surfaces"),
+        execution.get("scope touched"),
+        execution.get("scope_touched"),
+    ]
+    paths: list[str] = []
+    for raw in raw_values:
+        if isinstance(raw, list):
+            candidates = raw
+        else:
+            candidates = re.split(r"[;\n,]+", str(raw or ""))
+        for candidate in candidates:
+            text = str(candidate).strip()
+            if not text or text.lower() in {"none", "none yet", "pending", "not recorded"}:
+                continue
+            paths.append(text)
+    return _normalize_changed_paths(paths)
+
+
+def _installed_state_closeout_residue_payload(
+    *,
+    installed_state: dict[str, Any],
+    active_planning_record: dict[str, Any],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    status = str(installed_state.get("status") or "compatible")
+    if status == "compatible":
+        return {
+            "kind": "agentic-workspace/installed-state-closeout-residue/v1",
+            "status": "not_applicable",
+            "current_task_proof_effect": "none",
+        }
+    delegated = _as_dict(active_planning_record.get("delegated_judgment"))
+    requested_outcome = str(delegated.get("requested outcome") or delegated.get("requested_outcome") or "").strip()
+    changed_paths = _closeout_changed_surface_paths(active_planning_record)
+    triage = _installed_state_drift_triage_payload(
+        installed_state=installed_state,
+        task_text=requested_outcome,
+        changed_paths=changed_paths,
+        cli_invoke=cli_invoke,
+    )
+    triage_status = str(triage.get("status") or "")
+    current_task_blocking = triage_status in {"claim_blocking", "actionable_now"}
+    return {
+        "kind": "agentic-workspace/installed-state-closeout-residue/v1",
+        "status": "current_task_blocking" if current_task_blocking else "separate_maintenance_residue",
+        "installed_state_status": status,
+        "triage_status": triage_status,
+        "current_task_proof_effect": "blocking" if current_task_blocking else "not_blocking_narrow_task_proof",
+        "proof_claim_rule": (
+            "Installed payload drift blocks this closeout only when the task changes or claims installed/generated payload freshness."
+        ),
+        "residue": {
+            "status": "open",
+            "owner": "installed-payload-sync",
+            "next_action": triage.get("repair_command") or triage.get("selector") or "inspect installed_state_compatibility",
+            "claim_boundary": triage.get("claim_boundary", ""),
+        },
+        "triage": _compact_installed_state_drift_triage(triage),
+        "changed_paths_considered": changed_paths,
     }
 
 

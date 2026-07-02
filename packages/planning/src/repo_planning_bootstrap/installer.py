@@ -4054,6 +4054,11 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
             summary_profile="tiny",
         )
     )
+    continuation_answers = continuation_view.get("answers", {}) if isinstance(continuation_view.get("answers"), dict) else {}
+    continuation_next_action = str(continuation_answers.get("next_safe_action") or "").strip()
+    if continuation_next_action:
+        recommendation = continuation_next_action
+    projected_active_items = _active_items_with_projection_overrides(active_items, continuation_view)
     return _drop_empty_compact_fields(
         {
             "kind": "planning-summary/v1",
@@ -4063,7 +4068,7 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
             "todo": {
                 "active_count": len(active_items),
                 "queued_count": len(queued_items),
-                "active_items": _compact_active_items(active_items),
+                "active_items": _compact_active_items(projected_active_items),
             },
             "execplans": {
                 "active_count": len(active_execplans),
@@ -4202,6 +4207,52 @@ def _drop_empty_compact_fields(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _active_items_with_projection_overrides(items: Any, continuation_view: Any) -> list[dict[str, Any]]:
+    if not isinstance(items, list):
+        return []
+    projected = [dict(item) if isinstance(item, dict) else item for item in items]
+    if not isinstance(continuation_view, dict):
+        return [item for item in projected if isinstance(item, dict)]
+    stale_projections = continuation_view.get("stale_projections", [])
+    if not isinstance(stale_projections, list):
+        return [item for item in projected if isinstance(item, dict)]
+    for projection in stale_projections:
+        if not isinstance(projection, dict):
+            continue
+        field = str(projection.get("field", "")).strip()
+        match = re.fullmatch(r"todo\.active_items\[(\d+)\]\.([A-Za-z0-9_ -]+)", field)
+        if match is None:
+            continue
+        index = int(match.group(1))
+        key = match.group(2).strip().replace(" ", "_")
+        if index < 0 or index >= len(projected) or not isinstance(projected[index], dict):
+            continue
+        chosen_value = str(projection.get("chosen_value", "")).strip()
+        if not chosen_value:
+            continue
+        item = dict(projected[index])
+        item[key] = chosen_value
+        raw_overrides = item.get("projection_overrides", [])
+        overrides: list[dict[str, Any]] = (
+            [dict(override) for override in raw_overrides if isinstance(override, dict)] if isinstance(raw_overrides, list) else []
+        )
+        overrides.append(
+            {
+                "field": key,
+                "stale_value": str(projection.get("stale_value", "")).strip(),
+                "chosen_value": chosen_value,
+                "chosen_source": str(projection.get("chosen_source", "")).strip(),
+                "reason": str(projection.get("reason", "")).strip(),
+            }
+        )
+        item["projection_freshness"] = "superseded-state-field"
+        item["projection_overrides"] = [
+            {key: value for key, value in override.items() if value not in ("", [], {}, None)} for override in overrides
+        ]
+        projected[index] = item
+    return [item for item in projected if isinstance(item, dict)]
+
+
 def _compact_active_items(items: Any, *, max_items: int = 3) -> list[dict[str, Any]]:
     if not isinstance(items, list):
         return []
@@ -4224,6 +4275,8 @@ def _compact_active_items(items: Any, *, max_items: int = 3) -> list[dict[str, A
                     "next_action",
                     "done_when",
                     "suggested_first_slice",
+                    "projection_freshness",
+                    "projection_overrides",
                 )
                 if key in item and item[key] not in ("", [], {}, None)
             }
@@ -4736,6 +4789,12 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
     ordered_batch = execution_readiness.get("ordered_batch")
     if isinstance(ordered_batch, dict) and ordered_batch.get("status") == "present":
         compact_execution_readiness["ordered_batch"] = ordered_batch
+    continuation_answers = continuation_view.get("answers", {}) if isinstance(continuation_view.get("answers"), dict) else {}
+    continuation_next_action = str(continuation_answers.get("next_safe_action") or "").strip()
+    if continuation_next_action:
+        compact_execution_readiness["recommendation"] = {"summary": continuation_next_action}
+        planning_surface_health = dict(planning_surface_health)
+        planning_surface_health["recommended_next_action"] = continuation_next_action
 
     compact_summary: dict[str, Any] = {
         "kind": summary.get("kind", "planning-summary/v1"),
@@ -4748,7 +4807,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "line_count": todo.get("line_count", 0),
             "item_count": todo.get("item_count", 0),
             "active_count": todo.get("active_count", 0),
-            "active_items": _compact_active_items(todo.get("active_items", [])),
+            "active_items": _compact_active_items(_active_items_with_projection_overrides(todo.get("active_items", []), continuation_view)),
             "queued_count": todo.get("queued_count", 0),
             "queued_items": _compact_active_items(todo.get("queued_items", [])),
         },
