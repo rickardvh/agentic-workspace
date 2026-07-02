@@ -476,6 +476,7 @@
           "_active_plan_parent_decomposition_requirement",
           "_applicable_intent_status_payload",
           "_architecture_principles_payload",
+          "_architecture_principles_forecast_payload",
           "_closeout_intent_evidence_payload",
           "_compact_continuation_state_contract",
           "_decision_maturity_payload",
@@ -549,6 +550,7 @@
         ],
         "source_symbols": [
           "_active_plan_reliance_payload",
+          "_active_plan_touched_scope_paths",
           "_active_planning_assurance_for_proof",
           "_allow_ancillary_memory_feedback_path",
           "_allow_completed_archive_publication_residue",

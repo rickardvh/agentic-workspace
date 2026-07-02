@@ -116,6 +116,7 @@ from agentic_workspace.contract_tooling import (
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     output_contract_payload,
+    reasoning_economy_evidence_payload,
     repo_friction_payload,
     report_profile_payload,
     report_router_payload,
@@ -8878,6 +8879,7 @@ def _run_report_command(
         "decision_pressure": decision_pressure,
         "closeout_trust": closeout_trust,
         "successful_completion_cost": _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke),
+        "reasoning_economy": reasoning_economy_evidence_payload(cli_invoke=config.cli_invoke),
         "external_work_reconciliation": external_work_reconciliation,
         "external_work_delta": external_work_delta,
         "next_action": next_action,
@@ -10026,6 +10028,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/successful-completion-cost/v1",
         "purpose": "recent model CLI evaluation cost, package-read overhead, and first-pass versus rework evidence",
         "when_to_use": "when deciding whether workflow surfaces should stay default, shrink, or move behind selectors",
+    },
+    {
+        "section": "reasoning_economy",
+        "kind": "agentic-workspace/reasoning-economy-evidence/v1",
+        "purpose": "visible-artifact evidence classes, ledger examples, and fixture checks for compact closeout/report behavior",
+        "when_to_use": "when proving report or closeout output got cheaper without losing proof, residue, or closure status",
     },
     {
         "section": "operational_compression",
@@ -12650,6 +12658,10 @@ def _run_lazy_report_section_command(
 
     if normalized == "successful_completion_cost":
         payload["successful_completion_cost"] = _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "reasoning_economy":
+        payload["reasoning_economy"] = reasoning_economy_evidence_payload(cli_invoke=config.cli_invoke)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "closeout_trust":
