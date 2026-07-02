@@ -16130,6 +16130,25 @@ def _note_glob_matches(*, changed_paths: list[str], patterns: Any) -> list[dict[
     return matches
 
 
+def _active_plan_touched_scope_paths(active_planning_record: Any) -> list[str]:
+    record = _as_dict(active_planning_record)
+    candidate_values: list[Any] = [
+        _as_dict(record.get("canonical_core")).get("touched_scope"),
+        _as_dict(_as_dict(record.get("machine_readable_contract")).get("scope")).get("touched"),
+        record.get("touched_paths"),
+    ]
+    paths: list[str] = []
+    seen: set[str] = set()
+    for values in candidate_values:
+        for value in _list_payload(values):
+            path = str(value).strip()
+            if not path or path in seen or path.lower().startswith("fill in ") or path.lower() in {"none", "none yet", "not recorded"}:
+                continue
+            paths.append(path)
+            seen.add(path)
+    return _normalize_changed_paths(paths)
+
+
 def _architecture_principles_payload(
     *,
     target_root: Path | None,
@@ -16279,6 +16298,116 @@ def _architecture_principles_payload(
             ],
             "closeout": payload["closeout"],
         }
+    return payload
+
+
+def _architecture_principles_configured(target_root: Path | None) -> bool:
+    if target_root is None:
+        return False
+    path = target_root / ".agentic-workspace/system-intent/intent.toml"
+    if not path.is_file():
+        return False
+    try:
+        document = tomllib.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+        return False
+    return any(
+        isinstance(principle, dict) and str(principle.get("id", "")).strip()
+        for principle in _list_payload(document.get("architecture_principles"))
+    )
+
+
+def _architecture_principles_forecast_payload(
+    *,
+    target_root: Path | None,
+    planned_paths: list[str] | None,
+    scope_source: str,
+    cli_invoke: str,
+) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(planned_paths or [])
+    if not normalized_paths:
+        if not _architecture_principles_configured(target_root):
+            return {
+                "kind": "agentic-workspace/architecture-principles-forecast/v1",
+                "status": "not-configured",
+                "matched_count": 0,
+            }
+        command = _command_with_cli_invoke(
+            command="agentic-workspace implement --changed <paths> --select architecture_principles --format json",
+            cli_invoke=cli_invoke,
+        )
+        return {
+            "kind": "agentic-workspace/architecture-principles-forecast/v1",
+            "status": "needs-planned-scope",
+            "matched_count": 0,
+            "planned_scope": {"source": scope_source, "paths": []},
+            "rule": (
+                "Forecast cannot decide architecture-principle relevance until planned paths or changed paths are known; "
+                "it does not classify arbitrary task prose."
+            ),
+            "decision_maturity": {
+                "level": "evidence_seeking",
+                "decision": "architecture-principle-forecast",
+                "missing_evidence": ["planned paths or changed paths"],
+                "safe_probe": command,
+            },
+        }
+    architecture_principles = _architecture_principles_payload(
+        target_root=target_root,
+        changed_paths=normalized_paths,
+        cli_invoke=cli_invoke,
+        compact=True,
+    )
+    matched_count = int(architecture_principles.get("matched_count", 0) or 0)
+    status = "provisional-match" if matched_count else "clear"
+    command = _command_with_cli_invoke(
+        command=f"agentic-workspace implement --changed {' '.join(normalized_paths)} --select architecture_principles --format json",
+        cli_invoke=cli_invoke,
+    )
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/architecture-principles-forecast/v1",
+        "status": status,
+        "matched_count": matched_count,
+        "forecast_state": "provisional",
+        "planned_scope": {
+            "source": scope_source,
+            "paths": normalized_paths,
+        },
+        "evidence_basis": [
+            "explicit existing repo path in task scope",
+            "declared architecture_principles.path_globs",
+        ],
+        "rule": ("Forecast uses structured planned paths and configured path_globs only; it does not classify arbitrary task prose."),
+        "decision_maturity": {
+            "level": "evidence_seeking",
+            "decision": "architecture-principle-forecast",
+            "evidence_basis": ["planned path scope", "configured path_globs"],
+            "missing_evidence": ["actual changed paths"],
+            "safe_probe": command,
+        },
+        "verification": {
+            "required": True,
+            "command": command,
+            "rule": "Re-run implement --changed once actual changed paths are known to confirm or correct the forecast.",
+        },
+    }
+    if matched_count:
+        payload["architecture_principles"] = architecture_principles
+        payload["authority_boundary"] = _authority_boundary_payload(
+            surface="architecture_principles_forecast",
+            observed_by_aw=[
+                f"planned_scope_source={scope_source}",
+                f"planned_path_count={len(normalized_paths)}",
+                f"matched_count={matched_count}",
+            ],
+            recommended_by_aw=["consider matched architecture principles before edits"],
+            proof_hints=["verify forecast against actual changed paths with implement --changed"],
+            agent_owned_decisions=[
+                "whether the forecasted principle is semantically relevant to the intended edit",
+                "whether implementation preserves, re-scopes, or leaves the principle unresolved",
+            ],
+            rule="AW forecasts only from structured path evidence; agent judgment owns semantic application.",
+        )
     return payload
 
 
@@ -24403,6 +24532,31 @@ def _start_tiny_payload_fast(
     task_path_references = _task_path_reference_payload(task_text=task_text, detected_paths=task_mentioned_paths)
     if task_path_references["status"] == "present":
         payload["task_path_references"] = task_path_references
+    forecast_paths = []
+    forecast_scope_source = ""
+    if task_path_references.get("path_reference_kind") == "path-scoped-work":
+        forecast_paths = _list_payload(task_path_references.get("path_scoped_paths")) or task_mentioned_paths
+        forecast_scope_source = "task_path_references.path_scoped_paths"
+    elif active_planning_present:
+        forecast_paths = _active_plan_touched_scope_paths(active_parent_record)
+        forecast_scope_source = "active_planning_record.touched_scope"
+    forecast_missing_scope = (
+        bool(task_intent.get("status") == "present")
+        and not forecast_paths
+        and not changed_paths
+        and not _is_config_posture_task(task_text)
+        and read_only_response.get("status") != "read-only-reporting"
+        and not _is_prep_only_handoff_task(task_text)
+    )
+    if (forecast_paths or forecast_missing_scope) and not changed_paths and not _is_config_posture_task(task_text):
+        architecture_forecast = _architecture_principles_forecast_payload(
+            target_root=target_root,
+            planned_paths=forecast_paths,
+            scope_source=forecast_scope_source or "missing_planned_scope",
+            cli_invoke=config.cli_invoke,
+        )
+        if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"}:
+            payload["architecture_principles_forecast"] = architecture_forecast
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
         payload["vague_outcome_orientation"] = vague_orientation

@@ -42,6 +42,33 @@ def _assert_selector_inventory_omitted_from_compact_start(payload: dict[str, Any
     return inventory
 
 
+def _write_cli_architecture_principles(target_root: Path) -> None:
+    _write(
+        target_root / ".agentic-workspace" / "system-intent" / "intent.toml",
+        """
+kind = "agentic-workspace/system-intent/v1"
+summary = "Portable host-neutral operating intent."
+governing_intents = ["Keep package contracts portable across host repos."]
+anti_intents = ["Do not let this repo's current language, tooling, structure, or agent preferences become hidden universal product assumptions."]
+decision_tests = ["Favor work that improves portability by reducing accidental repo assumptions."]
+confidence = "high"
+needs_review = false
+
+[[architecture_principles]]
+id = "host-agnostic-agent-judgment"
+title = "Preserve host-agnostic agent judgment"
+authority = "repo-system-intent"
+owner = "workspace-runtime"
+summary = "AW provides infrastructure for agent judgment instead of package-owned host assumptions."
+allowed_sources = ["explicit structured facts", "AW-owned enum labels", "configuration"]
+forbidden_sources = ["package-owned assumptions about prose keywords", "package-owned assumptions about file names"]
+affected_decisions = ["routing", "ownership", "proof-selection"]
+path_globs = ["src/agentic_workspace/workspace_runtime*.py"]
+proof_expectation = "Closeout must state whether the principle was preserved or re-scoped."
+""",
+    )
+
+
 def test_repeated_module_flags_accumulate_module_selection(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--modules", "memory", "--modules", "planning", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -1507,6 +1534,186 @@ def test_start_path_scoped_task_text_uses_known_path_inspection(tmp_path: Path, 
     assert path_refs["path_reference_kind"] == "path-scoped-work"
     assert path_refs["path_scoped_paths"] == ["AGENTS.md"]
     assert path_refs["matched_action_terms"] == ["review"]
+
+
+def test_start_forecasts_architecture_principle_for_path_scoped_task_before_edits(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_cli_architecture_principles(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_startup.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Update src/agentic_workspace/workspace_runtime_startup.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    forecast = payload["context"]["architecture_principles_forecast"]
+    assert forecast["status"] == "provisional-match"
+    assert forecast["forecast_state"] == "provisional"
+    assert forecast["planned_scope"] == {
+        "source": "task_path_references.path_scoped_paths",
+        "paths": ["src/agentic_workspace/workspace_runtime_startup.py"],
+    }
+    assert forecast["architecture_principles"]["matched_principles"][0]["id"] == "host-agnostic-agent-judgment"
+    assert forecast["architecture_principles"]["matched_principles"][0]["matcher"]["kind"] == "path_glob"
+    assert "does not classify arbitrary task prose" in forecast["rule"]
+    assert "implement --changed src/agentic_workspace/workspace_runtime_startup.py" in forecast["verification"]["command"]
+    assert "--select architecture_principles" in forecast["verification"]["command"]
+    assert forecast["decision_maturity"]["level"] == "evidence_seeking"
+
+
+def test_start_surfaces_architecture_principle_scope_probe_when_planned_scope_missing(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_cli_architecture_principles(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement the architecture principle forecast update",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    forecast = payload["context"]["architecture_principles_forecast"]
+    assert forecast["status"] == "needs-planned-scope"
+    assert forecast["planned_scope"] == {"source": "missing_planned_scope", "paths": []}
+    assert forecast["decision_maturity"]["level"] == "evidence_seeking"
+    assert forecast["decision_maturity"]["missing_evidence"] == ["planned paths or changed paths"]
+    assert "implement --changed <paths>" in forecast["decision_maturity"]["safe_probe"]
+    assert "--select architecture_principles" in forecast["decision_maturity"]["safe_probe"]
+    assert "does not classify arbitrary task prose" in forecast["rule"]
+
+
+def test_start_keeps_architecture_principle_scope_probe_quiet_when_not_configured(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement the architecture principle forecast update",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert "architecture_principles_forecast" not in payload["context"]
+
+
+def test_start_forecasts_architecture_principle_from_active_plan_scope_before_edits(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_cli_architecture_principles(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_startup.py", "VALUE = 1\n")
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--target",
+                str(tmp_path),
+                "--id",
+                "runtime-forecast-plan",
+                "--title",
+                "Runtime forecast plan",
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "runtime-forecast-plan.plan.json"
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    planned_paths = ["src/agentic_workspace/workspace_runtime_startup.py"]
+    plan["canonical_core"]["touched_scope"] = planned_paths
+    plan["machine_readable_contract"]["scope"]["touched"] = planned_paths
+    plan["touched_paths"] = planned_paths
+    _write(plan_path, json.dumps(plan, indent=2) + "\n")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue the active plan",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    forecast = payload["context"]["architecture_principles_forecast"]
+    assert forecast["status"] == "provisional-match"
+    assert forecast["planned_scope"] == {
+        "source": "active_planning_record.touched_scope",
+        "paths": planned_paths,
+    }
+    assert forecast["architecture_principles"]["matched_principles"][0]["matcher"]["kind"] == "path_glob"
+
+
+def test_start_keeps_architecture_principle_forecast_quiet_for_unmatched_path(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_cli_architecture_principles(tmp_path)
+    _write(tmp_path / "README.md", "# Notes\n")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Review README.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["context"]["task_path_references"]["path_reference_kind"] == "path-scoped-work"
+    assert "architecture_principles_forecast" not in payload["context"]
+    assert "architecture_principles_forecast" not in payload
 
 
 def test_start_explicit_changed_path_still_uses_changed_path_startup(tmp_path: Path, capsys) -> None:
