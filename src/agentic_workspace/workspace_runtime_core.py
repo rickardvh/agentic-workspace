@@ -25319,6 +25319,9 @@ def _pr_context_refs_from_task(task_text: str | None) -> list[str]:
     refs = sorted(set(re.findall(r"#\d+\b", text)), key=lambda value: int(value.lstrip("#")))
     if not refs:
         return []
+    explicit_pr_refs = {f"#{match}" for match in re.findall(r"\b(?:pr|pull request)\s+#?(\d+)\b", text, flags=re.IGNORECASE)}
+    if explicit_pr_refs:
+        return sorted(explicit_pr_refs, key=lambda value: int(value.lstrip("#")))
     pr_terms = (
         " pr ",
         " pull request",
@@ -30979,7 +30982,6 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
             "posture": {},
             "reason": "No task text or changed paths were provided, so execution posture cannot infer task capability safely.",
         }
-    issue_refs = re.findall("#\\d+", task_text or "")
     judgment_terms = (
         "architecture",
         "contract",
@@ -31000,8 +31002,8 @@ def _capability_posture_for_implementation(*, changed_paths: list[str], task_tex
         risk_flags.append("many changed paths")
     if len(set((path.split("/")[0] for path in changed_paths if path))) >= 3:
         risk_flags.append("cross-surface breadth")
-    if len(issue_refs) > 1 or "epic" in combined:
-        scope_signal = "epic" if "epic" in combined else "lane"
+    if "epic" in combined:
+        scope_signal = "epic"
     elif "lane" in combined or len(changed_paths) >= 4:
         scope_signal = "lane"
     elif changed_paths or task_text:

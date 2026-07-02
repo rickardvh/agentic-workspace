@@ -1886,6 +1886,95 @@ def test_start_pr_reference_wording_does_not_route_as_unknown_issue_scope(tmp_pa
     assert payload.get("missing") == ["issue_reference_intent"]
 
 
+def test_start_github_comment_report_correction_does_not_force_planning(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Correct the #1942 follow-up report format after PR #1950 review fix",
+                "--select",
+                "planning_safety_gate,issue_reference_intent",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["values"]["planning_safety_gate"]
+
+    assert gate["workflow_sufficient"] is True
+    assert gate["decision"] != "planning-escalation-required"
+    assert gate["issue_refs"] == ["#1942"]
+    assert gate["pr_context"]["refs"] == ["#1950"]
+    assert payload["values"]["issue_reference_intent"]["issue_refs"] == ["#1942"]
+    assert "external_reporting_context" not in gate
+
+
+def test_start_mixed_issue_implementation_and_report_target_does_not_force_planning(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement issue #1951 and make a better report on #1942",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
+
+    assert gate["workflow_sufficient"] is True
+    assert gate["decision"] != "planning-escalation-required"
+    assert gate["issue_refs"] == ["#1942", "#1951"]
+    assert "external_reporting_context" not in gate
+
+
+@pytest.mark.parametrize("task", ["Work on #1951", "Fix bug in #1951", "Implement changes in #1951"])
+def test_start_bare_preposition_issue_refs_remain_implementation_scope(tmp_path: Path, capsys, task: str) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                task,
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
+
+    assert gate["issue_refs"] == ["#1951"]
+    assert "external_reporting_context" not in gate
+
+
 def test_start_issue_reference_wording_keeps_issue_scope_warning(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
