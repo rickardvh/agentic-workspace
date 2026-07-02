@@ -3561,6 +3561,41 @@ def test_report_exposes_communication_contract_in_router_and_output_contract(tmp
     ]
 
 
+def test_report_exposes_reasoning_economy_evidence_section(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "reasoning_economy", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    answer = selected["answer"]
+    assert answer["kind"] == "agentic-workspace/reasoning-economy-evidence/v1"
+    assert answer["scope"] == "visible_external_artifacts_only"
+    assert answer["evidence_class_ids"] == ["direct", "adjacent", "none"]
+    assert answer["required_visible_fields"] == [
+        "decision_or_finding",
+        "proof_boundary",
+        "residue_or_boundary",
+        "next_action_or_closure_status",
+    ]
+    assert answer["ledger_refs"] == ["PR #1955", "PR #1960", "PR #1961", "PR #1962"]
+    fixture_results = {item["id"]: item for item in answer["fixture_results"]}
+    assert fixture_results["visible-closeout-artifact"]["result"] == "pass"
+    assert fixture_results["tool-chronology-without-claim-boundary"]["result"] == "flag"
+    assert fixture_results["tool-chronology-without-claim-boundary"]["negative_signal_detected"] == "low_value_tool_chronology"
+    assert "hidden chain-of-thought grading" in answer["non_goals"]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--verbose", "--format", "json"]) == 0
+    full = json.loads(capsys.readouterr().out)
+    assert full["reasoning_economy"]["evidence_classes"]["direct"]["definition"].startswith("A visible PR")
+    assert full["reasoning_economy"]["behavior_check"]["applies_to"] == [
+        "PR body",
+        "review closeout",
+        "report section",
+        "closeout_report",
+        "handoff summary",
+    ]
+
+
 def test_report_ordinary_agent_path_carries_lane_completion_model(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 

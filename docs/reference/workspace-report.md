@@ -166,6 +166,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `effective_authority` | object | yes |  | Resolved authority hierarchy for workspace, module, and repo-owned surfaces. |  |  |
 | `operational_compression` | object | yes |  | Compression signals that keep ordinary agent startup and reporting cheap. |  |  |
 | `successful_completion_cost` | object | yes |  | Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions. |  |  |
+| `reasoning_economy` | object | yes |  | Visible-artifact reasoning-economy evidence classes, ledger examples, and behavior fixtures for report and closeout artifacts. |  |  |
 | `completion_contract` | object | yes |  | Derived Planning completion-contract lens for done, partial, blocked, and continuation-required decisions. |  |  |
 | `parent_intent_status` | ref `#/$defs/parent_intent_status` | no |  | Derived parent/original-intent status packet used to prevent slice proof from being reported as parent completion. |  |  |
 | `parent_intent_status.kind` | const `"agentic-workspace/parent-intent-status/v1"` | yes |  | Discriminator for the parent/original-intent status packet. |  |  |

@@ -49,6 +49,7 @@
     "maintenance_pressure",
     "operational_compression",
     "successful_completion_cost",
+    "reasoning_economy",
     "completion_contract",
     "repair_loop_residue",
     "structured_findings",
@@ -337,6 +338,11 @@
     "successful_completion_cost": {
       "type": "object",
       "description": "Recent model CLI evaluation cost, package-read overhead, and rework signals for advisory optimization decisions."
+    },
+    "reasoning_economy": {
+      "type": "object",
+      "description": "Visible-artifact reasoning-economy evidence classes, ledger examples, and behavior fixtures for report and closeout artifacts.",
+      "additionalProperties": true
     },
     "completion_contract": {
       "type": "object",
