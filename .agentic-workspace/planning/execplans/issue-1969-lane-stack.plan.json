@@ -30,7 +30,7 @@
     "hard_constraints": "Preserve proof, residue, next action, uncertainty, and honest closure; avoid prompt-prose classifiers, hidden reasoning scoring, terse persona changes, and broad always-on context dumps.",
     "agent_may_decide": "Exact packet helper names, compact projection placement, branch boundaries, and focused test shape, while preserving child issue acceptance criteria.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Implement shared state-delta packet builders and expose them through ordinary start, implement, report, and skill surfaces.",
+    "next_action": "Review the draft PR stack #1976-#1980, keep #1969 open until review/merge, and handle installed payload freshness as a separate follow-up.",
     "proof_expectations": [
       "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py",
       "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task \"Implement the full #1969 lane in stacked PRs. Switch to master and pull origin before starting work.\" --format json",
@@ -209,24 +209,24 @@
     "Parent #1969 acceptance evidence is recorded without over-claiming before proof."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "completed",
+    "executor": "Codex",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Implement #1970 current_decision packet first, then layer #1971-#1974."
+    "what happened": "Implemented the #1969 stack as five local branches: current decision packets, message economy, continuation capsules, evidence bundles, and operating-loop skill adoption.",
+    "scope touched": "Planning/lane records, reporting support packet builders, startup compact projection, skill payload mirrors, and focused CLI tests.",
+    "changed surfaces": "reporting_support.py; workspace_runtime_startup.py; workspace_runtime_implement.py; workspace-operating-loop skill and registries; workspace CLI tests; planning records.",
+    "validations run": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py memory route --target . --stage closeout --format json; uv run python scripts/run_agentic_workspace.py upgrade --target . --dry-run --format json.",
+    "result for continuation": "Draft PR stack opened: #1976 current decision, #1977 message economy, #1978 continuation capsule, #1979 evidence bundles, #1980 operating-loop skill and closeout. Installed payload freshness remains unclaimed because upgrade dry-run found broader managed-payload/provenance drift and scratch review items.",
+    "next step": "Review and merge the stacked PRs in order (#1976 -> #1977 -> #1978 -> #1979 -> #1980), then reassess #1969 closure and the installed payload freshness follow-up."
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "self-reviewed",
+    "scope respected": "yes; the work stayed within planned runtime packet, skill payload, test, and planning surfaces.",
+    "proof status": "passed for source behavior; doctor reports payload provenance drift, so installed payload freshness is not claimed.",
+    "intent served": "yes for source implementation of #1970-#1974; final issue closure should wait for PR review/merge.",
+    "config compliance": "AW start, summary, implement, closeout_trust, and memory route were used; upgrade apply was not run because dry-run reported review-required broader payload work.",
+    "misinterpretation risk": "low; packet defaults were tightened after budget tests showed early output bloat.",
+    "follow-on decision": "review stacked PRs #1976-#1980; keep parent issue open until review/merge confirms the lane."
   },
   "delegation_outcome_feedback": {
     "route chosen": "keep-local",
@@ -238,28 +238,28 @@
     "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py passed: 271 passed in 41.29s. AW summary passed with planning_surface_health.status=active and warning_count=0. AW memory route closeout found only baseline memory routing and no task-specific durable note. AW upgrade dry-run showed payload/provenance drift and review-required scratch state, so payload freshness is intentionally not claimed.",
+    "proof achieved now": "source-behavior-valid; installed-payload-freshness-unproven",
+    "evidence for \"proof achieved\" state": "Focused CLI suite passed, summary clean, memory route completed, and upgrade dry-run reviewed."
   },
   "intent_satisfaction": {
-    "original intent": "Create a bounded plan for Issue 1969 lane stack.",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "original intent": "Implement the full #1969 lane in stacked PRs.",
+    "was original intent fully satisfied?": "yes for local source implementation; external PR creation/review remains the delivery vehicle.",
+    "evidence of intent satisfaction": "The stack implements #1970 current_decision, #1971 message_economy, #1972 continuation_capsule for active continuation, #1973 evidence_bundle, and #1974 shipped operating-loop skill guidance with registry/payload mirror coverage.",
+    "unsolved intent passed to": "GitHub stacked PR review and merge (#1976-#1980); installed payload freshness follow-up if the broader upgrade review is accepted."
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
+    "outcome delivered": "draft PR stack opened for #1969: #1976, #1977, #1978, #1979, and #1980",
+    "validation confirmed": "focused CLI suite passed; planning summary clean",
+    "follow-on routed to": "stacked PR review and payload upgrade/provenance review if needed",
+    "post-work posterity capture": "planning record updated; no Memory note captured because closeout route found no task-specific durable knowledge",
     "knowledge promoted (Memory/Docs/Config)": "none",
     "resume from": "current milestone"
   },
   "durable_residue": {
     "status": "none",
-    "learned constraint": "none yet",
-    "motivation worth preserving": "none yet",
+    "learned constraint": "State-delta packets must remain visibility-gated and compact; default startup budget tests caught packet bloat.",
+    "motivation worth preserving": "The constraint is preserved in tests that keep simple start/implement/report outputs under existing budgets.",
     "canonical owner now": "none",
     "promotion trigger": "none",
     "retention after promotion": "retain"
@@ -275,16 +275,16 @@
     "owner surface": ""
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
+    "slice status": "complete",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "why this decision is honest": "Local source implementation and focused proof are complete, but PR review/merge and installed payload freshness are separate claims.",
+    "evidence carried forward": "271 focused tests passed; summary clean; doctor planning shows payload drift not claimed fresh; upgrade dry-run requires broader review before payload sync.",
+    "reopen trigger": "PR review finds packet semantics, budget behavior, skill discoverability, or payload mirror coverage insufficient."
   },
   "improvement_signal_review": {
-    "status": "not_checked",
+    "status": "signals_routed",
     "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
     "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
     "source": "operating_posture",
@@ -297,11 +297,15 @@
       "dismissed with reason"
     ],
     "ordinary output cap": 3,
-    "signals found": [],
+    "signals found": [
+      "implement --changed accepted a comma-separated path list as one path, yielding changed_path_count=1 for many intended paths."
+    ],
     "signals fixed": [],
-    "signals routed": [],
+    "signals routed": [
+      "GitHub #1975"
+    ],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "GitHub #1975"
   },
   "closeout_distillation": {
     "buckets": {

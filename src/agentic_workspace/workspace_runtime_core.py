@@ -23131,6 +23131,25 @@ def _startup_skills_projection(
         )
 
     recommended: list[dict[str, Any]] = []
+    state_delta_packets_visible = str(next_safe_action.get("next_safe_action", "")) != "choose-task-switch-route" and not isinstance(
+        payload.get("installed_state_compatibility"), dict
+    )
+    if state_delta_packets_visible and "workspace-operating-loop" in skills_by_id:
+        skill = skills_by_id.get("workspace-operating-loop", {})
+        state_delta_packets = ["current_decision", "message_economy"]
+        if isinstance(payload.get("continuation_view"), dict):
+            state_delta_packets.append("continuation_capsule")
+        state_delta_packets.append("evidence_bundle")
+        recommended.append(
+            {
+                "id": "workspace-operating-loop",
+                **({"path": skill.get("path")} if skill.get("path") else {}),
+                **({"summary": skill.get("summary")} if skill.get("summary") else {}),
+                "reason": "state-delta packets are visible in startup output",
+                "source": "startup_state_delta_packets",
+                "packets": state_delta_packets,
+            }
+        )
 
     catalog_command = _proof_command_for_target(
         command='agentic-workspace skills --target ./repo --task "<task>" --format json',
@@ -23140,7 +23159,7 @@ def _startup_skills_projection(
 
     return {
         "kind": "agentic-workspace/startup-skills-projection/v1",
-        "status": "recommended" if required else "available",
+        "status": "recommended" if required or recommended else "available",
         "rule": "Use catalog.command only for task-specific skill search.",
         "required": required,
         "recommended": recommended,
