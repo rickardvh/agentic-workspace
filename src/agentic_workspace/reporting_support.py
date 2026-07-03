@@ -208,6 +208,44 @@ def current_decision_payload(
     }
 
 
+def message_economy_payload(*, surface: str, communication_contract: dict[str, Any] | None = None) -> dict[str, Any]:
+    contract = communication_contract if isinstance(communication_contract, dict) else communication_contract_payload(surface=surface)
+    return {
+        "kind": "agentic-workspace/message-economy/v1",
+        "surface": surface,
+        "status": "active",
+        "speak_when": [
+            "decision_changed",
+            "proof_boundary_changed",
+            "residue_or_owner_changed",
+            "next_safe_action_changed",
+            "safety_or_reversibility_changed",
+        ],
+        "stay_compact_when": [
+            "state_unchanged",
+            "evidence_already_queryable",
+            "detail_route_available",
+            "chronology_not_trust_relevant",
+        ],
+        "expand_when": list(contract.get("expand_when", []))
+        or [
+            "ambiguous_action_safety",
+            "stale_missing_or_failed_proof",
+            "user_requests_detail",
+            "unresolved_residue",
+        ],
+        "discourage": [
+            "low_value_tool_chronology",
+            "repeated_state_recaps",
+            "broad_process_narration_without_decision_delta",
+        ],
+        "preserve": ["proof_boundary", "residue_or_claim_boundary", "next_safe_action", "uncertainty_when_action_changing"],
+        "density_rule": "Default visible updates should be compact state deltas; expand only when the triggers change trust, safety, proof, residue, or user value.",
+        "source_contract": contract.get("kind", "agentic-workspace/communication-contract/v1"),
+        "rule": "Message cadence is derived from structured communication state, not from prompt-prose keyword matching.",
+    }
+
+
 def _load_reasoning_economy_evidence_ledger(*, target_root: Path | None) -> dict[str, Any]:
     if target_root is None:
         return {

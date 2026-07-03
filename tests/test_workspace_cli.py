@@ -783,6 +783,13 @@ def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, c
         "unresolved_residue",
         "next_safe_action",
     ]
+    message_economy = payload["message_economy"]
+    assert message_economy["kind"] == "agentic-workspace/message-economy/v1"
+    assert message_economy["surface"] == "startup"
+    assert "decision_changed" in message_economy["speak_when"]
+    assert "state_unchanged" in message_economy["stay_compact_when"]
+    assert "stale_missing_or_failed_proof" in message_economy["expand_when"]
+    assert "proof_boundary" in message_economy["preserve"]
     current_decision = payload["current_decision"]
     assert current_decision["kind"] == "agentic-workspace/current-decision/v1"
     assert current_decision["surface"] == "startup"
@@ -3626,6 +3633,7 @@ def test_report_exposes_communication_contract_in_router_and_output_contract(tmp
     assert contract["default_posture"] == "decision_first_state_backed"
     assert "handoff_review" in contract["phase_ids"]
     assert "current_decision" not in router
+    assert "message_economy" not in router
     assert cli.main(["report", "--target", str(tmp_path), "--section", "output_contract", "--format", "json"]) == 0
 
     selected = json.loads(capsys.readouterr().out)["answer"]

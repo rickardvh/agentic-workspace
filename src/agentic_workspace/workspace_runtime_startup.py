@@ -18,6 +18,7 @@ from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
     current_decision_payload,
+    message_economy_payload,
 )
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
@@ -1710,6 +1711,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         payload.get("installed_state_compatibility"), dict
     )
     if show_current_decision:
+        selected["message_economy"] = message_economy_payload(
+            surface="startup", communication_contract=compact_communication_contract_payload(surface="startup")
+        )
         selected["current_decision"] = current_decision_payload(
             surface="startup",
             decision_packet=selected["decision_packet"],
