@@ -23136,6 +23136,10 @@ def _startup_skills_projection(
     )
     if state_delta_packets_visible and "workspace-operating-loop" in skills_by_id:
         skill = skills_by_id.get("workspace-operating-loop", {})
+        state_delta_packets = ["current_decision", "message_economy"]
+        if isinstance(payload.get("continuation_view"), dict):
+            state_delta_packets.append("continuation_capsule")
+        state_delta_packets.append("evidence_bundle")
         recommended.append(
             {
                 "id": "workspace-operating-loop",
@@ -23143,7 +23147,7 @@ def _startup_skills_projection(
                 **({"summary": skill.get("summary")} if skill.get("summary") else {}),
                 "reason": "state-delta packets are visible in startup output",
                 "source": "startup_state_delta_packets",
-                "packets": ["current_decision", "message_economy", "evidence_bundle"],
+                "packets": state_delta_packets,
             }
         )
 

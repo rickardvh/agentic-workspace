@@ -851,6 +851,15 @@ def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path
     assert capsule["proof_boundary"] == payload["current_decision"]["proof_boundary"]
     assert capsule["known_evidence"] == payload["current_decision"]["known_evidence"][:2]
     assert "full task history" in capsule["do_not_repeat"]
+    operating_loop_skill = next(entry for entry in payload["skills"]["recommended"] if entry["id"] == "workspace-operating-loop")
+    assert operating_loop_skill["reason"] == "state-delta packets are visible in startup output"
+    assert operating_loop_skill["source"] == "startup_state_delta_packets"
+    assert operating_loop_skill["packets"] == [
+        "current_decision",
+        "message_economy",
+        "continuation_capsule",
+        "evidence_bundle",
+    ]
 
 
 def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyword(tmp_path: Path, capsys) -> None:
