@@ -130,16 +130,32 @@ def compact_communication_contract_payload(*, surface: str) -> dict[str, Any]:
     }
 
 
-def current_decision_payload(
+def _state_delta_claim_boundary(decision_packet: dict[str, Any]) -> str:
+    claim_boundary = decision_packet.get("claim_boundary", "not-evaluated")
+    if isinstance(claim_boundary, dict):
+        claim_boundary = str(
+            claim_boundary.get("status")
+            or claim_boundary.get("gate_result")
+            or claim_boundary.get("claim_level_allowed")
+            or "structured-boundary"
+        )
+    return str(claim_boundary)
+
+
+def state_delta_core_payload(
     *,
     surface: str,
     decision_packet: dict[str, Any],
+    communication_contract: dict[str, Any] | None = None,
     evidence_basis: list[str] | None = None,
     missing_evidence: list[str] | None = None,
     safe_probe: str | None = None,
     response_shape: list[str] | None = None,
     avoid_repeat: list[str] | None = None,
 ) -> dict[str, Any]:
+    contract = (
+        communication_contract if isinstance(communication_contract, dict) else compact_communication_contract_payload(surface=surface)
+    )
     blocked_actions = [str(item) for item in decision_packet.get("blocked_actions", []) if str(item).strip()]
     required_commands = [str(item) for item in decision_packet.get("required_commands", []) if str(item).strip()]
     detail_routes = decision_packet.get("detail_routes", {})
@@ -175,65 +191,132 @@ def current_decision_payload(
         default_safe_probe = required_commands[0]
     elif route_keys:
         default_safe_probe = f"inspect selector {route_keys[0]}"
-    claim_boundary = decision_packet.get("claim_boundary", "not-evaluated")
-    if isinstance(claim_boundary, dict):
-        claim_boundary = str(
-            claim_boundary.get("status")
-            or claim_boundary.get("gate_result")
-            or claim_boundary.get("claim_level_allowed")
-            or "structured-boundary"
-        )
+    claim_boundary = _state_delta_claim_boundary(decision_packet)
+    default_response_shape = response_shape or [
+        "decision_or_finding",
+        "evidence_or_proof_boundary",
+        "residue_or_claim_boundary",
+        "next_safe_action",
+    ]
+    default_avoid_repeat = avoid_repeat or [
+        "chronological_tool_call_narration",
+        "repeated_context_reconstruction",
+    ]
+    expand_when = list(contract.get("expand_when", [])) or [
+        "stale_missing_or_failed_proof",
+        "user_requests_detail",
+    ]
     return {
-        "kind": "agentic-workspace/current-decision/v1",
+        "kind": "agentic-workspace/state-delta-core/v1",
         "surface": surface,
         "status": "blocked" if blocked_actions else "evidence-seeking" if missing else "ready",
-        "decision_question": str(decision_packet.get("phase_question", "") or "What decision is being made now?"),
-        "known_evidence": known_evidence[:1],
-        **({"missing_evidence": missing[:2]} if missing else {}),
-        "safe_probe": safe_probe or default_safe_probe or "answer from the current decision packet",
-        "response_shape": response_shape
-        or ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
-        "avoid_repeat": (
-            avoid_repeat
-            or [
-                "chronological_tool_call_narration",
-                "repeated_context_reconstruction",
-            ]
-        ),
-        "proof_boundary": claim_boundary,
-        "residue_owner": decision_packet.get("residue_owner", "none"),
-        "next_action": decision_packet.get("next_action", ""),
-        "detail_route_ids": route_keys[:3],
+        "decision": {
+            "question": str(decision_packet.get("phase_question", "") or "What decision is being made now?"),
+            "next_action": decision_packet.get("next_action", ""),
+            "safe_probe": safe_probe or default_safe_probe or "answer from the current decision packet",
+            "response_shape": default_response_shape,
+        },
+        "evidence": {
+            "known": known_evidence[:2],
+            **({"missing": missing[:2]} if missing else {}),
+            "route_ids": route_keys[:3],
+        },
+        "boundary": {
+            "proof": claim_boundary,
+            "claim": claim_boundary,
+            "residue_owner": decision_packet.get("residue_owner", "none"),
+        },
+        "output_policy": {
+            "speak_when": ["decision_changed", "proof_boundary_changed", "next_safe_action_changed"],
+            "stay_compact_when": ["state_unchanged", "detail_route_available", "chronology_not_trust_relevant"],
+            "expand_when": expand_when,
+            "avoid": default_avoid_repeat,
+            "preserve": ["proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
+        },
         "state_backed": True,
     }
 
 
-def message_economy_payload(*, surface: str, communication_contract: dict[str, Any] | None = None) -> dict[str, Any]:
-    contract = communication_contract if isinstance(communication_contract, dict) else communication_contract_payload(surface=surface)
+def current_decision_payload(
+    *,
+    surface: str,
+    decision_packet: dict[str, Any],
+    evidence_basis: list[str] | None = None,
+    missing_evidence: list[str] | None = None,
+    safe_probe: str | None = None,
+    response_shape: list[str] | None = None,
+    avoid_repeat: list[str] | None = None,
+    state_delta_core: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    core = (
+        state_delta_core
+        if isinstance(state_delta_core, dict)
+        else state_delta_core_payload(
+            surface=surface,
+            decision_packet=decision_packet,
+            evidence_basis=evidence_basis,
+            missing_evidence=missing_evidence,
+            safe_probe=safe_probe,
+            response_shape=response_shape,
+            avoid_repeat=avoid_repeat,
+        )
+    )
+    decision = core.get("decision", {}) if isinstance(core.get("decision"), dict) else {}
+    evidence = core.get("evidence", {}) if isinstance(core.get("evidence"), dict) else {}
+    boundary = core.get("boundary", {}) if isinstance(core.get("boundary"), dict) else {}
+    policy = core.get("output_policy", {}) if isinstance(core.get("output_policy"), dict) else {}
+    missing = [str(item) for item in evidence.get("missing", []) if str(item).strip()]
+    return {
+        "kind": "agentic-workspace/current-decision/v1",
+        "surface": surface,
+        "status": core.get("status", "ready"),
+        "decision_question": decision.get("question", "What decision is being made now?"),
+        "known_evidence": list(evidence.get("known", []))[:1],
+        **({"missing_evidence": missing[:2]} if missing else {}),
+        "safe_probe": decision.get("safe_probe", "answer from the current decision packet"),
+        "response_shape": list(decision.get("response_shape", [])),
+        "avoid_repeat": list(policy.get("avoid", [])),
+        "proof_boundary": boundary.get("proof", "not-evaluated"),
+        "residue_owner": boundary.get("residue_owner", "none"),
+        "next_action": decision.get("next_action", ""),
+        "detail_route_ids": list(evidence.get("route_ids", []))[:3],
+        "state_backed": True,
+    }
+
+
+def message_economy_payload(
+    *,
+    surface: str,
+    communication_contract: dict[str, Any] | None = None,
+    state_delta_core: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    core_policy = (
+        state_delta_core.get("output_policy", {})
+        if isinstance(state_delta_core, dict) and isinstance(state_delta_core.get("output_policy"), dict)
+        else {}
+    )
+    if core_policy:
+        speak_when = list(core_policy.get("speak_when", []))
+        stay_compact_when = list(core_policy.get("stay_compact_when", []))
+        expand_when = list(core_policy.get("expand_when", []))
+        preserve = list(core_policy.get("preserve", []))
+    else:
+        contract = (
+            communication_contract if isinstance(communication_contract, dict) else compact_communication_contract_payload(surface=surface)
+        )
+        speak_when = ["decision_changed", "proof_boundary_changed", "next_safe_action_changed"]
+        stay_compact_when = ["state_unchanged", "detail_route_available", "chronology_not_trust_relevant"]
+        expand_when = list(contract.get("expand_when", [])) or ["stale_missing_or_failed_proof", "user_requests_detail"]
+        preserve = ["proof_boundary", "residue_or_claim_boundary", "next_safe_action"]
     return {
         "kind": "agentic-workspace/message-economy/v1",
         "surface": surface,
         "status": "active",
-        "speak_when": [
-            "decision_changed",
-            "proof_boundary_changed",
-            "next_safe_action_changed",
-        ],
-        "stay_compact_when": [
-            "state_unchanged",
-            "detail_route_available",
-            "chronology_not_trust_relevant",
-        ],
-        "expand_when": list(contract.get("expand_when", []))
-        or [
-            "stale_missing_or_failed_proof",
-            "user_requests_detail",
-        ],
-        "discourage": [
-            "low_value_tool_chronology",
-            "repeated_state_recaps",
-        ],
-        "preserve": ["proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
+        "speak_when": speak_when,
+        "stay_compact_when": stay_compact_when,
+        "expand_when": expand_when,
+        "discourage": ["low_value_tool_chronology", "repeated_state_recaps"],
+        "preserve": preserve,
         "state_backed": True,
     }
 
@@ -245,43 +328,52 @@ def continuation_capsule_payload(
     message_economy: dict[str, Any] | None = None,
     preserved_intent: str | None = None,
     stale_context: list[str] | None = None,
+    state_delta_core: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    economy = message_economy if isinstance(message_economy, dict) else message_economy_payload(surface=surface)
-    proof_boundary = current_decision.get("proof_boundary", "not-evaluated")
-    residue_owner = current_decision.get("residue_owner", "none")
+    core = state_delta_core if isinstance(state_delta_core, dict) else {}
+    decision = core.get("decision", {}) if isinstance(core.get("decision"), dict) else {}
+    evidence = core.get("evidence", {}) if isinstance(core.get("evidence"), dict) else {}
+    boundary = core.get("boundary", {}) if isinstance(core.get("boundary"), dict) else {}
+    policy = core.get("output_policy", {}) if isinstance(core.get("output_policy"), dict) else {}
+    economy = message_economy if isinstance(message_economy, dict) else message_economy_payload(surface=surface, state_delta_core=core)
+    proof_boundary = boundary.get("proof", current_decision.get("proof_boundary", "not-evaluated"))
+    residue_owner = boundary.get("residue_owner", current_decision.get("residue_owner", "none"))
+    known_evidence = list(evidence.get("known", current_decision.get("known_evidence", [])))[:2]
+    next_action = decision.get("next_action", current_decision.get("next_action", ""))
     return {
         "kind": "agentic-workspace/continuation-capsule/v1",
         "surface": surface,
         "status": "available",
-        "preserved_intent": preserved_intent or str(current_decision.get("decision_question", "")),
+        "preserved_intent": preserved_intent or str(decision.get("question", current_decision.get("decision_question", ""))),
         "current_decision": {
-            "question": current_decision.get("decision_question", ""),
+            "question": decision.get("question", current_decision.get("decision_question", "")),
             "status": current_decision.get("status", "unknown"),
-            "next_action": current_decision.get("next_action", ""),
+            "next_action": next_action,
         },
         "proof_boundary": proof_boundary,
-        "known_evidence": list(current_decision.get("known_evidence", []))[:2],
+        "known_evidence": known_evidence,
         "unresolved_residue": residue_owner,
-        "next_safe_action": current_decision.get("next_action", ""),
-        "do_not_repeat": stale_context
-        or [
-            "full task history",
-            "tool chronology already captured",
-        ],
-        "expansion_triggers": list(economy.get("expand_when", []))[:3],
+        "next_safe_action": next_action,
+        "do_not_repeat": stale_context or list(policy.get("avoid", [])),
+        "expansion_triggers": list(policy.get("expand_when", economy.get("expand_when", [])))[:3],
         "state_backed": True,
     }
 
 
-def evidence_bundle_payload(*, surface: str, current_decision: dict[str, Any]) -> dict[str, Any]:
-    route_ids = current_decision.get("detail_route_ids", [])
+def evidence_bundle_payload(
+    *, surface: str, current_decision: dict[str, Any], state_delta_core: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    core = state_delta_core if isinstance(state_delta_core, dict) else {}
+    decision = core.get("decision", {}) if isinstance(core.get("decision"), dict) else {}
+    evidence = core.get("evidence", {}) if isinstance(core.get("evidence"), dict) else {}
+    route_ids = evidence.get("route_ids", current_decision.get("detail_route_ids", []))
     minimal_surfaces = [{"id": str(item)} for item in route_ids if str(item).strip()][:6]
-    missing_evidence = [str(item) for item in current_decision.get("missing_evidence", []) if str(item).strip()]
+    missing_evidence = [str(item) for item in evidence.get("missing", current_decision.get("missing_evidence", [])) if str(item).strip()]
     return {
         "kind": "agentic-workspace/evidence-bundle/v1",
         "surface": surface,
         "status": "available" if minimal_surfaces or missing_evidence else "not-needed",
-        "supports_decision": current_decision.get("decision_question", ""),
+        "supports_decision": decision.get("question", current_decision.get("decision_question", "")),
         "minimal_evidence_surfaces": minimal_surfaces,
         **({"missing_evidence": missing_evidence[:2]} if missing_evidence else {}),
         "decision_changes_when": [

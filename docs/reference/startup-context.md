@@ -17,6 +17,57 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `workflow_participation` | object | no |  | Compact reminder that enabled Agentic Workspace workflow participation is mandatory; advisory fields only guide choices inside that workflow. |  |  |
 | `action_signals` | object | no |  | Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment. |  |  |
 | `decision_packet` | object | no |  | Compact ordinary decision packet that names the startup phase question, next action, claim boundary, detail routes, and omitted detail states. |  |  |
+| `current_decision` | ref `#/$defs/current_decision` | no |  | State-delta decision view derived from the shared state-delta core. |  |  |
+| `current_decision.kind` | const `"agentic-workspace/current-decision/v1"` | yes |  | Discriminator for the current decision view. |  |  |
+| `current_decision.surface` | string | yes |  | Startup surface that emitted the current decision packet. |  |  |
+| `current_decision.status` | string | yes |  | Current decision readiness state derived from the shared state-delta core. |  |  |
+| `current_decision.decision_question` | string | yes |  | Compact question or decision now being evaluated. |  |  |
+| `current_decision.known_evidence` | ref `#/$defs/string_array` | yes |  | Smallest visible evidence summary needed to ground the current decision. |  |  |
+| `current_decision.missing_evidence` | ref `#/$defs/string_array` | no |  | Evidence gaps that prevent a stronger current decision claim. |  |  |
+| `current_decision.safe_probe` | string | yes |  | Next bounded inspection or command that can advance the decision safely. |  |  |
+| `current_decision.response_shape` | ref `#/$defs/string_array` | yes |  | Expected compact answer sections for this decision state. |  |  |
+| `current_decision.avoid_repeat` | ref `#/$defs/string_array` | yes |  | Low-value context patterns the agent should avoid repeating. |  |  |
+| `current_decision.proof_boundary` | string | yes |  | Current proof or claim boundary for the decision. |  |  |
+| `current_decision.residue_owner` | string | yes |  | Owner responsible for unresolved residue in the current decision. |  |  |
+| `current_decision.next_action` | string | yes |  | Immediate next action derived from the shared decision core. |  |  |
+| `current_decision.detail_route_ids` | ref `#/$defs/string_array` | yes |  | Selector or detail route identifiers that can expand the compact decision. |  |  |
+| `current_decision.state_backed` | boolean | yes |  | Whether the packet is backed by explicit startup state rather than narration. |  |  |
+| `message_economy` | ref `#/$defs/message_economy` | no |  | State-delta output-economy view derived from the shared state-delta core. |  |  |
+| `message_economy.kind` | const `"agentic-workspace/message-economy/v1"` | yes |  | Discriminator for the message economy view. |  |  |
+| `message_economy.surface` | string | yes |  | Startup surface that emitted the message economy packet. |  |  |
+| `message_economy.status` | string | yes |  | Current activation state of the message economy guidance. |  |  |
+| `message_economy.speak_when` | ref `#/$defs/string_array` | yes |  | State changes that justify visible agent output. |  |  |
+| `message_economy.stay_compact_when` | ref `#/$defs/string_array` | yes |  | Conditions where the agent should keep output compact. |  |  |
+| `message_economy.expand_when` | ref `#/$defs/string_array` | yes |  | Conditions where the agent should expand beyond compact output. |  |  |
+| `message_economy.discourage` | ref `#/$defs/string_array` | yes |  | Low-value output patterns discouraged for this surface. |  |  |
+| `message_economy.preserve` | ref `#/$defs/string_array` | yes |  | Facts that compact output must preserve. |  |  |
+| `message_economy.state_backed` | boolean | yes |  | Whether the packet is backed by explicit startup state rather than narration. |  |  |
+| `continuation_capsule` | ref `#/$defs/continuation_capsule` | no |  | Optional continuation handoff view derived from the shared state-delta core. |  |  |
+| `continuation_capsule.kind` | const `"agentic-workspace/continuation-capsule/v1"` | yes |  | Discriminator for the continuation capsule view. |  |  |
+| `continuation_capsule.surface` | string | yes |  | Startup surface that emitted the continuation capsule. |  |  |
+| `continuation_capsule.status` | string | yes |  | Availability state of the continuation capsule. |  |  |
+| `continuation_capsule.preserved_intent` | string | yes |  | Intent that should survive a context shift or handoff. |  |  |
+| `continuation_capsule.current_decision` | object | yes |  | Nested compact decision summary for handoff. |  |  |
+| `continuation_capsule.current_decision.question` | string | yes |  | Decision question preserved for continuation. |  |  |
+| `continuation_capsule.current_decision.status` | string | yes |  | Decision status preserved for continuation. |  |  |
+| `continuation_capsule.current_decision.next_action` | string | yes |  | Next action preserved for continuation. |  |  |
+| `continuation_capsule.proof_boundary` | string | yes |  | Proof or claim boundary preserved for handoff. |  |  |
+| `continuation_capsule.known_evidence` | ref `#/$defs/string_array` | yes |  | Compact evidence summary preserved for handoff. |  |  |
+| `continuation_capsule.unresolved_residue` | string | yes |  | Residual owner or unresolved state preserved for handoff. |  |  |
+| `continuation_capsule.next_safe_action` | string | yes |  | Safe continuation action derived from the shared state-delta core. |  |  |
+| `continuation_capsule.do_not_repeat` | ref `#/$defs/string_array` | yes |  | Context already captured and not worth replaying after handoff. |  |  |
+| `continuation_capsule.expansion_triggers` | ref `#/$defs/string_array` | yes |  | Conditions that justify expanding the continuation context. |  |  |
+| `continuation_capsule.state_backed` | boolean | yes |  | Whether the packet is backed by explicit startup state rather than narration. |  |  |
+| `evidence_bundle` | ref `#/$defs/evidence_bundle` | no |  | Minimal evidence route view derived from the shared state-delta core. |  |  |
+| `evidence_bundle.kind` | const `"agentic-workspace/evidence-bundle/v1"` | yes |  | Discriminator for the evidence bundle view. |  |  |
+| `evidence_bundle.surface` | string | yes |  | Startup surface that emitted the evidence bundle. |  |  |
+| `evidence_bundle.status` | string | yes |  | Availability state of minimal evidence routes. |  |  |
+| `evidence_bundle.supports_decision` | string | yes |  | Decision question this evidence bundle supports. |  |  |
+| `evidence_bundle.minimal_evidence_surfaces` | array of object | yes |  | Minimal selector or route surfaces that can expand supporting evidence. |  |  |
+| `evidence_bundle.missing_evidence` | ref `#/$defs/string_array` | no |  | Evidence gaps that would change or strengthen the supported decision. |  |  |
+| `evidence_bundle.decision_changes_when` | array of object | yes |  | Conditions under which the supported decision may change. |  |  |
+| `evidence_bundle.escalate_when` | ref `#/$defs/string_array` | yes |  | Conditions that require evidence escalation instead of compact reliance. |  |  |
+| `evidence_bundle.state_backed` | boolean | yes |  | Whether the packet is backed by explicit startup state rather than narration. |  |  |
 | `pre_test_evidence_guardrail` | object | no |  | Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or declared changed evidence/test paths indicate proof-shape decisions. |  |  |
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional dynamic instruction packet emitted when task facts, config posture, workflow obligations, or module contributions change startup routing. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |
