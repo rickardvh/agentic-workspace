@@ -2992,6 +2992,76 @@ def _pr_comment_attention_payload():
     assert in_sync["status"] == "in_sync"
 
 
+def test_report_runtime_mirror_consistency_surfaces_active_selector_shadowing(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    core = tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py"
+    primitives = tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py"
+    core.parent.mkdir(parents=True, exist_ok=True)
+    shared_helpers = """
+def _pr_comment_attention_payload():
+    return {"kind": "agentic-workspace/pr-comment-attention/v1", "status": "present"}
+
+def _dogfooding_signal_status_payload():
+    return {"kind": "agentic-workspace/dogfooding-signal-status/v1", "status": "present"}
+
+def _installed_state_drift_triage_payload():
+    return {"kind": "agentic-workspace/installed-state-drift-triage/v1", "status": "present"}
+
+def _proof_reuse_guidance_payload():
+    return {"kind": "agentic-workspace/proof-reuse-guidance/v1", "status": "present"}
+
+def _runtime_mirror_surface_consistency_payload():
+    return {"kind": "agentic-workspace/runtime-mirror-surface-consistency/v1", "status": "present"}
+
+def _run_report_command():
+    return {}
+
+def _run_report_router_command():
+    return {}
+"""
+    core.write_text(
+        shared_helpers
+        + """
+def _run_lazy_report_section_command(normalized):
+    if normalized == "current_work":
+        return {}
+    return {}
+""",
+        encoding="utf-8",
+    )
+    primitives.write_text(
+        shared_helpers
+        + """
+def _run_lazy_report_section_command(normalized):
+    if normalized == "current_work":
+        return {}
+    if normalized == "reasoning_economy":
+        return {}
+    return {}
+
+_run_report_command = _workspace_runtime_core._run_report_command
+_run_report_router_command = _workspace_runtime_core._run_report_router_command
+_run_lazy_report_section_command = _workspace_runtime_core._run_lazy_report_section_command
+""",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "runtime_mirror_consistency", "--format", "json"]) == 0
+    mirror = json.loads(capsys.readouterr().out)["answer"]
+
+    assert mirror["status"] == "shadow_mismatch"
+    shadowing = mirror["report_runtime_shadowing"]
+    assert shadowing["status"] == "selector_branch_mismatch"
+    selectors = shadowing["selector_branch_consistency"]
+    assert selectors["active_owner"] == "src/agentic_workspace/workspace_runtime_core.py"
+    assert selectors["missing_from_active_core"] == ["reasoning_economy"]
+    by_symbol = {item["symbol"]: item for item in shadowing["symbols"]}
+    assert by_symbol["_run_lazy_report_section_command"]["primitive_aliases_core"] is True
+    assert by_symbol["_run_lazy_report_section_command"]["active_owner"] == "src/agentic_workspace/workspace_runtime_core.py"
+
+
 def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
