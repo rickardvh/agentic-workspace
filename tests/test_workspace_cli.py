@@ -2992,6 +2992,76 @@ def _pr_comment_attention_payload():
     assert in_sync["status"] == "in_sync"
 
 
+def test_report_runtime_mirror_consistency_surfaces_active_selector_shadowing(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    core = tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py"
+    primitives = tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py"
+    core.parent.mkdir(parents=True, exist_ok=True)
+    shared_helpers = """
+def _pr_comment_attention_payload():
+    return {"kind": "agentic-workspace/pr-comment-attention/v1", "status": "present"}
+
+def _dogfooding_signal_status_payload():
+    return {"kind": "agentic-workspace/dogfooding-signal-status/v1", "status": "present"}
+
+def _installed_state_drift_triage_payload():
+    return {"kind": "agentic-workspace/installed-state-drift-triage/v1", "status": "present"}
+
+def _proof_reuse_guidance_payload():
+    return {"kind": "agentic-workspace/proof-reuse-guidance/v1", "status": "present"}
+
+def _runtime_mirror_surface_consistency_payload():
+    return {"kind": "agentic-workspace/runtime-mirror-surface-consistency/v1", "status": "present"}
+
+def _run_report_command():
+    return {}
+
+def _run_report_router_command():
+    return {}
+"""
+    core.write_text(
+        shared_helpers
+        + """
+def _run_lazy_report_section_command(normalized):
+    if normalized == "current_work":
+        return {}
+    return {}
+""",
+        encoding="utf-8",
+    )
+    primitives.write_text(
+        shared_helpers
+        + """
+def _run_lazy_report_section_command(normalized):
+    if normalized == "current_work":
+        return {}
+    if normalized == "reasoning_economy":
+        return {}
+    return {}
+
+_run_report_command = _workspace_runtime_core._run_report_command
+_run_report_router_command = _workspace_runtime_core._run_report_router_command
+_run_lazy_report_section_command = _workspace_runtime_core._run_lazy_report_section_command
+""",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "runtime_mirror_consistency", "--format", "json"]) == 0
+    mirror = json.loads(capsys.readouterr().out)["answer"]
+
+    assert mirror["status"] == "shadow_mismatch"
+    shadowing = mirror["report_runtime_shadowing"]
+    assert shadowing["status"] == "selector_branch_mismatch"
+    selectors = shadowing["selector_branch_consistency"]
+    assert selectors["active_owner"] == "src/agentic_workspace/workspace_runtime_core.py"
+    assert selectors["missing_from_active_core"] == ["reasoning_economy"]
+    by_symbol = {item["symbol"]: item for item in shadowing["symbols"]}
+    assert by_symbol["_run_lazy_report_section_command"]["primitive_aliases_core"] is True
+    assert by_symbol["_run_lazy_report_section_command"]["active_owner"] == "src/agentic_workspace/workspace_runtime_core.py"
+
+
 def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -3559,6 +3629,78 @@ def test_report_exposes_communication_contract_in_router_and_output_contract(tmp
         "residue_or_boundary",
         "next_safe_action",
     ]
+
+
+def test_report_exposes_reasoning_economy_evidence_section(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "reasoning_economy", "--format", "json"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    answer = selected["answer"]
+    assert answer["kind"] == "agentic-workspace/reasoning-economy-evidence/v1"
+    assert answer["scope"] == "visible_external_artifacts_only"
+    assert answer["evidence_class_ids"] == ["direct", "adjacent", "none"]
+    assert answer["required_visible_fields"] == [
+        "decision_or_finding",
+        "proof_boundary",
+        "residue_or_boundary",
+        "next_action_or_closure_status",
+    ]
+    assert answer["ledger_refs"] == []
+    assert "PR #1955" not in json.dumps(answer)
+    fixture_results = {item["id"]: item for item in answer["fixture_results"]}
+    assert fixture_results["visible-closeout-artifact"]["result"] == "pass"
+    assert fixture_results["tool-chronology-without-claim-boundary"]["result"] == "flag"
+    assert fixture_results["tool-chronology-without-claim-boundary"]["negative_signal_detected"] == "low_value_tool_chronology"
+    assert "hidden chain-of-thought grading" in answer["non_goals"]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--verbose", "--format", "json"]) == 0
+    full = json.loads(capsys.readouterr().out)
+    assert full["reasoning_economy"]["evidence_classes"]["direct"]["definition"].startswith("A visible PR")
+    assert full["reasoning_economy"]["behavior_check"]["applies_to"] == [
+        "PR body",
+        "review closeout",
+        "report section",
+        "closeout_report",
+        "handoff summary",
+    ]
+    assert full["reasoning_economy"]["evidence_ledger_source"]["status"] == "absent"
+
+
+def test_report_reasoning_economy_reads_repo_owned_evidence_ledger(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    ledger_path = tmp_path / ".agentic-workspace" / "verification" / "reasoning-economy-evidence.json"
+    ledger_path.parent.mkdir(parents=True, exist_ok=True)
+    ledger_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/reasoning-economy-evidence-ledger/v1",
+                "owner": "test-repo",
+                "entries": [
+                    {
+                        "ref": "PR #1955",
+                        "evidence_class": "direct",
+                        "visible_artifact_signal": "Visible closeout preserved proof and residue.",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "reasoning_economy", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["ledger_refs"] == ["PR #1955"]
+    assert answer["detail_selector"] == "reasoning_economy"
+
+    assert cli.main(["report", "--target", str(tmp_path), "--verbose", "--format", "json"]) == 0
+    full = json.loads(capsys.readouterr().out)
+    source = full["reasoning_economy"]["evidence_ledger_source"]
+    assert source["status"] == "loaded"
+    assert source["path"] == ".agentic-workspace/verification/reasoning-economy-evidence.json"
+    assert full["reasoning_economy"]["evidence_ledger"][0]["ref"] == "PR #1955"
 
 
 def test_report_ordinary_agent_path_carries_lane_completion_model(tmp_path: Path, capsys) -> None:

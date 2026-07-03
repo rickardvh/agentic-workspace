@@ -28,6 +28,7 @@ REPO_FRICTION_SCAN_SUFFIXES = {
 REPO_FRICTION_REGENERABLE_CACHE_PREFIXES = (".agentic-workspace/local/cache/", "scratch/")
 
 STANDING_INTENT_CANONICAL_DOC = ".agentic-workspace/docs/standing-intent-contract.md"
+REASONING_ECONOMY_EVIDENCE_LEDGER_PATH = ".agentic-workspace/verification/reasoning-economy-evidence.json"
 
 REPORT_SECTION_ALIASES = {
     "active_work": "current_work",
@@ -126,6 +127,167 @@ def compact_communication_contract_payload(*, surface: str) -> dict[str, Any]:
             "preserve": full["cost_evaluation"]["preserve"],
             "reduce": full["cost_evaluation"]["reduce"],
         },
+    }
+
+
+def _load_reasoning_economy_evidence_ledger(*, target_root: Path | None) -> dict[str, Any]:
+    if target_root is None:
+        return {
+            "status": "absent",
+            "path": REASONING_ECONOMY_EVIDENCE_LEDGER_PATH,
+            "entries": [],
+            "rule": "Repo-specific evidence is optional and must be supplied by the target repository.",
+        }
+    ledger_path = target_root / REASONING_ECONOMY_EVIDENCE_LEDGER_PATH
+    if not ledger_path.is_file():
+        return {
+            "status": "absent",
+            "path": REASONING_ECONOMY_EVIDENCE_LEDGER_PATH,
+            "entries": [],
+            "rule": "Repo-specific evidence is optional and must be supplied by the target repository.",
+        }
+    try:
+        payload = json.loads(ledger_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "status": "invalid",
+            "path": REASONING_ECONOMY_EVIDENCE_LEDGER_PATH,
+            "entries": [],
+            "error": str(exc),
+        }
+    entries = payload.get("entries", [])
+    if not isinstance(entries, list):
+        return {
+            "status": "invalid",
+            "path": REASONING_ECONOMY_EVIDENCE_LEDGER_PATH,
+            "entries": [],
+            "error": "entries must be a list",
+        }
+    normalized_entries = [
+        {
+            key: item[key]
+            for key in (
+                "ref",
+                "evidence_class",
+                "adjacent_support",
+                "visible_artifact_signal",
+                "source",
+            )
+            if isinstance(item, dict) and key in item
+        }
+        for item in entries
+        if isinstance(item, dict)
+    ]
+    return {
+        "status": "loaded",
+        "path": REASONING_ECONOMY_EVIDENCE_LEDGER_PATH,
+        "kind": payload.get("kind", "agentic-workspace/reasoning-economy-evidence-ledger/v1"),
+        "entry_count": len(normalized_entries),
+        "entries": normalized_entries,
+        "owner": payload.get("owner", "target-repository"),
+        "rule": "Repo-specific evidence is target-owned; package runtime only defines generic evidence classes and checks.",
+    }
+
+
+def reasoning_economy_evidence_payload(*, target_root: Path | None = None, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    required_visible_fields = [
+        "decision_or_finding",
+        "proof_boundary",
+        "residue_or_boundary",
+        "next_action_or_closure_status",
+    ]
+    fixtures = [
+        {
+            "id": "visible-closeout-artifact",
+            "artifact_surface": "closeout_report or PR closeout",
+            "present_fields": required_visible_fields,
+            "signals": ["omits_low_value_tool_chronology"],
+            "expected_result": "pass",
+        },
+        {
+            "id": "tool-chronology-without-claim-boundary",
+            "artifact_surface": "PR body or final response",
+            "present_fields": ["proof_boundary"],
+            "signals": ["low_value_tool_chronology"],
+            "expected_result": "flag",
+        },
+    ]
+    checked_fixtures: list[dict[str, Any]] = []
+    for fixture in fixtures:
+        present = set(str(field) for field in fixture.get("present_fields", []))
+        missing = [field for field in required_visible_fields if field not in present]
+        low_value_chronology = "low_value_tool_chronology" in set(str(signal) for signal in fixture.get("signals", []))
+        result = "pass" if not missing and not low_value_chronology else "flag"
+        checked_fixtures.append(
+            {
+                **fixture,
+                "result": result,
+                "missing_required_visible_fields": missing,
+                "negative_signal_detected": "low_value_tool_chronology" if low_value_chronology else "",
+            }
+        )
+    evidence_ledger_source = _load_reasoning_economy_evidence_ledger(target_root=target_root)
+    return {
+        "kind": "agentic-workspace/reasoning-economy-evidence/v1",
+        "status": "available",
+        "scope": "visible_external_artifacts_only",
+        "evidence_ledger_source": evidence_ledger_source,
+        "non_goals": [
+            "hidden chain-of-thought grading",
+            "semantic scoring of private reasoning",
+            "credit for shorter output without preserved proof and residue",
+        ],
+        "evidence_classes": {
+            "direct": {
+                "definition": (
+                    "A visible PR, closeout, report, or review artifact changed behavior by leading with the decision or finding, "
+                    "showing proof boundary, preserving residue, and naming next action or closure status."
+                ),
+                "positive_signals": [
+                    "decision_or_finding_first",
+                    "proof_boundary_visible",
+                    "residue_or_boundary_visible",
+                    "next_action_or_closure_status_visible",
+                    "low_value_tool_chronology_omitted",
+                ],
+            },
+            "adjacent": {
+                "definition": (
+                    "A routing, proof, fixture, or compact-state change supports reasoning economy but does not by itself prove "
+                    "visible artifact behavior improved."
+                ),
+                "positive_signals": ["selector_or_fixture_added", "proof_route_preserved", "report_section_discoverable"],
+            },
+            "none": {
+                "definition": (
+                    "Passing tests, internal routing, raw command chronology, or hidden reasoning claims alone are not reasoning-economy evidence."
+                ),
+                "negative_signals": ["tests_only", "tool_chronology_only", "private_reasoning_claim", "brevity_without_boundary"],
+            },
+        },
+        "evidence_ledger": evidence_ledger_source.get("entries", []),
+        "behavior_check": {
+            "kind": "agentic-workspace/visible-artifact-behavior-check/v1",
+            "applies_to": ["PR body", "review closeout", "report section", "closeout_report", "handoff summary"],
+            "required_visible_fields": required_visible_fields,
+            "flag_when": [
+                "low_value_tool_chronology appears without a decision-changing purpose",
+                "proof is collapsed into generic success language",
+                "residue or closure status is missing",
+                "the artifact claims reasoning quality from hidden reasoning or brevity alone",
+            ],
+            "expand_when": [
+                "stale_missing_or_failed_proof",
+                "ambiguous_action_safety",
+                "unresolved_residue_changes_next_owner",
+                "user_requests_detail",
+            ],
+        },
+        "fixture_results": checked_fixtures,
+        "query": _command_with_cli_invoke(
+            "agentic-workspace report --target ./repo --section reasoning_economy --format json",
+            cli_invoke=cli_invoke,
+        ),
     }
 
 
@@ -371,6 +533,46 @@ def _resolve_report_section(payload: dict[str, Any], section: str) -> tuple[str,
 
 
 def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str, target_arg: str = "./repo") -> Any:
+    if section == "reasoning_economy" and isinstance(answer, dict):
+        behavior = answer.get("behavior_check", {})
+        behavior = behavior if isinstance(behavior, dict) else {}
+        return _localize_command_fields(
+            {
+                "kind": answer.get("kind", "agentic-workspace/reasoning-economy-evidence/v1"),
+                "status": answer.get("status", "available"),
+                "scope": answer.get("scope", "visible_external_artifacts_only"),
+                "evidence_class_ids": list((answer.get("evidence_classes", {}) or {}).keys())
+                if isinstance(answer.get("evidence_classes"), dict)
+                else [],
+                "required_visible_fields": behavior.get("required_visible_fields", []),
+                "ledger_refs": [
+                    item.get("ref", "") for item in _support_list_payload(answer.get("evidence_ledger")) if isinstance(item, dict)
+                ],
+                "fixture_results": [
+                    {
+                        key: item.get(key)
+                        for key in (
+                            "id",
+                            "result",
+                            "expected_result",
+                            "missing_required_visible_fields",
+                            "negative_signal_detected",
+                        )
+                        if isinstance(item, dict) and key in item
+                    }
+                    for item in _support_list_payload(answer.get("fixture_results"))
+                ],
+                "non_goals": answer.get("non_goals", []),
+                "detail_command": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --verbose --format json",
+                    cli_invoke=cli_invoke,
+                    target_arg=target_arg,
+                ),
+                "detail_selector": "reasoning_economy",
+            },
+            cli_invoke=cli_invoke,
+            target_arg=target_arg,
+        )
     if section == "improvement_intake" and isinstance(answer, dict):
         candidates = [
             {
@@ -1720,6 +1922,7 @@ def report_section_hints(
         "reuse_pressure": "changed-path reuse and abstraction-pressure facts before adding local code",
         "operational_compression": "falsifiable advisory measures for whether surfaces reduce total operational cost",
         "successful_completion_cost": "recent model CLI evaluation cost, package-read overhead, and first-pass versus rework evidence",
+        "reasoning_economy": "visible-artifact evidence classes, ledger examples, and fixture checks for compact closeout/report behavior",
         "findings": "raw warnings and attention signals grouped in router warning_summary",
         "module_reports": "deep planning and memory module reports",
         "reports": "workspace lifecycle report detail",
@@ -1765,6 +1968,7 @@ def report_section_hints(
         "reuse_pressure": "inspect before implementation when deciding whether to reuse, accept duplication, or route extraction follow-up",
         "operational_compression": "inspect now when assessing whether package surfaces are reducing total work",
         "successful_completion_cost": "inspect now when deciding whether workflow surfaces should stay default, shrink, or move behind selectors",
+        "reasoning_economy": "inspect when proving closeout or report behavior got cheaper without losing proof, residue, or closure status",
         "findings": "inspect now because warnings are present" if findings else "skip unless diagnosing an absent-warning state",
         "module_reports": "deep detail; inspect only when a compact router field points to planning or memory internals",
         "reports": "deep lifecycle detail; inspect only for report/debug work",

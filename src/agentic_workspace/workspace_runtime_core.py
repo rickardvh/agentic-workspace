@@ -115,6 +115,7 @@ from agentic_workspace.contract_tooling import (
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     output_contract_payload,
+    reasoning_economy_evidence_payload,
     repo_friction_payload,
     report_profile_payload,
     report_router_payload,
@@ -8783,6 +8784,7 @@ def _run_report_command(
         "decision_pressure": decision_pressure,
         "closeout_trust": closeout_trust,
         "successful_completion_cost": _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke),
+        "reasoning_economy": reasoning_economy_evidence_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "external_work_reconciliation": external_work_reconciliation,
         "external_work_delta": external_work_delta,
         "next_action": next_action,
@@ -9931,6 +9933,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/successful-completion-cost/v1",
         "purpose": "recent model CLI evaluation cost, package-read overhead, and first-pass versus rework evidence",
         "when_to_use": "when deciding whether workflow surfaces should stay default, shrink, or move behind selectors",
+    },
+    {
+        "section": "reasoning_economy",
+        "kind": "agentic-workspace/reasoning-economy-evidence/v1",
+        "purpose": "visible-artifact evidence classes, ledger examples, and fixture checks for compact closeout/report behavior",
+        "when_to_use": "when proving report or closeout output got cheaper without losing proof, residue, or closure status",
     },
     {
         "section": "operational_compression",
@@ -13136,6 +13144,10 @@ def _run_lazy_report_section_command(
 
     if normalized == "successful_completion_cost":
         payload["successful_completion_cost"] = _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "reasoning_economy":
+        payload["reasoning_economy"] = reasoning_economy_evidence_payload(target_root=target_root, cli_invoke=config.cli_invoke)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "closeout_trust":
@@ -24295,11 +24307,109 @@ def _function_dict_return_keys(tree: ast.AST, function_name: str) -> set[str]:
     return set()
 
 
+def _function_string_comparison_values(tree: ast.AST, function_name: str, variable_name: str) -> set[str]:
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) or node.name != function_name:
+            continue
+        values: set[str] = set()
+        for child in ast.walk(node):
+            if not isinstance(child, ast.Compare):
+                continue
+            operands = [child.left, *child.comparators]
+            has_variable = any(isinstance(operand, ast.Name) and operand.id == variable_name for operand in operands)
+            if not has_variable:
+                continue
+            values.update(
+                str(operand.value) for operand in operands if isinstance(operand, ast.Constant) and isinstance(operand.value, str)
+            )
+        return values
+    return set()
+
+
+def _module_symbol_core_aliases(tree: ast.AST | None) -> set[str]:
+    if tree is None:
+        return set()
+    aliases: set[str] = set()
+    for node in ast.walk(tree):
+        target_name = ""
+        value = None
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            target_name = node.targets[0].id
+            value = node.value
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            target_name = node.target.id
+            value = node.value
+        if (
+            target_name
+            and isinstance(value, ast.Attribute)
+            and value.attr == target_name
+            and isinstance(value.value, ast.Name)
+            and value.value.id == "_workspace_runtime_core"
+        ):
+            aliases.add(target_name)
+    return aliases
+
+
 def _parse_python_module(path: Path) -> ast.AST | None:
     try:
         return ast.parse(path.read_text(encoding="utf-8"))
     except (OSError, SyntaxError, UnicodeDecodeError):
         return None
+
+
+def _active_report_runtime_shadowing_payload(
+    *, core_tree: ast.AST | None, primitive_tree: ast.AST | None, relative_core: str, relative_primitives: str
+) -> dict[str, Any]:
+    report_symbols = ["_run_report_command", "_run_report_router_command", "_run_lazy_report_section_command"]
+    primitive_core_aliases = _module_symbol_core_aliases(primitive_tree)
+    symbols = []
+    for symbol in report_symbols:
+        active_owner = relative_core if symbol in primitive_core_aliases else relative_primitives
+        symbols.append(
+            {
+                "symbol": symbol,
+                "active_owner": active_owner,
+                "core_owner": relative_core,
+                "runtime_mirror_owner": relative_primitives,
+                "primitive_aliases_core": symbol in primitive_core_aliases,
+                "reason": "runtime primitives re-export the core-backed symbol"
+                if symbol in primitive_core_aliases
+                else "runtime primitives define the active symbol locally",
+            }
+        )
+    if core_tree is None or primitive_tree is None:
+        selector_status = "not_applicable"
+        reason = "core or runtime primitives module could not be parsed"
+        core_sections: set[str] = set()
+        primitive_sections: set[str] = set()
+    else:
+        core_sections = _function_string_comparison_values(core_tree, "_run_lazy_report_section_command", "normalized")
+        primitive_sections = _function_string_comparison_values(
+            primitive_tree,
+            "_run_lazy_report_section_command",
+            "normalized",
+        )
+        if core_sections == primitive_sections:
+            selector_status = "in_sync"
+            reason = "lazy report section branches match between active core and runtime primitives"
+        else:
+            selector_status = "selector_branch_mismatch"
+            reason = "lazy report section branches differ; selector additions may be patched only in the inactive mirror"
+    return {
+        "kind": "agentic-workspace/active-report-runtime-shadowing/v1",
+        "status": selector_status,
+        "symbols": symbols,
+        "selector_branch_consistency": {
+            "status": selector_status,
+            "active_owner": relative_core if "_run_lazy_report_section_command" in primitive_core_aliases else relative_primitives,
+            "core_sections": sorted(core_sections),
+            "runtime_mirror_sections": sorted(primitive_sections),
+            "missing_from_active_core": sorted(primitive_sections - core_sections),
+            "missing_from_runtime_mirror": sorted(core_sections - primitive_sections),
+            "reason": reason,
+        },
+        "rule": "Report command builders are active from core when runtime primitives re-export core symbols; selector branches must be present in the active owner before a PR can rely on them.",
+    }
 
 
 def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
@@ -24371,19 +24481,30 @@ def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke
             }
         )
     failing = [record for record in records if record["status"] in {"mirror_missing", "shape_mismatch"}]
+    report_runtime_shadowing = _active_report_runtime_shadowing_payload(
+        core_tree=core_tree,
+        primitive_tree=primitive_tree,
+        relative_core=relative_core,
+        relative_primitives=relative_primitives,
+    )
+    selector_branch_mismatch = report_runtime_shadowing["status"] == "selector_branch_mismatch"
+    status = "shape_mismatch" if failing else "shadow_mismatch" if selector_branch_mismatch else "in_sync"
     return {
         "kind": "agentic-workspace/runtime-mirror-surface-consistency/v1",
-        "status": "in_sync" if not failing else "shape_mismatch",
+        "status": status,
         "mirrored_surface_count": len(records),
         "records": records,
+        "report_runtime_shadowing": report_runtime_shadowing,
         "recommended_next_action": "Mirror the missing helper/packet shape or document that the surface is intentionally core-only."
         if failing
+        else "Patch the active report runtime owner before relying on a new report selector."
+        if selector_branch_mismatch
         else "No mirror repair needed for known AW runtime report surfaces.",
         "proof_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section runtime_mirror_consistency --format json",
             cli_invoke=cli_invoke,
         ),
-        "rule": "Compare the smallest durable mirrored contract: known helper existence and public packet return-key shape.",
+        "rule": "Compare the smallest durable mirrored contract: known helper existence, public packet return-key shape, and active report selector ownership.",
     }
 
 

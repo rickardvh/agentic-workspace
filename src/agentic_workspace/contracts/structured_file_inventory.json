@@ -337,6 +337,23 @@
       "checked_in_justification": "Compact agent-recorded evidence labels preserve proof/review handoff decisions that would otherwise be lossy in chat or PR prose."
     },
     {
+      "pattern": ".agentic-workspace/verification/reasoning-economy-evidence.json",
+      "format": "json",
+      "owner": "verification",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "agentic_workspace.reporting_support._load_reasoning_economy_evidence_ledger runtime validator",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Optional repo-local reasoning-economy evidence ledger consumed by report --section reasoning_economy when present.",
+      "storage_class": "historical-audit-distillation",
+      "checked_in_justification": "Maintainer-reviewed dogfooding evidence is source-repo residue, not package runtime authority.",
+      "guardrails": {
+        "max_items": 20,
+        "routed_to": "#1963"
+      },
+      "storage_routed_to": "#1963"
+    },
+    {
       "pattern": ".agentic-workspace/verification/test-strategy-dispositions.json",
       "format": "json",
       "owner": "verification",
