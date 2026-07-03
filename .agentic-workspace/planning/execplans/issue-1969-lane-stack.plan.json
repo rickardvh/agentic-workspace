@@ -1,0 +1,320 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Issue 1969 lane stack",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the full GitHub #1969 lane as a stacked branch/PR sequence covering child issues #1970-#1974.",
+    "hard_constraints": "Preserve proof, residue, next action, uncertainty, and honest closure; avoid prompt-prose classifiers, hidden reasoning scoring, terse persona changes, and broad always-on context dumps.",
+    "agent_may_decide": "Exact packet helper names, compact projection placement, branch boundaries, and focused test shape, while preserving child issue acceptance criteria.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Implement shared state-delta packet builders and expose them through ordinary start, implement, report, and skill surfaces.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py",
+      "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task \"Implement the full #1969 lane in stacked PRs. Switch to master and pull origin before starting work.\" --format json",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/reporting_support.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "src/agentic_workspace/workspace_runtime_implement.py",
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_implement_cli.py",
+      "tests/test_workspace_skills_cli.py",
+      ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+      "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+      ".agentic-workspace/skills/REGISTRY.json",
+      "src/agentic_workspace/_payload/.agentic-workspace/skills/REGISTRY.json"
+    ],
+    "completion_criteria": [
+      "#1970 current_decision packet is exposed and tested in an ordinary workflow.",
+      "#1971 message_economy contract is exposed and tested without materially bloating simple output.",
+      "#1972 continuation_capsule supports resume/recheck without prose recap and is tested.",
+      "#1973 evidence_bundle names decision, minimal evidence, outcomes, response shape, and escalation triggers and is tested.",
+      "#1974 shipped workspace-operating-loop skill is updated, packaged, registered, and tested for discoverability.",
+      "#1969 parent evidence shows state-delta-first behavior across more than one workflow class."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Issue 1969 lane stack."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement the full GitHub #1969 lane as a stacked branch/PR sequence covering child issues #1970-#1974.",
+      "constraints": "Preserve proof, residue, next action, uncertainty, and honest closure; avoid prompt-prose classifiers, hidden reasoning scoring, terse persona changes, and broad always-on context dumps.",
+      "latitude": "Exact packet helper names, compact projection placement, branch boundaries, and focused test shape, while preserving child issue acceptance criteria.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "issue-1969-lane-stack",
+      "status": "active",
+      "next_step": "Implement shared state-delta packet builders and expose them through ordinary start, implement, report, and skill surfaces.",
+      "proof": "Run focused workspace CLI tests plus AW implement/summary proof routing."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/workspace_runtime_startup.py",
+        "src/agentic_workspace/workspace_runtime_implement.py",
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_implement_cli.py",
+        "tests/test_workspace_skills_cli.py",
+        ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+        "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+        ".agentic-workspace/skills/REGISTRY.json",
+        "src/agentic_workspace/_payload/.agentic-workspace/skills/REGISTRY.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make the ordinary AW operating loop state-delta-first across current decision, message economy, continuation, evidence bundles, and skill adoption.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the full #1969 lane in stacked PRs.",
+    "inferred intended outcome": "Land all #1969 child slices in an ordered stack from master.",
+    "chosen concrete what": "Add compact state-delta packet builders/projections and update the shipped operating-loop skill.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Runtime/reporting packet helpers, start/implement compact projections, focused CLI tests, installed skill registry/payload mirrors, and this planning/lane record.",
+    "max changed files": "about 12 product/test/skill files plus planning state",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py; AW implement and summary proof routing.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue from the next child slice branch in the #1969 stack; preserve compact packet semantics and focused proof.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the full GitHub #1969 lane as a stacked branch/PR sequence covering child issues #1970-#1974.",
+    "hard constraints": "Preserve proof, residue, next action, uncertainty, and honest closure; avoid prompt-prose classifiers, hidden reasoning scoring, terse persona changes, and broad always-on context dumps.",
+    "agent may decide locally": "Exact packet helper names, compact projection placement, branch boundaries, and focused test shape, while preserving child issue acceptance criteria.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "recorded",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract",
+    "route chosen": "keep-local",
+    "route skipped reason": "Full #1969 lane needs coordinated package/runtime/skill changes in one local stack; splitting across external agents would add merge and intent risk.",
+    "decision command": "agentic-planning delegation-decision",
+    "planning revision observed": "1275d104f0b50cd3",
+    "recorded at": "2026-07-03T09:08:39+00:00"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-1969-lane-stack",
+    "status": "active",
+    "scope": "Stack controller for child issues #1970-#1974 under lane issue-1969-state-delta-loop.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement #1970 current_decision packet first, then layer #1971-#1974."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/reporting_support.py",
+    "src/agentic_workspace/workspace_runtime_startup.py",
+    "src/agentic_workspace/workspace_runtime_implement.py",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_skills_cli.py",
+    ".agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+    "src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-operating-loop/SKILL.md",
+    ".agentic-workspace/skills/REGISTRY.json",
+    "src/agentic_workspace/_payload/.agentic-workspace/skills/REGISTRY.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py",
+    "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --task \"Implement the full #1969 lane in stacked PRs. Switch to master and pull origin before starting work.\" --format json",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Child issues #1970-#1974 are implemented as stacked branches/PRs.",
+    "Parent #1969 acceptance evidence is recorded without over-claiming before proof."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "execution has not started",
+    "scope touched": "none yet",
+    "changed surfaces": "none yet; execution has not changed files",
+    "validations run": "pending",
+    "result for continuation": "continue from this scaffolded execplan",
+    "next step": "Implement #1970 current_decision packet first, then layer #1971-#1974."
+  },
+  "finished_run_review": {
+    "review status": "pending",
+    "scope respected": "pending",
+    "proof status": "pending",
+    "intent served": "pending",
+    "config compliance": "pending",
+    "misinterpretation risk": "pending",
+    "follow-on decision": "pending"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "Full #1969 lane needs coordinated package/runtime/skill changes in one local stack; splitting across external agents would add merge and intent risk.",
+    "expected savings": "unknown",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "pending",
+    "proof achieved now": "pending",
+    "evidence for \"proof achieved\" state": ""
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Issue 1969 lane stack.",
+    "was original intent fully satisfied?": "pending",
+    "evidence of intent satisfaction": "",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "not completed yet",
+    "validation confirmed": "pending",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-03: Scaffolded by agentic-planning new-plan.",
+    "2026-07-03: Recorded delegation decision route=keep-local."
+  ]
+}

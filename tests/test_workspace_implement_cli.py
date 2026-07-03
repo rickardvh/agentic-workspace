@@ -147,6 +147,7 @@ def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Pa
         "repeated_rereads",
         "context_reconstruction",
     ]
+    assert "current_decision" not in payload
 
 
 def _write_architecture_principles(target_root: Path) -> None:
