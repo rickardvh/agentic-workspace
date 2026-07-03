@@ -246,6 +246,43 @@ def message_economy_payload(*, surface: str, communication_contract: dict[str, A
     }
 
 
+def continuation_capsule_payload(
+    *,
+    surface: str,
+    current_decision: dict[str, Any],
+    message_economy: dict[str, Any] | None = None,
+    preserved_intent: str | None = None,
+    stale_context: list[str] | None = None,
+) -> dict[str, Any]:
+    economy = message_economy if isinstance(message_economy, dict) else message_economy_payload(surface=surface)
+    proof_boundary = current_decision.get("proof_boundary", "not-evaluated")
+    residue_owner = current_decision.get("residue_owner", "none")
+    return {
+        "kind": "agentic-workspace/continuation-capsule/v1",
+        "surface": surface,
+        "status": "available",
+        "preserved_intent": preserved_intent or str(current_decision.get("decision_question", "")),
+        "current_decision": {
+            "question": current_decision.get("decision_question", ""),
+            "status": current_decision.get("status", "unknown"),
+            "next_action": current_decision.get("next_action", ""),
+        },
+        "known_evidence": list(current_decision.get("known_evidence", []))[:6],
+        "proof_boundary": proof_boundary,
+        "unresolved_residue": residue_owner,
+        "next_safe_action": current_decision.get("next_action", ""),
+        "do_not_repeat": stale_context
+        or [
+            "full task history",
+            "tool chronology already captured by proof or decision packets",
+            "raw selector-backed context unless expansion triggers require it",
+        ],
+        "expansion_triggers": list(economy.get("expand_when", []))[:8],
+        "detail_routes": current_decision.get("detail_routes", {}),
+        "rule": "Use this capsule for handoff, resume, or recheck before writing a prose recap.",
+    }
+
+
 def _load_reasoning_economy_evidence_ledger(*, target_root: Path | None) -> dict[str, Any]:
     if target_root is None:
         return {

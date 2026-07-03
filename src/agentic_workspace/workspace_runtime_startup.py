@@ -17,6 +17,7 @@ from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, 
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
+    continuation_capsule_payload,
     current_decision_payload,
     message_economy_payload,
 )
@@ -1726,6 +1727,16 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 next_safe_action.get("preferred_cli") or selected["decision_packet"].get("detail_routes", {}).get("active_plan") or ""
             ),
         )
+        continuation_answers = (
+            payload.get("continuation_view", {}).get("answers", {}) if isinstance(payload.get("continuation_view"), dict) else {}
+        )
+        if isinstance(payload.get("continuation_view"), dict):
+            selected["continuation_capsule"] = continuation_capsule_payload(
+                surface="startup",
+                current_decision=selected["current_decision"],
+                message_economy=selected["message_economy"],
+                preserved_intent=str(continuation_answers.get("preserved_intent", "")) if isinstance(continuation_answers, dict) else "",
+            )
     if isinstance(payload.get("continuation_view"), dict) or isinstance(payload.get("continuation_reorientation"), dict):
         drill_down: dict[str, Any] = selected["drill_down"]
         omitted_detail = drill_down.get("omitted_detail")

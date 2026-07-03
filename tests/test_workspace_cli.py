@@ -802,6 +802,42 @@ def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, c
     ]
     assert "repeated_context_reconstruction" in current_decision["avoid_repeat"]
     assert current_decision["state_backed"] is True
+    assert "continuation_capsule" not in payload
+
+
+def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "capsule-plan",
+                "--title",
+                "Capsule plan",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Capsule plan", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    capsule = payload["continuation_capsule"]
+    assert capsule["kind"] == "agentic-workspace/continuation-capsule/v1"
+    assert capsule["surface"] == "startup"
+    assert capsule["current_decision"]["question"] == "Startup posture?"
+    assert capsule["proof_boundary"] == payload["current_decision"]["proof_boundary"]
+    assert "full task history" in capsule["do_not_repeat"]
 
 
 def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyword(tmp_path: Path, capsys) -> None:
@@ -3634,6 +3670,7 @@ def test_report_exposes_communication_contract_in_router_and_output_contract(tmp
     assert "handoff_review" in contract["phase_ids"]
     assert "current_decision" not in router
     assert "message_economy" not in router
+    assert "continuation_capsule" not in router
     assert cli.main(["report", "--target", str(tmp_path), "--section", "output_contract", "--format", "json"]) == 0
 
     selected = json.loads(capsys.readouterr().out)["answer"]
