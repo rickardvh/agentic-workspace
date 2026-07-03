@@ -141,7 +141,8 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     assert workspace_entries["workspace-proof-selection"]["visibility"] == "routed-on-demand"
     assert workspace_entries["workspace-transition-gates"]["visibility"] == "reference-only"
     assert workspace_entries["workspace-transition-gates"]["scope"] == "reference-support"
-    assert workspace_entries["workspace-operating-loop"]["scope"] == "reference-support"
+    assert workspace_entries["workspace-operating-loop"]["scope"] == "specialized-subskill"
+    assert workspace_entries["workspace-operating-loop"]["visibility"] == "routed-on-demand"
     assert workspace_entries["workspace-work-shape"]["scope"] == "reference-support"
     assert workspace_entries["workspace-setup-jumpstart"]["scope"] == "specialized-subskill"
     workspace_startup = next(entry for entry in payload["skills"] if entry["id"] == "workspace-startup")
@@ -452,6 +453,11 @@ def test_workspace_skill_hierarchy_activation_matrix(tmp_path: Path, capsys) -> 
             "expected_top": "workspace-transition-gates",
             "absent": {"workspace-proof-selection", "workspace-setup-jumpstart"},
         },
+        {
+            "task": "answer from state-delta-first current decision message economy continuation capsule evidence bundle",
+            "expected_top": "workspace-operating-loop",
+            "absent": {"workspace-proof-selection", "workspace-setup-jumpstart"},
+        },
     ]
 
     for case in cases:
@@ -471,6 +477,17 @@ def test_workspace_skill_hierarchy_activation_matrix(tmp_path: Path, capsys) -> 
         "workspace-transition-gates",
         "workspace-operating-loop",
     } & {entry["id"] for entry in payload["recommendations"]}
+
+    installed_skill_text = Path(".agentic-workspace/skills/workspace-operating-loop/SKILL.md").read_text(encoding="utf-8")
+    payload_skill_text = Path("src/agentic_workspace/_payload/.agentic-workspace/skills/workspace-operating-loop/SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    for skill_text in (installed_skill_text, payload_skill_text):
+        assert "current_decision" in skill_text
+        assert "message_economy" in skill_text
+        assert "continuation_capsule" in skill_text
+        assert "evidence_bundle" in skill_text
+        assert "Default visible output is a compact delta" in skill_text
 
 
 def test_skills_command_recommends_memory_router_for_note_selection_task(tmp_path: Path, capsys) -> None:

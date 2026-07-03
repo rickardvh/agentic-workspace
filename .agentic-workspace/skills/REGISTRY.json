@@ -178,14 +178,21 @@
     {
       "id": "workspace-operating-loop",
       "path": "workspace-operating-loop/SKILL.md",
-      "scope": "reference-support",
+      "scope": "specialized-subskill",
       "stability": "contract-backed-projection",
-      "visibility": "reference-only",
-      "summary": "reference module-slot ownership and no-artifact direct-answer details after main AW routing",
+      "visibility": "routed-on-demand",
+      "summary": "use compact AW state for state-delta visible updates while preserving module-slot ownership and direct-answer boundaries",
       "activation_hints": {
-        "verbs": ["reference", "interpret"],
+        "verbs": ["reference", "interpret", "answer", "respond", "update", "resume", "recheck"],
         "nouns": [
           "operating loop",
+          "state-delta",
+          "current decision",
+          "message economy",
+          "continuation capsule",
+          "evidence bundle",
+          "decision packet",
+          "visible update",
           "module slot",
           "module slot contract",
           "workspace slot",
@@ -194,12 +201,23 @@
           "direct answer"
         ],
         "phrases": [
+          "state-delta-first",
+          "state delta first",
+          "current decision packet",
+          "message economy",
+          "continuation capsule",
+          "evidence bundle",
+          "visible update delta",
+          "answer from compact state",
           "module slot contract reference",
           "module slot reference",
           "interpret module slot",
           "answer directly no artifact reference"
         ],
         "when": [
+          "current_decision, message_economy, continuation_capsule, or evidence_bundle packets are present",
+          "the agent needs to write a compact visible update from AW state",
+          "a resume, recheck, handoff, proof, or closeout message should avoid prose recap",
           "module ownership is unclear",
           "a next-safe-action packet names a module slot",
           "the agent may create an unnecessary artifact instead of answering directly"

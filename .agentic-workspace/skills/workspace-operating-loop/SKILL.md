@@ -1,13 +1,44 @@
 ---
 name: workspace-operating-loop
-description: Reference the Agentic Workspace module-slot contract only when the main AW operating skill or compact router names module ownership details that need interpretation.
+description: Use AW compact state to write visible updates as decision, proof, residue, and next-action deltas while preserving module-slot ownership.
 ---
 
-# Workspace Operating Loop Reference
+# Workspace Operating Loop
 
 This is a package-managed workspace skill installed under `.agentic-workspace/skills/`.
 
-Do not use it as an ordinary startup or implementation entrypoint. Start with `workspace-startup`; use this reference only when `module_slot`, module ownership, or no-artifact direct-answer behavior needs interpretation after compact routing.
+Start with `workspace-startup`; use this skill when compact routing, `current_decision`, `message_economy`, `continuation_capsule`, `evidence_bundle`, module ownership, or no-artifact direct-answer behavior needs interpretation before a visible update.
+
+## State-Delta Procedure
+
+1. Read the compact decision frame when present:
+   - `current_decision`
+   - `message_economy` or `communication_contract`
+   - `continuation_capsule`
+   - `evidence_bundle`
+   - `decision_packet`
+   - `proof_narrowness`
+   - `reasoning_economy`
+2. If the frame is sufficient, answer only the decision-relevant delta:
+   - decision or finding;
+   - evidence or proof boundary;
+   - residue or claim boundary;
+   - next safe action or closure status.
+3. Do not repeat context already captured in AW state unless it changes the current decision.
+4. Do not narrate tool chronology unless the chronology itself is proof-relevant or trust-relevant.
+5. If the frame is insufficient, use the smallest `evidence_bundle` or safe probe before making a hard claim.
+6. Expand only for proof gaps, safety or ownership ambiguity, unresolved residue, stale evidence, or explicit user request.
+
+## Output Rule
+
+Default visible output is a compact delta, not a recap:
+
+- `Decision:` or `Finding:`
+- `Evidence:`
+- `Residue:`
+- `Next action:`
+
+Omit a field only when it is genuinely irrelevant. Do not omit proof, residue, uncertainty, or owner boundaries when they change the safe claim.
 
 ## Module Slot Contract
 
@@ -56,6 +87,8 @@ When the router or task shape supports an answer-directly/no-artifact outcome, d
 
 ## Guardrails
 
+- Do not replace structured packets with prompt-prose keyword matching.
+- Do not make all messages short when proof or residue requires detail.
 - Do not let one module absorb another module's ownership.
 - Do not put active sequencing in Memory.
 - Do not put durable repo facts only in a plan closeout.
