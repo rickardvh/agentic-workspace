@@ -136,6 +136,33 @@ Treat dogfooding friction as product input, but do not derail the active lane. P
 5. Record a review finding when evidence needs later prioritization.
 6. Promote durable repo knowledge to memory only when it will prevent rediscovery.
 
+## Single Finding Triage
+
+Use this compact triage when one dogfooding finding appears during unrelated work and does not justify a full self-improvement pass.
+
+1. State the friction in one sentence and name the observed evidence.
+2. Classify the owner:
+   - direct fix now;
+   - GitHub issue;
+   - Memory note;
+   - Planning state;
+   - docs/checks/contracts;
+   - PR or review comment;
+   - dismissed with reason.
+3. Check whether the finding is repo-local, package-generic, or agent-runtime-specific.
+4. Route only the future-useful residue; do not preserve the whole chat or transcript.
+5. If creating an issue, use the repo-owned issue shaping/creation skills.
+6. If dismissing, say why future agents do not need to act differently.
+
+Output:
+
+- `finding`: one sentence
+- `evidence`: issue, PR, command, file, or review ref
+- `owner`: direct fix / issue / Memory / Planning / docs-checks-contracts / review / dismissed
+- `portability`: repo-local / package-generic / agent-runtime-specific
+- `action`: what was done or where it was routed
+- `remaining_gap`: none or explicit owner
+
 ## Required Anti-Overfitting Review
 
 Before closing a self-improvement pass, record a compact anti-overfitting review in the execplan closeout, review artifact, or issue-close proof. Do not treat validation success alone as enough to close.
