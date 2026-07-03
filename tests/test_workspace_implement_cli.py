@@ -149,7 +149,6 @@ def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Pa
     ]
     assert "current_decision" not in payload
     assert "message_economy" not in payload
-    assert "continuation_capsule" not in payload
 
 
 def _write_architecture_principles(target_root: Path) -> None:

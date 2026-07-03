@@ -217,32 +217,26 @@ def message_economy_payload(*, surface: str, communication_contract: dict[str, A
         "speak_when": [
             "decision_changed",
             "proof_boundary_changed",
-            "residue_or_owner_changed",
             "next_safe_action_changed",
-            "safety_or_reversibility_changed",
         ],
         "stay_compact_when": [
             "state_unchanged",
-            "evidence_already_queryable",
             "detail_route_available",
             "chronology_not_trust_relevant",
         ],
-        "expand_when": list(contract.get("expand_when", []))
+        "expand_when": (list(contract.get("expand_when", [])) or ["stale_missing_or_failed_proof", "user_requests_detail"])[:3]
+        if "stale_missing_or_failed_proof" in (list(contract.get("expand_when", [])) or [])
+        else (["stale_missing_or_failed_proof", *(list(contract.get("expand_when", [])) or ["user_requests_detail"])])[:3]
         or [
-            "ambiguous_action_safety",
             "stale_missing_or_failed_proof",
             "user_requests_detail",
-            "unresolved_residue",
         ],
         "discourage": [
             "low_value_tool_chronology",
             "repeated_state_recaps",
-            "broad_process_narration_without_decision_delta",
         ],
-        "preserve": ["proof_boundary", "residue_or_claim_boundary", "next_safe_action", "uncertainty_when_action_changing"],
-        "density_rule": "Default visible updates should be compact state deltas; expand only when the triggers change trust, safety, proof, residue, or user value.",
-        "source_contract": contract.get("kind", "agentic-workspace/communication-contract/v1"),
-        "rule": "Message cadence is derived from structured communication state, not from prompt-prose keyword matching.",
+        "preserve": ["proof_boundary", "next_safe_action"],
+        "state_backed": True,
     }
 
 
@@ -267,19 +261,41 @@ def continuation_capsule_payload(
             "status": current_decision.get("status", "unknown"),
             "next_action": current_decision.get("next_action", ""),
         },
-        "known_evidence": list(current_decision.get("known_evidence", []))[:6],
         "proof_boundary": proof_boundary,
         "unresolved_residue": residue_owner,
         "next_safe_action": current_decision.get("next_action", ""),
         "do_not_repeat": stale_context
         or [
             "full task history",
-            "tool chronology already captured by proof or decision packets",
-            "raw selector-backed context unless expansion triggers require it",
+            "tool chronology already captured",
         ],
-        "expansion_triggers": list(economy.get("expand_when", []))[:8],
-        "detail_routes": current_decision.get("detail_routes", {}),
-        "rule": "Use this capsule for handoff, resume, or recheck before writing a prose recap.",
+        "expansion_triggers": list(economy.get("expand_when", []))[:3],
+        "state_backed": True,
+    }
+
+
+def evidence_bundle_payload(*, surface: str, current_decision: dict[str, Any]) -> dict[str, Any]:
+    route_ids = current_decision.get("detail_route_ids", [])
+    minimal_surfaces = [{"id": str(item)} for item in route_ids if str(item).strip()][:6]
+    missing_evidence = [str(item) for item in current_decision.get("missing_evidence", []) if str(item).strip()]
+    return {
+        "kind": "agentic-workspace/evidence-bundle/v1",
+        "surface": surface,
+        "status": "available" if minimal_surfaces or missing_evidence else "not-needed",
+        "supports_decision": current_decision.get("decision_question", ""),
+        "minimal_evidence_surfaces": minimal_surfaces,
+        **({"missing_evidence": missing_evidence[:2]} if missing_evidence else {}),
+        "decision_changes_when": [
+            {
+                "outcome": "proof or safe probe passes",
+                "decision_effect": "answer from the compact state delta",
+            },
+        ],
+        "escalate_when": [
+            "proof boundary is stale or missing for a hard claim",
+            "residue owner is unresolved",
+        ],
+        "state_backed": True,
     }
 
 
