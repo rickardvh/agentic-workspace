@@ -43,13 +43,39 @@
       }
     },
     {
+      "id": "pr-review-recheck",
+      "path": "pr-review-recheck/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "review, re-review, and assess merge readiness for this repo's pull requests using intent, proof, closure, CI, and semver boundaries",
+      "activation_hints": {
+        "verbs": ["review", "re-review", "recheck", "approve", "merge", "comment"],
+        "nouns": ["pull request", "PR", "merge readiness", "review comment", "CI", "semver label"],
+        "phrases": ["review PR", "review pull request", "recheck PR", "check again", "merge if ready", "mark ready", "post a comment"],
+        "when": ["reviewing or rechecking pull requests", "deciding whether a PR is ready", "checking whether review feedback was addressed"]
+      }
+    },
+    {
+      "id": "github-issue-shaping",
+      "path": "github-issue-shaping/SKILL.md",
+      "scope": "repo-owned",
+      "stability": "repo-managed",
+      "summary": "shape or refine repo GitHub issues before creation or update while preserving intent, scope, evidence, and closure boundaries",
+      "activation_hints": {
+        "verbs": ["shape", "refine", "split", "prune", "update", "create", "file"],
+        "nouns": ["github issue", "issue lane", "issue refinement", "child issue", "parent issue", "final satisfaction", "non-solutions"],
+        "phrases": ["refine issue", "shape issue", "split into child issues", "create an issue lane", "add concrete suggestions", "final satisfaction"],
+        "when": ["turning findings into durable issue shape", "refining existing issues", "deciding issue hierarchy or closure boundaries"]
+      }
+    },
+    {
       "id": "self-improvement-dogfooding",
       "path": "self-improvement-dogfooding/SKILL.md",
       "scope": "repo-owned",
       "stability": "repo-managed",
       "summary": "run bounded repo-local improvement cycles that dogfood package surfaces without becoming shipped workflow",
       "activation_hints": {
-        "verbs": ["continue", "repeat", "improve", "optimise", "optimize", "evaluate", "dogfood", "autopilot"],
+        "verbs": ["continue", "repeat", "improve", "optimise", "optimize", "evaluate", "dogfood", "autopilot", "triage", "route"],
         "nouns": [
           "self-improvement",
           "dogfooding",
@@ -61,7 +87,9 @@
           "evaluation scenario",
           "exploratory evaluation",
           "findings issue",
-          "model CLI evaluation"
+          "model CLI evaluation",
+          "dogfooding finding",
+          "friction signal"
         ],
         "phrases": [
           "run self-improvement",
@@ -74,14 +102,17 @@
           "skill optimization evaluation loop",
           "model cli optimisation loop",
           "dogfood the package",
-          "system-intent-driven dogfooding"
+          "system-intent-driven dogfooding",
+          "triage dogfooding finding",
+          "route friction signal"
         ],
         "when": [
           "repo-local improvement loop",
           "skill-routing optimisation",
           "model CLI dogfooding loop",
           "autonomous package dogfooding",
-          "system-intent follow-through"
+          "system-intent follow-through",
+          "single observed dogfooding finding needs routing"
         ]
       }
     },
