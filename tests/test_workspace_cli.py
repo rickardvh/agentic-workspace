@@ -811,6 +811,10 @@ def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, c
     assert bundle["supports_decision"] == "Startup posture?"
     assert bundle["minimal_evidence_surfaces"][0]["id"] == "why_blocked"
     assert "residue owner is unresolved" in bundle["escalate_when"]
+    operating_loop_skill = next(entry for entry in payload["skills"]["recommended"] if entry["id"] == "workspace-operating-loop")
+    assert operating_loop_skill["reason"] == "state-delta packets are visible in startup output"
+    assert operating_loop_skill["source"] == "startup_state_delta_packets"
+    assert operating_loop_skill["packets"] == ["current_decision", "message_economy", "evidence_bundle"]
 
 
 def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path: Path, capsys) -> None:
