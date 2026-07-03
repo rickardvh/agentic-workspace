@@ -37,6 +37,22 @@
       "description": "Compact ordinary decision packet that names the startup phase question, next action, claim boundary, detail routes, and omitted detail states.",
       "additionalProperties": true
     },
+    "current_decision": {
+      "$ref": "#/$defs/current_decision",
+      "description": "State-delta decision view derived from the shared state-delta core."
+    },
+    "message_economy": {
+      "$ref": "#/$defs/message_economy",
+      "description": "State-delta output-economy view derived from the shared state-delta core."
+    },
+    "continuation_capsule": {
+      "$ref": "#/$defs/continuation_capsule",
+      "description": "Optional continuation handoff view derived from the shared state-delta core."
+    },
+    "evidence_bundle": {
+      "$ref": "#/$defs/evidence_bundle",
+      "description": "Minimal evidence route view derived from the shared state-delta core."
+    },
     "pre_test_evidence_guardrail": {
       "type": "object",
       "description": "Optional non-blocking pre-test evidence-owner advisory surfaced when configured assurance signals or declared changed evidence/test paths indicate proof-shape decisions.",
@@ -476,6 +492,314 @@
   },
   "additionalProperties": false,
   "$defs": {
+    "string_array": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "current_decision": {
+      "type": "object",
+      "required": [
+        "kind",
+        "surface",
+        "status",
+        "decision_question",
+        "known_evidence",
+        "safe_probe",
+        "response_shape",
+        "avoid_repeat",
+        "proof_boundary",
+        "residue_owner",
+        "next_action",
+        "detail_route_ids",
+        "state_backed"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/current-decision/v1",
+          "description": "Discriminator for the current decision view."
+        },
+        "surface": {
+          "type": "string",
+          "description": "Startup surface that emitted the current decision packet."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current decision readiness state derived from the shared state-delta core."
+        },
+        "decision_question": {
+          "type": "string",
+          "description": "Compact question or decision now being evaluated."
+        },
+        "known_evidence": {
+          "$ref": "#/$defs/string_array",
+          "description": "Smallest visible evidence summary needed to ground the current decision."
+        },
+        "missing_evidence": {
+          "$ref": "#/$defs/string_array",
+          "description": "Evidence gaps that prevent a stronger current decision claim."
+        },
+        "safe_probe": {
+          "type": "string",
+          "description": "Next bounded inspection or command that can advance the decision safely."
+        },
+        "response_shape": {
+          "$ref": "#/$defs/string_array",
+          "description": "Expected compact answer sections for this decision state."
+        },
+        "avoid_repeat": {
+          "$ref": "#/$defs/string_array",
+          "description": "Low-value context patterns the agent should avoid repeating."
+        },
+        "proof_boundary": {
+          "type": "string",
+          "description": "Current proof or claim boundary for the decision."
+        },
+        "residue_owner": {
+          "type": "string",
+          "description": "Owner responsible for unresolved residue in the current decision."
+        },
+        "next_action": {
+          "type": "string",
+          "description": "Immediate next action derived from the shared decision core."
+        },
+        "detail_route_ids": {
+          "$ref": "#/$defs/string_array",
+          "description": "Selector or detail route identifiers that can expand the compact decision."
+        },
+        "state_backed": {
+          "type": "boolean",
+          "description": "Whether the packet is backed by explicit startup state rather than narration."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Compact current-decision state-delta packet derived from a shared state-delta core."
+    },
+    "message_economy": {
+      "type": "object",
+      "required": [
+        "kind",
+        "surface",
+        "status",
+        "speak_when",
+        "stay_compact_when",
+        "expand_when",
+        "discourage",
+        "preserve",
+        "state_backed"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/message-economy/v1",
+          "description": "Discriminator for the message economy view."
+        },
+        "surface": {
+          "type": "string",
+          "description": "Startup surface that emitted the message economy packet."
+        },
+        "status": {
+          "type": "string",
+          "description": "Current activation state of the message economy guidance."
+        },
+        "speak_when": {
+          "$ref": "#/$defs/string_array",
+          "description": "State changes that justify visible agent output."
+        },
+        "stay_compact_when": {
+          "$ref": "#/$defs/string_array",
+          "description": "Conditions where the agent should keep output compact."
+        },
+        "expand_when": {
+          "$ref": "#/$defs/string_array",
+          "description": "Conditions where the agent should expand beyond compact output."
+        },
+        "discourage": {
+          "$ref": "#/$defs/string_array",
+          "description": "Low-value output patterns discouraged for this surface."
+        },
+        "preserve": {
+          "$ref": "#/$defs/string_array",
+          "description": "Facts that compact output must preserve."
+        },
+        "state_backed": {
+          "type": "boolean",
+          "description": "Whether the packet is backed by explicit startup state rather than narration."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Compact message-economy state-delta packet derived from a shared state-delta core."
+    },
+    "continuation_capsule": {
+      "type": "object",
+      "required": [
+        "kind",
+        "surface",
+        "status",
+        "preserved_intent",
+        "current_decision",
+        "proof_boundary",
+        "known_evidence",
+        "unresolved_residue",
+        "next_safe_action",
+        "do_not_repeat",
+        "expansion_triggers",
+        "state_backed"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/continuation-capsule/v1",
+          "description": "Discriminator for the continuation capsule view."
+        },
+        "surface": {
+          "type": "string",
+          "description": "Startup surface that emitted the continuation capsule."
+        },
+        "status": {
+          "type": "string",
+          "description": "Availability state of the continuation capsule."
+        },
+        "preserved_intent": {
+          "type": "string",
+          "description": "Intent that should survive a context shift or handoff."
+        },
+        "current_decision": {
+          "type": "object",
+          "description": "Nested compact decision summary for handoff.",
+          "required": [
+            "question",
+            "status",
+            "next_action"
+          ],
+          "properties": {
+            "question": {
+              "type": "string",
+              "description": "Decision question preserved for continuation."
+            },
+            "status": {
+              "type": "string",
+              "description": "Decision status preserved for continuation."
+            },
+            "next_action": {
+              "type": "string",
+              "description": "Next action preserved for continuation."
+            }
+          },
+          "additionalProperties": false
+        },
+        "proof_boundary": {
+          "type": "string",
+          "description": "Proof or claim boundary preserved for handoff."
+        },
+        "known_evidence": {
+          "$ref": "#/$defs/string_array",
+          "description": "Compact evidence summary preserved for handoff."
+        },
+        "unresolved_residue": {
+          "type": "string",
+          "description": "Residual owner or unresolved state preserved for handoff."
+        },
+        "next_safe_action": {
+          "type": "string",
+          "description": "Safe continuation action derived from the shared state-delta core."
+        },
+        "do_not_repeat": {
+          "$ref": "#/$defs/string_array",
+          "description": "Context already captured and not worth replaying after handoff."
+        },
+        "expansion_triggers": {
+          "$ref": "#/$defs/string_array",
+          "description": "Conditions that justify expanding the continuation context."
+        },
+        "state_backed": {
+          "type": "boolean",
+          "description": "Whether the packet is backed by explicit startup state rather than narration."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Compact continuation state-delta packet derived from a shared state-delta core."
+    },
+    "evidence_bundle": {
+      "type": "object",
+      "required": [
+        "kind",
+        "surface",
+        "status",
+        "supports_decision",
+        "minimal_evidence_surfaces",
+        "decision_changes_when",
+        "escalate_when",
+        "state_backed"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/evidence-bundle/v1",
+          "description": "Discriminator for the evidence bundle view."
+        },
+        "surface": {
+          "type": "string",
+          "description": "Startup surface that emitted the evidence bundle."
+        },
+        "status": {
+          "type": "string",
+          "description": "Availability state of minimal evidence routes."
+        },
+        "supports_decision": {
+          "type": "string",
+          "description": "Decision question this evidence bundle supports."
+        },
+        "minimal_evidence_surfaces": {
+          "type": "array",
+          "description": "Minimal selector or route surfaces that can expand supporting evidence.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "missing_evidence": {
+          "$ref": "#/$defs/string_array",
+          "description": "Evidence gaps that would change or strengthen the supported decision."
+        },
+        "decision_changes_when": {
+          "type": "array",
+          "description": "Conditions under which the supported decision may change.",
+          "items": {
+            "type": "object",
+            "required": [
+              "outcome",
+              "decision_effect"
+            ],
+            "properties": {
+              "outcome": {
+                "type": "string"
+              },
+              "decision_effect": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "escalate_when": {
+          "$ref": "#/$defs/string_array",
+          "description": "Conditions that require evidence escalation instead of compact reliance."
+        },
+        "state_backed": {
+          "type": "boolean",
+          "description": "Whether the packet is backed by explicit startup state rather than narration."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Compact evidence-bundle state-delta packet derived from a shared state-delta core."
+    },
     "memory_decision_packet": {
       "type": "object",
       "description": "Command-backed Memory pull/capture decision packet surfaced during startup.",

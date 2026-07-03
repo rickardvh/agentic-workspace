@@ -21,6 +21,7 @@ from agentic_workspace.reporting_support import (
     current_decision_payload,
     evidence_bundle_payload,
     message_economy_payload,
+    state_delta_core_payload,
 )
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
@@ -1713,12 +1714,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         payload.get("installed_state_compatibility"), dict
     )
     if show_state_delta_packets:
-        selected["message_economy"] = message_economy_payload(
-            surface="startup", communication_contract=compact_communication_contract_payload(surface="startup")
-        )
-        selected["current_decision"] = current_decision_payload(
+        state_delta_core = state_delta_core_payload(
             surface="startup",
             decision_packet=selected["decision_packet"],
+            communication_contract=compact_communication_contract_payload(surface="startup"),
             evidence_basis=[
                 "next_safe_action",
                 "action_signals",
@@ -1727,6 +1726,16 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             safe_probe=str(
                 next_safe_action.get("preferred_cli") or selected["decision_packet"].get("detail_routes", {}).get("active_plan") or ""
             ),
+        )
+        selected["message_economy"] = message_economy_payload(
+            surface="startup",
+            communication_contract=compact_communication_contract_payload(surface="startup"),
+            state_delta_core=state_delta_core,
+        )
+        selected["current_decision"] = current_decision_payload(
+            surface="startup",
+            decision_packet=selected["decision_packet"],
+            state_delta_core=state_delta_core,
         )
         continuation_answers = (
             payload.get("continuation_view", {}).get("answers", {}) if isinstance(payload.get("continuation_view"), dict) else {}
@@ -1737,8 +1746,11 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 current_decision=selected["current_decision"],
                 message_economy=selected["message_economy"],
                 preserved_intent=str(continuation_answers.get("preserved_intent", "")) if isinstance(continuation_answers, dict) else "",
+                state_delta_core=state_delta_core,
             )
-        selected["evidence_bundle"] = evidence_bundle_payload(surface="startup", current_decision=selected["current_decision"])
+        selected["evidence_bundle"] = evidence_bundle_payload(
+            surface="startup", current_decision=selected["current_decision"], state_delta_core=state_delta_core
+        )
     if isinstance(payload.get("continuation_view"), dict) or isinstance(payload.get("continuation_reorientation"), dict):
         drill_down: dict[str, Any] = selected["drill_down"]
         omitted_detail = drill_down.get("omitted_detail")

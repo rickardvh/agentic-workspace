@@ -169,11 +169,13 @@
   "references": [],
   "active_milestone": {
     "id": "issue-1969-lane-stack",
-    "status": "active",
+    "status": "planned",
     "scope": "Stack controller for child issues #1970-#1974 under lane issue-1969-state-delta-loop.",
-    "ready": "ready",
+    "ready": "queued",
     "blocked": "none",
-    "optional_deps": "none"
+    "optional_deps": "none",
+    "switched_from_active_by": "issue-1981-state-delta-core",
+    "switch_reason": "Switched active lane to Issue 1981 state-delta shared core."
   },
   "immediate_next_action": [
     "Implement #1970 current_decision packet first, then layer #1971-#1974."
@@ -319,6 +321,7 @@
   },
   "drift_log": [
     "2026-07-03: Scaffolded by agentic-planning new-plan.",
-    "2026-07-03: Recorded delegation decision route=keep-local."
+    "2026-07-03: Recorded delegation decision route=keep-local.",
+    "2026-07-03: Demoted from active by agentic-planning new-plan --switch-active (issue-1981-state-delta-core)."
   ]
 }

@@ -1,0 +1,327 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Issue 1981 state-delta shared core",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #1981 by making state-delta packet views derive from one shared compact core.",
+    "hard_constraints": "Preserve startup output budgets, visibility gates, packet-driven workspace-operating-loop surfacing, and implement/report compact defaults.",
+    "agent_may_decide": "Choose the smallest shared helper and derived-view wiring that removes duplicated packet ownership without changing external packet names unnecessarily.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Publish the #1981 PR; proof is complete.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py",
+      "make lint-workspace",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+      "make typecheck"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/reporting_support.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+      "docs/reference/startup-context.md",
+      "tests/test_workspace_cli.py",
+      ".agentic-workspace/planning/execplans/issue-1981-state-delta-core.plan.json",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json"
+    ],
+    "completion_criteria": [
+      "State-delta shared facts have one canonical builder/core source.",
+      "current_decision, message_economy, continuation_capsule, and evidence_bundle are derived views over that core.",
+      "Invariant tests cover proof boundary, claim/residue boundary, evidence, next action, expansion policy, and avoid-repeat policy.",
+      "Startup output-budget tests and visibility gates remain intact.",
+      "Packet-driven workspace-operating-loop surfacing remains intact."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "complete-after-pr-merge"
+  },
+  "goal": [
+    "Create a bounded plan for Issue 1981 state-delta shared core."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement #1981 by making state-delta packet views derive from one shared compact core.",
+      "constraints": "Preserve startup output budgets, visibility gates, packet-driven workspace-operating-loop surfacing, and implement/report compact defaults.",
+      "latitude": "Choose the smallest shared helper and derived-view wiring that removes duplicated packet ownership without changing external packet names unnecessarily.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "issue-1981-state-delta-core",
+      "status": "active",
+      "next_step": "Publish the #1981 PR; proof is complete.",
+      "proof": "Focused workspace CLI suite, generated conformance, make test-workspace, AW summary/doctor, lint-workspace, and typecheck passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/workspace_runtime_startup.py",
+        "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+        "docs/reference/startup-context.md",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/execplans/issue-1981-state-delta-core.plan.json",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Implement #1981 by making state-delta packet views derive from one shared compact core.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #1981",
+    "inferred intended outcome": "Implement the refined #1981 issue: shared state-delta core with derived packet views and invariant coverage.",
+    "chosen concrete what": "Introduce a shared state_delta_core_payload builder, derive the four existing packet views from it, and add invariant tests without broadening compact defaults.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/reporting_support.py; src/agentic_workspace/workspace_runtime_startup.py; src/agentic_workspace/contracts/schemas/startup_context.schema.json; docs/reference/startup-context.md; tests/test_workspace_cli.py; planning state/execplan files touched by AW plan activation.",
+    "max changed files": "8 expected after proof revealed the startup-context schema contract and generated schema reference needed the visible state-delta packet fields.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py; uv run pytest tests/test_generated_tool_conformance.py::test_generated_tool_process_conformance_contracts -q; make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make schema-reference-docs; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make typecheck.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Shared state_delta_core_payload is implemented and proof is recorded; publish the #1981 PR.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #1981 by making state-delta packet views derive from one shared compact core.",
+    "hard constraints": "Preserve startup output budgets, visibility gates, packet-driven workspace-operating-loop surfacing, and implement/report compact defaults.",
+    "agent may decide locally": "Choose the smallest shared helper and derived-view wiring that removes duplicated packet ownership without changing external packet names unnecessarily.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-1981-state-delta-core",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Publish the #1981 PR; proof is complete."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/reporting_support.py",
+    "src/agentic_workspace/workspace_runtime_startup.py",
+    "src/agentic_workspace/contracts/schemas/startup_context.schema.json",
+    "docs/reference/startup-context.md",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/execplans/issue-1981-state-delta-core.plan.json",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py",
+    "uv run pytest tests/test_generated_tool_conformance.py::test_generated_tool_process_conformance_contracts -q",
+    "make test-workspace",
+    "make lint-workspace",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+    "make schema-reference-docs",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "make typecheck"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "State-delta packet views derive from one shared compact core and #1981 acceptance criteria are validated."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented a shared state_delta_core_payload and rewired current_decision, message_economy, continuation_capsule, and evidence_bundle as derived views. Added startup-context schema and generated reference coverage for the visible packets after conformance exposed the missing contract.",
+    "scope touched": "reporting_support state-delta builders, startup selected-payload wiring, startup context schema/reference docs, focused CLI tests, and planning state.",
+    "changed surfaces": "state-delta packet construction, startup selected output contract, startup schema/reference documentation, packet invariant tests, and active execplan state.",
+    "validations run": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py; uv run pytest tests/test_generated_tool_conformance.py::test_generated_tool_process_conformance_contracts -q; make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make schema-reference-docs; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; make typecheck.",
+    "result for continuation": "implementation, payload sync, and proof complete; publish branch.",
+    "next step": "Publish the PR for #1981."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; schema scope was added only after conformance proved the visible packet contract was missing",
+    "proof status": "passed; payload sync was applied and doctor planning reports installed-state compatible",
+    "intent served": "yes",
+    "config compliance": "used repo-local AW start/implement/summary/doctor routes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "no functional follow-on required for #1981"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "uv run pytest tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_skills_cli.py passed; uv run pytest tests/test_generated_tool_conformance.py::test_generated_tool_process_conformance_contracts -q passed; make test-workspace passed before and after payload sync; make lint-workspace passed; contract tooling passed; structured file inventory passed; ruff contract/schema lane passed; schema reference docs passed; AW summary completed; AW doctor planning completed after payload sync with installed-state compatible; make maintainer-surfaces passed; generated command packages check passed; make absolute-paths passed; make typecheck passed.",
+    "evidence for \"proof achieved\" state": "272 focused workspace tests passed, 87 generated tool conformance cases passed, make test-workspace reported [ok], lint-workspace reported [ok], schema-reference-docs reported [ok], typecheck reported [ok]."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement #1981 by making state-delta packet views derive from one shared compact core.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "One shared state_delta_core_payload now owns decision, evidence, proof/claim/residue boundary, and output policy facts; the four existing packet views derive from it; invariant tests lock the shared derivation; output-budget and visibility tests remained green.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "State-delta packet views derive from a shared compact core and startup schema/reference conformance includes the visible packet fields.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "not needed beyond #1981 PR and this execplan",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-and-close-after-pr-merge",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "#1981 acceptance is satisfied by shared-core derivation, invariant tests, preserved packet names, preserved compact output budget tests, preserved visibility gates, and preserved workspace-operating-loop packet surfacing.",
+    "evidence carried forward": "Payload sync was applied with `uv run python scripts/run_agentic_workspace.py upgrade --target . --format json`; doctor planning reports installed-state compatible.",
+    "reopen trigger": "A review finds a duplicated state-delta owner or a packet view diverging from the shared core."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "Payload must be kept synced as part of the PR branch rather than waived as pre-existing residue.",
+      "AW summary reported the active plan as full-intent-complete while closeout_trust still blocked on active_intent_satisfied=false for the same plan."
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      "Applied payload sync in this PR after user correction; no new issue needed.",
+      "Filed https://github.com/rickardvh/agentic-workspace/issues/1982 for the summary vs closeout_trust intent-satisfaction mismatch."
+    ],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "Branch proof and payload sync are complete; publish PR for #1981.",
+        "Follow-up issue #1982 owns the closeout_trust projection mismatch found during dogfooding."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "https://github.com/rickardvh/agentic-workspace/issues/1982"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-07-03: Scaffolded by agentic-planning new-plan."
+  ]
+}

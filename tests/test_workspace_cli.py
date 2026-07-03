@@ -30,6 +30,61 @@ def test_json_payload_budget_failure_reports_largest_contributors() -> None:
     assert "context.large" in message
 
 
+def test_state_delta_packet_views_derive_from_shared_core() -> None:
+    from agentic_workspace.reporting_support import (
+        continuation_capsule_payload,
+        current_decision_payload,
+        evidence_bundle_payload,
+        message_economy_payload,
+        state_delta_core_payload,
+    )
+
+    decision_packet = {
+        "kind": "agentic-workspace/ordinary-decision-packet/v1",
+        "phase_question": "What changed?",
+        "next_action": "Run the focused proof.",
+        "claim_boundary": "partial-progress",
+        "residue_owner": "planning",
+        "required_commands": ["pytest tests/test_workspace_cli.py"],
+        "detail_routes": {"proof_detail": "proof --select proof", "why_blocked": "start --select next_safe_action"},
+    }
+    contract = {
+        "kind": "agentic-workspace/communication-contract/v1",
+        "expand_when": ["stale_missing_or_failed_proof", "user_requests_detail"],
+    }
+
+    core = state_delta_core_payload(
+        surface="startup",
+        decision_packet=decision_packet,
+        communication_contract=contract,
+        evidence_basis=["decision_packet", "proof_route"],
+    )
+    current = current_decision_payload(surface="startup", decision_packet=decision_packet, state_delta_core=core)
+    economy = message_economy_payload(surface="startup", communication_contract=contract, state_delta_core=core)
+    capsule = continuation_capsule_payload(
+        surface="startup",
+        current_decision=current,
+        message_economy=economy,
+        preserved_intent="keep state compact",
+        state_delta_core=core,
+    )
+    bundle = evidence_bundle_payload(surface="startup", current_decision=current, state_delta_core=core)
+
+    assert core["kind"] == "agentic-workspace/state-delta-core/v1"
+    assert current["proof_boundary"] == core["boundary"]["proof"]
+    assert capsule["proof_boundary"] == core["boundary"]["proof"]
+    assert current["residue_owner"] == core["boundary"]["residue_owner"]
+    assert capsule["unresolved_residue"] == core["boundary"]["residue_owner"]
+    assert current["known_evidence"] == core["evidence"]["known"][:1]
+    assert capsule["known_evidence"] == core["evidence"]["known"][:2]
+    assert bundle["minimal_evidence_surfaces"][0]["id"] == core["evidence"]["route_ids"][0]
+    assert current["next_action"] == core["decision"]["next_action"]
+    assert capsule["next_safe_action"] == core["decision"]["next_action"]
+    assert economy["expand_when"] == core["output_policy"]["expand_when"]
+    assert current["avoid_repeat"] == core["output_policy"]["avoid"]
+    assert capsule["do_not_repeat"] == core["output_policy"]["avoid"]
+
+
 def _assert_selector_inventory_omitted_from_compact_start(payload: dict[str, Any]) -> dict[str, Any]:
     drill_down = payload["drill_down"]
     assert "available_selectors" not in drill_down
@@ -849,8 +904,8 @@ def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path
     assert capsule["surface"] == "startup"
     assert capsule["current_decision"]["question"] == "Startup posture?"
     assert capsule["proof_boundary"] == payload["current_decision"]["proof_boundary"]
-    assert capsule["known_evidence"] == payload["current_decision"]["known_evidence"][:2]
-    assert "full task history" in capsule["do_not_repeat"]
+    assert capsule["known_evidence"][0] == payload["current_decision"]["known_evidence"][0]
+    assert capsule["do_not_repeat"] == payload["current_decision"]["avoid_repeat"]
     operating_loop_skill = next(entry for entry in payload["skills"]["recommended"] if entry["id"] == "workspace-operating-loop")
     assert operating_loop_skill["reason"] == "state-delta packets are visible in startup output"
     assert operating_loop_skill["source"] == "startup_state_delta_packets"
