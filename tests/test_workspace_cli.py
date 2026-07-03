@@ -790,6 +790,8 @@ def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, c
     assert "state_unchanged" in message_economy["stay_compact_when"]
     assert "stale_missing_or_failed_proof" in message_economy["expand_when"]
     assert "proof_boundary" in message_economy["preserve"]
+    assert "residue_or_claim_boundary" in message_economy["preserve"]
+    assert "user_requests_detail" in message_economy["expand_when"]
     current_decision = payload["current_decision"]
     assert current_decision["kind"] == "agentic-workspace/current-decision/v1"
     assert current_decision["surface"] == "startup"
@@ -843,6 +845,7 @@ def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path
     assert capsule["surface"] == "startup"
     assert capsule["current_decision"]["question"] == "Startup posture?"
     assert capsule["proof_boundary"] == payload["current_decision"]["proof_boundary"]
+    assert capsule["known_evidence"] == payload["current_decision"]["known_evidence"][:2]
     assert "full task history" in capsule["do_not_repeat"]
 
 

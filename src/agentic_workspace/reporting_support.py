@@ -224,9 +224,7 @@ def message_economy_payload(*, surface: str, communication_contract: dict[str, A
             "detail_route_available",
             "chronology_not_trust_relevant",
         ],
-        "expand_when": (list(contract.get("expand_when", [])) or ["stale_missing_or_failed_proof", "user_requests_detail"])[:3]
-        if "stale_missing_or_failed_proof" in (list(contract.get("expand_when", [])) or [])
-        else (["stale_missing_or_failed_proof", *(list(contract.get("expand_when", [])) or ["user_requests_detail"])])[:3]
+        "expand_when": list(contract.get("expand_when", []))
         or [
             "stale_missing_or_failed_proof",
             "user_requests_detail",
@@ -235,7 +233,7 @@ def message_economy_payload(*, surface: str, communication_contract: dict[str, A
             "low_value_tool_chronology",
             "repeated_state_recaps",
         ],
-        "preserve": ["proof_boundary", "next_safe_action"],
+        "preserve": ["proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
         "state_backed": True,
     }
 
@@ -262,6 +260,7 @@ def continuation_capsule_payload(
             "next_action": current_decision.get("next_action", ""),
         },
         "proof_boundary": proof_boundary,
+        "known_evidence": list(current_decision.get("known_evidence", []))[:2],
         "unresolved_residue": residue_owner,
         "next_safe_action": current_decision.get("next_action", ""),
         "do_not_repeat": stale_context
