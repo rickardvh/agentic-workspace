@@ -783,6 +783,18 @@ def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, c
         "unresolved_residue",
         "next_safe_action",
     ]
+    current_decision = payload["current_decision"]
+    assert current_decision["kind"] == "agentic-workspace/current-decision/v1"
+    assert current_decision["surface"] == "startup"
+    assert current_decision["decision_question"] == "Startup posture?"
+    assert current_decision["response_shape"] == [
+        "decision_or_finding",
+        "evidence_or_proof_boundary",
+        "residue_or_claim_boundary",
+        "next_safe_action",
+    ]
+    assert "repeated_context_reconstruction" in current_decision["avoid_repeat"]
+    assert current_decision["state_backed"] is True
 
 
 def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyword(tmp_path: Path, capsys) -> None:
@@ -3613,6 +3625,7 @@ def test_report_exposes_communication_contract_in_router_and_output_contract(tmp
     assert contract["surface"] == "report"
     assert contract["default_posture"] == "decision_first_state_backed"
     assert "handoff_review" in contract["phase_ids"]
+    assert "current_decision" not in router
     assert cli.main(["report", "--target", str(tmp_path), "--section", "output_contract", "--format", "json"]) == 0
 
     selected = json.loads(capsys.readouterr().out)["answer"]

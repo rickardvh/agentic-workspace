@@ -1,0 +1,128 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "issue-1969-state-delta-loop",
+  "title": "Issue 1969 state-delta-first operating loop",
+  "status": "active",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "Make ordinary AW operating-loop packets state-delta-first for issue #1969 across startup, implementation, report/continuation, and shipped skill adoption.",
+  "purpose_for_parent": "Close the #1969 parent by landing all child slices #1970-#1974 as an ordered stack, with proof that the loop exposes current decision, message economy, continuation capsule, evidence bundle, and skill guidance without prompt-prose classifiers.",
+  "subsystems": [
+    "workspace runtime compact packets",
+    "reporting support",
+    "installed workspace skills",
+    "package payload mirrors",
+    "workspace CLI tests"
+  ],
+  "technical_strategy": "Add shared state-delta packet builders in reporting_support, project them through ordinary start/implement/report surfaces, then update the shipped operating-loop skill to consume those packets. Keep packet shape compact, selector-friendly, and derived from existing structured state such as ordinary decision packets, proof state, communication contract, and continuation state.",
+  "technology_choices": [
+    "pure Python dict packet builders",
+    "existing compact projection paths",
+    "existing skill registry and payload mirror"
+  ],
+  "slice_sequence": [
+    {
+      "id": "issue-1970-current-decision",
+      "title": "#1970 current-decision packet",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Expose current_decision packets in ordinary workflow outputs. Branch: codex/1969-01-current-decision."
+    },
+    {
+      "id": "issue-1971-message-economy",
+      "title": "#1971 message-economy contract",
+      "status": "planned",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
+      "depends_on": [
+        "issue-1970-current-decision"
+      ],
+      "purpose_for_lane": "Expose message_economy triggers alongside communication_contract. Branch: codex/1969-02-message-economy."
+    },
+    {
+      "id": "issue-1972-continuation-capsule",
+      "title": "#1972 continuation capsule",
+      "status": "planned",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
+      "depends_on": [
+        "issue-1971-message-economy"
+      ],
+      "purpose_for_lane": "Expose continuation_capsule state for cheap resume/recheck. Branch: codex/1969-03-continuation-capsule."
+    },
+    {
+      "id": "issue-1973-evidence-bundles",
+      "title": "#1973 evidence bundles",
+      "status": "planned",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
+      "depends_on": [
+        "issue-1972-continuation-capsule"
+      ],
+      "purpose_for_lane": "Expose evidence_bundle packets for evidence-seeking decisions. Branch: codex/1969-04-evidence-bundles."
+    },
+    {
+      "id": "issue-1974-operating-loop-skill",
+      "title": "#1974 operating-loop skill adoption",
+      "status": "planned",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
+      "depends_on": [
+        "issue-1973-evidence-bundles"
+      ],
+      "purpose_for_lane": "Update shipped workspace-operating-loop skill and registries for state-delta behavior. Branch: codex/1969-05-operating-loop-skill."
+    }
+  ],
+  "current_slice": "#1970-#1974 stack controller",
+  "acceptance_boundary": "The lane is complete only when the stacked branches/PRs together satisfy #1969 and all child issue acceptance criteria, with tests proving compact packets and skill discovery while preserving proof, residue, next action, and honest closure.",
+  "proof_strategy": "Run changed-path AW proof selection, focused CLI tests for start/implement/report/skills packet exposure, summary/doctor planning checks, and a real CLI sample showing compact state-delta packets without broad always-on dumps.",
+  "proof_aggregation": {
+    "status": "not-started",
+    "evidence": [],
+    "known_gaps": []
+  },
+  "residual_lane_work": "not evaluated",
+  "lane_to_epic_contribution": "not evaluated",
+  "parent_close_permission": "not-evaluated",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#1969",
+      "label": "Parent lane",
+      "role": "parent"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1970",
+      "label": "Current-decision packet",
+      "role": "slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1971",
+      "label": "Message-economy contract",
+      "role": "slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1972",
+      "label": "Continuation capsule",
+      "role": "slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1973",
+      "label": "Evidence bundles",
+      "role": "slice"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#1974",
+      "label": "Operating-loop skill",
+      "role": "slice"
+    }
+  ],
+  "notes": "Stack order follows child issues so each PR can be reviewed independently while the final branch closes the parent lane."
+}

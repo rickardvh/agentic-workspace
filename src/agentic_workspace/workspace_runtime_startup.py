@@ -14,7 +14,11 @@ from pathlib import Path
 from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
-from agentic_workspace.reporting_support import communication_contract_payload, compact_communication_contract_payload
+from agentic_workspace.reporting_support import (
+    communication_contract_payload,
+    compact_communication_contract_payload,
+    current_decision_payload,
+)
 from agentic_workspace.workspace_runtime_core import (
     _CONTEXT_TEMPLATES,
     _active_intent_contract_payload,
@@ -1702,6 +1706,22 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     task_posture_packet = payload.get("task_posture_packet", {})
     if isinstance(task_posture_packet, dict) and task_posture_packet:
         selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
+    show_current_decision = str(next_safe_action.get("next_safe_action", "")) != "choose-task-switch-route" and not isinstance(
+        payload.get("installed_state_compatibility"), dict
+    )
+    if show_current_decision:
+        selected["current_decision"] = current_decision_payload(
+            surface="startup",
+            decision_packet=selected["decision_packet"],
+            evidence_basis=[
+                "next_safe_action",
+                "action_signals",
+                "active planning summary" if payload.get("active_state_summary", {}).get("active_execplan") else "startup routing state",
+            ],
+            safe_probe=str(
+                next_safe_action.get("preferred_cli") or selected["decision_packet"].get("detail_routes", {}).get("active_plan") or ""
+            ),
+        )
     if isinstance(payload.get("continuation_view"), dict) or isinstance(payload.get("continuation_reorientation"), dict):
         drill_down: dict[str, Any] = selected["drill_down"]
         omitted_detail = drill_down.get("omitted_detail")

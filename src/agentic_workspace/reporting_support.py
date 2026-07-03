@@ -130,6 +130,84 @@ def compact_communication_contract_payload(*, surface: str) -> dict[str, Any]:
     }
 
 
+def current_decision_payload(
+    *,
+    surface: str,
+    decision_packet: dict[str, Any],
+    evidence_basis: list[str] | None = None,
+    missing_evidence: list[str] | None = None,
+    safe_probe: str | None = None,
+    response_shape: list[str] | None = None,
+    avoid_repeat: list[str] | None = None,
+) -> dict[str, Any]:
+    blocked_actions = [str(item) for item in decision_packet.get("blocked_actions", []) if str(item).strip()]
+    required_commands = [str(item) for item in decision_packet.get("required_commands", []) if str(item).strip()]
+    detail_routes = decision_packet.get("detail_routes", {})
+    route_keys = list(detail_routes.keys()) if isinstance(detail_routes, dict) else []
+    known_evidence = [
+        str(item)
+        for item in (
+            evidence_basis
+            or [
+                f"phase_question={decision_packet.get('phase_question', '')}",
+                f"next_action={decision_packet.get('next_action', '')}",
+                f"claim_boundary={decision_packet.get('claim_boundary', '')}",
+            ]
+        )
+        if str(item).strip()
+    ]
+    missing = [
+        str(item)
+        for item in (
+            missing_evidence
+            or (
+                required_commands
+                if required_commands
+                else ["proof execution evidence before hard completion claim"]
+                if "claim" in str(decision_packet.get("claim_boundary", "")).lower()
+                else []
+            )
+        )
+        if str(item).strip()
+    ]
+    default_safe_probe = ""
+    if required_commands:
+        default_safe_probe = required_commands[0]
+    elif route_keys:
+        default_safe_probe = f"inspect selector {route_keys[0]}"
+    claim_boundary = decision_packet.get("claim_boundary", "not-evaluated")
+    if isinstance(claim_boundary, dict):
+        claim_boundary = str(
+            claim_boundary.get("status")
+            or claim_boundary.get("gate_result")
+            or claim_boundary.get("claim_level_allowed")
+            or "structured-boundary"
+        )
+    return {
+        "kind": "agentic-workspace/current-decision/v1",
+        "surface": surface,
+        "status": "blocked" if blocked_actions else "evidence-seeking" if missing else "ready",
+        "decision_question": str(decision_packet.get("phase_question", "") or "What decision is being made now?"),
+        "known_evidence": known_evidence[:1],
+        **({"missing_evidence": missing[:2]} if missing else {}),
+        "safe_probe": safe_probe or default_safe_probe or "answer from the current decision packet",
+        "response_shape": response_shape
+        or ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
+        "avoid_repeat": (
+            avoid_repeat
+            or [
+                "chronological_tool_call_narration",
+                "repeated_context_reconstruction",
+            ]
+        ),
+        "proof_boundary": claim_boundary,
+        "residue_owner": decision_packet.get("residue_owner", "none"),
+        "next_action": decision_packet.get("next_action", ""),
+        "detail_route_ids": route_keys[:3],
+        "state_backed": True,
+    }
+
+
 def _load_reasoning_economy_evidence_ledger(*, target_root: Path | None) -> dict[str, Any]:
     if target_root is None:
         return {
