@@ -790,6 +790,8 @@ def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, c
     assert "state_unchanged" in message_economy["stay_compact_when"]
     assert "stale_missing_or_failed_proof" in message_economy["expand_when"]
     assert "proof_boundary" in message_economy["preserve"]
+    assert "residue_or_claim_boundary" in message_economy["preserve"]
+    assert "user_requests_detail" in message_economy["expand_when"]
     current_decision = payload["current_decision"]
     assert current_decision["kind"] == "agentic-workspace/current-decision/v1"
     assert current_decision["surface"] == "startup"
@@ -803,6 +805,12 @@ def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, c
     assert "repeated_context_reconstruction" in current_decision["avoid_repeat"]
     assert current_decision["state_backed"] is True
     assert "continuation_capsule" not in payload
+    bundle = payload["evidence_bundle"]
+    assert bundle["kind"] == "agentic-workspace/evidence-bundle/v1"
+    assert bundle["surface"] == "startup"
+    assert bundle["supports_decision"] == "Startup posture?"
+    assert bundle["minimal_evidence_surfaces"][0]["id"] == "why_blocked"
+    assert "residue owner is unresolved" in bundle["escalate_when"]
 
 
 def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path: Path, capsys) -> None:
@@ -837,6 +845,7 @@ def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path
     assert capsule["surface"] == "startup"
     assert capsule["current_decision"]["question"] == "Startup posture?"
     assert capsule["proof_boundary"] == payload["current_decision"]["proof_boundary"]
+    assert capsule["known_evidence"] == payload["current_decision"]["known_evidence"][:2]
     assert "full task history" in capsule["do_not_repeat"]
 
 
@@ -3670,7 +3679,6 @@ def test_report_exposes_communication_contract_in_router_and_output_contract(tmp
     assert "handoff_review" in contract["phase_ids"]
     assert "current_decision" not in router
     assert "message_economy" not in router
-    assert "continuation_capsule" not in router
     assert cli.main(["report", "--target", str(tmp_path), "--section", "output_contract", "--format", "json"]) == 0
 
     selected = json.loads(capsys.readouterr().out)["answer"]

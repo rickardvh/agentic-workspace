@@ -12,7 +12,10 @@ from pathlib import Path
 from typing import Any, cast
 
 from agentic_workspace.config import WorkspaceUsageError
-from agentic_workspace.reporting_support import communication_contract_payload, compact_communication_contract_payload
+from agentic_workspace.reporting_support import (
+    communication_contract_payload,
+    compact_communication_contract_payload,
+)
 from agentic_workspace.runtime_source_review import (
     tiny_generated_cli_freshness_payload,
     tiny_runtime_source_edit_review_payload,

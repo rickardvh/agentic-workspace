@@ -19,6 +19,7 @@ from agentic_workspace.reporting_support import (
     compact_communication_contract_payload,
     continuation_capsule_payload,
     current_decision_payload,
+    evidence_bundle_payload,
     message_economy_payload,
 )
 from agentic_workspace.workspace_runtime_core import (
@@ -1708,10 +1709,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     task_posture_packet = payload.get("task_posture_packet", {})
     if isinstance(task_posture_packet, dict) and task_posture_packet:
         selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
-    show_current_decision = str(next_safe_action.get("next_safe_action", "")) != "choose-task-switch-route" and not isinstance(
+    show_state_delta_packets = str(next_safe_action.get("next_safe_action", "")) != "choose-task-switch-route" and not isinstance(
         payload.get("installed_state_compatibility"), dict
     )
-    if show_current_decision:
+    if show_state_delta_packets:
         selected["message_economy"] = message_economy_payload(
             surface="startup", communication_contract=compact_communication_contract_payload(surface="startup")
         )
@@ -1737,6 +1738,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 message_economy=selected["message_economy"],
                 preserved_intent=str(continuation_answers.get("preserved_intent", "")) if isinstance(continuation_answers, dict) else "",
             )
+        selected["evidence_bundle"] = evidence_bundle_payload(surface="startup", current_decision=selected["current_decision"])
     if isinstance(payload.get("continuation_view"), dict) or isinstance(payload.get("continuation_reorientation"), dict):
         drill_down: dict[str, Any] = selected["drill_down"]
         omitted_detail = drill_down.get("omitted_detail")
