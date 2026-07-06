@@ -223,6 +223,41 @@ def _compact_tiny_local_overlay(value: Any) -> dict[str, Any]:
     }
 
 
+def _compact_tiny_proof_closeout_summary(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    route = _as_dict(value.get("route"))
+    sufficiency = _as_dict(value.get("sufficiency"))
+    changed_paths = [str(item) for item in _list_payload(value.get("changed_paths"))][:5]
+    gap_count = len(_list_payload(value.get("remaining_gaps")))
+    proof_count = len(_list_payload(value.get("proof_results")))
+    route_name = str(route.get("name") or "none")
+    route_maturity = str(route.get("maturity") or "unknown")
+    route_source = str(route.get("source") or "unknown")
+    human_summary = _short_tiny_text(
+        f"Route {route_name} from {route_source} ({route_maturity}); proof_results={proof_count}; remaining_gaps={gap_count}.",
+        limit=180,
+    )
+    return {
+        "kind": value.get("kind", "agentic-workspace/proof-closeout-summary/v1"),
+        "status": value.get("status", ""),
+        "changed_paths": changed_paths,
+        "route": {key: route.get(key, "") for key in ("name", "maturity") if route.get(key)},
+        "proof_result_count": proof_count,
+        "remaining_gap_count": gap_count,
+        "sufficiency": {key: sufficiency.get(key, "") for key in ("status",) if sufficiency.get(key)},
+        "human_summary": human_summary,
+        "detail_selector": "proof_closeout_summary",
+    }
+
+
+def _short_tiny_text(value: str, *, limit: int) -> str:
+    text = re.sub(r"\s+", " ", value).strip()
+    if len(text) <= limit:
+        return text
+    return f"{text[: max(0, limit - 3)].rstrip()}..."
+
+
 def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
     if payload.get("profile") == "compact-contract-answer/v1":
         answer = payload.get("answer", {})
@@ -244,6 +279,8 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                 next_decision["proof_route_selection"] = route_decision
             if answer.get("proof_command_adjustments"):
                 next_decision["proof_command_adjustments"] = answer["proof_command_adjustments"]
+            if answer.get("proof_closeout_summary"):
+                next_decision["proof_closeout_summary"] = _compact_tiny_proof_closeout_summary(answer["proof_closeout_summary"])
             if answer.get("unavailable_proof_commands"):
                 next_decision["unavailable_proof_commands"] = answer["unavailable_proof_commands"]
             if answer.get("target_proof_capabilities") and (
@@ -3202,6 +3239,18 @@ def _proof_selection_for_changed_paths(
         host_policy_blocked_commands=host_policy_blocked_commands,
         manual_verification=manual_verification,
     )
+    proof_closeout_summary = _proof_closeout_summary_payload(
+        changed_paths=changed_paths,
+        selected_lanes=selected_lanes,
+        proof_route_decision=proof_route_decision,
+        proof_command_explanations=proof_command_explanations,
+        proof_execution_evidence=proof_execution_evidence,
+        proof_receipt_reconciliation=proof_receipt_reconciliation,
+        learned_route_reliance=learned_route_reliance,
+        manual_verification=manual_verification,
+        unavailable_commands=unavailable_commands,
+        host_policy_blocked_commands=host_policy_blocked_commands,
+    )
     active_planning_record_for_requirement = (
         _active_planning_record_for_report_section(target_root=target_root) if target_root is not None else {}
     )
@@ -3309,6 +3358,7 @@ def _proof_selection_for_changed_paths(
         "proof_confidence": proof_confidence,
         "proof_adequacy": proof_adequacy,
         "proof_command_explanations": proof_command_explanations,
+        "proof_closeout_summary": proof_closeout_summary,
         "requirement_grounding": requirement_grounding,
         "test_strategy_check": test_strategy_check,
         "architecture_principles": architecture_principles,
@@ -3973,6 +4023,226 @@ def _template_burden_memory_note_entry() -> str:
         "learned_at": date.today().isoformat(),
     }
     return f"agentic-workspace-proof-route: {json.dumps(entry, sort_keys=True)}"
+
+
+def _proof_closeout_summary_payload(
+    *,
+    changed_paths: list[str],
+    selected_lanes: list[dict[str, Any]],
+    proof_route_decision: dict[str, Any],
+    proof_command_explanations: dict[str, Any],
+    proof_execution_evidence: dict[str, Any],
+    proof_receipt_reconciliation: dict[str, Any],
+    learned_route_reliance: dict[str, Any],
+    manual_verification: dict[str, Any] | None,
+    unavailable_commands: list[dict[str, Any]],
+    host_policy_blocked_commands: list[dict[str, str]],
+) -> dict[str, Any]:
+    route = _proof_closeout_route_payload(
+        proof_route_decision=proof_route_decision,
+        proof_command_explanations=proof_command_explanations,
+        learned_route_reliance=learned_route_reliance,
+    )
+    proof_results = _proof_closeout_proof_results(
+        proof_execution_evidence=proof_execution_evidence,
+        proof_receipt_reconciliation=proof_receipt_reconciliation,
+    )
+    maturity_gaps = _proof_closeout_maturity_gaps(proof_command_explanations=proof_command_explanations)
+    remaining_gaps = _proof_closeout_remaining_gaps(
+        proof_results=proof_results,
+        manual_verification=manual_verification,
+        unavailable_commands=unavailable_commands,
+        host_policy_blocked_commands=host_policy_blocked_commands,
+        maturity_gaps=maturity_gaps,
+    )
+    risk_lanes = _dedupe([str(lane.get("id", "")).strip() for lane in selected_lanes if str(lane.get("id", "")).strip()])
+    status = (
+        "sufficient-recorded"
+        if not remaining_gaps and proof_results
+        else "not-yet-sufficient"
+        if remaining_gaps
+        else "needs-agent-judgment"
+    )
+    sufficiency = _proof_closeout_sufficiency_text(status=status, proof_results=proof_results, remaining_gaps=remaining_gaps)
+    lines = [
+        f"Changed paths: {_join_or_none(changed_paths)}.",
+        f"Route: {route['name']} ({route['source']}; maturity={route['maturity']}).",
+        f"Risk lanes: {_join_or_none(risk_lanes)}.",
+        f"Required proof: {_join_or_none([item['command'] for item in proof_results])}.",
+        f"Proof result: {_proof_closeout_result_line(proof_results)}.",
+        f"Remaining gaps: {_join_or_none(remaining_gaps)}.",
+        f"Sufficiency: {sufficiency}",
+    ]
+    return {
+        "kind": "agentic-workspace/proof-closeout-summary/v1",
+        "status": status,
+        "changed_paths": changed_paths,
+        "changed_surface_groups": _proof_closeout_surface_groups(changed_paths=changed_paths),
+        "route": route,
+        "applicable_risk_lanes": risk_lanes,
+        "risk_lane_statement": _join_or_none(risk_lanes),
+        "required_proof": [item["command"] for item in proof_results],
+        "proof_results": proof_results,
+        "proof_result_statement": _proof_closeout_result_line(proof_results),
+        "remaining_gaps": remaining_gaps,
+        "remaining_gap_statement": _join_or_none(remaining_gaps),
+        "route_maturity_gaps": maturity_gaps,
+        "sufficiency": {"status": status, "why": sufficiency},
+        "pr_validation_lines": lines,
+        "rule": "This is a human-facing projection of proof-selection and receipt evidence; it does not replace the underlying proof records.",
+    }
+
+
+def _proof_closeout_route_payload(
+    *, proof_route_decision: dict[str, Any], proof_command_explanations: dict[str, Any], learned_route_reliance: dict[str, Any]
+) -> dict[str, str]:
+    selected = proof_route_decision.get("selected_command") if isinstance(proof_route_decision, dict) else None
+    if isinstance(selected, dict):
+        route_source = str(selected.get("route_source", ""))
+        fallback_status = str(selected.get("fallback_status", ""))
+        command = str(selected.get("command", ""))
+        reason_classes = _reason_classes_for_command(command=command, proof_command_explanations=proof_command_explanations)
+        reliance_items = learned_route_reliance.get("items", []) if isinstance(learned_route_reliance, dict) else []
+        learned_item = next((item for item in reliance_items if isinstance(item, dict) and item.get("command") == command), {})
+        source = str(learned_item.get("source") or selected.get("authority_surface") or route_source)
+        evidence = str(learned_item.get("provenance") or selected.get("route_authority") or route_source)
+        maturity = (
+            "learned-confirmed"
+            if learned_item
+            else "conservative-fallback"
+            if "conservative-fallback" in reason_classes
+            else fallback_status
+        )
+        return {
+            "name": route_source or "selected-proof-route",
+            "command": command,
+            "source": source or "unknown",
+            "evidence": evidence or "not recorded",
+            "maturity": maturity or "unknown",
+            "fallback_status": fallback_status,
+            "reason_classes": ", ".join(reason_classes),
+        }
+    manual = proof_route_decision.get("manual_fallback") if isinstance(proof_route_decision, dict) else None
+    return {
+        "name": "manual-fallback" if manual else str(proof_route_decision.get("route_source", "none")),
+        "command": "",
+        "source": "manual-verification" if manual else "none",
+        "evidence": str(manual.get("summary", "")) if isinstance(manual, dict) else "no route selected",
+        "maturity": "manual-required" if manual else "none",
+        "fallback_status": "manual-required" if manual else "none",
+        "reason_classes": "unavailable-manual" if manual else "",
+    }
+
+
+def _reason_classes_for_command(*, command: str, proof_command_explanations: dict[str, Any]) -> list[str]:
+    for item in _list_payload(proof_command_explanations.get("required")):
+        if isinstance(item, dict) and item.get("command") == command:
+            return [str(value) for value in _list_payload(item.get("reason_classes"))]
+    return []
+
+
+def _proof_closeout_proof_results(
+    *, proof_execution_evidence: dict[str, Any], proof_receipt_reconciliation: dict[str, Any]
+) -> list[dict[str, str]]:
+    execution_by_command = {
+        str(item.get("command", "")): item for item in _list_payload(proof_execution_evidence.get("commands")) if isinstance(item, dict)
+    }
+    results: list[dict[str, str]] = []
+    for item in _list_payload(proof_receipt_reconciliation.get("commands")):
+        if not isinstance(item, dict):
+            continue
+        command = str(item.get("command", ""))
+        execution = execution_by_command.get(command, {})
+        evidence_state = str(item.get("evidence_state", ""))
+        result = (
+            "passed"
+            if evidence_state == "accepted"
+            else "failed"
+            if evidence_state == "recorded-failed"
+            else str(execution.get("status", "missing"))
+        )
+        results.append(
+            {
+                "command": command,
+                "result": result,
+                "receipt_state": evidence_state or "not-recorded",
+                "execution_state": str(execution.get("status", "missing")),
+                "evidence_source": "proof-receipt" if evidence_state == "accepted" else "execution-evidence" if execution else "missing",
+            }
+        )
+    if results:
+        return results
+    for item in _list_payload(proof_execution_evidence.get("commands")):
+        if isinstance(item, dict):
+            results.append(
+                {
+                    "command": str(item.get("command", "")),
+                    "result": str(item.get("status", "missing")),
+                    "receipt_state": "not-recorded",
+                    "execution_state": str(item.get("status", "missing")),
+                    "evidence_source": "execution-evidence",
+                }
+            )
+    return results
+
+
+def _proof_closeout_maturity_gaps(*, proof_command_explanations: dict[str, Any]) -> list[str]:
+    gaps: list[str] = []
+    for item in _list_payload(proof_command_explanations.get("required")):
+        if not isinstance(item, dict):
+            continue
+        if "conservative-fallback" in _list_payload(item.get("reason_classes")):
+            gaps.append(f"{item.get('command')}: conservative fallback; narrower learned route evidence is missing or immature")
+    return gaps
+
+
+def _proof_closeout_remaining_gaps(
+    *,
+    proof_results: list[dict[str, str]],
+    manual_verification: dict[str, Any] | None,
+    unavailable_commands: list[dict[str, Any]],
+    host_policy_blocked_commands: list[dict[str, str]],
+    maturity_gaps: list[str],
+) -> list[str]:
+    gaps: list[str] = []
+    for item in proof_results:
+        if item.get("result") not in {"passed", "waived"}:
+            gaps.append(f"{item.get('command')}: proof result is {item.get('result')}")
+    if isinstance(manual_verification, dict):
+        gaps.append(str(manual_verification.get("summary") or manual_verification.get("reason") or "manual verification required"))
+    gaps.extend(f"{item.get('command')}: {item.get('reason')}" for item in unavailable_commands if isinstance(item, dict))
+    gaps.extend(f"{item.get('command')}: host policy blocked selected proof" for item in host_policy_blocked_commands)
+    gaps.extend(maturity_gaps)
+    return _dedupe([gap for gap in gaps if gap.strip()])
+
+
+def _proof_closeout_surface_groups(*, changed_paths: list[str]) -> list[dict[str, Any]]:
+    groups: dict[str, list[str]] = {}
+    for path in changed_paths:
+        group = "docs/process" if path.lower().endswith((".md", ".markdown")) or path.startswith(".github/") else "runtime/source"
+        groups.setdefault(group, []).append(path)
+    return [{"group": group, "paths": paths} for group, paths in groups.items()]
+
+
+def _proof_closeout_sufficiency_text(*, status: str, proof_results: list[dict[str, str]], remaining_gaps: list[str]) -> str:
+    if status == "sufficient-recorded":
+        return "All selected required proof has accepted execution evidence for the changed-path boundary."
+    if remaining_gaps:
+        return "Required proof or route maturity gaps remain; do not use this summary as completion proof yet."
+    if not proof_results:
+        return "No required proof result is recorded; agent judgment must supply task-specific closeout evidence."
+    return "Proof status needs agent interpretation before a completion claim."
+
+
+def _proof_closeout_result_line(proof_results: list[dict[str, str]]) -> str:
+    if not proof_results:
+        return "none recorded"
+    return "; ".join(f"{item['command']} -> {item['result']}" for item in proof_results)
+
+
+def _join_or_none(values: list[str]) -> str:
+    visible = [str(value).strip() for value in values if str(value).strip()]
+    return ", ".join(visible) if visible else "none known"
 
 
 def _proof_command_explanations_payload(
