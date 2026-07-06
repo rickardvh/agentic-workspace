@@ -27842,12 +27842,11 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
             checkpoint=checkpoint_projection,
             path=str(checkpoint_projection.get("path", LOCAL_CHAT_CHECKPOINT_PATH.as_posix())),
         )
-        records.append((str(checkpoint_projection.get("path", LOCAL_CHAT_CHECKPOINT_PATH.as_posix())), checkpoint_record))
         checkpoint_bridge = {
-            "status": "projected-as-thread",
+            "status": "available-fallback",
             "thread_id": "checkpoint-default",
             "source_selector": "local_chat_checkpoint",
-            "rule": "The checkpoint remains advisory and non-evidence; work_threads only gives it the same selection path.",
+            "rule": "The checkpoint remains advisory and non-evidence; it becomes a work-thread fallback only when no registry thread is a current match.",
         }
     index = _local_work_thread_index_projection(target_root=target_root)
     selected_id = str(index.get("selected_thread_id") or "").strip() if index.get("status") == "present" else ""
@@ -27861,6 +27860,18 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
         )
         for path, record in records
     ]
+    registry_current_matches = [thread for thread in projected if thread["status"] == "plausible-match"]
+    if checkpoint_projection.get("status") in {"present", "stale"} and not registry_current_matches:
+        projected.append(
+            _local_work_thread_record_projection(
+                record=checkpoint_record,
+                path=str(checkpoint_projection.get("path", LOCAL_CHAT_CHECKPOINT_PATH.as_posix())),
+                current=current,
+                task_refs=task_refs,
+                cli_invoke=cli_invoke,
+            )
+        )
+        checkpoint_bridge["status"] = "projected-as-fallback"
     selected_matches = [thread for thread in projected if selected_id and thread["id"] == selected_id]
     current_matches = [thread for thread in projected if thread["status"] == "plausible-match"]
     stale_threads = [thread for thread in projected if thread["status"] in {"stale", "other-branch"}]
@@ -27873,7 +27884,7 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
             "rule": "Forgetting removes only ignored local advisory state and never proves completion.",
         }
         for thread in stale_threads
-        if thread["source"] != "local_chat_checkpoint"
+        if thread["source"] != "local_chat_checkpoint" and "old-unused-thread" in thread["stale_reasons"]
     ]
     if unreadable:
         status = "unreadable"
@@ -28203,7 +28214,7 @@ def _prune_local_work_threads(
     candidates = _local_work_thread_safe_prune_targets(target_root=target_root, cli_invoke=cli_invoke)
     if all_candidates:
         requested_ids = sorted(candidates)
-    if not requested_ids:
+    elif not requested_ids:
         raise WorkspaceUsageError("Pass --thread-id at least once, or use --all-candidates.")
     pruned_ids: list[str] = []
     pruned_paths: list[str] = []

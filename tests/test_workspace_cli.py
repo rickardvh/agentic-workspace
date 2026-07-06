@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Any
 
 from tests.workspace_cli_support import *
@@ -2220,10 +2220,11 @@ def _write_local_work_thread(
     issue: str = "#1987",
     branch: str | None = None,
     head: str | None = None,
-    updated_at: str = "2026-07-06T12:00:00+00:00",
+    updated_at: str | None = None,
 ) -> Path:
     branch = branch if branch is not None else _git_value(target, "branch", "--show-current")
     head = head if head is not None else _git_value(target, "rev-parse", "HEAD")
+    updated_at = updated_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     record = {
         "kind": "agentic-workspace/local-work-thread/v1",
         "id": thread_id,
@@ -2313,6 +2314,8 @@ def test_local_work_threads_resume_after_branch_switch_round_trip(tmp_path: Path
     assert away["status"] == "stale"
     assert away["stale_threads"][0]["id"] == "issue-1987-master"
     assert "different-branch" in away["stale_threads"][0]["stale_reasons"]
+    assert away["cleanup"]["status"] == "none"
+    assert away["cleanup"]["prune_candidates"] == []
 
     subprocess.run(["git", "switch", "master"], cwd=tmp_path, text=True, capture_output=True, check=True)
 
@@ -2355,16 +2358,52 @@ def test_local_work_threads_report_ambiguity_and_checkpoint_bridge(tmp_path: Pat
     packet = json.loads(capsys.readouterr().out)["values"]["work_threads"]
 
     assert packet["status"] == "ambiguous"
-    assert packet["current_match_count"] == 3
+    assert packet["current_match_count"] == 2
     assert {thread["id"] for thread in packet["current_matches"]} == {
         "issue-1987-alpha",
         "issue-1987-beta",
-        "checkpoint-default",
     }
-    assert packet["checkpoint_bridge"]["status"] == "projected-as-thread"
+    assert packet["checkpoint_bridge"]["status"] == "available-fallback"
     assert packet["checkpoint_bridge"]["source_selector"] == "local_chat_checkpoint"
     forbidden_task_fields = {"priority", "assignee", "assignment", "canonical_status", "estimate", "dependencies"}
     assert all(not forbidden_task_fields.intersection(thread) for thread in packet["current_matches"])
+
+
+def test_local_work_threads_checkpoint_fallback_does_not_compete_with_registry_match(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_local_work_thread(tmp_path, thread_id="issue-1987-main", label="Issue 1987 main")
+
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Resume #1987 checkpoint fallback",
+                "--issue",
+                "#1987",
+                "--durable-source",
+                "https://github.com/rickardvh/agentic-workspace/issues/1987",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987", "--select", "work_threads", "--format", "json"]) == 0
+    packet = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+
+    assert packet["status"] == "clear-match"
+    assert packet["current_match_count"] == 1
+    assert packet["selected_thread"]["id"] == "issue-1987-main"
+    assert packet["checkpoint_bridge"]["status"] == "available-fallback"
+    assert {thread["id"] for thread in packet["current_matches"]} == {"issue-1987-main"}
 
 
 def test_local_work_threads_classify_stale_and_selected_missing(tmp_path: Path, capsys) -> None:
@@ -2475,6 +2514,26 @@ def test_local_work_threads_prune_removes_only_safe_local_candidates(tmp_path: P
     assert payload["skipped"] == []
     assert not stale_path.exists()
     assert readme.exists()
+
+    assert (
+        cli.main(
+            [
+                "work-thread",
+                "prune",
+                "--target",
+                str(tmp_path),
+                "--all-candidates",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    repeated = json.loads(capsys.readouterr().out)
+    assert repeated["status"] == "nothing-to-prune"
+    assert repeated["requested_thread_ids"] == []
+    assert repeated["pruned_thread_ids"] == []
+    assert repeated["skipped"] == []
 
     assert cli.main(["start", "--target", str(tmp_path), "--select", "work_threads", "--format", "json"]) == 0
     after = json.loads(capsys.readouterr().out)["values"]["work_threads"]
