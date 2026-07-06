@@ -2873,6 +2873,19 @@ def _proof_selection_for_changed_paths(
         target_capabilities=target_capabilities, learned_route_hints=learned_route_hints
     )
     selected_lanes.extend(_learned_proof_lanes_for_changed_paths(changed_paths=changed_paths, learned_route_hints=learned_route_hints))
+    docs_process_route = _docs_process_route_refinement(
+        changed_paths=changed_paths,
+        selected_lanes=selected_lanes,
+        task_text=task_text,
+        learned_route_hints=learned_route_hints,
+    )
+    if docs_process_route["status"] == "active":
+        selected_lanes = _apply_docs_process_route_to_lanes(
+            selected_lanes=selected_lanes,
+            docs_review_lane=copy.deepcopy(_lane("repo_docs_review")),
+            docs_process_route=docs_process_route,
+        )
+        routing_reductions.extend(docs_process_route["routing_reductions"])
     learned_negative_commands = {
         str(hint.get("candidate_command", "")).strip()
         for hint in learned_route_hints.get("negative", [])
@@ -3359,6 +3372,7 @@ def _proof_selection_for_changed_paths(
         "proof_adequacy": proof_adequacy,
         "proof_command_explanations": proof_command_explanations,
         "proof_closeout_summary": proof_closeout_summary,
+        "docs_process_route": docs_process_route,
         "requirement_grounding": requirement_grounding,
         "test_strategy_check": test_strategy_check,
         "architecture_principles": architecture_principles,
@@ -4023,6 +4037,146 @@ def _template_burden_memory_note_entry() -> str:
         "learned_at": date.today().isoformat(),
     }
     return f"agentic-workspace-proof-route: {json.dumps(entry, sort_keys=True)}"
+
+
+_DOCS_PROCESS_ACTIVATION_TERMS = (
+    "docs/process",
+    "docs-only",
+    "documentation-only",
+    "markdown path reference",
+    "path-reference",
+    "template-burden",
+    "template burden",
+    "tool-neutral",
+    "local-tool coupling",
+    "learned docs",
+)
+
+
+def _docs_process_route_refinement(
+    *, changed_paths: list[str], selected_lanes: list[dict[str, Any]], task_text: str | None, learned_route_hints: dict[str, Any]
+) -> dict[str, Any]:
+    docs_paths = [path for path in changed_paths if _is_docs_process_route_path(path)]
+    activation = _docs_process_route_activation(task_text=task_text, learned_route_hints=learned_route_hints)
+    selected_lane_ids = [str(lane.get("id", "")) for lane in selected_lanes]
+    if not changed_paths or len(docs_paths) != len(changed_paths):
+        return {
+            "kind": "agentic-workspace/docs-process-route/v1",
+            "status": "not-applicable",
+            "changed_paths": docs_paths,
+            "activation": activation,
+        }
+    if not activation:
+        return {
+            "kind": "agentic-workspace/docs-process-route/v1",
+            "status": "not-active",
+            "changed_paths": docs_paths,
+            "activation": activation,
+            "rule": "Docs/process route narrowing needs explicit task intent or repo-local learned route evidence.",
+        }
+    reductions = []
+    if "workspace_cli" in selected_lane_ids:
+        reductions.append(
+            {
+                "path": ", ".join(docs_paths),
+                "from_lane": "workspace_cli",
+                "to_lane": "repo_docs_review",
+                "reason": "repo-learned docs/process route covers documentation, template, path-reference, and guidance checks",
+            }
+        )
+    return {
+        "kind": "agentic-workspace/docs-process-route/v1",
+        "status": "active",
+        "changed_paths": docs_paths,
+        "activation": activation,
+        "routing_reductions": reductions,
+        "required_review_packets": [
+            "markdown_path_reference_review",
+            "template_burden_review",
+            "local_tool_coupling_review",
+            "proof_closeout_summary",
+        ],
+        "route_maturity": "repo-learned"
+        if any(signal.get("source") == "repo-learned-proof-route" for signal in activation)
+        else "task-scoped",
+        "rule": (
+            "When repo evidence supports a docs/process route, docs-only guidance and template changes use docs/process proof "
+            "before broad backend proof. Broader proof remains an escalation, policy, or confidence route."
+        ),
+    }
+
+
+def _apply_docs_process_route_to_lanes(
+    *, selected_lanes: list[dict[str, Any]], docs_review_lane: dict[str, Any], docs_process_route: dict[str, Any]
+) -> list[dict[str, Any]]:
+    lanes = [lane for lane in selected_lanes if str(lane.get("id", "")) != "workspace_cli"]
+    docs_lane = next((lane for lane in lanes if str(lane.get("id", "")) == "repo_docs_review"), None)
+    if docs_lane is None:
+        docs_lane = docs_review_lane
+        lanes.insert(0, docs_lane)
+    docs_lane["learned_route"] = {
+        "id": "docs-process",
+        "source": "repo-local evidence",
+        "maturity": docs_process_route.get("route_maturity", "repo-learned"),
+    }
+    docs_lane["enough_proof"] = [_docs_process_review_command(changed_paths=docs_process_route.get("changed_paths", []))]
+    docs_lane["recovery_signal"] = (
+        "Docs/process proof should resolve Markdown paths, template burden, tool-neutral wording, and diff review before "
+        "broad backend proof is treated as necessary."
+    )
+    return lanes
+
+
+def _docs_process_route_activation(*, task_text: str | None, learned_route_hints: dict[str, Any]) -> list[dict[str, str]]:
+    signals: list[dict[str, str]] = []
+    task_lower = (task_text or "").lower()
+    for term in _DOCS_PROCESS_ACTIVATION_TERMS:
+        if term in task_lower:
+            signals.append({"source": "task-intent", "term": term})
+    for hint in learned_route_hints.get("confirmed", []):
+        if not isinstance(hint, dict):
+            continue
+        searchable = " ".join(
+            str(hint.get(field, ""))
+            for field in ("id", "candidate_command", "scope", "provenance", "source_path")
+            if str(hint.get(field, "")).strip()
+        ).lower()
+        matched_terms = [term for term in _DOCS_PROCESS_ACTIVATION_TERMS if term in searchable]
+        if not matched_terms:
+            continue
+        signals.append(
+            {
+                "source": "repo-learned-proof-route",
+                "route_id": str(hint.get("id", "")),
+                "owner": str(hint.get("owner", "")),
+                "term": matched_terms[0],
+            }
+        )
+    return signals
+
+
+def _is_docs_process_route_path(path: str) -> bool:
+    normalized = path.lower().replace("\\", "/")
+    if normalized in {"readme.md", "packages/planning/readme.md", "packages/memory/readme.md"}:
+        return True
+    if normalized.startswith((".agentic-workspace/docs/", "docs/")) and normalized.endswith((".md", ".markdown")):
+        return True
+    if normalized == ".github/pull_request_template.md":
+        return True
+    if normalized.startswith(".github/issue_template/") or normalized.startswith(".github/issue_template"):
+        return True
+    return False
+
+
+def _docs_process_review_command(*, changed_paths: list[str]) -> str:
+    base_paths = ["README.md", "docs", ".agentic-workspace/docs", "packages/planning/README.md", "packages/memory/README.md"]
+    template_paths = [
+        ".github/pull_request_template.md",
+        ".github/ISSUE_TEMPLATE",
+    ]
+    include_templates = any(str(path).lower().replace("\\", "/").startswith(".github/") for path in changed_paths)
+    paths = [*base_paths, *(template_paths if include_templates else [])]
+    return f"git diff -- {' '.join(paths)}"
 
 
 def _proof_closeout_summary_payload(
