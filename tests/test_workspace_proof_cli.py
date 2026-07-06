@@ -2084,6 +2084,47 @@ def test_proof_changed_selector_routes_readme_to_docs_review(tmp_path: Path, cap
     assert answer["surface_value_review"]["reviewed_paths"][0]["surface_class"] == "adapter_or_repo_intent_surface"
 
 
+def test_proof_changed_selector_reviews_markdown_repo_path_references(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(tmp_path / "docs" / "existing.md", "# Existing\n")
+    _write(
+        tmp_path / "docs" / "guide.md",
+        """
+# Guide
+
+Concrete path: `docs/missing.md`
+Valid path: [existing](docs/existing.md)
+Example path: `docs/<area>/template.md`
+Command snippet: `uv run python scripts/check.py`
+Anchor only: [section](#local-anchor)
+Remote link: [site](https://example.com/docs/missing.md)
+""",
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "docs/guide.md", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload["answer"]
+    review = answer["markdown_path_reference_review"]
+    assert review["status"] == "attention-needed"
+    assert review["changed_paths"] == ["docs/guide.md"]
+    assert review["missing_count"] == 1
+    assert review["valid_count"] == 1
+    assert review["ambiguous_count"] == 2
+    assert review["missing_references"][0]["reference"] == "docs/missing.md"
+    assert review["missing_references"][0]["line"] == 4
+    assert review["valid_references"][0]["reference"] == "docs/existing.md"
+    assert {item["reference"] for item in review["ambiguous_references"]} == {
+        "docs/<area>/template.md",
+        "uv run python scripts/check.py",
+    }
+    route_learning = review["route_learning_evidence"]
+    assert route_learning["candidate_route"] == "docs/process path-reference check"
+    assert "--files docs/guide.md" in route_learning["capture_command"]
+    assert route_learning["memory_note_entry"].startswith("agentic-workspace-proof-route:")
+    assert '"intent_type": "static-check"' in route_learning["memory_note_entry"]
+
+
 def test_proof_changed_selector_routes_package_readmes_to_docs_review(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 

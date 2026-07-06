@@ -11,6 +11,7 @@ import fnmatch
 import json
 import re
 import tomllib
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +41,7 @@ from agentic_workspace.workspace_runtime_core import (
     _assurance_requirements_report_payload,
     _assurance_requirements_with_verification,
     _authority_boundary_payload,
+    _changed_path_exists,
     _cli_authority_review_for_changed_paths,
     _closeout_intent_evidence_payload,
     _closeout_report_adoption_payload,
@@ -3503,6 +3505,9 @@ def _proof_selection_for_changed_paths(
         }
     if include_assurance_requirements:
         proof_selection["assurance_requirements"] = active_assurance_requirements
+    markdown_path_reference_review = _markdown_path_reference_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
+    if markdown_path_reference_review["changed_paths"]:
+        proof_selection["markdown_path_reference_review"] = markdown_path_reference_review
     surface_value_review = _surface_value_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
     if surface_value_review["durable_surface_count"]:
         proof_selection["surface_value_review"] = surface_value_review
@@ -3522,3 +3527,165 @@ def _proof_selection_for_changed_paths(
     if cli_authority_review["changed_paths"]:
         proof_selection["cli_authority_review"] = cli_authority_review
     return proof_selection
+
+
+_MARKDOWN_LINK_RE = re.compile(r"!?\[[^\]]*]\(([^)]+)\)")
+_MARKDOWN_INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
+_PATH_LIKE_SUFFIXES = (
+    ".md",
+    ".markdown",
+    ".toml",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".py",
+    ".js",
+    ".ts",
+    ".txt",
+)
+_ROOT_PATH_NAMES = {"README.md", "AGENTS.md", "Makefile", "pyproject.toml", "uv.lock"}
+
+
+def _markdown_path_reference_review_for_changed_paths(*, changed_paths: list[str], target_root: Path | None) -> dict[str, Any]:
+    reviewed_paths: list[str] = []
+    references: list[dict[str, Any]] = []
+    for changed_path in changed_paths:
+        if not changed_path.lower().endswith((".md", ".markdown")):
+            continue
+        path = Path(changed_path)
+        source_path = path if path.is_absolute() else (target_root / path if target_root is not None else path)
+        if not source_path.is_file():
+            continue
+        reviewed_paths.append(changed_path)
+        for line_number, line in enumerate(source_path.read_text(encoding="utf-8").splitlines(), start=1):
+            for raw_ref in _markdown_path_reference_candidates(line):
+                reference = _classify_markdown_path_reference(
+                    raw_ref=raw_ref,
+                    source_path=changed_path,
+                    line_number=line_number,
+                    target_root=target_root,
+                )
+                if reference:
+                    references.append(reference)
+    missing = [item for item in references if item["status"] == "missing"]
+    valid = [item for item in references if item["status"] == "valid"]
+    ambiguous = [item for item in references if item["status"] == "ambiguous"]
+    status = "not-applicable"
+    if missing:
+        status = "attention-needed"
+    elif reviewed_paths:
+        status = "clear"
+    return {
+        "kind": "agentic-workspace/markdown-path-reference-review/v1",
+        "status": status,
+        "changed_paths": reviewed_paths,
+        "reference_count": len(references),
+        "missing_count": len(missing),
+        "valid_count": len(valid),
+        "ambiguous_count": len(ambiguous),
+        "missing_references": missing,
+        "valid_references": valid,
+        "ambiguous_references": ambiguous,
+        "rule": "Changed Markdown guidance is scanned for likely concrete repo-local path references; examples, placeholders, globs, URLs, anchors, and command-like snippets are not hard failures.",
+        "review_gate": "Missing likely concrete repo-local path references need correction or explicit closeout explanation before using docs/process proof as sufficient.",
+        "route_learning_evidence": {
+            "source": "changed Markdown static analysis",
+            "candidate_route": "docs/process path-reference check",
+            "parent_issue": "#1994",
+            "owner_options": ["Memory", "config proof profile", "docs/checks", "Planning", "issue follow-up"],
+            "recording_rule": (
+                "Missed or useful path-reference findings can be captured as repo-local route-learning evidence, then "
+                "promoted to a configured docs/process proof route or executable check when that owner is better."
+            ),
+            "capture_command": _markdown_path_reference_capture_command(changed_paths=reviewed_paths),
+            "memory_note_entry": _markdown_path_reference_memory_note_entry(),
+        },
+    }
+
+
+def _markdown_path_reference_candidates(line: str) -> list[str]:
+    candidates = [match.group(1) for match in _MARKDOWN_LINK_RE.finditer(line)]
+    candidates.extend(match.group(1) for match in _MARKDOWN_INLINE_CODE_RE.finditer(line))
+    return candidates
+
+
+def _classify_markdown_path_reference(
+    *, raw_ref: str, source_path: str, line_number: int, target_root: Path | None
+) -> dict[str, Any] | None:
+    normalized = _normalize_markdown_path_reference(raw_ref)
+    if normalized is None:
+        return None
+    if _markdown_reference_is_ambiguous(normalized):
+        return {
+            "source_path": source_path,
+            "line": line_number,
+            "raw_reference": raw_ref,
+            "reference": normalized,
+            "status": "ambiguous",
+            "reason": "placeholder, glob, command, or non-concrete path-like reference",
+        }
+    if not _markdown_reference_is_path_like(normalized):
+        return None
+    exists = _changed_path_exists(target_root=target_root, changed_path=normalized)
+    return {
+        "source_path": source_path,
+        "line": line_number,
+        "raw_reference": raw_ref,
+        "reference": normalized,
+        "status": "valid" if exists else "missing",
+        "reason": "repo-local path exists" if exists else "likely concrete repo-local path does not exist",
+    }
+
+
+def _normalize_markdown_path_reference(raw_ref: str) -> str | None:
+    ref = raw_ref.strip().strip("<>").strip()
+    if not ref or ref.startswith(("#", "http://", "https://", "mailto:")):
+        return None
+    if " " in ref or "\t" in ref:
+        return ref
+    ref = ref.split("#", 1)[0].split("?", 1)[0]
+    ref = ref.strip().strip(".,;:)]}")
+    while ref.startswith("./"):
+        ref = ref[2:]
+    return ref.replace("\\", "/") or None
+
+
+def _markdown_reference_is_ambiguous(ref: str) -> bool:
+    if any(token in ref for token in ("<", ">", "{", "}", "...", "*", "?")):
+        return True
+    if ref.startswith(("$", "python ", "uv ", "make ", "git ", "npm ", "pnpm ")):
+        return True
+    return " " in ref
+
+
+def _markdown_reference_is_path_like(ref: str) -> bool:
+    if "/" in ref:
+        return True
+    if ref in _ROOT_PATH_NAMES:
+        return True
+    return ref.endswith(_PATH_LIKE_SUFFIXES)
+
+
+def _markdown_path_reference_capture_command(*, changed_paths: list[str]) -> str:
+    files_arg = " ".join(changed_paths) if changed_paths else "<changed markdown paths>"
+    return (
+        "agentic-workspace memory capture-note --target . --slug markdown-path-reference-proof-route "
+        '--summary "docs/process path-reference check found useful repo-local proof evidence" '
+        f"--files {files_arg} --format json"
+    )
+
+
+def _markdown_path_reference_memory_note_entry() -> str:
+    entry = {
+        "state": "confirmed",
+        "intent_type": "static-check",
+        "candidate_command": "agentic-workspace proof --changed <markdown paths> --format json",
+        "source": "proof-selection",
+        "confidence": "medium",
+        "requires_live_confirmation": False,
+        "scope": "docs/process",
+        "owner": "Memory",
+        "provenance": "markdown_path_reference_review classified valid, missing, and ambiguous repo-local references",
+        "learned_at": date.today().isoformat(),
+    }
+    return f"agentic-workspace-proof-route: {json.dumps(entry, sort_keys=True)}"
