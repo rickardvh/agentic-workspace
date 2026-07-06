@@ -2199,6 +2199,187 @@ def test_local_chat_checkpoint_startup_reports_absent_stale_and_unreadable(tmp_p
     assert unreadable["status"] == "unreadable"
 
 
+def _init_real_git_repo_with_commit(target: Path) -> None:
+    subprocess.run(["git", "init"], cwd=target, text=True, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.email", "agent@example.test"], cwd=target, text=True, capture_output=True, check=True)
+    subprocess.run(["git", "config", "user.name", "Agent"], cwd=target, text=True, capture_output=True, check=True)
+    _write(target / "README.md", "# Host\n")
+    subprocess.run(["git", "add", "README.md"], cwd=target, text=True, capture_output=True, check=True)
+    subprocess.run(["git", "commit", "-m", "initial"], cwd=target, text=True, capture_output=True, check=True)
+
+
+def _git_value(target: Path, *args: str) -> str:
+    return subprocess.run(["git", *args], cwd=target, text=True, capture_output=True, check=True).stdout.strip()
+
+
+def _write_local_work_thread(
+    target: Path,
+    *,
+    thread_id: str,
+    label: str,
+    issue: str = "#1987",
+    branch: str | None = None,
+    head: str | None = None,
+    updated_at: str = "2026-07-06T12:00:00+00:00",
+) -> Path:
+    branch = branch if branch is not None else _git_value(target, "branch", "--show-current")
+    head = head if head is not None else _git_value(target, "rev-parse", "HEAD")
+    record = {
+        "kind": "agentic-workspace/local-work-thread/v1",
+        "id": thread_id,
+        "label": label,
+        "created_at": updated_at,
+        "updated_at": updated_at,
+        "refs": {
+            "issues": [issue],
+            "prs": [],
+            "planning": [".agentic-workspace/planning/execplans/issue-1987-work-threads.plan.json"],
+        },
+        "durable_sources": [f"https://github.com/rickardvh/agentic-workspace/issues/{issue.lstrip('#')}"],
+        "observations": {
+            "branch": {"value": branch, "source": "test fixture", "observed_at": updated_at},
+            "worktree": {"value": target.resolve().as_posix(), "source": "test fixture", "observed_at": updated_at},
+            "head_commit": {"value": head, "source": "test fixture", "observed_at": updated_at},
+        },
+        "proof_state": {
+            "status": "historical-local-summary",
+            "last_proof": ["uv run pytest tests/test_workspace_cli.py"],
+            "stale_if": ["HEAD changed after observed_at"],
+            "rule": "Do not treat local proof as closure evidence; re-run proof before completion claims.",
+        },
+        "next_safe_action": {
+            "command": "uv run python scripts/run_agentic_workspace.py start --target . --select work_threads --format json",
+            "selector": "work_threads",
+        },
+        "limits": {
+            "local_only": True,
+            "gitignored": True,
+            "advisory": True,
+            "not_closure_evidence": True,
+            "no_raw_transcripts": True,
+            "no_secrets": True,
+            "no_priority_status_assignment": True,
+            "durable_decisions_require_durable_source": True,
+        },
+    }
+    path = target / ".agentic-workspace" / "local" / "work-threads" / f"{thread_id}.json"
+    _write_json(path, record)
+    return path
+
+
+def test_local_work_thread_schema_and_startup_clear_match(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    thread_path = _write_local_work_thread(tmp_path, thread_id="issue-1987-main", label="Issue 1987 lane")
+
+    schema = json.loads(Path("src/agentic_workspace/contracts/schemas/local_work_thread.schema.json").read_text(encoding="utf-8"))
+    record = json.loads(thread_path.read_text(encoding="utf-8"))
+    errors = sorted(Draft202012Validator(schema).iter_errors(record), key=lambda error: list(error.path))
+    assert [error.message for error in errors] == []
+    assert record["limits"]["no_priority_status_assignment"] is True
+
+    assert (
+        cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987 lane", "--select", "work_threads", "--format", "json"]) == 0
+    )
+    packet = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+
+    assert packet["status"] == "clear-match"
+    assert packet["selected_thread"]["id"] == "issue-1987-main"
+    assert packet["selected_thread"]["match_reasons"] == ["branch-match", "head-match", "task-ref-match"]
+    assert packet["selected_thread"]["planning_owner_boundary"]["status"] == "reread-required"
+    assert packet["claim_boundary"].startswith("Local work threads are continuation handles")
+    assert packet["limits"]["not_closure_evidence"] is True
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987 lane", "--format", "json"]) == 0
+    startup = json.loads(capsys.readouterr().out)
+    assert startup["context"]["work_threads"]["selected_thread"]["id"] == "issue-1987-main"
+    assert "work_threads=clear-match" in startup["action_signals"]["changed_signals"]
+
+
+def test_local_work_threads_report_ambiguity_and_checkpoint_bridge(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_local_work_thread(tmp_path, thread_id="issue-1987-alpha", label="Issue 1987 alpha")
+    _write_local_work_thread(tmp_path, thread_id="issue-1987-beta", label="Issue 1987 beta")
+
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Resume #1987 checkpoint fallback",
+                "--issue",
+                "#1987",
+                "--durable-source",
+                "https://github.com/rickardvh/agentic-workspace/issues/1987",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987", "--select", "work_threads", "--format", "json"]) == 0
+    packet = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+
+    assert packet["status"] == "ambiguous"
+    assert packet["current_match_count"] == 3
+    assert {thread["id"] for thread in packet["current_matches"]} == {
+        "issue-1987-alpha",
+        "issue-1987-beta",
+        "checkpoint-default",
+    }
+    assert packet["checkpoint_bridge"]["status"] == "projected-as-thread"
+    assert packet["checkpoint_bridge"]["source_selector"] == "local_chat_checkpoint"
+    forbidden_task_fields = {"priority", "assignee", "assignment", "canonical_status", "estimate", "dependencies"}
+    assert all(not forbidden_task_fields.intersection(thread) for thread in packet["current_matches"])
+
+
+def test_local_work_threads_classify_stale_and_selected_missing(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    old_head = _git_value(tmp_path, "rev-parse", "HEAD")
+    subprocess.run(["git", "switch", "-c", "branch-b"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    _write(tmp_path / "branch-b.txt", "b\n")
+    subprocess.run(["git", "add", "branch-b.txt"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    subprocess.run(["git", "commit", "-m", "branch b"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    _write_local_work_thread(
+        tmp_path,
+        thread_id="issue-1987-stale",
+        label="Issue 1987 stale",
+        branch="master",
+        head=old_head,
+        updated_at="2026-01-01T00:00:00+00:00",
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987", "--select", "work_threads", "--format", "json"]) == 0
+    stale_packet = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+
+    assert stale_packet["status"] == "stale"
+    stale = stale_packet["stale_threads"][0]
+    assert stale["id"] == "issue-1987-stale"
+    assert {"different-branch", "head-drift", "old-unused-thread", "proof-invalidated"} <= set(stale["stale_reasons"])
+    assert stale_packet["cleanup"]["status"] == "available"
+    assert stale_packet["cleanup"]["prune_candidates"][0]["safe_to_forget"] is True
+    assert stale_packet["cleanup"]["safe_local_only"] is True
+
+    _write_json(
+        tmp_path / ".agentic-workspace" / "local" / "work-threads" / "index.json",
+        {"selected_thread_id": "missing-thread"},
+    )
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "work_threads", "--format", "json"]) == 0
+    selected_missing = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+    assert selected_missing["status"] == "selected-missing"
+    assert selected_missing["index"]["selected_thread_id"] == "missing-thread"
+
+
 def test_start_pr_reference_wording_does_not_route_as_unknown_issue_scope(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

@@ -359,6 +359,9 @@ MODULE_UPGRADE_SOURCE_PATHS = {
 }
 LOCAL_CHAT_CHECKPOINT_KIND = "agentic-workspace/local-chat-checkpoint/v2"
 LOCAL_CHAT_CHECKPOINT_PATH = Path(".agentic-workspace") / "local" / "chat-checkpoint.json"
+LOCAL_WORK_THREAD_KIND = "agentic-workspace/local-work-thread/v1"
+LOCAL_WORK_THREAD_ROOT = Path(".agentic-workspace") / "local" / "work-threads"
+LOCAL_WORK_THREAD_INDEX_PATH = LOCAL_WORK_THREAD_ROOT / "index.json"
 
 
 def _load_workspace_config(*, target_root: Path, descriptors: dict[str, "ModuleDescriptor"] | None = None, **kwargs):
@@ -27597,6 +27600,342 @@ def _local_chat_checkpoint_projection(*, target_root: Path, cli_invoke: str) -> 
     if candidate_routes.get("status") == "matched":
         payload["planning_candidate_routes"] = candidate_routes
     return payload
+
+
+def _local_work_thread_root(target_root: Path) -> Path:
+    return target_root / LOCAL_WORK_THREAD_ROOT
+
+
+def _local_work_thread_index_path(target_root: Path) -> Path:
+    return target_root / LOCAL_WORK_THREAD_INDEX_PATH
+
+
+def _local_work_thread_files(target_root: Path) -> list[Path]:
+    root = _local_work_thread_root(target_root)
+    if not root.is_dir():
+        return []
+    return sorted(path for path in root.glob("*.json") if path.name != "index.json")
+
+
+def _local_work_thread_git_snapshot(*, target_root: Path) -> dict[str, str]:
+    branch_posture = _branch_workflow_posture_payload(target_root=target_root)
+    return {
+        **_checkpoint_git_snapshot(target_root=target_root),
+        "branch": str(branch_posture.get("current_branch") or "").strip(),
+        "worktree": target_root.resolve().as_posix(),
+    }
+
+
+def _local_work_thread_observation_value(record: dict[str, Any], key: str) -> Any:
+    observations = _as_dict(record.get("observations") or record.get("volatile_observations"))
+    value = _as_dict(observations.get(key)).get("value")
+    return value if value not in {None, ""} else record.get(key)
+
+
+def _local_work_thread_refs(record: dict[str, Any]) -> dict[str, list[str]]:
+    refs = _as_dict(record.get("refs"))
+    issues = _list_payload(refs.get("issues") or record.get("current_issue_refs"))
+    prs = _list_payload(refs.get("prs") or ([record.get("current_pr")] if record.get("current_pr") not in {None, ""} else []))
+    planning = _list_payload(refs.get("planning") or refs.get("planning_refs") or record.get("planning_refs"))
+    return {
+        "issues": _compact_checkpoint_refs(issues, limit=8),
+        "prs": _compact_checkpoint_refs(prs, limit=8),
+        "planning": _compact_checkpoint_refs(planning, limit=8),
+    }
+
+
+def _local_work_thread_task_refs(task_text: str | None) -> set[str]:
+    text = str(task_text or "")
+    return {
+        *(f"#{match}" for match in re.findall(r"#(\d+)\b", text)),
+        *(f"#{match}" for match in re.findall(r"/issues/(\d+)\b", text)),
+        *(f"#{match}" for match in re.findall(r"/pull/(\d+)\b", text)),
+    }
+
+
+def _local_work_thread_parse_time(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _local_work_thread_from_checkpoint(*, checkpoint: dict[str, Any], path: str) -> dict[str, Any]:
+    thread_id = "checkpoint-default"
+    return {
+        "kind": LOCAL_WORK_THREAD_KIND,
+        "id": thread_id,
+        "label": str(checkpoint.get("task") or "Local checkpoint").strip()[:120] or "Local checkpoint",
+        "created_at": str(checkpoint.get("created_at") or checkpoint.get("updated_at") or ""),
+        "updated_at": str(checkpoint.get("updated_at") or ""),
+        "source": "local_chat_checkpoint",
+        "source_path": path,
+        "refs": {
+            "issues": _compact_checkpoint_refs(_list_payload(checkpoint.get("current_issue_refs")), limit=8),
+            "prs": _compact_checkpoint_refs([checkpoint.get("current_pr")] if checkpoint.get("current_pr") not in {None, ""} else []),
+            "planning": [],
+        },
+        "durable_sources": _compact_checkpoint_refs(_list_payload(checkpoint.get("durable_sources")), limit=8),
+        "observations": _as_dict(checkpoint.get("volatile_observations")),
+        "proof_state": _as_dict(checkpoint.get("proof_state")),
+        "next_safe_action": {
+            "command": str(checkpoint.get("next_safe_command", "")).strip(),
+            "selector": "local_chat_checkpoint",
+        },
+        "limits": _as_dict(checkpoint.get("limits")),
+        "resume_rule": str(
+            checkpoint.get(
+                "resume_rule",
+                "Treat this local checkpoint as advisory; reread durable sources before claims.",
+            )
+        ).strip(),
+    }
+
+
+def _local_work_thread_record_projection(
+    *,
+    record: dict[str, Any],
+    path: str,
+    current: dict[str, str],
+    task_refs: set[str],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    thread_id = str(record.get("id") or Path(path).stem).strip()
+    label = str(record.get("label") or record.get("task") or thread_id).strip()
+    refs = _local_work_thread_refs(record)
+    durable_sources = _compact_checkpoint_refs(_list_payload(record.get("durable_sources")), limit=8)
+    branch = str(_local_work_thread_observation_value(record, "branch") or "").strip()
+    head = str(_local_work_thread_observation_value(record, "head_commit") or "").strip()
+    upstream = str(_local_work_thread_observation_value(record, "upstream_commit") or "").strip()
+    worktree = str(
+        _local_work_thread_observation_value(record, "worktree") or _local_work_thread_observation_value(record, "repo_root") or ""
+    ).strip()
+    branch_match = bool(branch and branch == current.get("branch"))
+    head_match = bool(head and current.get("head_commit") and head == current.get("head_commit"))
+    issue_or_pr_refs = set(refs["issues"]) | set(refs["prs"])
+    task_ref_match = bool(task_refs and issue_or_pr_refs.intersection(task_refs))
+    selected_hint = str(record.get("selected") or "").strip().lower() in {"true", "1", "yes"}
+    stale_reasons: list[str] = []
+    if record.get("kind") != LOCAL_WORK_THREAD_KIND:
+        stale_reasons.append("unsupported-kind")
+    if branch and current.get("branch") and branch != current.get("branch"):
+        stale_reasons.append("different-branch")
+    if head and current.get("head_commit") and head != current.get("head_commit"):
+        stale_reasons.append("head-drift")
+    if upstream and current.get("upstream_commit") and upstream != current.get("upstream_commit"):
+        stale_reasons.append("upstream-drift")
+    updated_at = _local_work_thread_parse_time(record.get("updated_at"))
+    if updated_at and datetime.now(timezone.utc) - updated_at > timedelta(days=30):
+        stale_reasons.append("old-unused-thread")
+    proof_state = _as_dict(record.get("proof_state"))
+    proof_stale_if = _list_payload(proof_state.get("stale_if"))
+    proof_status = str(proof_state.get("status") or "not-recorded").strip()
+    if any(reason in stale_reasons for reason in ("head-drift", "upstream-drift")) and proof_status not in {"", "not-recorded"}:
+        stale_reasons.append("proof-invalidated")
+    match_reasons: list[str] = []
+    if selected_hint:
+        match_reasons.append("explicit-selection")
+    if branch_match:
+        match_reasons.append("branch-match")
+    if head_match:
+        match_reasons.append("head-match")
+    if task_ref_match:
+        match_reasons.append("task-ref-match")
+    status = "stale" if stale_reasons else "plausible-match" if match_reasons else "other-thread"
+    if stale_reasons == ["different-branch"]:
+        status = "other-branch"
+    planning_refs = refs["planning"]
+    planning_boundary = {
+        "status": "reread-required" if planning_refs else "not-linked",
+        "planning_refs": planning_refs,
+        "rule": "Local thread cursor state is actor-local; reread checked-in Planning before durable claims.",
+    }
+    return {
+        "id": thread_id,
+        "label": label,
+        "path": path,
+        "source": str(record.get("source") or "local_work_thread"),
+        "status": status,
+        "match_reasons": match_reasons,
+        "stale_reasons": _dedupe(stale_reasons),
+        "refs": refs,
+        "durable_sources": durable_sources,
+        "next_safe_action": _as_dict(record.get("next_safe_action")),
+        "proof_state": {
+            "status": proof_status or "not-recorded",
+            "stale_if": _compact_checkpoint_refs(proof_stale_if, limit=5),
+            "claim_boundary": "historical local proof only; rerun or re-evaluate before completion claims.",
+        },
+        "observations": {
+            "branch": branch,
+            "head_commit": head,
+            "upstream_commit": upstream,
+            "worktree": worktree,
+            "current_branch": current.get("branch", ""),
+            "current_head_commit": current.get("head_commit", ""),
+        },
+        "planning_owner_boundary": planning_boundary,
+        "limits": _as_dict(record.get("limits")),
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace start --target . --select work_threads --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "prune_guidance": "Only prune if this record appears under cleanup.prune_candidates; pruning is local advisory cleanup only.",
+        "local_prune_path": path,
+    }
+
+
+def _load_local_work_thread_records(*, target_root: Path) -> tuple[list[tuple[str, dict[str, Any]]], list[dict[str, Any]]]:
+    records: list[tuple[str, dict[str, Any]]] = []
+    unreadable: list[dict[str, Any]] = []
+    for path in _local_work_thread_files(target_root):
+        relative = path.relative_to(target_root).as_posix()
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+            unreadable.append({"path": relative, "reason": exc.__class__.__name__})
+            continue
+        if not isinstance(payload, dict):
+            unreadable.append({"path": relative, "reason": "thread root is not a JSON object"})
+            continue
+        records.append((relative, payload))
+    return records, unreadable
+
+
+def _local_work_thread_index_projection(*, target_root: Path) -> dict[str, Any]:
+    path = _local_work_thread_index_path(target_root)
+    if not path.exists():
+        return {"status": "absent", "path": LOCAL_WORK_THREAD_INDEX_PATH.as_posix()}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return {"status": "unreadable", "path": LOCAL_WORK_THREAD_INDEX_PATH.as_posix(), "reason": exc.__class__.__name__}
+    if not isinstance(payload, dict):
+        return {"status": "unreadable", "path": LOCAL_WORK_THREAD_INDEX_PATH.as_posix(), "reason": "index root is not a JSON object"}
+    return {
+        "status": "present",
+        "path": LOCAL_WORK_THREAD_INDEX_PATH.as_posix(),
+        "selected_thread_id": str(payload.get("selected_thread_id") or "").strip(),
+        "rule": "The index is a local cursor only; it is not shared Planning state.",
+    }
+
+
+def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_text: str | None = None) -> dict[str, Any]:
+    current = _local_work_thread_git_snapshot(target_root=target_root)
+    task_refs = _local_work_thread_task_refs(task_text)
+    records, unreadable = _load_local_work_thread_records(target_root=target_root)
+    checkpoint_projection = _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=cli_invoke)
+    checkpoint_bridge = {
+        "status": "absent",
+        "rule": "Local checkpoints project through work_threads when no registry thread is enough.",
+    }
+    if checkpoint_projection.get("status") in {"present", "stale"}:
+        checkpoint_record = _local_work_thread_from_checkpoint(
+            checkpoint=checkpoint_projection,
+            path=str(checkpoint_projection.get("path", LOCAL_CHAT_CHECKPOINT_PATH.as_posix())),
+        )
+        records.append((str(checkpoint_projection.get("path", LOCAL_CHAT_CHECKPOINT_PATH.as_posix())), checkpoint_record))
+        checkpoint_bridge = {
+            "status": "projected-as-thread",
+            "thread_id": "checkpoint-default",
+            "source_selector": "local_chat_checkpoint",
+            "rule": "The checkpoint remains advisory and non-evidence; work_threads only gives it the same selection path.",
+        }
+    index = _local_work_thread_index_projection(target_root=target_root)
+    selected_id = str(index.get("selected_thread_id") or "").strip() if index.get("status") == "present" else ""
+    projected = [
+        _local_work_thread_record_projection(
+            record=record,
+            path=path,
+            current=current,
+            task_refs=task_refs,
+            cli_invoke=cli_invoke,
+        )
+        for path, record in records
+    ]
+    selected_matches = [thread for thread in projected if selected_id and thread["id"] == selected_id]
+    current_matches = [thread for thread in projected if thread["status"] == "plausible-match"]
+    stale_threads = [thread for thread in projected if thread["status"] in {"stale", "other-branch"}]
+    prune_candidates = [
+        {
+            "id": thread["id"],
+            "path": thread["path"],
+            "stale_reasons": thread["stale_reasons"],
+            "safe_to_forget": True,
+            "rule": "Forgetting removes only ignored local advisory state and never proves completion.",
+        }
+        for thread in stale_threads
+        if thread["source"] != "local_chat_checkpoint"
+    ]
+    if unreadable:
+        status = "unreadable"
+    elif selected_id and not selected_matches:
+        status = "selected-missing"
+    elif selected_matches and selected_matches[0]["status"] not in {"stale", "other-branch"}:
+        status = "clear-match"
+    elif len(current_matches) == 1:
+        status = "clear-match"
+    elif len(current_matches) > 1:
+        status = "ambiguous"
+    elif stale_threads:
+        status = "stale"
+    elif projected:
+        status = "no-current-match"
+    else:
+        status = "none"
+    selected_thread = selected_matches[0] if selected_matches else current_matches[0] if len(current_matches) == 1 else {}
+    return {
+        "kind": "agentic-workspace/local-work-threads-projection/v1",
+        "status": status,
+        "path": LOCAL_WORK_THREAD_ROOT.as_posix(),
+        "index": index,
+        "authority": "local-advisory-only",
+        "local_only": True,
+        "thread_count": len(projected),
+        "current_match_count": len(current_matches),
+        "stale_count": len(stale_threads),
+        "unreadable": unreadable,
+        "selected_thread": selected_thread,
+        "current_matches": current_matches[:5],
+        "stale_threads": stale_threads[:5],
+        "checkpoint_bridge": checkpoint_bridge,
+        "selection_routes": {
+            "detail": _command_with_cli_invoke(
+                command="agentic-workspace start --target . --select work_threads --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "rule": "Use local thread facts to choose a resume handle; durable claims still require durable sources.",
+        },
+        "cleanup": {
+            "status": "available" if prune_candidates else "none",
+            "prune_candidates": prune_candidates[:10],
+            "safe_local_only": True,
+            "rule": "Prune only local advisory work-thread records; never delete Planning, proof receipts, Memory, docs, issues, or PRs.",
+        },
+        "claim_boundary": "Local work threads are continuation handles, not task status, priority, ownership, closure evidence, or proof.",
+        "durable_promotion_rule": "Promote facts another actor needs to issues, PRs, Planning, reviews, Memory, Verification, docs, or proof receipts.",
+        "limits": {
+            "local_only": True,
+            "gitignored": True,
+            "advisory": True,
+            "not_closure_evidence": True,
+            "no_priority_status_assignment": True,
+            "durable_decisions_require_durable_source": True,
+        },
+    }
+
+
+def _local_work_threads_default_visible(work_threads: dict[str, Any]) -> bool:
+    status = str(work_threads.get("status") or "").strip()
+    return status in {"clear-match", "ambiguous", "stale", "selected-missing", "unreadable"}
 
 
 def _local_chat_checkpoint_record(
