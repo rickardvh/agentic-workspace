@@ -2326,6 +2326,33 @@ def test_local_work_threads_resume_after_branch_switch_round_trip(tmp_path: Path
     assert returned["selected_thread"]["match_reasons"] == ["branch-match", "head-match", "task-ref-match"]
 
 
+def test_local_work_threads_deleted_recorded_branch_is_prunable(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    subprocess.run(["git", "switch", "-c", "obsolete-lane"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    _write(tmp_path / "obsolete.txt", "obsolete\n")
+    subprocess.run(["git", "add", "obsolete.txt"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    subprocess.run(["git", "commit", "-m", "obsolete lane"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    _write_local_work_thread(tmp_path, thread_id="issue-2001-deleted-branch", label="Issue 2001 deleted branch")
+
+    subprocess.run(["git", "switch", "master"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    subprocess.run(["git", "branch", "-D", "obsolete-lane"], cwd=tmp_path, text=True, capture_output=True, check=True)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987", "--select", "work_threads", "--format", "json"]) == 0
+    packet = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+
+    assert packet["status"] == "stale"
+    stale = packet["stale_threads"][0]
+    assert stale["id"] == "issue-2001-deleted-branch"
+    assert stale["observations"]["recorded_branch_exists"] is False
+    assert {"different-branch", "branch-missing", "head-drift", "proof-invalidated"} <= set(stale["stale_reasons"])
+    assert packet["cleanup"]["status"] == "available"
+    assert packet["cleanup"]["prune_candidates"][0]["stale_reasons"] == stale["stale_reasons"]
+    assert "branch-missing" in packet["cleanup"]["prune_candidates"][0]["stale_reasons"]
+
+
 def test_local_work_threads_report_ambiguity_and_checkpoint_bridge(tmp_path: Path, capsys) -> None:
     _init_real_git_repo_with_commit(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2583,6 +2610,11 @@ def test_stale_cleanup_report_separates_local_and_checked_in_planning_cleanup(tm
     _write(
         tmp_path / ".agentic-workspace" / "planning" / "state.toml",
         """
+[active]
+execplans = [
+  ".agentic-workspace/planning/execplans/active-selector.plan.json",
+]
+
 [todo]
 active_items = [
   { id = "issue-44-active", title = "Closed upstream active", status = "active", surface = ".agentic-workspace/planning/execplans/issue-44-active.plan.json", next_action = "Review stale owner.", done_when = "Proof and residue are reconciled." },
@@ -2609,6 +2641,16 @@ candidates = [
         },
     )
     _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-selector.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "id": "active-selector",
+            "title": "Closed active selector",
+            "references": ["#47"],
+            "proof_report": {"status": "missing"},
+        },
+    )
+    _write_json(
         tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
         {
             "kind": "planning-external-intent-evidence/v1",
@@ -2617,6 +2659,7 @@ candidates = [
                 {"system": "fixture", "id": "#44", "title": "Closed upstream active", "status": "closed", "kind": "issue"},
                 {"system": "fixture", "id": "#45", "title": "Merged queued PR", "status": "merged", "kind": "pull_request"},
                 {"system": "fixture", "id": "#46", "title": "Open upstream candidate", "status": "open", "kind": "issue"},
+                {"system": "fixture", "id": "#47", "title": "Closed active selector", "status": "closed", "kind": "issue"},
             ],
         },
     )
@@ -2637,7 +2680,15 @@ candidates = [
     assert payload["local_only_cleanup"]["candidates"][0]["id"] == "issue-2001-local"
     assert payload["checked_in_planning_cleanup"]["status"] == "review-required"
     planning_candidates = payload["checked_in_planning_cleanup"]["candidates"]
-    assert {candidate["section"] for candidate in planning_candidates} >= {"todo.active_items", "todo.queued_items", "planning.execplans"}
+    assert {candidate["section"] for candidate in planning_candidates} >= {
+        "active.execplans",
+        "todo.active_items",
+        "todo.queued_items",
+        "planning.execplans",
+    }
+    active_selector = next(candidate for candidate in planning_candidates if candidate["section"] == "active.execplans")
+    assert active_selector["cleanup_kind"] == "checked-in-active-selector-review"
+    assert active_selector["closed_refs"] == ["#47"]
     assert all(candidate["review_required"] is True for candidate in planning_candidates)
     assert "PR or issue closure alone is not completion proof" in payload["checked_in_planning_cleanup"]["rule"]
     assert payload["residue_promotion"]["status"] == "required-before-checked-in-cleanup"

@@ -19804,29 +19804,110 @@ def _planning_state_stale_cleanup_items(*, target_root: Path) -> list[dict[str, 
     statuses = _external_intent_status_by_ref(target_root)
     stale_items: list[dict[str, Any]] = []
 
+    def add_stale_item(
+        *,
+        item_id: str,
+        title: str,
+        section: str,
+        cleanup_kind: str,
+        owner_surface: str,
+        refs: list[str],
+        rule: str,
+    ) -> None:
+        refs = _dedupe([ref if ref.startswith("#") else f"#{ref}" if ref.isdigit() else ref for ref in refs if ref])
+        closed_refs = [ref for ref in refs if statuses.get(ref, "") in _EXTERNAL_OWNER_CLOSED_STATUSES]
+        if not closed_refs:
+            return
+        stale_items.append(
+            {
+                "id": item_id,
+                "title": title,
+                "section": section,
+                "cleanup_kind": cleanup_kind,
+                "owner_surface": owner_surface,
+                "refs": refs,
+                "closed_refs": closed_refs,
+                "external_statuses": {ref: statuses.get(ref, "unknown") for ref in refs if ref in statuses},
+                "review_required": True,
+                "rule": rule,
+            }
+        )
+
     def add_items(section: str, items: Any, *, cleanup_kind: str, owner_surface: str = ".agentic-workspace/planning/state.toml") -> None:
         for item in _list_payload(items):
             if not isinstance(item, dict):
                 continue
             refs = _planning_item_refs(item)
-            closed_refs = [ref for ref in refs if statuses.get(ref, "") in _EXTERNAL_OWNER_CLOSED_STATUSES]
-            if not closed_refs:
-                continue
-            stale_items.append(
-                {
-                    "id": str(item.get("id") or item.get("lane_id") or item.get("title") or section).strip(),
-                    "title": str(item.get("title") or "").strip(),
-                    "section": section,
-                    "cleanup_kind": cleanup_kind,
-                    "owner_surface": str(item.get("surface") or item.get("owner_surface") or owner_surface).strip(),
-                    "refs": refs,
-                    "closed_refs": closed_refs,
-                    "external_statuses": {ref: statuses.get(ref, "unknown") for ref in refs if ref in statuses},
-                    "review_required": True,
-                    "rule": "External closure is cleanup evidence only; closeout proof and residue routing still decide Planning completion.",
-                }
+            add_stale_item(
+                item_id=str(item.get("id") or item.get("lane_id") or item.get("title") or section).strip(),
+                title=str(item.get("title") or "").strip(),
+                section=section,
+                cleanup_kind=cleanup_kind,
+                owner_surface=str(item.get("surface") or item.get("owner_surface") or owner_surface).strip(),
+                refs=refs,
+                rule="External closure is cleanup evidence only; closeout proof and residue routing still decide Planning completion.",
             )
 
+    def selector_path(value: str) -> Path | None:
+        if not value:
+            return None
+        raw = Path(value)
+        candidates = (
+            [raw] if raw.is_absolute() else [target_root / raw, target_root / ".agentic-workspace" / "planning" / "execplans" / raw]
+        )
+        target_resolved = target_root.resolve()
+        for candidate in candidates:
+            try:
+                resolved = candidate.resolve()
+                resolved.relative_to(target_resolved)
+            except (OSError, ValueError):
+                continue
+            if resolved.is_file():
+                return resolved
+        return None
+
+    def add_active_execplan_selectors(items: Any) -> None:
+        for entry in _list_payload(items):
+            if isinstance(entry, dict):
+                owner_surface = str(
+                    entry.get("path") or entry.get("surface") or entry.get("owner_surface") or entry.get("id") or ""
+                ).strip()
+                refs = _planning_item_refs(entry)
+                title = str(entry.get("title") or "").strip()
+                item_id = str(entry.get("id") or Path(owner_surface).stem or "active.execplans").strip()
+            else:
+                owner_surface = str(entry or "").strip()
+                refs = _refs_from_planning_text(owner_surface)
+                title = ""
+                item_id = Path(owner_surface).stem or "active.execplans"
+            path = selector_path(owner_surface)
+            if path is not None:
+                try:
+                    payload = json.loads(path.read_text(encoding="utf-8-sig"))
+                except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                    payload = {}
+                if isinstance(payload, dict):
+                    refs.extend(_refs_from_planning_text(payload.get("id")))
+                    refs.extend(_refs_from_planning_text(payload.get("title")))
+                    refs.extend(_refs_from_planning_text(payload.get("summary")))
+                    refs.extend(
+                        str(ref).strip() for ref in _list_payload(payload.get("references") or payload.get("refs")) if str(ref).strip()
+                    )
+                    title = title or str(payload.get("title") or "").strip()
+                    item_id = str(payload.get("id") or item_id).strip()
+            add_stale_item(
+                item_id=item_id,
+                title=title,
+                section="active.execplans",
+                cleanup_kind="checked-in-active-selector-review",
+                owner_surface=owner_surface or ".agentic-workspace/planning/state.toml",
+                refs=refs,
+                rule="Active Planning selectors require proof/residue review before clearing; external closure only identifies stale checked-in selection.",
+            )
+
+    active = state.get("active", {}) if isinstance(state, dict) else {}
+    if isinstance(active, dict):
+        add_active_execplan_selectors(active.get("execplans", []))
     todo = state.get("todo", {}) if isinstance(state, dict) else {}
     if isinstance(todo, dict):
         add_items("todo.active_items", todo.get("active_items", []), cleanup_kind="checked-in-active-planning-review")
@@ -27837,6 +27918,22 @@ def _local_work_thread_git_snapshot(*, target_root: Path) -> dict[str, str]:
     }
 
 
+def _local_git_branch_exists(*, target_root: Path, branch: str) -> bool | None:
+    branch = branch.strip()
+    if not branch:
+        return None
+    result = subprocess.run(
+        ["git", "-C", str(target_root), "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"],
+        text=True,
+        capture_output=True,
+    )
+    if result.returncode == 0:
+        return True
+    if result.returncode == 1:
+        return False
+    return None
+
+
 def _local_work_thread_observation_value(record: dict[str, Any], key: str) -> Any:
     observations = _as_dict(record.get("observations") or record.get("volatile_observations"))
     value = _as_dict(observations.get(key)).get("value")
@@ -27918,6 +28015,7 @@ def _local_work_thread_record_projection(
     current: dict[str, str],
     task_refs: set[str],
     external_status_by_ref: dict[str, str] | None = None,
+    branch_exists: bool | None = None,
     cli_invoke: str,
 ) -> dict[str, Any]:
     thread_id = str(record.get("id") or Path(path).stem).strip()
@@ -27942,6 +28040,8 @@ def _local_work_thread_record_projection(
         stale_reasons.append("unsupported-kind")
     if branch and current.get("branch") and branch != current.get("branch"):
         stale_reasons.append("different-branch")
+    if branch_exists is False:
+        stale_reasons.append("branch-missing")
     if head and current.get("head_commit") and head != current.get("head_commit"):
         stale_reasons.append("head-drift")
     if upstream and current.get("upstream_commit") and upstream != current.get("upstream_commit"):
@@ -28004,6 +28104,7 @@ def _local_work_thread_record_projection(
             "worktree": worktree,
             "current_branch": current.get("branch", ""),
             "current_head_commit": current.get("head_commit", ""),
+            "recorded_branch_exists": branch_exists if branch_exists is not None else "unknown",
         },
         "planning_owner_boundary": planning_boundary,
         "limits": _as_dict(record.get("limits")),
@@ -28081,6 +28182,10 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
             current=current,
             task_refs=task_refs,
             external_status_by_ref=external_status_by_ref,
+            branch_exists=_local_git_branch_exists(
+                target_root=target_root,
+                branch=str(_local_work_thread_observation_value(record, "branch") or "").strip(),
+            ),
             cli_invoke=cli_invoke,
         )
         for path, record in records
@@ -28094,6 +28199,10 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
                 current=current,
                 task_refs=task_refs,
                 external_status_by_ref=external_status_by_ref,
+                branch_exists=_local_git_branch_exists(
+                    target_root=target_root,
+                    branch=str(_local_work_thread_observation_value(checkpoint_record, "branch") or "").strip(),
+                ),
                 cli_invoke=cli_invoke,
             )
         )
@@ -28111,7 +28220,11 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
         }
         for thread in stale_threads
         if thread["source"] != "local_chat_checkpoint"
-        and ("old-unused-thread" in thread["stale_reasons"] or "external-owner-closed" in thread["stale_reasons"])
+        and (
+            "old-unused-thread" in thread["stale_reasons"]
+            or "external-owner-closed" in thread["stale_reasons"]
+            or "branch-missing" in thread["stale_reasons"]
+        )
     ]
     if unreadable:
         status = "unreadable"
