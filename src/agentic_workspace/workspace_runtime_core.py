@@ -8790,6 +8790,7 @@ def _run_report_command(
         "reasoning_economy": reasoning_economy_evidence_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "external_work_reconciliation": external_work_reconciliation,
         "external_work_delta": external_work_delta,
+        "stale_cleanup": _stale_cleanup_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "next_action": next_action,
         "discovery": discovery,
         "standing_intent": standing_intent,
@@ -9984,6 +9985,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/external-work-reconciliation/v1",
         "purpose": "compact reconciliation posture for cached external work evidence and Planning residue",
         "when_to_use": "before closeout or intake decisions that depend on external issue, ticket, or tracker freshness",
+    },
+    {
+        "section": "stale_cleanup",
+        "kind": "agentic-workspace/stale-cleanup/v1",
+        "purpose": "local-thread and checked-in Planning stale cleanup guidance separated by proof and residue boundary",
+        "when_to_use": "after PR/issue closeout, branch deletion, or stale-thread warnings before claiming a parent lane is fully closed",
     },
     {
         "section": "pr_comment_attention",
@@ -12996,6 +13003,10 @@ def _run_lazy_report_section_command(
                 external_work_delta=external_work_delta,
                 cli_invoke=config.cli_invoke,
             )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "stale_cleanup":
+        payload["stale_cleanup"] = _stale_cleanup_payload(target_root=target_root, cli_invoke=config.cli_invoke)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "release_recovery":
@@ -19756,6 +19767,206 @@ def _external_work_summary(item: dict[str, Any]) -> dict[str, Any]:
         "kind": str(item.get("kind", "")),
         "parent_id": str(item.get("parent_id", "")),
         "reopens": [str(entry).strip() for entry in _list_payload(item.get("reopens")) if str(entry).strip()],
+    }
+
+
+_EXTERNAL_OWNER_CLOSED_STATUSES = {"closed", "done", "merged", "resolved", "retired"}
+
+
+def _refs_from_planning_text(value: Any) -> list[str]:
+    text = str(value or "")
+    refs = [*re.findall(r"#\d+\b", text), *(f"#{match}" for match in re.findall(r"(?:issue|github|pr)-(\d+)\b", text, re.I))]
+    return _dedupe(refs)
+
+
+def _planning_item_refs(item: dict[str, Any]) -> list[str]:
+    refs: list[str] = []
+    for key in ("refs", "issues", "prs", "references"):
+        raw = item.get(key)
+        if isinstance(raw, str):
+            refs.extend(_refs_from_planning_text(raw))
+        else:
+            refs.extend(str(ref).strip() for ref in _list_payload(raw) if str(ref).strip())
+    refs.extend(_refs_from_planning_text(item.get("id")))
+    refs.extend(_refs_from_planning_text(item.get("title")))
+    refs.extend(_refs_from_planning_text(item.get("surface")))
+    return _dedupe([ref if ref.startswith("#") else f"#{ref}" if ref.isdigit() else ref for ref in refs if ref])
+
+
+def _planning_state_stale_cleanup_items(*, target_root: Path) -> list[dict[str, Any]]:
+    state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    if not state_path.is_file():
+        return []
+    try:
+        state = tomllib.loads(state_path.read_text(encoding="utf-8-sig"))
+    except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
+        return []
+    statuses = _external_intent_status_by_ref(target_root)
+    stale_items: list[dict[str, Any]] = []
+
+    def add_items(section: str, items: Any, *, cleanup_kind: str, owner_surface: str = ".agentic-workspace/planning/state.toml") -> None:
+        for item in _list_payload(items):
+            if not isinstance(item, dict):
+                continue
+            refs = _planning_item_refs(item)
+            closed_refs = [ref for ref in refs if statuses.get(ref, "") in _EXTERNAL_OWNER_CLOSED_STATUSES]
+            if not closed_refs:
+                continue
+            stale_items.append(
+                {
+                    "id": str(item.get("id") or item.get("lane_id") or item.get("title") or section).strip(),
+                    "title": str(item.get("title") or "").strip(),
+                    "section": section,
+                    "cleanup_kind": cleanup_kind,
+                    "owner_surface": str(item.get("surface") or item.get("owner_surface") or owner_surface).strip(),
+                    "refs": refs,
+                    "closed_refs": closed_refs,
+                    "external_statuses": {ref: statuses.get(ref, "unknown") for ref in refs if ref in statuses},
+                    "review_required": True,
+                    "rule": "External closure is cleanup evidence only; closeout proof and residue routing still decide Planning completion.",
+                }
+            )
+
+    todo = state.get("todo", {}) if isinstance(state, dict) else {}
+    if isinstance(todo, dict):
+        add_items("todo.active_items", todo.get("active_items", []), cleanup_kind="checked-in-active-planning-review")
+        add_items("todo.queued_items", todo.get("queued_items", []), cleanup_kind="checked-in-queue-review")
+    roadmap = state.get("roadmap", {}) if isinstance(state, dict) else {}
+    if isinstance(roadmap, dict):
+        add_items("roadmap.lanes", roadmap.get("lanes", []), cleanup_kind="checked-in-roadmap-review")
+        add_items("roadmap.candidates", roadmap.get("candidates", []), cleanup_kind="checked-in-candidate-review")
+    return stale_items
+
+
+def _execplan_stale_cleanup_items(*, target_root: Path) -> list[dict[str, Any]]:
+    statuses = _external_intent_status_by_ref(target_root)
+    execplans_root = target_root / ".agentic-workspace" / "planning" / "execplans"
+    if not execplans_root.is_dir():
+        return []
+    stale_items: list[dict[str, Any]] = []
+    target_resolved = target_root.resolve()
+    for path in sorted(execplans_root.glob("*.json")):
+        if path.name == "TEMPLATE.plan.json":
+            continue
+        try:
+            resolved = path.resolve()
+            resolved.relative_to(target_resolved)
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError, json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        refs = _dedupe(
+            [
+                *_refs_from_planning_text(path.name),
+                *_refs_from_planning_text(payload.get("id")),
+                *_refs_from_planning_text(payload.get("title")),
+                *_refs_from_planning_text(payload.get("summary")),
+                *[str(ref).strip() for ref in _list_payload(payload.get("references") or payload.get("refs")) if str(ref).strip()],
+            ]
+        )
+        refs = [ref if ref.startswith("#") else f"#{ref}" if ref.isdigit() else ref for ref in refs]
+        closed_refs = [ref for ref in refs if statuses.get(ref, "") in _EXTERNAL_OWNER_CLOSED_STATUSES]
+        if not closed_refs:
+            continue
+        stale_items.append(
+            {
+                "id": str(payload.get("id") or path.stem).strip(),
+                "title": str(payload.get("title") or "").strip(),
+                "section": "planning.execplans",
+                "cleanup_kind": "checked-in-execplan-review",
+                "owner_surface": resolved.relative_to(target_resolved).as_posix(),
+                "refs": refs,
+                "closed_refs": closed_refs,
+                "external_statuses": {ref: statuses.get(ref, "unknown") for ref in refs if ref in statuses},
+                "review_required": True,
+                "rule": "Execplan cleanup requires proof/intent/residue review; external closure alone is not completion evidence.",
+            }
+        )
+    return stale_items
+
+
+def _stale_cleanup_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    external_work_delta = _external_work_delta_payload(target_root=target_root)
+    external_status = str(external_work_delta.get("status", "unavailable"))
+    local_work_threads = _local_work_threads_projection(target_root=target_root, cli_invoke=cli_invoke)
+    local_cleanup = _as_dict(local_work_threads.get("cleanup"))
+    local_candidates = [item for item in _list_payload(local_cleanup.get("prune_candidates")) if isinstance(item, dict)]
+    planning_items = [
+        *_planning_state_stale_cleanup_items(target_root=target_root),
+        *_execplan_stale_cleanup_items(target_root=target_root),
+    ]
+    planning_status = "review-required" if planning_items else "none"
+    local_status = "available" if local_candidates else "none"
+    if planning_items:
+        status = "review-required"
+    elif local_candidates:
+        status = "local-cleanup-available"
+    elif external_status in {"unavailable", "invalid"}:
+        status = "external-evidence-needed"
+    else:
+        status = "none"
+    return {
+        "kind": "agentic-workspace/stale-cleanup/v1",
+        "status": status,
+        "external_evidence": {
+            "status": external_status,
+            "source": external_work_delta.get("source", ""),
+            "storage": external_work_delta.get("storage", ""),
+            "closed_count": external_work_delta.get("closed_count", 0),
+            "changed_count": external_work_delta.get("changed_count", 0),
+            "refresh_command": _command_with_cli_invoke(
+                command="agentic-workspace external-intent refresh-github --target . --state all --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "rule": "External evidence must be refreshed before relying on provider state for cleanup decisions.",
+        },
+        "local_only_cleanup": {
+            "status": local_status,
+            "candidate_count": len(local_candidates),
+            "candidates": local_candidates[:10],
+            "dry_run_command": _command_with_cli_invoke(
+                command="agentic-workspace work-thread prune --target . --all-candidates --dry-run --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "apply_command": _command_with_cli_invoke(
+                command="agentic-workspace work-thread prune --target . --all-candidates --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "rule": "Local cleanup may delete only ignored advisory work-thread records and never proves completion.",
+        },
+        "checked_in_planning_cleanup": {
+            "status": planning_status,
+            "candidate_count": len(planning_items),
+            "candidates": planning_items[:10],
+            "review_command": _command_with_cli_invoke(
+                command="agentic-workspace reconcile --target . --format json", cli_invoke=cli_invoke
+            ),
+            "safe_prune_command": _command_with_cli_invoke(
+                command="agentic-workspace reconcile --target . --apply-safe-prune --dry-run --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "closeout_command": _command_with_cli_invoke(
+                command="agentic-workspace report --target . --section closeout_trust --format json",
+                cli_invoke=cli_invoke,
+            ),
+            "rule": "Checked-in Planning cleanup is semi-automatic and proof/residue guarded; PR or issue closure alone is not completion proof.",
+        },
+        "residue_promotion": {
+            "status": "required-before-checked-in-cleanup" if planning_items else "not-needed",
+            "required_when": [
+                "the merged or closed external owner did not satisfy the full Planning intent",
+                "active or queued Planning points at closed external work",
+                "an execplan has unresolved proof, review, or residue fields",
+            ],
+            "rule": "Promote unresolved facts to issues, PRs, Planning, Verification, Memory, docs, reviews, or proof receipts before clearing checked-in state.",
+        },
+        "startup_visibility": {
+            "status": "quiet-unless-actionable" if status == "none" else "detail-section",
+            "detail_section": "stale_cleanup",
+            "rule": "Ordinary startup should stay quiet when stale cleanup does not affect the next safe action.",
+        },
+        "claim_boundary": "Cleanup evidence does not prove completion; it only routes local deletion or checked-in Planning review.",
     }
 
 
@@ -27706,6 +27917,7 @@ def _local_work_thread_record_projection(
     path: str,
     current: dict[str, str],
     task_refs: set[str],
+    external_status_by_ref: dict[str, str] | None = None,
     cli_invoke: str,
 ) -> dict[str, Any]:
     thread_id = str(record.get("id") or Path(path).stem).strip()
@@ -27721,6 +27933,8 @@ def _local_work_thread_record_projection(
     branch_match = bool(branch and branch == current.get("branch"))
     head_match = bool(head and current.get("head_commit") and head == current.get("head_commit"))
     issue_or_pr_refs = set(refs["issues"]) | set(refs["prs"])
+    external_status_by_ref = external_status_by_ref if isinstance(external_status_by_ref, dict) else {}
+    external_closed_refs = sorted(ref for ref in issue_or_pr_refs if external_status_by_ref.get(ref, "") in _EXTERNAL_OWNER_CLOSED_STATUSES)
     task_ref_match = bool(task_refs and issue_or_pr_refs.intersection(task_refs))
     selected_hint = str(record.get("selected") or "").strip().lower() in {"true", "1", "yes"}
     stale_reasons: list[str] = []
@@ -27735,6 +27949,8 @@ def _local_work_thread_record_projection(
     updated_at = _local_work_thread_parse_time(record.get("updated_at"))
     if updated_at and datetime.now(timezone.utc) - updated_at > timedelta(days=30):
         stale_reasons.append("old-unused-thread")
+    if external_closed_refs:
+        stale_reasons.append("external-owner-closed")
     proof_state = _as_dict(record.get("proof_state"))
     proof_stale_if = _list_payload(proof_state.get("stale_if"))
     proof_status = str(proof_state.get("status") or "not-recorded").strip()
@@ -27767,6 +27983,13 @@ def _local_work_thread_record_projection(
         "match_reasons": match_reasons,
         "stale_reasons": _dedupe(stale_reasons),
         "refs": refs,
+        "external_owner_status": {
+            "closed_refs": external_closed_refs,
+            "statuses": {
+                ref: external_status_by_ref.get(ref, "unknown") for ref in sorted(issue_or_pr_refs) if ref in external_status_by_ref
+            },
+            "rule": "External owner status may make a local advisory thread forgettable; it is not completion proof.",
+        },
         "durable_sources": durable_sources,
         "next_safe_action": _as_dict(record.get("next_safe_action")),
         "proof_state": {
@@ -27831,6 +28054,7 @@ def _local_work_thread_index_projection(*, target_root: Path) -> dict[str, Any]:
 def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_text: str | None = None) -> dict[str, Any]:
     current = _local_work_thread_git_snapshot(target_root=target_root)
     task_refs = _local_work_thread_task_refs(task_text)
+    external_status_by_ref = _external_intent_status_by_ref(target_root)
     records, unreadable = _load_local_work_thread_records(target_root=target_root)
     checkpoint_projection = _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=cli_invoke)
     checkpoint_bridge = {
@@ -27856,6 +28080,7 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
             path=path,
             current=current,
             task_refs=task_refs,
+            external_status_by_ref=external_status_by_ref,
             cli_invoke=cli_invoke,
         )
         for path, record in records
@@ -27868,6 +28093,7 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
                 path=str(checkpoint_projection.get("path", LOCAL_CHAT_CHECKPOINT_PATH.as_posix())),
                 current=current,
                 task_refs=task_refs,
+                external_status_by_ref=external_status_by_ref,
                 cli_invoke=cli_invoke,
             )
         )
@@ -27884,7 +28110,8 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
             "rule": "Forgetting removes only ignored local advisory state and never proves completion.",
         }
         for thread in stale_threads
-        if thread["source"] != "local_chat_checkpoint" and "old-unused-thread" in thread["stale_reasons"]
+        if thread["source"] != "local_chat_checkpoint"
+        and ("old-unused-thread" in thread["stale_reasons"] or "external-owner-closed" in thread["stale_reasons"])
     ]
     if unreadable:
         status = "unreadable"

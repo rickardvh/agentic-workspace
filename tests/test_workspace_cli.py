@@ -2570,6 +2570,117 @@ def test_local_work_threads_prune_skips_current_non_candidate(tmp_path: Path, ca
     assert current_path.exists()
 
 
+def test_stale_cleanup_report_separates_local_and_checked_in_planning_cleanup(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    local_thread = _write_local_work_thread(
+        tmp_path,
+        thread_id="issue-2001-local",
+        label="Issue 2001 local thread",
+        issue="#44",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = [
+  { id = "issue-44-active", title = "Closed upstream active", status = "active", surface = ".agentic-workspace/planning/execplans/issue-44-active.plan.json", next_action = "Review stale owner.", done_when = "Proof and residue are reconciled." },
+]
+queued_items = [
+  { id = "issue-45-queued", title = "Merged PR queued", status = "next", surface = ".agentic-workspace/planning/execplans/issue-45-queued.plan.json" },
+]
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "issue-46-open", maturity = "candidate", status = "next", refs = "GitHub #46", title = "Open upstream candidate", outcome = "Keep.", reason = "Open.", promotion_signal = "When selected.", suggested_first_slice = "Inspect." },
+]
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "issue-44-active.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "id": "issue-44-active",
+            "title": "Closed upstream active",
+            "references": ["#44"],
+            "proof_report": {"status": "missing"},
+        },
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "refreshed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "items": [
+                {"system": "fixture", "id": "#44", "title": "Closed upstream active", "status": "closed", "kind": "issue"},
+                {"system": "fixture", "id": "#45", "title": "Merged queued PR", "status": "merged", "kind": "pull_request"},
+                {"system": "fixture", "id": "#46", "title": "Open upstream candidate", "status": "open", "kind": "issue"},
+            ],
+        },
+    )
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "work_threads", "--format", "json"]) == 0
+    work_threads = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+    assert work_threads["cleanup"]["status"] == "available"
+    assert work_threads["cleanup"]["prune_candidates"][0]["id"] == "issue-2001-local"
+    assert "external-owner-closed" in work_threads["stale_threads"][0]["stale_reasons"]
+    assert local_thread.exists()
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "stale_cleanup", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["kind"] == "agentic-workspace/stale-cleanup/v1"
+    assert payload["status"] == "review-required"
+    assert payload["local_only_cleanup"]["status"] == "available"
+    assert payload["local_only_cleanup"]["candidates"][0]["id"] == "issue-2001-local"
+    assert payload["checked_in_planning_cleanup"]["status"] == "review-required"
+    planning_candidates = payload["checked_in_planning_cleanup"]["candidates"]
+    assert {candidate["section"] for candidate in planning_candidates} >= {"todo.active_items", "todo.queued_items", "planning.execplans"}
+    assert all(candidate["review_required"] is True for candidate in planning_candidates)
+    assert "PR or issue closure alone is not completion proof" in payload["checked_in_planning_cleanup"]["rule"]
+    assert payload["residue_promotion"]["status"] == "required-before-checked-in-cleanup"
+
+
+def test_stale_cleanup_report_stays_quiet_when_no_cleanup_is_actionable(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = [
+  { id = "issue-46-open", maturity = "candidate", status = "next", refs = "GitHub #46", title = "Open upstream candidate", outcome = "Keep.", reason = "Open.", promotion_signal = "When selected.", suggested_first_slice = "Inspect." },
+]
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "refreshed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "items": [
+                {"system": "fixture", "id": "#46", "title": "Open upstream candidate", "status": "open", "kind": "issue"},
+            ],
+        },
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "stale_cleanup", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["status"] == "none"
+    assert payload["local_only_cleanup"]["status"] == "none"
+    assert payload["checked_in_planning_cleanup"]["status"] == "none"
+    assert payload["startup_visibility"]["status"] == "quiet-unless-actionable"
+
+
 def test_start_pr_reference_wording_does_not_route_as_unknown_issue_scope(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
