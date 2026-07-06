@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["checkpoint", "config", "defaults", "doctor", "external-intent", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade"]);
-const nativeOperationIds = new Set(["checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle"]);
+const supportedCommands = new Set(["checkpoint", "config", "defaults", "doctor", "external-intent", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
+const nativeOperationIds = new Set(["checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.prune"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -2136,6 +2136,96 @@ const commandDefinitions = [
     "operation_ref": {
       "id": "checkpoint.write",
       "path": "operations/checkpoint.write.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Manage ignored local work-thread continuation handles.",
+      "name": "work-thread",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ],
+      "subcommand_dest": "work_thread_command",
+      "subcommands": [
+        {
+          "help": "Prune ignored local work-thread records already classified as safe candidates.",
+          "name": "prune",
+          "operation_ref": {
+            "id": "work-thread.prune",
+            "path": "operations/work-thread.prune.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--thread-id"
+              ],
+              "help": "Local work-thread id to prune. May be repeated.",
+              "name": "thread_id"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--all-candidates"
+              ],
+              "help": "Prune all current safe local work-thread candidates.",
+              "name": "all_candidates"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report candidates without deleting local files.",
+              "name": "dry_run"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        }
+      ],
+      "subcommands_required": true
+    },
+    "name": "work-thread",
+    "operation_ref": {
+      "id": "work-thread.prune",
+      "path": "operations/work-thread.prune.json"
     }
   },
   {

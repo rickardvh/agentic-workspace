@@ -2297,6 +2297,32 @@ def test_local_work_thread_schema_and_startup_clear_match(tmp_path: Path, capsys
     assert "work_threads=clear-match" in startup["action_signals"]["changed_signals"]
 
 
+def test_local_work_threads_resume_after_branch_switch_round_trip(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_local_work_thread(tmp_path, thread_id="issue-1987-master", label="Issue 1987 master")
+
+    subprocess.run(["git", "switch", "-c", "branch-b"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    _write(tmp_path / "branch-b.txt", "b\n")
+    subprocess.run(["git", "add", "branch-b.txt"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    subprocess.run(["git", "commit", "-m", "branch b"], cwd=tmp_path, text=True, capture_output=True, check=True)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987", "--select", "work_threads", "--format", "json"]) == 0
+    away = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+    assert away["status"] == "stale"
+    assert away["stale_threads"][0]["id"] == "issue-1987-master"
+    assert "different-branch" in away["stale_threads"][0]["stale_reasons"]
+
+    subprocess.run(["git", "switch", "master"], cwd=tmp_path, text=True, capture_output=True, check=True)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987", "--select", "work_threads", "--format", "json"]) == 0
+    returned = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+    assert returned["status"] == "clear-match"
+    assert returned["selected_thread"]["id"] == "issue-1987-master"
+    assert returned["selected_thread"]["match_reasons"] == ["branch-match", "head-match", "task-ref-match"]
+
+
 def test_local_work_threads_report_ambiguity_and_checkpoint_bridge(tmp_path: Path, capsys) -> None:
     _init_real_git_repo_with_commit(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -2378,6 +2404,111 @@ def test_local_work_threads_classify_stale_and_selected_missing(tmp_path: Path, 
     selected_missing = json.loads(capsys.readouterr().out)["values"]["work_threads"]
     assert selected_missing["status"] == "selected-missing"
     assert selected_missing["index"]["selected_thread_id"] == "missing-thread"
+
+
+def test_local_work_threads_prune_removes_only_safe_local_candidates(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    old_head = _git_value(tmp_path, "rev-parse", "HEAD")
+    subprocess.run(["git", "switch", "-c", "branch-b"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    _write(tmp_path / "branch-b.txt", "b\n")
+    subprocess.run(["git", "add", "branch-b.txt"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    subprocess.run(["git", "commit", "-m", "branch b"], cwd=tmp_path, text=True, capture_output=True, check=True)
+    stale_path = _write_local_work_thread(
+        tmp_path,
+        thread_id="issue-1992-stale",
+        label="Issue 1992 stale",
+        issue="#1992",
+        branch="master",
+        head=old_head,
+        updated_at="2026-01-01T00:00:00+00:00",
+    )
+    readme = tmp_path / "README.md"
+
+    assert (
+        cli.main(
+            [
+                "work-thread",
+                "prune",
+                "--target",
+                str(tmp_path),
+                "--thread-id",
+                "issue-1992-stale",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    dry_run = json.loads(capsys.readouterr().out)
+    assert dry_run["status"] == "dry-run"
+    assert dry_run["pruned_thread_ids"] == ["issue-1992-stale"]
+    assert stale_path.exists()
+    assert readme.exists()
+
+    assert (
+        cli.main(
+            [
+                "work-thread",
+                "prune",
+                "--target",
+                str(tmp_path),
+                "--thread-id",
+                "issue-1992-stale",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    schema = json.loads(
+        Path("src/agentic_workspace/contracts/schemas/local_work_thread_prune_result.schema.json").read_text(encoding="utf-8")
+    )
+    errors = sorted(Draft202012Validator(schema).iter_errors(payload), key=lambda error: list(error.path))
+    assert [error.message for error in errors] == []
+    assert payload["status"] == "pruned"
+    assert payload["pruned_thread_ids"] == ["issue-1992-stale"]
+    assert payload["pruned_paths"] == [stale_path.relative_to(tmp_path).as_posix()]
+    assert payload["skipped"] == []
+    assert not stale_path.exists()
+    assert readme.exists()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "work_threads", "--format", "json"]) == 0
+    after = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+    assert after["thread_count"] == 0
+    assert after["cleanup"]["prune_candidates"] == []
+
+
+def test_local_work_threads_prune_skips_current_non_candidate(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    current_path = _write_local_work_thread(tmp_path, thread_id="issue-1992-current", label="Issue 1992 current", issue="#1992")
+
+    assert (
+        cli.main(
+            [
+                "work-thread",
+                "prune",
+                "--target",
+                str(tmp_path),
+                "--thread-id",
+                "issue-1992-current",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["status"] == "nothing-to-prune"
+    assert payload["pruned_thread_ids"] == []
+    assert payload["skipped"] == [{"id": "issue-1992-current", "reason": "not-current-prune-candidate"}]
+    assert current_path.exists()
 
 
 def test_start_pr_reference_wording_does_not_route_as_unknown_issue_scope(tmp_path: Path, capsys) -> None:

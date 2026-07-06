@@ -28146,6 +28146,98 @@ def _write_local_chat_checkpoint(
     }
 
 
+def _local_work_thread_safe_prune_targets(*, target_root: Path, cli_invoke: str) -> dict[str, dict[str, Any]]:
+    projection = _local_work_threads_projection(target_root=target_root, cli_invoke=cli_invoke)
+    cleanup = _as_dict(projection.get("cleanup"))
+    candidates = _list_payload(cleanup.get("prune_candidates"))
+    return {
+        str(candidate.get("id") or "").strip(): candidate
+        for candidate in candidates
+        if isinstance(candidate, dict) and str(candidate.get("id") or "").strip() and candidate.get("safe_to_forget") is True
+    }
+
+
+def _resolve_local_work_thread_prune_path(*, target_root: Path, candidate: dict[str, Any]) -> Path | None:
+    relative_text = str(candidate.get("path") or "").strip()
+    if not relative_text:
+        return None
+    relative = Path(relative_text)
+    if relative.is_absolute() or relative.name == "index.json" or relative.suffix != ".json":
+        return None
+    expected_root = _local_work_thread_root(target_root).resolve()
+    target = (target_root / relative).resolve()
+    try:
+        target.relative_to(expected_root)
+    except ValueError:
+        return None
+    return target
+
+
+def _clear_pruned_local_work_thread_index_selection(*, target_root: Path, pruned_thread_ids: set[str]) -> None:
+    if not pruned_thread_ids:
+        return
+    index_path = _local_work_thread_index_path(target_root)
+    if not index_path.is_file():
+        return
+    try:
+        payload = json.loads(index_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return
+    if not isinstance(payload, dict) or str(payload.get("selected_thread_id") or "").strip() not in pruned_thread_ids:
+        return
+    payload.pop("selected_thread_id", None)
+    index_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _prune_local_work_threads(
+    *,
+    target_root: Path,
+    thread_ids: list[str],
+    all_candidates: bool,
+    dry_run: bool,
+    cli_invoke: str,
+) -> dict[str, Any]:
+    requested_ids = _dedupe([str(item).strip() for item in thread_ids if str(item).strip()])
+    if all_candidates and requested_ids:
+        raise WorkspaceUsageError("Use either --thread-id or --all-candidates, not both.")
+    candidates = _local_work_thread_safe_prune_targets(target_root=target_root, cli_invoke=cli_invoke)
+    if all_candidates:
+        requested_ids = sorted(candidates)
+    if not requested_ids:
+        raise WorkspaceUsageError("Pass --thread-id at least once, or use --all-candidates.")
+    pruned_ids: list[str] = []
+    pruned_paths: list[str] = []
+    skipped: list[dict[str, str]] = []
+    for thread_id in requested_ids:
+        candidate = candidates.get(thread_id)
+        if candidate is None:
+            skipped.append({"id": thread_id, "reason": "not-current-prune-candidate"})
+            continue
+        target = _resolve_local_work_thread_prune_path(target_root=target_root, candidate=candidate)
+        if target is None:
+            skipped.append({"id": thread_id, "reason": "candidate-path-outside-local-work-threads"})
+            continue
+        relative = target.relative_to(target_root.resolve()).as_posix()
+        if not dry_run and target.exists():
+            target.unlink()
+        pruned_ids.append(thread_id)
+        pruned_paths.append(relative)
+    if not dry_run:
+        _clear_pruned_local_work_thread_index_selection(target_root=target_root, pruned_thread_ids=set(pruned_ids))
+    status = "dry-run" if dry_run else "pruned" if pruned_ids else "nothing-to-prune"
+    return {
+        "kind": "agentic-workspace/local-work-thread-prune/v1",
+        "status": status,
+        "path": LOCAL_WORK_THREAD_ROOT.as_posix(),
+        "dry_run": dry_run,
+        "requested_thread_ids": requested_ids,
+        "pruned_thread_ids": pruned_ids,
+        "pruned_paths": pruned_paths,
+        "skipped": skipped,
+        "rule": "Prune removes only local advisory work-thread records; never deletes Planning or durable evidence.",
+    }
+
+
 def _read_changed_surface_text(*, target_root: Path, changed_paths: list[str], max_bytes: int = 200000) -> str:
     chunks: list[str] = []
     remaining = max_bytes
@@ -37808,6 +37900,24 @@ def _run_checkpoint_write_adapter(args: argparse.Namespace) -> int:
         open_blockers=list(getattr(args, "open_blocker", []) or []),
         dirty_state_summary=getattr(args, "dirty_state_summary", None),
         preserve_existing=not bool(getattr(args, "replace", False)),
+    )
+    _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
+    return 0
+
+
+def _run_work_thread_prune_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="work-thread", target_root=target_root)
+    work_thread_command = getattr(args, "work_thread_command", None)
+    if work_thread_command != "prune":
+        raise WorkspaceUsageError(f"Unsupported work-thread command: {work_thread_command}")
+    config = _load_workspace_config(target_root=target_root)
+    payload = _prune_local_work_threads(
+        target_root=target_root,
+        thread_ids=list(getattr(args, "thread_id", []) or []),
+        all_candidates=bool(getattr(args, "all_candidates", False)),
+        dry_run=bool(getattr(args, "dry_run", False)),
+        cli_invoke=config.cli_invoke,
     )
     _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
     return 0

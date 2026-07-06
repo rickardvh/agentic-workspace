@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/local_work_thread_prune_result.schema.json",
+  "title": "Agentic Workspace local work-thread prune result",
+  "description": "Stdout payload emitted after dry-running or pruning ignored local work-thread records.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "status",
+    "path",
+    "dry_run",
+    "requested_thread_ids",
+    "pruned_thread_ids",
+    "pruned_paths",
+    "skipped",
+    "rule"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/local-work-thread-prune/v1",
+      "description": "Discriminator for local work-thread prune results."
+    },
+    "status": {
+      "enum": ["pruned", "dry-run", "nothing-to-prune"],
+      "description": "Outcome of the prune attempt."
+    },
+    "path": {
+      "const": ".agentic-workspace/local/work-threads",
+      "description": "Ignored local work-thread directory."
+    },
+    "dry_run": {
+      "type": "boolean",
+      "description": "Whether the command only reported candidates."
+    },
+    "requested_thread_ids": {
+      "type": "array",
+      "description": "Thread ids requested by the caller, or all current candidates when --all-candidates was used.",
+      "items": {"type": "string", "maxLength": 160}
+    },
+    "pruned_thread_ids": {
+      "type": "array",
+      "description": "Thread ids whose local advisory records were removed.",
+      "items": {"type": "string", "maxLength": 160}
+    },
+    "pruned_paths": {
+      "type": "array",
+      "description": "Repo-relative ignored local paths removed by this command.",
+      "items": {"type": "string", "maxLength": 500}
+    },
+    "skipped": {
+      "type": "array",
+      "description": "Requested ids that were not pruned and the reason.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "reason"],
+        "properties": {
+          "id": {"type": "string", "maxLength": 160, "description": "Requested local thread id."},
+          "reason": {"type": "string", "maxLength": 240, "description": "Why the id was not pruned."}
+        }
+      }
+    },
+    "rule": {
+      "type": "string",
+      "pattern": "local advisory.*never.*Planning|local advisory.*never.*durable",
+      "description": "Safety rule proving prune is only local advisory cleanup."
+    }
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

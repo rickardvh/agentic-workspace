@@ -2117,6 +2117,94 @@
     "operation_path": "operations/checkpoint.write.json"
   },
   {
+    "adapter_id": "work-thread.prune.cli",
+    "interface": {
+      "help": "Manage ignored local work-thread continuation handles.",
+      "name": "work-thread",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ],
+      "subcommand_dest": "work_thread_command",
+      "subcommands": [
+        {
+          "help": "Prune ignored local work-thread records already classified as safe candidates.",
+          "name": "prune",
+          "operation_ref": {
+            "id": "work-thread.prune",
+            "path": "operations/work-thread.prune.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--thread-id"
+              ],
+              "help": "Local work-thread id to prune. May be repeated.",
+              "name": "thread_id"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--all-candidates"
+              ],
+              "help": "Prune all current safe local work-thread candidates.",
+              "name": "all_candidates"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report candidates without deleting local files.",
+              "name": "dry_run"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        }
+      ],
+      "subcommands_required": true
+    },
+    "operation_id": "work-thread.prune",
+    "operation_path": "operations/work-thread.prune.json"
+  },
+  {
     "adapter_id": "start.context.cli",
     "interface": {
       "help": "Return the minimum safe startup context for beginning work in a target repository.",

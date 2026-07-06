@@ -1,0 +1,127 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "work-thread",
+    "format_option": "format",
+    "subcommand": "prune"
+  },
+  "effects": {
+    "destructive": true,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Prune only records already present in work_threads.cleanup.prune_candidates.",
+    "Delete only .agentic-workspace/local/work-threads/*.json files, never index.json, chat-checkpoint.json, Planning, Memory, Verification, docs, issues, PRs, or proof receipts.",
+    "Do not infer task completion from stale or pruned local state."
+  ],
+  "id": "work-thread.prune",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "thread_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "all_candidates",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "work-thread.prune"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/local_work_thread_prune_result.schema.json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "local work-thread prune tests validate stdout against local_work_thread_prune_result.schema.json",
+    "prune tests prove only ignored local work-thread files are removed"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/work-threads/*.json"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/chat-checkpoint.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Remove only ignored local work-thread records that are current prune candidates.",
+      "id": "prune_local_thread",
+      "uses": "workspace.local-work-thread.prune"
+    },
+    {
+      "description": "Emit the prune result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Prune ignored local work-thread records that startup already classifies as safe local candidates.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/work-threads/*.json",
+      "when": "remove selected safe local work-thread prune candidates"
+    }
+  ]
+}
