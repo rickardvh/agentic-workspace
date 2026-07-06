@@ -2298,6 +2298,44 @@ def test_local_work_thread_schema_and_startup_clear_match(tmp_path: Path, capsys
     assert "work_threads=clear-match" in startup["action_signals"]["changed_signals"]
 
 
+def test_local_work_threads_warn_when_planning_owner_changed(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    thread_time = datetime.now(timezone.utc).replace(microsecond=0).timestamp() - 60
+    updated_at = datetime.fromtimestamp(thread_time, timezone.utc).replace(microsecond=0).isoformat()
+    _write_local_work_thread(
+        tmp_path,
+        thread_id="issue-1991-local-cursor",
+        label="Issue 1991 local cursor",
+        issue="#1991",
+        updated_at=updated_at,
+    )
+    plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "issue-1987-work-threads.plan.json"
+    _write_json(plan_path, {"kind": "planning-execplan/v1", "id": "issue-1987-work-threads", "references": ["#1987"]})
+    owner_time = thread_time + 30
+    os.utime(plan_path, (owner_time, owner_time))
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1991", "--select", "work_threads", "--format", "json"]) == 0
+    packet = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+
+    assert packet["status"] == "stale"
+    stale = packet["stale_threads"][0]
+    assert stale["id"] == "issue-1991-local-cursor"
+    assert "planning-owner-changed" in stale["stale_reasons"]
+    assert stale["planning_owner_boundary"]["status"] == "changed-owner"
+    assert stale["planning_owner_boundary"]["changed_owner_refs"] == [
+        {
+            "path": ".agentic-workspace/planning/execplans/issue-1987-work-threads.plan.json",
+            "last_modified": datetime.fromtimestamp(owner_time, timezone.utc).replace(microsecond=0).isoformat(),
+            "thread_updated_at": updated_at,
+            "reason": "planning-owner-newer-than-local-thread",
+        }
+    ]
+    assert packet["cleanup"]["status"] == "none"
+    assert packet["cleanup"]["prune_candidates"] == []
+
+
 def test_local_work_threads_resume_after_branch_switch_round_trip(tmp_path: Path, capsys) -> None:
     _init_real_git_repo_with_commit(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

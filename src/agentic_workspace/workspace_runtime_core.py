@@ -27976,6 +27976,42 @@ def _local_work_thread_parse_time(value: Any) -> datetime | None:
     return parsed
 
 
+def _local_work_thread_planning_owner_changes(*, target_root: Path, record: dict[str, Any]) -> list[dict[str, Any]]:
+    planning_refs = _local_work_thread_refs(record)["planning"]
+    updated_at = _local_work_thread_parse_time(record.get("updated_at"))
+    if not planning_refs or updated_at is None:
+        return []
+    target_resolved = target_root.resolve()
+    changes: list[dict[str, Any]] = []
+    for ref in planning_refs:
+        ref_text = str(ref or "").strip()
+        if not ref_text:
+            continue
+        candidate = Path(ref_text)
+        if not candidate.is_absolute():
+            candidate = target_root / candidate
+        try:
+            resolved = candidate.resolve()
+            relative = resolved.relative_to(target_resolved).as_posix()
+            stat = resolved.stat()
+        except (OSError, ValueError):
+            continue
+        if not resolved.is_file():
+            continue
+        modified_at = datetime.fromtimestamp(stat.st_mtime, timezone.utc)
+        if modified_at <= updated_at:
+            continue
+        changes.append(
+            {
+                "path": relative,
+                "last_modified": modified_at.replace(microsecond=0).isoformat(),
+                "thread_updated_at": updated_at.replace(microsecond=0).isoformat(),
+                "reason": "planning-owner-newer-than-local-thread",
+            }
+        )
+    return changes
+
+
 def _local_work_thread_from_checkpoint(*, checkpoint: dict[str, Any], path: str) -> dict[str, Any]:
     thread_id = "checkpoint-default"
     return {
@@ -28016,6 +28052,7 @@ def _local_work_thread_record_projection(
     task_refs: set[str],
     external_status_by_ref: dict[str, str] | None = None,
     branch_exists: bool | None = None,
+    planning_owner_changes: list[dict[str, Any]] | None = None,
     cli_invoke: str,
 ) -> dict[str, Any]:
     thread_id = str(record.get("id") or Path(path).stem).strip()
@@ -28033,6 +28070,7 @@ def _local_work_thread_record_projection(
     issue_or_pr_refs = set(refs["issues"]) | set(refs["prs"])
     external_status_by_ref = external_status_by_ref if isinstance(external_status_by_ref, dict) else {}
     external_closed_refs = sorted(ref for ref in issue_or_pr_refs if external_status_by_ref.get(ref, "") in _EXTERNAL_OWNER_CLOSED_STATUSES)
+    planning_owner_changes = [item for item in _list_payload(planning_owner_changes) if isinstance(item, dict)]
     task_ref_match = bool(task_refs and issue_or_pr_refs.intersection(task_refs))
     selected_hint = str(record.get("selected") or "").strip().lower() in {"true", "1", "yes"}
     stale_reasons: list[str] = []
@@ -28051,6 +28089,8 @@ def _local_work_thread_record_projection(
         stale_reasons.append("old-unused-thread")
     if external_closed_refs:
         stale_reasons.append("external-owner-closed")
+    if planning_owner_changes:
+        stale_reasons.append("planning-owner-changed")
     proof_state = _as_dict(record.get("proof_state"))
     proof_stale_if = _list_payload(proof_state.get("stale_if"))
     proof_status = str(proof_state.get("status") or "not-recorded").strip()
@@ -28070,9 +28110,13 @@ def _local_work_thread_record_projection(
         status = "other-branch"
     planning_refs = refs["planning"]
     planning_boundary = {
-        "status": "reread-required" if planning_refs else "not-linked",
+        "status": "changed-owner" if planning_owner_changes else "reread-required" if planning_refs else "not-linked",
         "planning_refs": planning_refs,
-        "rule": "Local thread cursor state is actor-local; reread checked-in Planning before durable claims.",
+        "changed_owner_refs": planning_owner_changes,
+        "rule": (
+            "Local thread cursor state is actor-local; reread checked-in Planning before durable claims. "
+            "A newer checked-in Planning owner invalidates clean local resume but is not local prune evidence."
+        ),
     }
     return {
         "id": thread_id,
@@ -28186,6 +28230,7 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
                 target_root=target_root,
                 branch=str(_local_work_thread_observation_value(record, "branch") or "").strip(),
             ),
+            planning_owner_changes=_local_work_thread_planning_owner_changes(target_root=target_root, record=record),
             cli_invoke=cli_invoke,
         )
         for path, record in records
@@ -28203,6 +28248,7 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
                     target_root=target_root,
                     branch=str(_local_work_thread_observation_value(checkpoint_record, "branch") or "").strip(),
                 ),
+                planning_owner_changes=_local_work_thread_planning_owner_changes(target_root=target_root, record=checkpoint_record),
                 cli_invoke=cli_invoke,
             )
         )
