@@ -1523,6 +1523,18 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             else "detail_omitted",
             "thread_level_comments": "hidden_behind_detail_route",
         }
+        comment_addressing = pr_comment_attention.get("comment_addressing", {})
+        if isinstance(comment_addressing, dict) and comment_addressing:
+            closeout = comment_addressing.get("closeout", {}) if isinstance(comment_addressing.get("closeout"), dict) else {}
+            context["pr_comment_attention"]["comment_addressing"] = {
+                key: comment_addressing.get(key)
+                for key in ("kind", "status", "bucket_counts", "changed_files")
+                if comment_addressing.get(key) not in (None, "", [], {})
+            }
+            if closeout:
+                context["pr_comment_attention"]["comment_addressing"]["closeout"] = {
+                    key: closeout.get(key) for key in ("status", "rule") if closeout.get(key) not in (None, "", [], {})
+                }
         context["pr_comment_attention"]["detail_route"] = pr_comment_attention.get(
             "recommended_command", "agentic-workspace report --target . --section pr_comment_attention --format json"
         )

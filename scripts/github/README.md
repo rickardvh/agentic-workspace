@@ -12,6 +12,16 @@ Use `pr_comment_delta.py` at the start of a review-response turn when a PR may h
 - ambiguous comments route to clarification instead of broad local edits;
 - resolved or outdated threads become informational.
 
+Each item also carries an `addressing_status` so AW report/startup can derive a closeout packet without rereading raw comments:
+
+- `unresolved_action` needs a code, docs, metadata, or checks action;
+- `reply_only` needs clarification or a human response before local edits;
+- `already_addressed` was resolved in the inspected thread evidence;
+- `outdated` was superseded by later diff state;
+- `informational` does not require local action.
+
+The packet includes `comment_surfaces` so closeout can distinguish complete GraphQL comment/thread reads from normalized fixtures or legacy caches with incomplete thread-surface proof.
+
 Live read-only use:
 
 ```powershell

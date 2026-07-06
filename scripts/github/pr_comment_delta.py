@@ -27,6 +27,11 @@ CATEGORIES = (
     "informational_no_local_change",
     "ambiguous_needs_human",
 )
+ACTIONABLE_CATEGORIES = (
+    "actionable_code_doc_body_change",
+    "pr_metadata_body_only_change",
+    "ci_label_only_issue",
+)
 
 
 def _parse_timestamp(value: str | None) -> datetime | None:
@@ -72,9 +77,13 @@ def _author_login(raw: Any) -> str:
 
 
 def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
+    graphql_shape = False
     pr = payload.get("pull_request") if isinstance(payload.get("pull_request"), dict) else None
     if pr is None:
         pr = payload.get("data", {}).get("repository", {}).get("pullRequest", {})
+        graphql_shape = bool(pr)
+    else:
+        graphql_shape = True
     if not isinstance(pr, dict):
         pr = {}
 
@@ -160,6 +169,11 @@ def _normalize_graphql(payload: dict[str, Any]) -> dict[str, Any]:
             },
             "rule": "When truncated is true, do not treat this packet as a complete review-comment delta.",
         },
+        "comment_surfaces": {
+            "inspected": ["issue_comments", "reviews", "review_threads"] if graphql_shape else ["normalized_comments"],
+            "unavailable": [] if graphql_shape else ["thread_surface_completeness"],
+            "rule": "Use unavailable surfaces to bound review-readiness claims; normalized fixtures may not prove complete thread coverage.",
+        },
     }
 
 
@@ -225,6 +239,18 @@ def _classify(item: dict[str, Any]) -> tuple[str, str, str]:
     )
 
 
+def _addressing_status(item: dict[str, Any], category: str) -> str:
+    if item.get("is_outdated") is True:
+        return "outdated"
+    if item.get("is_resolved") is True:
+        return "already_addressed"
+    if category == "ambiguous_needs_human":
+        return "reply_only"
+    if category in ACTIONABLE_CATEGORIES:
+        return "unresolved_action"
+    return "informational"
+
+
 def _item_identity(item: dict[str, Any]) -> str:
     for key in ("url", "database_id", "databaseId", "id"):
         value = _text(item.get(key))
@@ -251,10 +277,13 @@ def build_packet(payload: dict[str, Any], *, since: datetime | None = None, seen
             skipped_seen += 1
             continue
         category, reason, proof_hint = _classify(raw)
+        addressing_status = _addressing_status(raw, category)
         item = {
             "id": _item_identity(raw),
             "kind": _text(raw.get("kind") or "comment"),
             "category": category,
+            "addressing_status": addressing_status,
+            "action_required": addressing_status in {"unresolved_action", "reply_only"},
             "reason": reason,
             "proof_hint": proof_hint,
             "url": url,
@@ -297,6 +326,7 @@ def build_packet(payload: dict[str, Any], *, since: datetime | None = None, seen
         "category_counts": counts,
         "items": items,
         "pagination": pagination,
+        "comment_surfaces": normalized.get("comment_surfaces", {}),
         "smallest_next_action": _smallest_next_action(counts, pagination=pagination),
         "write_safety": {
             "github_writes_performed": False,

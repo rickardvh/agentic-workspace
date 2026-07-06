@@ -3508,8 +3508,8 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
                     "actionable_code_doc_body_change": 1,
                     "pr_metadata_body_only_change": 0,
                     "ci_label_only_issue": 0,
-                    "ambiguous_needs_human": 0,
-                    "informational_no_local_change": 0,
+                    "ambiguous_needs_human": 1,
+                    "informational_no_local_change": 2,
                 },
                 "items": [
                     {
@@ -3519,7 +3519,30 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
                         "line": 12,
                         "url": "https://example.test/pr#thread",
                         "proof_hint": "Run focused tests.",
-                    }
+                    },
+                    {
+                        "kind": "issue_comment",
+                        "category": "ambiguous_needs_human",
+                        "url": "https://example.test/pr#question",
+                        "body_excerpt": "Which behavior should win here?",
+                        "proof_hint": "Ask or draft a response before editing.",
+                    },
+                    {
+                        "kind": "review_thread_comment",
+                        "category": "informational_no_local_change",
+                        "path": "README.md",
+                        "url": "https://example.test/pr#resolved",
+                        "is_resolved": True,
+                        "proof_hint": "No local proof unless the thread is reopened.",
+                    },
+                    {
+                        "kind": "review_thread_comment",
+                        "category": "informational_no_local_change",
+                        "path": "docs/old.md",
+                        "url": "https://example.test/pr#outdated",
+                        "is_outdated": True,
+                        "proof_hint": "No local proof unless the thread is reopened.",
+                    },
                 ],
                 "baseline": {"since": "2026-06-28T00:00:00Z"},
             }
@@ -3531,11 +3554,32 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     actionable = json.loads(capsys.readouterr().out)["answer"]
     assert actionable["status"] == "actionable_pr_comments_present"
     assert actionable["comment_state"] == "comments_requiring_action"
-    assert actionable["actionable_count"] == 1
+    assert actionable["actionable_count"] == 2
     assert actionable["sample"][0]["path"] == "src/app.py"
     assert actionable["thread_inspection"]["status"] == "available"
     assert "report --target . --section pr_comment_attention --format json" in actionable["recommended_command"]
     assert "pr_comment_delta.py" in actionable["thread_inspection"]["source_checkout_helper"]["command"]
+    addressing = actionable["comment_addressing"]
+    assert addressing["kind"] == "agentic-workspace/pr-comment-addressing/v1"
+    assert addressing["status"] == "unresolved_review_feedback_present"
+    assert addressing["bucket_counts"] == {
+        "unresolved_action": 1,
+        "reply_only": 1,
+        "already_addressed": 1,
+        "outdated": 1,
+        "informational": 0,
+    }
+    assert addressing["buckets"]["unresolved_action"][0]["path"] == "src/app.py"
+    assert addressing["buckets"]["reply_only"][0]["url"].endswith("#question")
+    assert addressing["source_availability"]["inspected_surfaces"] == ["cached_delta_items"]
+    assert addressing["source_availability"]["unavailable_surfaces"] == ["thread_surface_completeness"]
+    assert addressing["closeout"]["addressed_comments"][0]["url"].endswith("#resolved")
+    assert addressing["closeout"]["outdated_comments"][0]["url"].endswith("#outdated")
+    assert [item["url"] for item in addressing["closeout"]["intentionally_open_comments"]] == [
+        "https://example.test/pr#thread",
+        "https://example.test/pr#question",
+    ]
+    assert addressing["write_safety"]["github_writes_performed"] is False
 
     # Legacy empty caches are not enough to support readiness claims because they
     # do not prove which PR head was observed.
@@ -3565,6 +3609,8 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     assert stale_empty["comment_state"] == "stale_or_unknown"
     assert stale_empty["cached_status"] == "no_actionable_pr_comments_detected"
     assert stale_empty["degraded_explicitly"] is True
+    assert stale_empty["comment_addressing"]["status"] == "stale_or_unverified"
+    assert stale_empty["comment_addressing"]["closeout"]["status"] == "blocked_until_refreshed"
     assert "Current PR head is unverified." in stale_empty["unverified_context"]
 
     cache_path.write_text(
@@ -3598,6 +3644,8 @@ def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tm
     assert fresh_empty["comment_state"] == "no_comments_requiring_action"
     assert fresh_empty["actionable_count"] == 0
     assert fresh_empty["freshness"]["pr_head_sha"] == "abc123"
+    assert fresh_empty["comment_addressing"]["status"] == "review_feedback_closed"
+    assert fresh_empty["comment_addressing"]["closeout"]["status"] == "ready_if_fresh"
     assert fresh_empty["unverified_context"] == []
 
 
@@ -3726,6 +3774,8 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert attention["status"] == "actionable_stack_comments_present"
     assert attention["comment_state"] == "stack_comments_requiring_action"
     assert attention["stack_member_count"] == 2
+    assert attention["comment_addressing"]["kind"] == "agentic-workspace/pr-comment-stack-addressing/v1"
+    assert attention["comment_addressing"]["status"] == "open_feedback_present"
     assert "--section pr_comment_attention --format json" in attention["detail_route"]
     assert attention["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
     assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
