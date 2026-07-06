@@ -4,7 +4,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import re
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from tests.workspace_cli_support import *
@@ -3090,7 +3090,7 @@ def test_start_open_issue_intake_routes_refresh_and_grouping(tmp_path: Path, cap
         json.dumps(
             {
                 "kind": "planning-external-intent-evidence/v1",
-                "refreshed_at": "2026-06-26T08:00:00+00:00",
+                "refreshed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
                 "refresh_metadata": {"adapter": "fixture", "open_count": 4, "closed_count": 0},
                 "items": [
                     {"id": "#1739", "system": "github", "status": "open", "kind": "lane", "title": "Dogfooding friction lane"},
@@ -3162,6 +3162,25 @@ candidates = [
     assert grouping["child_issue_clusters"][0]["child_count"] == 2
     assert grouping["standalone_candidates"][0]["id"] == "#1802"
     assert intake["detailed_issue_list_rule"]
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "open_issue_intake", "--format", "json"]) == 0
+    selected = json.loads(capsys.readouterr().out)
+    selected_intake = selected["values"]["open_issue_intake"]
+    assert selected.get("missing", []) == []
+    assert selected_intake["trigger"] == "explicit-selector"
+    assert selected_intake["status"] == "ready-to-review"
+    assert "external-intent refresh-github" in selected_intake["command_owned_intake"]
+    assert selected_intake["counts"]["open_issue_count"] == 4
+    assert selected_intake["grouping_hints"]["parent_lanes"][0]["id"] == "#1739"
+    assert "explicit open_issue_intake selector requested" in selected_intake["authority_boundary"]["observed_by_aw"]
+
+    stale_payload = json.loads(evidence_path.read_text(encoding="utf-8"))
+    stale_payload["refreshed_at"] = (datetime.now(timezone.utc) - timedelta(hours=25)).replace(microsecond=0).isoformat()
+    evidence_path.write_text(json.dumps(stale_payload), encoding="utf-8")
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "open_issue_intake", "--format", "json"]) == 0
+    stale_intake = json.loads(capsys.readouterr().out)["values"]["open_issue_intake"]
+    assert stale_intake["freshness"]["status"] == "stale-refresh-recommended"
+    assert stale_intake["recommended_next_action"] == "refresh-apply-intake"
 
 
 def test_start_cached_issue_reference_intent_is_advisory(tmp_path: Path, capsys) -> None:
