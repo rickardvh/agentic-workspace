@@ -192,6 +192,7 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
         "start",
         "implement",
         "checkpoint",
+        "work-thread",
         "defaults",
         "proof",
         "setup",
@@ -216,6 +217,7 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
     assert command_roles["upgrade"] == "core_lifecycle"
     assert command_roles["start"] == "core_context_router"
     assert command_roles["checkpoint"] == "core_context_router"
+    assert command_roles["work-thread"] == "core_context_router"
     assert command_roles["planning"] == "core_context_router"
     assert command_roles["report"] == "core_context_router"
     assert command_roles["modules"] == "module_delegation_front_door"
@@ -227,6 +229,7 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
     assert command_audiences["doctor"] == "advanced_host_repo"
     assert command_audiences["note-delegation-outcome"] == "local_only"
     assert command_audiences["checkpoint"] == "ordinary_host_repo"
+    assert command_audiences["work-thread"] == "ordinary_host_repo"
     assert command_audiences["setup"] == "advanced_host_repo"
     assert all(command["classification_note"] for command in commands)
     assert "source_checkout_only_maintainer_development" not in set(command_roles.values())

@@ -1405,6 +1405,18 @@
       "conformance_ref": "checkpoint.write.process plus workspace checkpoint tests",
       "migration_path": "Keep as workspace runtime until local-only continuity semantics are stable enough for portable file-write primitives.",
       "generic_behavior_audit": "Not counted as portable codegen completion; local-only policy and checkpoint schema remain AW-owned."
+    },
+    {
+      "id": "workspace.local-work-thread.prune",
+      "summary": "Prune ignored local work-thread records under .agentic-workspace/local/work-threads/.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Local work-thread pruning enforces AW-specific candidate selection, ignored-local path limits, and non-evidence semantics.",
+      "conformance_ref": "work-thread.prune.process plus workspace work-thread tests",
+      "migration_path": "Keep as workspace runtime until local-only prune-candidate policy can be represented by portable file-delete primitives with equivalent safety.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; prune safety depends on AW-owned work-thread projection and local-only authority boundaries."
     }
   ],
   "primitive_taxonomy": {

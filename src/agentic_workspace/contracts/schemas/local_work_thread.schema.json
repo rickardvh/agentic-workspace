@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/local_work_thread.schema.json",
+  "title": "Agentic Workspace local work thread",
+  "description": "Ignored local-only continuation handle used to resume one actor's work without treating local cursor state as durable task, proof, or closure evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "id",
+    "label",
+    "created_at",
+    "updated_at",
+    "refs",
+    "durable_sources",
+    "observations",
+    "proof_state",
+    "next_safe_action",
+    "limits"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/local-work-thread/v1",
+      "description": "Stable local work-thread record discriminator."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]{1,100}$",
+      "description": "Stable human-readable local thread identifier."
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "description": "Short human-readable label for selection."
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO-like timestamp for initial thread creation."
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "ISO-like timestamp for the last local cursor update."
+    },
+    "source": {
+      "type": "string",
+      "maxLength": 120,
+      "description": "Optional local source, such as local_work_thread or local_chat_checkpoint."
+    },
+    "refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Durable owner references this local cursor points at.",
+      "required": ["issues", "prs", "planning"],
+      "properties": {
+        "issues": {
+          "type": "array",
+          "description": "Issue references this local thread points at.",
+          "items": {"type": "string", "maxLength": 160, "description": "One issue reference or issue URL."}
+        },
+        "prs": {
+          "type": "array",
+          "description": "Pull request references this local thread points at.",
+          "items": {"type": "string", "maxLength": 160, "description": "One pull request number, reference, or URL."}
+        },
+        "planning": {
+          "type": "array",
+          "description": "Checked-in Planning owners or selectors to reread before durable claims.",
+          "items": {"type": "string", "maxLength": 300, "description": "One Planning path, selector, or owner reference."}
+        }
+      }
+    },
+    "durable_sources": {
+      "type": "array",
+      "description": "Durable sources to reread before making claims from this local handle.",
+      "items": {"type": "string", "maxLength": 500}
+    },
+    "observations": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Stale-prone branch, worktree, and owner observations.",
+      "required": ["branch", "worktree", "head_commit"],
+      "properties": {
+        "repo_root": {"$ref": "#/$defs/observation", "description": "Repository root observed when the local thread was written."},
+        "remote_origin_url": {"$ref": "#/$defs/observation", "description": "Origin remote URL observed when available."},
+        "branch": {"$ref": "#/$defs/observation", "description": "Git branch observed when the local thread was written."},
+        "worktree": {"$ref": "#/$defs/observation", "description": "Worktree path observed when the local thread was written."},
+        "head_commit": {"$ref": "#/$defs/observation", "description": "Local HEAD commit observed when the local thread was written."},
+        "upstream_commit": {"$ref": "#/$defs/observation", "description": "Upstream commit observed when available."},
+        "planning_revision": {"$ref": "#/$defs/observation", "description": "Planning revision observed when a Planning owner was relevant."},
+        "dirty_state_summary": {"$ref": "#/$defs/observation", "description": "Short local dirty-state summary observed when the thread was written."}
+      }
+    },
+    "proof_state": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Historical local proof summary with invalidation rules.",
+      "required": ["status", "last_proof", "stale_if", "rule"],
+      "properties": {
+        "status": {
+          "enum": ["historical-local-summary", "no-proof-recorded"],
+          "description": "Whether this thread has local proof history."
+        },
+        "last_proof": {
+          "type": "array",
+          "description": "Historical proof commands or receipts recorded for orientation.",
+          "items": {"type": "string", "maxLength": 500, "description": "One historical proof command or receipt summary."}
+        },
+        "stale_if": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Conditions that invalidate the local proof history.",
+          "items": {"type": "string", "maxLength": 250, "description": "One proof invalidation condition."}
+        },
+        "rule": {
+          "type": "string",
+          "pattern": "not.*closure|not.*completion|re-run|re-evaluate",
+          "description": "Rule preventing local proof history from becoming completion evidence."
+        }
+      }
+    },
+    "next_safe_action": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Advisory resume route.",
+      "required": ["command"],
+      "properties": {
+        "command": {"type": "string", "maxLength": 500, "description": "Advisory command for resuming from this local thread."},
+        "selector": {"type": "string", "maxLength": 120, "description": "Optional AW selector related to the resume route."}
+      }
+    },
+    "local_notes": {
+      "type": "string",
+      "maxLength": 1000,
+      "description": "Short advisory note; raw transcripts and durable policy text are not allowed."
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Invariant flags that keep local work threads from becoming durable task or proof state.",
+      "required": [
+        "local_only",
+        "gitignored",
+        "advisory",
+        "not_closure_evidence",
+        "no_raw_transcripts",
+        "no_secrets",
+        "no_priority_status_assignment",
+        "durable_decisions_require_durable_source"
+      ],
+      "properties": {
+        "local_only": {"const": true, "description": "Thread records are only for the local workspace."},
+        "gitignored": {"const": true, "description": "Thread records must remain under ignored local storage."},
+        "advisory": {"const": true, "description": "Thread records are advisory hints, not durable authority."},
+        "not_closure_evidence": {"const": true, "description": "Thread records cannot prove issue, PR, or plan closure."},
+        "no_raw_transcripts": {"const": true, "description": "Thread records must not contain raw chat transcript content."},
+        "no_secrets": {"const": true, "description": "Thread records must not contain secrets or authentication material."},
+        "no_priority_status_assignment": {"const": true, "description": "Thread records must not introduce task-manager priority, status, owner, or assignment semantics."},
+        "durable_decisions_require_durable_source": {"const": true, "description": "Durable decisions must be backed by durable sources outside this local record."}
+      }
+    }
+  },
+  "$defs": {
+    "observation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "source", "observed_at"],
+      "properties": {
+        "value": {"description": "Observed value."},
+        "source": {"type": "string", "minLength": 1, "description": "Where this observation came from."},
+        "observed_at": {"type": "string", "minLength": 1, "description": "Timestamp when this observation was captured."}
+      }
+    }
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

@@ -483,6 +483,11 @@
             "function": "_run_checkpoint_write_adapter"
           },
           {
+            "operation_id": "work-thread.prune",
+            "import_module": "agentic_workspace.workspace_runtime_core",
+            "function": "_run_work_thread_prune_adapter"
+          },
+          {
             "operation_id": "external-intent.refresh-github",
             "import_module": "agentic_workspace.workspace_runtime_primitives",
             "function": "_run_external_intent_refresh_github_adapter"
@@ -3704,22 +3709,161 @@
           "conformance_refs": [
             "checkpoint.write.process"
           ],
-      "projection_boundary": {
-        "universal": [
-          "command identity",
-          "option semantics",
-          "operation reference",
-          "runtime primitive reference",
-          "conformance refs",
-          "effect hints"
-        ],
-        "target_specific": [
-          "parser library",
-          "help text layout",
-          "package entrypoint wiring"
-        ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "conformance refs",
+              "effect hints"
+            ],
+            "target_specific": [
+              "parser library",
+              "help text layout",
+              "package entrypoint wiring"
+            ],
             "runtime_owned": [
               "local-only checkpoint write",
+              "target root validation",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "work-thread.prune.cli",
+          "status": "generated",
+          "command": {
+            "name": "work-thread",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "work-thread",
+            "help": "Manage ignored local work-thread continuation handles.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ],
+            "subcommand_dest": "work_thread_command",
+            "subcommands_required": true,
+            "subcommands": [
+              {
+                "name": "prune",
+                "help": "Prune ignored local work-thread records already classified as safe candidates.",
+                "operation_ref": {
+                  "id": "work-thread.prune",
+                  "path": "operations/work-thread.prune.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "thread_id",
+                    "flags": [
+                      "--thread-id"
+                    ],
+                    "action": "append",
+                    "default": [],
+                    "help": "Local work-thread id to prune. May be repeated."
+                  },
+                  {
+                    "name": "all_candidates",
+                    "flags": [
+                      "--all-candidates"
+                    ],
+                    "action": "store_true",
+                    "help": "Prune all current safe local work-thread candidates."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Report candidates without deleting local files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "work-thread.prune",
+            "path": "operations/work-thread.prune.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.target-root.resolve",
+              "workspace.local-work-thread.prune",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "local_work_thread_prune_result.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": true,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "work-thread.prune.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "conformance refs",
+              "effect hints"
+            ],
+            "target_specific": [
+              "parser library",
+              "help text layout",
+              "package entrypoint wiring"
+            ],
+            "runtime_owned": [
+              "local-only work-thread prune",
               "target root validation",
               "output emission"
             ]

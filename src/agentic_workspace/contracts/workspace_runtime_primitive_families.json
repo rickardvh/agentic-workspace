@@ -429,6 +429,8 @@
           "_guidance_with_cli_invoke",
           "_local_chat_checkpoint_projection",
           "_local_footprint_payload",
+          "_local_work_threads_default_visible",
+          "_local_work_threads_projection",
           "_ordinary_decision_packet",
           "_selector_first_planning_safety_gate",
           "_selector_requests",

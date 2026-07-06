@@ -1,0 +1,99 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "work-thread.prune",
+  "command_surface": {
+    "command": "work-thread",
+    "subcommand": "prune",
+    "format_option": "format"
+  },
+  "summary": "Prune ignored local work-thread records that startup already classifies as safe local candidates.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "thread_id",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "all_candidates",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/local_work_thread_prune_result.schema.json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": true,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/local/work-threads/*.json",
+      "required": false
+    },
+    {
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/local/work-threads/*.json",
+      "required": false,
+      "when": "remove selected safe local work-thread prune candidates"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "prune_local_thread",
+      "uses": "workspace.local-work-thread.prune",
+      "description": "Remove only ignored local work-thread records that are current prune candidates."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the prune result."
+    }
+  ],
+  "guards": [
+    "Prune only records already present in work_threads.cleanup.prune_candidates.",
+    "Delete only .agentic-workspace/local/work-threads/*.json files, never index.json, chat-checkpoint.json, Planning, Memory, Verification, docs, issues, PRs, or proof receipts.",
+    "Do not infer task completion from stale or pruned local state."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "local work-thread prune tests validate stdout against local_work_thread_prune_result.schema.json",
+    "prune tests prove only ignored local work-thread files are removed"
+  ],
+  "migration_status": "draft-contract-only"
+}

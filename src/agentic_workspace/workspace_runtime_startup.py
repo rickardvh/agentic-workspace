@@ -77,6 +77,8 @@ from agentic_workspace.workspace_runtime_core import (
     _load_workspace_config,
     _local_chat_checkpoint_projection,
     _local_footprint_payload,
+    _local_work_threads_default_visible,
+    _local_work_threads_projection,
     _maintainer_mode_payload,
     _memory_consult_from_payload,
     _memory_consult_payload,
@@ -497,6 +499,7 @@ def _start_payload(
         payload = _start_tiny_payload_fast(
             target_root=target_root, changed_paths=changed_paths, task_text=task_text, config=config, startup_template=startup_template
         )
+        payload["work_threads"] = _local_work_threads_projection(target_root=target_root, cli_invoke=config.cli_invoke, task_text=task_text)
         normalized_paths = _normalize_changed_paths(changed_paths)
         task_posture_packet = _task_posture_packet_payload(
             config=config,
@@ -670,6 +673,7 @@ def _start_payload(
             target_root=target_root, changed_paths=changed_paths, compact=True, cli_invoke=config.cli_invoke
         ),
         "local_chat_checkpoint": _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke),
+        "work_threads": _local_work_threads_projection(target_root=target_root, cli_invoke=config.cli_invoke, task_text=task_text),
         "maintainer_mode": _maintainer_mode_payload(config=config, target_root=target_root, compact=True),
         "continuation_state": _compact_continuation_state_contract(cli_invoke=config.cli_invoke),
         "operating_posture": _operating_posture_payload(config=config, surface="start", compact=True),
@@ -1204,6 +1208,8 @@ def _hydrate_selected_start_advisory_payloads(
             )
     if _selector_requests(select, "local_chat_checkpoint"):
         payload["local_chat_checkpoint"] = _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke)
+    if _selector_requests(select, "work_threads"):
+        payload["work_threads"] = _local_work_threads_projection(target_root=target_root, cli_invoke=config.cli_invoke, task_text=task_text)
     if _selector_requests(select, "installed_state_compatibility") or _selector_requests(select, "installed_state_drift_triage"):
         installed_modules = _fast_installed_modules(target_root=target_root)
         selected_modules = list(config.enabled_modules)
@@ -1402,6 +1408,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if compact_closeout_obligations:
         context["closeout_obligations"] = compact_closeout_obligations
     local_checkpoint = payload.get("local_chat_checkpoint", {})
+    work_threads = payload.get("work_threads", {})
     if isinstance(local_checkpoint, dict) and _local_chat_checkpoint_default_visible(local_checkpoint, payload=payload):
         context["local_chat_checkpoint"] = {
             key: local_checkpoint.get(key)
@@ -1422,6 +1429,27 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "authority",
             )
             if key in local_checkpoint
+        }
+    if isinstance(work_threads, dict) and _local_work_threads_default_visible(work_threads):
+        context["work_threads"] = {
+            key: work_threads.get(key)
+            for key in (
+                "status",
+                "path",
+                "thread_count",
+                "current_match_count",
+                "stale_count",
+                "selected_thread",
+                "current_matches",
+                "stale_threads",
+                "checkpoint_bridge",
+                "selection_routes",
+                "cleanup",
+                "claim_boundary",
+                "durable_promotion_rule",
+                "authority",
+            )
+            if key in work_threads
         }
     parent_intent_packet = payload.get("parent_intent_status", {})
     if isinstance(parent_intent_packet, dict) and parent_intent_packet.get("status") not in {None, "", "not-recorded", "guidance-only"}:
@@ -1579,6 +1607,14 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         startup_changed_signals.append(f"installed_state_drift_triage={installed_state_triage.get('status')}")
     if isinstance(local_checkpoint, dict) and local_checkpoint.get("status") in {"present", "stale", "unreadable"}:
         startup_changed_signals.append(f"local_chat_checkpoint={local_checkpoint.get('status')}")
+    if isinstance(work_threads, dict) and work_threads.get("status") in {
+        "clear-match",
+        "ambiguous",
+        "stale",
+        "selected-missing",
+        "unreadable",
+    }:
+        startup_changed_signals.append(f"work_threads={work_threads.get('status')}")
     sibling_freshness = payload.get("sibling_repo_aw_freshness", {})
     if isinstance(sibling_freshness, dict) and sibling_freshness.get("status") == "attention":
         startup_changed_signals.append("sibling_repo_aw_freshness=attention")
@@ -1609,6 +1645,12 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         and (target_root / ".agentic-workspace" / "local" / "chat-checkpoint.json").is_file()
     ):
         available_selectors.append("local_chat_checkpoint")
+    if (
+        target_root is not None
+        and "work_threads" not in available_selectors
+        and (target_root / ".agentic-workspace" / "local" / "work-threads").is_dir()
+    ):
+        available_selectors.append("work_threads")
     if "read_only_response" in payload and "acceptance" not in available_selectors:
         insert_at = (
             available_selectors.index("durable_intent_promotion")
@@ -1627,6 +1669,14 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         advisory_selectors.append("installed_state_drift_triage")
     if isinstance(local_checkpoint, dict) and local_checkpoint.get("status") in {"present", "stale", "unreadable"}:
         advisory_selectors.append("local_chat_checkpoint")
+    if isinstance(work_threads, dict) and work_threads.get("status") in {
+        "clear-match",
+        "ambiguous",
+        "stale",
+        "selected-missing",
+        "unreadable",
+    }:
+        advisory_selectors.append("work_threads")
     if isinstance(local_footprint, dict) and local_footprint.get("status") == "attention":
         advisory_selectors.append("local_footprint")
     if isinstance(pre_test_guardrail, dict) and pre_test_guardrail.get("status") == "advisory":

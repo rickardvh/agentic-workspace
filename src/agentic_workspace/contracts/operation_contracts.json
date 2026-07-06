@@ -11,6 +11,12 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "work-thread.prune",
+      "path": "operations/work-thread.prune.json",
+      "command": "work-thread",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "config.report",
       "path": "operations/config.report.json",
       "command": "config",

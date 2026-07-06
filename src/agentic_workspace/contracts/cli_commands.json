@@ -1742,6 +1742,75 @@
       "mutates_state": true
     },
     {
+      "name": "work-thread",
+      "help": "Manage ignored local work-thread continuation handles.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path."
+        }
+      ],
+      "subcommand_dest": "work_thread_command",
+      "subcommands_required": true,
+      "subcommands": [
+        {
+          "name": "prune",
+          "help": "Prune ignored local work-thread records already classified as safe candidates.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "thread_id",
+              "flags": [
+                "--thread-id"
+              ],
+              "action": "append",
+              "default": [],
+              "help": "Local work-thread id to prune. May be repeated."
+            },
+            {
+              "name": "all_candidates",
+              "flags": [
+                "--all-candidates"
+              ],
+              "action": "store_true",
+              "help": "Prune all current safe local work-thread candidates."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Report candidates without deleting local files."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "ignored local work-thread cleanup; not durable closure evidence",
+          "mutates_state": true
+        }
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "local-only work-thread cleanup helper",
+      "mutates_state": true
+    },
+    {
       "name": "start",
       "help": "Return the minimum safe startup context for beginning work in a target repository.",
       "uses_option_groups": [

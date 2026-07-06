@@ -8882,6 +8882,7 @@ def _run_report_command(
         "reasoning_economy": reasoning_economy_evidence_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "external_work_reconciliation": external_work_reconciliation,
         "external_work_delta": external_work_delta,
+        "stale_cleanup": _stale_cleanup_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "next_action": next_action,
         "discovery": discovery,
         "standing_intent": standing_intent,
@@ -10076,6 +10077,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/external-work-reconciliation/v1",
         "purpose": "compact reconciliation posture for cached external work evidence and Planning residue",
         "when_to_use": "before closeout or intake decisions that depend on external issue, ticket, or tracker freshness",
+    },
+    {
+        "section": "stale_cleanup",
+        "kind": "agentic-workspace/stale-cleanup/v1",
+        "purpose": "local-thread and checked-in Planning stale cleanup guidance separated by proof and residue boundary",
+        "when_to_use": "after PR/issue closeout, branch deletion, or stale-thread warnings before claiming a parent lane is fully closed",
     },
     {
         "section": "pr_comment_attention",
@@ -12511,6 +12518,10 @@ def _run_lazy_report_section_command(
                 external_work_delta=external_work_delta,
                 cli_invoke=config.cli_invoke,
             )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "stale_cleanup":
+        payload["stale_cleanup"] = _stale_cleanup_payload(target_root=target_root, cli_invoke=config.cli_invoke)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "release_recovery":
@@ -19087,6 +19098,10 @@ def _external_work_summary(item: dict[str, Any]) -> dict[str, Any]:
         "parent_id": str(item.get("parent_id", "")),
         "reopens": [str(entry).strip() for entry in _list_payload(item.get("reopens")) if str(entry).strip()],
     }
+
+
+def _stale_cleanup_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    return _workspace_runtime_core._stale_cleanup_payload(target_root=target_root, cli_invoke=cli_invoke)
 
 
 def _external_intent_evidence_path(target_root: Path) -> Path:

@@ -10,6 +10,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "work-thread.prune.process",
+      "operation_id": "work-thread.prune",
+      "path": "conformance/work-thread.prune.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "config.report.process",
       "operation_id": "config.report",
       "path": "conformance/config.report.process.json",

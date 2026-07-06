@@ -925,6 +925,44 @@
         "output": []
       },
       "status": "generated"
+    },
+    "work-thread": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "work-thread",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommands": [
+          "prune"
+        ]
+      },
+      "conformance_refs": [
+        "work-thread.prune.process"
+      ],
+      "effect_hints": {
+        "destructive": true,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "work-thread.prune.cli",
+      "operation_id": "work-thread.prune",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "workspace.local-work-thread.prune",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "local_work_thread_prune_result.schema.json"
+        ]
+      },
+      "status": "generated"
     }
   },
   "program": "agentic-workspace",
