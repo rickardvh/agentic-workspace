@@ -2163,6 +2163,57 @@ Remote link: [site](https://example.com/docs/missing.md)
     assert '"intent_type": "static-check"' in route_learning["memory_note_entry"]
 
 
+def test_proof_changed_selector_reviews_scoped_local_tool_coupling(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(
+        tmp_path / "docs" / "guide.md",
+        """
+# Guide
+
+This repository guidance must stay tool-neutral.
+Contributors must run `agentic-workspace start` before opening a PR.
+Optional local evidence may include `.agentic-workspace` proof receipts.
+Agentic Workspace notes appear during local investigation.
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/guide.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    review = answer["local_tool_coupling_review"]
+    assert review["status"] == "attention-needed"
+    assert review["flagged_count"] == 1
+    assert review["accepted_optional_count"] == 1
+    assert review["ambiguous_count"] == 1
+    assert review["flagged_references"][0]["line"] == 5
+    assert "mandatory repository-process" in review["flagged_references"][0]["reason"]
+    assert ".agentic-workspace" in review["accepted_optional_references"][0]["matched_terms"]
+
+
+def test_proof_changed_selector_does_not_globally_ban_local_tool_references(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(tmp_path / "docs" / "guide.md", "Local setup can mention `agentic-workspace start`.\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "docs/guide.md", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert "local_tool_coupling_review" not in answer
+
+
 def test_proof_changed_selector_routes_package_readmes_to_docs_review(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 
