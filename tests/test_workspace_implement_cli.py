@@ -3200,6 +3200,30 @@ def test_implement_accumulates_repeated_changed_flags(tmp_path: Path, capsys) ->
     assert "focused tiny/default payload shape tests" in compatibility_review["expected_proof"]
 
 
+def test_implement_splits_comma_separated_changed_paths(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "./src/app.py, tests/test_app.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["context"]["scope"]["changed_paths"] == ["src/app.py", "tests/test_app.py"]
+    assert "changed_path_count=2" in payload["decision_packet"]["reasons"]
+
+
 def test_implement_package_cli_edits_select_generated_command_package_gate(capsys) -> None:
     assert (
         cli.main(
