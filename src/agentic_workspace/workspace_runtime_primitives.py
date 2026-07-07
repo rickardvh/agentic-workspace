@@ -4370,6 +4370,78 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
     }
 
 
+def _session_improvement_pressure_payload(
+    *, target_root: Path, config: WorkspaceConfig, task_text: str | None, cli_invoke: str, active_planning_present: bool = False
+) -> dict[str, Any]:
+    session_intake = _session_improvement_intake_payload(target_root=target_root, config=config, cli_invoke=cli_invoke)
+    status = str(session_intake.get("status") or "").strip()
+    session_signals = [item for item in _list_payload(session_intake.get("session_observed_signals")) if isinstance(item, dict)]
+    candidates: list[dict[str, Any]] = []
+    active_outcomes = {"unresolved", "recorded_chat_only", "recorded_session_only"}
+    for index, signal in enumerate(session_signals, start=1):
+        outcome = str(signal.get("outcome") or "").strip()
+        if outcome not in active_outcomes:
+            continue
+        candidate = _improvement_signal_candidate(
+            kind="workflow_cost",
+            observed_during="agentic-workspace report --section session_improvement_intake",
+            symptom=str(signal.get("signal") or "session dogfooding signal needs durable disposition"),
+            cost="session-observed improvement signal can disappear without routing",
+            suspected_owner="workspace",
+            likely_remediation="unknown",
+            confidence="medium",
+            recurrence="first_seen",
+            immediate_action="route",
+            retention="shrink_after_fix",
+            source="session_improvement_intake.session_observed_signals",
+        )
+        candidate["pressure_state"] = "active"
+        candidate["evidence_ref"] = ".agentic-workspace/local/cache/dogfooding-signal-status.json"
+        candidate["posture_obligation_ref"] = f"session-improvement-pressure-{index}-owner-route"
+        candidates.append(candidate)
+    if candidates:
+        pressure = _improvement_pressure_payload({"improvement_signal_candidates": candidates})
+        pressure["source_intake"] = "session_improvement_intake"
+        pressure["intake_status"] = status
+        pressure["detail_command"] = _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section session_improvement_intake --format json",
+            cli_invoke=cli_invoke,
+        )
+        return pressure
+    reasons: list[str] = []
+    if status == "checked_none":
+        reasons.append("session improvement intake was checked and found no signal")
+    elif status == "session_observed":
+        reasons.append("session improvement signals are already routed, dismissed, deferred, or otherwise non-active")
+    elif status == "unavailable":
+        reasons.append(
+            str(session_intake.get("claim_boundary") or session_intake.get("reason") or "session improvement intake unavailable")
+        )
+    else:
+        reasons.append(f"session improvement intake status {status or 'unknown'} produced no active pressure")
+    if not active_planning_present and not _dogfooding_signal_relevant(
+        task_text=task_text, config=config, source_checkout=_is_agentic_workspace_source_checkout(target_root)
+    ):
+        reasons.append("current task shape does not require dogfooding pressure in ordinary posture")
+    return {
+        "kind": "workspace-improvement-pressure/v1",
+        "status": "not_checked" if status == "unavailable" else "not_applicable",
+        "source_intake": "session_improvement_intake",
+        "intake_status": status or "unknown",
+        "records": [],
+        "active_record_refs": [],
+        "inactive_record_refs": [],
+        "posture_obligations": [],
+        "active_obligation_refs": [],
+        "non_applicability_reasons": reasons,
+        "detail_command": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section session_improvement_intake --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "routing_rule": "Ordinary posture compiles cheap session improvement pressure only; broad repo-wide scans stay behind explicit selectors.",
+    }
+
+
 def _improvement_intake_payload(
     *, target_root: Path | None = None, config: WorkspaceConfig | None = None, repo_friction: dict[str, Any] | None = None
 ) -> dict[str, Any]:
@@ -4609,9 +4681,77 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _session_improvement_capture_routes(*, cli_invoke: str) -> dict[str, Any]:
+    memory_command = _command_with_cli_invoke(
+        command=(
+            "agentic-workspace memory capture-note --target ./repo --slug <slug> "
+            '--summary "AW dogfooding finding: <evidence-backed lesson>" --files <relevant paths> --format json'
+        ),
+        cli_invoke=cli_invoke,
+    )
+    planning_command = _command_with_cli_invoke(
+        command='agentic-workspace planning new-plan --target ./repo --id <id> --title "<title>" --source "session dogfooding signal" --format json',
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "kind": "agentic-workspace/session-improvement-capture-routes/v1",
+        "status": "available",
+        "cache_path": ".agentic-workspace/local/cache/dogfooding-signal-status.json",
+        "ordinary_routes": [
+            {
+                "id": "record-no-signal",
+                "outcome": "checked_none",
+                "effect": "closeout can state no session dogfooding signal was found",
+                "requires_manual_issue_filing": False,
+            },
+            {
+                "id": "route-to-memory",
+                "outcome": "routed_to_memory",
+                "command": memory_command,
+                "effect": "durable knowledge route without relying on chat recall",
+                "requires_manual_issue_filing": False,
+            },
+            {
+                "id": "route-to-planning",
+                "outcome": "routed_to_planning",
+                "command": planning_command,
+                "effect": "durable planning route for follow-up work",
+                "requires_manual_issue_filing": False,
+            },
+            {
+                "id": "dismiss-with-reason",
+                "outcome": "dismissed_with_reason",
+                "effect": "closeout can record why the signal should not become work",
+                "requires_manual_issue_filing": False,
+            },
+            {
+                "id": "leave-unresolved",
+                "outcome": "unresolved",
+                "effect": "keeps completion visibly qualified until owner, dismissal, or accepted-risk exists",
+                "requires_manual_issue_filing": False,
+            },
+        ],
+        "accepted_outcomes": [
+            "checked_none",
+            "routed_to_issue",
+            "routed_to_planning",
+            "routed_to_memory",
+            "routed_to_docs",
+            "deferred_to_roadmap",
+            "dismissed_with_reason",
+            "unresolved",
+        ],
+        "rule": (
+            "Ordinary work can classify and route session dogfooding residue through Memory, Planning, docs, "
+            "dismissal, no-signal, or unresolved state; GitHub issue filing is optional, not the only route."
+        ),
+    }
+
+
 def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceConfig, cli_invoke: str) -> dict[str, Any]:
     cache_path = ".agentic-workspace/local/cache/dogfooding-signal-status.json"
     cache = _read_local_cache_json(target_root, cache_path)
+    capture_routes = _session_improvement_capture_routes(cli_invoke=cli_invoke)
     repo_wide_command = _command_with_cli_invoke(
         command="agentic-workspace defaults --section improvement_intake --format json",
         cli_invoke=cli_invoke,
@@ -4629,6 +4769,7 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
             "session_signal_source": {"status": "unavailable", "cache_path": cache_path},
             "session_observed_signals": [],
             "routing_decisions": [],
+            "capture_routes": capture_routes,
             "repo_wide_existing": {
                 "status": "bounded_index_available",
                 "command": repo_wide_command,
@@ -4647,6 +4788,12 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
             "session_signal_source": {"status": "missing", "cache_path": cache_path},
             "session_observed_signals": [],
             "routing_decisions": [],
+            "capture_routes": capture_routes,
+            "operational_effect": {
+                "status": "capture-route-available",
+                "changes": ["durable routing choices", "closeout classification vocabulary"],
+                "non_applicability_reason": "no session signal has been recorded yet",
+            },
             "repo_wide_existing": {
                 "status": "bounded_index_available",
                 "command": repo_wide_command,
@@ -4685,6 +4832,13 @@ def _session_improvement_intake_payload(*, target_root: Path, config: WorkspaceC
                 "closeout_blocked": outcome["closeout_blocked"],
             }
         ],
+        "capture_routes": capture_routes,
+        "operational_effect": {
+            "status": "closeout-blocking" if outcome["closeout_blocked"] else "disposition-recorded",
+            "changes": ["durable route/capture/dismissal state", "closeout boundary"],
+            "disposition": outcome["status"],
+            "durability": outcome["durability"],
+        },
         "repo_wide_existing": {
             "status": "bounded_index_available",
             "command": repo_wide_command,
@@ -21772,7 +21926,13 @@ def _compact_task_posture_packet_projection(task_posture_packet: dict[str, Any])
         "kind": task_posture_packet.get("kind"),
         "operating_posture": task_posture_packet.get("operating_posture", {}),
         "workflow_obligations": task_posture_packet.get("workflow_obligations", []),
+        "workflow_obligation_effects": task_posture_packet.get("workflow_obligation_effects", []),
+        "improvement_pressure_evaluation": task_posture_packet.get("improvement_pressure_evaluation", {}),
         "improvement_obligations": task_posture_packet.get("improvement_obligations", []),
+        "dogfooding_signal_status": task_posture_packet.get("dogfooding_signal_status", {}),
+        "dogfooding_obligations": task_posture_packet.get("dogfooding_obligations", []),
+        "optimization_effect": task_posture_packet.get("optimization_effect", {}),
+        "operational_effectiveness": task_posture_packet.get("operational_effectiveness", {}),
         "skill_routes": task_posture_packet.get("skill_routes", []),
         "allowed_actions": task_posture_packet.get("allowed_actions", []),
         "forbidden_actions": task_posture_packet.get("forbidden_actions", []),
@@ -24195,6 +24355,24 @@ def _dogfooding_signal_status_payload(
         "canonical_repo_history": bool(outcome["canonical_repo_history"]),
         "cache_path": cache_path,
         "detail_command": command,
+        "capture_routes": _session_improvement_capture_routes(cli_invoke=cli_invoke),
+        "disposition": {
+            "status": status,
+            "allowed_states": [
+                "fixed",
+                "routed_to_issue",
+                "routed_to_planning",
+                "routed_to_memory",
+                "routed_to_docs",
+                "deferred_to_roadmap",
+                "dismissed_with_reason",
+                "checked_none",
+                "accepted-risk",
+                "unresolved",
+            ],
+            "behavior_effect": "closeout-blocking" if closeout_blocked else "classified",
+            "diagnostic_command_alone_satisfies": False,
+        },
         "selector": "dogfooding_signal_status",
         "allowed_statuses": sorted(allowed_statuses),
         "claim_boundary": "A broad done claim is qualified until dogfooding signals are checked and routed, recorded locally, deferred, dismissed, or left visibly unresolved.",
@@ -33156,6 +33334,16 @@ def _workflow_obligations_report_payload(
         },
         "configured": configured,
         "relevant_to_current_work": relevant,
+        "disposition_contract": {
+            "kind": "agentic-workspace/workflow-obligation-disposition-contract/v1",
+            "allowed_states": ["changed-behavior", "no-signal", "routed", "dismissed", "accepted-risk", "unresolved"],
+            "diagnostic_command_alone_satisfies": False,
+            "rule": (
+                "Behavior-changing workflow obligations require a recorded disposition; running a diagnostic command alone "
+                "is only evidence gathering unless the disposition says no signal was found or the signal was routed/dismissed."
+            ),
+        },
+        "operational_effects": _workflow_obligation_disposition_effects(configured=configured, relevant=relevant, matching=matching),
     }
 
 
@@ -33170,6 +33358,215 @@ def _workflow_obligation_gate_status(*, obligation: dict[str, Any], matched: boo
     if force == "blocking":
         return "blocking" if matched else "standing-blocking-requirement"
     return "unknown"
+
+
+def _workflow_obligation_disposition_effects(
+    *, configured: list[dict[str, Any]], relevant: list[dict[str, Any]], matching: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    matched_by_id = {str(item.get("id")): item for item in matching if isinstance(item, dict)}
+    relevant_ids = {str(item.get("id")) for item in relevant if isinstance(item, dict)}
+    effects: list[dict[str, Any]] = []
+    for obligation in configured:
+        if not isinstance(obligation, dict):
+            continue
+        obligation_id = str(obligation.get("id") or "").strip()
+        force = str(obligation.get("force") or "recommended")
+        matched = obligation_id in relevant_ids
+        behavior_changing = matched and force in {"required-before-closeout", "blocking"}
+        effects.append(
+            {
+                "id": obligation_id,
+                "status": "behavior-changing" if behavior_changing else "advisory" if matched else "not-currently-relevant",
+                "matched": matched,
+                "force": force,
+                "stage": str(obligation.get("stage") or ""),
+                "gate_status": str(_as_dict(matched_by_id.get(obligation_id)).get("gate_status") or ""),
+                "changes": ["closeout boundary", "forbidden actions", "task posture obligations"] if behavior_changing else [],
+                "allowed_dispositions": ["changed-behavior", "no-signal", "routed", "dismissed", "accepted-risk", "unresolved"],
+                "diagnostic_command_alone_satisfies": False,
+                "record_resolution_to": "closeout evidence, Planning closeout, or PR body",
+            }
+        )
+    return effects
+
+
+def _optimization_posture_operational_effect(*, config: WorkspaceConfig, compact: bool) -> dict[str, Any]:
+    effects: list[dict[str, Any]] = []
+    if config.optimization_bias == "agent-efficiency":
+        effects.extend(
+            [
+                {
+                    "id": "compact-router-first",
+                    "changes": ["ordinary output shape", "read budget"],
+                    "requirement": "agent-efficiency: emit compact router state first; move broad detail behind selectors",
+                },
+                {
+                    "id": "proof-output-cap",
+                    "changes": ["proof reporting boundary"],
+                    "requirement": "agent-efficiency: summarize proof receipts and cite commands instead of pasting broad output",
+                },
+            ]
+        )
+    elif config.optimization_bias == "human-legibility":
+        effects.append(
+            {
+                "id": "human-legibility-context",
+                "changes": ["ordinary output shape"],
+                "requirement": "human-legibility: include enough labels and context for human review without hiding proof or uncertainty",
+            }
+        )
+    return {
+        "kind": "agentic-workspace/optimization-posture-effect/v1",
+        "status": "behavior-changing" if effects else "balanced",
+        "mode": config.optimization_bias,
+        "source": config.optimization_bias_source,
+        "current_projection": "tiny-router-first" if compact else "selector-first-detail-on-demand",
+        "enforced_effects": effects,
+        "must_not_hide": ["proof", "safety", "uncertainty", "residue"],
+        "rule": "Optimization posture may change output/proof/selector routing, but not machine-readable truth or safety boundaries.",
+    }
+
+
+def _operational_effectiveness_record(
+    *, signal: str, source: str, status: str, changes: Sequence[str] = (), non_applicability_reason: str = ""
+) -> dict[str, Any]:
+    return {
+        "signal": signal,
+        "source": source,
+        "status": status,
+        "changes": list(changes),
+        "non_applicability_reason": non_applicability_reason,
+        "operationally_effective": status == "behavior-changing",
+    }
+
+
+def _operational_effectiveness_payload(
+    *,
+    improvement_pressure_evaluation: dict[str, Any],
+    improvement_obligations: list[dict[str, Any]],
+    dogfooding_signal_status: dict[str, Any],
+    dogfooding_obligations: list[dict[str, Any]],
+    workflow_effects: list[dict[str, Any]],
+    optimization_effect: dict[str, Any],
+    planning_safety_gate: dict[str, Any],
+    proof: dict[str, Any],
+    closeout_trust: dict[str, Any],
+) -> dict[str, Any]:
+    records: list[dict[str, Any]] = []
+    records.append(
+        _operational_effectiveness_record(
+            signal="improvement_pressure",
+            source="session_improvement_intake",
+            status="behavior-changing" if improvement_obligations else "not-applicable",
+            changes=["task posture obligations", "forbidden actions", "closeout boundary"] if improvement_obligations else [],
+            non_applicability_reason="; ".join(_list_payload(improvement_pressure_evaluation.get("non_applicability_reasons"))),
+        )
+    )
+    dogfooding_status = str(dogfooding_signal_status.get("status") or "not_applicable")
+    records.append(
+        _operational_effectiveness_record(
+            signal="session_dogfooding",
+            source="dogfooding_signal_status",
+            status="behavior-changing" if dogfooding_obligations or dogfooding_signal_status.get("capture_routes") else "not-applicable",
+            changes=["durable route/capture/dismissal state", "closeout boundary"]
+            if dogfooding_obligations
+            else ["route affordance"]
+            if dogfooding_signal_status.get("capture_routes")
+            else [],
+            non_applicability_reason=str(dogfooding_signal_status.get("reason") or "") if dogfooding_status == "not_applicable" else "",
+        )
+    )
+    behavior_workflow = [item for item in workflow_effects if str(item.get("status")) == "behavior-changing"]
+    records.append(
+        _operational_effectiveness_record(
+            signal="workflow_obligations",
+            source="workflow_obligations",
+            status="behavior-changing" if behavior_workflow else "advisory",
+            changes=["closeout boundary", "forbidden actions", "task posture obligations"] if behavior_workflow else [],
+            non_applicability_reason="no behavior-changing workflow obligation matched current scope" if not behavior_workflow else "",
+        )
+    )
+    optimization_changes = _dedupe(
+        [
+            str(change)
+            for effect in _list_payload(optimization_effect.get("enforced_effects"))
+            if isinstance(effect, dict)
+            for change in _list_payload(effect.get("changes"))
+            if str(change).strip()
+        ]
+    )
+    records.append(
+        _operational_effectiveness_record(
+            signal="workspace_optimization",
+            source="operating_posture.optimization_bias",
+            status="behavior-changing" if optimization_changes else "advisory",
+            changes=optimization_changes,
+            non_applicability_reason="balanced optimization posture has no extra enforcement beyond ordinary output contract"
+            if not optimization_changes
+            else "",
+        )
+    )
+    planning_changes = []
+    if planning_safety_gate.get("workflow_sufficient") is False:
+        planning_changes = ["next_safe_action", "allowed actions", "forbidden actions"]
+    elif planning_safety_gate:
+        planning_changes = ["claim boundary"]
+    records.append(
+        _operational_effectiveness_record(
+            signal="planning",
+            source="planning_safety_gate",
+            status="behavior-changing" if planning_changes else "advisory",
+            changes=planning_changes,
+            non_applicability_reason="planning signal did not need to alter current task posture" if not planning_changes else "",
+        )
+    )
+    proof_commands = _list_payload(proof.get("required_commands")) or _list_payload(proof.get("proof_commands"))
+    proof_boundary_present = bool(
+        proof_commands
+        or proof.get("tiny_surface_compatibility_review")
+        or proof.get("runtime_source_edit_review")
+        or proof.get("acceptance_guidance")
+        or proof.get("proof_selection_identity")
+    )
+    records.append(
+        _operational_effectiveness_record(
+            signal="verification",
+            source="proof_selection",
+            status="behavior-changing" if proof_boundary_present else "advisory",
+            changes=["proof selection", "completion claim boundary"] if proof_boundary_present else [],
+            non_applicability_reason="no proof route selected for the current packet" if not proof_boundary_present else "",
+        )
+    )
+    closeout_changes = []
+    if str(closeout_trust.get("trust") or "").lower() == "lower-trust" or _as_int(closeout_trust.get("lower_trust_closeout_count")) > 0:
+        closeout_changes = ["closeout boundary", "durable residue routing"]
+    records.append(
+        _operational_effectiveness_record(
+            signal="memory",
+            source="memory/closeout routing",
+            status="behavior-changing" if closeout_changes else "advisory",
+            changes=closeout_changes,
+            non_applicability_reason="memory signal is advisory unless route-matched Memory or closeout residue is present"
+            if not closeout_changes
+            else "",
+        )
+    )
+    behavior_count = sum(1 for record in records if record["operationally_effective"])
+    return {
+        "kind": "agentic-workspace/operational-effectiveness/v1",
+        "status": "active" if behavior_count else "advisory-only",
+        "definition": (
+            "A signal is operationally effective only when it changes next_safe_action, allowed/forbidden actions, "
+            "proof selection or boundary, closeout boundary, task posture obligations, or durable route/capture/dismissal state."
+        ),
+        "records": records,
+        "summary": {
+            "record_count": len(records),
+            "behavior_changing_count": behavior_count,
+            "advisory_or_non_applicable_count": len(records) - behavior_count,
+        },
+        "claim_boundary": "Do not close #2046 unless more than one module/signal class has behavior-changing evidence and residual child symptoms remain bounded.",
+    }
 
 
 def _task_posture_packet_payload(
@@ -33198,6 +33595,17 @@ def _task_posture_packet_payload(
     improvement_obligations = [
         dict(item) for item in _list_payload(improvement_pressure.get("posture_obligations")) if isinstance(item, dict)
     ]
+    improvement_pressure_evaluation = {
+        "status": str(improvement_pressure.get("status") or "not-evaluated"),
+        "source_intake": str(improvement_pressure.get("source_intake") or ""),
+        "intake_status": str(improvement_pressure.get("intake_status") or ""),
+        "active_obligation_count": len(improvement_obligations),
+        "non_applicability_reasons": [
+            str(item) for item in _list_payload(improvement_pressure.get("non_applicability_reasons")) if str(item).strip()
+        ],
+        "detail_command": str(improvement_pressure.get("detail_command") or ""),
+    }
+    improvement_pressure_evaluation = {key: value for key, value in improvement_pressure_evaluation.items() if value not in ("", [], {})}
     relevant_obligations = [
         dict(item) for item in _list_payload(workflow_obligations.get("relevant_to_current_work")) if isinstance(item, dict)
     ]
@@ -33207,6 +33615,7 @@ def _task_posture_packet_payload(
                 continue
             if str(item.get("force", "")) in {"blocking", "required-before-closeout"}:
                 relevant_obligations.append(dict(item))
+    workflow_effects = [dict(item) for item in _list_payload(workflow_obligations.get("operational_effects")) if isinstance(item, dict)]
     operating_posture = _operating_posture_payload(config=config, surface=surface, compact=True)
     execution_posture = _execution_posture_payload(
         config=config,
@@ -33272,6 +33681,39 @@ def _task_posture_packet_payload(
     )
     for obligation in improvement_obligations:
         forbidden_actions.extend(str(item) for item in _list_payload(obligation.get("forbidden_actions")) if str(item).strip())
+    dogfooding_signal_status = _dogfooding_signal_status_payload(
+        target_root=config.target_root or Path("."),
+        config=config,
+        task_text=task_text,
+        cli_invoke=config.cli_invoke,
+        active_planning_present=bool(planning_safety_gate.get("active_planning_present")),
+    )
+    dogfooding_obligations: list[dict[str, Any]] = []
+    dogfooding_status = str(dogfooding_signal_status.get("status") or "")
+    dogfooding_task_text = " ".join((task_text or "").lower().split())
+    explicit_dogfooding_pressure = any(
+        marker in dogfooding_task_text for marker in ("#2046", "self-improvement", "operational effectiveness")
+    )
+    obligation_statuses = {"recorded_chat_only", "recorded_session_only", "unresolved"}
+    if dogfooding_signal_status.get("applies_to_current_work") and (
+        dogfooding_status in obligation_statuses or (dogfooding_status == "not_checked" and explicit_dogfooding_pressure)
+    ):
+        dogfooding_obligations.append(
+            {
+                "id": "session-dogfooding-disposition",
+                "source": "dogfooding_signal_status",
+                "status": dogfooding_status,
+                "effect": "require fixed, routed, dismissed, accepted-risk, no-signal, or unresolved disposition before broad closeout",
+                "routes_to": ["closeout_boundaries", "posture_adherence", "durable routing"],
+                "forbidden_actions": ["claim dogfooding obligation satisfied by running diagnostics alone"],
+                "closeout_boundary": "session dogfooding signal classified as fixed, routed, dismissed, accepted-risk, no-signal, or explicitly unresolved",
+                "next_allowed_action": "classify session dogfooding signal disposition",
+                "capture_routes": dogfooding_signal_status.get("capture_routes", {}),
+                "adherence": "unresolved",
+            }
+        )
+    for obligation in dogfooding_obligations:
+        forbidden_actions.extend(str(item) for item in _list_payload(obligation.get("forbidden_actions")) if str(item).strip())
     proof_boundaries = [str(item) for item in _list_payload(proof.get("required_commands")) if str(item).strip()]
     if not proof_boundaries:
         proof_boundaries = [str(item) for item in _list_payload(proof.get("proof_commands")) if str(item).strip()]
@@ -33291,6 +33733,9 @@ def _task_posture_packet_payload(
         closeout_boundaries = ["record proof, acceptance, posture adherence, and residue before completion claims"]
     improvement_closeout_boundaries = [
         str(item.get("closeout_boundary")) for item in improvement_obligations if str(item.get("closeout_boundary") or "").strip()
+    ]
+    dogfooding_closeout_boundaries = [
+        str(item.get("closeout_boundary")) for item in dogfooding_obligations if str(item.get("closeout_boundary") or "").strip()
     ]
     authority_boundaries = []
     for source_name, source_payload in (
@@ -33359,6 +33804,12 @@ def _task_posture_packet_payload(
         "prefer compact router output; use selectors/detail commands for raw context",
         f"apply optimization_bias={config.optimization_bias}",
     ]
+    optimization_effect = _optimization_posture_operational_effect(config=config, compact=compact)
+    output_shape_requirements.extend(
+        str(effect.get("requirement"))
+        for effect in _list_payload(optimization_effect.get("enforced_effects"))
+        if isinstance(effect, dict) and str(effect.get("requirement") or "").strip()
+    )
     review_rubrics = [
         "Did the work follow the resolved task posture?",
         "Were hard obligations, proof burden, authority boundaries, and read budget respected?",
@@ -33368,6 +33819,21 @@ def _task_posture_packet_payload(
         review_rubrics.append("Were matched workflow obligations satisfied or explicitly routed?")
     if improvement_obligations:
         review_rubrics.append("Were active improvement-pressure obligations followed, overridden, accepted-risk, or left unresolved?")
+    if dogfooding_obligations:
+        review_rubrics.append(
+            "Was session dogfooding friction fixed, routed, dismissed, accepted-risk, no-signal, or left explicitly unresolved?"
+        )
+    operational_effectiveness = _operational_effectiveness_payload(
+        improvement_pressure_evaluation=improvement_pressure_evaluation,
+        improvement_obligations=improvement_obligations,
+        dogfooding_signal_status=dogfooding_signal_status,
+        dogfooding_obligations=dogfooding_obligations,
+        workflow_effects=workflow_effects,
+        optimization_effect=optimization_effect,
+        planning_safety_gate=planning_safety_gate,
+        proof=proof,
+        closeout_trust=closeout_trust,
+    )
     knowledge_gates = _knowledge_gates_payload(
         surface=surface,
         task_text=task_text,
@@ -33413,12 +33879,20 @@ def _task_posture_packet_payload(
             "repo_posture_reminder": repo_posture["reminder"],
         },
         "workflow_obligations": relevant_obligations,
+        "workflow_obligation_effects": workflow_effects,
+        "improvement_pressure_evaluation": improvement_pressure_evaluation,
         "improvement_obligations": improvement_obligations,
+        "dogfooding_signal_status": dogfooding_signal_status,
+        "dogfooding_obligations": dogfooding_obligations,
+        "optimization_effect": optimization_effect,
+        "operational_effectiveness": operational_effectiveness,
         "skill_routes": skill_routes,
         "allowed_actions": _dedupe(allowed_actions),
         "forbidden_actions": _dedupe(forbidden_actions),
         "proof_boundaries": _dedupe(proof_boundaries),
-        "closeout_boundaries": _dedupe([*closeout_boundaries, *gate_closeout_boundaries, *improvement_closeout_boundaries]),
+        "closeout_boundaries": _dedupe(
+            [*closeout_boundaries, *gate_closeout_boundaries, *improvement_closeout_boundaries, *dogfooding_closeout_boundaries]
+        ),
         "read_budget": read_budget,
         "authority_boundaries": authority_boundaries,
         "knowledge_gates": knowledge_gates,
@@ -33426,7 +33900,11 @@ def _task_posture_packet_payload(
         "blocked_actions": blocked_actions,
         "next_allowed_action": improvement_next_actions[0]
         if improvement_next_actions
-        else (gate_next_actions[0] if gate_next_actions else (allowed_actions[0] if allowed_actions else "continue-direct")),
+        else (
+            str(dogfooding_obligations[0].get("next_allowed_action"))
+            if dogfooding_obligations
+            else (gate_next_actions[0] if gate_next_actions else (allowed_actions[0] if allowed_actions else "continue-direct"))
+        ),
         "output_shape_requirements": output_shape_requirements,
         "review_rubrics": review_rubrics,
         "module_contributions": module_contributions,
@@ -33436,6 +33914,10 @@ def _task_posture_packet_payload(
             {"source": "planning_safety_gate", "status": planning_safety_gate.get("status", "not-present")},
             {"source": "module_registry", "matched_module_count": len(module_contributions)},
             {"source": "improvement_pressure", "active_obligation_count": len(improvement_obligations)},
+            {
+                "source": "operational_effectiveness",
+                "behavior_changing_count": operational_effectiveness["summary"]["behavior_changing_count"],
+            },
         ],
     }
     packet["dynamic_instruction_projection"] = {
@@ -33465,6 +33947,15 @@ def _task_posture_packet_payload(
                 "record_to": "closeout evidence, report closeout, or PR body",
             }
             for obligation in improvement_obligations
+        ],
+        "dogfooding_obligation_adherence": [
+            {
+                "obligation_ref": str(obligation.get("id") or ""),
+                "status": str(obligation.get("adherence") or "unresolved"),
+                "allowed_states": ["fixed", "routed", "dismissed", "no-signal", "unresolved", "accepted-risk"],
+                "record_to": "closeout evidence, report closeout, or PR body",
+            }
+            for obligation in dogfooding_obligations
         ],
     }
     return packet
@@ -33658,6 +34149,10 @@ def _task_posture_packet_changes_routing(packet: dict[str, Any]) -> bool:
         return False
     return bool(
         packet.get("workflow_obligations")
+        or packet.get("workflow_obligation_effects")
+        or packet.get("improvement_obligations")
+        or packet.get("dogfooding_obligations")
+        or packet.get("operational_effectiveness")
         or packet.get("module_contributions")
         or packet.get("forbidden_actions")
         or packet.get("proof_boundaries")
@@ -33678,6 +34173,11 @@ def _task_posture_packet_relevant(*, task_text: str | None, changed_paths: list[
         "agents.md",
         "module participation",
         "workflow obligation",
+        "operational effectiveness",
+        "operational-effectiveness",
+        "#2046",
+        "self-improvement",
+        "optimization",
         "knowledge gate",
         "knowledge-gate",
         "knowledge routing",
