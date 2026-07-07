@@ -1,0 +1,125 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "issue-2046-operational-effectiveness",
+  "title": "Issue 2046 operational self-improvement effectiveness",
+  "status": "archived",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "Make self-improvement, dogfooding, workflow-obligation, optimization-posture, and core module signals change ordinary AW behavior or produce explicit non-applicability/routing states for issue #2046.",
+  "purpose_for_parent": "Close the #2046 parent only when operational pressure demonstrably affects ordinary work across more than one signal/module class; first slices must not close the parent by fixing only one symptom.",
+  "subsystems": [],
+  "technical_strategy": "Start with the narrow improvement-pressure posture compiler slice, then layer session dogfooding persistence/routing, workflow-obligation disposition states, optimization-posture enforcement, and module-effectiveness fixtures. Keep broad repo-friction scans selector-gated unless a slice explicitly changes that cost model.",
+  "technology_choices": [
+    "existing task_posture_packet",
+    "session_improvement_intake and dogfooding-signal local cache",
+    "changed-path AW proof selection",
+    "focused workspace CLI tests"
+  ],
+  "slice_sequence": [
+    {
+      "id": "issue-2046-improvement-pressure-posture",
+      "title": "#2046 first slice: session improvement pressure posture compiler",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [],
+      "purpose_for_lane": "Compile cheap current-session improvement pressure into task_posture_packet obligations for ordinary start/implement, or expose explicit non-applicability/not-checked reasons without running broad repo-friction scans.",
+      "proof": "Focused start/implement CLI tests plus runtime mirror consistency.",
+      "residual_after_slice": "Repo-wide improvement pressure, workflow-obligation disposition states, optimization enforcement, and module-effectiveness fixtures remain future slices."
+    },
+    {
+      "id": "issue-2046-session-dogfooding-capture",
+      "title": "#2046 session dogfooding capture/routing",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [
+        "issue-2046-improvement-pressure-posture"
+      ],
+      "purpose_for_lane": "Make observed dogfooding friction capturable and routable from ordinary work without relying on chat memory.",
+      "proof": "CLI/report fixture showing capture, route, dismiss, accepted-risk, no-signal, and unresolved states.",
+      "residual_after_slice": "No lane-local residue; durable follow-ups are tracked outside #2046 as #2048/#2049."
+    },
+    {
+      "id": "issue-2046-workflow-obligation-disposition",
+      "title": "#2046 workflow obligation disposition states",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [
+        "issue-2046-session-dogfooding-capture"
+      ],
+      "purpose_for_lane": "Distinguish command-run ceremony from fixed, routed, dismissed, accepted-risk, no-signal, or unresolved behavior-changing obligations.",
+      "proof": "Workflow obligation fixture where diagnostic execution alone does not satisfy a behavior-changing obligation.",
+      "residual_after_slice": "No lane-local residue; diagnostic execution alone is explicitly marked insufficient."
+    },
+    {
+      "id": "issue-2046-optimization-effect",
+      "title": "#2046 optimization posture enforcement",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [
+        "issue-2046-workflow-obligation-disposition"
+      ],
+      "purpose_for_lane": "Make optimization_bias=agent-efficiency enforce at least one ordinary output/proof/selector default without hiding safety or proof.",
+      "proof": "Budget or selector fixture proving the configured posture changes output/routing.",
+      "residual_after_slice": "No lane-local residue; compact-router-first and proof-output-cap are exposed as enforceable effects."
+    },
+    {
+      "id": "issue-2046-module-effectiveness-matrix",
+      "title": "#2046 module-effectiveness fixture matrix",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [
+        "issue-2046-optimization-effect"
+      ],
+      "purpose_for_lane": "Prove Workspace, Planning, Memory, and Verification signals each change behavior or are explicitly advisory/non-applicable.",
+      "proof": "Fixture matrix across core module signals and ordinary task posture/proof/closeout effects.",
+      "residual_after_slice": "External review/merge ownership remains outside local implementation; #2046 runtime acceptance is covered."
+    }
+  ],
+  "current_slice": "issue-2046-module-effectiveness-matrix",
+  "acceptance_boundary": "The lane is complete only when #2046 acceptance evidence covers more than one signal/module class and child symptom slices remain bounded rather than silently closing the parent.",
+  "proof_strategy": "Each slice must include focused CLI fixtures showing at least one operational effect or explicit non-applicability state; lane closeout aggregates slice proof and records residual parent gaps before any #2046 completion claim.",
+  "proof_aggregation": {
+    "status": "satisfied",
+    "evidence": [
+      "issue-2046-improvement-pressure-posture: focused start/implement tests passed; runtime_mirror_consistency in_sync; make test-workspace, make lint-workspace, tests/test_workspace_cli.py, make typecheck, summary, and git diff --check passed.",
+      "issue-2046-session-dogfooding-capture: dogfooding signal status and session improvement intake expose capture routes, disposition states, and closeout-blocking unresolved observations.",
+      "issue-2046-workflow-obligation-disposition: workflow obligations now expose behavior-changing/advisory effects and mark diagnostic execution alone as insufficient.",
+      "issue-2046-optimization-effect: optimization_bias=agent-efficiency surfaces compact-router-first and proof-output-cap effects without suppressing safety or proof residue.",
+      "issue-2046-module-effectiveness-matrix: task_posture_packet operational_effectiveness records Workspace, Planning, Memory, and Verification signals as behavior-changing, advisory, non-applicable, or unresolved."
+    ],
+    "known_gaps": [
+      "External GitHub issue/PR closure remains outside this local implementation closeout.",
+      "Installed payload freshness remains unclaimed because doctor reported payload sync-required and this lane did not change installed payload surfaces.",
+      "Out-of-scope dogfooding findings are tracked separately as #2048/#2049."
+    ]
+  },
+  "residual_lane_work": "No #2046 lane-local implementation work remains; external review/merge and installed-payload freshness are separate ownership.",
+  "lane_to_epic_contribution": "The lane proves multiple signal/module classes change ordinary task posture, routing, proof, or closeout boundaries, while child #2045/#2047 remain bounded symptoms.",
+  "parent_close_permission": "may-close-parent-after-human-confirmation",
+  "closeout_state": {
+    "status": "closed",
+    "summary": "Full #2046 lane implementation evidence is present locally and the full-lane execplan was archived with lane intent satisfied.",
+    "residual_work": "External review/merge and issue closure only.",
+    "next_owner": "PR/review owner"
+  },
+  "references": [
+    {
+      "kind": "github-issue",
+      "target": "#2046",
+      "label": "Operational self-improvement effectiveness",
+      "role": "parent"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#2045",
+      "label": "Default output budget symptom",
+      "role": "related-child-symptom"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#2047",
+      "label": "Memory routing/capture symptom",
+      "role": "related-child-symptom"
+    }
+  ],
+  "notes": "The user corrected the scope to the whole lane, so the remaining planned slices were implemented together in the full-lane execplan. Durable follow-ups #2048/#2049 remain outside #2046."
+}

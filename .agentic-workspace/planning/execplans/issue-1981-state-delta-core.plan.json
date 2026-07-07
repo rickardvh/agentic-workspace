@@ -161,11 +161,13 @@
   "references": [],
   "active_milestone": {
     "id": "issue-1981-state-delta-core",
-    "status": "active",
+    "status": "planned",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
-    "ready": "ready",
+    "ready": "queued",
     "blocked": "none",
-    "optional_deps": "none"
+    "optional_deps": "none",
+    "switched_from_active_by": "issue-2046-improvement-pressure-posture",
+    "switch_reason": "GitHub #2046 first slice"
   },
   "immediate_next_action": [
     "Publish the #1981 PR; proof is complete."
@@ -322,6 +324,7 @@
     }
   },
   "drift_log": [
-    "2026-07-03: Scaffolded by agentic-planning new-plan."
+    "2026-07-03: Scaffolded by agentic-planning new-plan.",
+    "2026-07-07: Demoted from active by agentic-planning new-plan --switch-active (issue-2046-improvement-pressure-posture)."
   ]
 }
