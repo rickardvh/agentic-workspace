@@ -84,6 +84,7 @@ from agentic_workspace.workspace_runtime_core import (
     _selector_requests_task_contract,
     _selector_requests_test_strategy_check,
     _selector_requests_verification,
+    _session_improvement_pressure_payload,
     _task_acceptance_payload,
     _task_contract_payload,
     _task_intent_carry_forward_payload,
@@ -974,6 +975,13 @@ def _implement_payload(
         task_text=task_text,
         changed_paths=normalized_paths,
     )
+    improvement_pressure = _session_improvement_pressure_payload(
+        target_root=target_root,
+        config=config,
+        task_text=task_text,
+        cli_invoke=config.cli_invoke,
+        active_planning_present=bool(active_planning_record_for_intent),
+    )
     task_posture_packet = _task_posture_packet_payload(
         config=config,
         surface="implement",
@@ -983,10 +991,13 @@ def _implement_payload(
         skill_routing={},
         planning_safety_gate=planning_safety_gate,
         proof=proof,
+        improvement_pressure=improvement_pressure,
         compact=False,
     )
-    if _task_posture_packet_relevant(
-        task_text=task_text, changed_paths=normalized_paths, surface="implement"
+    if (
+        _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="implement")
+        or task_posture_packet.get("improvement_obligations")
+        or task_posture_packet.get("dogfooding_obligations")
     ) and _task_posture_packet_changes_routing(task_posture_packet):
         payload["task_posture_packet"] = task_posture_packet
     if include_routine_work_context:
