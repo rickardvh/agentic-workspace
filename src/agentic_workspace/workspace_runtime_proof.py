@@ -3194,6 +3194,14 @@ def _proof_selection_for_changed_paths(
         proof_confidence=proof_confidence,
         manual_verification=manual_verification,
     )
+    proof_command_explanations = _proof_command_explanations_payload(
+        selected_commands=selected_commands,
+        required_commands=required_commands,
+        optional_commands=optional_commands,
+        unavailable_commands=unavailable_commands,
+        host_policy_blocked_commands=host_policy_blocked_commands,
+        manual_verification=manual_verification,
+    )
     active_planning_record_for_requirement = (
         _active_planning_record_for_report_section(target_root=target_root) if target_root is not None else {}
     )
@@ -3300,6 +3308,7 @@ def _proof_selection_for_changed_paths(
         "intent_proof": intent_proof,
         "proof_confidence": proof_confidence,
         "proof_adequacy": proof_adequacy,
+        "proof_command_explanations": proof_command_explanations,
         "requirement_grounding": requirement_grounding,
         "test_strategy_check": test_strategy_check,
         "architecture_principles": architecture_principles,
@@ -3689,3 +3698,132 @@ def _markdown_path_reference_memory_note_entry() -> str:
         "learned_at": date.today().isoformat(),
     }
     return f"agentic-workspace-proof-route: {json.dumps(entry, sort_keys=True)}"
+
+
+def _proof_command_explanations_payload(
+    *,
+    selected_commands: list[dict[str, Any]],
+    required_commands: list[str],
+    optional_commands: list[str],
+    unavailable_commands: list[dict[str, Any]],
+    host_policy_blocked_commands: list[dict[str, str]],
+    manual_verification: dict[str, Any] | None,
+) -> dict[str, Any]:
+    selected_by_text = {str(command.get("command", "")): command for command in selected_commands}
+    required_items = [
+        _proof_command_explanation_item(command=str(command), selected=selected_by_text.get(str(command), {}), blocking=True)
+        for command in required_commands
+    ]
+    optional_items = [
+        {
+            "command": str(command),
+            "reason_classes": ["optional-confidence"],
+            "blocking": False,
+            "why": "Recommended confidence check; it may raise trust but does not replace required proof.",
+        }
+        for command in optional_commands
+        if str(command) not in set(required_commands)
+    ]
+    manual_items = (
+        [
+            {
+                "kind": "manual-verification/v1",
+                "status": str(manual_verification.get("status", "")),
+                "reason_classes": ["unavailable-manual"],
+                "blocking": True,
+                "why": str(manual_verification.get("reason", "")) or "Manual verification is required.",
+            }
+        ]
+        if manual_verification is not None
+        else []
+    )
+    unavailable_items = [
+        {
+            "command": str(command.get("command", "")),
+            "lane": str(command.get("lane", "")),
+            "reason": str(command.get("reason", "")),
+            "reason_classes": ["unavailable-manual"],
+            "blocking": True,
+            **({"missing_paths": command["missing_paths"]} if command.get("missing_paths") else {}),
+            **({"replacement": command["replacement"]} if command.get("replacement") else {}),
+        }
+        for command in unavailable_commands
+    ]
+    policy_blocked_items = [
+        {
+            "command": str(command.get("command", "")),
+            "lane": str(command.get("lane", "")),
+            "reason": str(command.get("reason", "")),
+            "reason_classes": ["explicit-config-policy"],
+            "blocking": True,
+            "configured_command": str(command.get("configured_command", "")),
+        }
+        for command in host_policy_blocked_commands
+    ]
+    return {
+        "kind": "agentic-workspace/proof-command-explanations/v1",
+        "status": "present" if required_items or optional_items or manual_items or unavailable_items or policy_blocked_items else "empty",
+        "reason_class_model": {
+            "learned-repo-evidence": "selected from confirmed repo-local route evidence or Memory-backed learning",
+            "explicit-config-policy": "selected or blocked by host configuration, subsystem ownership, local overlay, or proof profile",
+            "changed-surface-risk": "selected because changed paths matched a proof rule or risk lane",
+            "conservative-fallback": "selected through package seed, broad fallback, or live-adapted target capability before route learning is mature",
+            "optional-confidence": "recommended confidence check that is not a hard closeout blocker",
+            "unavailable-manual": "manual verification or explanation is required because executable proof is missing, blocked, or unavailable",
+        },
+        "required": required_items,
+        "optional_confidence": optional_items,
+        "manual_or_unavailable": [*manual_items, *unavailable_items, *policy_blocked_items],
+        "blocking_rule": (
+            "Only required commands, host-policy blockers, unavailable required proof, and required manual verification block closeout; "
+            "optional confidence checks remain visible but non-blocking."
+        ),
+        "route_maturity_rule": "Commands with conservative-fallback should be refined by learned route evidence before treating them as route-specific.",
+    }
+
+
+def _proof_command_explanation_item(*, command: str, selected: dict[str, Any], blocking: bool) -> dict[str, Any]:
+    route_source = str(selected.get("selected_from", ""))
+    fallback_status = str(selected.get("fallback_status", ""))
+    reason_classes = _proof_command_reason_classes(route_source=route_source, fallback_status=fallback_status)
+    return {
+        "command": command,
+        "lane": str(selected.get("lane", "")),
+        "intent_type": str(selected.get("intent_type", "")),
+        "route_source": route_source,
+        "fallback_status": fallback_status,
+        "route_authority": str(selected.get("route_authority", "")),
+        "reason_classes": reason_classes,
+        "blocking": blocking,
+        "why": _proof_command_explanation_text(reason_classes=reason_classes, selected=selected),
+    }
+
+
+def _proof_command_reason_classes(*, route_source: str, fallback_status: str) -> list[str]:
+    classes: list[str] = []
+    if route_source == "repo-learned-proof-route":
+        classes.append("learned-repo-evidence")
+    if route_source in {
+        "host-configured-proof-profile",
+        "host-declared-domain-proof-lane",
+        "host-configured-subsystem",
+        "local-only-high-risk-overlay",
+        "verification-manual-protocol",
+    }:
+        classes.append("explicit-config-policy")
+    if route_source in {"live-confirmed-proof-rule", "live-adapted-target-capability"}:
+        classes.append("changed-surface-risk")
+    if fallback_status in {"seed-fallback", "fallback", "candidate-live-confirmed"}:
+        classes.append("conservative-fallback")
+    return classes or ["changed-surface-risk"]
+
+
+def _proof_command_explanation_text(*, reason_classes: list[str], selected: dict[str, Any]) -> str:
+    lane = str(selected.get("lane", ""))
+    if "learned-repo-evidence" in reason_classes:
+        return f"Required because learned repo evidence selected lane {lane}."
+    if "explicit-config-policy" in reason_classes:
+        return f"Required because host-owned policy or configuration selected lane {lane}."
+    if "conservative-fallback" in reason_classes:
+        return f"Required as conservative fallback for lane {lane}; refine with learned route evidence when possible."
+    return f"Required because changed-surface risk selected lane {lane}."

@@ -799,6 +799,44 @@ def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, c
     assert execution_evidence["missing_evidence_diagnostics"]["not-run-or-not-recorded"] == (
         "no trusted receipt exists for this selected command"
     )
+    explanations = answer["proof_command_explanations"]
+    assert explanations["status"] == "present"
+    assert explanations["required"] == []
+    assert explanations["manual_or_unavailable"][0]["reason_classes"] == ["unavailable-manual"]
+    assert explanations["manual_or_unavailable"][0]["blocking"] is True
+    assert "optional-confidence" in explanations["reason_class_model"]
+
+
+def test_proof_command_explanations_status_present_for_policy_blockers_only() -> None:
+    explanations = workspace_runtime_proof._proof_command_explanations_payload(
+        selected_commands=[],
+        required_commands=[],
+        optional_commands=[],
+        unavailable_commands=[],
+        host_policy_blocked_commands=[
+            {
+                "command": "npm test",
+                "lane": "concern:no_npm_test",
+                "reason": "host-configured proof profile disallows this command",
+                "configured_command": "npm test",
+            }
+        ],
+        manual_verification=None,
+    )
+
+    assert explanations["status"] == "present"
+    assert explanations["required"] == []
+    assert explanations["optional_confidence"] == []
+    assert explanations["manual_or_unavailable"] == [
+        {
+            "command": "npm test",
+            "lane": "concern:no_npm_test",
+            "reason": "host-configured proof profile disallows this command",
+            "reason_classes": ["explicit-config-policy"],
+            "blocking": True,
+            "configured_command": "npm test",
+        }
+    ]
 
 
 def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_path: Path, capsys) -> None:
@@ -2706,6 +2744,13 @@ def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(tmp
     assert typecheck_step["lane_id"] == "planning_source_typecheck_ci_parity"
     typecheck_command = next(command for command in answer["selected_commands"] if command["command"] == "make typecheck-planning")
     assert typecheck_command["intent_type"] == "static-check"
+    explanations = answer["proof_command_explanations"]
+    typecheck_explanation = next(item for item in explanations["required"] if item["command"] == "make typecheck-planning")
+    assert typecheck_explanation["blocking"] is True
+    assert "changed-surface-risk" in typecheck_explanation["reason_classes"]
+    assert "conservative-fallback" in typecheck_explanation["reason_classes"]
+    assert all(item["blocking"] is False for item in explanations["optional_confidence"])
+    assert explanations["blocking_rule"].startswith("Only required commands")
 
 
 def test_proof_changed_selector_includes_workspace_runtime_typecheck_ci_parity(tmp_path: Path, capsys) -> None:
