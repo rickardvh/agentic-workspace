@@ -16,6 +16,7 @@ def test_verification_report_absent_manifest(tmp_path: Path) -> None:
     assert payload["configured"] is False
     assert payload["protocol_count"] == 0
     assert payload["active_count"] == 0
+    assert payload["assurance_first_jumpstart"]["status"] == "not_applicable"
     assert payload["evidence_strategy"]["kind"] == "agentic-workspace/verification-evidence-strategy/v1"
     assert payload["evidence_strategy"]["status"] == "unavailable"
     assert payload["evidence_strategy"]["strategy_basis"]["declared_strategy_state"] == "not-declared"
@@ -25,6 +26,67 @@ def test_verification_report_absent_manifest(tmp_path: Path) -> None:
     assert payload["evidence_strategy"]["proof_decision"]["kind"] == "agentic-workspace/verification-proof-decision/v1"
     assert payload["evidence_strategy"]["proof_decision"]["status"] == "missing"
     assert payload["evidence_strategy"]["proof_decision"]["decision_authority"] == "agent"
+
+
+def test_verification_report_suggests_assurance_first_jumpstart_lanes_from_host_evidence(tmp_path: Path) -> None:
+    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.security_audit]
+title = "Security and audit review"
+purpose = "Broad assurance protocol covering auth, migrations, privacy, compliance, and integration export readiness."
+applies_to_paths = ["**/*"]
+expected_evidence = ["security_reviewed"]
+review_owner = "assurance-owner"
+""".strip(),
+        encoding="utf-8",
+    )
+    for relative in (
+        "docs/security/authz.md",
+        "db/migrations/001-initial.sql",
+        "docs/privacy/error-logs.md",
+        "docs/compliance/legal-boundaries.md",
+        "src/integrations/exporter.py",
+    ):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# host evidence\n", encoding="utf-8")
+
+    payload = verification_report_payload(
+        target_root=tmp_path,
+        changed_paths=[],
+        task_text="Jumpstart high assurance verification for this repo",
+        assurance_requirements={"active_count": 1, "active": [{"id": "strict_assurance"}]},
+    )
+
+    jumpstart = payload["assurance_first_jumpstart"]
+    assert jumpstart["kind"] == "agentic-workspace/assurance-first-jumpstart/v1"
+    assert jumpstart["status"] == "candidate_lanes_present"
+    assert jumpstart["assurance_signal"]["status"] == "present"
+    lane_ids = {lane["id"] for lane in jumpstart["candidate_lanes"]}
+    assert {"access_audit", "migrations_history", "api_error_privacy"}.issubset(lane_ids)
+    assert jumpstart["candidate_lane_count"] >= 3
+    assert jumpstart["broad_protocol_gap"]["status"] == "possible_gap"
+    assert jumpstart["broad_protocol_gap"]["protocols"][0]["protocol_id"] == "security_audit"
+    access_lane = next(lane for lane in jumpstart["candidate_lanes"] if lane["id"] == "access_audit")
+    evidence_sources = {item["source"] for item in access_lane["evidence"]}
+    assert {"verification_manifest", "host_path"}.issubset(evidence_sources)
+    assert any(item.get("path") == "docs/security/authz.md" for item in access_lane["evidence"])
+    assert access_lane["claim_boundary"].startswith("Advisory jumpstart suggestion only")
+
+
+def test_verification_report_keeps_low_evidence_repo_on_low_cost_path(tmp_path: Path) -> None:
+    (tmp_path / "README.md").write_text("# Small repo\n", encoding="utf-8")
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="Update docs")
+
+    jumpstart = payload["assurance_first_jumpstart"]
+    assert jumpstart["status"] == "not_applicable"
+    assert jumpstart["candidate_lanes"] == []
+    assert "low-evidence repos stay on the current low-cost path" in jumpstart["rule"]
 
 
 def test_verification_report_matches_path_protocol_and_evidence(tmp_path: Path) -> None:
