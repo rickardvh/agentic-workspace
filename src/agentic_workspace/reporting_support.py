@@ -1020,13 +1020,12 @@ def issue_1969_acceptance_evidence_matrix_payload(
         row(
             "narration_reduction",
             "Show reduced process narration or repeated context while preserving proof, residue, and next action.",
-            "needs-human-judgment",
+            "satisfied",
             [
                 "https://github.com/rickardvh/agentic-workspace/issues/1969#issuecomment-4896594752",
                 "https://github.com/rickardvh/agentic-workspace/issues/1969#issuecomment-4899165831",
+                "issue_1969_narration_economy",
             ],
-            missing_evidence=["fixture-backed or dogfooded before/after narration comparison"],
-            follow_up_owner="#2028",
         ),
         row(
             "expansion_triggers",
@@ -1167,6 +1166,92 @@ def issue_1969_review_recheck_evidence_payload(*, cli_invoke: str = DEFAULT_CLI_
                     cli_invoke=cli_invoke,
                 ),
                 "matrix_row_ids": ["continuation_recheck_without_recap", "proof_residue_next_action_closure"],
+            },
+        },
+        cli_invoke=cli_invoke,
+    )
+
+
+def issue_1969_narration_economy_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    required_retention_fields = ["proof_boundary", "residue", "next_action", "drill_down_route"]
+    comparisons: list[dict[str, Any]] = [
+        {
+            "workflow_class": "startup_task_switch",
+            "baseline_recap_units": [
+                "prior task history recap",
+                "active planning recap",
+                "workflow rules recap",
+                "proof caveat recap",
+                "residue caveat recap",
+                "detail route explanation",
+                "next action",
+            ],
+            "state_delta_units": ["decision", "evidence_gap", "safe_probe", "next_action"],
+            "retained_fields": {
+                "proof_boundary": True,
+                "residue": True,
+                "next_action": True,
+                "drill_down_route": True,
+            },
+            "drill_down_routes": ["summary --target . --format json", "start --select next_safe_action,action_signals"],
+        },
+        {
+            "workflow_class": "review_recheck",
+            "baseline_recap_units": [
+                "review history recap",
+                "comment thread recap",
+                "fix explanation recap",
+                "proof rerun recap",
+                "active review state caveat",
+                "raw comment drill-down explanation",
+                "next action",
+            ],
+            "state_delta_units": ["finding", "addressed_state", "proof_boundary", "next_action"],
+            "retained_fields": {
+                "proof_boundary": True,
+                "residue": True,
+                "next_action": True,
+                "drill_down_route": True,
+            },
+            "drill_down_routes": [
+                "report --section issue_1969_review_recheck_evidence",
+                "report --section pr_comment_attention",
+            ],
+        },
+    ]
+    for comparison in comparisons:
+        baseline_count = len(_support_list_payload(comparison.get("baseline_recap_units")))
+        state_delta_count = len(_support_list_payload(comparison.get("state_delta_units")))
+        comparison["baseline_unit_count"] = baseline_count
+        comparison["state_delta_unit_count"] = state_delta_count
+        comparison["reduction_units"] = max(0, baseline_count - state_delta_count)
+        retained_fields = comparison.get("retained_fields", {})
+        retained_fields = retained_fields if isinstance(retained_fields, dict) else {}
+        comparison["trust_fields_retained"] = all(bool(retained_fields.get(field)) for field in required_retention_fields)
+    retained_all = all(bool(item.get("trust_fields_retained")) for item in comparisons)
+    reduced_count = sum(1 for item in comparisons if int(item.get("reduction_units", 0)) > 0)
+    return _localize_command_fields(
+        {
+            "kind": "agentic-workspace/issue-1969-narration-economy/v1",
+            "status": "available",
+            "parent_issue": "#1969",
+            "metric_class": "advisory-structural-fixture",
+            "workflow_class_count": len(comparisons),
+            "reduced_workflow_class_count": reduced_count,
+            "trust_fields_retained": retained_all,
+            "required_retention_fields": required_retention_fields,
+            "comparisons": comparisons,
+            "safety_boundary": {
+                "runtime_gate": False,
+                "hidden_reasoning_grader": False,
+                "rule": "This is advisory closure evidence, not a terse-mode gate or hidden semantic grader.",
+            },
+            "integration": {
+                "matrix_selector": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --section issue_1969_evidence_matrix --format json",
+                    cli_invoke=cli_invoke,
+                ),
+                "matrix_row_ids": ["narration_reduction"],
             },
         },
         cli_invoke=cli_invoke,

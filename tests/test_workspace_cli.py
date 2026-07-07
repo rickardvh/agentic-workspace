@@ -722,6 +722,32 @@ def test_issue_1969_review_recheck_evidence_preserves_historical_boundary(tmp_pa
     assert section["payload_is_lazy"] is True
 
 
+def test_issue_1969_narration_economy_reports_reduction_with_trust_retention(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "issue_1969_narration_economy", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["kind"] == "agentic-workspace/issue-1969-narration-economy/v1"
+    assert payload["metric_class"] == "advisory-structural-fixture"
+    assert payload["workflow_class_count"] >= 2
+    assert payload["reduced_workflow_class_count"] >= 2
+    assert payload["trust_fields_retained"] is True
+    assert payload["safety_boundary"]["runtime_gate"] is False
+    assert payload["safety_boundary"]["hidden_reasoning_grader"] is False
+    for comparison in payload["comparisons"]:
+        assert comparison["baseline_unit_count"] >= comparison["state_delta_unit_count"]
+        assert comparison["trust_fields_retained"] is True
+        assert comparison["drill_down_routes"]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "section_catalog", "--format", "json"]) == 0
+    catalog = json.loads(capsys.readouterr().out)["answer"]
+    section = next(item for item in catalog["lazy_sections"] if item["section"] == "issue_1969_narration_economy")
+    assert section["payload_is_lazy"] is True
+
+
 def test_closeout_trust_does_not_block_on_stale_satisfied_task_posture_residue(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

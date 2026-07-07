@@ -116,6 +116,7 @@ from agentic_workspace.reporting_support import (
     closeout_claim_boundary_payload,
     communication_contract_payload,
     issue_1969_acceptance_evidence_matrix_payload,
+    issue_1969_narration_economy_payload,
     issue_1969_review_recheck_evidence_payload,
     output_contract_payload,
     reasoning_economy_evidence_payload,
@@ -10074,6 +10075,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "when citing addressed review comments after PRs merged without dumping raw comment history",
     },
     {
+        "section": "issue_1969_narration_economy",
+        "kind": "agentic-workspace/issue-1969-narration-economy/v1",
+        "purpose": "advisory structural fixture evidence for state-delta narration reduction with trust retention",
+        "when_to_use": "when #1969 closure review needs repeatable evidence that compact deltas reduce recap without hiding proof or residue",
+    },
+    {
         "section": "local_footprint",
         "kind": "agentic-workspace/local-footprint/v1",
         "purpose": "tracked-vs-ignored AW footprint, local scratch retention, budgets, and largest local offenders",
@@ -13219,6 +13226,10 @@ def _run_lazy_report_section_command(
 
     if normalized == "issue_1969_review_recheck_evidence":
         payload["issue_1969_review_recheck_evidence"] = issue_1969_review_recheck_evidence_payload(cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "issue_1969_narration_economy":
+        payload["issue_1969_narration_economy"] = issue_1969_narration_economy_payload(cli_invoke=config.cli_invoke)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "issue_1969_evidence_matrix":
