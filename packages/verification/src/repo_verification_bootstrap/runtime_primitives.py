@@ -27,6 +27,51 @@ CORE_EVIDENCE_CONCEPTS = {
     "compliance_uncertainty": "Explicit preservation of compliance or certification uncertainty.",
 }
 
+ASSURANCE_FIRST_LANE_CANDIDATES = (
+    {
+        "id": "access_audit",
+        "title": "Access, authorization, and audit",
+        "tokens": ("auth", "authz", "access", "permission", "role", "audit", "security"),
+        "suggested_requirement": "access_audit_review",
+        "suggested_protocol": "access_audit_verification",
+    },
+    {
+        "id": "migrations_history",
+        "title": "Migrations, storage, and history",
+        "tokens": ("migration", "migrations", "schema", "storage", "database", "history"),
+        "suggested_requirement": "migration_history_review",
+        "suggested_protocol": "migration_history_verification",
+    },
+    {
+        "id": "api_error_privacy",
+        "title": "API, error, log, and privacy boundaries",
+        "tokens": ("api", "error", "errors", "log", "logs", "privacy", "redaction"),
+        "suggested_requirement": "api_error_privacy_review",
+        "suggested_protocol": "api_error_privacy_verification",
+    },
+    {
+        "id": "domain_legal_boundary",
+        "title": "Domain and legal boundaries",
+        "tokens": ("domain", "legal", "policy", "policies", "terms", "contract"),
+        "suggested_requirement": "domain_legal_boundary_review",
+        "suggested_protocol": "domain_legal_boundary_verification",
+    },
+    {
+        "id": "compliance_uncertainty",
+        "title": "Compliance uncertainty",
+        "tokens": ("compliance", "regulatory", "certification", "certified", "soc2", "hipaa", "gdpr"),
+        "suggested_requirement": "compliance_uncertainty_review",
+        "suggested_protocol": "compliance_uncertainty_verification",
+    },
+    {
+        "id": "integration_export_ai",
+        "title": "Integration, export, and AI readiness",
+        "tokens": ("integration", "integrations", "export", "import", "ai", "llm", "model"),
+        "suggested_requirement": "integration_export_ai_review",
+        "suggested_protocol": "integration_export_ai_verification",
+    },
+)
+
 SOURCE_HINTS = [
     (Path("docs/maintainer/testing-strategy.md"), "candidate-host-strategy-source"),
     (Path("docs/maintainer/test-knowledge-inventory.md"), "candidate-test-knowledge-inventory"),
@@ -1559,6 +1604,249 @@ def _match_protocol(
     return (bool(applies_because), _dedupe(applies_because), match_signals)
 
 
+def _token_matches(text: str, tokens: tuple[str, ...]) -> list[str]:
+    lowered = text.lower()
+    return [token for token in tokens if token in lowered]
+
+
+def _assurance_first_signal(
+    *,
+    task_text: str | None,
+    assurance_requirements: dict[str, Any] | None,
+    protocols: list[dict[str, Any]],
+) -> dict[str, Any]:
+    signals: list[dict[str, Any]] = []
+    if isinstance(assurance_requirements, dict) and int(assurance_requirements.get("active_count", 0) or 0) > 0:
+        signals.append(
+            {
+                "source": "assurance_requirements",
+                "authority": "host-declared-assurance-config",
+                "reason": "active assurance requirements are present",
+            }
+        )
+    task_matches = _token_matches(
+        str(task_text or ""),
+        ("assurance", "high assurance", "verification", "compliance", "security", "audit"),
+    )
+    if task_matches:
+        signals.append(
+            {
+                "source": "task_text",
+                "authority": "explicit-user-task",
+                "matches": task_matches,
+                "reason": "task text asks for assurance or verification-focused jumpstart",
+            }
+        )
+    for protocol in protocols:
+        text = " ".join(
+            str(value or "")
+            for value in (
+                protocol.get("id"),
+                protocol.get("title"),
+                protocol.get("purpose"),
+                " ".join(str(item) for item in _list_payload(protocol.get("expected_evidence"))),
+                " ".join(str(item) for item in _list_payload(protocol.get("review_aids"))),
+            )
+        )
+        matches = _token_matches(text, ("assurance", "security", "audit", "compliance", "privacy", "verification"))
+        if matches:
+            signals.append(
+                {
+                    "source": f"protocol:{protocol.get('id')}",
+                    "authority": "host-declared-verification-manifest",
+                    "matches": matches,
+                    "reason": "configured protocol names assurance-sensitive verification concerns",
+                }
+            )
+    return {
+        "status": "present" if signals else "absent",
+        "signals": signals,
+        "signal_count": len(signals),
+        "rule": "Assurance-first jumpstart activates only from explicit task text or host-owned assurance/verification evidence.",
+    }
+
+
+def _host_file_evidence_by_lane(
+    *, target_root: Path, lanes: tuple[dict[str, Any], ...], per_lane_limit: int = 4, scan_limit: int = 1500
+) -> dict[str, list[dict[str, Any]]]:
+    evidence_by_lane: dict[str, list[dict[str, Any]]] = {str(lane["id"]): [] for lane in lanes}
+    ignored_dir_names = {
+        ".git",
+        ".hg",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".tox",
+        ".venv",
+        "__pycache__",
+        "node_modules",
+        ".agentic-workspace",
+    }
+    stack = [target_root]
+    scanned = 0
+    while stack and scanned < scan_limit:
+        current = stack.pop()
+        try:
+            children = sorted(current.iterdir(), key=lambda item: item.name)
+        except OSError:
+            continue
+        for child in children:
+            if child.is_dir():
+                if child.name not in ignored_dir_names:
+                    stack.append(child)
+                continue
+            if not child.is_file():
+                continue
+            scanned += 1
+            relative = _repo_relative_path(child, target_root)
+            for lane in lanes:
+                lane_id = str(lane["id"])
+                if len(evidence_by_lane[lane_id]) >= per_lane_limit:
+                    continue
+                matches = _token_matches(relative, tuple(str(token) for token in lane.get("tokens", ())))
+                if not matches:
+                    continue
+                evidence_by_lane[lane_id].append(
+                    {
+                        "source": "host_path",
+                        "path": relative,
+                        "matches": matches,
+                        "authority": "host-owned-file-path",
+                    }
+                )
+    return evidence_by_lane
+
+
+def _protocol_evidence_for_lane(*, protocols: list[dict[str, Any]], lane: dict[str, Any], limit: int = 4) -> list[dict[str, Any]]:
+    evidence: list[dict[str, Any]] = []
+    tokens = tuple(str(token) for token in lane.get("tokens", ()))
+    for protocol in protocols:
+        fields = {
+            "id": str(protocol.get("id") or ""),
+            "title": str(protocol.get("title") or ""),
+            "purpose": str(protocol.get("purpose") or ""),
+            "applies_to_paths": " ".join(str(item) for item in _list_payload(protocol.get("applies_to_paths"))),
+            "expected_evidence": " ".join(str(item) for item in _list_payload(protocol.get("expected_evidence"))),
+            "steps": " ".join(str(item) for item in _list_payload(protocol.get("steps"))),
+            "authority_refs": " ".join(str(item) for item in _list_payload(protocol.get("authority_refs"))),
+        }
+        for field, text in fields.items():
+            matches = _token_matches(text, tokens)
+            if not matches:
+                continue
+            evidence.append(
+                {
+                    "source": "verification_manifest",
+                    "protocol_id": protocol.get("id"),
+                    "field": field,
+                    "matches": matches,
+                    "authority": "host-declared-verification-manifest",
+                }
+            )
+            break
+        if len(evidence) >= limit:
+            break
+    return evidence
+
+
+def _broad_protocol_gap(*, protocols: list[dict[str, Any]], candidate_lanes: list[dict[str, Any]]) -> dict[str, Any]:
+    active_lane_ids = {str(lane.get("id")) for lane in candidate_lanes}
+    broad_protocols: list[dict[str, Any]] = []
+    for protocol in protocols:
+        text = " ".join(
+            [
+                str(protocol.get("id") or ""),
+                str(protocol.get("title") or ""),
+                str(protocol.get("purpose") or ""),
+                " ".join(str(item) for item in _list_payload(protocol.get("expected_evidence"))),
+                " ".join(str(item) for item in _list_payload(protocol.get("steps"))),
+            ]
+        )
+        lane_matches = [
+            str(lane.get("id"))
+            for lane in ASSURANCE_FIRST_LANE_CANDIDATES
+            if _token_matches(text, tuple(str(token) for token in lane.get("tokens", ())))
+        ]
+        applies_to_paths = [str(item).strip() for item in _list_payload(protocol.get("applies_to_paths")) if str(item).strip()]
+        catch_all = any(pattern in {"*", "**", "**/*"} for pattern in applies_to_paths)
+        if catch_all or len(set(lane_matches) & active_lane_ids) >= 2:
+            broad_protocols.append(
+                {
+                    "protocol_id": protocol.get("id"),
+                    "reason": "catch-all path activation" if catch_all else "protocol text spans multiple candidate assurance lanes",
+                    "matched_lane_ids": sorted(set(lane_matches) & active_lane_ids),
+                    "applies_to_paths": applies_to_paths,
+                    "status": "possible_modeling_gap",
+                }
+            )
+    return {
+        "status": "possible_gap" if broad_protocols else "not_detected",
+        "protocols": broad_protocols,
+        "rule": "Broad protocol coverage is advisory modeling-gap evidence, not a failing error.",
+    }
+
+
+def _assurance_first_jumpstart_payload(
+    *,
+    target_root: Path,
+    task_text: str | None,
+    assurance_requirements: dict[str, Any] | None,
+    protocols: list[dict[str, Any]],
+) -> dict[str, Any]:
+    signal = _assurance_first_signal(task_text=task_text, assurance_requirements=assurance_requirements, protocols=protocols)
+    if signal["status"] != "present":
+        return {
+            "kind": "agentic-workspace/assurance-first-jumpstart/v1",
+            "status": "not_applicable",
+            "assurance_signal": signal,
+            "candidate_lanes": [],
+            "omitted_lanes": [],
+            "rule": "No assurance-first signal was detected; low-evidence repos stay on the current low-cost path.",
+        }
+    candidate_lanes: list[dict[str, Any]] = []
+    omitted_lanes: list[dict[str, Any]] = []
+    host_evidence_by_lane = _host_file_evidence_by_lane(target_root=target_root, lanes=ASSURANCE_FIRST_LANE_CANDIDATES)
+    for lane in ASSURANCE_FIRST_LANE_CANDIDATES:
+        evidence = [
+            *_protocol_evidence_for_lane(protocols=protocols, lane=lane),
+            *host_evidence_by_lane.get(str(lane["id"]), []),
+        ]
+        if evidence:
+            candidate_lanes.append(
+                {
+                    "id": lane["id"],
+                    "title": lane["title"],
+                    "status": "candidate",
+                    "evidence": evidence,
+                    "suggested_assurance_requirement": lane["suggested_requirement"],
+                    "suggested_verification_protocol": lane["suggested_protocol"],
+                    "claim_boundary": "Advisory jumpstart suggestion only; seed durable routes only after agent/human review.",
+                }
+            )
+        else:
+            omitted_lanes.append(
+                {
+                    "id": lane["id"],
+                    "title": lane["title"],
+                    "reason": "no host-owned evidence found for this lane",
+                }
+            )
+    broad_gap = _broad_protocol_gap(protocols=protocols, candidate_lanes=candidate_lanes)
+    return {
+        "kind": "agentic-workspace/assurance-first-jumpstart/v1",
+        "status": "candidate_lanes_present" if candidate_lanes else "assurance_signal_without_lane_evidence",
+        "assurance_signal": signal,
+        "candidate_lanes": candidate_lanes,
+        "candidate_lane_count": len(candidate_lanes),
+        "omitted_lanes": omitted_lanes,
+        "broad_protocol_gap": broad_gap,
+        "rule": (
+            "Suggest narrower assurance lanes only when an assurance-first signal and host-owned lane evidence are both present. "
+            "Suggestions are advisory and must cite host evidence."
+        ),
+    }
+
+
 def verification_report_payload(
     *,
     target_root: Path | None,
@@ -1718,6 +2006,12 @@ def verification_report_payload(
         task_text=task_text,
         manifest=manifest,
     )
+    assurance_first_jumpstart = _assurance_first_jumpstart_payload(
+        target_root=target_root,
+        task_text=task_text,
+        assurance_requirements=assurance_requirements,
+        protocols=configured_protocols,
+    )
     degraded_concepts = [
         item
         for status in evidence_status
@@ -1786,6 +2080,7 @@ def verification_report_payload(
         "evidence_status": evidence_status,
         "evidence_bundle_status": [_bundle_state(bundle, changed_paths=normalized_paths) for bundle in evidence_bundles],
         "evidence_strategy": evidence_strategy,
+        "assurance_first_jumpstart": assurance_first_jumpstart,
         "match_evidence": {
             "observed_scope_source": ", ".join(
                 source
