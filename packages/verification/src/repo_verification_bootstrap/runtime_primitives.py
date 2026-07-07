@@ -82,6 +82,82 @@ ASSURANCE_FIRST_LANE_CANDIDATES = (
         "suggested_protocol": "integration_export_ai_verification",
     },
 )
+PROOF_PROFILE_CANDIDATES = (
+    {
+        "id": "unit",
+        "title": "Unit or focused test proof",
+        "tokens": ("test", "pytest", "vitest", "jest"),
+        "manual_if": (),
+    },
+    {
+        "id": "lint",
+        "title": "Lint/static style proof",
+        "tokens": ("lint", "ruff", "eslint"),
+        "manual_if": (),
+    },
+    {
+        "id": "typecheck",
+        "title": "Typecheck proof",
+        "tokens": ("typecheck", "type-check", "mypy", "pyright", "tsc"),
+        "manual_if": (),
+    },
+    {
+        "id": "migration",
+        "title": "Migration/storage proof",
+        "tokens": ("migration", "migrate", "alembic", "db"),
+        "manual_if": ("apply", "deploy", "prod", "production"),
+    },
+    {
+        "id": "audit",
+        "title": "Audit/security proof",
+        "tokens": ("audit", "security", "bandit", "pip-audit", "npm audit"),
+        "manual_if": (),
+    },
+    {
+        "id": "full",
+        "title": "Full maintainer or CI proof",
+        "tokens": ("check", "verify", "ci", "workflow"),
+        "manual_if": ("publish", "release", "deploy"),
+    },
+)
+PROOF_PROFILE_CANDIDATES = (
+    {
+        "id": "unit",
+        "title": "Unit or focused test proof",
+        "tokens": ("test", "pytest", "vitest", "jest"),
+        "manual_if": (),
+    },
+    {
+        "id": "lint",
+        "title": "Lint/static style proof",
+        "tokens": ("lint", "ruff", "eslint"),
+        "manual_if": (),
+    },
+    {
+        "id": "typecheck",
+        "title": "Typecheck proof",
+        "tokens": ("typecheck", "type-check", "mypy", "pyright", "tsc"),
+        "manual_if": (),
+    },
+    {
+        "id": "migration",
+        "title": "Migration/storage proof",
+        "tokens": ("migration", "migrate", "alembic", "db"),
+        "manual_if": ("apply", "deploy", "prod", "production"),
+    },
+    {
+        "id": "audit",
+        "title": "Audit/security proof",
+        "tokens": ("audit", "security", "bandit", "pip-audit", "npm audit"),
+        "manual_if": (),
+    },
+    {
+        "id": "full",
+        "title": "Full maintainer or CI proof",
+        "tokens": ("check", "verify", "ci", "workflow"),
+        "manual_if": ("publish", "release", "deploy"),
+    },
+)
 
 SOURCE_HINTS = [
     (Path("docs/maintainer/testing-strategy.md"), "candidate-host-strategy-source"),
@@ -1188,6 +1264,196 @@ def _evidence_modeling_guidance(*, protocols: list[dict[str, Any]], evidence_con
     }
 
 
+def _makefile_targets(target_root: Path) -> list[dict[str, Any]]:
+    makefile = target_root / "Makefile"
+    text = _read_text_if_present(makefile)
+    if not text:
+        return []
+    targets: list[dict[str, Any]] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or ":" not in stripped or stripped.startswith("\t"):
+            continue
+        name = stripped.split(":", 1)[0].strip()
+        if not name or any(char.isspace() for char in name) or name.startswith("."):
+            continue
+        targets.append({"source": "Makefile", "command": f"make {name}", "raw": stripped, "authority": "host-owned-tooling"})
+    return targets
+
+
+def _package_json_scripts(target_root: Path) -> list[dict[str, Any]]:
+    exists, payload, _ = _read_json_if_present(target_root / "package.json")
+    if not exists or not isinstance(payload, dict) or not isinstance(payload.get("scripts"), dict):
+        return []
+    return [
+        {
+            "source": "package.json scripts",
+            "command": f"npm run {name}",
+            "raw": str(command),
+            "authority": "host-owned-tooling",
+        }
+        for name, command in sorted(payload["scripts"].items())
+        if str(name).strip()
+    ]
+
+
+def _pyproject_tooling(target_root: Path) -> list[dict[str, Any]]:
+    text = _read_text_if_present(target_root / "pyproject.toml")
+    if not text:
+        return []
+    candidates: list[dict[str, Any]] = []
+    lower = text.lower()
+    for tool_name, command in (
+        ("pytest", "uv run pytest"),
+        ("ruff", "uv run ruff check ."),
+        ("mypy", "uv run mypy ."),
+        ("pyright", "uv run pyright"),
+    ):
+        if tool_name in lower:
+            candidates.append(
+                {
+                    "source": "pyproject.toml",
+                    "command": command,
+                    "raw": f"pyproject mentions {tool_name}",
+                    "authority": "host-owned-tooling",
+                }
+            )
+    return candidates
+
+
+def _workflow_tooling(target_root: Path) -> list[dict[str, Any]]:
+    workflow_dir = target_root / ".github" / "workflows"
+    if not workflow_dir.is_dir():
+        return []
+    try:
+        workflow_files = sorted(path for path in workflow_dir.iterdir() if path.is_file() and path.suffix.lower() in {".yml", ".yaml"})
+    except OSError:
+        return []
+    return [
+        {
+            "source": _repo_relative_path(path, target_root),
+            "command": "inspect CI workflow",
+            "raw": path.name,
+            "authority": "host-owned-ci-config",
+        }
+        for path in workflow_files[:5]
+    ]
+
+
+def _host_validation_tooling(target_root: Path) -> list[dict[str, Any]]:
+    return [
+        *_makefile_targets(target_root),
+        *_package_json_scripts(target_root),
+        *_pyproject_tooling(target_root),
+        *_workflow_tooling(target_root),
+    ]
+
+
+def _manual_command_reason(command_text: str, manual_tokens: tuple[str, ...]) -> str:
+    lowered = command_text.lower()
+    matched = [token for token in manual_tokens if token and token in lowered]
+    if matched:
+        return f"manual/optional because command includes environment-sensitive token(s): {', '.join(matched)}"
+    if any(token in lowered for token in ("deploy", "publish", "release", "prod", "production", "apply")):
+        return "manual/optional because command may mutate external or production state"
+    return ""
+
+
+def _sample_path_for_pattern(pattern: str, protocol_id: str) -> str:
+    cleaned = pattern.strip() or f"{protocol_id}/sample.txt"
+    cleaned = cleaned.replace("\\", "/")
+    if cleaned in {"*", "**", "**/*"}:
+        return f"{protocol_id}/sample.txt"
+    for token in ("**/*", "**", "*"):
+        cleaned = cleaned.replace(token, f"{protocol_id}_sample")
+    if cleaned.endswith("/"):
+        cleaned = f"{cleaned}{protocol_id}_sample.txt"
+    return cleaned
+
+
+def _activation_smoke_tests(*, protocols: list[dict[str, Any]], evidence_modeling_guidance: dict[str, Any]) -> list[dict[str, Any]]:
+    warnings = evidence_modeling_guidance.get("shared_exact_label_warnings", [])
+    shared_warning_labels = [str(item.get("label")) for item in _list_payload(warnings) if isinstance(item, dict)]
+    tests: list[dict[str, Any]] = []
+    for protocol in protocols:
+        applies_to_paths = [str(item).strip() for item in _list_payload(protocol.get("applies_to_paths")) if str(item).strip()]
+        if not applies_to_paths:
+            continue
+        sample_path = _sample_path_for_pattern(applies_to_paths[0], str(protocol.get("id") or "protocol"))
+        expected_protocols = []
+        for candidate in protocols:
+            candidate_patterns = [str(item).strip() for item in _list_payload(candidate.get("applies_to_paths")) if str(item).strip()]
+            if any(pattern and fnmatch.fnmatch(sample_path, pattern) for pattern in candidate_patterns):
+                expected_protocols.append(str(candidate.get("id")))
+        expected_evidence = [str(item).strip() for item in _list_payload(protocol.get("expected_evidence")) if str(item).strip()]
+        shared_label_overlap = sorted(set(expected_evidence) & set(shared_warning_labels))
+        broad = len(expected_protocols) > 1 or bool(shared_label_overlap)
+        tests.append(
+            {
+                "protocol_id": protocol.get("id"),
+                "sample_changed_path": sample_path,
+                "command": f"agentic-workspace proof --changed {sample_path} --format json",
+                "expected_protocol_ids": expected_protocols,
+                "status": "unexpected_broad_activation" if broad else "expected_activation",
+                "broad_activation_reasons": [
+                    *([f"sample path also matches {len(expected_protocols) - 1} other protocol(s)"] if len(expected_protocols) > 1 else []),
+                    *([f"shared exact expected_evidence label(s): {', '.join(shared_label_overlap)}"] if shared_label_overlap else []),
+                ],
+                "rule": "Run as a smoke test after seeding or changing verification routes; inspect output before making proof required.",
+            }
+        )
+    return tests
+
+
+def _proof_profile_jumpstart_payload(
+    *, target_root: Path, protocols: list[dict[str, Any]], evidence_modeling_guidance: dict[str, Any]
+) -> dict[str, Any]:
+    tooling = _host_validation_tooling(target_root)
+    candidates: list[dict[str, Any]] = []
+    manual_optional: list[dict[str, Any]] = []
+    for profile in PROOF_PROFILE_CANDIDATES:
+        matches: list[dict[str, Any]] = []
+        for tool in tooling:
+            haystack = f"{tool.get('command', '')} {tool.get('raw', '')} {tool.get('source', '')}"
+            matched_tokens = _token_matches(haystack, tuple(str(token) for token in profile.get("tokens", ())))
+            if not matched_tokens:
+                continue
+            reason = _manual_command_reason(haystack, tuple(str(token) for token in profile.get("manual_if", ())))
+            item = {
+                "command": tool.get("command"),
+                "source": tool.get("source"),
+                "matches": matched_tokens,
+                "authority": tool.get("authority"),
+            }
+            if reason:
+                manual_optional.append({**item, "profile": profile["id"], "reason": reason})
+            else:
+                matches.append(item)
+        if matches:
+            candidates.append(
+                {
+                    "id": profile["id"],
+                    "title": profile["title"],
+                    "status": "candidate",
+                    "evidence": matches[:4],
+                    "rule": "Candidate proof profile is grounded in host-owned tooling and is not required until promoted.",
+                }
+            )
+    smoke_tests = _activation_smoke_tests(protocols=protocols, evidence_modeling_guidance=evidence_modeling_guidance)
+    return {
+        "kind": "agentic-workspace/proof-profile-jumpstart/v1",
+        "status": "profiles_discovered" if candidates else "no_host_tooling_detected",
+        "candidate_profiles": candidates,
+        "candidate_profile_count": len(candidates),
+        "manual_optional_commands": manual_optional,
+        "activation_smoke_tests": smoke_tests,
+        "rule": (
+            "Proof-profile jumpstart discovers host-owned validation commands and recommends representative proof --changed "
+            "smoke tests; it does not run discovered commands or make them required."
+        ),
+    }
+
+
 def _load_manifest(*, target_root: Path) -> dict[str, Any]:
     manifest_path, payload = _manifest_raw(target_root=target_root)
     if payload is None:
@@ -2106,6 +2372,11 @@ def verification_report_payload(
         protocols=configured_protocols,
         evidence_concepts=evidence_concepts,
     )
+    proof_profile_jumpstart = _proof_profile_jumpstart_payload(
+        target_root=target_root,
+        protocols=configured_protocols,
+        evidence_modeling_guidance=evidence_modeling_guidance,
+    )
     degraded_concepts = [
         item
         for status in evidence_status
@@ -2163,6 +2434,7 @@ def verification_report_payload(
             ),
         },
         "evidence_modeling_guidance": evidence_modeling_guidance,
+        "proof_profile_jumpstart": proof_profile_jumpstart,
         "configured_protocols": configured_protocols,
         "configured_scenarios": configured_scenarios,
         "proof_routes": proof_routes,
