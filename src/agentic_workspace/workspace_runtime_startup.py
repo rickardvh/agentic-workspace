@@ -1513,6 +1513,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "new_comment_count",
                 "stack_member_count",
                 "recommended_command",
+                "cache_selector_command",
+                "live_inspection",
+                "pr_resolution",
+                "write_safety",
                 "claim_boundary",
             )
             if key in pr_comment_attention

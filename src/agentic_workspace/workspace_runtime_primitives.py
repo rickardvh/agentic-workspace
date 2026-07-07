@@ -23254,6 +23254,40 @@ def _pr_comment_source_checkout_helper_command(*, repo: str, pr_number: str, cli
     )
 
 
+def _pr_comment_pr_resolution_command(*, repo: str, branch: str) -> str:
+    branch_filter = f" --head {_shell_quote(branch)}" if branch else ""
+    return f"gh pr list --repo {_shell_quote(repo)} --state open{branch_filter} --json number,url,headRefName,baseRefName"
+
+
+def _pr_comment_live_inspection_routes_payload(*, repo: str, branch: str, pr_number: str, cli_invoke: str) -> dict[str, Any]:
+    pr_resolution_command = _pr_comment_pr_resolution_command(repo=repo, branch=branch)
+    live_inspection_command = (
+        _pr_comment_source_checkout_helper_command(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke)
+        if pr_number
+        else pr_resolution_command
+    )
+    return {
+        "kind": "agentic-workspace/pr-comment-live-inspection-routes/v1",
+        "status": "live_inspection_available" if pr_number else "pr_resolution_required",
+        "repository": repo,
+        "branch": branch,
+        "pr_number": pr_number,
+        "recommended_command": live_inspection_command,
+        "pr_resolution_command": pr_resolution_command,
+        "live_thread_inspection_command": live_inspection_command,
+        "source_checkout_helper_command": _pr_comment_source_checkout_helper_command(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke)
+        if pr_number
+        else None,
+        "connector_route": f"GitHub connector or gh GraphQL: inspect reviewThreads for {repo}#{pr_number or '<resolved-pr-number>'}",
+        "write_safety": {
+            "github_writes_performed": False,
+            "allowed_actions": ["read_pr_metadata", "read_review_threads", "refresh_local_comment_delta"],
+            "forbidden_actions_without_user_request": ["reply_to_comment", "resolve_thread", "submit_review", "dismiss_review"],
+        },
+        "rule": "Resolve the branch PR or inspect live thread-level comments before making review-readiness claims.",
+    }
+
+
 def _pr_comment_thread_inspection_payload(*, repo: str, pr_number: str, cli_invoke: str, status: str = "required") -> dict[str, Any]:
     command = _pr_comment_report_command(cli_invoke=cli_invoke)
     return {
@@ -23790,7 +23824,8 @@ def _pr_stack_comment_context_relevant(*, task_text: str | None, branch: str) ->
 
 def _pr_stack_comment_unavailable_payload(*, repo: str, branch: str, pr_number: str, cli_invoke: str) -> dict[str, Any]:
     cache_path = ".agentic-workspace/local/cache/pr-comment-stack.json"
-    recommended_command = _pr_comment_report_command(cli_invoke=cli_invoke)
+    live_inspection = _pr_comment_live_inspection_routes_payload(repo=repo, branch=branch, pr_number=pr_number, cli_invoke=cli_invoke)
+    recommended_command = str(live_inspection["recommended_command"])
     return {
         "kind": "agentic-workspace/pr-stack-comment-attention/v1",
         "status": "stack_comment_status_unavailable",
@@ -23806,12 +23841,20 @@ def _pr_stack_comment_unavailable_payload(*, repo: str, branch: str, pr_number: 
             "repository": repo,
             "cache_path": cache_path,
             "refresh_command": recommended_command,
+            "pr_resolution_command": live_inspection["pr_resolution_command"],
             "source_checkout_refresh_command": _pr_comment_source_checkout_helper_command(
                 repo=repo, pr_number=pr_number, cli_invoke=cli_invoke
             ),
         },
         "comment_state": "stack_discovery_unavailable",
         "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+        "live_inspection": live_inspection,
+        "pr_resolution": {
+            "status": "known" if pr_number else "required",
+            "command": live_inspection["pr_resolution_command"],
+            "rule": "Resolve the current branch PR before stack review-thread claims when stack cache is absent.",
+        },
+        "recommended_command": recommended_command,
         "unverified_context": ["Stack membership is unverified.", "Thread-level PR comment state is unverified."],
         "claim_boundary": "A broad stack-ready claim is blocked until stack members are discovered or the stack scope is explicitly narrowed.",
         "degraded_because": "missing-stack-discovery-evidence",
@@ -23853,14 +23896,15 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "unverified_context": stack.get("unverified_context", []),
             "recommended_command": str(stack.get("stack_members", [{}])[0].get("refresh_command", ""))
             if isinstance(stack.get("stack_members"), list) and stack.get("stack_members")
-            else _command_with_cli_invoke(
-                command="agentic-workspace report --target . --section pr_comment_attention --format json", cli_invoke=cli_invoke
-            ),
+            else str(stack.get("recommended_command") or _pr_comment_report_command(cli_invoke=cli_invoke)),
+            "live_inspection": stack.get("live_inspection", {}),
+            "pr_resolution": stack.get("pr_resolution", {}),
             "selector": "pr_comment_attention",
             "degraded_explicitly": status == "stack_comment_status_unavailable",
             "claim_boundary": stack.get("claim_boundary"),
         }
     command = _pr_comment_report_command(cli_invoke=cli_invoke)
+    live_inspection = _pr_comment_live_inspection_routes_payload(repo=repo, branch=branch, pr_number=pr_number, cli_invoke=cli_invoke)
     if cache.get("_cache_error"):
         return {
             "kind": "agentic-workspace/pr-comment-attention/v1",
@@ -23870,7 +23914,14 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "pr_number": pr_number,
             "repository": repo,
             "cache_path": cache_path,
-            "recommended_command": command,
+            "recommended_command": live_inspection["recommended_command"],
+            "cache_selector_command": command,
+            "live_inspection": live_inspection,
+            "pr_resolution": {
+                "status": "known" if pr_number else "required",
+                "command": live_inspection["pr_resolution_command"],
+                "rule": "Resolve the current branch PR before review-thread claims when cached state is unreadable.",
+            },
             "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
             "comment_addressing": _pr_comment_addressing_unavailable_packet(
                 repo=repo,
@@ -23883,6 +23934,10 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "selector": "pr_comment_attention",
         }
     if cache:
+        cache_pr_number = str(cache.get("pr_number") or pr_number)
+        cache_live_inspection = _pr_comment_live_inspection_routes_payload(
+            repo=repo, branch=branch, pr_number=cache_pr_number, cli_invoke=cli_invoke
+        )
         counts = cache.get("category_counts", {}) if isinstance(cache.get("category_counts"), dict) else {}
         actionable_categories = (
             "actionable_code_doc_body_change",
@@ -23899,7 +23954,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
         comment_addressing = _pr_comment_addressing_packet_from_delta(
             cache=cache,
             repo=repo,
-            pr_number=str(cache.get("pr_number") or pr_number),
+            pr_number=cache_pr_number,
             cache_path=cache_path,
             cli_invoke=cli_invoke,
         )
@@ -23910,7 +23965,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
                 "comment_state": "stale_or_unknown",
                 "reason": "Cached PR comment delta has no PR-head freshness proof; refresh before readiness claims.",
                 "repository": repo,
-                "pr_number": str(cache.get("pr_number") or pr_number),
+                "pr_number": cache_pr_number,
                 "cached_status": status,
                 "freshness": freshness
                 or {
@@ -23918,10 +23973,15 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
                     "readiness_claim_rule": "Refresh PR comments before claiming there are no actionable comments.",
                 },
                 "cache_path": cache_path,
-                "recommended_command": command,
-                "thread_inspection": _pr_comment_thread_inspection_payload(
-                    repo=repo, pr_number=str(cache.get("pr_number") or pr_number), cli_invoke=cli_invoke
-                ),
+                "recommended_command": cache_live_inspection["recommended_command"],
+                "cache_selector_command": command,
+                "live_inspection": cache_live_inspection,
+                "pr_resolution": {
+                    "status": "known" if cache_pr_number else "required",
+                    "command": cache_live_inspection["pr_resolution_command"],
+                    "rule": "Resolve or refresh the current branch PR before review-readiness claims.",
+                },
+                "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=cache_pr_number, cli_invoke=cli_invoke),
                 "comment_addressing": comment_addressing,
                 "unverified_context": ["Current PR head is unverified.", "Thread-level comment state may be stale."],
                 "selector": "pr_comment_attention",
@@ -23932,7 +23992,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "status": status,
             "comment_state": "comments_requiring_action" if actionable_count else "no_comments_requiring_action",
             "repository": repo,
-            "pr_number": str(cache.get("pr_number") or pr_number),
+            "pr_number": cache_pr_number,
             "pr_url": str(cache.get("pr_url") or ""),
             "actionable_count": actionable_count,
             "new_comment_count": _as_int(cache.get("new_comment_count")),
@@ -23951,7 +24011,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "cache_path": cache_path,
             "recommended_command": command,
             "thread_inspection": _pr_comment_thread_inspection_payload(
-                repo=repo, pr_number=str(cache.get("pr_number") or pr_number), cli_invoke=cli_invoke, status="available"
+                repo=repo, pr_number=cache_pr_number, cli_invoke=cli_invoke, status="available"
             ),
             "comment_addressing": comment_addressing,
             "unverified_context": [] if cache_is_fresh else ["Current PR head is unverified; refresh before readiness claims."],
@@ -23967,7 +24027,14 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
         "pr_number": pr_number,
         "branch": branch,
         "cache_path": cache_path,
-        "recommended_command": command,
+        "recommended_command": live_inspection["recommended_command"],
+        "cache_selector_command": command,
+        "live_inspection": live_inspection,
+        "pr_resolution": {
+            "status": "known" if pr_number else "required",
+            "command": live_inspection["pr_resolution_command"],
+            "rule": "Resolve the current branch PR before claiming review comments are absent or handled.",
+        },
         "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
         "comment_addressing": _pr_comment_addressing_unavailable_packet(
             repo=repo,
@@ -23977,6 +24044,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             cli_invoke=cli_invoke,
         ),
         "unverified_context": ["No cached PR comment delta exists.", "Thread-level PR comment state is unverified."],
+        "write_safety": live_inspection["write_safety"],
         "selector": "pr_comment_attention",
         "degraded_explicitly": True,
     }
