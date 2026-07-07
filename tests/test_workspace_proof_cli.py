@@ -665,6 +665,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
         "detail_command",
         "detail_command_template",
         "proof_route_selection",
+        "proof_closeout_summary",
     }
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
     assert payload["proof_narrowness"]["status"] == "broad_required"
@@ -678,7 +679,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert "validation_plan" not in encoded
     assert payload["detail_command_template"]["runnable"] is False
     assert payload["detail_command_template"]["placeholders"] == {"paths": ["generated/workspace/python/cli.py"]}
-    assert len(encoded) < 3400
+    assert len(encoded) < 4100
 
 
 def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:
@@ -1257,6 +1258,66 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
     assert learning["confirmed_evidence"]["status"] == "present"
     assert "memory capture-note" in learning["confirmed_evidence"]["items"][0]["capture"]["command_to_run"]
     assert learning["actionable_next_steps"]["memory_note_entries"][0].startswith("agentic-workspace-proof-route:")
+
+
+def test_proof_changed_closeout_summary_preserves_learned_route_receipt(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src" / "app.py", "print('ok')\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "proof-routes.md",
+        """
+# Proof routes
+
+agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test","candidate_command":"python -m compileall src","source":"memory","confidence":"high","requires_live_confirmation":false,"scope":"src","owner":"Memory","provenance":"manual verification passed on 2026-06-02","learned_at":"2026-06-02"}
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "command": "python -m compileall src",
+                "result": "passed",
+                "changed_paths": ["src/app.py"],
+                "recorded_at": "2026-07-06T10:00:00Z",
+            }
+        ),
+    )
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.py", "--format", "json"]) == 0
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    summary = answer["proof_closeout_summary"]
+    assert summary["status"] == "sufficient-recorded"
+    assert summary["changed_paths"] == ["src/app.py"]
+    assert summary["route"]["source"] == "memory"
+    assert summary["route"]["maturity"] == "learned-confirmed"
+    assert summary["proof_results"] == [
+        {
+            "command": "python -m compileall src",
+            "result": "passed",
+            "receipt_state": "accepted",
+            "execution_state": "missing",
+            "evidence_source": "proof-receipt",
+        }
+    ]
+    assert summary["remaining_gaps"] == []
+    assert any(line.startswith("Route:") and "learned-confirmed" in line for line in summary["pr_validation_lines"])
+    assert any(line == "Remaining gaps: none known." for line in summary["pr_validation_lines"])
+
+
+def test_proof_tiny_includes_closeout_summary_for_pr_validation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "Makefile", "test:\n\tpytest\n\nlint:\n\truff check .\n")
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    summary = payload["proof_closeout_summary"]
+    assert summary["changed_paths"] == ["llms.txt"]
+    assert summary["route"]["maturity"] == "conservative-fallback"
+    assert summary["remaining_gap_count"] == 4
+    assert "conservative-fallback" in summary["human_summary"]
 
 
 def test_proof_changed_memory_negative_route_suppresses_candidate(tmp_path: Path, capsys) -> None:
@@ -3080,7 +3141,7 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
     assert payload["next"]["command"] == docs_diff
     assert payload["required_commands"] == [docs_diff]
     assert "uv run pytest tests -q" not in encoded
-    assert len(encoded) < 2500
+    assert len(encoded) < 3200
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(tmp_path: Path, capsys) -> None:
