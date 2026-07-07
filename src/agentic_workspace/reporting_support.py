@@ -993,7 +993,18 @@ def issue_1969_acceptance_evidence_matrix_payload(
             "continuation_recheck_without_recap",
             "Resume or re-review from compact state without a prose recap of the whole history.",
             "satisfied",
-            ["#1978", "#1987", "#2004", "#2005", "#2006", "#2007", "#2008", "#2009", "#2010"],
+            [
+                "#1978",
+                "#1987",
+                "#2004",
+                "#2005",
+                "#2006",
+                "#2007",
+                "#2008",
+                "#2009",
+                "#2010",
+                "issue_1969_review_recheck_evidence",
+            ],
         ),
         row(
             "proof_residue_next_action_closure",
@@ -1086,6 +1097,76 @@ def issue_1969_acceptance_evidence_matrix_payload(
             "dogfooding_boundary": {
                 "without_manual_reread": bool(lane_record or execplan_record),
                 "evidence_source": "checked-in #1969 lane/execplan plus stable issue and PR refs",
+            },
+        },
+        cli_invoke=cli_invoke,
+    )
+
+
+def issue_1969_review_recheck_evidence_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    findings = [
+        {
+            "id": "pr-2009-policy-blocked-proof-command",
+            "source": "#2009",
+            "finding_kind": "actionable-review-comment",
+            "historical_state": "addressed",
+            "summary": "Review feedback required preserving policy-blocked proof-command explanation status.",
+            "addressed_by": ["#2009 follow-up fix", "#1969 dogfooding comment"],
+            "recheck_evidence": [
+                "subsequent stack PRs merged after the review fix",
+                "state-delta evidence matrix cites the review/recheck example as historical closure support",
+            ],
+            "current_proof_boundary": "historical review evidence only; rerun selected proof for current HEAD before closure claims",
+            "detail_route": "gh pr view 2009 --comments",
+        },
+        {
+            "id": "pr-2017-duplicate-proof-profile-candidates",
+            "source": "#2017",
+            "finding_kind": "actionable-review-comment",
+            "historical_state": "addressed",
+            "summary": "Review feedback found a duplicate PROOF_PROFILE_CANDIDATES definition and required fix, rebase, and recheck.",
+            "addressed_by": ["#2017 fix/rebase/recheck", "#1969 dogfooding comment"],
+            "recheck_evidence": [
+                "later merged stack PRs depended on the corrected review state",
+                "no active unresolved state is inferred from this historical packet",
+            ],
+            "current_proof_boundary": "historical review evidence only; rerun selected proof for current HEAD before closure claims",
+            "detail_route": "gh pr view 2017 --comments",
+        },
+    ]
+    return _localize_command_fields(
+        {
+            "kind": "agentic-workspace/issue-1969-review-recheck-evidence/v1",
+            "status": "available",
+            "parent_issue": "#1969",
+            "scope": "merged-pr-review-recheck-evidence",
+            "finding_count": len(findings),
+            "actionable_addressed_count": sum(1 for item in findings if item["historical_state"] == "addressed"),
+            "active_unresolved_review_state": {
+                "status": "not-polled",
+                "unresolved_action_count": "unknown",
+                "rule": "This packet preserves historical merged-PR evidence; use pr_comment_attention for active PR review state.",
+                "active_selector": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --section pr_comment_attention --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            },
+            "findings": findings,
+            "raw_comment_dump_policy": {
+                "included_by_default": False,
+                "drill_down": ["gh pr view 2009 --comments", "gh pr view 2017 --comments"],
+                "rule": "Keep closure evidence at finding/recheck granularity; raw comments remain explicit drill-down detail.",
+            },
+            "current_proof_boundary": {
+                "historical_evidence_is_current_proof": False,
+                "rule": "Merged PR review evidence can support #1969 closure criteria, but current HEAD still needs selected proof and closeout gates.",
+            },
+            "integration": {
+                "matrix_selector": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --section issue_1969_evidence_matrix --format json",
+                    cli_invoke=cli_invoke,
+                ),
+                "matrix_row_ids": ["continuation_recheck_without_recap", "proof_residue_next_action_closure"],
             },
         },
         cli_invoke=cli_invoke,

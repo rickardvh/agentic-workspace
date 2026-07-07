@@ -696,6 +696,32 @@ def test_issue_1969_evidence_matrix_maps_criteria_without_closure_authority(tmp_
     assert section["payload_is_lazy"] is True
 
 
+def test_issue_1969_review_recheck_evidence_preserves_historical_boundary(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "issue_1969_review_recheck_evidence", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["kind"] == "agentic-workspace/issue-1969-review-recheck-evidence/v1"
+    assert payload["actionable_addressed_count"] >= 2
+    findings_by_source = {finding["source"]: finding for finding in payload["findings"]}
+    assert findings_by_source["#2009"]["historical_state"] == "addressed"
+    assert "policy-blocked proof-command" in findings_by_source["#2009"]["summary"]
+    assert findings_by_source["#2017"]["historical_state"] == "addressed"
+    assert "PROOF_PROFILE_CANDIDATES" in findings_by_source["#2017"]["summary"]
+    assert payload["active_unresolved_review_state"]["status"] == "not-polled"
+    assert "--section pr_comment_attention" in payload["active_unresolved_review_state"]["active_selector"]
+    assert payload["raw_comment_dump_policy"]["included_by_default"] is False
+    assert payload["current_proof_boundary"]["historical_evidence_is_current_proof"] is False
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "section_catalog", "--format", "json"]) == 0
+    catalog = json.loads(capsys.readouterr().out)["answer"]
+    section = next(item for item in catalog["lazy_sections"] if item["section"] == "issue_1969_review_recheck_evidence")
+    assert section["payload_is_lazy"] is True
+
+
 def test_closeout_trust_does_not_block_on_stale_satisfied_task_posture_residue(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

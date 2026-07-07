@@ -116,6 +116,7 @@ from agentic_workspace.reporting_support import (
     closeout_claim_boundary_payload,
     communication_contract_payload,
     issue_1969_acceptance_evidence_matrix_payload,
+    issue_1969_review_recheck_evidence_payload,
     output_contract_payload,
     reasoning_economy_evidence_payload,
     repo_friction_payload,
@@ -10067,6 +10068,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "when reassessing #1969 closure without manually re-reading every merged PR",
     },
     {
+        "section": "issue_1969_review_recheck_evidence",
+        "kind": "agentic-workspace/issue-1969-review-recheck-evidence/v1",
+        "purpose": "merged PR review/recheck evidence for #1969 state-delta closure support",
+        "when_to_use": "when citing addressed review comments after PRs merged without dumping raw comment history",
+    },
+    {
         "section": "local_footprint",
         "kind": "agentic-workspace/local-footprint/v1",
         "purpose": "tracked-vs-ignored AW footprint, local scratch retention, budgets, and largest local offenders",
@@ -13208,6 +13215,10 @@ def _run_lazy_report_section_command(
                 cli_invoke=config.cli_invoke,
                 target_arg="./repo",
             )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "issue_1969_review_recheck_evidence":
+        payload["issue_1969_review_recheck_evidence"] = issue_1969_review_recheck_evidence_payload(cli_invoke=config.cli_invoke)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "issue_1969_evidence_matrix":
