@@ -120,45 +120,6 @@ PROOF_PROFILE_CANDIDATES = (
         "manual_if": ("publish", "release", "deploy"),
     },
 )
-PROOF_PROFILE_CANDIDATES = (
-    {
-        "id": "unit",
-        "title": "Unit or focused test proof",
-        "tokens": ("test", "pytest", "vitest", "jest"),
-        "manual_if": (),
-    },
-    {
-        "id": "lint",
-        "title": "Lint/static style proof",
-        "tokens": ("lint", "ruff", "eslint"),
-        "manual_if": (),
-    },
-    {
-        "id": "typecheck",
-        "title": "Typecheck proof",
-        "tokens": ("typecheck", "type-check", "mypy", "pyright", "tsc"),
-        "manual_if": (),
-    },
-    {
-        "id": "migration",
-        "title": "Migration/storage proof",
-        "tokens": ("migration", "migrate", "alembic", "db"),
-        "manual_if": ("apply", "deploy", "prod", "production"),
-    },
-    {
-        "id": "audit",
-        "title": "Audit/security proof",
-        "tokens": ("audit", "security", "bandit", "pip-audit", "npm audit"),
-        "manual_if": (),
-    },
-    {
-        "id": "full",
-        "title": "Full maintainer or CI proof",
-        "tokens": ("check", "verify", "ci", "workflow"),
-        "manual_if": ("publish", "release", "deploy"),
-    },
-)
-
 SOURCE_HINTS = [
     (Path("docs/maintainer/testing-strategy.md"), "candidate-host-strategy-source"),
     (Path("docs/maintainer/test-knowledge-inventory.md"), "candidate-test-knowledge-inventory"),
