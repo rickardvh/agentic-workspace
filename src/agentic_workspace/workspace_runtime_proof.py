@@ -92,6 +92,7 @@ from agentic_workspace.workspace_runtime_core import (
     _requirement_grounding_payload,
     _routine_work_context_payload,
     _run_lifecycle_command,
+    _shell_quote,
     _skill_behavior_impact_review_for_changed_paths,
     _split_validation_command,
     _subsystem_matches_for_changed_paths,
@@ -228,6 +229,7 @@ def _compact_tiny_proof_closeout_summary(value: Any) -> dict[str, Any]:
         return {}
     route = _as_dict(value.get("route"))
     sufficiency = _as_dict(value.get("sufficiency"))
+    receipt_bridge = _as_dict(value.get("receipt_bridge"))
     changed_paths = [str(item) for item in _list_payload(value.get("changed_paths"))][:5]
     gap_count = len(_list_payload(value.get("remaining_gaps")))
     proof_count = len(_list_payload(value.get("proof_results")))
@@ -245,6 +247,9 @@ def _compact_tiny_proof_closeout_summary(value: Any) -> dict[str, Any]:
         "route": {key: route.get(key, "") for key in ("name", "maturity") if route.get(key)},
         "proof_result_count": proof_count,
         "remaining_gap_count": gap_count,
+        "receipt_bridge": {
+            key: receipt_bridge.get(key) for key in ("status", "missing_receipt_count", "detail_selector") if key in receipt_bridge
+        },
         "sufficiency": {key: sufficiency.get(key, "") for key in ("status",) if sufficiency.get(key)},
         "human_summary": human_summary,
         "detail_selector": "proof_closeout_summary",
@@ -662,6 +667,65 @@ def _proof_receipt_reconciliation_payload(
             "rule": "Each selected command may be reconciled against any trusted receipt in the current proof boundary.",
         },
         "commands": command_states,
+    }
+
+
+def _proof_receipt_bridge_payload(
+    *,
+    changed_paths: list[str],
+    proof_receipt_reconciliation: dict[str, Any],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    actions: list[dict[str, Any]] = []
+    changed_args = " ".join(_shell_quote(path) for path in changed_paths)
+    changed_part = f" --changed {changed_args}" if changed_args else ""
+    for item in _list_payload(proof_receipt_reconciliation.get("commands")):
+        if not isinstance(item, dict):
+            continue
+        evidence_state = str(item.get("evidence_state", "")).strip()
+        if evidence_state == "accepted":
+            continue
+        command = str(item.get("command", "")).strip()
+        if not command:
+            continue
+        placeholders = sorted(set(re.findall(r"<[^>]+>", command)))
+        action: dict[str, Any] = {
+            "kind": "agentic-workspace/proof-receipt-bridge-action/v1",
+            "command": command,
+            "receipt_state": evidence_state or "not-recorded",
+            "diagnostic": str(item.get("diagnostic", "")),
+            "result_options": ["passed", "failed", "skipped", "waived"],
+            "after_running": "Record the actual result only after executing or deliberately classifying this selected proof command.",
+        }
+        if placeholders:
+            action.update(
+                {
+                    "status": "instantiate-before-recording",
+                    "placeholders": placeholders,
+                    "recording_rule": "Substitute placeholders and run the concrete command before recording a receipt.",
+                }
+            )
+        else:
+            action["status"] = "ready-to-record-after-run"
+            action["record_passed_command"] = _command_with_cli_invoke(
+                command=(
+                    "agentic-workspace proof --target ."
+                    f"{changed_part} --record-receipt --receipt-command {_shell_quote(command)} --receipt-result passed --format json"
+                ),
+                cli_invoke=cli_invoke,
+            )
+        actions.append(action)
+    return {
+        "kind": "agentic-workspace/proof-receipt-bridge/v1",
+        "status": "action-required" if actions else "complete",
+        "missing_receipt_count": len(actions),
+        "receipt_path": str(proof_receipt_reconciliation.get("receipt_path", PROOF_RECEIPT_RELATIVE_PATH.as_posix())),
+        "history_path": str(proof_receipt_reconciliation.get("receipt_history_path", PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix())),
+        "actions": actions,
+        "rule": (
+            "This bridge supplies explicit receipt commands for selected proof only; it does not infer execution success "
+            "from shell history or prose. Record the actual result after running the command."
+        ),
     }
 
 
@@ -3246,6 +3310,11 @@ def _proof_selection_for_changed_paths(
             "or was manually verified. Latest receipts are reconciled but do not bypass intent or closeout review."
         ),
     }
+    proof_receipt_bridge = _proof_receipt_bridge_payload(
+        changed_paths=changed_paths,
+        proof_receipt_reconciliation=proof_receipt_reconciliation,
+        cli_invoke=cli_invoke,
+    )
     configured_policy = [
         {
             "kind": "proof-profile/v1",
@@ -3424,6 +3493,7 @@ def _proof_selection_for_changed_paths(
         proof_command_explanations=proof_command_explanations,
         proof_execution_evidence=proof_execution_evidence,
         proof_receipt_reconciliation=proof_receipt_reconciliation,
+        proof_receipt_bridge=proof_receipt_bridge,
         learned_route_reliance=learned_route_reliance,
         manual_verification=manual_verification,
         unavailable_commands=unavailable_commands,
@@ -3531,6 +3601,7 @@ def _proof_selection_for_changed_paths(
         "host_policy_blocked_commands": host_policy_blocked_commands,
         "proof_execution_evidence": proof_execution_evidence,
         "proof_receipt_reconciliation": proof_receipt_reconciliation,
+        "proof_receipt_bridge": proof_receipt_bridge,
         "proof_decision": proof_decision,
         "high_assurance_closeout_posture": high_assurance_closeout_posture,
         "intent_proof": intent_proof,
@@ -4353,6 +4424,7 @@ def _proof_closeout_summary_payload(
     proof_command_explanations: dict[str, Any],
     proof_execution_evidence: dict[str, Any],
     proof_receipt_reconciliation: dict[str, Any],
+    proof_receipt_bridge: dict[str, Any],
     learned_route_reliance: dict[str, Any],
     manual_verification: dict[str, Any] | None,
     unavailable_commands: list[dict[str, Any]],
@@ -4404,6 +4476,11 @@ def _proof_closeout_summary_payload(
         "required_proof": [item["command"] for item in proof_results],
         "proof_results": proof_results,
         "proof_result_statement": _proof_closeout_result_line(proof_results),
+        "receipt_bridge": {
+            "status": str(proof_receipt_bridge.get("status", "")),
+            "missing_receipt_count": int(proof_receipt_bridge.get("missing_receipt_count", 0) or 0),
+            "detail_selector": "proof_receipt_bridge",
+        },
         "remaining_gaps": remaining_gaps,
         "remaining_gap_statement": _join_or_none(remaining_gaps),
         "route_maturity_gaps": maturity_gaps,
