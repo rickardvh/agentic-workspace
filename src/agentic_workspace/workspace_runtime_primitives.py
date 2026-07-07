@@ -116,6 +116,7 @@ from agentic_workspace.contract_tooling import (
 from agentic_workspace.reporting_support import (
     closeout_claim_boundary_payload,
     communication_contract_payload,
+    issue_1969_acceptance_evidence_matrix_payload,
     output_contract_payload,
     reasoning_economy_evidence_payload,
     repo_friction_payload,
@@ -10152,6 +10153,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "immediately before final messages, PR readiness, issue closure, or closeout handoff",
     },
     {
+        "section": "issue_1969_evidence_matrix",
+        "kind": "agentic-workspace/issue-1969-acceptance-evidence-matrix/v1",
+        "purpose": "#1969 criterion-to-evidence matrix with gaps and closeout boundary",
+        "when_to_use": "when reassessing #1969 closure without manually re-reading every merged PR",
+    },
+    {
         "section": "workflow_compliance_summary",
         "kind": "agentic-workspace/workflow-compliance-summary/v1",
         "purpose": ("review/recovery summary of expected entrypoint, observed workflow use, gates, trust impact, and recovery action"),
@@ -12716,6 +12723,27 @@ def _run_lazy_report_section_command(
                 cli_invoke=config.cli_invoke,
                 target_arg="./repo",
             )
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "issue_1969_evidence_matrix":
+        closeout_trust = _report_closeout_trust_payload(
+            module_reports=_selected_module_reports(target_root=target_root, selected_modules=selected_modules),
+            target_root=target_root,
+            config=config,
+            cli_invoke=config.cli_invoke,
+            task_text=task_text,
+            changed_paths=changed_paths,
+        )
+        closeout_boundary = closeout_claim_boundary_payload(
+            closeout_trust,
+            cli_invoke=config.cli_invoke,
+            target_arg="./repo",
+        )
+        payload["issue_1969_evidence_matrix"] = issue_1969_acceptance_evidence_matrix_payload(
+            target_root=target_root,
+            closeout_claim_boundary=closeout_boundary,
+            cli_invoke=config.cli_invoke,
+        )
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized in {

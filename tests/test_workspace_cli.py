@@ -648,6 +648,54 @@ def test_closeout_claim_boundary_returns_fast_claim_packet(tmp_path: Path, capsy
     assert section["payload_is_lazy"] is True
 
 
+def test_issue_1969_evidence_matrix_maps_criteria_without_closure_authority(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "lanes" / "issue-1969-state-delta-loop.lane.json",
+        {
+            "kind": "planning-lane/v1",
+            "id": "issue-1969-state-delta-loop",
+            "lane_outcome": "Make ordinary AW operating-loop packets state-delta-first for issue #1969.",
+        },
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "issue-1969-lane-stack.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "canonical_core": {
+                "completion_criteria": [
+                    "#1970 current_decision packet is exposed and tested in an ordinary workflow.",
+                    "#1969 parent evidence shows state-delta-first behavior across more than one workflow class.",
+                ]
+            },
+        },
+    )
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "issue_1969_evidence_matrix", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["kind"] == "agentic-workspace/issue-1969-acceptance-evidence-matrix/v1"
+    assert payload["parent_issue"] == "#1969"
+    assert payload["state_counts"]["satisfied"] >= 1
+    assert payload["state_counts"]["missing"] >= 1
+    rows_by_id = {row["id"]: row for row in payload["rows"]}
+    assert rows_by_id["state_delta_model"]["state"] == "satisfied"
+    assert "#1976" in rows_by_id["state_delta_model"]["evidence_refs"]
+    assert rows_by_id["omission_proof"]["state"] == "missing"
+    assert rows_by_id["omission_proof"]["follow_up_owner"] == "#2029"
+    assert payload["closeout_gate_boundary"]["matrix_authorizes_closure"] is False
+    assert "--section closeout_claim_boundary" in payload["closeout_gate_boundary"]["claim_boundary_selector"]
+    assert ".agentic-workspace/planning/lanes/issue-1969-state-delta-loop.lane.json" in payload["source_refs"]
+    assert payload["dogfooding_boundary"]["without_manual_reread"] is True
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "section_catalog", "--format", "json"]) == 0
+    catalog = json.loads(capsys.readouterr().out)["answer"]
+    section = next(item for item in catalog["lazy_sections"] if item["section"] == "issue_1969_evidence_matrix")
+    assert section["payload_is_lazy"] is True
+
+
 def test_closeout_trust_does_not_block_on_stale_satisfied_task_posture_residue(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

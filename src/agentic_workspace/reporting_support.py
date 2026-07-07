@@ -918,6 +918,180 @@ def closeout_claim_boundary_payload(
     )
 
 
+def issue_1969_acceptance_evidence_matrix_payload(
+    *,
+    target_root: Path | None,
+    closeout_claim_boundary: dict[str, Any] | None = None,
+    cli_invoke: str = DEFAULT_CLI_INVOKE,
+) -> dict[str, Any]:
+    root = target_root or Path(".")
+    lane_path = root / ".agentic-workspace" / "planning" / "lanes" / "issue-1969-state-delta-loop.lane.json"
+    execplan_path = root / ".agentic-workspace" / "planning" / "execplans" / "issue-1969-lane-stack.plan.json"
+
+    def read_json(path: Path) -> dict[str, Any]:
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+        return value if isinstance(value, dict) else {}
+
+    lane_record = read_json(lane_path)
+    execplan_record = read_json(execplan_path)
+    closeout_claim_boundary = closeout_claim_boundary if isinstance(closeout_claim_boundary, dict) else {}
+    source_refs = [
+        ref
+        for ref, present in (
+            (".agentic-workspace/planning/lanes/issue-1969-state-delta-loop.lane.json", bool(lane_record)),
+            (".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json", bool(execplan_record)),
+            ("https://github.com/rickardvh/agentic-workspace/issues/1969", True),
+        )
+        if present
+    ]
+
+    def row(
+        row_id: str,
+        criterion: str,
+        state: str,
+        evidence_refs: list[str],
+        *,
+        missing_evidence: list[str] | None = None,
+        follow_up_owner: str = "none-known",
+        current_proof_boundary: str = "historical evidence only; current HEAD still requires selected proof and closeout gates",
+    ) -> dict[str, Any]:
+        return {
+            "id": row_id,
+            "criterion": criterion,
+            "state": state,
+            "evidence_refs": evidence_refs,
+            "missing_evidence": missing_evidence or [],
+            "follow_up_owner": follow_up_owner,
+            "current_proof_boundary": current_proof_boundary,
+        }
+
+    rows = [
+        row(
+            "state_delta_model",
+            "Define a compact state-delta-first message model for the AW operating loop.",
+            "satisfied",
+            [
+                ".agentic-workspace/planning/lanes/issue-1969-state-delta-loop.lane.json",
+                ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json",
+                "#1976",
+                "#1977",
+                "#1978",
+                "#1979",
+                "#1980",
+            ],
+        ),
+        row(
+            "ordinary_workflow_decision_packet",
+            "Expose current decision, known evidence, missing evidence, safe probe, and response shape before visible output.",
+            "satisfied",
+            ["#1976", "#1979", ".agentic-workspace/planning/execplans/issue-1969-lane-stack.plan.json"],
+        ),
+        row(
+            "continuation_recheck_without_recap",
+            "Resume or re-review from compact state without a prose recap of the whole history.",
+            "satisfied",
+            ["#1978", "#1987", "#2004", "#2005", "#2006", "#2007", "#2008", "#2009", "#2010"],
+        ),
+        row(
+            "proof_residue_next_action_closure",
+            "Preserve proof boundary, residue, next action, and honest closure in state-delta closeout.",
+            "stale",
+            ["#1981", "#1982", "#2021", "#2023", "#2024", "#2025"],
+            missing_evidence=[
+                "current closeout authorization must be checked separately through closeout_claim_boundary or closeout_trust"
+            ],
+            follow_up_owner="#2030",
+            current_proof_boundary="matrix evidence is not closeout authorization; use closeout gates for current closure claims",
+        ),
+        row(
+            "narration_reduction",
+            "Show reduced process narration or repeated context while preserving proof, residue, and next action.",
+            "needs-human-judgment",
+            [
+                "https://github.com/rickardvh/agentic-workspace/issues/1969#issuecomment-4896594752",
+                "https://github.com/rickardvh/agentic-workspace/issues/1969#issuecomment-4899165831",
+            ],
+            missing_evidence=["fixture-backed or dogfooded before/after narration comparison"],
+            follow_up_owner="#2028",
+        ),
+        row(
+            "expansion_triggers",
+            "Make expansion triggers explicit and preserve proof, safety, uncertainty, and residue detail when needed.",
+            "satisfied",
+            ["#1977", "#1979", "#1980", "src/agentic_workspace/reporting_support.py"],
+        ),
+        row(
+            "structured_state_not_prompt_keywords",
+            "Use structured state rather than prompt-prose classifiers or broad always-on dumps.",
+            "satisfied",
+            [
+                "#1976",
+                "#1977",
+                "#1978",
+                "#1979",
+                "#1980",
+                "#1983",
+                "#2004",
+                "#2024",
+                "#2025",
+            ],
+        ),
+        row(
+            "omission_proof",
+            "Show why compact operating-loop outputs can omit hidden detail without losing needed state.",
+            "missing",
+            [],
+            missing_evidence=["omission proof packet or fixture evidence for selector-hidden context"],
+            follow_up_owner="#2029",
+        ),
+    ]
+    counts = {
+        state: sum(1 for item in rows if item["state"] == state) for state in ("satisfied", "missing", "stale", "needs-human-judgment")
+    }
+    closeout_status = {
+        "status": closeout_claim_boundary.get("status", "unavailable"),
+        "trust": closeout_claim_boundary.get("trust", ""),
+        "claim_level_allowed": closeout_claim_boundary.get("claim_level_allowed", ""),
+        "closure_permission": closeout_claim_boundary.get("closure_permission", {}),
+        "detail_selector": closeout_claim_boundary.get("detail_selector", "closeout_trust"),
+    }
+    matrix_authorizes_closure = False
+    return _localize_command_fields(
+        {
+            "kind": "agentic-workspace/issue-1969-acceptance-evidence-matrix/v1",
+            "status": "available",
+            "parent_issue": "#1969",
+            "criterion_count": len(rows),
+            "state_counts": counts,
+            "source_refs": source_refs,
+            "rows": rows,
+            "closeout_gate_boundary": {
+                "matrix_authorizes_closure": matrix_authorizes_closure,
+                "rule": "This matrix maps evidence; it does not authorize #1969 closure without current proof and closeout gates.",
+                "current_closeout_claim_boundary": closeout_status,
+                "claim_boundary_selector": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --section closeout_claim_boundary --format json",
+                    cli_invoke=cli_invoke,
+                ),
+            },
+            "update_model": {
+                "historical_refs_are_inputs": True,
+                "current_proof_required": True,
+                "smallest_follow_up_owner_field": "rows[].follow_up_owner",
+                "rule": "Update row states from durable issue, PR, packet, test, doc, or comment refs; do not infer closure from raw merged count.",
+            },
+            "dogfooding_boundary": {
+                "without_manual_reread": bool(lane_record or execplan_record),
+                "evidence_source": "checked-in #1969 lane/execplan plus stable issue and PR refs",
+            },
+        },
+        cli_invoke=cli_invoke,
+    )
+
+
 def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str, target_arg: str = "./repo") -> Any:
     if section == "reasoning_economy" and isinstance(answer, dict):
         behavior = answer.get("behavior_check", {})
