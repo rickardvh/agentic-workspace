@@ -316,6 +316,63 @@ def test_implement_surfaces_operating_loop_with_proof_blocker(tmp_path: Path, ca
     assert packet["reasons"][0]["code"] == "proof_missing"
 
 
+def test_implement_task_switch_keeps_unrelated_active_plan_out_of_current_closure_blockers(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Unrelated active plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        {"kind": "planning-execplan/v1", "id": "active-plan", "title": "Unrelated active plan"},
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Implement issue #3000 parser cache cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "enough-for-bounded-implementation"
+    assert payload["context"]["planning_safety_gate"]["gate_result"] == "active-plan-task-switch"
+    packet = payload["operating_loop"]
+    assert packet["verification"]["state"] == "proof_missing"
+    assert packet["closeout_state"] == "blocked_missing_proof"
+    assert packet["residue_owner"] == "verification"
+    assert packet["planning"]["state"] == "unrelated_active_plan"
+    assert packet["planning"]["plan_ref"] == ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    assert packet["planning"]["blocks_full_closure"] is False
+    assert packet["required_before_full_closure"] == ["run_or_refresh_proof"]
+
+
 def test_implement_does_not_require_stale_deleted_test_inventory_sweep(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

@@ -283,6 +283,11 @@
       "description": "Tracked-vs-ignored AW footprint, local scratch retention budgets, largest offenders, and cleanup routing.",
       "additionalProperties": true
     },
+    "stale_cleanup": {
+      "type": "object",
+      "description": "Cleanup routing for stale local and checked-in planning surfaces.",
+      "additionalProperties": true
+    },
     "workflow_obligations": {
       "type": "object",
       "description": "Repo-configured workflow obligations surfaced for report consumers."

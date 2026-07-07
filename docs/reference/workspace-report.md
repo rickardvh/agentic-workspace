@@ -152,6 +152,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `architecture_principles` | object | yes |  | Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths. |  |  |
 | `local_aw_state` | object | yes |  | Compact ownership-aware status for tracked, ignored, local-only, cache, payload, policy, and proof AW surfaces. |  |  |
 | `local_footprint` | object | yes |  | Tracked-vs-ignored AW footprint, local scratch retention budgets, largest offenders, and cleanup routing. |  |  |
+| `stale_cleanup` | object | no |  | Cleanup routing for stale local and checked-in planning surfaces. |  |  |
 | `workflow_obligations` | object | yes |  | Repo-configured workflow obligations surfaced for report consumers. |  |  |
 | `assurance_requirements` | object | yes |  | Repo-declared assurance requirements, active matches, and evidence status projection; task-marker matches cite explicit config while semantic acceptance remains agent/human owned. |  |  |
 | `verification` | object | yes |  | Repo-native verification protocols, scenarios, bounded evidence bundles, and soft verification routing projection; task-marker matches are configured protocol evidence, not AW-owned intent classification. |  |  |

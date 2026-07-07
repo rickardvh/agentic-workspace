@@ -707,6 +707,29 @@ def test_operating_loop_projection_blocks_active_planning() -> None:
     assert "continue_or_close_plan" in packet["required_before_full_closure"]
 
 
+def test_operating_loop_projection_keeps_unrelated_task_switch_plan_as_residue() -> None:
+    packet = _operating_loop_decision_payload(
+        claim_context="closeout",
+        planning_safety_gate={
+            "gate_result": "active-plan-task-switch",
+            "workflow_sufficient": True,
+            "task_switch_reconciliation": {"status": "active"},
+            "active_plan_reliance": {
+                "status": "active-plan-present",
+                "active_execplan": ".agentic-workspace/planning/execplans/current.md",
+            },
+        },
+        proof={"status": "passed"},
+    )
+
+    assert packet["planning"]["state"] == "unrelated_active_plan"
+    assert packet["planning"]["plan_ref"] == ".agentic-workspace/planning/execplans/current.md"
+    assert packet["planning"]["blocks_full_closure"] is False
+    assert packet["closeout_state"] == "ready_for_full_closure"
+    assert packet["safe_claim"] == "full"
+    assert "continue_or_close_plan" not in packet["required_before_full_closure"]
+
+
 def test_operating_loop_projection_maps_planning_continuation_to_partial_claim() -> None:
     packet = _operating_loop_decision_payload(
         claim_context="closeout",
