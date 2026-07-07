@@ -10,6 +10,43 @@ from typing import Any
 from tests.workspace_cli_support import *
 
 
+@pytest.mark.parametrize(
+    ("argv", "blocked_command"),
+    [
+        (["start"], "start"),
+        (["summary"], "summary"),
+        (["report"], "report"),
+        (["implement", "--task", "disabled workspace should not build implement context"], "implement"),
+        (["proof"], "proof"),
+        (["planning", "closeout"], "planning closeout"),
+    ],
+)
+def test_workspace_disabled_state_blocks_ordinary_commands(tmp_path: Path, capsys, argv: list[str], blocked_command: str) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[workspace]\nenabled = false\n",
+    )
+
+    assert cli.main([*argv, "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/disabled-state/v1"
+    assert payload["status"] == "disabled"
+    assert payload["command"] == blocked_command
+    assert payload["effective_config"] == {
+        "field": "workspace.enabled",
+        "value": False,
+        "source": "local-override",
+        "surface": ".agentic-workspace/config.local.toml",
+    }
+    assert payload["action_effect"]["normal_workflow_allowed"] is False
+    assert payload["action_effect"]["diagnostics_allowed"] is True
+    assert "config" in payload["allowed_diagnostics"]
+    assert "workspace.enabled = true" in payload["re_enable"]["local_override"]
+
+
 def test_json_payload_budget_failure_reports_largest_contributors() -> None:
     payload = {
         "small": "ok",

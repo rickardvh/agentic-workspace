@@ -13,6 +13,7 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | (root) | object | yes |  | Machine-local override schema for invocation preferences, delegation capabilities, safety posture, and local memory. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `schema_version` | const `1` | yes |  | Local override contract version. |  |  |
 | `workspace` | object | no |  | Local workspace preferences that should not be checked into shared repo config. |  |  |
+| `workspace.enabled` | boolean | no |  | Machine-local override for whether ordinary Agentic Workspace operation should run in this repository. When false, ordinary commands return a disabled-state packet; set true here to re-enable even if repo config disables AW. |  |  |
 | `workspace.cli_invoke` | string | no |  | Command prefix this machine should show in copyable Agentic Workspace commands, such as `uv run agentic-workspace`. |  |  |
 | `workspace.shared_config_path` | string | no |  | Optional path to another machine-local Agentic Workspace local config file. Relative paths resolve from the repository root; repo-local local config values override shared values. |  |  |
 | `workspace.maintainer_mode` | boolean | no |  | Machine-local opt-in that surfaces package-maintainer dogfooding report routes during ordinary start/report use without making them shared repo policy. |  |  |

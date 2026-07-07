@@ -5784,6 +5784,11 @@
             "command": "decision-promote",
             "function": "_run_planning_decision_adapter",
             "import_module": "agentic_workspace.workspace_runtime_primitives"
+          },
+          {
+            "command": "closeout",
+            "function": "_run_planning_closeout_adapter",
+            "import_module": "agentic_workspace.workspace_runtime_primitives"
           }
         ],
         "missing_module_message": "The planning module must be installed to use planning subcommands.",

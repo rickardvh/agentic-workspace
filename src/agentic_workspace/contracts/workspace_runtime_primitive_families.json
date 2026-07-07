@@ -678,6 +678,19 @@
         "exclusion_rule": "Do not add broad semantic helper families to this bucket; promote them to a named family with a specific owner-boundary reason first."
       },
       {
+        "id": "workspace-enablement-gate",
+        "title": "Workspace enablement gate",
+        "allowed_owner_modules": [
+          "src/agentic_workspace/workspace_runtime_startup.py",
+          "src/agentic_workspace/workspace_runtime_implement.py"
+        ],
+        "source_symbols": [
+          "_workspace_disabled_payload"
+        ],
+        "core_role": "Shared core may expose the workspace.enabled disabled-state packet for ordinary runtime entrypoints so owner modules stop with a consistent compact payload before normal workflow assembly.",
+        "exclusion_rule": "Do not add command-specific disabled behavior, proof/report selector assembly, or generated command dispatch here; each owner remains responsible for deciding where to apply the gate."
+      },
+      {
         "id": "workspace-environment-and-contract-loaders",
         "title": "Workspace environment and contract loaders",
         "allowed_owner_modules": [
@@ -711,6 +724,7 @@
           "_package_scripts_without_negative_routes",
           "_read_task_text_from_file",
           "_resolve_target_root",
+          "_shell_quote",
           "_subsystem_matches_for_changed_paths",
           "_target_proof_capabilities",
           "_validate_target_root"

@@ -234,6 +234,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `decision_pressure` | object | yes |  | Routing-only architecture-decision pressure surface with owner-model split, host decision target discovery, existing decision index, promotion pressure, and command-owned scaffold routes. |  |  |
 | `maintenance_pressure` | object | yes |  | Maintainer-facing pressure signals and optional follow-up routes. |  |  |
 | `closeout_trust` | object | yes |  | Trust signals for whether recent or current work can be safely closed. |  |  |
+| `closeout_claim_boundary` | object | yes |  | Fast closeout claim permission, blocker, residue-route, and proof-dependency packet. |  |  |
 | `external_work_reconciliation` | object | yes |  | Provider-agnostic reconciliation between checked-in planning and external work evidence. |  |  |
 | `external_work_delta` | object | yes |  | Delta view for external work evidence when a prior snapshot is available. |  |  |
 | `findings` | array | yes |  | Diagnostic findings emitted by the report. |  |  |
