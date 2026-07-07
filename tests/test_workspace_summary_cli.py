@@ -619,7 +619,7 @@ def test_memory_decision_packet_closeout_states_are_pressure_driven() -> None:
 
 
 def test_memory_decision_packet_pull_statuses_distinguish_route_inspection() -> None:
-    checked_none = _memory_decision_packet_payload(
+    baseline_only = _memory_decision_packet_payload(
         stage="implement",
         cli_invoke="agentic-workspace",
         memory_consult={
@@ -630,6 +630,17 @@ def test_memory_decision_packet_pull_statuses_distinguish_route_inspection() -> 
             "route_matches": [{"path": ".agentic-workspace/memory/repo/index.md", "match_source": "routing-baseline"}],
         },
         changed_paths=["src/example.py"],
+    )
+    checked_none = _memory_decision_packet_payload(
+        stage="implement",
+        cli_invoke="agentic-workspace",
+        memory_consult={
+            "status": "recommended",
+            "route_inspection_state": "checked",
+            "route_signal_count": 0,
+            "route_matches": [],
+        },
+        changed_paths=["docs/example.md"],
     )
     relevant = _memory_decision_packet_payload(
         stage="implement",
@@ -653,9 +664,17 @@ def test_memory_decision_packet_pull_statuses_distinguish_route_inspection() -> 
         task_text="memory memory memory",
     )
 
+    assert baseline_only["pull"]["status"] == "baseline_only"
     assert checked_none["pull"]["status"] == "checked_none"
     assert relevant["pull"]["status"] == "relevant_notes_found"
     assert hinted_only["pull"]["status"] == "not_checked"
+    assert baseline_only["capture"]["allowed_outcomes"] == [
+        "capture",
+        "update_existing",
+        "route_elsewhere",
+        "dismiss",
+        "follow_up_required",
+    ]
 
 
 def test_operating_loop_projection_keeps_task_prose_from_changing_state() -> None:

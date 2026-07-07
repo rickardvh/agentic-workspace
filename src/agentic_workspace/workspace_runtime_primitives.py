@@ -14074,6 +14074,7 @@ def _operational_compression_payload(
         "generated_output_footprint": generated_footprint,
         "archive_retention_policy": archive_retention,
         "ordinary_output_shape_inventory": output_shape_inventory,
+        "ordinary_default_output_budget": output_shape_inventory.get("ordinary_default_output_budget", {}),
         "review_retention_policy": review_retention,
         "unresolved_external_work_routing": {
             "status": current_external_work.get("status", "unavailable") if isinstance(current_external_work, dict) else "unavailable",
@@ -14185,7 +14186,7 @@ def _operational_compression_payload(
     return {
         "kind": "workspace-operational-compression/v1",
         "status": "attention" if advisory_signals else "measured",
-        "advisory_only": True,
+        "advisory_only": False,
         "rule": "These measures make surface cost inspectable. They are not a score, workflow engine, dashboard, or host-tracker policy.",
         "measures": measures,
         "signals": advisory_signals,
@@ -14199,21 +14200,21 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
     outputs = [
         {
             "surface": "start",
-            "status": "proven",
+            "status": "budget-proven",
             "primary_decision": "next_safe_action",
             "primary_decision_object": "next_safe_action",
             "ordinary_default_shape": "one startup decision packet with action_signals and selector-backed drill-down",
             "detail_route": "start --select <field> or --verbose",
-            "retention_evidence": "Milestone D installed walkthrough proved start as the ordinary front door.",
+            "budget_evidence": "tests/test_workspace_cli.py keeps representative default start JSON under the tiny-output ceiling.",
         },
         {
             "surface": "implement",
-            "status": "retained-with-evidence",
+            "status": "budget-proven",
             "primary_decision": "safe implementation route for the changed paths and task",
             "primary_decision_object": "next",
             "ordinary_default_shape": "changed-path implementation card with action_signals and proof summary",
             "detail_route": "implement selector/detail output",
-            "retention_evidence": "Milestone D walkthrough showed implement --changed emits one scoped next action plus required proof commands.",
+            "budget_evidence": "tests/test_workspace_implement_cli.py keeps docs/code default implement JSON under tiny-output ceilings.",
         },
         {
             "surface": "summary",
@@ -14270,13 +14271,64 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
             "retention_evidence": "Memory routes governing knowledge and closeout residue; promotion/remediation detail stays behind memory report selectors.",
         },
     ]
-    proven_count = sum(1 for item in outputs if item["status"] == "proven")
+    budget_contract = {
+        "kind": "workspace-ordinary-default-output-budget/v1",
+        "status": "checked",
+        "advisory_only": False,
+        "rule": "Representative ordinary defaults must stay selector-first; growth needs replacement, relocation, compression, or an explicit waiver.",
+        "representative_surfaces": [
+            {
+                "surface": "start",
+                "status": "budget-proven",
+                "max_json_bytes": 10000,
+                "proof": "test_start_default_stays_under_tiny_output_budget_for_docs_task",
+            },
+            {
+                "surface": "implement",
+                "status": "budget-proven",
+                "max_json_bytes": 13000,
+                "proof": "test_implement_default_stays_under_tiny_output_budget_for_docs_task",
+            },
+            {
+                "surface": "summary",
+                "status": "retained-with-evidence",
+                "max_json_bytes": 12000,
+                "proof": "summary default remains selector-first through continuation_view tests",
+            },
+            {
+                "surface": "report",
+                "status": "retained-with-evidence",
+                "max_json_bytes": 16000,
+                "proof": "report defaults route high-volume sections behind --section and operational_compression records this budget state",
+            },
+            {
+                "surface": "proof",
+                "status": "retained-with-evidence",
+                "max_json_bytes": 12000,
+                "proof": "proof defaults expose next proof action while detailed proof context stays behind selectors",
+            },
+        ],
+        "selector_relocations": [
+            {
+                "surface": "report",
+                "block": "closeout_trust.historical_review_artifacts",
+                "default_state": "selector-routed",
+                "detail_route": "report --section closeout_trust or report --section operational_compression",
+            }
+        ],
+        "status_vocabulary": {
+            "budget-proven": "CI has a focused representative default-output size/shape assertion.",
+            "retained-with-evidence": "The surface names a primary decision object and selector route, but is not yet directly budget-proven here.",
+        },
+    }
+    proven_count = sum(1 for item in outputs if item["status"] in {"proven", "budget-proven"})
     retained_with_evidence_count = sum(1 for item in outputs if item["status"] == "retained-with-evidence")
-    remaining = [item for item in outputs if item["status"] not in {"proven", "retained-with-evidence"}]
+    budget_proven_count = sum(1 for item in outputs if item["status"] == "budget-proven")
+    remaining = [item for item in outputs if item["status"] not in {"proven", "budget-proven", "retained-with-evidence"}]
     return {
         "kind": "workspace-ordinary-output-shape-inventory/v1",
-        "status": "attention" if remaining else "measured",
-        "advisory_only": True,
+        "status": "attention" if remaining else "checked",
+        "advisory_only": False,
         "rule": "Each ordinary output must name one primary decision object; retained complexity is acceptable only with explicit routing evidence.",
         "classification": [
             "primary decision",
@@ -14290,7 +14342,9 @@ def _ordinary_output_shape_inventory() -> dict[str, Any]:
         "remaining_count": len(remaining),
         "resolved_count": len(outputs) - len(remaining),
         "proven_count": proven_count,
+        "budget_proven_count": budget_proven_count,
         "retained_with_evidence_count": retained_with_evidence_count,
+        "ordinary_default_output_budget": budget_contract,
         "outputs": outputs,
         "recommended_grouping": "No unresolved output-shape slices remain; rerun the installed walkthrough before closing #1389.",
     }
@@ -14358,6 +14412,7 @@ def _memory_consultation_protocol_payload(
         "state_vocabulary": [
             "not_checked",
             "checked_none",
+            "baseline_only",
             "relevant_notes_found",
             "capture_candidate",
             "routed_elsewhere",
@@ -14367,6 +14422,7 @@ def _memory_consultation_protocol_payload(
         "status_mapping": {
             "not_checked": "no Memory route, index, or structured memory surface was inspected",
             "checked_none": "Memory routing was inspected and no relevant note was found",
+            "baseline_only": "only the Memory routing baseline or index matched; no task-relevant durable note was found",
             "relevant_notes_found": "existing notes or routes informed the work",
             "capture_candidate": "a durable anti-rediscovery lesson may belong in Memory",
             "routed_elsewhere": "residue belongs in Planning, docs, tests, contracts, config, review, or an issue",
@@ -14466,7 +14522,15 @@ def _memory_consult_payload(
             except Exception:
                 route_actions = []
                 route_inspection_state = "unavailable"
-        consultation_state = "checked-with-matches" if read_first else "checked-none"
+        relevant_route_actions = [action for action in route_actions if action.get("match_source") != "routing-baseline"]
+        if route_inspection_state == "unavailable":
+            consultation_state = "unavailable"
+        elif relevant_route_actions:
+            consultation_state = "relevant_notes_found"
+        elif route_actions or read_first:
+            consultation_state = "baseline_only"
+        else:
+            consultation_state = "checked_none"
         return {
             "kind": "agentic-workspace/memory-consult/v1",
             "status": "recommended" if read_first else "not-recommended",
@@ -14556,7 +14620,19 @@ def _memory_consult_payload(
         command="agentic-workspace memory capture-note --slug <slug> --target ./repo --summary <text> --files <changed paths> --format json",
         workspace_cli_invoke=cli_invoke,
     )
-    consultation_state = "checked-with-matches" if read_first else "checked-none"
+    relevant_route_actions = [action for action in route_actions if action.get("match_source") != "routing-baseline"]
+    if route_inspection_state == "unavailable":
+        consultation_state = "unavailable"
+    elif relevant_route_actions:
+        consultation_state = "relevant_notes_found"
+    elif route_actions and read_first:
+        consultation_state = "baseline_only"
+    elif read_first and route_inspection_state == "not_checked":
+        consultation_state = "not_checked"
+    elif read_first:
+        consultation_state = "baseline_only"
+    else:
+        consultation_state = "checked_none"
     consultation_protocol = _memory_consultation_protocol_payload(
         consultation_state=consultation_state,
         read_first=read_first,
@@ -14621,7 +14697,7 @@ _MEMORY_DECISION_OWNER_SURFACES = [
     "review",
     "issue",
 ]
-_MEMORY_PULL_STATUSES = {"not_checked", "checked_none", "relevant_notes_found", "stale", "unavailable", "dismissed"}
+_MEMORY_PULL_STATUSES = {"not_checked", "checked_none", "baseline_only", "relevant_notes_found", "stale", "unavailable", "dismissed"}
 _MEMORY_CAPTURE_STATUSES = {
     "not_evaluated",
     "none_found",
@@ -14702,7 +14778,7 @@ def _operating_loop_memory_state(memory_decision_packet: dict[str, Any] | None) 
     if pull_status == "relevant_notes_found":
         memory_state = "pulled"
         reason_code = "matched_route"
-    elif pull_status == "checked_none":
+    elif pull_status in {"checked_none", "baseline_only"}:
         memory_state = "dismissed"
         reason_code = "no_relevant_route"
     elif pull_status in {"stale", "unavailable"}:
@@ -15084,6 +15160,10 @@ def _memory_decision_packet_payload(
         pull_status = "unavailable"
     elif pull_status == "not_checked" and route_inspection_state == "checked" and (route_signal_count > 0 or relevant_route_matches):
         pull_status = "relevant_notes_found"
+    elif pull_status == "not_checked" and (
+        route_inspection_state == "baseline_only" or (route_inspection_state == "checked" and route_matches and not relevant_route_matches)
+    ):
+        pull_status = "baseline_only"
     elif pull_status == "not_checked" and route_inspection_state == "checked":
         pull_status = "checked_none"
 
@@ -15134,6 +15214,13 @@ def _memory_decision_packet_payload(
         },
         "capture": {
             "status": capture_status,
+            "allowed_outcomes": [
+                "capture",
+                "update_existing",
+                "route_elsewhere",
+                "dismiss",
+                "follow_up_required",
+            ],
             "candidate_owner_surfaces": list(_MEMORY_DECISION_OWNER_SURFACES),
             "recommended_commands": [_memory_capture_command(cli_invoke=cli_invoke, task_text=task_text, changed_paths=normalized_paths)]
             if force != "not_applicable"
@@ -15178,6 +15265,7 @@ def _compact_memory_decision_packet(packet: Any) -> dict[str, Any]:
         compact_pull["candidate_routes"] = relevant_routes
     compact_capture: dict[str, Any] = {
         "status": capture.get("status"),
+        "outcome_count": len(_list_payload(capture.get("allowed_outcomes"))),
         "recommended_commands": capture.get("recommended_commands", []),
         "candidate_owner_surface_count": len(_list_payload(capture.get("candidate_owner_surfaces"))),
         "agent_decision_required": capture.get("agent_decision_required"),
@@ -15191,7 +15279,7 @@ def _compact_memory_decision_packet(packet: Any) -> dict[str, Any]:
         "why_visible": "Explicit agent-owned Memory pull/capture decision.",
         "pull": {key: value for key, value in compact_pull.items() if value is not None},
         "capture": {key: value for key, value in compact_capture.items() if value is not None},
-        "detail_visibility": "full authority, limits, owner, and candidate detail stay behind verbose implement context",
+        "detail_visibility": "details stay behind verbose implement context",
     }
 
 
@@ -18015,6 +18103,7 @@ def _report_closeout_trust_payload(
             "trust": "normal" if slice_trusted else "lower-trust",
             "scope": "slice",
             "canonical_evidence": evidence_source.get("authority", "archived-planning-evidence"),
+            "evidence_source_class": evidence_source.get("evidence_source_class", ""),
             "owner_surface": evidence_source.get("path", ""),
             "owner_kind": evidence_source.get("authority", "archived-planning-evidence"),
             "evidence_relationship": evidence_source.get("relationship")
@@ -19415,9 +19504,16 @@ def _recent_archived_planning_record_for_closeout(*, target_root: Path | None) -
     payload = copy.deepcopy(payload)
     payload["_closeout_evidence_source"] = {
         "authority": "archived-planning-evidence",
+        "evidence_source_class": "stale-archived-execplan-evidence",
         "path": relative,
         "sort_mtime": mtime,
         "last_modified": datetime.fromtimestamp(mtime, timezone.utc).isoformat() if mtime else "",
+        "selection": {
+            "basis": "archive-fallback",
+            "selected_source_class": "stale-archived-execplan-evidence",
+            "ineligible_fresher_source_class": "none",
+            "rule": "Archived execplans are fallback closeout evidence only when retained closeout-evidence records are absent or ineligible.",
+        },
         "rule": "Archived closeout evidence may inform user-facing reports, but it does not restore active planning state.",
     }
     return payload
@@ -19535,6 +19631,7 @@ def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -
     ]
     payload["_closeout_evidence_source"] = {
         "authority": "retained-closeout-evidence",
+        "evidence_source_class": "fresh-closeout-evidence",
         "path": relative,
         "source_plan": str(payload.get("source_plan") or ""),
         "intended_archive": str(payload.get("intended_archive") or ""),
@@ -19543,6 +19640,7 @@ def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -
         "relevance": relevance,
         "selection": {
             "basis": "relevance-then-mtime",
+            "selected_source_class": "fresh-closeout-evidence",
             "selected_priority": priority,
             "candidate_count": len(candidates),
             "newer_unrelated_count": sum(
@@ -19574,11 +19672,12 @@ def _closeout_planning_record_for_report(*, active_planning_record: dict[str, An
         )
         return record
     retained = _recent_retained_closeout_evidence_for_report(target_root=target_root)
+    if retained:
+        return retained
     archived = _recent_archived_planning_record_for_closeout(target_root=target_root)
-    candidates = [record for record in (retained, archived) if record]
-    if not candidates:
-        return {}
-    return max(candidates, key=lambda record: float(_as_dict(record.get("_closeout_evidence_source")).get("sort_mtime") or 0.0))
+    if archived:
+        return archived
+    return {}
 
 
 def _intent_proof_check_payload(*, planning_report: dict[str, Any], target_root: Path | None = None) -> dict[str, Any]:
