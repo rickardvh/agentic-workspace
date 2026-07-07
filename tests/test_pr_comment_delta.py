@@ -98,12 +98,20 @@ def test_pr_comment_delta_classifies_new_review_response_scope() -> None:
     assert packet["category_counts"]["ci_label_only_issue"] == 1
     assert packet["category_counts"]["ambiguous_needs_human"] == 1
     assert packet["category_counts"]["informational_no_local_change"] == 1
+    assert packet["comment_surfaces"]["inspected"] == ["normalized_comments"]
+    assert packet["comment_surfaces"]["unavailable"] == ["thread_surface_completeness"]
     closure = next(item for item in packet["items"] if item["url"].endswith("#closure"))
     assert closure["category"] == "pr_metadata_body_only_change"
     assert "no source proof" in closure["proof_hint"].lower()
     anchored = next(item for item in packet["items"] if item["url"].endswith("#code"))
     assert anchored["path"] == "tests/test_widget.py"
+    assert anchored["addressing_status"] == "unresolved_action"
+    assert anchored["action_required"] is True
     assert "focused tests" in anchored["proof_hint"]
+    question = next(item for item in packet["items"] if item["url"].endswith("#question"))
+    assert question["addressing_status"] == "reply_only"
+    resolved = next(item for item in packet["items"] if item["url"].endswith("#resolved"))
+    assert resolved["addressing_status"] == "already_addressed"
 
 
 def test_pr_comment_delta_filters_seen_comment_urls(tmp_path: Path) -> None:
@@ -167,11 +175,48 @@ def test_pr_comment_delta_normalizes_graphql_review_threads() -> None:
     assert packet["new_comment_count"] == 1
     assert packet["freshness"]["status"] == "current_at_observed_head"
     assert packet["freshness"]["pr_head_sha"] == "abc123"
+    assert packet["comment_surfaces"]["inspected"] == ["issue_comments", "reviews", "review_threads"]
+    assert packet["comment_surfaces"]["unavailable"] == []
     item = packet["items"][0]
     assert item["kind"] == "review_thread_comment"
     assert item["category"] == "actionable_code_doc_body_change"
+    assert item["addressing_status"] == "unresolved_action"
     assert item["path"] == "src/app.py"
     assert item["line"] == 12
+
+
+def test_pr_comment_delta_separates_outdated_threads_from_addressed_threads() -> None:
+    module = _load_module()
+    packet = module.build_packet(
+        {
+            "repository": "rickardvh/agentic-workspace",
+            "pr_number": 42,
+            "comments": [
+                {
+                    "kind": "review_thread_comment",
+                    "url": "https://example.test/pr#outdated",
+                    "body": "Old inline note",
+                    "created_at": "2026-06-23T11:00:00Z",
+                    "path": "src/app.py",
+                    "is_resolved": False,
+                    "is_outdated": True,
+                },
+                {
+                    "kind": "review_thread_comment",
+                    "url": "https://example.test/pr#resolved",
+                    "body": "Handled inline note",
+                    "created_at": "2026-06-23T11:01:00Z",
+                    "path": "src/app.py",
+                    "is_resolved": True,
+                    "is_outdated": False,
+                },
+            ],
+        }
+    )
+
+    statuses = {item["url"].split("#")[-1]: item["addressing_status"] for item in packet["items"]}
+    assert statuses == {"outdated": "outdated", "resolved": "already_addressed"}
+    assert all(item["action_required"] is False for item in packet["items"])
 
 
 def test_pr_comment_delta_reports_graphql_truncation_boundaries() -> None:

@@ -22946,6 +22946,162 @@ def _compact_installed_state_drift_triage(triage: Any) -> dict[str, Any]:
     }
 
 
+_PR_COMMENT_ADDRESSING_BUCKETS = (
+    "unresolved_action",
+    "reply_only",
+    "already_addressed",
+    "outdated",
+    "informational",
+)
+
+
+def _pr_comment_item_addressing_status(item: dict[str, Any]) -> str:
+    explicit = str(item.get("addressing_status") or "").strip()
+    if explicit in _PR_COMMENT_ADDRESSING_BUCKETS:
+        return explicit
+    if item.get("is_outdated") is True:
+        return "outdated"
+    if item.get("is_resolved") is True:
+        return "already_addressed"
+    category = str(item.get("category") or "").strip()
+    if category == "ambiguous_needs_human":
+        return "reply_only"
+    if category in {"actionable_code_doc_body_change", "pr_metadata_body_only_change", "ci_label_only_issue"}:
+        return "unresolved_action"
+    return "informational"
+
+
+def _pr_comment_addressing_sample(item: dict[str, Any]) -> dict[str, Any]:
+    status = _pr_comment_item_addressing_status(item)
+    return {
+        key: item.get(key)
+        for key in (
+            "id",
+            "kind",
+            "category",
+            "path",
+            "line",
+            "url",
+            "author",
+            "created_at",
+            "proof_hint",
+            "reason",
+            "body_excerpt",
+        )
+        if item.get(key) not in (None, "")
+    } | {"addressing_status": status}
+
+
+def _pr_comment_addressing_unavailable_packet(
+    *, repo: str, pr_number: str, cache_path: str, reason: str, cli_invoke: str
+) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/pr-comment-addressing/v1",
+        "status": "review_comment_evidence_unavailable",
+        "repository": repo,
+        "pr_number": pr_number,
+        "source_availability": {
+            "cached_delta": "unavailable",
+            "thread_level_comments": "unverified",
+            "cache_path": cache_path,
+            "reason": reason,
+        },
+        "bucket_counts": {bucket: 0 for bucket in _PR_COMMENT_ADDRESSING_BUCKETS},
+        "buckets": {bucket: [] for bucket in _PR_COMMENT_ADDRESSING_BUCKETS},
+        "closeout": {
+            "status": "blocked_until_inspected",
+            "addressed_comments": [],
+            "intentionally_open_comments": [],
+            "rule": "Fetch or provide thread-aware PR comment evidence before claiming review feedback is fully handled.",
+        },
+        "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+        "write_safety": {
+            "github_writes_performed": False,
+            "rule": "Do not reply, resolve, or submit reviews from this packet without explicit user approval.",
+        },
+    }
+
+
+def _pr_comment_addressing_packet_from_delta(
+    *, cache: dict[str, Any], repo: str, pr_number: str, cache_path: str, cli_invoke: str
+) -> dict[str, Any]:
+    items = [item for item in _list_payload(cache.get("items")) if isinstance(item, dict)]
+    buckets: dict[str, list[dict[str, Any]]] = {bucket: [] for bucket in _PR_COMMENT_ADDRESSING_BUCKETS}
+    for item in items:
+        buckets[_pr_comment_item_addressing_status(item)].append(_pr_comment_addressing_sample(item))
+    bucket_counts = {bucket: len(entries) for bucket, entries in buckets.items()}
+    freshness = cache.get("freshness", {}) if isinstance(cache.get("freshness"), dict) else {}
+    pagination = cache.get("pagination", {}) if isinstance(cache.get("pagination"), dict) else {}
+    truncated = bool(pagination.get("truncated"))
+    comment_surfaces = cache.get("comment_surfaces", {}) if isinstance(cache.get("comment_surfaces"), dict) else {}
+    unavailable_surfaces = [str(item) for item in _list_payload(comment_surfaces.get("unavailable")) if str(item).strip()]
+    if not comment_surfaces:
+        unavailable_surfaces.append("thread_surface_completeness")
+    if truncated:
+        unavailable_surfaces.append("paginated_comment_tail")
+    fresh = freshness.get("status") == "current_at_observed_head" and bool(str(freshness.get("pr_head_sha") or "").strip())
+    open_count = bucket_counts["unresolved_action"] + bucket_counts["reply_only"]
+    status = (
+        "incomplete_review_comment_evidence"
+        if truncated
+        else "unresolved_review_feedback_present"
+        if open_count
+        else "stale_or_unverified"
+        if not fresh
+        else "review_feedback_closed"
+    )
+    changed_files = sorted(
+        {str(item.get("path") or "").strip() for item in buckets["unresolved_action"] if str(item.get("path") or "").strip()}
+    )
+    return {
+        "kind": "agentic-workspace/pr-comment-addressing/v1",
+        "status": status,
+        "repository": repo,
+        "pr_number": str(cache.get("pr_number") or pr_number),
+        "pr_url": str(cache.get("pr_url") or ""),
+        "source_availability": {
+            "cached_delta": "available",
+            "cache_path": cache_path,
+            "freshness": freshness or {"status": "missing"},
+            "pagination": pagination,
+            "inspected_surfaces": [str(item) for item in _list_payload(comment_surfaces.get("inspected")) if str(item).strip()]
+            or ["cached_delta_items"],
+            "unavailable_surfaces": unavailable_surfaces,
+            "surface_rule": str(
+                comment_surfaces.get("rule")
+                or "Use unavailable surfaces to bound review-readiness claims before claiming all comments are handled."
+            ),
+        },
+        "bucket_counts": bucket_counts,
+        "buckets": buckets,
+        "changed_files": changed_files,
+        "proof_linkage": {
+            "status": "path_anchored" if changed_files else "no_path_anchored_actions" if open_count else "no_open_local_actions",
+            "changed_paths": changed_files,
+            "proof_hints": [
+                str(item.get("proof_hint") or "") for item in buckets["unresolved_action"][:3] if str(item.get("proof_hint") or "").strip()
+            ],
+        },
+        "closeout": {
+            "status": "open_feedback_present" if open_count else "ready_if_fresh" if fresh else "blocked_until_refreshed",
+            "addressed_comments": buckets["already_addressed"],
+            "outdated_comments": buckets["outdated"],
+            "intentionally_open_comments": [*buckets["unresolved_action"], *buckets["reply_only"]],
+            "rule": (
+                "Before closeout, list each unresolved or reply-only comment as addressed or intentionally open; "
+                "do not treat stale or truncated comment evidence as full closure proof."
+            ),
+        },
+        "thread_inspection": _pr_comment_thread_inspection_payload(
+            repo=repo, pr_number=str(cache.get("pr_number") or pr_number), cli_invoke=cli_invoke, status="available"
+        ),
+        "write_safety": {
+            "github_writes_performed": False,
+            "rule": "Do not reply, resolve, or submit reviews from this packet without explicit user approval.",
+        },
+    }
+
+
 def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str, cli_invoke: str) -> dict[str, Any]:
     cache_path = ".agentic-workspace/local/cache/pr-comment-stack.json"
     cache = _read_local_cache_json(target_root, cache_path)
@@ -22997,6 +23153,13 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
             unavailable_present = True
         refresh_command = _pr_comment_report_command(cli_invoke=cli_invoke)
         thread_inspection = _pr_comment_thread_inspection_payload(repo=command_repo, pr_number=pr_number, cli_invoke=cli_invoke)
+        comment_addressing = _pr_comment_addressing_packet_from_delta(
+            cache=member_cache,
+            repo=command_repo,
+            pr_number=pr_number,
+            cache_path=cache_path,
+            cli_invoke=cli_invoke,
+        )
         members.append(
             {
                 "pr_number": pr_number,
@@ -23019,6 +23182,7 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
                     repo=command_repo, pr_number=pr_number, cli_invoke=cli_invoke
                 ),
                 "thread_inspection": thread_inspection,
+                "comment_addressing": comment_addressing,
             }
         )
     status = (
@@ -23054,6 +23218,25 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
         else ["At least one stack member lacks PR-head freshness proof; refresh that member before readiness claims."],
         "claim_boundary": "A broad stack-ready claim is blocked while any stack member has actionable, stale, or unavailable comment status.",
         "degraded_because": "stale-or-missing-member-freshness" if unavailable_present else "",
+        "comment_addressing": {
+            "kind": "agentic-workspace/pr-comment-stack-addressing/v1",
+            "status": "open_feedback_present"
+            if actionable_present
+            else "stale_or_unverified"
+            if unavailable_present
+            else "review_feedback_closed",
+            "member_count": len(members),
+            "members": [
+                {
+                    "pr_number": member.get("pr_number"),
+                    "branch": member.get("branch"),
+                    "comment_status": member.get("comment_status"),
+                    "comment_addressing": member.get("comment_addressing", {}),
+                }
+                for member in members
+            ],
+            "closeout_rule": "List addressed and intentionally open comments per stack member before claiming the whole stack is ready.",
+        },
     }
 
 
@@ -23136,6 +23319,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "comment_state": stack.get("comment_state") or status,
             "thread_inspection": stack.get("thread_inspection")
             or _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+            "comment_addressing": stack.get("comment_addressing", {}),
             "unverified_context": stack.get("unverified_context", []),
             "recommended_command": str(stack.get("stack_members", [{}])[0].get("refresh_command", ""))
             if isinstance(stack.get("stack_members"), list) and stack.get("stack_members")
@@ -23158,6 +23342,13 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "cache_path": cache_path,
             "recommended_command": command,
             "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+            "comment_addressing": _pr_comment_addressing_unavailable_packet(
+                repo=repo,
+                pr_number=pr_number,
+                cache_path=cache_path,
+                reason=str(cache["_cache_error"]),
+                cli_invoke=cli_invoke,
+            ),
             "unverified_context": ["Cached PR comment delta could not be read; thread-level comment state is unverified."],
             "selector": "pr_comment_attention",
         }
@@ -23175,6 +23366,13 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
         status = "actionable_pr_comments_present" if actionable_count else "no_actionable_pr_comments_detected"
         freshness = cache.get("freshness", {}) if isinstance(cache.get("freshness"), dict) else {}
         cache_is_fresh = freshness.get("status") == "current_at_observed_head" and bool(str(freshness.get("pr_head_sha") or "").strip())
+        comment_addressing = _pr_comment_addressing_packet_from_delta(
+            cache=cache,
+            repo=repo,
+            pr_number=str(cache.get("pr_number") or pr_number),
+            cache_path=cache_path,
+            cli_invoke=cli_invoke,
+        )
         if actionable_count == 0 and not cache_is_fresh:
             return {
                 "kind": "agentic-workspace/pr-comment-attention/v1",
@@ -23194,6 +23392,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
                 "thread_inspection": _pr_comment_thread_inspection_payload(
                     repo=repo, pr_number=str(cache.get("pr_number") or pr_number), cli_invoke=cli_invoke
                 ),
+                "comment_addressing": comment_addressing,
                 "unverified_context": ["Current PR head is unverified.", "Thread-level comment state may be stale."],
                 "selector": "pr_comment_attention",
                 "degraded_explicitly": True,
@@ -23224,6 +23423,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             "thread_inspection": _pr_comment_thread_inspection_payload(
                 repo=repo, pr_number=str(cache.get("pr_number") or pr_number), cli_invoke=cli_invoke, status="available"
             ),
+            "comment_addressing": comment_addressing,
             "unverified_context": [] if cache_is_fresh else ["Current PR head is unverified; refresh before readiness claims."],
             "selector": "pr_comment_attention",
             "claim_boundary": "Do not claim PR readiness while actionable PR comments are present unless they are addressed or explicitly deferred.",
@@ -23239,6 +23439,13 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
         "cache_path": cache_path,
         "recommended_command": command,
         "thread_inspection": _pr_comment_thread_inspection_payload(repo=repo, pr_number=pr_number, cli_invoke=cli_invoke),
+        "comment_addressing": _pr_comment_addressing_unavailable_packet(
+            repo=repo,
+            pr_number=pr_number,
+            cache_path=cache_path,
+            reason="No cached PR comment delta exists.",
+            cli_invoke=cli_invoke,
+        ),
         "unverified_context": ["No cached PR comment delta exists.", "Thread-level PR comment state is unverified."],
         "selector": "pr_comment_attention",
         "degraded_explicitly": True,
