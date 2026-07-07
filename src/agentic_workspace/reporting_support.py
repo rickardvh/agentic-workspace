@@ -843,6 +843,7 @@ def closeout_claim_boundary_payload(
         or closeout_protocol.get("status")
         or ""
     )
+    source_surface = str(closeout_trust.get("source_surface") or "closeout_trust")
     detail_command = _command_with_cli_invoke(
         "agentic-workspace report --target ./repo --section closeout_trust --format json",
         cli_invoke=cli_invoke,
@@ -892,6 +893,7 @@ def closeout_claim_boundary_payload(
                         "verification_active_count",
                         "required",
                         "proof_status",
+                        "claim_boundary",
                         "command",
                         "rule",
                     ),
@@ -911,7 +913,9 @@ def closeout_claim_boundary_payload(
             "next_action": next_action,
             "source_detail_command": detail_command,
             "detail_selector": "closeout_trust",
-            "rule": "Derived from closeout_trust; use this selector for the compact claim boundary and closeout_trust for full proof and residue detail.",
+            "source_surface": source_surface,
+            "computation": closeout_trust.get("computation", {}),
+            "rule": "Derived from a compact closeout gate source; use this selector for the claim boundary and closeout_trust for full proof and residue detail.",
         },
         cli_invoke=cli_invoke,
         target_arg=target_arg,
