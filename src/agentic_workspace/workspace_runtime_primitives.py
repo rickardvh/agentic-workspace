@@ -37947,6 +37947,8 @@ def _proof_intent_for_lane(lane: dict[str, Any]) -> dict[str, Any]:
 
 
 def _proof_route_source_for_lane(*, lane: dict[str, Any], command: str, adjustments_by_replacement: dict[str, dict[str, str]]) -> str:
+    if lane.get("learned_route"):
+        return "repo-learned-proof-route"
     if lane.get("proof_profile"):
         return "host-configured-proof-profile"
     if lane.get("subsystem"):

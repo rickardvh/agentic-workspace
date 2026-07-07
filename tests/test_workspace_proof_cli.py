@@ -2183,6 +2183,63 @@ def test_proof_changed_selector_routes_readme_to_docs_review(tmp_path: Path, cap
     assert answer["surface_value_review"]["reviewed_paths"][0]["surface_class"] == "adapter_or_repo_intent_surface"
 
 
+def test_proof_changed_selector_applies_learned_docs_process_route(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    docs_process_command = (
+        "git diff -- README.md docs .agentic-workspace/docs packages/planning/README.md packages/memory/README.md "
+        ".github/pull_request_template.md .github/ISSUE_TEMPLATE"
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "docs-process-proof.md",
+        f"""
+# Docs/process proof
+
+agentic-workspace-proof-route: {{"state":"confirmed","intent_type":"docs-diff-review","candidate_command":"{docs_process_command}","source":"memory","confidence":"high","requires_live_confirmation":false,"scope":"repo","owner":"Memory","provenance":"docs/process route confirmed from markdown path reference, template-burden, and local-tool coupling review","learned_at":"2026-07-06"}}
+""",
+    )
+    _write(
+        tmp_path / ".github" / "pull_request_template.md",
+        """
+# Pull Request
+
+## Optional high-risk evidence
+
+- Not applicable; no high-risk lanes.
+""",
+    )
+    _write(tmp_path / ".github" / "ISSUE_TEMPLATE" / "bug.md", "# Bug\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                ".github/pull_request_template.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lane_ids = [lane["id"] for lane in answer["selected_lanes"]]
+    assert "workspace_cli" not in lane_ids
+    assert lane_ids[0] == "repo_docs_review"
+    assert answer["docs_process_route"]["status"] == "active"
+    assert answer["docs_process_route"]["route_maturity"] == "repo-learned"
+    assert answer["required_commands"] == [docs_process_command]
+    assert answer["proof_route_selection"]["selected_command"]["route_source"] == "repo-learned-proof-route"
+    assert answer["proof_command_explanations"]["required"][0]["reason_classes"] == ["learned-repo-evidence"]
+    assert answer["proof_closeout_summary"]["route"]["maturity"] == "learned-confirmed"
+    assert answer["template_burden_review"]["status"] == "clear"
+    assert answer["routing_reductions"][0]["from_lane"] == "workspace_cli"
+
+
 def test_proof_changed_selector_reviews_markdown_repo_path_references(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
     _write(tmp_path / "docs" / "existing.md", "# Existing\n")
