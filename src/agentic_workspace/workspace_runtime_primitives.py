@@ -118,6 +118,7 @@ from agentic_workspace.reporting_support import (
     communication_contract_payload,
     issue_1969_acceptance_evidence_matrix_payload,
     issue_1969_narration_economy_payload,
+    issue_1969_omission_proof_payload,
     issue_1969_review_recheck_evidence_payload,
     output_contract_payload,
     reasoning_economy_evidence_payload,
@@ -10173,6 +10174,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "when #1969 closure review needs repeatable evidence that compact deltas reduce recap without hiding proof or residue",
     },
     {
+        "section": "issue_1969_omission_proof",
+        "kind": "agentic-workspace/issue-1969-omission-proof/v1",
+        "purpose": "compact omission-state proof for selector-hidden, absent, not-checked, not-applicable, and blocked detail",
+        "when_to_use": "when compact operating-loop output needs proof that omitted detail has a safe drill-down or must stay visible",
+    },
+    {
         "section": "workflow_compliance_summary",
         "kind": "agentic-workspace/workflow-compliance-summary/v1",
         "purpose": ("review/recovery summary of expected entrypoint, observed workflow use, gates, trust impact, and recovery action"),
@@ -12745,6 +12752,10 @@ def _run_lazy_report_section_command(
 
     if normalized == "issue_1969_narration_economy":
         payload["issue_1969_narration_economy"] = issue_1969_narration_economy_payload(cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "issue_1969_omission_proof":
+        payload["issue_1969_omission_proof"] = issue_1969_omission_proof_payload(cli_invoke=config.cli_invoke)
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "issue_1969_evidence_matrix":

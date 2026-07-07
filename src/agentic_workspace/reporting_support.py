@@ -1052,10 +1052,8 @@ def issue_1969_acceptance_evidence_matrix_payload(
         row(
             "omission_proof",
             "Show why compact operating-loop outputs can omit hidden detail without losing needed state.",
-            "missing",
-            [],
-            missing_evidence=["omission proof packet or fixture evidence for selector-hidden context"],
-            follow_up_owner="#2029",
+            "satisfied",
+            ["issue_1969_omission_proof"],
         ),
     ]
     counts = {
@@ -1252,6 +1250,131 @@ def issue_1969_narration_economy_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE
                     cli_invoke=cli_invoke,
                 ),
                 "matrix_row_ids": ["narration_reduction"],
+            },
+        },
+        cli_invoke=cli_invoke,
+    )
+
+
+def issue_1969_omission_proof_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    surfaces = [
+        {
+            "surface": "startup_task_switch",
+            "omission_states": [
+                {
+                    "field": "local_chat_checkpoint",
+                    "state": "not_checked",
+                    "why_safe": "not read unless current task or checkpoint selector requires it",
+                    "drill_down_route": "start --select work_threads --format json",
+                },
+                {
+                    "field": "selector_inventory",
+                    "state": "hidden-behind-detail-route",
+                    "why_safe": "compact output includes exact selector command and omits broad inventory by default",
+                    "drill_down_route": "start --select <field[,field...]> --format json",
+                },
+                {
+                    "field": "active_pr_context",
+                    "state": "absent",
+                    "why_safe": "no PR-specific review state is part of a generic startup/task-switch decision",
+                    "drill_down_route": "report --section pr_comment_attention",
+                },
+            ],
+            "blocked_non_omittable": [
+                {
+                    "field": "proof_required",
+                    "state": "blocked",
+                    "reason": "proof gaps affect completion safety and remain visible",
+                }
+            ],
+            "retained_trust_fields": ["proof_boundary", "residue_owner", "next_safe_action"],
+        },
+        {
+            "surface": "review_recheck",
+            "omission_states": [
+                {
+                    "field": "raw_review_comments",
+                    "state": "hidden-behind-detail-route",
+                    "why_safe": "finding/recheck packet keeps actionable state while raw comments stay explicit drill-down",
+                    "drill_down_route": "gh pr view <pr> --comments",
+                },
+                {
+                    "field": "active_unresolved_review_state",
+                    "state": "not_checked",
+                    "why_safe": "historical merged-PR evidence does not claim active thread status",
+                    "drill_down_route": "report --section pr_comment_attention",
+                },
+            ],
+            "blocked_non_omittable": [
+                {
+                    "field": "current_proof_boundary",
+                    "state": "blocked",
+                    "reason": "historical review evidence must not stand in for current proof",
+                }
+            ],
+            "retained_trust_fields": ["proof_boundary", "next_action", "drill_down_route"],
+        },
+        {
+            "surface": "closeout_claim_boundary",
+            "omission_states": [
+                {
+                    "field": "full_closeout_trust_detail",
+                    "state": "hidden-behind-detail-route",
+                    "why_safe": "compact claim boundary exposes blockers, proof dependency, residue, and next action",
+                    "drill_down_route": "report --section closeout_trust",
+                },
+                {
+                    "field": "parent_lane_auto_close",
+                    "state": "not-applicable",
+                    "why_safe": "claim-boundary selector reports permission; it does not close issues",
+                    "drill_down_route": "report --section issue_1969_evidence_matrix",
+                },
+            ],
+            "blocked_non_omittable": [
+                {
+                    "field": "blocking_fields",
+                    "state": "blocked",
+                    "reason": "proof, residue, safety, and closure blockers stay visible",
+                }
+            ],
+            "retained_trust_fields": ["proof_dependency", "residue_routing", "next_action"],
+        },
+    ]
+    state_counts: dict[str, int] = {}
+    for surface in surfaces:
+        for item in _support_list_payload(surface.get("omission_states")):
+            if isinstance(item, dict):
+                state = str(item.get("state", "unknown"))
+                state_counts[state] = state_counts.get(state, 0) + 1
+        for item in _support_list_payload(surface.get("blocked_non_omittable")):
+            if isinstance(item, dict):
+                state = str(item.get("state", "unknown"))
+                state_counts[state] = state_counts.get(state, 0) + 1
+    return _localize_command_fields(
+        {
+            "kind": "agentic-workspace/issue-1969-omission-proof/v1",
+            "status": "available",
+            "parent_issue": "#1969",
+            "state_vocabulary": [
+                "absent",
+                "not_checked",
+                "not-applicable",
+                "hidden-behind-detail-route",
+                "blocked",
+            ],
+            "state_counts": state_counts,
+            "surface_count": len(surfaces),
+            "surfaces": surfaces,
+            "trust_boundary": {
+                "hides_safety_or_proof_warnings": False,
+                "rule": "Blocked proof, residue, safety, uncertainty, and closure fields remain visible rather than being classified as safely omitted.",
+            },
+            "integration": {
+                "matrix_selector": _command_with_cli_invoke(
+                    "agentic-workspace report --target ./repo --section issue_1969_evidence_matrix --format json",
+                    cli_invoke=cli_invoke,
+                ),
+                "matrix_row_ids": ["omission_proof"],
             },
         },
         cli_invoke=cli_invoke,

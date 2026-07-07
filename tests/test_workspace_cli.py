@@ -679,12 +679,12 @@ def test_issue_1969_evidence_matrix_maps_criteria_without_closure_authority(tmp_
     assert payload["kind"] == "agentic-workspace/issue-1969-acceptance-evidence-matrix/v1"
     assert payload["parent_issue"] == "#1969"
     assert payload["state_counts"]["satisfied"] >= 1
-    assert payload["state_counts"]["missing"] >= 1
+    assert payload["state_counts"]["stale"] + payload["state_counts"]["needs-human-judgment"] >= 1
     rows_by_id = {row["id"]: row for row in payload["rows"]}
     assert rows_by_id["state_delta_model"]["state"] == "satisfied"
     assert "#1976" in rows_by_id["state_delta_model"]["evidence_refs"]
-    assert rows_by_id["omission_proof"]["state"] == "missing"
-    assert rows_by_id["omission_proof"]["follow_up_owner"] == "#2029"
+    assert rows_by_id["omission_proof"]["state"] == "satisfied"
+    assert "issue_1969_omission_proof" in rows_by_id["omission_proof"]["evidence_refs"]
     assert payload["closeout_gate_boundary"]["matrix_authorizes_closure"] is False
     assert "--section closeout_claim_boundary" in payload["closeout_gate_boundary"]["claim_boundary_selector"]
     assert ".agentic-workspace/planning/lanes/issue-1969-state-delta-loop.lane.json" in payload["source_refs"]
@@ -745,6 +745,33 @@ def test_issue_1969_narration_economy_reports_reduction_with_trust_retention(tmp
     assert cli.main(["report", "--target", str(tmp_path), "--section", "section_catalog", "--format", "json"]) == 0
     catalog = json.loads(capsys.readouterr().out)["answer"]
     section = next(item for item in catalog["lazy_sections"] if item["section"] == "issue_1969_narration_economy")
+    assert section["payload_is_lazy"] is True
+
+
+def test_issue_1969_omission_proof_covers_compact_state_boundaries(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "issue_1969_omission_proof", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["kind"] == "agentic-workspace/issue-1969-omission-proof/v1"
+    assert payload["surface_count"] >= 2
+    for state in ("absent", "not_checked", "not-applicable", "hidden-behind-detail-route", "blocked"):
+        assert state in payload["state_vocabulary"]
+        assert payload["state_counts"][state] >= 1
+    assert payload["trust_boundary"]["hides_safety_or_proof_warnings"] is False
+    startup = next(surface for surface in payload["surfaces"] if surface["surface"] == "startup_task_switch")
+    assert any(item["state"] == "hidden-behind-detail-route" and item["drill_down_route"] for item in startup["omission_states"])
+    review = next(surface for surface in payload["surfaces"] if surface["surface"] == "review_recheck")
+    assert any(item["state"] == "not_checked" and item["drill_down_route"] for item in review["omission_states"])
+    closeout = next(surface for surface in payload["surfaces"] if surface["surface"] == "closeout_claim_boundary")
+    assert any(item["state"] == "blocked" for item in closeout["blocked_non_omittable"])
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "section_catalog", "--format", "json"]) == 0
+    catalog = json.loads(capsys.readouterr().out)["answer"]
+    section = next(item for item in catalog["lazy_sections"] if item["section"] == "issue_1969_omission_proof")
     assert section["payload_is_lazy"] is True
 
 
