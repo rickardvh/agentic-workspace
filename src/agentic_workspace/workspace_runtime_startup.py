@@ -86,6 +86,7 @@ from agentic_workspace.workspace_runtime_core import (
     _module_operations,
     _module_registry,
     _next_safe_action_packet,
+    _open_issue_intake_payload,
     _operating_posture_payload,
     _ordinary_decision_packet,
     _package_boundary_payload,
@@ -1206,6 +1207,13 @@ def _hydrate_selected_start_advisory_payloads(
             payload["issue_reference_intent"] = _issue_reference_intent_payload(
                 issue_scope_evidence=gate.get("issue_scope_evidence", {}), cli_invoke=config.cli_invoke
             )
+    if _selector_requests(select, "open_issue_intake"):
+        payload["open_issue_intake"] = _open_issue_intake_payload(
+            target_root=target_root,
+            task_text=task_text,
+            cli_invoke=config.cli_invoke,
+            explicit_request=True,
+        )
     if _selector_requests(select, "local_chat_checkpoint"):
         payload["local_chat_checkpoint"] = _local_chat_checkpoint_projection(target_root=target_root, cli_invoke=config.cli_invoke)
     if _selector_requests(select, "work_threads"):

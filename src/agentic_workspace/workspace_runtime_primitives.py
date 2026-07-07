@@ -24816,8 +24816,11 @@ def _planning_state_roadmap_candidates(*, target_root: Path) -> list[dict[str, A
     return [candidate for candidate in candidates if isinstance(candidate, dict)]
 
 
-def _open_issue_intake_payload(*, target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
-    if not _is_open_issue_intake_task(task_text):
+def _open_issue_intake_payload(
+    *, target_root: Path, task_text: str | None, cli_invoke: str, explicit_request: bool = False
+) -> dict[str, Any]:
+    is_intake_task = _is_open_issue_intake_task(task_text)
+    if not is_intake_task and not explicit_request:
         return {"kind": "agentic-workspace/open-issue-intake/v1", "status": "not-applicable"}
     path, relative_path, storage = _external_intent_evidence_read_location(target_root)
     evidence: dict[str, Any] = {}
@@ -24829,20 +24832,29 @@ def _open_issue_intake_payload(*, target_root: Path, task_text: str | None, cli_
     items = [item for item in _list_payload(evidence.get("items")) if isinstance(item, dict)]
     candidates = _planning_state_roadmap_candidates(target_root=target_root)
     refreshed_at = str(evidence.get("refreshed_at") or _as_dict(evidence.get("refresh_metadata")).get("refreshed_at") or "").strip()
-    freshness_status = "fresh-enough" if path.exists() and refreshed_at else "needs-refresh"
+    refreshed_at_datetime = _parse_external_intent_timestamp(refreshed_at)
+    cache_age = datetime.now(timezone.utc) - refreshed_at_datetime if refreshed_at_datetime is not None else None
+    freshness_status = (
+        "fresh-enough"
+        if path.exists() and refreshed_at_datetime is not None and cache_age is not None and cache_age <= timedelta(hours=24)
+        else "stale-refresh-recommended"
+        if path.exists() and refreshed_at
+        else "needs-refresh"
+    )
     grouping = _external_issue_grouping_hints(items=items, candidates=candidates)
     refresh_command = _command_with_cli_invoke(
         command="agentic-workspace external-intent refresh-github --target . --state all --storage cache --apply-planning-candidates --format json",
         cli_invoke=cli_invoke,
     )
     status = "ready-to-review" if items or candidates else "refresh-needed"
-    recommended = "refresh-apply-intake" if freshness_status == "needs-refresh" else "inspect-candidate-grouping"
+    recommended = "refresh-apply-intake" if freshness_status != "fresh-enough" else "inspect-candidate-grouping"
     if candidates and freshness_status == "fresh-enough":
         recommended = "promote-or-review-first-lane"
+    trigger = "open-issue-intake-task" if is_intake_task else "explicit-selector"
     return {
         "kind": "agentic-workspace/open-issue-intake/v1",
         "status": status,
-        "trigger": "open-issue-intake-task",
+        "trigger": trigger,
         "command_owned_intake": refresh_command,
         "recommended_next_action": recommended,
         "freshness": {
@@ -24850,6 +24862,8 @@ def _open_issue_intake_payload(*, target_root: Path, task_text: str | None, cli_
             "source_path": relative_path if path.exists() else "",
             "storage": storage if path.exists() else "none",
             "refreshed_at": refreshed_at,
+            "max_age_hours": 24,
+            "age_hours": round(cache_age.total_seconds() / 3600, 2) if cache_age is not None else None,
             "refresh_before_relying_on_grouping": freshness_status != "fresh-enough",
         },
         "counts": {
@@ -24866,7 +24880,7 @@ def _open_issue_intake_payload(*, target_root: Path, task_text: str | None, cli_
         "authority_boundary": _authority_boundary_payload(
             surface="open_issue_intake",
             observed_by_aw=[
-                "task requests open issue intake",
+                "task requests open issue intake" if is_intake_task else "explicit open_issue_intake selector requested",
                 f"cached_evidence={path.exists()}",
                 f"planning_candidate_count={len(candidates)}",
             ],
