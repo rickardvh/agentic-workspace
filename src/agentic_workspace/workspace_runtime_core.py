@@ -17125,6 +17125,11 @@ def _completion_option(
     return item
 
 
+def _archive_and_close_decision(value: Any, *, allow_blank: bool = False) -> bool:
+    decision = str(value or "").strip().lower()
+    return (allow_blank and not decision) or decision == "archive-and-close" or decision.startswith("archive-and-close-")
+
+
 def _closeout_completion_options(
     *,
     status: str,
@@ -17184,6 +17189,7 @@ def _closeout_completion_options(
     larger_closure = larger_closure if isinstance(larger_closure, dict) else {}
     larger_status = str(larger_closure.get("status", "")).strip().lower()
     closure_decision = str(larger_closure.get("closure_decision", "")).strip().lower()
+    external_intent_evidence = _as_dict(closure_scope.get("external_intent_evidence"))
     continuation_owner = str(intent_check.get("continuation_surface", "")).strip()
     package_continuation = intent_check.get("package_owned_continuation", {})
     if not continuation_owner and isinstance(package_continuation, dict):
@@ -17195,6 +17201,16 @@ def _closeout_completion_options(
         or larger_status in {"open", "follow-up-required"}
         or required_follow_on in {"yes", "true"}
     )
+    larger_intent_blockers: list[str] = []
+    if intent_trust in {"follow-up-required", "needs-review"}:
+        if external_intent_evidence and str(external_intent_evidence.get("trust") or "").strip().lower() != "normal":
+            larger_intent_blockers.append("intent_satisfaction.closure_scope.external_intent_evidence")
+        else:
+            larger_intent_blockers.append("intent_satisfaction.trust")
+    if larger_status in {"open", "follow-up-required"}:
+        larger_intent_blockers.append("intent_satisfaction.closure_scope.larger_intent_closure.status")
+    if required_follow_on in {"yes", "true"}:
+        larger_intent_blockers.append("intent_satisfaction.required_follow_on")
     residue_required = (
         lower_trust_closeout_count > 0
         or trust in {"lower-trust", "unavailable"}
@@ -17208,12 +17224,8 @@ def _closeout_completion_options(
     intent_satisfied = intent_trust in {"satisfied", "normal"} or (intent_trust in {"", "not-applicable"} and intent_proof_supports_work)
     close_evidence = (
         larger_status in {"closed", "complete", "completed", "done"}
-        or closure_decision
-        in {
-            "archive-and-close",
-            "close",
-            "closed",
-        }
+        or _archive_and_close_decision(closure_decision)
+        or closure_decision in {"close", "closed"}
         or (intent_trust in {"", "not-applicable"} and intent_proof_supports_work)
     )
     proof_achieved = proof_achieved or intent_proof_records_execution
@@ -17227,11 +17239,11 @@ def _closeout_completion_options(
     if residue_required:
         completion_blockers.append("durable_residue")
     if larger_intent_open:
-        completion_blockers.append("intent_satisfaction")
+        completion_blockers.extend(_dedupe(larger_intent_blockers) or ["intent_satisfaction.trust"])
     if larger_intent_open and not continuation_owner:
-        completion_blockers.append("continuation_owner")
+        completion_blockers.append("intent_satisfaction.continuation_surface")
     if not intent_proof_supports_work:
-        completion_blockers.append("intent_proof")
+        completion_blockers.append("planning.active.planning_record.proof_report.intent_proof.status")
     if unsupported_preservation:
         completion_blockers.append("behavior_preservation")
     if completion_gate_blocks_full:
@@ -17241,7 +17253,9 @@ def _closeout_completion_options(
     slice_blockers = [
         field
         for field in completion_blockers
-        if field not in {"intent_satisfaction", "intent_proof"} or intent_proof_status == "needs_review"
+        if not field.startswith("intent_satisfaction.")
+        and not field.endswith(".intent_proof.status")
+        or intent_proof_status == "needs_review"
     ]
     slice_blockers.extend(assurance_claim_blockers.get("claim-slice-complete", []))
     work_blockers = [*completion_blockers, *assurance_claim_blockers.get("claim-work-complete", [])]
@@ -17327,7 +17341,11 @@ def _closeout_completion_options(
             if close_parent_allowed
             else "parent lane closure requires satisfied larger intent and explicit closure evidence",
             owner=continuation_owner if larger_intent_open else None,
-            blocking_fields=parent_blockers if parent_blockers else ["intent_satisfaction.closure_scope.larger_intent_closure"],
+            blocking_fields=None
+            if close_parent_allowed
+            else parent_blockers
+            if parent_blockers
+            else ["intent_satisfaction.closure_scope.larger_intent_closure"],
             required_claim_class="parent_complete",
         ),
         _completion_option(
@@ -19250,6 +19268,9 @@ def _acceptance_criteria_reconciliation_payload(*, planning_report: dict[str, An
             str(proof_report.get("acceptance reconciliation", "")),
             str(closure_check.get("acceptance reconciliation", "")),
             str(closure_check.get("criteria satisfied", "")),
+            str(closure_check.get("why this decision is honest", "")),
+            str(closure_check.get("evidence carried forward", "")),
+            str(_as_dict(planning_record.get("intent_satisfaction")).get("evidence of intent satisfaction", "")),
         ]
     ).lower()
     evidence_present = any(
@@ -19526,6 +19547,14 @@ def _intent_proof_check_payload(*, planning_report: dict[str, Any], target_root:
     proof_report = proof_report if isinstance(proof_report, dict) else {}
     raw_proof_report = raw_planning_record.get("proof_report", {}) if isinstance(raw_planning_record, dict) else {}
     raw_proof_report = raw_proof_report if isinstance(raw_proof_report, dict) else {}
+    intent_satisfaction = planning_record.get("intent_satisfaction", {})
+    intent_satisfaction = intent_satisfaction if isinstance(intent_satisfaction, dict) else {}
+    raw_intent_satisfaction = raw_planning_record.get("intent_satisfaction", {}) if isinstance(raw_planning_record, dict) else {}
+    raw_intent_satisfaction = raw_intent_satisfaction if isinstance(raw_intent_satisfaction, dict) else {}
+    closure_check = planning_record.get("closure_check", {})
+    closure_check = closure_check if isinstance(closure_check, dict) else {}
+    raw_closure_check = raw_planning_record.get("closure_check", {}) if isinstance(raw_planning_record, dict) else {}
+    raw_closure_check = raw_closure_check if isinstance(raw_closure_check, dict) else {}
     raw_intent_proof = planning_record.get(
         "intent_proof",
         proof_report.get(
@@ -19549,6 +19578,66 @@ def _intent_proof_check_payload(*, planning_report: dict[str, Any], target_root:
                 parsed = {"status": raw_intent_proof}
         raw_intent_proof = parsed
     raw_intent_proof = raw_intent_proof if isinstance(raw_intent_proof, dict) else {}
+
+    def truthy_yes(value: Any) -> bool:
+        return str(value or "").strip().lower() in {"yes", "true", "satisfied", "complete", "completed", "closed"}
+
+    def proof_text(*records: dict[str, Any]) -> str:
+        values: list[str] = []
+        for record in records:
+            values.extend(
+                str(record.get(key) or "").strip()
+                for key in (
+                    "validation proof",
+                    "proof achieved now",
+                    'evidence for "proof achieved" state',
+                    "proof execution evidence",
+                    "proof_execution_evidence",
+                )
+                if str(record.get(key) or "").strip()
+            )
+        return "\n".join(values)
+
+    def proof_recorded(text: str) -> bool:
+        normalized = text.lower()
+        return bool(normalized) and any(marker in normalized for marker in ("passed", "yes", "satisfied", "complete", "proof"))
+
+    def closure_complete(*records: dict[str, Any]) -> bool:
+        for record in records:
+            slice_status = str(record.get("slice status") or record.get("slice_status") or "").strip().lower()
+            larger_status = str(record.get("larger-intent status") or record.get("larger_intent_status") or "").strip().lower()
+            decision = str(record.get("closure decision") or record.get("closure_decision") or "").strip().lower()
+            if (
+                slice_status in {"complete", "completed", "closed", "done", "bounded slice complete"}
+                and larger_status in {"closed", "complete", "completed", "done", ""}
+                and (_archive_and_close_decision(decision, allow_blank=True) or decision in {"close", "closed"})
+            ):
+                return True
+        return False
+
+    if not raw_intent_proof:
+        recorded_proof_text = proof_text(proof_report, raw_proof_report)
+        satisfied = truthy_yes(
+            intent_satisfaction.get("was original intent fully satisfied?")
+            or raw_intent_satisfaction.get("was original intent fully satisfied?")
+        )
+        if satisfied and proof_recorded(recorded_proof_text) and closure_complete(closure_check, raw_closure_check):
+            raw_intent_proof = {
+                "status": "sufficient_for_claim",
+                "claim_boundary": "full-intent",
+                "intended_behavior": [
+                    str(
+                        intent_satisfaction.get("original intent")
+                        or raw_intent_satisfaction.get("original intent")
+                        or planning_record.get("requested_outcome")
+                        or ""
+                    ).strip()
+                ],
+                "proof_dimensions": ["recorded intent satisfaction", "recorded closeout proof"],
+                "proof_classes": ["closeout-evidence"],
+                "preservation_evidence": [recorded_proof_text],
+                "evidence": "Derived from active execplan proof_report, intent_satisfaction, and closure_check.",
+            }
     raw_status = str(raw_intent_proof.get("status", "")).strip().lower().replace("-", "_")
     status = (
         raw_status
@@ -19594,6 +19683,8 @@ def _intent_proof_check_payload(*, planning_report: dict[str, Any], target_root:
             "planning.active.planning_record.proof_report.intent_proof",
             "planning.active.task.surface.raw_execplan.intent_proof",
             "planning.active.task.surface.raw_execplan.proof_report.intent_proof",
+            "planning.active.planning_record.proof_report + intent_satisfaction + closure_check",
+            "planning.active.task.surface.raw_execplan.proof_report + intent_satisfaction + closure_check",
         ],
     }
 
@@ -27409,7 +27500,7 @@ def _parent_intent_status_payload(
     parent_closed = (
         intent_satisfied
         and closure_status in {"closed", "complete", "completed", "done", ""}
-        and closure_decision in {"archive-and-close", "close", "closed", ""}
+        and (_archive_and_close_decision(closure_decision, allow_blank=True) or closure_decision in {"close", "closed"})
         and required_follow_on not in {"yes", "true"}
         and intent_trust not in {"follow-up-required", "needs-review"}
         and not lane_blocks_parent_close
@@ -31563,7 +31654,7 @@ def _archive_record_closeout_state(*, target_root: Path, relative_path: str) -> 
     larger_intent_status = str(closure_check.get("larger-intent status") or "").strip().lower()
     intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?") or "").strip().lower()
     completed = status in {"completed", "complete", "closed", "done"}
-    closed = closure_decision == "archive-and-close"
+    closed = _archive_and_close_decision(closure_decision)
     continuation_owner_present = any(
         value not in {"", "none", "no", "false", "n/a", "na"}
         for value in [

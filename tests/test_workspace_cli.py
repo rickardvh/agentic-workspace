@@ -474,6 +474,165 @@ def test_closeout_trust_prefers_relevant_closeout_evidence_over_newer_unrelated_
     assert evidence["freshness"]["sort_mtime"] == 1000
 
 
+def _write_issue_1981_closeout_fixture(target: Path, *, include_proof: bool, external_status: str = "closed") -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    issue_ref = "#1981"
+    _write(
+        target / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "issue-1981", title = "Issue 1981 state-delta shared core", status = "active", surface = ".agentic-workspace/planning/execplans/issue-1981.plan.json", next_action = "Close complete.", done_when = "Issue 1981 can honestly be closed." },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Issue 1981 state-delta shared core",
+        item_id="issue-1981",
+        status="active",
+        why_now="regress closeout trust alignment.",
+        next_action="Close complete.",
+        done_when="Issue 1981 can honestly be closed.",
+    )
+    record["references"] = [issue_ref]
+    record["completion_criteria"] = ["summary and closeout trust agree on active execplan intent satisfaction"]
+    record["proof_expectations"] = [
+        "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+        "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
+        "uv run pytest tests/test_workspace_cli.py -q",
+    ]
+    record["execution_run"] = {
+        "handoff source": "synthetic regression fixture",
+        "what happened": "The shared state-delta core was implemented.",
+        "validations run": [
+            "agentic-workspace summary passed",
+            "agentic-workspace report --section closeout_trust passed",
+            "pytest passed",
+        ],
+    }
+    if include_proof:
+        record["proof_report"] = {
+            "validation proof": "uv run pytest tests/test_workspace_cli.py -q passed",
+            "proof achieved now": "yes, proof passed for the requested behavior",
+            'evidence for "proof achieved" state': "summary and closeout trust fixture covered the shared core closeout.",
+        }
+    else:
+        record["proof_report"] = {}
+    record["intent_satisfaction"] = {
+        "original intent": "Implement #1981 by making state-delta packet views derive from one shared compact core.",
+        "was original intent fully satisfied?": "yes",
+        "evidence of intent satisfaction": "Summary payloads and closeout trust agree the requested behavior is complete.",
+        "unsolved intent passed to": "none",
+    }
+    record["intent_continuity"] = {
+        "larger intended outcome": "Implement #1981 by making state-delta packet views derive from one shared compact core.",
+        "this slice completes the larger intended outcome": "yes",
+        "continuation surface": "none",
+    }
+    record["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "no",
+        "owner surface": "none",
+    }
+    record["closure_check"] = {
+        "slice status": "complete",
+        "larger-intent status": "closed",
+        "closure decision": "archive-and-close-after-pr-merge",
+        "why this decision is honest": "#1981 acceptance criteria are satisfied by the fixture proof.",
+        "evidence carried forward": "summary, closeout_trust, and pytest proof",
+        "reopen trigger": "closeout_trust stops accepting active execplan closeout evidence",
+    }
+    record["durable_residue"] = {
+        "status": "none",
+        "learned constraint": "No reusable product constraint in this synthetic fixture.",
+        "motivation worth preserving": "Only the closeout trust alignment behavior matters.",
+        "canonical owner now": "none",
+        "promotion trigger": "none",
+        "retention after promotion": "retain",
+    }
+    planning_installer._write_execplan_record(
+        record_path=target / ".agentic-workspace" / "planning" / "execplans" / "issue-1981.plan.json",
+        record=record,
+    )
+    _write_json(
+        target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        {
+            "kind": "planning-external-intent-evidence/v1",
+            "refreshed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "items": [
+                {
+                    "system": "fixture",
+                    "id": issue_ref,
+                    "title": "Issue 1981 state-delta shared core",
+                    "status": external_status,
+                    "kind": "issue",
+                },
+            ],
+        },
+    )
+
+
+def test_closeout_trust_derives_intent_proof_from_satisfied_active_execplan(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=True)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "closeout_trust", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["completion_gate"]["status"] == "allowed"
+    assert payload["completion_gate"]["active_intent_satisfied"] is True
+    assert payload["completion_gate"]["claim_level_allowed"] == "full-intent-complete"
+    assert payload["checks"]["intent_proof"]["status"] == "sufficient_for_claim"
+    claim_work = next(option for option in payload["completion_options"] if option["id"] == "claim-work-complete")
+    assert claim_work["allowed"] is False
+    assert claim_work["blocking_fields"] == ["durable_residue"]
+    assert "planning.active.planning_record.proof_report.intent_proof.status" not in claim_work.get("blocking_fields", [])
+
+
+def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missing(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=False)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "closeout_trust", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["completion_gate"]["status"] in {"blocked", "continue-required"}
+    assert payload["completion_gate"]["active_intent_satisfied"] is False
+    assert payload["checks"]["intent_proof"]["status"] == "not_recorded"
+    claim_work = next(option for option in payload["completion_options"] if option["id"] == "claim-work-complete")
+    assert claim_work["allowed"] is False
+    assert "planning.active.planning_record.proof_report.intent_proof.status" in claim_work["blocking_fields"]
+    assert "intent_proof" not in claim_work["blocking_fields"]
+
+
+def test_closeout_trust_names_external_intent_evidence_blocker_for_open_issue(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, external_status="open")
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "closeout_trust", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["checks"]["intent_proof"]["status"] == "sufficient_for_claim"
+    claim_work = next(option for option in payload["completion_options"] if option["id"] == "claim-work-complete")
+    assert claim_work["allowed"] is False
+    assert "intent_satisfaction.closure_scope.external_intent_evidence" in claim_work["blocking_fields"]
+    assert "intent_satisfaction.required_follow_on" not in claim_work["blocking_fields"]
+
+
 def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / "README.md").write_text("# Fixture\n", encoding="utf-8")
