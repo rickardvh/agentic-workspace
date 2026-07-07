@@ -308,6 +308,7 @@ class MixedAgentLocalOverride:
     shared_config_path: Path | None
     shared_config_exists: bool
     shared_config_applied: bool
+    enabled: bool | None
     cli_invoke: str | None
     maintainer_mode: bool | None
     supports_internal_delegation: bool | None
@@ -474,6 +475,8 @@ class WorkspaceConfig:
     path: Path | None
     exists: bool
     schema_version: int
+    enabled: bool
+    enabled_source: str
     enabled_modules: tuple[str, ...]
     agent_instructions_file: str
     agent_instructions_source: str
@@ -1515,6 +1518,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         shared_config_path=None,
         shared_config_exists=False,
         shared_config_applied=False,
+        enabled=None,
         cli_invoke=None,
         maintainer_mode=None,
         supports_internal_delegation=None,
@@ -2140,10 +2144,22 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         raw_workspace = {}
     if not isinstance(raw_workspace, dict):
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [workspace] section must be a table.")
-    unknown_workspace = sorted(set(raw_workspace) - {"cli_invoke", "shared_config_path", "maintainer_mode"})
+    unknown_workspace = sorted(set(raw_workspace) - {"enabled", "cli_invoke", "shared_config_path", "maintainer_mode"})
     if unknown_workspace:
         unknown_text = ", ".join(unknown_workspace)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [workspace] contains unsupported field(s): {unknown_text}.")
+    enabled = require_optional_bool(
+        payload=raw_workspace,
+        key="enabled",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+    if enabled is not None:
+        field_sources["workspace.enabled"] = _local_config_field_source(
+            local_payload=local_payload,
+            shared_payload=shared_payload,
+            table="workspace",
+            key="enabled",
+        )
     raw_cli_invoke = raw_workspace.get("cli_invoke")
     cli_invoke = None
     if raw_cli_invoke is not None:
@@ -2279,6 +2295,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         shared_config_path=shared_config_path,
         shared_config_exists=shared_config_exists,
         shared_config_applied=shared_config_applied,
+        enabled=enabled,
         cli_invoke=cli_invoke,
         maintainer_mode=maintainer_mode,
         supports_internal_delegation=require_optional_bool(
@@ -2448,6 +2465,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     configured_agent_instructions_file: str | None = None
     workflow_artifact_profile = DEFAULT_WORKFLOW_ARTIFACT_PROFILE
     workflow_artifact_profile_source = "product-default"
+    enabled = True
+    enabled_source = "product-default"
     improvement_latitude = DEFAULT_IMPROVEMENT_LATITUDE
     improvement_latitude_source = "product-default"
     optimization_bias = DEFAULT_OPTIMIZATION_BIAS
@@ -2465,6 +2484,9 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         config_path=WORKSPACE_CONFIG_PATH,
     )
     warnings.extend(cli_compatibility_warnings)
+    if local_override.enabled is not None:
+        enabled = local_override.enabled
+        enabled_source = local_override.field_sources.get("workspace.enabled", "local-override")
     if local_override.cli_invoke is not None:
         cli_invoke = local_override.cli_invoke
         cli_invoke_source = local_override.field_sources.get("workspace.cli_invoke", "local-override")
@@ -2482,6 +2504,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             path=config_path,
             exists=False,
             schema_version=1,
+            enabled=enabled,
+            enabled_source=enabled_source,
             enabled_modules=enabled_modules,
             agent_instructions_file=agent_instructions_file,
             agent_instructions_source=agent_instructions_source,
@@ -2569,6 +2593,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         set(raw_workspace)
         - {
             "agent_instructions_file",
+            "enabled",
             "workflow_artifact_profile",
             "improvement_latitude",
             "optimization_bias",
@@ -2604,6 +2629,12 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     raw_agent_instructions_file = raw_workspace.get("agent_instructions_file")
     if raw_agent_instructions_file is not None:
         configured_agent_instructions_file = validate_agent_instructions_filename(str(raw_agent_instructions_file))
+    raw_enabled = raw_workspace.get("enabled")
+    if raw_enabled is not None:
+        if not isinstance(raw_enabled, bool):
+            raise WorkspaceUsageError(f"{WORKSPACE_CONFIG_PATH.as_posix()} workspace.enabled must be true or false.")
+        enabled = raw_enabled
+        enabled_source = "repo-config"
     raw_workflow_artifact_profile = raw_workspace.get("workflow_artifact_profile")
     if raw_workflow_artifact_profile is not None:
         workflow_artifact_profile = validate_workflow_artifact_profile(str(raw_workflow_artifact_profile))
@@ -2640,6 +2671,9 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
     if local_override.cli_invoke is not None:
         cli_invoke = local_override.cli_invoke
         cli_invoke_source = local_override.field_sources.get("workspace.cli_invoke", "local-override")
+    if local_override.enabled is not None:
+        enabled = local_override.enabled
+        enabled_source = local_override.field_sources.get("workspace.enabled", "local-override")
     if local_override.maintainer_mode is not None:
         maintainer_mode = local_override.maintainer_mode
         maintainer_mode_source = local_override.field_sources.get("workspace.maintainer_mode", "local-override")
@@ -2747,6 +2781,8 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         path=config_path,
         exists=True,
         schema_version=1,
+        enabled=enabled,
+        enabled_source=enabled_source,
         enabled_modules=enabled_modules,
         agent_instructions_file=agent_instructions_file,
         agent_instructions_source=agent_instructions_source,

@@ -126,6 +126,7 @@ from agentic_workspace.workspace_runtime_core import (
     _validate_target_root,
     _workflow_sufficiency_payload,
     _workspace_absence_startup_review,
+    _workspace_disabled_payload,
 )
 from agentic_workspace.workspace_runtime_generated_surface import (
     _as_dict,
@@ -1914,6 +1915,10 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         if recovery_payload := _obsolete_default_preset_start_recovery_payload(target_root=target_root):
             _emit_payload(payload=recovery_payload, format_name=args.format)
             return 0
+    config = _load_workspace_config(target_root=target_root)
+    if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="start", config=config):
+        _emit_payload(payload=disabled_payload, format_name=args.format)
+        return 0
     start_profile = "full" if getattr(args, "verbose", False) else getattr(args, "profile", None)
     task_text = getattr(args, "task", None)
     selected_fields = getattr(args, "select", None)
@@ -1924,7 +1929,6 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
         profile=_start_profile_for_select(requested_profile=start_profile, select=selected_fields),
     )
     if selected_fields:
-        config = _load_workspace_config(target_root=target_root)
         _hydrate_selected_start_advisory_payloads(
             payload=payload,
             select=selected_fields,

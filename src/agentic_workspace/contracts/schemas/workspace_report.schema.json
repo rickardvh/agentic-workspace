@@ -62,6 +62,7 @@
     "automation_readiness",
     "decision_pressure",
     "closeout_trust",
+    "closeout_claim_boundary",
     "external_work_reconciliation",
     "external_work_delta",
     "local_aw_state",
@@ -446,6 +447,10 @@
     "closeout_trust": {
       "type": "object",
       "description": "Trust signals for whether recent or current work can be safely closed."
+    },
+    "closeout_claim_boundary": {
+      "type": "object",
+      "description": "Fast closeout claim permission, blocker, residue-route, and proof-dependency packet."
     },
     "external_work_reconciliation": {
       "type": "object",

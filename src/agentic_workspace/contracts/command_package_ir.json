@@ -761,6 +761,11 @@
                 "command": "decision-promote",
                 "import_module": "agentic_workspace.workspace_runtime_primitives",
                 "function": "_run_planning_decision_adapter"
+              },
+              {
+                "command": "closeout",
+                "import_module": "agentic_workspace.workspace_runtime_primitives",
+                "function": "_run_planning_closeout_adapter"
               }
             ],
             "positionals": [

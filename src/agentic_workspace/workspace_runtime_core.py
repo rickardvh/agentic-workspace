@@ -372,6 +372,63 @@ def _load_workspace_config(*, target_root: Path, descriptors: dict[str, "ModuleD
     return config_lib.load_workspace_config(target_root=target_root, **kwargs)
 
 
+def _workspace_enabled_source_surface(config: WorkspaceConfig) -> str:
+    source = config.enabled_source
+    if source in {"local-override", "shared-local-config", "merged-local-config"}:
+        return WORKSPACE_LOCAL_CONFIG_PATH.as_posix()
+    if source == "repo-config":
+        return WORKSPACE_CONFIG_PATH.as_posix()
+    return "product-default"
+
+
+def _workspace_disabled_payload(*, target_root: Path, command_name: str, config: WorkspaceConfig) -> dict[str, Any] | None:
+    if config.enabled:
+        return None
+    config_command = _command_with_cli_invoke(
+        command="agentic-workspace config --target . --select workspace.enabled,workspace.enabled_source --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    return {
+        "kind": "agentic-workspace/disabled-state/v1",
+        "status": "disabled",
+        "command": command_name,
+        "target": target_root.as_posix(),
+        "effective_config": {
+            "field": "workspace.enabled",
+            "value": False,
+            "source": config.enabled_source,
+            "surface": _workspace_enabled_source_surface(config),
+        },
+        "action_effect": {
+            "normal_workflow_allowed": False,
+            "implementation_allowed": False,
+            "proof_closeout_allowed": False,
+            "diagnostics_allowed": True,
+            "reason": "Agentic Workspace operation is explicitly disabled by effective workspace config.",
+        },
+        "allowed_diagnostics": [
+            "config",
+            "status",
+            "doctor",
+            "defaults",
+            "modules",
+            "skills",
+            "preflight",
+        ],
+        "re_enable": {
+            "repo_config": ".agentic-workspace/config.toml workspace.enabled = true",
+            "local_override": ".agentic-workspace/config.local.toml workspace.enabled = true",
+            "precedence": "config.local.toml overrides config.toml for workspace.enabled.",
+            "verify_command": config_command,
+        },
+        "next_safe_action": {
+            "next_safe_action": "inspect-or-re-enable-agentic-workspace",
+            "recommended_action": "Use config/doctor/status to inspect state, or set workspace.enabled = true before ordinary AW workflow commands.",
+            "commands": [config_command],
+        },
+    }
+
+
 def _load_toml_payload(*args, **kwargs):
     """Alias for tests."""
     return config_lib.load_toml_payload(*args, **kwargs)
@@ -34129,6 +34186,12 @@ def _config_field_enforcement_entries() -> list[dict[str, Any]]:
             "used_by": ["startup adapters", "install", "init"],
         },
         {
+            "field": "workspace.enabled",
+            "enforcement": "operational",
+            "scope": "repo-config-or-local-config",
+            "used_by": ["start", "summary", "report", "implement", "proof", "planning closeout", "disabled-state packet"],
+        },
+        {
             "field": "workspace.workflow_artifact_profile",
             "enforcement": "operational",
             "scope": "repo-config",
@@ -34334,6 +34397,12 @@ def _config_effect_audit_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         if field.startswith("workspace.improvement_latitude"):
             concrete_commands = [command("agentic-workspace report --target ./repo --section repo_friction --format json")]
             payload_fields = ["repo_friction.policy_mode", "operating_posture.improvement_latitude"]
+        elif field.startswith("workspace.enabled"):
+            concrete_commands = [
+                command("agentic-workspace config --target ./repo --select workspace.enabled,workspace.enabled_source --format json"),
+                command("agentic-workspace start --target ./repo --format json"),
+            ]
+            payload_fields = ["workspace.enabled", "agentic-workspace/disabled-state/v1"]
         elif field.startswith("workspace.optimization_bias"):
             concrete_commands = [command("agentic-workspace report --target ./repo --section output_contract --format json")]
             payload_fields = ["output_contract", "operating_posture.optimization_bias"]
@@ -38968,6 +39037,9 @@ def _emit_proof(
 ) -> None:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
     config = _load_workspace_config(target_root=target_root)
+    if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="proof", config=config):
+        _emit_payload(payload=disabled_payload, format_name=format_name)
+        return
     if record_receipt:
         payload = _record_proof_receipt_payload(
             target_root=target_root,
@@ -39048,10 +39120,14 @@ def _emit_proof(
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="summary", target_root=target_root)
+
+    config = _load_workspace_config(target_root=target_root)
+    if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="summary", config=config):
+        _emit_payload(payload=disabled_payload, format_name=args.format)
+        return 0
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
     from repo_planning_bootstrap.runtime_projection import _print_summary
 
-    config = _load_workspace_config(target_root=target_root)
     changed_paths = list(getattr(args, "changed", []) or [])
     if getattr(args, "select", None):
         closeout_inspection = _completion_closeout_inspection_payload(
@@ -39252,6 +39328,9 @@ def _selected_runtime_context(
 
 def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="report")
+    if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="report", config=config):
+        _emit_payload(payload=disabled_payload, format_name=args.format)
+        return 0
     if getattr(args, "startup", False):
         _emit_startup_report(format_name=args.format, target_root=target_root, descriptors=descriptors, config=config)
         return 0
@@ -44262,7 +44341,12 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "path": WORKSPACE_CONFIG_PATH.as_posix(),
             "source": "repo-config" if config.exists else "product-defaults",
             "authoritative": config.exists,
-            "supported_fields": ["workspace.improvement_latitude", "workspace.advanced_features", "workspace.maintainer_mode"],
+            "supported_fields": [
+                "workspace.enabled",
+                "workspace.improvement_latitude",
+                "workspace.advanced_features",
+                "workspace.maintainer_mode",
+            ],
         },
         "local_override": {
             "path": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
@@ -44441,6 +44525,8 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "config_effect_audit": _config_effect_audit_payload(config=config),
         "configuration_projection": _configuration_projection_payload(config=config),
         "workspace": {
+            "enabled": config.enabled,
+            "enabled_source": config.enabled_source,
             "enabled_modules": list(config.enabled_modules),
             "module_enablement_source": "repo-config" if config.exists else "product-default",
             "agent_instructions_file": config.agent_instructions_file,
@@ -44583,6 +44669,8 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "configuration_projection": _compact_configuration_projection_payload(payload["configuration_projection"]),
         "workspace": {
+            "enabled": workspace["enabled"],
+            "enabled_source": workspace["enabled_source"],
             "enabled_modules": workspace["enabled_modules"],
             "agent_instructions_file": workspace["agent_instructions_file"],
             "workflow_artifact_profile": workspace["workflow_artifact_profile"],
@@ -44601,6 +44689,8 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "summary": "Use this compact config payload as source evidence; do not read raw config files only to cite line numbers.",
             "effect": "Report the setting names and values that changed the closeout or handoff answer.",
             "repo_policy": {
+                "enabled": workspace["enabled"],
+                "enabled_source": workspace["enabled_source"],
                 "improvement_latitude": workspace["improvement_latitude"],
                 "improvement_latitude_source": workspace["improvement_latitude_source"],
                 "optimization_bias": workspace["optimization_bias"],
@@ -44682,6 +44772,8 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "citation_rule": reporting_posture["citation_rule"],
         },
         "workspace": {
+            "enabled": workspace["enabled"],
+            "enabled_source": workspace["enabled_source"],
             "enabled_modules": workspace["enabled_modules"],
             "agent_instructions_file": workspace["agent_instructions_file"],
             "improvement_latitude": workspace["improvement_latitude"],
@@ -44703,6 +44795,7 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "compatibility_compact": f"{workspace['cli_invoke']} config --target . --verbose --format json",
         },
         "available_selectors": [
+            "workspace.enabled",
             "workspace.enabled_modules",
             "workspace.agent_instructions_file",
             "workspace.workflow_obligation_ids",
@@ -44729,6 +44822,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "f
     if profile == "tiny":
         print(f"Target: {payload['target']}")
         print(f"Config path: {payload['config_path']}")
+        print(f"AW enabled: {payload['workspace']['enabled']} ({payload['workspace']['enabled_source']})")
         print(f"Enabled modules: {', '.join(payload['workspace']['enabled_modules']) or '(none)'}")
         print(f"Improvement latitude: {payload['workspace']['improvement_latitude']}")
         print(f"Optimization bias: {payload['workspace']['optimization_bias']}")
@@ -44741,6 +44835,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "f
         print(f"Target: {payload['target']}")
         print(f"Config path: {payload['config_path']}")
         print(f"Exists: {payload['exists']}")
+        print(f"AW enabled: {payload['workspace']['enabled']} ({payload['workspace']['enabled_source']})")
         print(f"Enabled modules: {', '.join(payload['workspace']['enabled_modules']) or '(none)'}")
         print(f"Improvement latitude: {payload['workspace']['improvement_latitude']}")
         print(f"Optimization bias: {payload['workspace']['optimization_bias']}")
@@ -44752,6 +44847,7 @@ def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "f
     print(f"Target: {payload['target']}")
     print(f"Config path: {payload['config_path']}")
     print(f"Exists: {payload['exists']}")
+    print(f"AW enabled: {payload['workspace']['enabled']} ({payload['workspace']['enabled_source']})")
     print(f"Reference: {payload['edit_reference']['reference_doc']}")
     print(f"Schema: {payload['edit_reference']['source_schema']}")
     print(f"Check command: {payload['edit_reference']['check_command']}")
@@ -45564,6 +45660,19 @@ def _module_registry(*, descriptors: dict[str, ModuleDescriptor], target_root: P
 def _emit_payload(*, payload: dict[str, Any], format_name: str) -> None:
     if format_name == "json":
         print(json.dumps(serialise_value(payload), separators=(",", ":")))
+        return
+    if payload.get("kind") == "agentic-workspace/disabled-state/v1":
+        print(f"Agentic Workspace is disabled for {payload.get('target', '.')}.")
+        print(f"Command blocked: {payload.get('command', 'unknown')}")
+        effective = payload.get("effective_config", {})
+        if isinstance(effective, dict):
+            print(f"Effective config: {effective.get('field')} = {effective.get('value')} ({effective.get('source')})")
+        next_action = payload.get("next_safe_action", {})
+        if isinstance(next_action, dict) and next_action.get("recommended_action"):
+            print(f"Next action: {next_action['recommended_action']}")
+        re_enable = payload.get("re_enable", {})
+        if isinstance(re_enable, dict) and re_enable.get("verify_command"):
+            print(f"Inspect: {re_enable['verify_command']}")
         return
     if payload.get("command") == "prompt":
         _emit_prompt_text(payload)

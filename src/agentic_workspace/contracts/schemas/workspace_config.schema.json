@@ -47,6 +47,12 @@
       "x-agentic-workspace-doc-role": "public",
       "x-agentic-workspace-unknown-properties": "warn",
       "properties": {
+        "enabled": {
+          "description": "Effective Agentic Workspace operation switch. Defaults to true; when false, ordinary AW workflow commands return a disabled-state packet while diagnostic and recovery commands remain available. Machine-local config.local.toml may override this value.",
+          "type": "boolean",
+          "default": true,
+          "x-agentic-workspace-effective-default-source": "product-default-or-repo-config-or-local-override"
+        },
         "agent_instructions_file": {
           "description": "Repo startup adapter text file agents should read first.",
           "type": "string",

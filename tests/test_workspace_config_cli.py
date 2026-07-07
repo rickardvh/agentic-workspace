@@ -18,6 +18,8 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
     assert payload["edit_reference"]["source_schema"] == "src/agentic_workspace/contracts/schemas/workspace_config.schema.json"
     assert "# Agentic Workspace managed config." in payload["edit_reference"]["managed_header"]
     assert payload["edit_reference"]["check_command"] == "agentic-workspace config --target . --format json"
+    assert payload["workspace"]["enabled"] is True
+    assert payload["workspace"]["enabled_source"] == "product-default"
     assert payload["workspace"]["enabled_modules"] == ["planning", "memory"]
     assert payload["workspace"]["agent_instructions_file"] == "AGENTS.md"
     assert payload["workspace"]["agent_instructions_file_source"] == "product-default"
@@ -1689,6 +1691,42 @@ def test_local_config_cli_invoke_overrides_repo_owned_invocation_policy(tmp_path
         'python -c "import sys; from agentic_workspace.cli import main; raise SystemExit(main(sys.argv[1:]))"'
     )
     assert payload["workspace"]["cli_invoke_source"] == "local-override"
+    assert payload["warnings"] == []
+
+
+def test_local_config_can_disable_workspace_operation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / ".agentic-workspace" / "config.toml", "schema_version = 1\n")
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[workspace]\nenabled = false\n",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["enabled"] is False
+    assert payload["workspace"]["enabled_source"] == "local-override"
+    assert payload["warnings"] == []
+
+
+def test_local_config_can_reenable_repo_disabled_workspace_operation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    _write(target / ".agentic-workspace" / "config.toml", "schema_version = 1\n\n[workspace]\nenabled = false\n")
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[workspace]\nenabled = true\n",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["workspace"]["enabled"] is True
+    assert payload["workspace"]["enabled_source"] == "local-override"
     assert payload["warnings"] == []
 
 

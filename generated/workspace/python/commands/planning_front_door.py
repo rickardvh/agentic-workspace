@@ -36,7 +36,7 @@ def run(args: argparse.Namespace) -> int:
 
             help_text_function(payload)
         return 0
-    local_handlers = {'decision-scaffold': ('agentic_workspace.workspace_runtime_primitives', '_run_planning_decision_adapter'), 'decision-promote': ('agentic_workspace.workspace_runtime_primitives', '_run_planning_decision_adapter')}
+    local_handlers = {'decision-scaffold': ('agentic_workspace.workspace_runtime_primitives', '_run_planning_decision_adapter'), 'decision-promote': ('agentic_workspace.workspace_runtime_primitives', '_run_planning_decision_adapter'), 'closeout': ('agentic_workspace.workspace_runtime_primitives', '_run_planning_closeout_adapter')}
     local_handler = local_handlers.get(str(command_value))
     if local_handler is not None:
         module_name, function_name = local_handler

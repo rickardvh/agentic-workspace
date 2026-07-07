@@ -868,7 +868,7 @@ def test_status_warns_when_module_update_source_metadata_drifts_from_repo_config
     capsys.readouterr()
     (target / ".agentic-workspace/config.toml").write_text(
         "schema_version = 1\n\n"
-        "[workspace]\n"
+        "[modules]\n"
         'enabled = ["planning"]\n\n'
         "[update.modules.planning]\n"
         'source_type = "git"\n'

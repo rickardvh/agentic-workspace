@@ -107,6 +107,7 @@ from agentic_workspace.workspace_runtime_core import (
     _validate_target_root,
     _workflow_obligations_report_payload,
     _workflow_sufficiency_payload,
+    _workspace_disabled_payload,
 )
 from agentic_workspace.workspace_runtime_generated_surface import (
     _as_dict,
@@ -136,6 +137,10 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         raise WorkspaceUsageError("Use either --task or --task-file, not both.")
     if not task_text:
         task_text = _read_task_text_from_file(target_root=target_root, task_file=getattr(args, "task_file", None))
+    config = _load_workspace_config(target_root=target_root)
+    if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="implement", config=config):
+        _emit_payload(payload=disabled_payload, format_name=args.format)
+        return 0
     profile = _diagnostic_profile(args, default="tiny")
     selected_fields = getattr(args, "select", None)
     change_impact_selected = _selector_requests_change_impact(selected_fields)
