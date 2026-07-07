@@ -14924,7 +14924,7 @@ _OPERATING_LOOP_MEMORY_REASONS = {
     "explicitly_dismissed",
 }
 _OPERATING_LOOP_MEMORY_CAPTURE = {"none", "recommended", "required"}
-_OPERATING_LOOP_PLANNING_STATES = {"none", "active", "continuation", "closeout_required"}
+_OPERATING_LOOP_PLANNING_STATES = {"none", "active", "continuation", "closeout_required", "unrelated_active_plan"}
 _OPERATING_LOOP_VERIFICATION_STATES = {
     "proof_not_required",
     "proof_required",
@@ -15041,6 +15041,13 @@ def _operating_loop_planning_state(
             "blocks_full_closure": True,
             "custody": "recommended",
         }
+    task_switch = _as_dict(gate.get("task_switch_reconciliation"))
+    if (
+        str(gate.get("gate_result") or "") == "active-plan-task-switch"
+        and gate.get("workflow_sufficient") is True
+        and str(task_switch.get("status") or "") == "active"
+    ):
+        return {"state": "unrelated_active_plan", "plan_ref": plan_ref, "blocks_full_closure": False}
     if str(reliance.get("status") or "") not in {"", "no-active-plan", "not-applicable", "clear", "satisfied"}:
         return {"state": "continuation", "plan_ref": plan_ref, "blocks_full_closure": True}
     if active_record.get("status") == "present":

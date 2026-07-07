@@ -58,7 +58,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `operating_loop.memory.route_ref` | string \| null | yes |  | Selector or route reference for pulled Memory, when available. |  |  |
 | `operating_loop.memory.capture` | enum `"none"`, `"recommended"`, `"required"` | yes |  | Whether reusable learning capture is absent, recommended, or required. |  |  |
 | `operating_loop.planning` | object | yes |  | Planning state relevant to full closure safety. |  |  |
-| `operating_loop.planning.state` | enum `"none"`, `"active"`, `"continuation"`, `"closeout_required"` | yes |  | Active, continuation, closeout-required, or absent Planning state. |  |  |
+| `operating_loop.planning.state` | enum `"none"`, `"active"`, `"continuation"`, `"closeout_required"`, `"unrelated_active_plan"` | yes |  | Active, continuation, closeout-required, or absent Planning state. |  |  |
 | `operating_loop.planning.plan_ref` | string \| null | yes |  | Planning record or execplan reference, when available. |  |  |
 | `operating_loop.planning.blocks_full_closure` | boolean | yes |  | Whether the Planning state structurally blocks an unqualified full closure claim. |  |  |
 | `operating_loop.verification` | object | yes |  | Verification or proof state relevant to the current claim boundary. |  |  |

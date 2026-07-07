@@ -904,7 +904,8 @@
                 "none",
                 "active",
                 "continuation",
-                "closeout_required"
+                "closeout_required",
+                "unrelated_active_plan"
               ]
             },
             "plan_ref": {

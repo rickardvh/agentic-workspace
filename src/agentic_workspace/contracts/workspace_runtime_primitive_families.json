@@ -389,6 +389,7 @@
         "source_symbols": [
           "_boundary_warning_for_path",
           "_change_impact_path_payload",
+          "_changed_path_exists",
           "_ownership_payload",
           "_project_roots_for_changed_paths",
           "_read_changed_surface_text",
@@ -504,6 +505,7 @@
           "_issue_reference_intent_payload",
           "_memory_consult_from_payload",
           "_memory_consult_payload",
+          "_open_issue_intake_payload",
           "_operating_loop_decision_payload",
           "_operating_posture_payload",
           "_parent_intent_status_payload",
