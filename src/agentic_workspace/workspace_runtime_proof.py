@@ -3522,6 +3522,14 @@ def _proof_selection_for_changed_paths(
     )
     if local_tool_coupling_review["status"] != "not-active":
         proof_selection["local_tool_coupling_review"] = local_tool_coupling_review
+    template_burden_review = _template_burden_review_for_changed_paths(
+        changed_paths=changed_paths,
+        target_root=target_root,
+        task_text=task_text,
+        learned_route_hints=learned_route_hints,
+    )
+    if template_burden_review["changed_paths"]:
+        proof_selection["template_burden_review"] = template_burden_review
     surface_value_review = _surface_value_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
     if surface_value_review["durable_surface_count"]:
         proof_selection["surface_value_review"] = surface_value_review
@@ -3812,6 +3820,159 @@ def _classify_local_tool_coupling_line(line: str) -> dict[str, Any] | None:
         "matched_terms": matched_terms,
         "reason": "local-tool reference needs human interpretation under tool-neutral task intent",
     }
+
+
+_TEMPLATE_BURDEN_ACTIVATION_TERMS = (
+    "template-burden",
+    "template burden",
+    "low-risk answer",
+    "low risk answer",
+    "contributor-burden",
+    "contributor burden",
+)
+_TEMPLATE_BURDEN_PATH_TERMS = ("pull_request_template", "issue_template", ".github/issue_template")
+_TEMPLATE_BURDEN_SECTION_TERMS = ("risk", "evidence", "proof", "validation", "assurance", "gap")
+_TEMPLATE_LOW_RISK_TERMS = ("not applicable", "n/a", "no high-risk", "no evidence gaps", "optional", "if applicable")
+
+
+def _template_burden_review_for_changed_paths(
+    *, changed_paths: list[str], target_root: Path | None, task_text: str | None, learned_route_hints: dict[str, Any] | None
+) -> dict[str, Any]:
+    template_paths = [changed_path for changed_path in changed_paths if _is_template_path(changed_path)]
+    activation = _template_burden_activation(task_text=task_text, learned_route_hints=learned_route_hints)
+    if not template_paths:
+        return {
+            "kind": "agentic-workspace/template-burden-review/v1",
+            "status": "not-applicable",
+            "changed_paths": [],
+            "activation": {"status": "not-applicable"},
+        }
+    if not activation:
+        return {
+            "kind": "agentic-workspace/template-burden-review/v1",
+            "status": "not-active",
+            "changed_paths": template_paths,
+            "flagged_count": 0,
+            "accepted_count": 0,
+            "flagged_sections": [],
+            "accepted_sections": [],
+            "activation": {
+                "status": "absent",
+                "rule": "Template-burden review needs explicit task intent or repo-local learned route evidence.",
+            },
+            "process_surface": "pr-or-issue-template",
+        }
+    reviewed_paths: list[str] = []
+    flagged: list[dict[str, Any]] = []
+    accepted: list[dict[str, Any]] = []
+    for changed_path in template_paths:
+        path = Path(changed_path)
+        source_path = path if path.is_absolute() else (target_root / path if target_root is not None else path)
+        if not source_path.is_file():
+            continue
+        reviewed_paths.append(changed_path)
+        lines = source_path.read_text(encoding="utf-8").splitlines()
+        text = "\n".join(lines).lower()
+        has_low_risk_path = any(term in text for term in _TEMPLATE_LOW_RISK_TERMS)
+        for line_number, line in enumerate(lines, start=1):
+            line_lower = line.lower()
+            if not line.lstrip().startswith("#"):
+                continue
+            if not any(term in line_lower for term in _TEMPLATE_BURDEN_SECTION_TERMS):
+                continue
+            item = {"source_path": changed_path, "line": line_number, "text": line.strip()}
+            if "optional" in line_lower or has_low_risk_path:
+                accepted.append({**item, "reason": "template section is optional or gives a low-risk/not-applicable answer path"})
+            else:
+                flagged.append(
+                    {
+                        **item,
+                        "reason": "mandatory-looking template section may burden every future contributor without a low-risk answer path",
+                    }
+                )
+    return {
+        "kind": "agentic-workspace/template-burden-review/v1",
+        "status": "attention-needed" if flagged else "clear" if reviewed_paths else "not-applicable",
+        "activation": {"status": "active", "signals": activation},
+        "changed_paths": reviewed_paths,
+        "flagged_count": len(flagged),
+        "accepted_count": len(accepted),
+        "flagged_sections": flagged,
+        "accepted_sections": accepted,
+        "rule": (
+            "PR and issue template changes are process-surface changes. Mandatory risk/evidence/proof sections should give "
+            "ordinary low-risk contributors an explicit lightweight answer path."
+        ),
+        "review_gate": "Flagged template sections need optional wording, a not-applicable example, or explicit closeout rationale.",
+        "route_learning_evidence": {
+            "source": "repo-local template-burden review signal",
+            "candidate_route": "docs/process template-burden review",
+            "parent_issue": "#1997",
+            "owner_options": ["Memory", "config proof profile", "docs/checks", "Planning", "issue follow-up"],
+            "recording_rule": (
+                "Useful or missed template-burden findings should be captured as repo-local route-learning evidence before "
+                "they become routine proof/review signals for future template changes."
+            ),
+            "capture_command": _template_burden_capture_command(changed_paths=reviewed_paths),
+            "memory_note_entry": _template_burden_memory_note_entry(),
+        },
+    }
+
+
+def _is_template_path(path: str) -> bool:
+    normalized = path.lower().replace("\\", "/")
+    return any(term in normalized for term in _TEMPLATE_BURDEN_PATH_TERMS)
+
+
+def _template_burden_activation(*, task_text: str | None, learned_route_hints: dict[str, Any] | None) -> list[dict[str, str]]:
+    signals: list[dict[str, str]] = []
+    task_lower = (task_text or "").lower()
+    for term in _TEMPLATE_BURDEN_ACTIVATION_TERMS:
+        if term in task_lower:
+            signals.append({"source": "task-intent", "term": term})
+    for hint in (learned_route_hints or {}).get("confirmed", []):
+        searchable = " ".join(
+            str(hint.get(field, ""))
+            for field in ("id", "candidate_command", "scope", "provenance", "source_path")
+            if str(hint.get(field, "")).strip()
+        ).lower()
+        matched_terms = [term for term in _TEMPLATE_BURDEN_ACTIVATION_TERMS if term in searchable]
+        if not matched_terms:
+            continue
+        signals.append(
+            {
+                "source": "repo-learned-proof-route",
+                "route_id": str(hint.get("id", "")),
+                "owner": str(hint.get("owner", "")),
+                "term": matched_terms[0],
+            }
+        )
+    return signals
+
+
+def _template_burden_capture_command(*, changed_paths: list[str]) -> str:
+    files_arg = " ".join(changed_paths) if changed_paths else "<changed template paths>"
+    return (
+        "agentic-workspace memory capture-note --target . --slug template-burden-review-route "
+        '--summary "docs/process template-burden review found useful repo-local evidence" '
+        f"--files {files_arg} --format json"
+    )
+
+
+def _template_burden_memory_note_entry() -> str:
+    entry = {
+        "state": "confirmed",
+        "intent_type": "static-check",
+        "candidate_command": "agentic-workspace proof --changed <template paths> --format json",
+        "source": "memory",
+        "confidence": "medium",
+        "requires_live_confirmation": False,
+        "scope": "docs/process template-burden",
+        "owner": "Memory",
+        "provenance": "template_burden_review classified mandatory and optional PR/issue template guidance",
+        "learned_at": date.today().isoformat(),
+    }
+    return f"agentic-workspace-proof-route: {json.dumps(entry, sort_keys=True)}"
 
 
 def _proof_command_explanations_payload(

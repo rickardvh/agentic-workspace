@@ -2214,6 +2214,133 @@ def test_proof_changed_selector_does_not_globally_ban_local_tool_references(tmp_
     assert "local_tool_coupling_review" not in answer
 
 
+def test_proof_changed_selector_reviews_template_burden(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "template-burden.md",
+        """
+# Template burden review
+
+agentic-workspace-proof-route: {"state":"confirmed","intent_type":"static-check","candidate_command":"agentic-workspace proof --changed <template paths> --format json","source":"memory","confidence":"high","requires_live_confirmation":false,"scope":"docs/process template-burden","owner":"Memory","provenance":"human review asked PR templates to include low-risk answer paths","learned_at":"2026-07-06"}
+""",
+    )
+    _write(
+        tmp_path / ".github" / "pull_request_template.md",
+        """
+# Pull Request
+
+## Evidence gaps
+
+- List all missing evidence.
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".github/pull_request_template.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    review = answer["template_burden_review"]
+    assert review["status"] == "attention-needed"
+    assert review["activation"]["signals"][0]["source"] == "repo-learned-proof-route"
+    assert review["flagged_count"] == 1
+    assert review["flagged_sections"][0]["line"] == 4
+    assert "low-risk answer path" in review["flagged_sections"][0]["reason"]
+    assert review["route_learning_evidence"]["memory_note_entry"].startswith("agentic-workspace-proof-route:")
+
+
+def test_proof_changed_selector_accepts_optional_template_burden_guidance(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "template-burden.md",
+        """
+# Template burden review
+
+agentic-workspace-proof-route: {"state":"confirmed","intent_type":"static-check","candidate_command":"agentic-workspace proof --changed <template paths> --format json","source":"memory","confidence":"high","requires_live_confirmation":false,"scope":"docs/process template-burden","owner":"Memory","provenance":"human review asked PR templates to include low-risk answer paths","learned_at":"2026-07-06"}
+""",
+    )
+    _write(
+        tmp_path / ".github" / "pull_request_template.md",
+        """
+# Pull Request
+
+## Optional high-risk evidence
+
+- Not applicable; no high-risk lanes.
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".github/pull_request_template.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    review = answer["template_burden_review"]
+    assert review["status"] == "clear"
+    assert review["flagged_count"] == 0
+    assert review["accepted_count"] == 1
+
+
+def test_proof_changed_selector_does_not_globally_require_template_burden_review(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(
+        tmp_path / ".github" / "pull_request_template.md",
+        """
+# Pull Request
+
+## Evidence gaps
+
+- List missing evidence.
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".github/pull_request_template.md",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    review = answer["template_burden_review"]
+    assert review["status"] == "not-active"
+    assert review["changed_paths"] == [".github/pull_request_template.md"]
+    assert review["flagged_count"] == 0
+
+
 def test_proof_changed_selector_routes_package_readmes_to_docs_review(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 
