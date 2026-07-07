@@ -1,0 +1,426 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Issue 2046 operational effectiveness full lane",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the whole GitHub #2046 operational-effectiveness lane: relevant self-improvement, dogfooding, workflow-obligation, optimization-posture, Planning, Memory, and Verification signals must change ordinary task posture/routing/proof/closeout or report explicit non-applicability.",
+    "hard_constraints": "Do not close #2046 by fixing only #2045 or #2047; do not add advisory-only prose; do not replace agent judgment with keyword matching; keep broad repo scans behind selectors.",
+    "agent_may_decide": "Exact field names, packet shape, focused fixture coverage, and whether the behavior lands in task_posture_packet, report packets, or closeout packet helpers.",
+    "escalate_when": "Satisfying the lane would require a general task-management system, automatic issue filing for weak signals, or hiding proof/safety/residue for compactness.",
+    "next_action": "Implement the operational-effectiveness contract across task posture, dogfooding intake, workflow obligations, optimization effect, and module-effect fixtures.",
+    "proof_expectations": [
+      "Focused CLI fixtures for task posture, session dogfooding intake/status, workflow obligation disposition, optimization effect, and module-effect matrix.",
+      "AW implement proof selection for changed paths.",
+      "Runtime mirror consistency for mirrored runtime helpers.",
+      "Workspace test/lint/typecheck proof before closeout."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "src/agentic_workspace/workspace_runtime_implement.py",
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_implement_cli.py",
+      ".agentic-workspace/planning/state.toml",
+      ".agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json",
+      ".agentic-workspace/planning/execplans/issue-2046-operational-effectiveness-full-lane.plan.json"
+    ],
+    "completion_criteria": [
+      "Operational-effectiveness packet classifies each relevant signal as behavior-changing, advisory/non-applicable, or unresolved.",
+      "Active improvement pressure changes task posture or explains why it does not.",
+      "Session dogfooding observations expose ordinary capture/routing/dismissal states and commands without requiring chat memory or manual issue filing.",
+      "Workflow obligations expose disposition states and make diagnostic execution alone insufficient for behavior-changing compliance.",
+      "Optimization posture has at least one enforceable ordinary output/proof/selector effect.",
+      "Fixtures cover Workspace, Planning, Memory, and Verification signals changing ordinary behavior or being explicitly advisory.",
+      "#2046 parent is only claimed complete after this full-lane evidence passes; child #2045/#2047 remain bounded symptoms."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement the whole GitHub #2046 operational-effectiveness lane, not only the first slice."
+  ],
+  "non_goals": [
+    "Do not close or implement unrelated standalone issues such as #2048/#2049.",
+    "Do not make broad repo-friction scans part of ordinary start/implement.",
+    "Do not auto-file issues for every weak signal.",
+    "Do not hide proof, safety, uncertainty, or residue to satisfy compactness."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement the whole GitHub #2046 operational-effectiveness lane.",
+      "constraints": "Behavior must be operational, not advisory-only; broad scans stay selector-gated.",
+      "latitude": "Choose packet fields and fixtures that satisfy the issue acceptance criteria.",
+      "escalation": "Escalate only if the lane requires auto-issue-filing, a general task manager, or proof/safety hiding.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "issue-2046-operational-effectiveness-full-lane",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_startup.py",
+        "src/agentic_workspace/workspace_runtime_implement.py",
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_implement_cli.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json",
+        ".agentic-workspace/planning/execplans/issue-2046-operational-effectiveness-full-lane.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make operational self-improvement effective in ordinary work for #2046.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement the #2046 lane in stacked PRs.",
+    "inferred intended outcome": "Implement the whole #2046 operational-effectiveness lane, not a first slice.",
+    "chosen concrete what": "Add runtime contract fields and fixtures proving operational effect across improvement, dogfooding, workflow, optimization, Planning, Memory, and Verification signals.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Runtime posture/report helpers, mirrored primitives, startup/implement wiring, focused CLI tests, generated command artifacts only if a command-interface change is needed, and #2046 planning records.",
+    "max changed files": "Expected upper bound: about 18 files if generated command artifacts are needed; otherwise about 10 files.",
+    "required validation commands": "Focused pytest for new fixtures, AW implement proof selection, runtime mirror consistency, make test-workspace, make lint-workspace, tests/test_workspace_cli.py, make typecheck, summary, closeout_trust.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, #2046 issue body, #2046 lane record, runtime task posture/report helpers, and focused CLI tests.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue full #2046 lane implementation; first slice is already closed, but parent lane remains the requested scope.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Whole #2046 lane, including remaining child symptoms and parent acceptance criteria.",
+    "hard constraints": "Operational effect required; advisory-only outputs do not satisfy the lane; child symptoms alone do not close parent.",
+    "agent may decide locally": "Exact runtime packet shape and fixture placement.",
+    "escalate when": "The implementation needs auto-filing every weak signal or a general task manager."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub #2046 full lane after user scope correction",
+      "label": "GitHub #2046 full lane after user scope correction",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "issue-2046-operational-effectiveness-full-lane",
+    "status": "completed",
+    "scope": "Whole #2046 operational-effectiveness lane.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement and prove all #2046 operational-effectiveness acceptance criteria."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/workspace_runtime_startup.py",
+    "src/agentic_workspace/workspace_runtime_implement.py",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json",
+    ".agentic-workspace/planning/execplans/issue-2046-operational-effectiveness-full-lane.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py::test_start_compiles_session_improvement_pressure_into_task_posture tests/test_workspace_cli.py::test_report_dogfooding_signal_status_covers_closeout_states tests/test_workspace_implement_cli.py::test_implement_compiles_session_improvement_pressure_into_task_posture -q",
+    "uv run python scripts/run_agentic_workspace.py implement --changed <changed-paths> --task \"Implement the whole #2046 lane in stacked PRs\" --format json",
+    "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
+    "make test-workspace",
+    "make lint-workspace",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "make typecheck",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Every #2046 acceptance criterion has explicit runtime behavior and fixture evidence.",
+    "The parent #2046 lane can be honestly closed or, if an external merge policy keeps it open, the remaining residue is explicitly outside the issue body."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented the whole #2046 operational-effectiveness lane across task posture, session dogfooding capture/routing, workflow-obligation disposition, optimization posture effect, and module-effectiveness matrix.",
+    "scope touched": "Runtime posture/report helpers, startup/implement routing, focused CLI fixtures, and #2046 planning records.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_startup.py; src/agentic_workspace/workspace_runtime_implement.py; tests/test_workspace_cli.py; tests/test_workspace_implement_cli.py; .agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope stayed inside the #2046 lane. The implementation adds behavior-changing records rather than advisory-only prose; child symptoms #2045/#2047 remain bounded. Runtime primitive mirror stayed in sync.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "make test-workspace passed; make lint-workspace passed; uv run pytest tests/test_workspace_cli.py -q passed; make typecheck passed; runtime_mirror_consistency status in_sync; summary/doctor/closeout_trust reviewed; git diff --check passed.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub #2046 full lane after user scope correction",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "#2046 lane behavior is implemented locally; external issue/PR closure remains separate from this planning closeout.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership..",
+    "motivation worth preserving": "Future agents should continue from GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership. rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership.",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership.",
+    "proposed durable intent": "Future agents should continue from GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership. rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership."
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      {
+        "summary": "Closeout routed issue residue to GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership..",
+        "owner": "GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership.",
+        "source": "durable_residue"
+      }
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      {
+        "summary": "Closeout routed issue residue to GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership..",
+        "owner": "GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership.",
+        "source": "durable_residue"
+      }
+    ],
+    "signals dismissed": [],
+    "next owner": "see routed signal owner"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-07: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership.",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "blocked_claim_classes": [],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#2046",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        }
+      ],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: GitHub #2046 full lane after user scope correction\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: make test-workspace passed; make lint-workspace passed; uv run pytest tests/test_workspace_cli.py -q passed; make typecheck passed; runtime_mirror_consistency status in_sync; summary/doctor/closeout_trust reviewed; git diff --check passed.\nChanged surfaces: src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_startup.py; src/agentic_workspace/workspace_runtime_implement.py; tests/test_workspace_cli.py; tests/test_workspace_implement_cli.py; .agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json\nDurable residue: planning (GitHub issues #2048/#2049 for out-of-scope dogfooding follow-ups; GitHub #2046 remains external PR/merge ownership.)\nMemory learning: route_to_planning\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 2046 improvement pressure posture compiler",
+  "plan_id": "issue-2046-improvement-pressure-posture",
+  "created_at": "2026-07-07T16:58:04.321658+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2046-improvement-pressure-posture.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2046-improvement-pressure-posture.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive is omitted or skipped."
+  },
+  "active_milestone": {
+    "id": "issue-2046-improvement-pressure-posture",
+    "status": "completed",
+    "scope": "First #2046 slice: session improvement-pressure posture compiler.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the first #2046 stacked-PR slice by making current-session improvement pressure operational in task posture.",
+    "hard constraints": "Keep broad repo-friction scans selector-gated; preserve compact default output; do not close #2046 parent from this slice.",
+    "agent may decide locally": "Helper names, exact field shape, and focused tests.",
+    "escalate when": "The slice needs repo-wide diagnostics in ordinary start/implement or changes lifecycle semantics."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented the first #2046 stacked-PR slice: cheap current-session improvement pressure now compiles into start/implement task_posture_packet obligations or explicit non-applicability/not-checked states.",
+    "scope touched": "workspace runtime task posture compiler, start/implement routing, focused CLI fixtures, #2046 lane and execplan planning surfaces",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_startup.py; src/agentic_workspace/workspace_runtime_implement.py; tests/test_workspace_cli.py; tests/test_workspace_implement_cli.py; .agentic-workspace/planning/execplans/issue-2046-improvement-pressure-posture.plan.json; .agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json; .agentic-workspace/planning/state.toml",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "continue from .agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Focused source behavior is implemented and tested; parent #2046 remains open for dogfooding capture/routing, workflow disposition, optimization posture, and module-effectiveness slices.",
+    "proof status": "passed",
+    "intent served": "no; intent-status=partial keeps continuation explicit.",
+    "config compliance": "AW start, summary, implement, proof selection, closeout_trust, session_improvement_intake, and memory route were used.",
+    "misinterpretation risk": "medium; this slice advances #2046 but cannot close the parent.",
+    "follow-on decision": ".agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json"
+  },
+  "proof_report": {
+    "validation proof": "Focused tests: 3 passed; make test-workspace ok; make lint-workspace ok; tests/test_workspace_cli.py: 132 passed; make typecheck ok; runtime_mirror_consistency in_sync; summary warning_count 0; git diff --check clean. Planning doctor completed with installed payload freshness unclaimed (payload-upgrade-required).",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement the #2046 lane in stacked PRs.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": ".agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status partial.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Bounded first slice landed; continuation owner is the #2046 operational-effectiveness lane.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": ".agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json",
+    "post-work posterity capture": "#2046 lane/closeout evidence updated; #2048 created for the task-switch routing issue; #2049 created for closeout evidence selection.",
+    "resume from": ".agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "GitHub #2048",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/lanes/issue-2046-operational-effectiveness.lane.json",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "GitHub #2048",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "GitHub #2049",
+          "owner": "",
+          "source": "post-closeout dogfooding reflection"
+        }
+      ]
+    }
+  }
+}
