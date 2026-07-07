@@ -1306,6 +1306,140 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
     assert any(line == "Remaining gaps: none known." for line in summary["pr_validation_lines"])
 
 
+def test_proof_changed_projects_learned_route_model_for_two_route_classes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "docs" / "runbook.md", "# Runbook\n")
+    _write(tmp_path / "src" / "security" / "policy.py", "ALLOW = True\n")
+    _write(tmp_path / "scripts" / "check_docs.py", "print('docs ok')\n")
+    _write(tmp_path / "scripts" / "check_access.py", "print('access ok')\n")
+    docs_route = {
+        "state": "confirmed",
+        "route_class": "docs-process",
+        "intent_type": "static-check",
+        "candidate_command": "python scripts/check_docs.py",
+        "source": "memory",
+        "confidence": "high",
+        "requires_live_confirmation": False,
+        "scope": "docs",
+        "owner": "Memory",
+        "provenance": "review feedback showed docs/process changes need path-reference checks",
+        "learned_at": "2026-07-06",
+        "risk_markers": ["docs-link-drift"],
+        "evidence": [{"source": "review", "review_ref": "#1993", "summary": "docs path-reference misses recurred"}],
+        "proof_classes": {
+            "required": ["python scripts/check_docs.py"],
+            "recommended": ["manual changed-link spot check"],
+            "not_applicable": ["full workspace typecheck"],
+        },
+        "override_semantics": {
+            "escalate_when": ["docs generator or published output changes"],
+            "repo_policy_overrides": True,
+            "rule": "Docs-process learned routes may not weaken generated documentation proof.",
+        },
+    }
+    access_route = {
+        "state": "confirmed",
+        "route_class": "access-audit",
+        "intent_type": "behavior-test",
+        "candidate_command": "python scripts/check_access.py",
+        "source": "memory",
+        "confidence": "high",
+        "requires_live_confirmation": False,
+        "scope": "src/security",
+        "owner": "Memory",
+        "provenance": "access-control closeout required stronger route than generic test",
+        "learned_at": "2026-07-06",
+        "risk_markers": ["authorization", "audit"],
+        "evidence": [{"source": "dogfood", "source_path": "tests/test_access_control.py", "summary": "access paths need focused checks"}],
+        "proof_classes": {
+            "required": ["python scripts/check_access.py"],
+            "optional_confidence": ["manual policy-diff review"],
+            "unavailable_manual": ["record unavailable audit harness evidence"],
+        },
+        "override_semantics": {
+            "escalate_when": ["auth boundary changes", "user requests high assurance"],
+            "requires_human_review_when": ["legal/compliance certification is claimed"],
+        },
+    }
+    _write(
+        tmp_path / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "proof-routes.md",
+        "\n".join(
+            [
+                "# Proof routes",
+                "",
+                f"agentic-workspace-proof-route: {json.dumps(docs_route, sort_keys=True)}",
+                f"agentic-workspace-proof-route: {json.dumps(access_route, sort_keys=True)}",
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/runbook.md",
+                "src/security/policy.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    compact = json.loads(capsys.readouterr().out)["learned_proof_route_model"]
+    assert compact["status"] == "selected"
+    assert set(compact["route_classes"]) >= {"docs-process", "access-audit"}
+    assert compact["selected_route_count"] == 2
+    assert compact["fallback"]["status"] == "not-needed"
+    assert "Route class names are host-owned evidence fields" in compact["repo_neutrality_rule"]
+    assert compact["proof_class_vocabulary"] == [
+        "required",
+        "recommended",
+        "optional_confidence",
+        "unavailable_manual",
+        "not_applicable",
+    ]
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "docs/runbook.md",
+                "src/security/policy.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    model = answer["learned_proof_route_model"]
+    assert model["status"] == "selected"
+    selected = {route["route_class"]: route for route in model["selected_routes"]}
+    assert selected["docs-process"]["proof_classes"]["required"] == ["python scripts/check_docs.py"]
+    assert selected["docs-process"]["proof_classes"]["recommended"] == ["manual changed-link spot check"]
+    assert selected["docs-process"]["proof_classes"]["not_applicable"] == ["full workspace typecheck"]
+    assert selected["access-audit"]["proof_classes"]["required"] == ["python scripts/check_access.py"]
+    assert selected["access-audit"]["proof_classes"]["optional_confidence"] == ["manual policy-diff review"]
+    assert selected["access-audit"]["proof_classes"]["unavailable_manual"] == ["record unavailable audit harness evidence"]
+    assert selected["access-audit"]["override_semantics"]["escalate_when"] == [
+        "auth boundary changes",
+        "user requests high assurance",
+    ]
+    assert selected["docs-process"]["source"]["provenance"] == "review feedback showed docs/process changes need path-reference checks"
+    assert "python scripts/check_docs.py" in answer["required_commands"]
+    assert "python scripts/check_access.py" in answer["required_commands"]
+    assert model["closeout_semantics"]["issue_closure"] == "learned proof route selection alone never authorizes issue or parent closure"
+
+
 def test_proof_tiny_includes_closeout_summary_for_pr_validation(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "Makefile", "test:\n\tpytest\n\nlint:\n\truff check .\n")
@@ -1338,6 +1472,10 @@ agentic-workspace-proof-route: {"state":"negative","intent_type":"behavior-test"
     assert answer["learned_route_hints"]["negative"][0]["candidate_command"] == "npm test"
     assert "npm test" not in answer["target_proof_capabilities"]["candidate_commands"]
     assert answer["required_commands"] == []
+    model = answer["learned_proof_route_model"]
+    assert model["fallback"]["status"] == "used"
+    assert model["routes"][0]["proof_classes"]["not_applicable"] == ["npm test"]
+    assert model["routes"][0]["state"] == "negative"
     assert answer["proof_route_selection"]["selected_command"] is None
     assert answer["proof_route_selection"]["critical_warnings"] == ["1 learned negative route(s) suppressed candidate proof commands."]
     learning = answer["host_repo_learning"]
