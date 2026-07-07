@@ -217,6 +217,46 @@ def test_implement_changed_surfaces_task_posture_packet(tmp_path: Path, capsys) 
     assert "knowledge_gates" not in packet
 
 
+def test_implement_compiles_session_improvement_pressure_into_task_posture(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "dogfooding-signal-status.json"
+    cache_path.write_text(
+        json.dumps({"status": "unresolved", "signals": ["observed dogfooding signal would otherwise stay in chat"]}),
+        encoding="utf-8",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "def changed():\n    return True\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Continue planned lane in stacked PR sequence",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    packet = payload["task_posture_packet"]
+    assert packet["improvement_pressure_evaluation"]["status"] == "active"
+    assert packet["improvement_obligations"][0]["id"].endswith("-owner-route")
+    assert "show owner route, mitigation, accepted-risk decision, or obsolete evidence for this pressure" in packet["proof_boundaries"]
+    assert "active improvement pressure has a recorded owner, mitigation, or accepted-risk disposition" in packet["closeout_boundaries"]
+    by_signal = {record["signal"]: record for record in packet["operational_effectiveness"]["records"]}
+    assert by_signal["improvement_pressure"]["status"] == "behavior-changing"
+    assert by_signal["session_dogfooding"]["status"] == "behavior-changing"
+    assert by_signal["verification"]["status"] == "behavior-changing"
+
+
 def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
