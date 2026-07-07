@@ -792,6 +792,132 @@ def _resolve_report_section(payload: dict[str, Any], section: str) -> tuple[str,
     return section, None
 
 
+def closeout_claim_boundary_payload(
+    closeout_trust: dict[str, Any], *, cli_invoke: str = DEFAULT_CLI_INVOKE, target_arg: str = "./repo"
+) -> dict[str, Any]:
+    if not isinstance(closeout_trust, dict):
+        closeout_trust = {}
+
+    def compact(value: Any, keys: tuple[str, ...]) -> dict[str, Any]:
+        if not isinstance(value, dict):
+            return {}
+        return {key: value.get(key) for key in keys if key in value}
+
+    completion_gate = closeout_trust.get("completion_gate", {})
+    completion_gate = completion_gate if isinstance(completion_gate, dict) else {}
+    claim_authorization = completion_gate.get("claim_authorization", {})
+    claim_authorization = claim_authorization if isinstance(claim_authorization, dict) else {}
+    strict_gate = closeout_trust.get("strict_closeout_gate", {})
+    strict_gate = strict_gate if isinstance(strict_gate, dict) else {}
+    terminal_action = closeout_trust.get("terminal_action", {})
+    terminal_action = terminal_action if isinstance(terminal_action, dict) else {}
+    closeout_protocol = closeout_trust.get("closeout_protocol", {})
+    closeout_protocol = closeout_protocol if isinstance(closeout_protocol, dict) else {}
+    readiness = closeout_protocol.get("readiness", {})
+    readiness = readiness if isinstance(readiness, dict) else {}
+    residue_routing = closeout_protocol.get("residue_routing", {})
+    residue_routing = residue_routing if isinstance(residue_routing, dict) else {}
+    closure_permission = closeout_protocol.get("closure_permission", {})
+    closure_permission = closure_permission if isinstance(closure_permission, dict) else {}
+    proof_dependency = closeout_protocol.get("proof_dependency", {})
+    proof_dependency = proof_dependency if isinstance(proof_dependency, dict) else {}
+    proof_dependency_status = "unknown"
+    if proof_dependency.get("run_proof_allowed") is True:
+        proof_dependency_status = "proof-required"
+    elif proof_dependency.get("run_proof_allowed") is False:
+        proof_dependency_status = "satisfied"
+
+    blocking_fields: list[str] = []
+    for option in _support_list_payload(closeout_trust.get("completion_options")):
+        if not isinstance(option, dict) or option.get("allowed") is True:
+            continue
+        for field in _support_list_payload(option.get("blocking_fields")):
+            field_text = str(field)
+            if field_text and field_text not in blocking_fields:
+                blocking_fields.append(field_text)
+
+    next_action = (
+        terminal_action.get("recommended_next_action")
+        or completion_gate.get("required_next_action")
+        or strict_gate.get("recommended_next_action")
+        or closeout_protocol.get("status")
+        or ""
+    )
+    detail_command = _command_with_cli_invoke(
+        "agentic-workspace report --target ./repo --section closeout_trust --format json",
+        cli_invoke=cli_invoke,
+        target_arg=target_arg,
+    )
+
+    return _localize_command_fields(
+        {
+            "kind": "agentic-workspace/closeout-claim-boundary/v1",
+            "status": completion_gate.get("status", closeout_trust.get("status", "unavailable")),
+            "trust": closeout_trust.get("trust", ""),
+            "active_intent_satisfied": completion_gate.get("active_intent_satisfied", False),
+            "claim_level_allowed": completion_gate.get("claim_level_allowed", "none"),
+            "claim_authorization": {
+                key: claim_authorization.get(key)
+                for key in (
+                    "allowed_claim_classes",
+                    "blocked_claim_classes",
+                    "closure_actions",
+                    "rule",
+                )
+                if key in claim_authorization
+            },
+            "blocking_fields": blocking_fields,
+            "strict_closeout": compact(strict_gate, ("status", "blocking", "required_for_broad_work", "recommended_next_action")),
+            "readiness": compact(readiness, ("status", "can_close", "blocking_fields", "warning_fields", "rule")),
+            "residue_routing": compact(
+                residue_routing,
+                (
+                    "required",
+                    "durable_residue_required",
+                    "safe_destination",
+                    "destination",
+                    "owner",
+                    "next_action",
+                    "rule",
+                ),
+            ),
+            "proof_dependency": {
+                "status": proof_dependency_status,
+                **compact(
+                    proof_dependency,
+                    (
+                        "run_proof_allowed",
+                        "proof_confidence",
+                        "verification_status",
+                        "verification_active_count",
+                        "required",
+                        "proof_status",
+                        "command",
+                        "rule",
+                    ),
+                ),
+            },
+            "closure_permission": compact(
+                closure_permission,
+                (
+                    "status",
+                    "allowed",
+                    "claim_work_complete_allowed",
+                    "keep_parent_open_allowed",
+                    "blocked_reason",
+                    "rule",
+                ),
+            ),
+            "next_action": next_action,
+            "source_detail_command": detail_command,
+            "detail_selector": "closeout_trust",
+            "rule": "Derived from closeout_trust; use this selector for the compact claim boundary and closeout_trust for full proof and residue detail.",
+        },
+        cli_invoke=cli_invoke,
+        target_arg=target_arg,
+    )
+
+
 def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str, target_arg: str = "./repo") -> Any:
     if section == "reasoning_economy" and isinstance(answer, dict):
         behavior = answer.get("behavior_check", {})
@@ -2287,6 +2413,7 @@ def report_section_hints(
         "surface_value_guardrail": "surface growth review pressure",
         "assurance_requirements": "repo-declared assurance authority, evidence, proof profile, and claim-boundary facts",
         "closeout_trust": "closeout trust and lower-trust residue signals",
+        "closeout_claim_boundary": "compact closeout claim permission, blockers, residue route, and proof dependency",
         "external_work_reconciliation": "one provider-agnostic external-work route for evidence freshness, closeout reconciliation, and landed-open checks",
         "external_evidence_safety": "compact external freshness, divergence, and closeout-safety decision support",
         "completion_contract": "Planning completion-contract lens for what must become true, proof, constraints, and blocked stop",
@@ -2333,6 +2460,7 @@ def report_section_hints(
         "surface_value_guardrail": "inspect before adding or expanding a visible surface",
         "assurance_requirements": "inspect when repo-declared assurance requirements may affect authority lookup, proof, review, or closeout claims",
         "closeout_trust": "inspect before closing broad work or auditing package-use evidence",
+        "closeout_claim_boundary": "inspect immediately before final messages, PR readiness, issue closure, or closeout handoff",
         "external_work_reconciliation": "inspect when deciding whether checked-in planning, external work state, and landed evidence agree",
         "external_evidence_safety": "inspect before closeout when external issue, CI, scanner, or ticket evidence may be stale or divergent",
         "completion_contract": "inspect when deciding whether work is done, partial, blocked, or continuation-required",

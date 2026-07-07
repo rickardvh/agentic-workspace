@@ -113,6 +113,7 @@ from agentic_workspace.contract_tooling import (
     workspace_surfaces_manifest,
 )
 from agentic_workspace.reporting_support import (
+    closeout_claim_boundary_payload,
     communication_contract_payload,
     output_contract_payload,
     reasoning_economy_evidence_payload,
@@ -8793,6 +8794,11 @@ def _run_report_command(
         "findings": aggregated_findings,
         "decision_pressure": decision_pressure,
         "closeout_trust": closeout_trust,
+        "closeout_claim_boundary": closeout_claim_boundary_payload(
+            closeout_trust,
+            cli_invoke=config.cli_invoke,
+            target_arg="./repo",
+        ),
         "successful_completion_cost": _successful_completion_cost_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "reasoning_economy": reasoning_economy_evidence_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         "external_work_reconciliation": external_work_reconciliation,
@@ -10046,6 +10052,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "kind": "agentic-workspace/closeout-trust/v1",
         "purpose": "compact strict closeout gate, claim permission, proof, and residue routing posture",
         "when_to_use": "before ordinary lane closeout or broad completion claims, without loading the full report",
+    },
+    {
+        "section": "closeout_claim_boundary",
+        "kind": "agentic-workspace/closeout-claim-boundary/v1",
+        "purpose": "fast derived claim boundary for what can be honestly said or closed",
+        "when_to_use": "immediately before final messages, PR readiness, issue closure, or closeout handoff",
     },
     {
         "section": "local_footprint",
@@ -13173,8 +13185,8 @@ def _run_lazy_report_section_command(
         payload["reasoning_economy"] = reasoning_economy_evidence_payload(target_root=target_root, cli_invoke=config.cli_invoke)
         return _select_report_payload(payload, profile="router", section=normalized)
 
-    if normalized == "closeout_trust":
-        payload["closeout_trust"] = _report_closeout_trust_payload(
+    if normalized in {"closeout_claim_boundary", "closeout_trust"}:
+        closeout_trust = _report_closeout_trust_payload(
             module_reports=_selected_module_reports(target_root=target_root, selected_modules=selected_modules),
             target_root=target_root,
             config=config,
@@ -13182,6 +13194,13 @@ def _run_lazy_report_section_command(
             task_text=task_text,
             changed_paths=changed_paths,
         )
+        payload["closeout_trust"] = closeout_trust
+        if normalized == "closeout_claim_boundary":
+            payload["closeout_claim_boundary"] = closeout_claim_boundary_payload(
+                closeout_trust,
+                cli_invoke=config.cli_invoke,
+                target_arg="./repo",
+            )
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized in {

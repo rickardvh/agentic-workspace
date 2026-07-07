@@ -623,6 +623,31 @@ def test_closeout_trust_derives_intent_proof_from_satisfied_active_execplan(tmp_
     assert "planning.active.planning_record.proof_report.intent_proof.status" not in claim_work.get("blocking_fields", [])
 
 
+def test_closeout_claim_boundary_returns_fast_claim_packet(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, include_stale_task_posture_residue=True)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "closeout_claim_boundary", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["kind"] == "agentic-workspace/closeout-claim-boundary/v1"
+    assert payload["status"] == "allowed"
+    assert payload["active_intent_satisfied"] is True
+    assert payload["claim_level_allowed"] == "full-intent-complete"
+    assert "full_intent_complete" in payload["claim_authorization"]["allowed_claim_classes"]
+    assert payload["blocking_fields"] == []
+    assert payload["residue_routing"]["required"] is False
+    assert payload["proof_dependency"]["status"] == "satisfied"
+    assert "--section closeout_trust" in payload["source_detail_command"]
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "section_catalog", "--format", "json"]) == 0
+    catalog = json.loads(capsys.readouterr().out)["answer"]
+    section = next(item for item in catalog["lazy_sections"] if item["section"] == "closeout_claim_boundary")
+    assert section["payload_is_lazy"] is True
+
+
 def test_closeout_trust_does_not_block_on_stale_satisfied_task_posture_residue(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
