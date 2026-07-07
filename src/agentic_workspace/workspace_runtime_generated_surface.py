@@ -41,22 +41,23 @@ def _selector_tokens(select: str | None) -> list[str]:
 def _normalize_changed_paths(paths: list[str]) -> list[str]:
     normalized: list[str] = []
     for path_text in paths:
-        stripped = str(path_text).strip()
-        if not stripped:
-            continue
-        path = Path(stripped)
-        try:
-            if path.is_absolute():
-                stripped = path.resolve().as_posix()
-            else:
+        for raw_part in str(path_text).split(","):
+            stripped = raw_part.strip()
+            if not stripped:
+                continue
+            path = Path(stripped)
+            try:
+                if path.is_absolute():
+                    stripped = path.resolve().as_posix()
+                else:
+                    stripped = path.as_posix()
+            except OSError:
                 stripped = path.as_posix()
-        except OSError:
-            stripped = path.as_posix()
-        while stripped.startswith("./"):
-            stripped = stripped[2:]
-        stripped = stripped.rstrip("/")
-        if stripped and stripped not in normalized:
-            normalized.append(stripped)
+            while stripped.startswith("./"):
+                stripped = stripped[2:]
+            stripped = stripped.rstrip("/")
+            if stripped and stripped not in normalized:
+                normalized.append(stripped)
     return normalized
 
 
