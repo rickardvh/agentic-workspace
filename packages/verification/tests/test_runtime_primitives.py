@@ -165,6 +165,83 @@ review_owner = "data-owner"
     assert payload["evidence_concepts"]["declared_host"][0]["id"] == "host:security_assurance"
 
 
+def test_verification_report_discovers_proof_profiles_and_activation_smoke_tests(tmp_path: Path) -> None:
+    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.catch_all_review]
+title = "Broad review"
+purpose = "Broad fallback review."
+applies_to_paths = ["**/*"]
+expected_evidence = ["security_review"]
+review_owner = "maintainer"
+
+[protocols.access_review]
+title = "Access review"
+purpose = "Check access controls."
+applies_to_paths = ["src/auth/**"]
+expected_evidence = ["security_review"]
+review_owner = "security-owner"
+
+[protocols.migration_review]
+title = "Migration review"
+purpose = "Check migration safety."
+applies_to_paths = ["db/migrations/**"]
+expected_evidence = ["migration_reviewed"]
+review_owner = "data-owner"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / "Makefile").write_text(
+        """
+test:
+\tpytest
+lint:
+\truff check .
+typecheck:
+\tmypy .
+migration-check:
+\talembic upgrade --sql
+check-deploy-prod:
+\tdeploy --prod
+audit:
+\tpip-audit
+""".strip(),
+        encoding="utf-8",
+    )
+    workflow = tmp_path / ".github" / "workflows" / "ci.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text("name: CI\n", encoding="utf-8")
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    jumpstart = payload["proof_profile_jumpstart"]
+    assert jumpstart["kind"] == "agentic-workspace/proof-profile-jumpstart/v1"
+    assert jumpstart["status"] == "profiles_discovered"
+    profile_ids = {profile["id"] for profile in jumpstart["candidate_profiles"]}
+    assert {"unit", "lint", "typecheck", "migration", "audit", "full"}.issubset(profile_ids)
+    migration = next(profile for profile in jumpstart["candidate_profiles"] if profile["id"] == "migration")
+    assert migration["evidence"][0]["command"] == "make migration-check"
+    assert any(item["command"] == "make check-deploy-prod" and item["profile"] == "full" for item in jumpstart["manual_optional_commands"])
+    access_smoke = next(item for item in jumpstart["activation_smoke_tests"] if item["protocol_id"] == "access_review")
+    assert access_smoke["sample_changed_path"] == "src/auth/access_review_sample"
+    assert access_smoke["status"] == "unexpected_broad_activation"
+    assert "catch_all_review" in access_smoke["expected_protocol_ids"]
+    assert any("shared exact expected_evidence" in reason for reason in access_smoke["broad_activation_reasons"])
+
+
+def test_verification_report_keeps_proof_profile_jumpstart_quiet_without_host_tooling(tmp_path: Path) -> None:
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    jumpstart = payload["proof_profile_jumpstart"]
+    assert jumpstart["status"] == "no_host_tooling_detected"
+    assert jumpstart["candidate_profiles"] == []
+    assert jumpstart["activation_smoke_tests"] == []
+
+
 def test_verification_report_matches_path_protocol_and_evidence(tmp_path: Path) -> None:
     manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     manifest.parent.mkdir(parents=True)
