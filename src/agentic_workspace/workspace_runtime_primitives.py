@@ -8643,6 +8643,8 @@ def _run_report_command(
     resolved_preset: str | None,
     descriptors: dict[str, ModuleDescriptor],
     config: WorkspaceConfig,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     status_payload = _run_lifecycle_command(
         command_name="status",
@@ -8728,7 +8730,12 @@ def _run_report_command(
     local_aw_state = _local_aw_state_payload(target_root=target_root)
     local_memory = _local_memory_payload(config=config)
     closeout_trust = _report_closeout_trust_payload(
-        module_reports=module_reports, target_root=target_root, config=config, cli_invoke=config.cli_invoke
+        module_reports=module_reports,
+        target_root=target_root,
+        config=config,
+        cli_invoke=config.cli_invoke,
+        task_text=task_text,
+        changed_paths=changed_paths,
     )
     decision_pressure = _decision_pressure_payload(
         target_root=target_root, config=config, module_reports=module_reports, cli_invoke=config.cli_invoke
@@ -12472,6 +12479,8 @@ def _run_lazy_report_section_command(
     resolved_preset: str | None,
     config: WorkspaceConfig,
     section: str | None,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any] | None:
     if section is None:
         return None
@@ -12685,6 +12694,8 @@ def _run_lazy_report_section_command(
             target_root=target_root,
             config=config,
             cli_invoke=config.cli_invoke,
+            task_text=task_text,
+            changed_paths=changed_paths,
         )
         return _select_report_payload(payload, profile="router", section=normalized)
 
@@ -12730,6 +12741,8 @@ def _run_lazy_report_section_command(
                 target_root=target_root,
                 config=config,
                 cli_invoke=config.cli_invoke,
+                task_text=task_text,
+                changed_paths=changed_paths,
             )
             payload["closeout_trust"] = closeout_trust
         payload["external_work_delta"] = external_work_delta
@@ -16475,6 +16488,7 @@ def _closeout_completion_options(
     durable_residue_action: dict[str, Any],
     lower_trust_closeout_count: int,
     cli_invoke: str,
+    current_task_switch_scope: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     closure_scope = intent_check.get("closure_scope", {}) if isinstance(intent_check, dict) else {}
     closure_scope = closure_scope if isinstance(closure_scope, dict) else {}
@@ -16496,6 +16510,8 @@ def _closeout_completion_options(
     acceptance_trust = str(acceptance_reconciliation.get("trust", "")).strip().lower()
     intent_proof_check = intent_proof_check if isinstance(intent_proof_check, dict) else {}
     completion_gate = completion_gate if isinstance(completion_gate, dict) else {}
+    current_task_switch_scope = _as_dict(current_task_switch_scope)
+    current_task_switch_active = str(current_task_switch_scope.get("status") or "") == "active"
     completion_gate_status = str(completion_gate.get("status", "")).strip()
     claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
     allowed_claim_classes = {
@@ -16503,6 +16519,8 @@ def _closeout_completion_options(
     }
 
     def structured_claim_authorized(claim_class: str) -> bool:
+        if current_task_switch_active and claim_class == "slice_complete":
+            return True
         return not claim_authorization or claim_class in allowed_claim_classes
 
     completion_gate_blocks_full = completion_gate_status in {
@@ -16578,16 +16596,20 @@ def _closeout_completion_options(
     slice_blockers = [
         field
         for field in completion_blockers
-        if field not in {"intent_satisfaction", "intent_proof"} or intent_proof_status == "needs_review"
+        if field == "intent_satisfaction.closure_scope.validation_proof"
+        or field not in {"intent_satisfaction", "intent_proof"}
+        or intent_proof_status == "needs_review"
     ]
+    if current_task_switch_active:
+        slice_blockers = [field for field in slice_blockers if field not in {"strict_closeout_gate", "durable_residue", "completion_gate"}]
     slice_blockers.extend(assurance_claim_blockers.get("claim-slice-complete", []))
     work_blockers = [*completion_blockers, *assurance_claim_blockers.get("claim-work-complete", [])]
     parent_blockers = [*completion_blockers, *assurance_claim_blockers.get("close-parent-lane", [])]
     claim_slice_allowed = (
         proof_achieved
-        and (not strict_blocking)
+        and (current_task_switch_active or not strict_blocking)
         and acceptance_ok
-        and not residue_required
+        and (current_task_switch_active or not residue_required)
         and not intent_proof_needs_review
         and not unsupported_preservation
         and not assurance_claim_blockers.get("claim-slice-complete")
@@ -17234,8 +17256,11 @@ def _report_closeout_trust_payload(
     target_root: Path | None = None,
     config: WorkspaceConfig | None = None,
     cli_invoke: str = DEFAULT_CLI_INVOKE,
+    task_text: str | None = None,
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     strict_closeout = bool(config.assurance.strict_closeout) if config is not None else False
+    normalized_changed_paths = _normalize_changed_paths(changed_paths or [])
     knowledge_authority_review = _knowledge_authority_review_payload(
         target_root=target_root,
         source_payload={"module_reports": module_reports},
@@ -17315,6 +17340,43 @@ def _report_closeout_trust_payload(
         }
         action["run"] = action["command"]
         return action
+
+    def current_task_switch_scope() -> dict[str, Any]:
+        if target_root is None or config is None or not normalized_changed_paths or not str(task_text or "").strip():
+            return {"kind": "agentic-workspace/current-task-closeout-scope/v1", "status": "not-applicable"}
+        execution_posture = _execution_posture_payload(
+            config=config,
+            changed_paths=normalized_changed_paths,
+            task_text=task_text,
+            target_root=target_root,
+        )
+        planning_safety_gate = _planning_safety_gate_payload(
+            target_root=target_root,
+            config=config,
+            changed_paths=normalized_changed_paths,
+            task_text=task_text,
+            execution_posture=execution_posture,
+        )
+        task_switch = _as_dict(planning_safety_gate.get("task_switch_reconciliation"))
+        if (
+            str(planning_safety_gate.get("gate_result") or "") != "active-plan-task-switch"
+            or planning_safety_gate.get("workflow_sufficient") is not True
+            or str(task_switch.get("status") or "") != "active"
+        ):
+            return {
+                "kind": "agentic-workspace/current-task-closeout-scope/v1",
+                "status": "not-applicable",
+                "planning_safety_gate": _selector_first_planning_safety_gate(planning_safety_gate),
+            }
+        return {
+            "kind": "agentic-workspace/current-task-closeout-scope/v1",
+            "status": "active",
+            "relationship": "bounded-task-switch",
+            "changed_paths": normalized_changed_paths,
+            "planning_safety_gate": _selector_first_planning_safety_gate(planning_safety_gate),
+            "task_switch_reconciliation": task_switch,
+            "rule": "The active plan remains protected repo-wide residue; this scope only classifies current bounded-task closeout blockers.",
+        }
 
     def archived_slice_closeout_evidence() -> dict[str, Any]:
         archived_record = _closeout_planning_record_for_report(active_planning_record={}, target_root=target_root)
@@ -17409,6 +17471,7 @@ def _report_closeout_trust_payload(
             adjusted.append(updated)
         return adjusted
 
+    task_switch_scope = current_task_switch_scope()
     planning_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"), None)
     if not isinstance(planning_report, dict):
         gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
@@ -17719,6 +17782,61 @@ def _report_closeout_trust_payload(
         cli_invoke=cli_invoke,
     )
     completion_options = allow_archived_slice_claim(completion_options, slice_closeout_evidence)
+    current_task_closeout: dict[str, Any] = {"status": "not-applicable"}
+    if task_switch_scope.get("status") == "active":
+        current_task_gate = copy.deepcopy(gate)
+        current_task_gate.update(
+            {
+                "status": "unrelated-active-plan-residue",
+                "blocking": False,
+                "current_task_blocking": False,
+                "relationship": "bounded-task-switch",
+                "summary": "Strict closeout still protects the unrelated active plan, but it is not a current bounded-task slice blocker.",
+            }
+        )
+        proof_selection = _proof_selection_for_changed_paths(
+            changed_paths=normalized_changed_paths,
+            target_root=target_root,
+            task_text=task_text,
+            include_durable_intent=False,
+            include_assurance_requirements=False,
+            include_routine_work_context=False,
+        )
+        current_task_options = _closeout_completion_options(
+            status="present",
+            trust=trust,
+            strict_gate=current_task_gate,
+            completion_gate=completion_gate,
+            intent_check=intent_satisfaction_check,
+            acceptance_reconciliation=acceptance_reconciliation,
+            intent_proof_check=intent_proof_check,
+            assurance_requirements=assurance_requirements,
+            durable_residue_action=residue_action,
+            lower_trust_closeout_count=effective_lower_trust_count,
+            cli_invoke=cli_invoke,
+            current_task_switch_scope=task_switch_scope,
+        )
+        current_task_operating_loop = _operating_loop_decision_payload(
+            claim_context="closeout",
+            planning_safety_gate=_as_dict(task_switch_scope.get("planning_safety_gate")),
+            proof=proof_selection,
+        )
+        current_task_closeout = {
+            "kind": "agentic-workspace/current-task-closeout/v1",
+            "status": "active",
+            "scope": task_switch_scope,
+            "strict_closeout_gate": current_task_gate,
+            "completion_options": current_task_options,
+            "operating_loop": current_task_operating_loop,
+            "proof": proof_selection,
+            "repo_wide_residue": {
+                "strict_closeout_gate": gate,
+                "completion_gate": completion_gate,
+                "trust": trust,
+                "lower_trust_closeout_count": effective_lower_trust_count,
+            },
+            "rule": "Current-task closeout options do not authorize active-plan progress, parent closure, or issue closure for unrelated planning residue.",
+        }
     memory_consult = (
         _memory_consult_payload(target_root=target_root, compact=True, cli_invoke=cli_invoke)
         if target_root is not None
@@ -17774,6 +17892,7 @@ def _report_closeout_trust_payload(
         "memory_consult": memory_consult,
         "memory_decision_packet": memory_decision_packet,
         "operating_loop": operating_loop,
+        "current_task_closeout": current_task_closeout,
         "knowledge_authority_review": knowledge_authority_review,
         "architecture_decision_closeout": architecture_decision_closeout,
         "historical_review_artifacts": _historical_review_artifacts_policy(
@@ -36631,6 +36750,8 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
         profile = "router"
     section = getattr(args, "section", None)
     select = getattr(args, "select", None)
+    task_text = getattr(args, "task", None)
+    changed_paths = _normalize_changed_paths(getattr(args, "changed", []) or [])
     if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)
     if profile == "router" and section is None and (args.format == "json"):
@@ -36653,6 +36774,8 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             config=config,
             section=section,
+            task_text=task_text,
+            changed_paths=changed_paths,
         )
         if payload is not None:
             if select:
@@ -36661,7 +36784,13 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             _emit_payload(payload=payload, format_name=args.format)
             return 0
     payload = _run_report_command(
-        target_root=target_root, selected_modules=selected_modules, resolved_preset=resolved_preset, descriptors=descriptors, config=config
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=resolved_preset,
+        descriptors=descriptors,
+        config=config,
+        task_text=task_text,
+        changed_paths=changed_paths,
     )
     payload = _select_report_payload(payload, profile=profile, section=section)
     if select:

@@ -633,6 +633,91 @@ def test_closeout_trust_names_external_intent_evidence_blocker_for_open_issue(tm
     assert "intent_satisfaction.required_follow_on" not in claim_work["blocking_fields"]
 
 
+def test_closeout_trust_scopes_unrelated_active_plan_residue_to_repo_wide_closeout(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        """
+schema_version = 1
+
+[assurance]
+strict_closeout = true
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Unrelated active plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    record = planning_installer._build_execplan_record_from_todo_item(
+        title="Unrelated active plan",
+        item_id="active-plan",
+        status="active",
+        why_now="regress task-scoped closeout trust with unrelated active planning residue.",
+        next_action="Continue unrelated active plan later.",
+        done_when="The unrelated active plan is complete.",
+    )
+    planning_installer._write_execplan_record(
+        record_path=tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        record=record,
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "closeout_trust",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Implement issue #3000 parser cache cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["strict_closeout_gate"]["blocking"] is True
+    current = payload["current_task_closeout"]
+    assert current["status"] == "active"
+    assert current["scope"]["relationship"] == "bounded-task-switch"
+    assert current["scope"]["planning_safety_gate"]["gate_result"] == "active-plan-task-switch"
+    assert current["strict_closeout_gate"]["blocking"] is False
+    assert current["strict_closeout_gate"]["current_task_blocking"] is False
+    assert current["operating_loop"]["planning"]["state"] == "unrelated_active_plan"
+    assert current["operating_loop"]["planning"]["blocks_full_closure"] is False
+    assert current["operating_loop"]["verification"]["state"] == "proof_missing"
+    assert current["operating_loop"]["required_before_full_closure"] == ["run_or_refresh_proof"]
+    claim_slice = next(option for option in current["completion_options"] if option["id"] == "claim-slice-complete")
+    assert claim_slice["allowed"] is False
+    assert "intent_satisfaction.closure_scope.validation_proof" in claim_slice["blocking_fields"]
+    assert "strict_closeout_gate" not in claim_slice["blocking_fields"]
+    assert "durable_residue" not in claim_slice["blocking_fields"]
+    assert "completion_gate" not in claim_slice["blocking_fields"]
+
+
 def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / "README.md").write_text("# Fixture\n", encoding="utf-8")
