@@ -3517,6 +3517,11 @@ def _proof_selection_for_changed_paths(
     markdown_path_reference_review = _markdown_path_reference_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
     if markdown_path_reference_review["changed_paths"]:
         proof_selection["markdown_path_reference_review"] = markdown_path_reference_review
+    local_tool_coupling_review = _local_tool_coupling_review_for_changed_paths(
+        changed_paths=changed_paths, target_root=target_root, task_text=task_text
+    )
+    if local_tool_coupling_review["status"] != "not-active":
+        proof_selection["local_tool_coupling_review"] = local_tool_coupling_review
     surface_value_review = _surface_value_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
     if surface_value_review["durable_surface_count"]:
         proof_selection["surface_value_review"] = surface_value_review
@@ -3698,6 +3703,115 @@ def _markdown_path_reference_memory_note_entry() -> str:
         "learned_at": date.today().isoformat(),
     }
     return f"agentic-workspace-proof-route: {json.dumps(entry, sort_keys=True)}"
+
+
+_LOCAL_TOOL_NEUTRALITY_TERMS = (
+    "tool-neutral",
+    "tool neutral",
+    "tool neutrality",
+    "no agentic workspace",
+    "no local tool",
+    "local-tool coupling",
+    "avoid local tool",
+)
+_LOCAL_TOOL_TERMS = ("agentic workspace", "agentic-workspace", ".agentic-workspace", "run_agentic_workspace.py")
+_MANDATORY_PROCESS_TERMS = ("must", "required", "shall", "always", "need to", "needs to", "have to")
+_OPTIONAL_EVIDENCE_TERMS = ("optional", "may", "can", "if using", "when using", "local evidence", "implementation evidence")
+
+
+def _local_tool_coupling_review_for_changed_paths(
+    *, changed_paths: list[str], target_root: Path | None, task_text: str | None
+) -> dict[str, Any]:
+    task_activation = _local_tool_coupling_activation(task_text=task_text)
+    scanned_files: list[tuple[str, list[str]]] = []
+    file_activation: list[str] = []
+    for changed_path in changed_paths:
+        if not changed_path.lower().endswith((".md", ".markdown")):
+            continue
+        path = Path(changed_path)
+        source_path = path if path.is_absolute() else (target_root / path if target_root is not None else path)
+        if not source_path.is_file():
+            continue
+        lines = source_path.read_text(encoding="utf-8").splitlines()
+        scanned_files.append((changed_path, lines))
+        for line in lines:
+            file_activation.extend(term for term in _LOCAL_TOOL_NEUTRALITY_TERMS if term in line.lower())
+    activation = _dedupe([*task_activation, *file_activation])
+    if not activation:
+        return {
+            "kind": "agentic-workspace/local-tool-coupling-review/v1",
+            "status": "not-active",
+            "activation": {"status": "absent", "source": "task-intent"},
+        }
+    reviewed_paths: list[str] = []
+    flagged: list[dict[str, Any]] = []
+    accepted: list[dict[str, Any]] = []
+    ambiguous: list[dict[str, Any]] = []
+    for changed_path, lines in scanned_files:
+        reviewed_paths.append(changed_path)
+        for line_number, line in enumerate(lines, start=1):
+            classification = _classify_local_tool_coupling_line(line)
+            if classification is None:
+                continue
+            item = {
+                "source_path": changed_path,
+                "line": line_number,
+                "text": line.strip(),
+                "matched_terms": classification["matched_terms"],
+                "reason": classification["reason"],
+            }
+            if classification["status"] == "flagged":
+                flagged.append(item)
+            elif classification["status"] == "accepted":
+                accepted.append(item)
+            else:
+                ambiguous.append(item)
+    return {
+        "kind": "agentic-workspace/local-tool-coupling-review/v1",
+        "status": "attention-needed" if flagged else "clear",
+        "activation": {"status": "active", "source": "task-intent", "matched_terms": activation},
+        "changed_paths": reviewed_paths,
+        "flagged_count": len(flagged),
+        "accepted_optional_count": len(accepted),
+        "ambiguous_count": len(ambiguous),
+        "flagged_references": flagged,
+        "accepted_optional_references": accepted,
+        "ambiguous_references": ambiguous,
+        "rule": (
+            "When tool neutrality is in scope, changed guidance is scanned for local-tool references. Mandatory repository-process "
+            "wording is flagged; optional local evidence wording is allowed."
+        ),
+        "review_gate": "Flagged mandatory local-tool process wording needs rewrite or explicit closeout explanation.",
+    }
+
+
+def _local_tool_coupling_activation(*, task_text: str | None) -> list[str]:
+    text = (task_text or "").lower()
+    return [term for term in _LOCAL_TOOL_NEUTRALITY_TERMS if term in text]
+
+
+def _classify_local_tool_coupling_line(line: str) -> dict[str, Any] | None:
+    text = line.lower()
+    matched_terms = [term for term in _LOCAL_TOOL_TERMS if term in text]
+    if not matched_terms:
+        return None
+    if any(term in text for term in _OPTIONAL_EVIDENCE_TERMS):
+        return {
+            "status": "accepted",
+            "matched_terms": matched_terms,
+            "reason": "optional or evidence-scoped local-tool wording",
+        }
+    if any(term in text for term in _MANDATORY_PROCESS_TERMS):
+        return {
+            "status": "flagged",
+            "matched_terms": matched_terms,
+            "reason": "mandatory repository-process wording references a local tool while tool neutrality is in scope",
+        }
+    return {
+        "status": "ambiguous",
+        "matched_terms": matched_terms,
+        "reason": "local-tool reference needs human interpretation under tool-neutral task intent",
+    }
 
 
 def _proof_command_explanations_payload(
