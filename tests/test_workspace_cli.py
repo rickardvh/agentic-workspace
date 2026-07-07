@@ -511,6 +511,66 @@ def test_closeout_trust_prefers_relevant_closeout_evidence_over_newer_unrelated_
     assert evidence["freshness"]["sort_mtime"] == 1000
 
 
+def test_closeout_trust_prefers_retained_closeout_evidence_over_newer_archive(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    archive_path = target / ".agentic-workspace" / "planning" / "execplans" / "archive" / "newer.plan.json"
+    closeout_path = target / ".agentic-workspace" / "planning" / "closeout-evidence" / "issue-2049.closeout.json"
+    proof_report = {
+        "validation proof": "passed",
+        "proof achieved now": "yes",
+        'evidence for "proof achieved" state': "focused proof passed",
+    }
+    closure_check = {
+        "slice status": "completed",
+        "larger-intent status": "closed",
+        "closure decision": "archive-and-close",
+    }
+    _write(
+        archive_path,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "title": "Newer Archived Record",
+                "proof_report": proof_report,
+                "closure_check": closure_check,
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write(
+        closeout_path,
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "title": "Issue 2049 Retained Evidence",
+                "plan_id": "issue-2049",
+                "source_plan": ".agentic-workspace/planning/execplans/issue-2049.plan.json",
+                "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2049.plan.json",
+                "retention": {"state": "cleanup-distilled-without-full-archive"},
+                "proof_report": proof_report,
+                "closure_check": closure_check,
+            }
+        ),
+        encoding="utf-8",
+    )
+    os.utime(closeout_path, (1000, 1000))
+    os.utime(archive_path, (2000, 2000))
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    evidence = json.loads(capsys.readouterr().out)["answer"]["archived_slice_closeout_evidence"]
+    assert evidence["trust"] == "normal"
+    assert evidence["owner_surface"] == ".agentic-workspace/planning/closeout-evidence/issue-2049.closeout.json"
+    assert evidence["owner_kind"] == "retained-closeout-evidence"
+    assert evidence["evidence_source_class"] == "fresh-closeout-evidence"
+    assert evidence["evidence_selection"]["selected_source_class"] == "fresh-closeout-evidence"
+    assert evidence["freshness"]["sort_mtime"] == 1000
+
+
 def _write_issue_1981_closeout_fixture(
     target: Path,
     *,
@@ -1533,6 +1593,34 @@ def test_start_default_stays_under_tiny_output_budget_for_docs_task(tmp_path: Pa
     assert "implementation_allowed cannot bypass workflow" in payload["workflow_participation"]["rule"]
 
 
+def test_operational_compression_surfaces_checked_default_output_budget(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "operational_compression", "--format", "json"]) == 0
+
+    measures = json.loads(capsys.readouterr().out)["answer"]["measures"]
+    budget = measures["ordinary_default_output_budget"]
+    inventory = measures["ordinary_output_shape_inventory"]
+    surfaces = {item["surface"]: item for item in budget["representative_surfaces"]}
+
+    assert budget["status"] == "checked"
+    assert budget["advisory_only"] is False
+    assert inventory["status"] == "checked"
+    assert inventory["budget_proven_count"] >= 2
+    assert {surface for surface in ("start", "implement", "summary", "report", "proof") if surface in surfaces} == {
+        "start",
+        "implement",
+        "summary",
+        "report",
+        "proof",
+    }
+    assert surfaces["start"]["status"] == "budget-proven"
+    assert surfaces["summary"]["status"] == "retained-with-evidence"
+    assert budget["selector_relocations"][0]["default_state"] == "selector-routed"
+
+
 def test_start_routes_high_assurance_milestone_to_planning_before_implementation(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -1693,6 +1781,46 @@ candidates = []
         "proceed-bounded-repo-maintenance",
         "reconcile-active-plan-before-implementation",
     }
+
+
+def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Path, capsys) -> None:
+    from types import SimpleNamespace
+
+    from agentic_workspace.workspace_runtime_planning import _task_switch_reconciliation_payload
+
+    switch = _task_switch_reconciliation_payload(
+        active_planning_present=True,
+        active_plan_reliance={"status": "not-needed-for-current-task"},
+        active_summary={
+            "active_execplan": ".agentic-workspace/planning/execplans/issue-2046-lane.plan.json",
+            "active_item_id": "issue-2046-lane",
+            "planning_status": "active",
+        },
+        task_text="Implement the whole #2046 lane",
+        config=SimpleNamespace(cli_invoke="agentic-workspace"),
+        planning_revision={"status": "clean", "revision": "fixture"},
+    )
+
+    assert switch["status"] == "issue-matched-continuation"
+    assert switch["recommended_next_action"] == "continue-active-plan"
+    assert switch["intent_conflict_state"] == "explicit-reference-continuation"
+    assert "issue-2046" in switch["mismatch_evidence"]["shared_refs"]
+    assert switch["rule"] == "Structured issue/PR ref overlap is active-plan continuation evidence; arbitrary prose keyword overlap is not."
+
+    plural_lane_switch = _task_switch_reconciliation_payload(
+        active_planning_present=True,
+        active_plan_reliance={"status": "not-needed-for-current-task"},
+        active_summary={
+            "active_execplan": ".agentic-workspace/planning/execplans/issues-2045-2047-followups.plan.json",
+            "active_item_id": "issues-2045-2047-followups",
+            "planning_status": "active",
+        },
+        task_text="Finish issue comments for #2045",
+        config=SimpleNamespace(cli_invoke="agentic-workspace"),
+        planning_revision={"status": "clean", "revision": "fixture"},
+    )
+    assert plural_lane_switch["status"] == "issue-matched-continuation"
+    assert "issue-2045" in plural_lane_switch["mismatch_evidence"]["shared_refs"]
 
 
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
