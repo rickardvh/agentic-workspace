@@ -1331,8 +1331,14 @@ def test_proof_changed_exposes_receipt_bridge_for_unrecorded_commands(tmp_path: 
     assert bridge["kind"] == "agentic-workspace/proof-receipt-bridge/v1"
     assert bridge["status"] == "action-required"
     assert bridge["missing_receipt_count"] == len(reconciliation["commands"])
+    assert bridge["ready_to_record_count"] >= 1
+    assert bridge["template_blocked_count"] == 0
+    assert bridge["next_action"] == "record the first concrete proof receipt"
+    assert "--record-receipt" in bridge["next_recording_command"]
     action = next(item for item in bridge["actions"] if item["command"] == "make test-workspace")
     assert action["status"] == "ready-to-record-after-run"
+    assert action["next_action"] == "record the actual proof result after this concrete command has run"
+    assert action["recording_command"] == action["record_passed_command"]
     assert action["receipt_state"] in {"not-run-or-not-recorded", "run-but-not-recorded"}
     assert "--record-receipt" in action["record_passed_command"]
     assert '--receipt-command "make test-workspace"' in action["record_passed_command"]
@@ -1362,6 +1368,39 @@ def test_proof_changed_exposes_receipt_bridge_for_unrecorded_commands(tmp_path: 
     compact = json.loads(capsys.readouterr().out)
     assert compact["proof_closeout_summary"]["receipt_bridge"]["status"] == "action-required"
     assert "record_passed_command" not in json.dumps(compact)
+
+
+def test_proof_receipt_bridge_marks_template_commands_unrecordable() -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_bridge_payload
+
+    bridge = _proof_receipt_bridge_payload(
+        changed_paths=["src/example.py"],
+        proof_receipt_reconciliation={
+            "commands": [
+                {
+                    "command": "uv run pytest <paths>",
+                    "evidence_state": "not-run-or-not-recorded",
+                    "diagnostic": "no trusted receipt exists for this selected command",
+                },
+                {
+                    "command": "make typecheck",
+                    "evidence_state": "run-but-not-recorded",
+                    "diagnostic": "receipt missing for this command",
+                },
+            ]
+        },
+        cli_invoke=REPO_LOCAL_CLI_INVOKE,
+    )
+
+    assert bridge["status"] == "action-required"
+    assert bridge["ready_to_record_count"] == 1
+    assert bridge["template_blocked_count"] == 1
+    assert "--record-receipt" in bridge["next_recording_command"]
+    template = next(action for action in bridge["actions"] if action["command"] == "uv run pytest <paths>")
+    assert template["status"] == "instantiate-before-recording"
+    assert template["placeholders"] == ["<paths>"]
+    assert "recording_command" not in template
+    assert template["next_action"] == "instantiate placeholders, run the concrete command, then record the actual result"
 
 
 def test_proof_changed_projects_learned_route_model_for_two_route_classes(tmp_path: Path, capsys) -> None:
@@ -2935,6 +2974,10 @@ def test_proof_changed_reconciles_receipt_history_without_duplicate_runs(tmp_pat
     assert states["make typecheck"]["diagnostic"] == "passed receipt accepted"
     assert answer["proof_execution_evidence"]["status"] == "recorded-and-accepted"
     assert answer["proof_receipt_bridge"]["status"] == "complete"
+    assert answer["proof_receipt_bridge"]["ready_to_record_count"] == 0
+    assert answer["proof_receipt_bridge"]["template_blocked_count"] == 0
+    assert answer["proof_receipt_bridge"]["next_action"] == "no receipt action required"
+    assert answer["proof_receipt_bridge"]["next_recording_command"] == ""
     assert answer["proof_receipt_bridge"]["actions"] == []
     assert answer["proof_closeout_summary"]["receipt_bridge"] == {
         "status": "complete",

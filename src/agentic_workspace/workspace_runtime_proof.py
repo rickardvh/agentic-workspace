@@ -702,23 +702,38 @@ def _proof_receipt_bridge_payload(
                 {
                     "status": "instantiate-before-recording",
                     "placeholders": placeholders,
+                    "next_action": "instantiate placeholders, run the concrete command, then record the actual result",
                     "recording_rule": "Substitute placeholders and run the concrete command before recording a receipt.",
                 }
             )
         else:
             action["status"] = "ready-to-record-after-run"
-            action["record_passed_command"] = _command_with_cli_invoke(
+            record_passed_command = _command_with_cli_invoke(
                 command=(
                     "agentic-workspace proof --target ."
                     f"{changed_part} --record-receipt --receipt-command {_shell_quote(command)} --receipt-result passed --format json"
                 ),
                 cli_invoke=cli_invoke,
             )
+            action["next_action"] = "record the actual proof result after this concrete command has run"
+            action["recording_command"] = record_passed_command
+            action["record_passed_command"] = record_passed_command
         actions.append(action)
+    ready_actions = [action for action in actions if action.get("status") == "ready-to-record-after-run"]
+    template_actions = [action for action in actions if action.get("status") == "instantiate-before-recording"]
+    next_ready_command = str(ready_actions[0].get("recording_command", "")) if ready_actions else ""
     return {
         "kind": "agentic-workspace/proof-receipt-bridge/v1",
         "status": "action-required" if actions else "complete",
         "missing_receipt_count": len(actions),
+        "ready_to_record_count": len(ready_actions),
+        "template_blocked_count": len(template_actions),
+        "next_action": "record the first concrete proof receipt"
+        if ready_actions
+        else "instantiate template proof commands before recording"
+        if template_actions
+        else "no receipt action required",
+        "next_recording_command": next_ready_command,
         "receipt_path": str(proof_receipt_reconciliation.get("receipt_path", PROOF_RECEIPT_RELATIVE_PATH.as_posix())),
         "history_path": str(proof_receipt_reconciliation.get("receipt_history_path", PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix())),
         "actions": actions,
