@@ -807,6 +807,38 @@ def test_proof_verbose_exposes_manual_fallback_decision_layers(tmp_path: Path, c
     assert "optional-confidence" in explanations["reason_class_model"]
 
 
+def test_proof_command_explanations_status_present_for_policy_blockers_only() -> None:
+    explanations = workspace_runtime_proof._proof_command_explanations_payload(
+        selected_commands=[],
+        required_commands=[],
+        optional_commands=[],
+        unavailable_commands=[],
+        host_policy_blocked_commands=[
+            {
+                "command": "npm test",
+                "lane": "concern:no_npm_test",
+                "reason": "host-configured proof profile disallows this command",
+                "configured_command": "npm test",
+            }
+        ],
+        manual_verification=None,
+    )
+
+    assert explanations["status"] == "present"
+    assert explanations["required"] == []
+    assert explanations["optional_confidence"] == []
+    assert explanations["manual_or_unavailable"] == [
+        {
+            "command": "npm test",
+            "lane": "concern:no_npm_test",
+            "reason": "host-configured proof profile disallows this command",
+            "reason_classes": ["explicit-config-policy"],
+            "blocking": True,
+            "configured_command": "npm test",
+        }
+    ]
+
+
 def test_proof_changed_uses_target_package_json_scripts_without_makefile(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "package.json", json.dumps({"scripts": {"test": "vitest run", "lint": "eslint ."}}))

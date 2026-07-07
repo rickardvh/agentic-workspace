@@ -3762,7 +3762,7 @@ def _proof_command_explanations_payload(
     ]
     return {
         "kind": "agentic-workspace/proof-command-explanations/v1",
-        "status": "present" if required_items or optional_items or manual_items or unavailable_items else "empty",
+        "status": "present" if required_items or optional_items or manual_items or unavailable_items or policy_blocked_items else "empty",
         "reason_class_model": {
             "learned-repo-evidence": "selected from confirmed repo-local route evidence or Memory-backed learning",
             "explicit-config-policy": "selected or blocked by host configuration, subsystem ownership, local overlay, or proof profile",
