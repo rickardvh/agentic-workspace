@@ -1306,6 +1306,64 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
     assert any(line == "Remaining gaps: none known." for line in summary["pr_validation_lines"])
 
 
+def test_proof_changed_exposes_receipt_bridge_for_unrecorded_commands(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    bridge = answer["proof_receipt_bridge"]
+    reconciliation = answer["proof_receipt_reconciliation"]
+    assert bridge["kind"] == "agentic-workspace/proof-receipt-bridge/v1"
+    assert bridge["status"] == "action-required"
+    assert bridge["missing_receipt_count"] == len(reconciliation["commands"])
+    action = next(item for item in bridge["actions"] if item["command"] == "make test-workspace")
+    assert action["status"] == "ready-to-record-after-run"
+    assert action["receipt_state"] in {"not-run-or-not-recorded", "run-but-not-recorded"}
+    assert "--record-receipt" in action["record_passed_command"]
+    assert '--receipt-command "make test-workspace"' in action["record_passed_command"]
+    assert "--receipt-result passed" in action["record_passed_command"]
+    assert action["result_options"] == ["passed", "failed", "skipped", "waived"]
+    summary_bridge = answer["proof_closeout_summary"]["receipt_bridge"]
+    assert summary_bridge == {
+        "status": "action-required",
+        "missing_receipt_count": bridge["missing_receipt_count"],
+        "detail_selector": "proof_receipt_bridge",
+    }
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compact = json.loads(capsys.readouterr().out)
+    assert compact["proof_closeout_summary"]["receipt_bridge"]["status"] == "action-required"
+    assert "record_passed_command" not in json.dumps(compact)
+
+
 def test_proof_changed_projects_learned_route_model_for_two_route_classes(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "docs" / "runbook.md", "# Runbook\n")
@@ -2876,6 +2934,13 @@ def test_proof_changed_reconciles_receipt_history_without_duplicate_runs(tmp_pat
     assert states["make typecheck"]["evidence_state"] == "accepted"
     assert states["make typecheck"]["diagnostic"] == "passed receipt accepted"
     assert answer["proof_execution_evidence"]["status"] == "recorded-and-accepted"
+    assert answer["proof_receipt_bridge"]["status"] == "complete"
+    assert answer["proof_receipt_bridge"]["actions"] == []
+    assert answer["proof_closeout_summary"]["receipt_bridge"] == {
+        "status": "complete",
+        "missing_receipt_count": 0,
+        "detail_selector": "proof_receipt_bridge",
+    }
     assert "closeout review" in answer["proof_execution_evidence"]["rule"]
 
 
