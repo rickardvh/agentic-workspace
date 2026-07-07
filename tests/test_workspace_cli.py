@@ -474,7 +474,13 @@ def test_closeout_trust_prefers_relevant_closeout_evidence_over_newer_unrelated_
     assert evidence["freshness"]["sort_mtime"] == 1000
 
 
-def _write_issue_1981_closeout_fixture(target: Path, *, include_proof: bool, external_status: str = "closed") -> None:
+def _write_issue_1981_closeout_fixture(
+    target: Path,
+    *,
+    include_proof: bool,
+    external_status: str = "closed",
+    include_stale_task_posture_residue: bool = False,
+) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 
     issue_ref = "#1981"
@@ -505,6 +511,8 @@ candidates = []
     )
     record["references"] = [issue_ref]
     record["completion_criteria"] = ["summary and closeout trust agree on active execplan intent satisfaction"]
+    if include_stale_task_posture_residue:
+        record["active_milestone"]["id"] = "task-posture-fixture"
     record["proof_expectations"] = [
         "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
         "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
@@ -562,6 +570,22 @@ candidates = []
         record_path=target / ".agentic-workspace" / "planning" / "execplans" / "issue-1981.plan.json",
         record=record,
     )
+    if include_stale_task_posture_residue:
+        _write_json(
+            target / ".agentic-workspace" / "planning" / "lanes" / "lane-1392-open-module-participation.lane.json",
+            {
+                "kind": "planning-lane/v1",
+                "id": "lane-1392-open-module-participation",
+                "slice_sequence": [
+                    {
+                        "id": "state-delta-packet-followthrough",
+                        "title": "Task posture packet follow-through",
+                        "status": "planned",
+                        "purpose_for_lane": "Historical packet follow-through residue retained after the active slice completed.",
+                    }
+                ],
+            },
+        )
     _write_json(
         target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
         {
@@ -594,9 +618,26 @@ def test_closeout_trust_derives_intent_proof_from_satisfied_active_execplan(tmp_
     assert payload["completion_gate"]["claim_level_allowed"] == "full-intent-complete"
     assert payload["checks"]["intent_proof"]["status"] == "sufficient_for_claim"
     claim_work = next(option for option in payload["completion_options"] if option["id"] == "claim-work-complete")
-    assert claim_work["allowed"] is False
-    assert claim_work["blocking_fields"] == ["durable_residue"]
+    assert claim_work["allowed"] is True
+    assert "durable_residue" not in claim_work.get("blocking_fields", [])
     assert "planning.active.planning_record.proof_report.intent_proof.status" not in claim_work.get("blocking_fields", [])
+
+
+def test_closeout_trust_does_not_block_on_stale_satisfied_task_posture_residue(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, include_stale_task_posture_residue=True)
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "closeout_trust", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    assert payload["completion_gate"]["status"] == "allowed"
+    assert payload["completion_gate"]["active_intent_satisfied"] is True
+    assert payload["completion_gate"]["task_posture_followthrough"]["status"] == "stale-satisfied"
+    assert payload["completion_gate"]["task_posture_followthrough"]["blocking"] is False
+    claim_work = next(option for option in payload["completion_options"] if option["id"] == "claim-work-complete")
+    assert "completion_gate" not in claim_work.get("blocking_fields", [])
 
 
 def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missing(tmp_path: Path, capsys) -> None:

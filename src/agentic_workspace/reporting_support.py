@@ -1244,6 +1244,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "residual_intent",
                     "self_review",
                     "continuation",
+                    "task_posture_followthrough",
                     "authority_boundary",
                 )
                 if key in completion_gate

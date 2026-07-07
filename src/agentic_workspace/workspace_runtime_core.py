@@ -17680,7 +17680,25 @@ def _completion_gate_payload(
     intent_satisfied_field = truthy(intent_satisfaction.get("was original intent fully satisfied?")) or truthy(
         intent_continuity.get("this slice completes the larger intended outcome")
     )
-    task_posture_residue = _planned_task_posture_residue(active_planning_record)
+    closure_status = str(closure_check.get("larger-intent status") or closure_check.get("larger_intent_status") or "").strip().lower()
+    closure_decision = str(closure_check.get("closure decision") or closure_check.get("closure_decision") or "").strip().lower()
+    explicit_closeout_satisfied = closure_status in {"closed", "complete", "completed", "done", ""} and (
+        closure_decision in {"archive-and-close", "close", "closed", ""} or closure_decision.startswith("archive-and-close-")
+    )
+    no_required_follow_on = required_follow_on.lower() in {"", "no", "false", "none"}
+    active_closeout_evidence_satisfied = bool(
+        active_planning_record
+        and (intent_satisfied_field or intent_trust in {"satisfied", "normal"})
+        and no_required_follow_on
+        and (parent_satisfied or explicit_closeout_satisfied)
+        and acceptance_trust in {"", "normal", "not-applicable"}
+        and proof_supports_full
+        and not applicable_intent_status.get("closeout_blocked")
+    )
+    task_posture_residue = _planned_task_posture_residue(
+        active_planning_record,
+        active_closeout_evidence_satisfied=active_closeout_evidence_satisfied,
+    )
     task_posture_residue_open = task_posture_residue.get("status") == "open"
     if task_posture_residue_open:
         posture_titles = [
@@ -17694,12 +17712,12 @@ def _completion_gate_payload(
             "Task posture follow-through remains unresolved: " + "; ".join(posture_titles[:4]),
         )
         required_follow_on = "yes"
-    no_required_follow_on = required_follow_on.lower() in {"", "no", "false", "none"}
+        no_required_follow_on = False
     active_intent_satisfied = bool(
         active_planning_record
         and (intent_satisfied_field or intent_trust in {"satisfied", "normal"})
         and no_required_follow_on
-        and parent_satisfied
+        and (parent_satisfied or explicit_closeout_satisfied)
         and acceptance_trust in {"", "normal", "not-applicable"}
         and proof_supports_full
         and not applicable_intent_status.get("closeout_blocked")
@@ -17829,7 +17847,11 @@ def _completion_gate_payload(
     }
 
 
-def _planned_task_posture_residue(active_planning_record: dict[str, Any]) -> dict[str, Any]:
+def _planned_task_posture_residue(
+    active_planning_record: dict[str, Any],
+    *,
+    active_closeout_evidence_satisfied: bool = False,
+) -> dict[str, Any]:
     active_planning_record = _as_dict(active_planning_record)
     records = [active_planning_record]
     target_root = _target_root_from_record(active_planning_record)
@@ -17893,12 +17915,76 @@ def _planned_task_posture_residue(active_planning_record: dict[str, Any]) -> dic
             owner = ".agentic-workspace/planning/lanes/" + str(record.get("id", "")).strip() + ".lane.json"
         if owner:
             break
+    status = "stale-satisfied" if active_closeout_evidence_satisfied else "open"
     return {
-        "status": "open",
+        "status": status,
         "planned": planned,
         "owner_surface": owner or ".agentic-workspace/planning/lanes/lane-1392-open-module-participation.lane.json",
-        "rule": "Full closeout is blocked while task-posture slices remain planned, active, or blocked.",
+        "blocking": not active_closeout_evidence_satisfied,
+        "rule": (
+            "Task-posture slice residue remains visible as stale satisfied evidence because the active execplan records "
+            "full intent, proof, no required continuation, and closeout satisfaction."
+            if active_closeout_evidence_satisfied
+            else "Full closeout is blocked while task-posture slices remain planned, active, or blocked."
+        ),
     }
+
+
+def _active_closeout_evidence_satisfied(
+    *,
+    active_planning_record: dict[str, Any],
+    intent_satisfaction_check: dict[str, Any],
+    acceptance_reconciliation: dict[str, Any],
+    intent_proof_check: dict[str, Any],
+    parent_intent_status: dict[str, Any],
+    applicable_intent_status: dict[str, Any],
+) -> bool:
+    active_planning_record = _as_dict(active_planning_record)
+    if not active_planning_record:
+        return False
+    intent_satisfaction = _as_dict(active_planning_record.get("intent_satisfaction"))
+    intent_continuity = _as_dict(active_planning_record.get("intent_continuity"))
+    required_continuation = _as_dict(active_planning_record.get("required_continuation"))
+    closure_check = _as_dict(active_planning_record.get("closure_check"))
+    intent_trust = str(intent_satisfaction_check.get("trust") or "").strip().lower()
+    acceptance_trust = str(acceptance_reconciliation.get("trust") or "").strip().lower()
+    proof_status = str(intent_proof_check.get("status") or "").strip().lower().replace("-", "_")
+    parent_status = str(parent_intent_status.get("status") or "").strip().lower()
+    closure_status = str(closure_check.get("larger-intent status") or closure_check.get("larger_intent_status") or "").strip().lower()
+    closure_decision = str(closure_check.get("closure decision") or closure_check.get("closure_decision") or "").strip().lower()
+    intent_satisfied = str(intent_satisfaction.get("was original intent fully satisfied?") or "").strip().lower() in {
+        "yes",
+        "true",
+        "satisfied",
+        "complete",
+        "completed",
+    } or str(intent_continuity.get("this slice completes the larger intended outcome") or "").strip().lower() in {
+        "yes",
+        "true",
+        "satisfied",
+        "complete",
+        "completed",
+    }
+    required_follow_on = (
+        str(
+            required_continuation.get("required follow-on for the larger intended outcome")
+            or intent_satisfaction_check.get("required_follow_on")
+            or ""
+        )
+        .strip()
+        .lower()
+    )
+    explicit_closeout_satisfied = closure_status in {"closed", "complete", "completed", "done", ""} and (
+        closure_decision in {"archive-and-close", "close", "closed", ""} or closure_decision.startswith("archive-and-close-")
+    )
+    return bool(
+        (intent_satisfied or intent_trust in {"satisfied", "normal"})
+        and required_follow_on in {"", "no", "false", "none"}
+        and (parent_status in {"satisfied", "guidance-only", ""} or explicit_closeout_satisfied)
+        and acceptance_trust in {"", "normal", "not-applicable"}
+        and proof_status in {"representative", "sufficient_for_claim"}
+        and not applicable_intent_status.get("closeout_blocked")
+    )
 
 
 def _assurance_claim_blockers(assurance_requirements: dict[str, Any] | None) -> dict[str, list[str]]:
@@ -18402,9 +18488,26 @@ def _report_closeout_trust_payload(
         assurance_requirements=assurance_requirements,
     )
     assurance_requirements = _assurance_requirements_with_verification(assurance_requirements, verification)
+    applicable_intent_status = _applicable_intent_status_payload(
+        active_planning_record=raw_active_planning_record,
+        verification=verification,
+        assurance_requirements=assurance_requirements,
+    )
+    active_closeout_satisfied = _active_closeout_evidence_satisfied(
+        active_planning_record=raw_active_planning_record,
+        intent_satisfaction_check=intent_satisfaction_check,
+        acceptance_reconciliation=acceptance_reconciliation,
+        intent_proof_check=intent_proof_check,
+        parent_intent_status=parent_intent_status,
+        applicable_intent_status=applicable_intent_status,
+    )
     active_planning_record = package_workflow_evidence.get("status") == "present"
     package_absence_signals: list[str] = []
-    if package_workflow_evidence.get("status") == "present" and package_workflow_evidence.get("trust") == "lower-trust":
+    if (
+        package_workflow_evidence.get("status") == "present"
+        and package_workflow_evidence.get("trust") == "lower-trust"
+        and not active_closeout_satisfied
+    ):
         missing = ", ".join((str(item) for item in package_workflow_evidence.get("missing_expected_surfaces", [])))
         missing = missing or "package workflow evidence"
         package_absence_signals.append(
@@ -18439,11 +18542,6 @@ def _report_closeout_trust_payload(
         active_planning_record=active_planning_record,
     )
     residue_action = durable_residue_action(trust=trust)
-    applicable_intent_status = _applicable_intent_status_payload(
-        active_planning_record=raw_active_planning_record,
-        verification=verification,
-        assurance_requirements=assurance_requirements,
-    )
     completion_gate = _completion_gate_payload(
         active_planning_record=raw_active_planning_record,
         intent_check=intent_satisfaction_check,
