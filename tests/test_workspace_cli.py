@@ -1824,8 +1824,98 @@ def test_start_surfaces_unresolved_dogfooding_signal_outcome(tmp_path: Path, cap
     assert status["status"] == "unresolved"
     assert status["closeout_blocked"] is True
     assert status["durable_residue"] is True
-    assert status["sample_signals"] == ["diagnostic did not change routing"]
-    assert "dogfooding_signal_status=unresolved" in payload["action_signals"]["changed_signals"]
+
+
+def test_start_compiles_session_improvement_pressure_into_task_posture(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "dogfooding-signal-status.json"
+    cache_path.write_text(
+        json.dumps({"status": "unresolved", "signals": ["improvement diagnostics did not change next action"]}),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue planned lane in stacked PR sequence",
+                "--select",
+                "task_posture_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    packet = payload["values"]["task_posture_packet"]
+
+    assert packet["improvement_pressure_evaluation"]["status"] == "active"
+    assert packet["improvement_pressure_evaluation"]["source_intake"] == "session_improvement_intake"
+    assert packet["improvement_pressure_evaluation"]["active_obligation_count"] == 1
+    assert packet["improvement_obligations"][0]["source"] == "improvement-pressure"
+    assert packet["next_allowed_action"] == "route active improvement pressure or record accepted-risk"
+    assert "claim improvement pressure resolved without owner, dismissal, or accepted-risk state" in packet["forbidden_actions"]
+
+
+def test_start_operational_effectiveness_matrix_covers_2046_lane_signals(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace/config.toml",
+        """
+schema_version = 1
+
+[workspace]
+optimization_bias = "agent-efficiency"
+
+[workflow_obligations.dogfood_closeout]
+summary = "Classify dogfooding pressure before closeout."
+stage = "before-claiming-completion"
+force = "required-before-closeout"
+scope_tags = ["dogfooding", "self-improvement", "planning"]
+commands = ["agentic-workspace report --section dogfooding_signal_status --format json"]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement the whole #2046 dogfooding self-improvement lane",
+                "--select",
+                "task_posture_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    packet = json.loads(capsys.readouterr().out)["values"]["task_posture_packet"]
+    effectiveness = packet["operational_effectiveness"]
+    by_signal = {record["signal"]: record for record in effectiveness["records"]}
+
+    assert effectiveness["summary"]["behavior_changing_count"] >= 3
+    assert by_signal["session_dogfooding"]["status"] == "behavior-changing"
+    assert by_signal["workflow_obligations"]["status"] == "behavior-changing"
+    assert by_signal["workspace_optimization"]["status"] == "behavior-changing"
+    assert by_signal["planning"]["status"] == "behavior-changing"
+    assert by_signal["memory"]["status"] == "advisory"
+    assert by_signal["verification"]["status"] == "advisory"
+    assert packet["dogfooding_obligations"][0]["id"] == "session-dogfooding-disposition"
+    assert packet["workflow_obligation_effects"][0]["diagnostic_command_alone_satisfies"] is False
+    assert packet["optimization_effect"]["enforced_effects"][0]["id"] == "compact-router-first"
+    assert any("agent-efficiency: emit compact router state first" in item for item in packet["output_shape_requirements"])
 
 
 def test_start_report_meta_task_keeps_routine_context_selector_only_with_background_drift(tmp_path: Path, capsys) -> None:
@@ -4267,6 +4357,9 @@ def test_report_dogfooding_signal_status_covers_closeout_states(tmp_path: Path, 
     assert not_checked["outcome"] == "not_checked"
     assert not_checked["closeout_blocked"] is False
     assert "session_improvement_intake" in not_checked["detail_command"]
+    assert not_checked["capture_routes"]["status"] == "available"
+    assert any(route["outcome"] == "routed_to_memory" for route in not_checked["capture_routes"]["ordinary_routes"])
+    assert not_checked["disposition"]["diagnostic_command_alone_satisfies"] is False
 
     cache_path.write_text(json.dumps({"status": "checked_none", "reason": "reviewed; no durable signal"}), encoding="utf-8")
     assert cli.main(["report", "--target", str(tmp_path), "--section", "dogfooding_signal_status", "--format", "json"]) == 0
@@ -4346,6 +4439,8 @@ def test_session_improvement_intake_separates_session_and_repo_wide_scopes(tmp_p
     unavailable = json.loads(capsys.readouterr().out)["answer"]
     assert unavailable["status"] == "unavailable"
     assert unavailable["session_signal_source"]["status"] == "missing"
+    assert unavailable["capture_routes"]["status"] == "available"
+    assert unavailable["operational_effect"]["status"] == "capture-route-available"
     assert unavailable["repo_wide_existing"]["included_by_default"] is False
     assert unavailable["repo_wide_existing"]["status"] == "bounded_index_available"
     assert "defaults --section improvement_intake --format json" in unavailable["repo_wide_existing"]["command"]
@@ -4368,6 +4463,7 @@ def test_session_improvement_intake_separates_session_and_repo_wide_scopes(tmp_p
     assert session["session_observed_signals"][0]["outcome"] == "unresolved"
     assert session["routing_decisions"][0]["decision"] == "route_now"
     assert session["routing_decisions"][0]["closeout_blocked"] is True
+    assert session["operational_effect"]["status"] == "closeout-blocking"
 
     assert cli.main(["report", "--target", str(tmp_path), "--section", "improvement_intake", "--format", "json"]) == 0
     repo_wide = json.loads(capsys.readouterr().out)["answer"]

@@ -101,6 +101,7 @@ from agentic_workspace.workspace_runtime_core import (
     _select_payload_fields,
     _selector_first_planning_safety_gate,
     _selector_requests,
+    _session_improvement_pressure_payload,
     _sibling_repo_aw_freshness_payload,
     _start_profile_for_select,
     _start_tiny_payload_fast,
@@ -503,6 +504,12 @@ def _start_payload(
         )
         payload["work_threads"] = _local_work_threads_projection(target_root=target_root, cli_invoke=config.cli_invoke, task_text=task_text)
         normalized_paths = _normalize_changed_paths(changed_paths)
+        improvement_pressure = _session_improvement_pressure_payload(
+            target_root=target_root,
+            config=config,
+            task_text=task_text,
+            cli_invoke=config.cli_invoke,
+        )
         task_posture_packet = _task_posture_packet_payload(
             config=config,
             surface="start",
@@ -512,11 +519,18 @@ def _start_payload(
             skill_routing=payload.get("skill_routing", {}),
             planning_safety_gate=payload.get("planning_safety_gate", {}),
             proof=payload.get("proof", {}),
+            improvement_pressure=improvement_pressure,
             compact=True,
         )
-        if _task_posture_packet_relevant(
-            task_text=task_text, changed_paths=normalized_paths, surface="start"
-        ) and _task_posture_packet_changes_routing(task_posture_packet):
+        if (
+            _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="start")
+            or task_posture_packet.get("improvement_obligations")
+            or task_posture_packet.get("dogfooding_obligations")
+        ):
+            task_posture_relevant = True
+        else:
+            task_posture_relevant = False
+        if task_posture_relevant and _task_posture_packet_changes_routing(task_posture_packet):
             payload["task_posture_packet"] = task_posture_packet
         if profile is None:
             return _selector_first_start_payload(payload, cli_invoke=config.cli_invoke, target_root=target_root)
@@ -1104,6 +1118,13 @@ def _start_payload(
         payload["path_boundaries"] = [
             _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
         ]
+    improvement_pressure = _session_improvement_pressure_payload(
+        target_root=target_root,
+        config=config,
+        task_text=task_text,
+        cli_invoke=config.cli_invoke,
+        active_planning_present=active_planning_present,
+    )
     task_posture_packet = _task_posture_packet_payload(
         config=config,
         surface="start",
@@ -1113,10 +1134,13 @@ def _start_payload(
         skill_routing=payload.get("skill_routing", {}),
         planning_safety_gate=planning_safety_gate,
         proof=payload.get("proof", {}),
+        improvement_pressure=improvement_pressure,
         compact=(profile == "tiny"),
     )
-    if _task_posture_packet_relevant(
-        task_text=task_text, changed_paths=normalized_paths, surface="start"
+    if (
+        _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="start")
+        or task_posture_packet.get("improvement_obligations")
+        or task_posture_packet.get("dogfooding_obligations")
     ) and _task_posture_packet_changes_routing(task_posture_packet):
         payload["task_posture_packet"] = task_posture_packet
     if profile == "tiny":
