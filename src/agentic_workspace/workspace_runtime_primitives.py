@@ -7753,14 +7753,20 @@ def _payload_doctor_closure_plan(
     provenance_drift = str(payload_state.get("provenance_drift", "unknown"))
     installed_payload_needs_sync = payload_status == "sync-required" or provenance_drift not in {"none", "unknown"}
     scratch_repos = _local_scratch_nested_repo_paths(target_root=target_root)
-    proof_commands = [
+    installed_lane_proof_commands = [
         _command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke),
+        _command_with_cli_invoke(command=f"agentic-workspace status --target {target} --format json", cli_invoke=cli_invoke),
+        "git diff --check",
+    ]
+    source_checkout_proof_commands = [
         "make test-workspace",
         "make maintainer-surfaces",
         "uv run python scripts/generate/generate_command_packages.py --check",
         "make absolute-paths",
-        "git diff --check",
     ]
+    proof_commands = [*installed_lane_proof_commands]
+    if source_checkout:
+        proof_commands[2:2] = source_checkout_proof_commands
     installed_dry_run = _command_with_cli_invoke(
         command=f"agentic-workspace upgrade --target {target} --dry-run --format json", cli_invoke=cli_invoke
     )
@@ -7788,6 +7794,9 @@ def _payload_doctor_closure_plan(
             "status": "check-required" if source_checkout else "not-source-checkout",
             "paths": sorted(source_mirror_paths),
             "check_command": "make maintainer-surfaces" if source_checkout else None,
+            "not_applicable_reason": None
+            if source_checkout
+            else "Source payload mirror checks require an agentic-workspace source checkout.",
             "rule": "When the invoked CLI is a source checkout, verify source payload mirrors with the maintainer surface lane.",
         },
         {
@@ -7795,6 +7804,9 @@ def _payload_doctor_closure_plan(
             "status": "check-required" if source_checkout else "not-source-checkout",
             "refresh_command": "uv run python scripts/generate/generate_command_packages.py" if source_checkout else None,
             "check_command": "uv run python scripts/generate/generate_command_packages.py --check" if source_checkout else None,
+            "not_applicable_reason": None
+            if source_checkout
+            else "Generated command-package projection checks are source-checkout maintainer proof.",
             "rule": "Refresh generated command-package projections before broad tests discover stale generated targets.",
         },
         {
@@ -7812,7 +7824,8 @@ def _payload_doctor_closure_plan(
             else "check-required",
             "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
             "normalize_command": installed_apply,
-            "hygiene_check": "make absolute-paths",
+            "hygiene_check": "make absolute-paths" if source_checkout else None,
+            "hygiene_status": "source-checkout-required" if source_checkout else "not-applicable",
             "rule": "Payload provenance must stay repo-portable and free of machine-local absolute paths.",
         },
         {
@@ -7822,7 +7835,7 @@ def _payload_doctor_closure_plan(
             "rule": "Run this proof lane after repair steps so later checks do not reveal omitted payload-surface work.",
         },
     ]
-    repair_sequence = [
+    repair_sequence: list[dict[str, Any]] = [
         {
             "id": "inspect_installed_payload",
             "surface_class": "installed_payload",
@@ -7835,32 +7848,41 @@ def _payload_doctor_closure_plan(
             "command": installed_apply,
             "when": "dry-run shows only managed payload sync or provenance normalization",
         },
-        {
-            "id": "check_source_payload_mirrors",
-            "surface_class": "source_payload_mirrors",
-            "command": "make maintainer-surfaces",
-            "when": "running from an agentic-workspace source checkout or touching payload mirrors",
-        },
-        {
-            "id": "refresh_generated_projections",
-            "surface_class": "generated_payload_projections",
-            "command": "uv run python scripts/generate/generate_command_packages.py",
-            "when": "source payload mirrors or generated command-package inputs changed",
-        },
-        {
-            "id": "review_local_scratch_cleanup",
-            "surface_class": "local_scratch_blockers",
-            "command": scratch_dry_run_command,
-            "when": "manual scratch cleanup is explicitly requested",
-        },
-        {
-            "id": "normalize_provenance",
-            "surface_class": "provenance",
-            "command": installed_apply,
-            "when": "payload provenance is missing, invalid, stale, or contains local absolute paths",
-        },
-        {"id": "run_final_proof", "surface_class": "proof", "commands": proof_commands, "when": "all repair steps are complete"},
     ]
+    if source_checkout:
+        repair_sequence.extend(
+            [
+                {
+                    "id": "check_source_payload_mirrors",
+                    "surface_class": "source_payload_mirrors",
+                    "command": "make maintainer-surfaces",
+                    "when": "running from an agentic-workspace source checkout or touching payload mirrors",
+                },
+                {
+                    "id": "refresh_generated_projections",
+                    "surface_class": "generated_payload_projections",
+                    "command": "uv run python scripts/generate/generate_command_packages.py",
+                    "when": "source payload mirrors or generated command-package inputs changed",
+                },
+            ]
+        )
+    repair_sequence.extend(
+        [
+            {
+                "id": "review_local_scratch_cleanup",
+                "surface_class": "local_scratch_blockers",
+                "command": scratch_dry_run_command,
+                "when": "manual scratch cleanup is explicitly requested",
+            },
+            {
+                "id": "normalize_provenance",
+                "surface_class": "provenance",
+                "command": installed_apply,
+                "when": "payload provenance is missing, invalid, stale, or contains local absolute paths",
+            },
+            {"id": "run_final_proof", "surface_class": "proof", "commands": proof_commands, "when": "all repair steps are complete"},
+        ]
+    )
     plan_status = "attention" if installed_payload_needs_sync or repair_actions or manual_review_actions else "available"
     payload_action_required = installed_payload_needs_sync or bool(repair_actions)
     if installed_payload_needs_sync:

@@ -343,7 +343,10 @@ def test_doctor_compact_payload_closure_plan_names_full_repair_lane(monkeypatch,
         "Ignore AW local scratch contents for payload closure; cleanup remains explicitly scoped to local scratch roots."
     )
     assert surface_classes["provenance"]["hygiene_check"] == "make absolute-paths"
+    assert surface_classes["provenance"]["hygiene_status"] == "source-checkout-required"
     proof_commands = surface_classes["proof"]["commands"]
+    assert any(command.startswith("agentic-workspace doctor --target ") for command in proof_commands)
+    assert any(command.startswith("agentic-workspace status --target ") for command in proof_commands)
     assert "make test-workspace" in proof_commands
     assert "make maintainer-surfaces" in proof_commands
     assert "uv run python scripts/generate/generate_command_packages.py --check" in proof_commands
@@ -354,6 +357,46 @@ def test_doctor_compact_payload_closure_plan_names_full_repair_lane(monkeypatch,
         "installed_payload",
         "source_payload_mirrors",
         "generated_payload_projections",
+        "local_scratch_blockers",
+        "provenance",
+        "proof",
+    ]
+
+
+def test_doctor_payload_closure_plan_omits_source_maintainer_proof_for_installed_target(monkeypatch, tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    monkeypatch.setattr(cli, "_is_agentic_workspace_source_checkout", lambda target_root: False)
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    plan = payload["payload_closure_plan"]
+    assert plan["source_checkout"] is False
+    surface_classes = {item["id"]: item for item in plan["surface_classes"]}
+    assert surface_classes["source_payload_mirrors"]["status"] == "not-source-checkout"
+    assert surface_classes["source_payload_mirrors"]["check_command"] is None
+    assert surface_classes["source_payload_mirrors"]["not_applicable_reason"]
+    assert surface_classes["generated_payload_projections"]["status"] == "not-source-checkout"
+    assert surface_classes["generated_payload_projections"]["refresh_command"] is None
+    assert surface_classes["generated_payload_projections"]["check_command"] is None
+    assert surface_classes["generated_payload_projections"]["not_applicable_reason"]
+    assert surface_classes["provenance"]["hygiene_check"] is None
+    assert surface_classes["provenance"]["hygiene_status"] == "not-applicable"
+    proof_commands = surface_classes["proof"]["commands"]
+    assert any(command.startswith("agentic-workspace doctor --target ") for command in proof_commands)
+    assert any(command.startswith("agentic-workspace status --target ") for command in proof_commands)
+    assert "git diff --check" in proof_commands
+    assert "make test-workspace" not in proof_commands
+    assert "make maintainer-surfaces" not in proof_commands
+    assert "uv run python scripts/generate/generate_command_packages.py --check" not in proof_commands
+    assert "make absolute-paths" not in proof_commands
+    assert [step["surface_class"] for step in plan["repair_sequence"]] == [
+        "installed_payload",
+        "installed_payload",
         "local_scratch_blockers",
         "provenance",
         "proof",
