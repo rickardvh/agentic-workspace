@@ -89,6 +89,82 @@ def test_verification_report_keeps_low_evidence_repo_on_low_cost_path(tmp_path: 
     assert "low-evidence repos stay on the current low-cost path" in jumpstart["rule"]
 
 
+def test_verification_report_warns_about_shared_generic_expected_evidence_labels(tmp_path: Path) -> None:
+    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.access_review]
+title = "Access review"
+purpose = "Check access controls."
+applies_to_paths = ["src/auth/**"]
+expected_evidence = ["security_review"]
+review_owner = "security-owner"
+
+[protocols.migration_review]
+title = "Migration review"
+purpose = "Check migration safety."
+applies_to_paths = ["db/migrations/**"]
+expected_evidence = ["security_review"]
+review_owner = "data-owner"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    guidance = payload["evidence_modeling_guidance"]
+    assert guidance["kind"] == "agentic-workspace/evidence-modeling-guidance/v1"
+    assert guidance["status"] == "attention"
+    assert "expected_evidence entries are exact evidence labels" in guidance["exact_label_rule"]
+    assert "host:<term> concepts are semantic vocabulary" in guidance["semantic_concept_rule"]
+    warning = guidance["shared_exact_label_warnings"][0]
+    assert warning["label"] == "security_review"
+    assert warning["protocol_count"] == 2
+    assert {item["protocol_id"] for item in warning["protocols"]} == {"access_review", "migration_review"}
+    assert "protocol-specific expected_evidence labels" in warning["suggestion"]
+
+
+def test_verification_report_keeps_protocol_specific_labels_with_semantic_concepts_clear(tmp_path: Path) -> None:
+    manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
+    manifest.parent.mkdir(parents=True)
+    manifest.write_text(
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[evidence_concepts."host:security_assurance"]
+title = "Security assurance"
+meaning = "Host-owned semantic grouping for access and migration security reviews."
+claim_effect = "reporting-vocabulary"
+
+[protocols.access_review]
+title = "Access review"
+purpose = "Check access controls."
+applies_to_paths = ["src/auth/**"]
+expected_evidence = ["access_security_reviewed"]
+review_owner = "security-owner"
+
+[protocols.migration_review]
+title = "Migration review"
+purpose = "Check migration safety."
+applies_to_paths = ["db/migrations/**"]
+expected_evidence = ["migration_security_reviewed"]
+review_owner = "data-owner"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    payload = verification_report_payload(target_root=tmp_path, changed_paths=[], task_text="")
+
+    guidance = payload["evidence_modeling_guidance"]
+    assert guidance["status"] == "clear"
+    assert guidance["shared_exact_label_warnings"] == []
+    assert guidance["legacy_label_count"] == 2
+    assert payload["evidence_concepts"]["declared_host"][0]["id"] == "host:security_assurance"
+
+
 def test_verification_report_matches_path_protocol_and_evidence(tmp_path: Path) -> None:
     manifest = tmp_path / ".agentic-workspace" / "verification" / "manifest.toml"
     manifest.parent.mkdir(parents=True)

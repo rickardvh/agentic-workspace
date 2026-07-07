@@ -26,6 +26,17 @@ CORE_EVIDENCE_CONCEPTS = {
     "security_review": "Security, access-control, or audit review evidence.",
     "compliance_uncertainty": "Explicit preservation of compliance or certification uncertainty.",
 }
+GENERIC_EXPECTED_EVIDENCE_LABELS = {
+    "security_review",
+    "security_reviewed",
+    "privacy_review",
+    "privacy_reviewed",
+    "contract",
+    "scenario_coverage",
+    "manual_review",
+    "compliance_uncertainty",
+    *CORE_EVIDENCE_CONCEPTS.keys(),
+}
 
 ASSURANCE_FIRST_LANE_CANDIDATES = (
     {
@@ -1098,6 +1109,85 @@ def _evidence_concept_usage(*, labels: list[str], concepts: dict[str, Any]) -> d
     }
 
 
+def _protocol_activation_fingerprint(protocol: dict[str, Any]) -> tuple[str, ...]:
+    values: list[str] = []
+    for key in (
+        "applies_to_paths",
+        "applies_to_task_markers",
+        "assurance_requirement_refs",
+        "proof_profiles",
+        "planning_refs",
+        "protocol_refs",
+    ):
+        values.extend(str(item).strip() for item in _list_payload(protocol.get(key)) if str(item).strip())
+    return tuple(sorted(values))
+
+
+def _evidence_modeling_guidance(*, protocols: list[dict[str, Any]], evidence_concepts: dict[str, Any]) -> dict[str, Any]:
+    label_users: dict[str, list[dict[str, Any]]] = {}
+    legacy_label_count = 0
+    concept_label_count = 0
+    declared_host = evidence_concepts.get("declared_host_by_id", {}) if isinstance(evidence_concepts, dict) else {}
+    declared_host = declared_host if isinstance(declared_host, dict) else {}
+    for protocol in protocols:
+        for label in [str(item).strip() for item in _list_payload(protocol.get("expected_evidence")) if str(item).strip()]:
+            if label in CORE_EVIDENCE_CONCEPTS or label in declared_host:
+                concept_label_count += 1
+            elif not label.startswith("host:"):
+                legacy_label_count += 1
+            label_users.setdefault(label, []).append(
+                {
+                    "protocol_id": protocol.get("id"),
+                    "title": protocol.get("title"),
+                    "activation_fingerprint": list(_protocol_activation_fingerprint(protocol)),
+                }
+            )
+    shared_warnings: list[dict[str, Any]] = []
+    for label, users in sorted(label_users.items()):
+        if len(users) < 2:
+            continue
+        fingerprints = {tuple(item.get("activation_fingerprint", [])) for item in users}
+        generic = label in GENERIC_EXPECTED_EVIDENCE_LABELS or label.startswith("host:")
+        if not generic and len(fingerprints) <= 1:
+            continue
+        shared_warnings.append(
+            {
+                "label": label,
+                "state": "likely-accidental-shared-exact-label",
+                "protocol_count": len(users),
+                "protocols": users,
+                "reason": (
+                    "The same expected_evidence label is reused by multiple protocols. "
+                    "Expected evidence labels are exact activation and missing-evidence keys; use protocol-specific labels when "
+                    "the protocols should not satisfy each other."
+                ),
+                "suggestion": (
+                    "Use path/protocol-specific expected_evidence labels for exact proof tracking, and reserve core or "
+                    "host:<term> concepts for semantic reporting and closeout vocabulary."
+                ),
+            }
+        )
+    return {
+        "kind": "agentic-workspace/evidence-modeling-guidance/v1",
+        "status": "attention" if shared_warnings else "clear",
+        "exact_label_rule": (
+            "expected_evidence entries are exact evidence labels used for activation, satisfaction, and missing-evidence tracking."
+        ),
+        "semantic_concept_rule": (
+            "Core concepts and declared host:<term> concepts are semantic vocabulary for reporting, grouping, and closeout; "
+            "they do not make unrelated exact labels equivalent."
+        ),
+        "host_concept_declaration": {
+            "surface": '.agentic-workspace/verification/manifest.toml [evidence_concepts."host:<term>"]',
+            "rule": "Declare host concepts only when the host repo owns the semantic category and claim effect.",
+        },
+        "shared_exact_label_warnings": shared_warnings,
+        "legacy_label_count": legacy_label_count,
+        "concept_label_count": concept_label_count,
+        "rule": "This guidance is advisory and preserves compatibility with legacy expected_evidence labels.",
+    }
+
+
 def _load_manifest(*, target_root: Path) -> dict[str, Any]:
     manifest_path, payload = _manifest_raw(target_root=target_root)
     if payload is None:
@@ -2012,6 +2102,10 @@ def verification_report_payload(
         assurance_requirements=assurance_requirements,
         protocols=configured_protocols,
     )
+    evidence_modeling_guidance = _evidence_modeling_guidance(
+        protocols=configured_protocols,
+        evidence_concepts=evidence_concepts,
+    )
     degraded_concepts = [
         item
         for status in evidence_status
@@ -2068,6 +2162,7 @@ def verification_report_payload(
                 "Undeclared host concepts degrade proof guidance instead of weakening structured schemas."
             ),
         },
+        "evidence_modeling_guidance": evidence_modeling_guidance,
         "configured_protocols": configured_protocols,
         "configured_scenarios": configured_scenarios,
         "proof_routes": proof_routes,
