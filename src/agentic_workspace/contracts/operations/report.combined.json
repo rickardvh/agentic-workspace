@@ -38,6 +38,16 @@
       "required": false
     },
     {
+      "name": "changed",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "task",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "select",
       "source": "cli-option",
       "required": false
@@ -87,6 +97,10 @@
     {
       "surface": "section name and exact field selector for compact drill-down",
       "required": false
+    },
+    {
+      "surface": "optional task text and changed-path list for task-scoped closeout trust sections",
+      "required": false
     }
   ],
   "writes": [],
@@ -127,11 +141,13 @@
     "The default profile should route to high-signal sections before exposing high-volume module detail.",
     "Operational-compression measures must remain descriptive and advisory, not a score, dashboard, workflow engine, or host-specific tracker policy.",
     "Unknown sections should be treated as usage errors.",
+    "Optional task text and changed paths may refine task-scoped section payloads, but must not change default repo-wide closeout trust semantics.",
     "Exact field selectors must operate on the selected report payload and must not force a lazy section to build the full report."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
     "report command tests remain compatible",
+    "task-scoped closeout trust distinguishes bounded task-switch residue from repo-wide active-plan closure blockers",
     "operational-compression section selector returns compact advisory measures",
     "sectioned exact field selection returns selected-output JSON without full-report assembly"
   ],

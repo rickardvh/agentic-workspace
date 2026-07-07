@@ -1059,6 +1059,100 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                 }
             return compact
 
+        def compact_current_task_closeout(value: dict[str, Any]) -> dict[str, Any]:
+            if value.get("status") != "active":
+                return {"status": value.get("status", "not-applicable")}
+            scope = value.get("scope", {})
+            scope = scope if isinstance(scope, dict) else {}
+            planning_gate = scope.get("planning_safety_gate", {})
+            planning_gate = planning_gate if isinstance(planning_gate, dict) else {}
+            task_switch = scope.get("task_switch_reconciliation", {})
+            task_switch = task_switch if isinstance(task_switch, dict) else {}
+            proof = value.get("proof", {})
+            proof = proof if isinstance(proof, dict) else {}
+            proof_commands = _support_list_payload(proof.get("required_commands"))
+            changed_paths = _support_list_payload(scope.get("changed_paths"))
+            repo_wide = value.get("repo_wide_residue", {})
+            repo_wide = repo_wide if isinstance(repo_wide, dict) else {}
+            repo_wide_gate = repo_wide.get("strict_closeout_gate", {})
+            repo_wide_gate = repo_wide_gate if isinstance(repo_wide_gate, dict) else {}
+            repo_wide_completion_gate = repo_wide.get("completion_gate", {})
+            repo_wide_completion_gate = repo_wide_completion_gate if isinstance(repo_wide_completion_gate, dict) else {}
+            return {
+                "kind": value.get("kind", "agentic-workspace/current-task-closeout/v1"),
+                "status": "active",
+                "scope": {
+                    "status": scope.get("status", ""),
+                    "relationship": scope.get("relationship", ""),
+                    "changed_path_count": len(changed_paths),
+                    "changed_paths": changed_paths[:12],
+                    "changed_paths_omitted_count": max(0, len(changed_paths) - 12),
+                    "planning_safety_gate": {
+                        key: planning_gate.get(key)
+                        for key in (
+                            "kind",
+                            "label",
+                            "provenance",
+                            "status",
+                            "gate_result",
+                            "workflow_sufficient",
+                            "reason",
+                            "required_next_action",
+                            "active_planning_present",
+                            "issue_refs",
+                            "implementation_allowed",
+                            "task_switch_reconciliation",
+                        )
+                        if key in planning_gate
+                    },
+                    "task_switch_reconciliation": {
+                        key: task_switch.get(key)
+                        for key in (
+                            "kind",
+                            "status",
+                            "summary",
+                            "current_task_class",
+                            "recommended_next_action",
+                            "safe_route_ids",
+                            "blocked_claims",
+                            "detail_selector",
+                            "rule",
+                        )
+                        if key in task_switch
+                    },
+                    "rule": scope.get("rule", ""),
+                },
+                "strict_closeout_gate": value.get("strict_closeout_gate", {}),
+                "completion_options": value.get("completion_options", []),
+                "operating_loop": value.get("operating_loop", {}),
+                "proof": {
+                    "status": proof.get("status", ""),
+                    "changed_path_count": len(_support_list_payload(proof.get("changed_paths"))),
+                    "required_commands": proof_commands,
+                    "required_command_count": len(proof_commands),
+                    "proof_strategy": proof.get("proof_strategy", {}),
+                    "detail_omitted": "full proof packet is available with report --section closeout_trust --verbose",
+                },
+                "repo_wide_residue": {
+                    "strict_closeout_gate": repo_wide_gate,
+                    "completion_gate": {
+                        key: repo_wide_completion_gate.get(key)
+                        for key in (
+                            "kind",
+                            "status",
+                            "active_intent_satisfied",
+                            "claim_level_allowed",
+                            "required_next_action",
+                            "claim_authorization",
+                        )
+                        if key in repo_wide_completion_gate
+                    },
+                    "trust": repo_wide.get("trust", ""),
+                    "lower_trust_closeout_count": repo_wide.get("lower_trust_closeout_count", 0),
+                },
+                "rule": value.get("rule", ""),
+            }
+
         historical_reviews = answer.get("historical_review_artifacts", {})
         historical_reviews = historical_reviews if isinstance(historical_reviews, dict) else {}
         retention_policy = historical_reviews.get("retention_policy", {})
@@ -1099,6 +1193,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         memory_decision_packet = memory_decision_packet if isinstance(memory_decision_packet, dict) else {}
         operating_loop = answer.get("operating_loop", {})
         operating_loop = operating_loop if isinstance(operating_loop, dict) else {}
+        current_task_closeout = answer.get("current_task_closeout", {})
+        current_task_closeout = current_task_closeout if isinstance(current_task_closeout, dict) else {}
         detail_command = _command_with_cli_invoke(
             "agentic-workspace report --target ./repo --verbose --format json",
             cli_invoke=cli_invoke,
@@ -1158,6 +1254,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             "completion_options": completion_options,
             "memory_decision_packet": memory_decision_packet,
             "operating_loop": operating_loop,
+            "current_task_closeout": compact_current_task_closeout(current_task_closeout),
             "closeout_protocol": {
                 key: closeout_protocol.get(key)
                 for key in (

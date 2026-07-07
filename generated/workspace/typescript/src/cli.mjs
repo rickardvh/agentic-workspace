@@ -2914,6 +2914,23 @@ const commandDefinitions = [
           "name": "section"
         },
         {
+          "action": "extend",
+          "default": [],
+          "flags": [
+            "--changed"
+          ],
+          "help": "Optional repo-relative changed paths used by task-scoped report sections such as closeout_trust.",
+          "name": "changed",
+          "nargs": "*"
+        },
+        {
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used by task-scoped report sections such as closeout_trust.",
+          "name": "task"
+        },
+        {
           "flags": [
             "--select"
           ],

@@ -5080,6 +5080,23 @@
                 "help": "Return one top-level full-report section in the compact contract profile."
               },
               {
+                "name": "changed",
+                "flags": [
+                  "--changed"
+                ],
+                "action": "extend",
+                "nargs": "*",
+                "default": [],
+                "help": "Optional repo-relative changed paths used by task-scoped report sections such as closeout_trust."
+              },
+              {
+                "name": "task",
+                "flags": [
+                  "--task"
+                ],
+                "help": "Optional task description used by task-scoped report sections such as closeout_trust."
+              },
+              {
                 "name": "select",
                 "flags": [
                   "--select"
