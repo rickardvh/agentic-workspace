@@ -136,6 +136,11 @@
               "general-check"
             ]
           },
+          "route_class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Repo-local route class for explaining why this learned route applies. Examples may include docs-process, access-audit, migration-storage, or any host-owned class; AW treats the value as evidence, not a global taxonomy."
+          },
           "candidate_command": {
             "type": "string",
             "minLength": 1,
@@ -200,6 +205,135 @@
             "type": "string",
             "minLength": 1,
             "description": "ISO date or timestamp when this lesson was learned or last confirmed."
+          },
+          "risk_markers": {
+            "type": "array",
+            "description": "Repo-owned risk signals that make this route relevant.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "description": "Compact evidence records that justify the learned route.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "source": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source_path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "summary": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "receipt": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "review_ref": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "memory_ref": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "proof_classes": {
+            "type": "object",
+            "description": "Proof buckets for this route. Required commands affect closeout; other classes explain recommended, optional, manual, or not-applicable evidence.",
+            "properties": {
+              "required": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "recommended": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "optional_confidence": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "unavailable_manual": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "not_applicable": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "override_semantics": {
+            "type": "object",
+            "description": "Escalation and override semantics that prevent learned routes from weakening proof under higher-risk conditions.",
+            "properties": {
+              "escalate_when": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "blocked_when": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "requires_human_review_when": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "fallback_when": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "repo_policy_overrides": {
+                "type": "boolean"
+              },
+              "user_instruction_overrides": {
+                "type": "boolean"
+              },
+              "rule": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
           },
           "superseded_by": {
             "type": "string",

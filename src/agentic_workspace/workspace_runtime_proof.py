@@ -251,6 +251,33 @@ def _compact_tiny_proof_closeout_summary(value: Any) -> dict[str, Any]:
     }
 
 
+def _compact_tiny_learned_proof_route_model(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    selected_routes = [
+        {
+            key: route.get(key)
+            for key in ("id", "route_class", "maturity", "selected", "scope", "proof_classes", "override_semantics")
+            if key in route
+        }
+        for route in _list_payload(value.get("selected_routes"))[:4]
+        if isinstance(route, dict)
+    ]
+    fallback = _as_dict(value.get("fallback"))
+    return {
+        "kind": value.get("kind", "learned-proof-route-model/v1"),
+        "status": value.get("status", "absent"),
+        "route_classes": _list_payload(value.get("route_classes")),
+        "selected_route_count": value.get("selected_route_count", 0),
+        "selected_routes": selected_routes,
+        "fallback": {key: fallback.get(key) for key in ("status", "reason", "manual_verification_required") if key in fallback},
+        "proof_class_vocabulary": _list_payload(value.get("proof_class_vocabulary")),
+        "override_rule": value.get("override_rule", ""),
+        "repo_neutrality_rule": value.get("repo_neutrality_rule", ""),
+        "detail_selector": "learned_proof_route_model",
+    }
+
+
 def _short_tiny_text(value: str, *, limit: int) -> str:
     text = re.sub(r"\s+", " ", value).strip()
     if len(text) <= limit:
@@ -281,6 +308,10 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                 next_decision["proof_command_adjustments"] = answer["proof_command_adjustments"]
             if answer.get("proof_closeout_summary"):
                 next_decision["proof_closeout_summary"] = _compact_tiny_proof_closeout_summary(answer["proof_closeout_summary"])
+            if answer.get("learned_proof_route_model"):
+                learned_route_model = _compact_tiny_learned_proof_route_model(answer["learned_proof_route_model"])
+                if learned_route_model.get("status") != "absent":
+                    next_decision["learned_proof_route_model"] = learned_route_model
             if answer.get("unavailable_proof_commands"):
                 next_decision["unavailable_proof_commands"] = answer["unavailable_proof_commands"]
             if answer.get("target_proof_capabilities") and (
@@ -2574,6 +2605,133 @@ def _proof_decision_packet(
     }
 
 
+def _learned_route_maturity(hint: dict[str, Any]) -> str:
+    confirmation = str(hint.get("confirmation", "")).strip()
+    state = str(hint.get("state", "candidate")).strip()
+    if confirmation == "learned-confirmed":
+        return "confirmed-learned"
+    if confirmation == "live-confirmed":
+        return "confirmed-live"
+    if state in {"stale", "negative", "superseded", "invalid-authority"}:
+        return state
+    if state == "confirmed":
+        return "confirmed"
+    return "candidate"
+
+
+def _default_proof_classes_for_hint(hint: dict[str, Any]) -> dict[str, list[str]]:
+    command = str(hint.get("candidate_command", "")).strip()
+    state = str(hint.get("state", "candidate")).strip()
+    if not command:
+        return {}
+    if state == "negative":
+        return {"not_applicable": [command]}
+    if state in {"stale", "superseded", "invalid-authority"}:
+        return {"unavailable_manual": [command]}
+    return {"required": [command]}
+
+
+def _learned_proof_route_model_payload(
+    *,
+    changed_paths: list[str],
+    learned_route_hints: dict[str, Any],
+    selected_lanes: list[dict[str, Any]],
+    selected_commands: list[dict[str, Any]],
+    manual_verification: dict[str, Any] | None,
+) -> dict[str, Any]:
+    selected_lane_ids = {str(command.get("lane", "")) for command in selected_commands if isinstance(command, dict)}
+    selected_commands_by_lane = {
+        str(command.get("lane", "")): str(command.get("command", ""))
+        for command in selected_commands
+        if isinstance(command, dict) and str(command.get("lane", ""))
+    }
+    selected_learned_lanes = {
+        str(lane.get("id", "")): _as_dict(lane.get("learned_route"))
+        for lane in selected_lanes
+        if isinstance(lane, dict) and isinstance(lane.get("learned_route"), dict)
+    }
+    route_records: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for bucket in ("confirmed", "stale", "negative", "superseded", "invalid"):
+        for raw_hint in _list_payload(learned_route_hints.get(bucket)):
+            if not isinstance(raw_hint, dict):
+                continue
+            hint = raw_hint
+            command = str(hint.get("candidate_command", "")).strip()
+            route_id = str(hint.get("id") or command or bucket).strip()
+            key = (route_id, command)
+            if key in seen:
+                continue
+            seen.add(key)
+            lane_id = next(
+                (
+                    candidate_lane_id
+                    for candidate_lane_id, lane in selected_learned_lanes.items()
+                    if str(lane.get("id", "")) == route_id or selected_commands_by_lane.get(candidate_lane_id) == command
+                ),
+                "",
+            )
+            selected = lane_id in selected_lane_ids
+            proof_classes = _as_dict(hint.get("proof_classes")) or _default_proof_classes_for_hint(hint)
+            route_records.append(
+                {
+                    "kind": "learned-proof-route/v1",
+                    "id": route_id,
+                    "route_class": str(hint.get("route_class") or hint.get("intent_type") or "behavior-test"),
+                    "state": str(hint.get("state", "candidate")),
+                    "maturity": _learned_route_maturity(hint),
+                    "selected": selected,
+                    "selected_lane": lane_id,
+                    "scope": str(hint.get("scope", "repo")),
+                    "matched_changed_paths": _list_payload(selected_learned_lanes.get(lane_id, {}).get("matched_paths")) if lane_id else [],
+                    "risk_markers": _list_payload(hint.get("risk_markers")),
+                    "evidence": _list_payload(hint.get("evidence")),
+                    "proof_classes": proof_classes,
+                    "override_semantics": _as_dict(hint.get("override_semantics")),
+                    "source": {
+                        "source": str(hint.get("source", "")),
+                        "source_path": str(hint.get("source_path", "")),
+                        "owner": str(hint.get("owner", "")),
+                        "provenance": str(hint.get("provenance", "")),
+                        "learned_at": str(hint.get("learned_at", "")),
+                    },
+                }
+            )
+    selected_routes = [route for route in route_records if route["selected"]]
+    fallback_reason = ""
+    if not selected_routes:
+        fallback_reason = "no learned route matched changed paths and live target capabilities"
+        if isinstance(manual_verification, dict):
+            fallback_reason = str(manual_verification.get("summary") or manual_verification.get("reason") or fallback_reason)
+    route_classes = sorted({str(route.get("route_class", "")) for route in route_records if route.get("route_class")})
+    return {
+        "kind": "learned-proof-route-model/v1",
+        "status": "selected" if selected_routes else "available" if route_records else "absent",
+        "changed_paths": changed_paths,
+        "route_class_count": len(route_classes),
+        "route_classes": route_classes,
+        "selected_route_count": len(selected_routes),
+        "selected_routes": selected_routes,
+        "routes": route_records,
+        "fallback": {
+            "status": "not-needed" if selected_routes else "used",
+            "reason": fallback_reason,
+            "manual_verification_required": isinstance(manual_verification, dict),
+        },
+        "proof_class_vocabulary": ["required", "recommended", "optional_confidence", "unavailable_manual", "not_applicable"],
+        "override_rule": (
+            "Learned routes can narrow or explain proof only within their evidence scope; repo policy, user instruction, "
+            "high-risk signals, stale evidence, unavailable commands, or explicit override semantics must escalate instead."
+        ),
+        "repo_neutrality_rule": "Route class names are host-owned evidence fields; AW does not treat them as global domains or universal requirements.",
+        "closeout_semantics": {
+            "selected_route_required": bool(selected_routes),
+            "report_maturity": "name selected route class, maturity, evidence source, and fallback/override state",
+            "issue_closure": "learned proof route selection alone never authorizes issue or parent closure",
+        },
+    }
+
+
 def _proof_selection_for_changed_paths(
     *,
     changed_paths: list[str],
@@ -3131,6 +3289,13 @@ def _proof_selection_for_changed_paths(
         selected_commands=selected_commands,
         learned_route_hints=learned_route_hints,
     )
+    learned_proof_route_model = _learned_proof_route_model_payload(
+        changed_paths=changed_paths,
+        learned_route_hints=learned_route_hints,
+        selected_lanes=selected_lanes,
+        selected_commands=selected_commands,
+        manual_verification=manual_verification,
+    )
     proof_next_decision = _proof_next_decision_payload(
         required_commands=required_commands,
         selected_commands=selected_commands,
@@ -3355,6 +3520,7 @@ def _proof_selection_for_changed_paths(
         "host_repo_learning": host_repo_learning,
         "learned_route_hints": learned_route_hints,
         "learned_route_reliance": learned_route_reliance,
+        "learned_proof_route_model": learned_proof_route_model,
         "proof_route_maintenance": proof_route_maintenance,
         "proof_route_precedence": proof_route_precedence,
         "proof_intents": proof_intents,

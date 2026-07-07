@@ -39783,6 +39783,7 @@ def _learned_proof_lanes_for_changed_paths(*, changed_paths: list[str], learned_
             continue
         hint_id = str(hint.get("id") or _decision_slug(command)).strip()
         intent_type = str(hint.get("intent_type", "behavior-test")).strip() or "behavior-test"
+        override_semantics = _as_dict(hint.get("override_semantics"))
         lanes.append(
             {
                 "id": f"learned_route:{hint_id}",
@@ -39792,15 +39793,21 @@ def _learned_proof_lanes_for_changed_paths(*, changed_paths: list[str], learned_
                 "proof_responsibility": "local-closeout",
                 "execution_mode": "serial-recommended",
                 "matched_paths": matched_paths or list(changed_paths),
+                "escalate_when": _string_list_payload(override_semantics.get("escalate_when")),
                 "learned_route": {
                     "id": hint_id,
+                    "route_class": str(hint.get("route_class", "")),
                     "scope": scope,
+                    "matched_paths": matched_paths or list(changed_paths),
                     "source": str(hint.get("source", "")),
                     "source_path": str(hint.get("source_path", "")),
                     "owner": str(hint.get("owner", "")),
                     "provenance": str(hint.get("provenance", "")),
                     "learned_at": str(hint.get("learned_at", "")),
                     "confirmation": str(hint.get("confirmation", "")),
+                    "risk_markers": _list_payload(hint.get("risk_markers")),
+                    "proof_classes": _as_dict(hint.get("proof_classes")),
+                    "override_semantics": override_semantics,
                 },
                 "ci_relationship": str(hint.get("ci_relationship", "")),
                 "recovery_signal": "stale, failing, or missing learned route evidence should update the repo route table instead of forcing rediscovery",
@@ -40021,6 +40028,13 @@ def _proof_route_hints_payload(*, target_root: Path) -> dict[str, Any]:
 _PROOF_ROUTE_MEMORY_PREFIX = "agentic-workspace-proof-route:"
 _PROOF_ROUTE_STATES = {"candidate", "confirmed", "stale", "negative", "superseded", "invalid-authority"}
 _PROOF_ROUTE_INTENT_TYPES = {"behavior-test", "static-check", "type-check", "general-check"}
+_PROOF_ROUTE_PROOF_CLASS_KEYS = (
+    "required",
+    "recommended",
+    "optional_confidence",
+    "unavailable_manual",
+    "not_applicable",
+)
 _AUTHORITATIVE_PROOF_ROUTE_REQUIRED_FIELDS = (
     "candidate_command",
     "state",
@@ -40030,6 +40044,69 @@ _AUTHORITATIVE_PROOF_ROUTE_REQUIRED_FIELDS = (
     "provenance",
     "learned_at",
 )
+
+
+def _learned_route_class_for_intent_type(intent_type: str) -> str:
+    if intent_type == "static-check":
+        return "static-check"
+    if intent_type == "type-check":
+        return "type-check"
+    if intent_type == "general-check":
+        return "general-check"
+    return "behavior-test"
+
+
+def _string_list_payload(value: Any) -> list[str]:
+    return [str(item).strip() for item in _list_payload(value) if str(item).strip()]
+
+
+def _normalize_learned_route_proof_classes(value: Any, *, command: str, state: str = "candidate") -> dict[str, list[str]]:
+    raw = _as_dict(value)
+    proof_classes: dict[str, list[str]] = {}
+    for key in _PROOF_ROUTE_PROOF_CLASS_KEYS:
+        items = _string_list_payload(raw.get(key))
+        if items:
+            proof_classes[key] = items
+    if not proof_classes and command:
+        if state == "negative":
+            proof_classes["not_applicable"] = [command]
+        elif state in {"stale", "superseded", "invalid-authority"}:
+            proof_classes["unavailable_manual"] = [command]
+        else:
+            proof_classes["required"] = [command]
+    return proof_classes
+
+
+def _normalize_learned_route_override_semantics(value: Any) -> dict[str, Any]:
+    raw = _as_dict(value)
+    result: dict[str, Any] = {}
+    for key in ("escalate_when", "blocked_when", "requires_human_review_when", "fallback_when"):
+        items = _string_list_payload(raw.get(key))
+        if items:
+            result[key] = items
+    if "repo_policy_overrides" in raw:
+        result["repo_policy_overrides"] = bool(raw.get("repo_policy_overrides"))
+    if "user_instruction_overrides" in raw:
+        result["user_instruction_overrides"] = bool(raw.get("user_instruction_overrides"))
+    if "rule" in raw and str(raw.get("rule", "")).strip():
+        result["rule"] = str(raw["rule"]).strip()
+    return result
+
+
+def _normalize_learned_route_evidence(value: Any) -> list[dict[str, str]]:
+    evidence_items: list[dict[str, str]] = []
+    raw_items = value if isinstance(value, list) else [value] if isinstance(value, dict) else []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        compact = {
+            key: str(item.get(key, "")).strip()
+            for key in ("source", "source_path", "summary", "receipt", "review_ref", "memory_ref")
+            if str(item.get(key, "")).strip()
+        }
+        if compact:
+            evidence_items.append(compact)
+    return evidence_items
 
 
 def _proof_route_hints_path(*, target_root: Path) -> Path:
@@ -40060,6 +40137,8 @@ def _normalize_proof_route_hint(
     intent_type = str(hint.get("intent_type") or "behavior-test").strip()
     if intent_type not in _PROOF_ROUTE_INTENT_TYPES:
         intent_type = "behavior-test"
+    route_class = str(hint.get("route_class") or _learned_route_class_for_intent_type(intent_type)).strip()
+    route_class = route_class or _learned_route_class_for_intent_type(intent_type)
     source = str(hint.get("source") or default_source).strip() or default_source
     source_path = str(hint.get("source_path") or default_source_path).strip()
     owner = str(hint.get("owner") or default_owner).strip()
@@ -40084,6 +40163,7 @@ def _normalize_proof_route_hint(
     record: dict[str, Any] = {
         "id": str(hint.get("id") or f"{source}:{_decision_slug(command)}"),
         "state": state,
+        "route_class": route_class,
         "intent_type": intent_type,
         "candidate_command": command,
         "source": source,
@@ -40094,6 +40174,10 @@ def _normalize_proof_route_hint(
         "owner": owner or ("Memory" if source == "memory" else ""),
         "provenance": str(hint.get("provenance") or hint.get("observed") or source_path or source).strip(),
         "learned_at": str(hint.get("learned_at") or hint.get("last_confirmed") or "").strip(),
+        "risk_markers": _string_list_payload(hint.get("risk_markers")),
+        "evidence": _normalize_learned_route_evidence(hint.get("evidence")),
+        "proof_classes": _normalize_learned_route_proof_classes(hint.get("proof_classes"), command=command, state=state),
+        "override_semantics": _normalize_learned_route_override_semantics(hint.get("override_semantics")),
     }
     superseded_by = str(hint.get("superseded_by") or hint.get("replacement_command") or "").strip()
     if superseded_by:
@@ -40276,6 +40360,7 @@ def _confirm_learned_route_hints(*, learned_hints: dict[str, Any], target_capabi
         record = {
             "id": str(hint.get("id", "")),
             "state": str(hint.get("state", "candidate")),
+            "route_class": str(hint.get("route_class", "")),
             "intent_type": str(hint.get("intent_type", "")),
             "candidate_command": command,
             "source": str(hint.get("source", "")),
@@ -40291,6 +40376,10 @@ def _confirm_learned_route_hints(*, learned_hints: dict[str, Any], target_capabi
             "original_state": str(hint.get("original_state", "")),
             "missing_fields": list(hint.get("missing_fields", [])) if isinstance(hint.get("missing_fields"), list) else [],
             "recovery": str(hint.get("recovery", "")),
+            "risk_markers": _list_payload(hint.get("risk_markers")),
+            "evidence": _list_payload(hint.get("evidence")),
+            "proof_classes": _as_dict(hint.get("proof_classes")),
+            "override_semantics": _as_dict(hint.get("override_semantics")),
         }
         record = {key: value for key, value in record.items() if value != "" and value != []}
         state = str(record.get("state", "candidate"))
