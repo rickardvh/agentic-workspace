@@ -3652,11 +3652,68 @@ def test_start_surfaces_pr_comment_attention_only_for_pr_context(tmp_path: Path,
     assert attention["status"] == "pr_comment_status_unavailable"
     assert attention["comment_state"] == "cache_miss"
     assert attention["pr_number"] == "1831"
-    assert "report --target . --section pr_comment_attention --format json" in attention["recommended_command"]
+    assert "pr_comment_delta.py" in attention["recommended_command"]
+    assert "--pr 1831" in attention["recommended_command"]
+    assert "report --target . --section pr_comment_attention --format json" in attention["cache_selector_command"]
+    assert attention["live_inspection"]["status"] == "live_inspection_available"
+    assert attention["pr_resolution"]["status"] == "known"
+    assert attention["write_safety"]["github_writes_performed"] is False
     assert attention["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
-    assert "--section pr_comment_attention --format json" in attention["detail_route"]
+    assert "pr_comment_delta.py" in attention["detail_route"]
     assert "pr_comment_attention=pr_comment_status_unavailable" in payload["action_signals"]["changed_signals"]
     assert "pr_comment_attention" in payload["action_signals"]["advisory_detail"]["selectors"]
+
+
+def test_report_pr_comment_attention_cache_miss_routes_to_live_inspection_for_branch_pr(monkeypatch, tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    branch = "codex/2030-proof-receipt-bridge-actions"
+    monkeypatch.setattr(cli, "_current_git_branch", lambda target_root: branch)
+    monkeypatch.setattr(cli, "_github_repo_from_origin", lambda target_root: "rickardvh/agentic-workspace")
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "pr_comment_attention", "--format", "json"]) == 0
+
+    attention = json.loads(capsys.readouterr().out)["answer"]
+    assert attention["status"] == "pr_comment_status_unavailable"
+    assert attention["comment_state"] == "cache_miss"
+    assert attention["repository"] == "rickardvh/agentic-workspace"
+    assert attention["branch"] == branch
+    assert attention["pr_number"] == ""
+    assert "gh pr list" in attention["recommended_command"]
+    assert '--head "codex/2030-proof-receipt-bridge-actions"' in attention["recommended_command"]
+    assert "report --target . --section pr_comment_attention --format json" in attention["cache_selector_command"]
+    assert attention["live_inspection"]["status"] == "pr_resolution_required"
+    assert attention["live_inspection"]["recommended_command"] == attention["recommended_command"]
+    assert attention["live_inspection"]["connector_route"].endswith("#<resolved-pr-number>")
+    assert attention["pr_resolution"]["status"] == "required"
+    assert attention["pr_resolution"]["command"] == attention["recommended_command"]
+    assert attention["write_safety"]["github_writes_performed"] is False
+    assert "resolve_thread" in attention["write_safety"]["forbidden_actions_without_user_request"]
+    assert attention["comment_addressing"]["status"] == "review_comment_evidence_unavailable"
+    assert attention["comment_addressing"]["write_safety"]["github_writes_performed"] is False
+    assert "Thread-level PR comment state is unverified." in attention["unverified_context"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Address review comments on this PR",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    start_attention = json.loads(capsys.readouterr().out)["context"]["pr_comment_attention"]
+    assert start_attention["comment_state"] == "cache_miss"
+    assert start_attention["recommended_command"] == attention["recommended_command"]
+    assert start_attention["live_inspection"]["status"] == "pr_resolution_required"
+    assert start_attention["pr_resolution"]["status"] == "required"
+    assert start_attention["write_safety"]["github_writes_performed"] is False
 
 
 def test_report_pr_comment_attention_reads_cached_actionable_and_empty_deltas(tmp_path: Path, capsys) -> None:
