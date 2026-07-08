@@ -19,6 +19,8 @@ agentic-workspace defaults --section module_selection --format json
 agentic-workspace init --target . --modules memory
 ```
 
+Ordinary bootstrap writes only necessary checked-in surfaces: repo-owned config/startup, a compact adoption receipt, and the smallest selected module state anchors. Generic package docs, templates, schemas, bundled skills, payload provenance, and upgrade-source provenance stay package-owned and are read from the installed package, dev dependency, editable install, or source checkout at runtime. Use `--mirror-payload` only when the host repo explicitly wants the full bundled payload checked in.
+
 Choose the smallest module set that fits:
 
 - `memory`: durable repo knowledge and anti-rediscovery context.
@@ -50,4 +52,4 @@ agentic-workspace config --target . --format json
 agentic-workspace doctor --target . --format json
 ```
 
-If bootstrap writes `.agentic-workspace/bootstrap-handoff.md` or `.agentic-workspace/bootstrap-handoff.json`, treat that as the bounded finishing brief before normal repo work resumes.
+If ordinary bootstrap needs a finishing brief, it is written under `.agentic-workspace/local/scratch/` and should not be checked in. Payload mirror mode may still write `.agentic-workspace/bootstrap-handoff.md` or `.agentic-workspace/bootstrap-handoff.json`; treat those as bounded finishing briefs before normal repo work resumes.

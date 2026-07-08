@@ -23,6 +23,12 @@
       "required": false
     },
     {
+      "name": "mirror_payload",
+      "source": "cli-option",
+      "required": false,
+      "description": "Opt in to checking in the full generic package payload mirror instead of the ordinary necessary-surface footprint."
+    },
+    {
       "name": "force",
       "source": "cli-option",
       "command_visibility": "non-command-visible",

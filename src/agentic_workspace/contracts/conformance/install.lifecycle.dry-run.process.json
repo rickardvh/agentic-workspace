@@ -110,7 +110,7 @@
             "next_safe_command",
             "status"
           ],
-          "equals": "review-required"
+          "equals": "ready"
         }
       ]
     },

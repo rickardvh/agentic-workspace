@@ -35,6 +35,7 @@ from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, Ro
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
+    DEFAULT_BOOTSTRAP_FOOTPRINT_PROFILE,
     DEFAULT_CLI_INVOKE,
     DEFAULT_IMPROVEMENT_LATITUDE,
     DEFAULT_OPTIMIZATION_BIAS,
@@ -47,6 +48,7 @@ from agentic_workspace.config import (
     SUPPORTED_AGENT_INSTRUCTIONS_FILES,
     SUPPORTED_ASSURANCE_LEVELS,
     SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS,
+    SUPPORTED_BOOTSTRAP_FOOTPRINT_PROFILES,
     SUPPORTED_CAPABILITY_EXECUTION_CLASSES,
     SUPPORTED_CAPABILITY_LOCATIONS,
     SUPPORTED_CLARIFICATION_CONTROL_MODES,
@@ -65,12 +67,15 @@ from agentic_workspace.config import (
     SUPPORTED_WORKFLOW_ARTIFACT_PROFILES,
     SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
     SUPPORTED_WORKFLOW_OBLIGATION_STAGES,
+    WORKSPACE_ADOPTION_RECEIPT_PATH,
     WORKSPACE_AGENT_AID_ROOT_PATH,
     WORKSPACE_AGENT_AID_SUBDIRS,
     WORKSPACE_BOOTSTRAP_HANDOFF_PATH,
     WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH,
     WORKSPACE_CONFIG_PATH,
     WORKSPACE_DELEGATION_OUTCOMES_PATH,
+    WORKSPACE_LOCAL_BOOTSTRAP_HANDOFF_PATH,
+    WORKSPACE_LOCAL_BOOTSTRAP_HANDOFF_RECORD_PATH,
     WORKSPACE_LOCAL_CONFIG_PATH,
     WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS,
     WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES,
@@ -540,6 +545,26 @@ def _installed_package_source_class(*, package: str) -> str:
     return "installed-package"
 
 
+ADOPTION_RECEIPT_KIND = "agentic-workspace/adoption-receipt/v1"
+
+
+def _resolve_bootstrap_footprint_profile(*, target_root: Path, requested_profile: str | None = None, mirror_payload: bool = False) -> str:
+    del target_root
+    if mirror_payload:
+        return "full-payload-mirror"
+    if requested_profile:
+        profile = requested_profile.strip()
+        if profile not in SUPPORTED_BOOTSTRAP_FOOTPRINT_PROFILES:
+            supported = ", ".join(SUPPORTED_BOOTSTRAP_FOOTPRINT_PROFILES)
+            raise WorkspaceUsageError(f"Unsupported bootstrap footprint profile '{profile}'. Supported profiles: {supported}.")
+        return profile
+    return DEFAULT_BOOTSTRAP_FOOTPRINT_PROFILE
+
+
+def _uses_minimal_bootstrap_footprint(profile: str) -> bool:
+    return profile == DEFAULT_BOOTSTRAP_FOOTPRINT_PROFILE
+
+
 def _package_version(package: str) -> str:
     try:
         return importlib.metadata.version(package)
@@ -700,6 +725,87 @@ def _write_payload_provenance_action(*, target_root: Path, dry_run: bool, force:
         "path": relative.as_posix(),
         "detail": "record AW payload provenance for installed-state compatibility checks",
     }
+
+
+def _adoption_receipt_payload(*, selected_modules: list[str], reports: list[dict[str, Any]], payload_mirror: bool) -> dict[str, Any]:
+    adopted_state: list[str] = []
+    for report in reports:
+        for action in report.get("actions", []):
+            if not isinstance(action, dict):
+                continue
+            path = str(action.get("path", "")).replace("\\", "/")
+            if path.startswith(".agentic-workspace/"):
+                path = path.removeprefix(".agentic-workspace/")
+            if path == "planning/execplans" or path.startswith(
+                ("planning/state.toml", "planning/execplans/", "memory/repo/", "verification/")
+            ):
+                _append_unique(adopted_state, path)
+    omitted_package_payload = (
+        []
+        if payload_mirror
+        else _dedupe(
+            [
+                "package-payload",
+                "payload-provenance.json",
+                "AGENTS.md",
+                *[f"{module_name}/package-payload" for module_name in selected_modules],
+            ]
+        )
+    )
+    return {
+        "kind": ADOPTION_RECEIPT_KIND,
+        "checked_in_rule": "necessary-surfaces-only",
+        "adopted_state": sorted(adopted_state),
+        "omitted_package_payload": omitted_package_payload,
+        "local_only": [
+            "local/scratch/bootstrap-handoff.md",
+            "local/scratch/bootstrap-handoff.json",
+            "absolute-path provenance",
+        ],
+        "payload_mirror": payload_mirror,
+        "recheck_command": "agentic-workspace doctor --target . --format json",
+        "rule": (
+            "This receipt is the durable authority that ordinary bootstrap intentionally omitted generic package payload. "
+            "Status and doctor must not infer that decision from missing files alone."
+        ),
+    }
+
+
+def _write_adoption_receipt_action(
+    *, target_root: Path, selected_modules: list[str], reports: list[dict[str, Any]], payload_mirror: bool, dry_run: bool
+) -> dict[str, str]:
+    relative = WORKSPACE_ADOPTION_RECEIPT_PATH
+    path = target_root / relative
+    existing_text = path.read_text(encoding="utf-8") if path.exists() else None
+    payload = _adoption_receipt_payload(selected_modules=selected_modules, reports=reports, payload_mirror=payload_mirror)
+    rendered_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    if existing_text == rendered_text:
+        return {"kind": "current", "path": relative.as_posix(), "detail": "adoption receipt already current"}
+    if not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(rendered_text, encoding="utf-8")
+    return {
+        "kind": "would create" if dry_run and existing_text is None else "would update" if dry_run else "created",
+        "path": relative.as_posix(),
+        "detail": "record checked-in footprint decision without local absolute paths",
+    }
+
+
+def _read_adoption_receipt(*, target_root: Path) -> dict[str, Any]:
+    path = target_root / WORKSPACE_ADOPTION_RECEIPT_PATH
+    if not path.is_file():
+        return {"status": "missing", "path": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix()}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"status": "invalid", "path": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(), "error": str(exc)}
+    if not isinstance(payload, dict) or payload.get("kind") != ADOPTION_RECEIPT_KIND:
+        return {
+            "status": "invalid",
+            "path": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+            "error": "adoption receipt kind is missing or unsupported",
+        }
+    return {"status": "present", "path": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(), "payload": payload}
 
 
 def _validate_payload_provenance(payload: dict[str, Any]) -> list[str]:
@@ -1619,7 +1725,7 @@ def _installed_state_compatibility_payload(
     if provenance_status.get("status") in {"invalid"}:
         payload_provenance_drift = "invalid-provenance"
     elif provenance_status.get("status") == "missing" and initialized_payload_present:
-        payload_provenance_drift = "missing-provenance"
+        payload_provenance_drift = "none" if _minimal_bootstrap_footprint_detected(target_root=target_root) else "missing-provenance"
     elif installed_version and _version_key(installed_version) > _version_key(__version__):
         payload_provenance_drift = "executable-too-old"
     elif installed_version and _version_key(installed_version) < _version_key(__version__):
@@ -5705,10 +5811,7 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             "uninstall_handler": planning_uninstall_bootstrap,
             "doctor_handler": planning_doctor_bootstrap,
             "status_handler": planning_collect_status,
-            "detector": lambda target_root: (
-                (target_root / ".agentic-workspace" / "planning" / "state.toml").exists()
-                and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
-            ),
+            "detector": lambda target_root: (target_root / ".agentic-workspace" / "planning" / "state.toml").exists(),
         },
         "memory": {
             "install_handler": memory_install_bootstrap,
@@ -6877,29 +6980,94 @@ def _sync_workspace_managed_agent_instructions(
     return ([action], [warning])
 
 
+def _minimal_bootstrap_footprint_detected(*, target_root: Path) -> bool:
+    receipt_status = _read_adoption_receipt(target_root=target_root)
+    receipt = receipt_status.get("payload") if receipt_status.get("status") == "present" else {}
+    return isinstance(receipt, dict) and receipt.get("payload_mirror") is False
+
+
+def _filter_minimal_bootstrap_module_report(report: dict[str, Any]) -> dict[str, Any]:
+    def _is_intentional_minimal_warning(item: dict[str, Any]) -> bool:
+        text = " ".join((str(item.get("message", "")), str(item.get("detail", ""))))
+        path = str(item.get("path", ""))
+        kind = str(item.get("kind", ""))
+        role = str(item.get("role", ""))
+        missing_or_package_change = "missing" in text or "planned change" in text
+        return (
+            "shared Workspace layer is not installed" in text
+            or (path == "AGENTS.md" and role == "local-entrypoint" and "missing canonical workflow pointer block" in text)
+            or (path.startswith(".agentic-workspace/docs/") and missing_or_package_change)
+            or (path.startswith(".agentic-workspace/skills/") and missing_or_package_change)
+            or (path.startswith(".agentic-workspace/planning/skills/") and missing_or_package_change)
+            or (path.startswith(".agentic-workspace/planning/schemas/") and missing_or_package_change)
+            or (path.startswith(".agentic-workspace/planning/") and path.endswith("/README.md") and missing_or_package_change)
+            or (path.startswith(".agentic-workspace/planning/") and "/TEMPLATE." in path and missing_or_package_change)
+            or (path.startswith(".agentic-workspace/planning/decompositions/") and missing_or_package_change)
+            or (path == ".agentic-workspace/planning/agent-manifest.json" and missing_or_package_change)
+            or (path.startswith(".agentic-workspace/memory/skills/") and missing_or_package_change)
+            or (path.startswith(".agentic-workspace/memory/bootstrap/") and missing_or_package_change)
+            or (path.startswith(".agentic-workspace/memory/repo/") and path.endswith("/README.md") and missing_or_package_change)
+            or (path.startswith(".agentic-workspace/memory/repo/templates/") and missing_or_package_change)
+            or (path == ".agentic-workspace/memory/repo/manifest.toml" and kind == "would replace" and "planned change" in text)
+            or (
+                path
+                in {".agentic-workspace/memory/SKILLS.md", ".agentic-workspace/memory/VERSION.md", ".agentic-workspace/memory/WORKFLOW.md"}
+                and missing_or_package_change
+            )
+            or path.endswith("/UPGRADE-SOURCE.toml")
+        )
+
+    filtered_warnings = [
+        warning for warning in report.get("warnings", []) if not (isinstance(warning, dict) and _is_intentional_minimal_warning(warning))
+    ]
+    filtered_actions = [
+        action for action in report.get("actions", []) if not (isinstance(action, dict) and _is_intentional_minimal_warning(action))
+    ]
+    if len(filtered_warnings) == len(report.get("warnings", [])) and len(filtered_actions) == len(report.get("actions", [])):
+        return report
+    return {**report, "actions": filtered_actions, "warnings": filtered_warnings}
+
+
 def _workspace_status_report(
     *, target_root: Path, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor], command_name: str, config: WorkspaceConfig
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     agents_relative = Path(config.agent_instructions_file)
-    for relative in WORKSPACE_PAYLOAD_FILES:
-        path = target_root / relative
-        exists = path.exists()
+    minimal_footprint = _minimal_bootstrap_footprint_detected(target_root=target_root)
+    if minimal_footprint:
         actions.append(
             {
-                "kind": "current" if exists else "missing",
-                "path": relative.as_posix(),
-                "detail": "required workspace file present" if exists else "required workspace file missing",
+                "kind": "current",
+                "path": ".agentic-workspace/package-payload",
+                "detail": "adoption receipt intentionally omits shared package payload; use --mirror-payload to require a checked-in mirror",
             }
         )
-        if not exists:
-            warnings.append({"path": relative.as_posix(), "message": "required workspace file missing"})
-    local_actions, local_warnings = _sync_workspace_managed_agent_instructions(
-        target_root=target_root, config=config, dry_run=False, apply=False
-    )
-    actions.extend(local_actions)
-    warnings.extend(local_warnings)
+        actions.append(
+            {
+                "kind": "current",
+                "path": _workspace_managed_agent_instructions_path(config).as_posix(),
+                "detail": "minimal bootstrap footprint intentionally omits managed .agentic-workspace local instructions",
+            }
+        )
+    else:
+        for relative in WORKSPACE_PAYLOAD_FILES:
+            path = target_root / relative
+            exists = path.exists()
+            actions.append(
+                {
+                    "kind": "current" if exists else "missing",
+                    "path": relative.as_posix(),
+                    "detail": "required workspace file present" if exists else "required workspace file missing",
+                }
+            )
+            if not exists:
+                warnings.append({"path": relative.as_posix(), "message": "required workspace file missing"})
+        local_actions, local_warnings = _sync_workspace_managed_agent_instructions(
+            target_root=target_root, config=config, dry_run=False, apply=False
+        )
+        actions.extend(local_actions)
+        warnings.extend(local_warnings)
     scratch_path = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
     actions.append(
         {
@@ -7436,10 +7604,14 @@ def _workspace_init_or_upgrade_report(
     command_name: str,
     config: WorkspaceConfig,
     to_payload_target: bool = False,
+    footprint_profile: str | None = None,
+    module_reports: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     conservative = inspection_mode != "install" and command_name == "init"
+    resolved_footprint_profile = _resolve_bootstrap_footprint_profile(target_root=target_root, requested_profile=footprint_profile)
+    minimal_footprint = command_name in {"init", "install"} and _uses_minimal_bootstrap_footprint(resolved_footprint_profile)
     config_action = _seed_workspace_config_action(
         target_root=target_root,
         resolved_preset=resolved_preset,
@@ -7458,60 +7630,108 @@ def _workspace_init_or_upgrade_report(
             requested = set(config.enabled_modules) | set(selected_modules)
             config_modules = [module_name for module_name in ordered_names if module_name in requested]
         actions.append(_set_enabled_modules_action(target_root=target_root, enabled_modules=config_modules, dry_run=dry_run))
-    for relative in WORKSPACE_PAYLOAD_FILES:
-        destination = target_root / relative
-        source_bytes = _workspace_payload_bytes_for_target(relative, target_root=target_root)
-        existing = destination.exists()
-        if not existing:
-            if not dry_run:
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                destination.write_bytes(source_bytes)
-            actions.append(
-                {
-                    "kind": "would create" if dry_run else "created",
-                    "path": relative.as_posix(),
-                    "detail": "install workspace shared-layer file",
-                }
-            )
-            continue
-        if destination.read_bytes() == source_bytes:
+    if minimal_footprint:
+        actions.append(
+            {
+                "kind": "omitted",
+                "path": ".agentic-workspace/package-payload",
+                "detail": (
+                    "ordinary bootstrap omits generic workspace docs, templates, schemas, and bundled skills; "
+                    "use --mirror-payload to copy the package payload"
+                ),
+            }
+        )
+        if (target_root / WORKSPACE_PAYLOAD_PROVENANCE_PATH).exists():
             actions.append(
                 {
                     "kind": "current",
-                    "path": relative.as_posix(),
-                    "detail": _workspace_payload_current_detail(relative=relative, target_root=target_root),
+                    "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+                    "detail": "preserve existing payload provenance; minimal footprint does not refresh local executable provenance",
                 }
             )
-            continue
-        if conservative:
+        else:
             actions.append(
                 {
-                    "kind": "manual review",
-                    "path": relative.as_posix(),
-                    "detail": "existing workspace shared-layer file differs from managed payload",
+                    "kind": "omitted",
+                    "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+                    "detail": "ordinary bootstrap keeps local executable provenance out of checked-in adoption state",
                 }
             )
-            continue
-        if not dry_run:
-            destination.write_bytes(source_bytes)
+    else:
+        for relative in WORKSPACE_PAYLOAD_FILES:
+            destination = target_root / relative
+            source_bytes = _workspace_payload_bytes_for_target(relative, target_root=target_root)
+            existing = destination.exists()
+            if not existing:
+                if not dry_run:
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_bytes(source_bytes)
+                actions.append(
+                    {
+                        "kind": "would create" if dry_run else "created",
+                        "path": relative.as_posix(),
+                        "detail": "install workspace shared-layer file",
+                    }
+                )
+                continue
+            if destination.read_bytes() == source_bytes:
+                actions.append(
+                    {
+                        "kind": "current",
+                        "path": relative.as_posix(),
+                        "detail": _workspace_payload_current_detail(relative=relative, target_root=target_root),
+                    }
+                )
+                continue
+            if conservative:
+                actions.append(
+                    {
+                        "kind": "manual review",
+                        "path": relative.as_posix(),
+                        "detail": "existing workspace shared-layer file differs from managed payload",
+                    }
+                )
+                continue
+            if not dry_run:
+                destination.write_bytes(source_bytes)
+            actions.append(
+                {
+                    "kind": "would update" if dry_run else "updated",
+                    "path": relative.as_posix(),
+                    "detail": "refresh workspace shared-layer file from package payload while preserving host-owned subsystem overlay"
+                    if relative == Path(".agentic-workspace/OWNERSHIP.toml") and not _is_agentic_workspace_source_checkout(target_root)
+                    else "refresh workspace shared-layer file from package payload",
+                }
+            )
+        actions.append(_write_payload_provenance_action(target_root=target_root, dry_run=dry_run, force=to_payload_target))
+    if command_name in {"init", "install"} and local_only_repo_root is None:
+        receipt_reports = [*(module_reports or []), {"actions": actions}]
+        actions.append(
+            _write_adoption_receipt_action(
+                target_root=target_root,
+                selected_modules=selected_modules,
+                reports=receipt_reports,
+                payload_mirror=not minimal_footprint,
+                dry_run=dry_run,
+            )
+        )
+    if minimal_footprint:
         actions.append(
             {
-                "kind": "would update" if dry_run else "updated",
-                "path": relative.as_posix(),
-                "detail": "refresh workspace shared-layer file from package payload while preserving host-owned subsystem overlay"
-                if relative == Path(".agentic-workspace/OWNERSHIP.toml") and not _is_agentic_workspace_source_checkout(target_root)
-                else "refresh workspace shared-layer file from package payload",
+                "kind": "omitted",
+                "path": ".agentic-workspace/AGENTS.md",
+                "detail": "ordinary bootstrap omits managed local startup payload; the root startup entrypoint carries the shared workflow pointer",
             }
         )
-    actions.append(_write_payload_provenance_action(target_root=target_root, dry_run=dry_run, force=to_payload_target))
-    local_agent_actions, local_agent_warnings = _sync_workspace_managed_agent_instructions(
-        target_root=target_root,
-        config=config,
-        dry_run=dry_run,
-        apply=command_name in {"init", "upgrade"},
-    )
-    actions.extend(local_agent_actions)
-    warnings.extend(local_agent_warnings)
+    else:
+        local_agent_actions, local_agent_warnings = _sync_workspace_managed_agent_instructions(
+            target_root=target_root,
+            config=config,
+            dry_run=dry_run,
+            apply=command_name in {"init", "upgrade"},
+        )
+        actions.extend(local_agent_actions)
+        warnings.extend(local_agent_warnings)
     agents_relative = Path(config.agent_instructions_file)
     agents_path = target_root / agents_relative
     rendered_agents = _workspace_agents_template(
@@ -7629,11 +7849,26 @@ def _workspace_init_or_upgrade_report(
         )
         actions.extend(cast(list[dict[str, str]], scratch_prune.get("actions", [])))
         warnings.extend(cast(list[dict[str, str]], scratch_prune.get("warnings", [])))
-    policy_actions, policy_warnings = _sync_update_policy_actions(
-        target_root=target_root, selected_modules=selected_modules, dry_run=dry_run, command_name=command_name, config=config, apply=True
-    )
-    actions.extend(policy_actions)
-    warnings.extend(policy_warnings)
+    if minimal_footprint:
+        for module_name in selected_modules:
+            actions.append(
+                {
+                    "kind": "omitted",
+                    "path": f".agentic-workspace/{module_name}/UPGRADE-SOURCE.toml",
+                    "detail": "ordinary bootstrap omits package-source provenance; refresh it only with --mirror-payload",
+                }
+            )
+    else:
+        policy_actions, policy_warnings = _sync_update_policy_actions(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            dry_run=dry_run,
+            command_name=command_name,
+            config=config,
+            apply=True,
+        )
+        actions.extend(policy_actions)
+        warnings.extend(policy_warnings)
     verification_next_action = _verification_manifest_next_action(target_root=target_root, selected_modules=selected_modules, config=config)
     if verification_next_action is not None:
         actions.append(verification_next_action)
@@ -7931,26 +8166,43 @@ def _run_init(
     print_prompt: bool,
     write_prompt: str | None,
     config: WorkspaceConfig,
+    footprint_profile: str | None = None,
+    mirror_payload: bool = False,
 ) -> dict[str, Any]:
+    resolved_footprint_profile = _resolve_bootstrap_footprint_profile(
+        target_root=target_root, requested_profile=footprint_profile, mirror_payload=mirror_payload
+    )
     inspection = _inspect_repo_state(
         target_root=target_root, selected_modules=selected_modules, descriptors=descriptors, force_adopt=force_adopt, config=config
     )
     module_command = "install" if inspection.mode == "install" else "adopt"
-    reports = [
-        _normalize_module_report_startup_paths(
-            _invoke_module_command(
-                command_name=module_command,
+    if _uses_minimal_bootstrap_footprint(resolved_footprint_profile):
+        reports = [
+            _minimal_module_footprint_report(
                 module_name=module_name,
-                descriptor=descriptors[module_name],
                 target_root=target_root,
                 dry_run=dry_run,
-                force=False,
-            ),
-            target_root=target_root,
-            config=config,
-        )
-        for module_name in selected_modules
-    ]
+                command_name=module_command,
+                footprint_profile=resolved_footprint_profile,
+            )
+            for module_name in selected_modules
+        ]
+    else:
+        reports = [
+            _normalize_module_report_startup_paths(
+                _invoke_module_command(
+                    command_name=module_command,
+                    module_name=module_name,
+                    descriptor=descriptors[module_name],
+                    target_root=target_root,
+                    dry_run=dry_run,
+                    force=False,
+                ),
+                target_root=target_root,
+                config=config,
+            )
+            for module_name in selected_modules
+        ]
     reports.append(
         _workspace_init_or_upgrade_report(
             target_root=target_root,
@@ -7962,6 +8214,8 @@ def _run_init(
             inspection_mode=inspection.mode,
             command_name="init",
             config=config,
+            footprint_profile=resolved_footprint_profile,
+            module_reports=reports,
         )
     )
     effective_config = config
@@ -7975,12 +8229,21 @@ def _run_init(
         inspection=inspection,
         reports=reports,
         config=effective_config,
+        footprint_profile=resolved_footprint_profile,
     )
     summary["non_interactive"] = non_interactive
     prompt_text = _build_handoff_prompt(summary)
-    prompt_path = _default_handoff_prompt_path(target_root=target_root) if summary["prompt_requirement"] != "none" else None
+    prompt_path = (
+        _default_handoff_prompt_path(target_root=target_root, footprint_profile=resolved_footprint_profile)
+        if summary["prompt_requirement"] != "none"
+        else None
+    )
     handoff_record = _build_bootstrap_handoff_record(summary) if summary["prompt_requirement"] != "none" else None
-    handoff_record_path = _default_handoff_record_path(target_root=target_root) if handoff_record is not None else None
+    handoff_record_path = (
+        _default_handoff_record_path(target_root=target_root, footprint_profile=resolved_footprint_profile)
+        if handoff_record is not None
+        else None
+    )
     if write_prompt:
         prompt_path = Path(write_prompt).expanduser().resolve()
     if prompt_path is not None and (write_prompt or not dry_run):
@@ -7996,6 +8259,13 @@ def _run_init(
         "dry_run": dry_run,
         "non_interactive": non_interactive,
         "module_reports": reports,
+        "bootstrap_footprint": _bootstrap_footprint_payload(
+            target_root=target_root,
+            profile=resolved_footprint_profile,
+            reports=reports,
+            prompt_path=prompt_path,
+            handoff_record_path=handoff_record_path,
+        ),
         "config": _config_payload(config=effective_config),
         "proof_route_hints": {
             "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
@@ -8016,6 +8286,93 @@ def _run_init(
         payload["handoff_record_path"] = handoff_record_path.as_posix()
         payload["next_steps"].append(f"Review the structured handoff record at {handoff_record_path.as_posix()}.")
     return payload
+
+
+def _minimal_module_footprint_report(
+    *, module_name: str, target_root: Path, dry_run: bool, command_name: str, footprint_profile: str
+) -> dict[str, Any]:
+    actions: list[dict[str, str]] = []
+
+    def _ensure_text(relative: Path, text: str, detail: str) -> None:
+        path = target_root / relative
+        if path.exists():
+            actions.append({"kind": "current", "path": relative.as_posix(), "detail": detail + "; preserved existing local-mode state"})
+            return
+        if not dry_run:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text, encoding="utf-8")
+        actions.append({"kind": "would create" if dry_run else "created", "path": relative.as_posix(), "detail": detail})
+
+    if module_name == "planning":
+        _ensure_text(
+            Path(".agentic-workspace/planning/state.toml"),
+            "# Agentic Workspace planning state\nactive_items = []\n",
+            "create minimal planning state anchor without copying planning package templates, schemas, or bundled skills",
+        )
+        execplans = target_root / ".agentic-workspace" / "planning" / "execplans"
+        if execplans.exists():
+            actions.append(
+                {
+                    "kind": "current",
+                    "path": ".agentic-workspace/planning/execplans",
+                    "detail": "preserve existing local-mode execplans without refreshing bundled planning payload",
+                }
+            )
+    elif module_name == "memory":
+        _ensure_text(
+            Path(".agentic-workspace/memory/repo/index.md"),
+            "# Repo Memory\n\nNo durable repo memory has been captured yet.\n",
+            "create minimal memory index without copying memory package bootstrap payload or bundled skills",
+        )
+        _ensure_text(
+            Path(".agentic-workspace/memory/repo/manifest.toml"),
+            'schema_version = "agentic-workspace/memory-repo-manifest/v1"\n',
+            "create minimal memory manifest without package-supplied route templates",
+        )
+    elif module_name == "verification":
+        manifest = Path(".agentic-workspace/verification/manifest.toml")
+        if (target_root / manifest).exists():
+            actions.append(
+                {
+                    "kind": "current",
+                    "path": manifest.as_posix(),
+                    "detail": "preserve repo-owned verification manifest without package payload mutation",
+                }
+            )
+        else:
+            actions.append(
+                {
+                    "kind": "manual review",
+                    "path": manifest.as_posix(),
+                    "detail": "verification remains repo-owned; create a manifest only after choosing host proof protocols",
+                }
+            )
+    else:
+        actions.append(
+            {
+                "kind": "manual review",
+                "path": ".agentic-workspace",
+                "detail": f"ordinary bootstrap does not define state anchors for module '{module_name}'",
+            }
+        )
+    actions.append(
+        {
+            "kind": "omitted",
+            "path": f".agentic-workspace/{module_name}",
+            "detail": (
+                f"ordinary bootstrap keeps generic {module_name} package payload out of the repository; "
+                "use --mirror-payload for an explicit mirrored install"
+            ),
+        }
+    )
+    return {
+        "module": module_name,
+        "message": f"{command_name.title()} report ({footprint_profile})",
+        "target": target_root.as_posix(),
+        "dry_run": dry_run,
+        "actions": actions,
+        "warnings": [],
+    }
 
 
 def _inspect_repo_state(
@@ -8173,6 +8530,7 @@ def _build_init_summary(
     inspection: RepoInspection,
     reports: list[dict[str, Any]],
     config: WorkspaceConfig,
+    footprint_profile: str,
 ) -> dict[str, Any]:
     created: list[str] = []
     updated_managed: list[str] = []
@@ -8225,6 +8583,8 @@ def _build_init_summary(
         "preset": resolved_preset,
         "agent_instructions_file": config.agent_instructions_file,
         "workflow_artifact_profile": config.workflow_artifact_profile,
+        "footprint_profile": footprint_profile,
+        "payload_mirror": not _uses_minimal_bootstrap_footprint(footprint_profile),
         "intent": _bootstrap_intent_payload(selected_modules=selected_modules, resolved_preset=resolved_preset),
         "repo_state": inspection.repo_state,
         "inferred_policy": inspection.inferred_policy,
@@ -8237,7 +8597,7 @@ def _build_init_summary(
         "needs_review": _dedupe(needs_review),
         "placeholders": _dedupe(placeholders),
         "generated_artifacts": _dedupe(generated_artifacts),
-        "validation": _validation_commands(target_root=target_root),
+        "validation": _validation_commands(target_root=target_root, footprint_profile=footprint_profile),
         "next_steps": _init_next_steps(
             target_root=target_root,
             repo_state=inspection.repo_state,
@@ -8247,6 +8607,7 @@ def _build_init_summary(
             needs_review=needs_review,
             placeholders=placeholders,
             agent_instructions_file=config.agent_instructions_file,
+            footprint_profile=footprint_profile,
         ),
     }
 
@@ -8265,25 +8626,42 @@ def _run_lifecycle_command(
     compact_status: bool = True,
     module_scope_explicit: bool = False,
     to_payload_target: bool = False,
+    footprint_profile: str | None = None,
+    mirror_payload: bool = False,
 ) -> dict[str, Any]:
     if command_name == "upgrade" and local_only_repo_root is None and _has_local_only_workspace_state(target_root=target_root):
         local_only_repo_root = target_root
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
-    reports = [
-        _normalize_module_report_startup_paths(
-            _invoke_module_command(
-                command_name=command_name,
+    resolved_footprint_profile = _resolve_bootstrap_footprint_profile(
+        target_root=target_root, requested_profile=footprint_profile, mirror_payload=mirror_payload
+    )
+    if command_name == "install" and _uses_minimal_bootstrap_footprint(resolved_footprint_profile):
+        reports = [
+            _minimal_module_footprint_report(
                 module_name=module_name,
-                descriptor=descriptors[module_name],
                 target_root=target_root,
                 dry_run=dry_run,
-                force=False,
-            ),
-            target_root=target_root,
-            config=config,
-        )
-        for module_name in selected_modules
-    ]
+                command_name=command_name,
+                footprint_profile=resolved_footprint_profile,
+            )
+            for module_name in selected_modules
+        ]
+    else:
+        reports = [
+            _normalize_module_report_startup_paths(
+                _invoke_module_command(
+                    command_name=command_name,
+                    module_name=module_name,
+                    descriptor=descriptors[module_name],
+                    target_root=target_root,
+                    dry_run=dry_run,
+                    force=False,
+                ),
+                target_root=target_root,
+                config=config,
+            )
+            for module_name in selected_modules
+        ]
     if command_name in {"status", "doctor"}:
         reports.append(
             _workspace_status_report(
@@ -8307,6 +8685,7 @@ def _run_lifecycle_command(
                 command_name=command_name,
                 config=config,
                 to_payload_target=to_payload_target,
+                footprint_profile=resolved_footprint_profile,
             )
         )
     elif command_name == "install":
@@ -8321,6 +8700,8 @@ def _run_lifecycle_command(
                 inspection_mode="install",
                 command_name=command_name,
                 config=config,
+                footprint_profile=resolved_footprint_profile,
+                module_reports=reports,
             )
         )
     elif command_name == "uninstall":
@@ -8334,6 +8715,8 @@ def _run_lifecycle_command(
                 local_only_repo_root=local_only_repo_root,
             )
         )
+    if command_name in {"status", "doctor"} and _minimal_bootstrap_footprint_detected(target_root=target_root):
+        reports = [_filter_minimal_bootstrap_module_report(report) for report in reports]
     summary = _summarise_reports(target_root=target_root, reports=reports, descriptors=descriptors, command_name=command_name)
     warnings: list[str] = []
     placeholders: list[str] = []
@@ -8377,6 +8760,8 @@ def _run_lifecycle_command(
         "preset": resolved_preset,
         "dry_run": dry_run,
         "non_interactive": non_interactive,
+        "footprint_profile": resolved_footprint_profile,
+        "payload_mirror": not _uses_minimal_bootstrap_footprint(resolved_footprint_profile),
         "health": "healthy" if not warnings else "attention-needed",
         "created": summary["created"],
         "updated_managed": summary["updated_managed"],
@@ -8427,6 +8812,14 @@ def _run_lifecycle_command(
         "reports": reports,
         "config": _config_payload(config=config),
     }
+    if command_name == "install":
+        payload["bootstrap_footprint"] = _bootstrap_footprint_payload(
+            target_root=target_root,
+            profile=resolved_footprint_profile,
+            reports=reports,
+            prompt_path=None,
+            handoff_record_path=None,
+        )
     if cli_compatibility_warnings:
         payload["executable_drift_warnings"] = cli_compatibility_warnings
     payload["lifecycle_plan"] = _lifecycle_plan_payload(
@@ -38472,6 +38865,8 @@ def _run_prompt_command(
     force_adopt: bool,
     non_interactive: bool,
     config: WorkspaceConfig,
+    footprint_profile: str | None = None,
+    mirror_payload: bool = False,
 ) -> dict[str, Any]:
     if prompt_command == "init":
         payload = _run_init(
@@ -38486,6 +38881,8 @@ def _run_prompt_command(
             print_prompt=True,
             write_prompt=None,
             config=config,
+            footprint_profile=footprint_profile,
+            mirror_payload=mirror_payload,
         )
         return {**payload, "command": "prompt", "prompt_command": "init"}
     payload = _run_lifecycle_command(
@@ -38498,6 +38895,8 @@ def _run_prompt_command(
         dry_run=True,
         non_interactive=non_interactive,
         config=config,
+        footprint_profile=footprint_profile,
+        mirror_payload=mirror_payload,
     )
     payload["command"] = "prompt"
     payload["prompt_command"] = prompt_command
@@ -38678,8 +39077,8 @@ def _normalize_module_report_startup_paths(report: dict[str, Any], *, target_roo
     }
 
 
-def _validation_commands(*, target_root: Path) -> list[str]:
-    target = target_root.as_posix()
+def _validation_commands(*, target_root: Path, footprint_profile: str = DEFAULT_BOOTSTRAP_FOOTPRINT_PROFILE) -> list[str]:
+    target = "." if _uses_minimal_bootstrap_footprint(footprint_profile) else target_root.as_posix()
     return [f"agentic-workspace doctor --target {target}", f"agentic-workspace status --target {target}"]
 
 
@@ -38693,13 +39092,13 @@ def _init_next_steps(
     needs_review: list[str],
     placeholders: list[str],
     agent_instructions_file: str,
+    footprint_profile: str = DEFAULT_BOOTSTRAP_FOOTPRINT_PROFILE,
 ) -> list[str]:
-    target = target_root.as_posix()
+    target = "." if _uses_minimal_bootstrap_footprint(footprint_profile) else target_root.as_posix()
     steps = [f"Run agentic-workspace doctor --target {target} after bootstrap changes settle."]
     if prompt_requirement != "none":
-        steps.append(
-            f"Use the generated finishing brief at {WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix()} for the next bounded bootstrap action."
-        )
+        handoff_path = _handoff_prompt_relative_path(footprint_profile=footprint_profile)
+        steps.append(f"Use the generated finishing brief at {handoff_path.as_posix()} for the next bounded bootstrap action.")
     if prompt_requirement == "none":
         steps.append(f"Tell your coding agent to use {agent_instructions_file} for normal work.")
         return steps
@@ -38733,12 +39132,14 @@ def _lifecycle_next_steps(*, command_name: str, target_root: Path, warnings: lis
 
 def _build_handoff_prompt(summary: dict[str, Any]) -> str:
     agent_instructions_file = str(summary.get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE))
+    footprint_profile = str(summary.get("footprint_profile", DEFAULT_BOOTSTRAP_FOOTPRINT_PROFILE))
+    target_display = "." if _uses_minimal_bootstrap_footprint(footprint_profile) else str(summary["target"])
     workflow_artifact_profile = _workflow_artifact_profile_payload(
         str(summary.get("workflow_artifact_profile", DEFAULT_WORKFLOW_ARTIFACT_PROFILE))
     )
     intent_payload = summary.get("intent")
     lines = [
-        f"Finish the Agentic Workspace bootstrap in {summary['target']}.",
+        f"Finish the Agentic Workspace bootstrap in {target_display}.",
         "",
         "Repo state:",
         f"- {summary['repo_state']}",
@@ -38748,6 +39149,9 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
         "",
         "Lifecycle mode:",
         f"- {summary['mode']}",
+        "",
+        "Checked-in footprint:",
+        f"- {footprint_profile}",
         "",
         "Selected modules:",
     ]
@@ -38808,13 +39212,19 @@ def _build_handoff_prompt(summary: dict[str, Any]) -> str:
     lines.extend(["", "When done:"])
     if summary["placeholders"]:
         lines.append("- remove or resolve any remaining placeholders before closing the bootstrap task")
-    lines.append("- leave only durable workflow residue; do not keep temporary bootstrap notes around")
+    if _uses_minimal_bootstrap_footprint(footprint_profile):
+        lines.append("- keep temporary bootstrap notes in .agentic-workspace/local/scratch or delete them after use")
+    else:
+        lines.append("- leave only durable workflow residue; do not keep temporary bootstrap notes around")
     lines.append(f"- keep {agent_instructions_file} as the repo startup entrypoint")
     return "\n".join(lines)
 
 
 def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
     agent_instructions_file = str(summary.get("agent_instructions_file", DEFAULT_AGENT_INSTRUCTIONS_FILE))
+    footprint_profile = str(summary.get("footprint_profile", DEFAULT_BOOTSTRAP_FOOTPRINT_PROFILE))
+    handoff_path = _handoff_prompt_relative_path(footprint_profile=footprint_profile).as_posix()
+    target_display = "." if _uses_minimal_bootstrap_footprint(footprint_profile) else str(summary["target"])
     workflow_artifact_profile = _workflow_artifact_profile_payload(
         str(summary.get("workflow_artifact_profile", DEFAULT_WORKFLOW_ARTIFACT_PROFILE))
     )
@@ -38824,7 +39234,7 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
         "kind": "workspace-bootstrap-handoff/v1",
         "intent": summary["intent"],
         "scope": {
-            "target": summary["target"],
+            "target": target_display,
             "selected_modules": summary["modules"],
             "repo_state": summary["repo_state"],
             "inferred_policy": summary["inferred_policy"],
@@ -38832,9 +39242,10 @@ def _build_bootstrap_handoff_record(summary: dict[str, Any]) -> dict[str, Any]:
             "prompt_requirement": summary["prompt_requirement"],
             "non_interactive": bool(summary.get("non_interactive")),
             "workflow_artifact_profile": workflow_artifact_profile,
+            "footprint_profile": footprint_profile,
             "review_items": review_items,
         },
-        "next": {"steps": summary["next_steps"], "immediate_brief": WORKSPACE_BOOTSTRAP_HANDOFF_PATH.as_posix()},
+        "next": {"steps": summary["next_steps"], "immediate_brief": handoff_path},
         "proof": {
             "validation": summary["validation"],
             "done_when": [
@@ -39349,12 +39760,92 @@ def _build_lifecycle_handoff_prompt(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _default_handoff_prompt_path(*, target_root: Path) -> Path:
-    return (target_root / WORKSPACE_BOOTSTRAP_HANDOFF_PATH).resolve()
+def _bootstrap_footprint_payload(
+    *,
+    target_root: Path,
+    profile: str,
+    reports: list[dict[str, Any]],
+    prompt_path: Path | None,
+    handoff_record_path: Path | None,
+) -> dict[str, Any]:
+    classes: dict[str, list[str]] = {
+        "repo_owned_config": [],
+        "adopted_local_state": [],
+        "package_supplied_payload": [],
+        "transient_handoff": [],
+        "local_environment_provenance": [],
+        "intentional_full_mirror": [],
+    }
+
+    def _add(class_name: str, path: str) -> None:
+        if path and path not in classes[class_name]:
+            classes[class_name].append(path)
+
+    for report in reports:
+        for action in report.get("actions", []):
+            if not isinstance(action, dict):
+                continue
+            path = _display_path(action.get("path", "."), target_root)
+            kind = str(action.get("kind", ""))
+            if path in {WORKSPACE_CONFIG_PATH.as_posix(), DEFAULT_AGENT_INSTRUCTIONS_FILE, "AGENTS.local.md"}:
+                _add("repo_owned_config", path)
+            if path == WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix():
+                _add("repo_owned_config", path)
+            if path.startswith(".agentic-workspace/planning/") or path.startswith(".agentic-workspace/memory/repo/"):
+                _add("adopted_local_state", path)
+            if path.startswith(".agentic-workspace/verification/"):
+                _add("adopted_local_state", path)
+            if path == WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix() or path.endswith("/UPGRADE-SOURCE.toml"):
+                _add("local_environment_provenance", path)
+            if kind == "omitted" and (
+                path == ".agentic-workspace/package-payload"
+                or path in {".agentic-workspace/planning", ".agentic-workspace/memory", ".agentic-workspace/AGENTS.md"}
+                or path.endswith("/UPGRADE-SOURCE.toml")
+                or path == WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix()
+            ):
+                _add("package_supplied_payload", path)
+            if path in {relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES}:
+                _add("package_supplied_payload", path)
+                if profile == "full-payload-mirror":
+                    _add("intentional_full_mirror", path)
+    for candidate in (prompt_path, handoff_record_path):
+        if candidate is None:
+            continue
+        _add("transient_handoff", _display_path(candidate.as_posix(), target_root))
+    omitted = sorted(classes["package_supplied_payload"])
+    return {
+        "kind": "agentic-workspace/bootstrap-footprint/v1",
+        "profile": profile,
+        "payload_mirror": not _uses_minimal_bootstrap_footprint(profile),
+        "status": "necessary-surfaces" if _uses_minimal_bootstrap_footprint(profile) else "full-mirror",
+        "planned_surface_classes": [{"class": name, "count": len(paths), "paths": sorted(paths)} for name, paths in classes.items()],
+        "omitted_package_payload_count": len(omitted) if _uses_minimal_bootstrap_footprint(profile) else 0,
+        "omitted_package_payload_paths": omitted if _uses_minimal_bootstrap_footprint(profile) else [],
+        "rule": (
+            "ordinary bootstrap writes only necessary checked-in AW surfaces and preserves repo-owned continuity; "
+            "--mirror-payload is the explicit opt-in for mirroring bundled docs, templates, schemas, skills, and provenance"
+        ),
+    }
 
 
-def _default_handoff_record_path(*, target_root: Path) -> Path:
-    return (target_root / WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH).resolve()
+def _handoff_prompt_relative_path(*, footprint_profile: str) -> Path:
+    if _uses_minimal_bootstrap_footprint(footprint_profile):
+        return WORKSPACE_LOCAL_BOOTSTRAP_HANDOFF_PATH
+    return WORKSPACE_BOOTSTRAP_HANDOFF_PATH
+
+
+def _handoff_record_relative_path(*, footprint_profile: str) -> Path:
+    if _uses_minimal_bootstrap_footprint(footprint_profile):
+        return WORKSPACE_LOCAL_BOOTSTRAP_HANDOFF_RECORD_PATH
+    return WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH
+
+
+def _default_handoff_prompt_path(*, target_root: Path, footprint_profile: str = DEFAULT_BOOTSTRAP_FOOTPRINT_PROFILE) -> Path:
+    return (target_root / _handoff_prompt_relative_path(footprint_profile=footprint_profile)).resolve()
+
+
+def _default_handoff_record_path(*, target_root: Path, footprint_profile: str = DEFAULT_BOOTSTRAP_FOOTPRINT_PROFILE) -> Path:
+    return (target_root / _handoff_record_relative_path(footprint_profile=footprint_profile)).resolve()
 
 
 def _write_prompt_file(*, prompt_path: Path, prompt_text: str, dry_run: bool) -> Path:
@@ -41337,6 +41828,8 @@ def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
         print_prompt=args.print_prompt,
         write_prompt=args.write_prompt,
         config=config,
+        footprint_profile=getattr(args, "footprint_profile", None),
+        mirror_payload=bool(getattr(args, "mirror_payload", False)),
     )
     payload["command"] = command_name
     payload["lifecycle_plan"] = _lifecycle_plan_payload(
@@ -41395,6 +41888,8 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
         config=config,
         module_scope_explicit=bool(getattr(args, "modules", None)),
         to_payload_target=bool(getattr(args, "to_payload_target", False)),
+        footprint_profile=getattr(args, "footprint_profile", None),
+        mirror_payload=bool(getattr(args, "mirror_payload", False)),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
@@ -46990,6 +47485,7 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
         registry_file = target_root / source.registry_path
         skills_root = target_root / source.skills_root
         package_registry_file = _package_skill_registry_file(source)
+        package_skills_root = package_registry_file.parent if package_registry_file is not None else None
         source_state = "absent"
         loaded_from_registry: list[RegisteredSkill] = []
         warn_for_missing_registry_entries = False
@@ -47001,7 +47497,14 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
             source_state = "package-registry"
             loaded_from_registry = _load_registered_skills(source=source, registry_file=package_registry_file)
         for skill in loaded_from_registry:
-            if not (target_root / skill.path).exists():
+            skill_exists = (target_root / skill.path).exists()
+            if (not skill_exists) and source_state == "package-registry" and package_skills_root is not None:
+                try:
+                    package_relative = skill.path.relative_to(source.skills_root)
+                except ValueError:
+                    package_relative = Path(str(skill.path.name))
+                skill_exists = (package_skills_root / package_relative).exists()
+            if not skill_exists:
                 if warn_for_missing_registry_entries:
                     warnings.append(f"{source.registry_path.as_posix()} points at missing skill file {skill.path.as_posix()}")
                 continue
@@ -47057,6 +47560,16 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
 
 
 def _package_skill_registry_file(source: SkillCatalogSource) -> Path | None:
+    if source.name == "workspace-core":
+        registry_file = Path(__file__).resolve().parent / "_payload" / ".agentic-workspace" / "skills" / "REGISTRY.json"
+        return registry_file if registry_file.exists() else None
+    if source.name in {"memory-core", "memory-bootstrap-temporary"}:
+        try:
+            from repo_memory_bootstrap._installer_paths import payload_root as memory_payload_root
+        except ImportError:
+            return None
+        registry_file = memory_payload_root() / source.registry_path
+        return registry_file if registry_file.exists() else None
     if source.name != "planning-bundled":
         return None
     try:

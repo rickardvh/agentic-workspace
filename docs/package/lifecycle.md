@@ -18,6 +18,10 @@ The `agentic-workspace` CLI has two jobs:
 
 Mutating commands are conservative. They operate on package-owned surfaces, managed fences, and module-owned directories, and report manual-review cases instead of blindly rewriting repo-owned content.
 
+`init` and `install` use the necessary-surface footprint by default. They write repo-owned config/startup, a compact adoption receipt, and the smallest selected module state anchors while preserving durable pre-existing Planning, Memory, and Verification state. Generic package docs, templates, schemas, bundled skills, payload provenance, and upgrade-source provenance remain package-owned and are read from the installed package, dev dependency, editable install, or source checkout at runtime.
+
+Use `--mirror-payload` only when a host repo explicitly wants the full package payload checked in for offline or tool-agnostic operation. Ordinary handoff files are written under `.agentic-workspace/local/scratch/` and should not become durable tracked state.
+
 ## Context Commands
 
 | Command | First question answered |

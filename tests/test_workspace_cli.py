@@ -187,6 +187,169 @@ def test_lifecycle_guidance_uses_canonical_modules_option(tmp_path: Path, capsys
     assert "--module planning --module memory" not in command_text
 
 
+def test_init_ordinary_footprint_omits_package_payload_and_writes_receipt(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "init",
+                "--target",
+                str(tmp_path),
+                "--modules",
+                "planning,memory",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["footprint_profile"] == "necessary-surfaces"
+    assert payload["payload_mirror"] is False
+    assert payload["bootstrap_footprint"]["status"] == "necessary-surfaces"
+    assert (tmp_path / ".agentic-workspace" / "planning" / "state.toml").exists()
+    assert (tmp_path / ".agentic-workspace" / "memory" / "repo" / "index.md").exists()
+    receipt = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
+    assert receipt["kind"] == "agentic-workspace/adoption-receipt/v1"
+    assert receipt["checked_in_rule"] == "necessary-surfaces-only"
+    assert receipt["payload_mirror"] is False
+    assert "absolute-path provenance" in receipt["local_only"]
+    assert not (tmp_path / ".agentic-workspace" / "payload-provenance.json").exists()
+    assert not (tmp_path / ".agentic-workspace" / "AGENTS.md").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json").exists()
+    assert ".agentic-workspace/package-payload" in payload["bootstrap_footprint"]["omitted_package_payload_paths"]
+    assert payload["validation"] == ["agentic-workspace doctor --target .", "agentic-workspace status --target ."]
+
+
+def test_init_adopts_local_state_and_uses_local_scratch_handoff(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "AGENTS.md", "# Existing instructions\n")
+    _write(tmp_path / ".agentic-workspace" / "planning" / "state.toml", "active_items = []\n")
+    _write(tmp_path / ".agentic-workspace" / "planning" / "execplans" / "existing.plan.json", "{}\n")
+    _write(tmp_path / ".agentic-workspace" / "memory" / "repo" / "index.md", "# Existing Memory\n")
+
+    assert (
+        cli.main(
+            [
+                "init",
+                "--target",
+                str(tmp_path),
+                "--modules",
+                "planning,memory",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["footprint_profile"] == "necessary-surfaces"
+    assert payload["payload_mirror"] is False
+    assert payload["handoff_prompt_path"].endswith(".agentic-workspace/local/scratch/bootstrap-handoff.md")
+    assert payload["handoff_record_path"].endswith(".agentic-workspace/local/scratch/bootstrap-handoff.json")
+    assert payload["handoff_record"]["scope"]["target"] == "."
+    receipt = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
+    assert "planning/execplans" in "\n".join(receipt["adopted_state"])
+    assert not (tmp_path / ".agentic-workspace" / "bootstrap-handoff.md").exists()
+    assert not (tmp_path / ".agentic-workspace" / "bootstrap-handoff.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "local" / "scratch" / "bootstrap-handoff.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "existing.plan.json").exists()
+
+
+def test_install_ordinary_footprint_omits_package_payload(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["install", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["payload_mirror"] is False
+    assert payload["bootstrap_footprint"]["status"] == "necessary-surfaces"
+    receipt = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
+    assert receipt["payload_mirror"] is False
+    assert not (tmp_path / ".agentic-workspace" / "payload-provenance.json").exists()
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json").exists()
+
+
+def test_init_mirror_payload_writes_payload_and_receipt(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "init",
+                "--target",
+                str(tmp_path),
+                "--modules",
+                "planning,memory",
+                "--mirror-payload",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["payload_mirror"] is True
+    assert payload["bootstrap_footprint"]["status"] == "full-mirror"
+    receipt = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
+    assert receipt["payload_mirror"] is True
+    assert (tmp_path / ".agentic-workspace" / "payload-provenance.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "AGENTS.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml").exists()
+
+
+def test_doctor_requires_adoption_receipt_before_treating_missing_payload_as_healthy(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / ".agentic-workspace" / "adoption-receipt.json").unlink()
+
+    assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["health"] == "attention-needed"
+    warning_text = "\n".join(payload["warnings"])
+    assert ".agentic-workspace/WORKFLOW.md" in warning_text or "payload-provenance.json" in warning_text
+    assert payload["installed_state_compatibility"]["payload"]["provenance_drift"] == "missing-provenance"
+
+
+@pytest.mark.parametrize(
+    ("command", "missing_path", "expected_warning"),
+    [
+        ("status", ".agentic-workspace/planning/state.toml", "enabled module 'planning' is not installed"),
+        ("doctor", ".agentic-workspace/planning/state.toml", "enabled module 'planning' is not installed"),
+        ("status", ".agentic-workspace/memory/repo/index.md", "enabled module 'memory' is not installed"),
+        ("doctor", ".agentic-workspace/memory/repo/index.md", "enabled module 'memory' is not installed"),
+    ],
+)
+def test_adoption_receipt_does_not_hide_missing_necessary_module_anchors(
+    tmp_path: Path, capsys, command: str, missing_path: str, expected_warning: str
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (tmp_path / ".agentic-workspace" / "adoption-receipt.json").is_file()
+    (tmp_path / missing_path).unlink()
+
+    assert cli.main([command, "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["health"] == "attention-needed"
+    assert expected_warning in payload["warnings"]
+
+
+def test_bootstrap_footprint_defaults_to_necessary_surfaces_with_explicit_mirror_opt_in(tmp_path: Path) -> None:
+    from agentic_workspace import workspace_runtime_core
+
+    assert workspace_runtime_core._resolve_bootstrap_footprint_profile(target_root=tmp_path) == "necessary-surfaces"
+    assert workspace_runtime_core._resolve_bootstrap_footprint_profile(target_root=tmp_path, mirror_payload=True) == "full-payload-mirror"
+
+
 def test_setup_surfaces_host_orientation_candidates_for_jumpstarted_repo(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "README.md", "# Host Repo\n")
@@ -249,7 +412,7 @@ def test_upgrade_preserves_host_owned_ownership_subsystems(tmp_path: Path, capsy
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     ownership_path = target / ".agentic-workspace" / "OWNERSHIP.toml"
     ownership_path.write_text(
@@ -272,7 +435,7 @@ def test_upgrade_refreshes_module_upgrade_source_recorded_at(tmp_path: Path, cap
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--modules", "planning", "--target", str(target), "--format", "json"]) == 0
+    assert cli.main(["init", "--modules", "planning", "--target", str(target), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     source_path = target / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml"
     source_path.write_text(
@@ -712,7 +875,7 @@ candidates = []
 
 def test_closeout_trust_derives_intent_proof_from_satisfied_active_execplan(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, active_milestone_status="completed")
 
@@ -733,7 +896,7 @@ def test_closeout_claim_boundary_returns_fast_claim_packet(tmp_path: Path, capsy
     import tests.workspace_cli_support as workspace_cli_support
 
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, include_stale_task_posture_residue=True)
 
@@ -773,7 +936,7 @@ def test_closeout_claim_boundary_returns_fast_claim_packet(tmp_path: Path, capsy
 
 def test_closeout_trust_does_not_block_on_stale_satisfied_task_posture_residue(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, include_stale_task_posture_residue=True)
 
@@ -790,7 +953,7 @@ def test_closeout_trust_does_not_block_on_stale_satisfied_task_posture_residue(t
 
 def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missing(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     _write_issue_1981_closeout_fixture(tmp_path, include_proof=False)
 
@@ -808,7 +971,7 @@ def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missi
 
 def test_closeout_trust_names_external_intent_evidence_blocker_for_open_issue(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, external_status="open")
 
@@ -826,7 +989,7 @@ def test_closeout_trust_scopes_unrelated_active_plan_residue_to_repo_wide_closeo
     from repo_planning_bootstrap import installer as planning_installer
 
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
@@ -909,7 +1072,7 @@ candidates = []
 
 def test_closeout_trust_scopes_pr_comment_repair_to_feedback_claim(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
     capsys.readouterr()
 
@@ -951,7 +1114,7 @@ def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp
     _init_git_repo(tmp_path)
     (tmp_path / "README.md").write_text("# Fixture\n", encoding="utf-8")
 
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
 
     cases = [
@@ -1532,7 +1695,7 @@ def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: P
 
 def test_start_installed_state_treats_stale_compatible_provenance_as_no_repair_needed(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
     provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
@@ -1573,7 +1736,7 @@ def test_start_installed_state_treats_stale_compatible_provenance_as_no_repair_n
 def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     (workspace / "config.toml").write_text(
         "schema_version = 1\n\n"
@@ -1656,7 +1819,7 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
 def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     (workspace / "config.toml").write_text(
         "schema_version = 1\n\n"
@@ -1758,7 +1921,7 @@ def test_payload_upgrade_attention_plan_classifies_repo_surfaces(tmp_path: Path,
 
 def test_payload_upgrade_attention_plan_routes_unsupported_long_hop(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
     provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
@@ -1792,7 +1955,7 @@ def test_payload_upgrade_attention_plan_routes_unsupported_long_hop(tmp_path: Pa
 def test_payload_target_required_before_claim_limits_claims_without_blocking_work(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     (workspace / "config.toml").write_text(
         "schema_version = 1\n\n"
@@ -1876,7 +2039,7 @@ def test_workspace_config_rejects_invalid_payload_target_policy(tmp_path: Path) 
 
 def test_start_installed_state_blocks_newer_repo_payload_instead_of_downgrading(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
     provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
@@ -1915,7 +2078,7 @@ def test_start_installed_state_blocks_newer_repo_payload_instead_of_downgrading(
 
 def test_upgrade_dry_run_does_not_rewrite_valid_provenance_for_identity_only_drift(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
     provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
@@ -1937,7 +2100,7 @@ def test_upgrade_dry_run_does_not_rewrite_valid_provenance_for_identity_only_dri
 
 def test_upgrade_dry_run_repairs_structurally_invalid_provenance_with_matching_file_set(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
     provenance = json.loads(provenance_path.read_text(encoding="utf-8"))

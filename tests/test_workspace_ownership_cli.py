@@ -62,7 +62,7 @@ def test_ownership_real_init_does_not_settle_repo_root_memory_as_repo_owned_cont
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     capsys.readouterr()
 
     assert cli.main(["ownership", "--target", str(target), "--format", "json"]) == 0
@@ -81,7 +81,7 @@ def test_ownership_diagnostics_report_startup_adapter_drift_and_ambiguity(tmp_pa
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target), "--modules", "planning"]) == 0
+    assert cli.main(["init", "--target", str(target), "--modules", "planning", "--mirror-payload"]) == 0
     capsys.readouterr()
     agents_path = target / "AGENTS.md"
     agents_path.write_text(

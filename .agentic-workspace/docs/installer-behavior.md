@@ -45,6 +45,14 @@ The installer distinguishes between three classes of files:
 2. **Package Managed**: Contracts and scripts in `docs/` or `scripts/`. These are updated by the installer during upgrades.
 3. **Generated**: Artifacts like `AGENT_QUICKSTART.md` that are derived from canonical manifests.
 
+## Bootstrap Footprint
+
+Root `agentic-workspace init` and `agentic-workspace install` use the necessary-surface footprint by default. They create repo-owned config/startup, a compact adoption receipt, and the smallest selected module state anchors; they preserve durable pre-existing local-mode Planning, Memory, and Verification state; and they omit generic package payload, bundled skills, payload provenance, and upgrade-source provenance.
+
+The invocation source does not decide the host-repo footprint. A released package, dev dependency, editable install, or source checkout can all provide package payload at runtime. Use `--mirror-payload` only when a host repo explicitly wants bundled docs, templates, schemas, skills, provenance, and module upgrade-source files checked in.
+
+Ordinary handoff files live under `.agentic-workspace/local/scratch/` instead of tracked bootstrap handoff paths. Status and doctor treat omitted package payload as healthy only when the checked-in adoption receipt records that package mirroring is not enabled.
+
 ## Local-only Installation
 
 The workspace-level `agentic-workspace install --local-only` command installs the shared workspace surfaces in the normal repository layout, but records `.agentic-workspace/` in git-local exclude metadata instead of expecting the package surfaces to be checked in.

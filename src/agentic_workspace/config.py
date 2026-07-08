@@ -19,6 +19,8 @@ WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH = Path(".agentic-workspace/local/memory.toml
 WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH = Path(".agentic-workspace/local/integrations")
 WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION = "<vendor-or-runtime>/"
 WORKSPACE_LOCAL_SCRATCH_ROOT_PATH = Path(".agentic-workspace/local/scratch")
+WORKSPACE_LOCAL_BOOTSTRAP_HANDOFF_PATH = WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "bootstrap-handoff.md"
+WORKSPACE_LOCAL_BOOTSTRAP_HANDOFF_RECORD_PATH = WORKSPACE_LOCAL_SCRATCH_ROOT_PATH / "bootstrap-handoff.json"
 WORKSPACE_AGENT_AID_ROOT_PATH = Path(".agentic-workspace/agent-aids")
 WORKSPACE_AGENT_AID_SUBDIRS = (
     "scripts",
@@ -57,6 +59,12 @@ SYSTEM_INTENT_SOURCE_DISCOVERY_CANDIDATES = (
 )
 WORKSPACE_BOOTSTRAP_HANDOFF_PATH = Path(".agentic-workspace/bootstrap-handoff.md")
 WORKSPACE_BOOTSTRAP_HANDOFF_RECORD_PATH = Path(".agentic-workspace/bootstrap-handoff.json")
+WORKSPACE_ADOPTION_RECEIPT_PATH = Path(".agentic-workspace/adoption-receipt.json")
+DEFAULT_BOOTSTRAP_FOOTPRINT_PROFILE = "necessary-surfaces"
+SUPPORTED_BOOTSTRAP_FOOTPRINT_PROFILES = (
+    "necessary-surfaces",
+    "full-payload-mirror",
+)
 DEFAULT_AGENT_INSTRUCTIONS_FILE = "AGENTS.md"
 SUPPORTED_AGENT_INSTRUCTIONS_FILES = (
     "AGENTS.md",
