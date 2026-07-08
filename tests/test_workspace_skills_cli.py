@@ -635,7 +635,7 @@ def test_skills_command_discovers_temporary_memory_bootstrap_skills(tmp_path: Pa
     assert install_skill["path"] == ".agentic-workspace/memory/bootstrap/skills/install/SKILL.md"
     assert payload["recommendations"][0]["id"] == "install"
     assert not payload["warnings"]
-    assert any(source["name"] == "memory-bootstrap-temporary" and source["state"] == "registry" for source in payload["sources"])
+    assert any(source["name"] == "memory-bootstrap-temporary" and source["state"] == "package-registry" for source in payload["sources"])
 
 
 def test_skills_command_recommends_high_risk_workflow_decision_skills(tmp_path: Path, capsys) -> None:

@@ -17,6 +17,8 @@ An installed host repository gets a small set of checked-in surfaces. Their purp
 
 The package keeps `AGENTS.md` thin. Durable rules and structured state live under `.agentic-workspace/` or in repo-owned docs, not in a growing startup manual.
 
+Bootstrap uses the necessary-surface footprint by default. It creates shared config/startup, a compact adoption receipt, and selected module state anchors while preserving durable pre-existing local-mode Planning, Memory, and Verification state. Generic package payload remains package-owned and is read from the installed package, dev dependency, editable install, or source checkout at runtime. `--mirror-payload` is the explicit opt-in for checking in bundled docs, templates, schemas, skills, payload provenance, and upgrade-source provenance.
+
 ## Participation Boundary
 
 Installed surfaces should expose the operating loop, not every implementation

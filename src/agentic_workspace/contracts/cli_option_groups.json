@@ -104,6 +104,14 @@
           "help": "Force conservative adopt behavior."
         },
         {
+          "name": "mirror_payload",
+          "flags": [
+            "--mirror-payload"
+          ],
+          "action": "store_true",
+          "help": "Opt in to checking in the full generic package payload mirror instead of the ordinary necessary-surface footprint."
+        },
+        {
           "name": "dry_run",
           "flags": [
             "--dry-run"

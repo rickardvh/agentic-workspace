@@ -1508,7 +1508,9 @@ def _installed_state_compatibility_payload(
     if provenance_status.get("status") in {"invalid"}:
         payload_provenance_drift = "invalid-provenance"
     elif provenance_status.get("status") == "missing" and initialized_payload_present:
-        payload_provenance_drift = "missing-provenance"
+        payload_provenance_drift = (
+            "none" if _workspace_runtime_core._minimal_bootstrap_footprint_detected(target_root=target_root) else "missing-provenance"
+        )
     elif installed_version and _version_key(installed_version) > _version_key(__version__):
         payload_provenance_drift = "executable-too-old"
     elif installed_version and _version_key(installed_version) < _version_key(__version__):
@@ -5588,10 +5590,7 @@ def _module_operations() -> dict[str, ModuleDescriptor]:
             "uninstall_handler": planning_uninstall_bootstrap,
             "doctor_handler": planning_doctor_bootstrap,
             "status_handler": planning_collect_status,
-            "detector": lambda target_root: (
-                (target_root / ".agentic-workspace" / "planning" / "state.toml").exists()
-                and (target_root / ".agentic-workspace" / "planning" / "agent-manifest.json").exists()
-            ),
+            "detector": lambda target_root: (target_root / ".agentic-workspace" / "planning" / "state.toml").exists(),
         },
         "memory": {
             "install_handler": memory_install_bootstrap,
@@ -7304,7 +7303,10 @@ def _workspace_init_or_upgrade_report(
     command_name: str,
     config: WorkspaceConfig,
     to_payload_target: bool = False,
+    footprint_profile: str | None = None,
+    module_reports: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    del footprint_profile, module_reports
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
     conservative = inspection_mode != "install" and command_name == "init"
@@ -7791,7 +7793,10 @@ def _run_init(
     print_prompt: bool,
     write_prompt: str | None,
     config: WorkspaceConfig,
+    footprint_profile: str | None = None,
+    mirror_payload: bool = False,
 ) -> dict[str, Any]:
+    del footprint_profile, mirror_payload
     inspection = _inspect_repo_state(
         target_root=target_root, selected_modules=selected_modules, descriptors=descriptors, force_adopt=force_adopt, config=config
     )
@@ -8125,9 +8130,31 @@ def _run_lifecycle_command(
     compact_status: bool = True,
     module_scope_explicit: bool = False,
     to_payload_target: bool = False,
+    footprint_profile: str | None = None,
+    mirror_payload: bool = False,
 ) -> dict[str, Any]:
     if command_name == "upgrade" and local_only_repo_root is None and _has_local_only_workspace_state(target_root=target_root):
         local_only_repo_root = target_root
+    resolved_footprint_profile = _workspace_runtime_core._resolve_bootstrap_footprint_profile(
+        target_root=target_root, requested_profile=footprint_profile, mirror_payload=mirror_payload
+    )
+    if command_name == "install" and _workspace_runtime_core._uses_minimal_bootstrap_footprint(resolved_footprint_profile):
+        return _workspace_runtime_core._run_lifecycle_command(
+            command_name=command_name,
+            target_root=target_root,
+            local_only_repo_root=local_only_repo_root,
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            descriptors=descriptors,
+            dry_run=dry_run,
+            non_interactive=non_interactive,
+            config=config,
+            compact_status=compact_status,
+            module_scope_explicit=module_scope_explicit,
+            to_payload_target=to_payload_target,
+            footprint_profile=resolved_footprint_profile,
+            mirror_payload=mirror_payload,
+        )
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     reports = [
         _normalize_module_report_startup_paths(
@@ -8167,6 +8194,7 @@ def _run_lifecycle_command(
                 command_name=command_name,
                 config=config,
                 to_payload_target=to_payload_target,
+                footprint_profile=resolved_footprint_profile,
             )
         )
     elif command_name == "install":
@@ -8181,6 +8209,8 @@ def _run_lifecycle_command(
                 inspection_mode="install",
                 command_name=command_name,
                 config=config,
+                footprint_profile=resolved_footprint_profile,
+                module_reports=reports,
             )
         )
     elif command_name == "uninstall":
@@ -8194,6 +8224,8 @@ def _run_lifecycle_command(
                 local_only_repo_root=local_only_repo_root,
             )
         )
+    if command_name in {"status", "doctor"} and _workspace_runtime_core._minimal_bootstrap_footprint_detected(target_root=target_root):
+        reports = [_workspace_runtime_core._filter_minimal_bootstrap_module_report(report) for report in reports]
     summary = _summarise_reports(target_root=target_root, reports=reports, descriptors=descriptors, command_name=command_name)
     warnings: list[str] = []
     placeholders: list[str] = []
@@ -39250,6 +39282,8 @@ def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
         print_prompt=args.print_prompt,
         write_prompt=args.write_prompt,
         config=config,
+        footprint_profile=getattr(args, "footprint_profile", None),
+        mirror_payload=bool(getattr(args, "mirror_payload", False)),
     )
     payload["command"] = command_name
     payload["lifecycle_plan"] = _lifecycle_plan_payload(
@@ -39308,6 +39342,8 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
         config=config,
         module_scope_explicit=bool(getattr(args, "modules", None)),
         to_payload_target=bool(getattr(args, "to_payload_target", False)),
+        footprint_profile=getattr(args, "footprint_profile", None),
+        mirror_payload=bool(getattr(args, "mirror_payload", False)),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
@@ -44744,6 +44780,7 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
         registry_file = target_root / source.registry_path
         skills_root = target_root / source.skills_root
         package_registry_file = _package_skill_registry_file(source)
+        package_skills_root = package_registry_file.parent if package_registry_file is not None else None
         source_state = "absent"
         loaded_from_registry: list[RegisteredSkill] = []
         warn_for_missing_registry_entries = False
@@ -44755,7 +44792,14 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
             source_state = "package-registry"
             loaded_from_registry = _load_registered_skills(source=source, registry_file=package_registry_file)
         for skill in loaded_from_registry:
-            if not (target_root / skill.path).exists():
+            skill_exists = (target_root / skill.path).exists()
+            if (not skill_exists) and source_state == "package-registry" and package_skills_root is not None:
+                try:
+                    package_relative = skill.path.relative_to(source.skills_root)
+                except ValueError:
+                    package_relative = Path(str(skill.path.name))
+                skill_exists = (package_skills_root / package_relative).exists()
+            if not skill_exists:
                 if warn_for_missing_registry_entries:
                     warnings.append(f"{source.registry_path.as_posix()} points at missing skill file {skill.path.as_posix()}")
                 continue
@@ -44811,6 +44855,16 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
 
 
 def _package_skill_registry_file(source: SkillCatalogSource) -> Path | None:
+    if source.name == "workspace-core":
+        registry_file = Path(__file__).resolve().parent / "_payload" / ".agentic-workspace" / "skills" / "REGISTRY.json"
+        return registry_file if registry_file.exists() else None
+    if source.name in {"memory-core", "memory-bootstrap-temporary"}:
+        try:
+            from repo_memory_bootstrap._installer_paths import payload_root as memory_payload_root
+        except ImportError:
+            return None
+        registry_file = memory_payload_root() / source.registry_path
+        return registry_file if registry_file.exists() else None
     if source.name != "planning-bundled":
         return None
     try:
@@ -45178,6 +45232,7 @@ _prune_local_scratch_runs: Any = _workspace_runtime_core._prune_local_scratch_ru
 _cleanup_legacy_local_scratch: Any = _workspace_runtime_core._cleanup_legacy_local_scratch
 _workspace_status_report: Any = _workspace_runtime_core._workspace_status_report
 _workspace_init_or_upgrade_report: Any = _workspace_runtime_core._workspace_init_or_upgrade_report
+_run_init: Any = _workspace_runtime_core._run_init
 _run_legacy_scratch_cleanup: Any = _workspace_runtime_core._run_legacy_scratch_cleanup
 _run_lazy_report_section_command: Any = _workspace_runtime_core._run_lazy_report_section_command
 _run_report_command: Any = _workspace_runtime_core._run_report_command

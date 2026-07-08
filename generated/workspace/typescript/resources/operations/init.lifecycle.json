@@ -32,6 +32,12 @@
       "source": "cli-option"
     },
     {
+      "description": "Opt in to checking in the full generic package payload mirror instead of the ordinary necessary-surface footprint.",
+      "name": "mirror_payload",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "command_visibility": "non-command-visible",
       "description": "Internal lifecycle adapter value; root init exposes --adopt for command-visible forced adoption behavior.",
       "name": "force",

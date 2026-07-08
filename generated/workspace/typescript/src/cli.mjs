@@ -3243,6 +3243,14 @@ const commandDefinitions = [
         {
           "action": "store_true",
           "flags": [
+            "--mirror-payload"
+          ],
+          "help": "Opt in to checking in the full generic package payload mirror instead of the ordinary necessary-surface footprint.",
+          "name": "mirror_payload"
+        },
+        {
+          "action": "store_true",
+          "flags": [
             "--dry-run"
           ],
           "help": "Show planned changes without mutating files.",
@@ -3358,6 +3366,14 @@ const commandDefinitions = [
           ],
           "help": "Force conservative adopt behavior.",
           "name": "adopt"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--mirror-payload"
+          ],
+          "help": "Opt in to checking in the full generic package payload mirror instead of the ordinary necessary-surface footprint.",
+          "name": "mirror_payload"
         },
         {
           "action": "store_true",

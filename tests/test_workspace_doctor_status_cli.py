@@ -26,7 +26,7 @@ def test_doctor_emits_affordance_shaped_repair_and_manual_review_actions(tmp_pat
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     capsys.readouterr()
     (target / ".agentic-workspace" / "WORKFLOW.md").unlink()
     agents_path = target / "AGENTS.md"
@@ -75,7 +75,7 @@ def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     capsys.readouterr()
     _write(
         target / ".agentic-workspace" / "config.local.toml",
@@ -157,7 +157,7 @@ def test_doctor_routes_workspace_merge_conflict_markers_to_manual_review(tmp_pat
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     capsys.readouterr()
     _write(
         target / ".agentic-workspace" / "config.toml",
@@ -264,7 +264,7 @@ def test_doctor_promotes_safe_module_lifecycle_repairs_for_missing_memory_templa
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     capsys.readouterr()
     template_paths = [
         target / ".agentic-workspace" / "memory" / "repo" / "templates" / "invariant.template.md",
@@ -409,7 +409,7 @@ def test_setup_surfaces_assurance_verification_onboarding_without_optional_modul
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     _write(
         target / ".agentic-workspace" / "verification" / "manifest.toml",
         'schema_version = "agentic-workspace/verification-manifest/v1"\n',
@@ -441,7 +441,7 @@ def test_setup_reports_verification_enabled_unconfigured_state(tmp_path: Path, c
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     config_path = target / ".agentic-workspace" / "config.toml"
     config_text = config_path.read_text(encoding="utf-8")
     config_path.write_text(config_text.replace('enabled = ["planning", "memory"]', 'enabled = ["planning", "memory", "verification"]'))
@@ -477,7 +477,7 @@ def test_doctor_module_filter_does_not_require_llms_adapter(tmp_path: Path, caps
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     capsys.readouterr()
 
     assert cli.main(["doctor", "--verbose", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
@@ -518,7 +518,7 @@ def test_status_flags_missing_workspace_shared_layer(tmp_path: Path, capsys) -> 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     (target / ".agentic-workspace" / "WORKFLOW.md").unlink()
     capsys.readouterr()
 
@@ -533,7 +533,7 @@ def test_doctor_flags_missing_workspace_shared_layer(tmp_path: Path, capsys) -> 
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     (target / ".agentic-workspace" / "OWNERSHIP.toml").unlink()
     capsys.readouterr()
 
@@ -635,7 +635,7 @@ def test_doctor_real_init_preserves_package_contract_shortlists_in_reports(tmp_p
     target.mkdir()
     _init_git_repo(target)
 
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     capsys.readouterr()
 
     assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
@@ -664,7 +664,7 @@ def test_doctor_text_output_shows_package_contract_shortlists(tmp_path: Path, ca
     target.mkdir()
     _init_git_repo(target)
 
-    assert cli.main(["init", "--target", str(target)]) == 0
+    assert cli.main(["init", "--target", str(target), "--mirror-payload"]) == 0
     capsys.readouterr()
 
     assert cli.main(["doctor", "--verbose", "--target", str(target)]) == 0
@@ -866,7 +866,7 @@ def test_status_warns_when_module_update_source_metadata_drifts_from_repo_config
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
-    assert cli.main(["init", "--modules", "planning", "--target", str(target)]) == 0
+    assert cli.main(["init", "--modules", "planning", "--target", str(target), "--mirror-payload"]) == 0
     capsys.readouterr()
     (target / ".agentic-workspace/config.toml").write_text(
         "schema_version = 1\n\n"

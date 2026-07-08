@@ -255,7 +255,7 @@ def test_config_command_reports_effective_defaults_without_repo_file(tmp_path: P
 
 def test_configuration_projection_reports_selector_backed_and_stale_sources(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
-    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     capsys.readouterr()
     _write(
         tmp_path / ".agentic-workspace/config.toml",
