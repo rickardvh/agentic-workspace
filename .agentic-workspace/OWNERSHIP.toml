@@ -157,6 +157,14 @@ authority = "primary"
 summary = "Memory-owned shared workflow, version, bootstrap, and skill support surfaces."
 
 [[authority_surfaces]]
+concern = "verification-manifest"
+surface = ".agentic-workspace/verification/manifest.toml"
+owner = "verification"
+ownership = "repo_owned"
+authority = "primary"
+summary = "Repo-owned Verification protocol manifest for reusable proof routes, scenarios, and known evidence gaps."
+
+[[authority_surfaces]]
 concern = "workspace-workflow-pointer"
 surface = "AGENTS.md#agentic-workspace:workflow"
 owner = "workspace"
@@ -177,6 +185,14 @@ paths = [".agentic-workspace/memory/**", "packages/memory/**"]
 owns = ["durable repo knowledge", "memory note routing", "memory package workflow semantics"]
 does_not_own = ["active execution planning", "workspace command runtime internals"]
 escalate_when = ["change widens what memory may store", "promotion policy changes"]
+
+[[subsystems]]
+id = "verification"
+paths = [".agentic-workspace/verification/**", "packages/verification/**"]
+owns = ["reusable proof protocols", "verification evidence routing", "verification package workflow semantics"]
+does_not_own = ["semantic user acceptance", "active execution planning", "issue or parent-lane closure"]
+proof = ["uv run pytest packages/verification/tests -q"]
+escalate_when = ["change makes Verification a proof authority", "protocol changes widen closeout or acceptance semantics"]
 
 [[subsystems]]
 id = "workspace-cli-runtime"
