@@ -317,6 +317,7 @@ def test_doctor_compact_payload_closure_plan_names_full_repair_lane(monkeypatch,
     payload = json.loads(capsys.readouterr().out)
     plan = payload["payload_closure_plan"]
     assert plan["kind"] == "agentic-workspace/payload-doctor-closure-plan/v1"
+    assert plan["action_state"]["state"] == "no_repair_needed"
     surface_classes = {item["id"]: item for item in plan["surface_classes"]}
     assert set(surface_classes) == {
         "installed_payload",
@@ -342,6 +343,7 @@ def test_doctor_compact_payload_closure_plan_names_full_repair_lane(monkeypatch,
     assert surface_classes["local_scratch_blockers"]["rule"] == (
         "Ignore AW local scratch contents for payload closure; cleanup remains explicitly scoped to local scratch roots."
     )
+    assert surface_classes["installed_payload"]["action_state"]["state"] == "no_repair_needed"
     assert surface_classes["provenance"]["hygiene_check"] == "make absolute-paths"
     assert surface_classes["provenance"]["hygiene_status"] == "source-checkout-required"
     proof_commands = surface_classes["proof"]["commands"]

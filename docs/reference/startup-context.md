@@ -135,6 +135,24 @@ Startup routing payload returned when an agent needs the minimum safe context fo
 | `installed_state_compatibility.status` | enum `"compatible"`, `"upgrade-recommended"`, `"payload-upgrade-required"`, `"blocking-drift"` | yes |  | Current installed-state compatibility classification. |  |  |
 | `installed_state_compatibility.reason` | string | no |  | Short explanation for the selected status. |  |  |
 | `installed_state_compatibility.authority` | const `"repo-state-authoritative"` | yes |  | Repo payload state owns compatibility for the current target. |  |  |
+| `installed_state_compatibility.action_state` | object | no |  | Public installed-state action-state machine result. |  |  |
+| `installed_state_compatibility.action_state.kind` | const `"agentic-workspace/installed-state-action-state/v1"` | yes |  | Discriminator for the installed-state action-state packet. |  |  |
+| `installed_state_compatibility.action_state.state` | enum `"no_repair_needed"`, `"safe_payload_sync_available"`, `"manual_review_required"`, `"blocking_incompatible"` | yes |  | Decisive action state for installed repo payload freshness. |  |  |
+| `installed_state_compatibility.action_state.status` | enum `"no_repair_needed"`, `"safe_payload_sync_available"`, `"manual_review_required"`, `"blocking_incompatible"` | yes |  | Alias of state for compact routing surfaces. |  |  |
+| `installed_state_compatibility.action_state.reason` | string | no |  | Short explanation for the selected action state. |  |  |
+| `installed_state_compatibility.action_state.repo_payload_authority` | const `"repo-state-authoritative"` | yes |  | The checked-in repo payload contract owns freshness decisions. |  |  |
+| `installed_state_compatibility.action_state.invoked_cli_role` | const `"compatibility-evaluator-and-projection-source"` | yes |  | The invoked CLI evaluates and proposes explicit repair but is not automatically authoritative. |  |  |
+| `installed_state_compatibility.action_state.compatibility_basis` | object | yes |  | Payload contract and provenance facts used for the action-state decision. |  |  |
+| `installed_state_compatibility.action_state.repair_mechanism` | string | yes |  | Visible repair mechanism, if any. |  |  |
+| `installed_state_compatibility.action_state.action_id` | string | yes |  | Stable internal action identifier. |  |  |
+| `installed_state_compatibility.action_state.command` | string | no |  | Primary command for the action when one is available. |  |  |
+| `installed_state_compatibility.action_state.dry_run_command` | string | no |  | Resolved dry-run sync command for safe package-owned repair. |  |  |
+| `installed_state_compatibility.action_state.apply_command` | string | no |  | Resolved apply sync command for safe package-owned repair. |  |  |
+| `installed_state_compatibility.action_state.safe_to_apply` | boolean | yes |  | Whether the action is bounded to package-owned sync surfaces. |  |  |
+| `installed_state_compatibility.action_state.mutates_on_start` | const `false` | yes |  | Startup may report this state but must not mutate the repo. |  |  |
+| `installed_state_compatibility.action_state.package_owned_surfaces` | array of string | no |  | Managed surfaces covered by safe sync. |  |  |
+| `installed_state_compatibility.action_state.manual_review_surfaces` | array of string | no |  | Surfaces requiring explicit manual review. |  |  |
+| `installed_state_compatibility.action_state.rule` | string | no |  | Policy rule for applying this action state. |  |  |
 | `installed_state_compatibility.executable` | object | yes |  | Executable identity and compatibility classification. |  |  |
 | `installed_state_compatibility.payload` | object | yes |  | Installed repo payload compatibility and sync guidance. |  |  |
 | `installed_state_compatibility.generated_artifacts` | object | yes |  | Generated artifact freshness classification. |  |  |

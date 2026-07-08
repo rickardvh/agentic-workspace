@@ -639,6 +639,7 @@
           "_proof_route_explanation_payload",
           "_proof_route_source_for_lane",
           "_run_lifecycle_command",
+          "_session_improvement_pressure_payload",
           "_skill_behavior_impact_review_for_changed_paths",
           "_split_validation_command",
           "_startup_closeout_report_route",

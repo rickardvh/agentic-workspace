@@ -1455,9 +1455,14 @@ def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: P
     selected = json.loads(capsys.readouterr().out)
     full = selected["values"]["installed_state_compatibility"]
     assert full["status"] == "payload-upgrade-required"
+    assert full["action_state"]["state"] == "safe_payload_sync_available"
+    assert full["action_state"]["repair_mechanism"] == "upgrade"
+    assert full["action_state"]["safe_to_apply"] is True
+    assert full["action_state"]["mutates_on_start"] is False
+    assert "agentic-workspace upgrade" in full["action_state"]["dry_run_command"]
     assert full["payload"]["provenance"]["status"] == "invalid"
     assert full["action_effect"]["force"] == "required_before_claim"
-    assert full["action_effect"]["allowed_now"] == "continue-bounded-work-with-repo-local-invocation"
+    assert full["action_effect"]["allowed_now"] == "continue-bounded-work-with-compatible-claim-limits"
     assert full["action_effect"]["blocked_until_reconciled"] == [
         "claim-installed-state-fresh",
         "claim-payload-synced",
@@ -1466,6 +1471,146 @@ def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: P
     assert full["action_effect"]["resolution_selector"] == "installed_state_compatibility"
     assert "agentic-workspace upgrade" in full["action_effect"]["resolution_command"]
     assert full["adapter_contracts"]
+
+
+def test_start_installed_state_treats_stale_compatible_provenance_as_no_repair_needed(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance["release_identity"]["version"] = "0.0.1"
+    provenance["release_identity"]["tag"] = "v0.0.1"
+    provenance["installed_by"]["version"] = "0.0.1"
+    provenance["installed_by"]["source_class"] = "source-checkout"
+    provenance["installed_by"]["source"] = "local-source"
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Inspect installed state",
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+
+    assert compatibility["status"] == "compatible"
+    assert compatibility["payload"]["status"] == "observed-compatible"
+    assert compatibility["payload"]["provenance_drift"] == "payload-installed-by-older-aw"
+    assert compatibility["action_state"]["state"] == "no_repair_needed"
+    assert compatibility["action_state"]["compatibility_basis"]["version_match_required"] is False
+    assert compatibility["repair_route"]["status"] == "not-required"
+    assert compatibility["action_effect"]["blocked_until_reconciled"] == []
+
+
+def test_start_installed_state_blocks_newer_repo_payload_instead_of_downgrading(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance["release_identity"]["version"] = "999.0.0"
+    provenance["release_identity"]["tag"] = "v999.0.0"
+    provenance["installed_by"]["version"] = "999.0.0"
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Inspect installed state",
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+
+    assert compatibility["status"] == "blocking-drift"
+    assert compatibility["payload"]["status"] == "incompatible"
+    assert compatibility["payload"]["provenance_drift"] == "executable-too-old"
+    assert compatibility["action_state"]["state"] == "blocking_incompatible"
+    assert compatibility["action_state"]["safe_to_apply"] is False
+    assert compatibility["repair_route"]["status"] == "blocking"
+    assert compatibility["repair_route"]["waiver"]["allowed"] is False
+    assert "upgrade --target" not in compatibility["action_state"]["command"]
+
+
+def test_upgrade_dry_run_does_not_rewrite_valid_provenance_for_identity_only_drift(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance["release_identity"]["version"] = "0.0.1"
+    provenance["release_identity"]["tag"] = "v0.0.1"
+    provenance["installed_by"]["version"] = "0.0.1"
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    provenance_action = next(
+        action for action in workspace_report["actions"] if action["path"] == ".agentic-workspace/payload-provenance.json"
+    )
+    assert provenance_action["kind"] == "current"
+    assert "installer identity drift does not require rewrite" in provenance_action["detail"]
+
+
+def test_upgrade_dry_run_repairs_structurally_invalid_provenance_with_matching_file_set(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance.pop("release_identity")
+    provenance.pop("installed_by")
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    assert compatibility["status"] == "payload-upgrade-required"
+    assert compatibility["payload"]["provenance"]["status"] == "invalid"
+    assert compatibility["action_state"]["state"] == "safe_payload_sync_available"
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    provenance_action = next(
+        action for action in workspace_report["actions"] if action["path"] == ".agentic-workspace/payload-provenance.json"
+    )
+    assert provenance_action["kind"] == "would update"
 
 
 def test_payload_provenance_payload_uses_portable_path_identities(tmp_path: Path) -> None:
@@ -1507,6 +1652,8 @@ def test_start_select_installed_state_blocking_drift_blocks_execution(tmp_path: 
     compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
 
     assert compatibility["status"] == "blocking-drift"
+    assert compatibility["action_state"]["state"] == "blocking_incompatible"
+    assert compatibility["repair_route"]["status"] == "blocking"
     assert compatibility["executable"]["classification"] == "executable-too-old-or-wrong-version"
     assert compatibility["action_effect"]["force"] == "required_before_execution"
     assert compatibility["action_effect"]["allowed_now"] == "switch-to-compatible-invocation-before-running-workspace-actions"
@@ -1549,6 +1696,8 @@ def test_start_select_installed_state_advisory_drift_limits_currentness_claims(t
     compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
 
     assert compatibility["status"] == "upgrade-recommended"
+    assert compatibility["action_state"]["state"] == "manual_review_required"
+    assert compatibility["repair_route"]["status"] == "manual-review-required"
     assert compatibility["action_effect"]["force"] == "advisory"
     assert compatibility["action_effect"]["allowed_now"] == "continue-bounded-work-with-compatible-claim-limits"
     assert compatibility["action_effect"]["blocked_until_reconciled"] == [
@@ -2184,6 +2333,9 @@ def test_start_installed_state_drift_triage_is_actionable_for_payload_claims(tmp
 
     triage = payload["context"]["installed_state_drift_triage"]
     assert triage["status"] == "actionable_now"
+    assert triage["action_state"]["state"] == "safe_payload_sync_available"
+    assert triage["action_state"]["repair_mechanism"] == "upgrade"
+    assert triage["action_state"]["mutates_on_start"] is False
     assert triage["claim_relevant"] is True
     assert "agentic-workspace upgrade" in triage["repair_command"]
     assert "installed_state_drift_triage=actionable_now" in payload["action_signals"]["changed_signals"]

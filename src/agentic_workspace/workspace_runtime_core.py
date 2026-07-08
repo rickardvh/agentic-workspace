@@ -670,6 +670,15 @@ def _write_payload_provenance_action(*, target_root: Path, dry_run: bool) -> dic
     payload = _payload_provenance_payload(target_root=target_root)
     if existing_payload is not None and _stable_payload_provenance(existing_payload) == _stable_payload_provenance(payload):
         return {"kind": "current", "path": relative.as_posix(), "detail": "payload provenance already current"}
+    existing_validation_errors = _validate_payload_provenance(existing_payload) if existing_payload is not None else []
+    if existing_payload is not None and not existing_validation_errors:
+        existing_payload_files = existing_payload.get("payload_files")
+        if existing_payload.get("payload_schema") == WORKSPACE_PAYLOAD_SCHEMA and existing_payload_files == payload["payload_files"]:
+            return {
+                "kind": "current",
+                "path": relative.as_posix(),
+                "detail": "valid payload provenance schema and managed file set are compatible; installer identity drift does not require rewrite",
+            }
     if existing_payload is not None and existing_payload.get("installed_at"):
         payload["installed_at"] = existing_payload["installed_at"]
     rendered_text = json.dumps(payload, indent=2, sort_keys=True) + "\n"
@@ -951,9 +960,17 @@ def _cli_compatibility_remediation(
     }
 
 
-def _installed_state_action_effect(*, status: str, next_action: str | None, config: WorkspaceConfig) -> dict[str, Any]:
-    resolution_command = next_action or config.cli_invoke
-    if status == "blocking-drift":
+def _installed_state_action_effect(
+    *,
+    status: str,
+    next_action: str | None,
+    config: WorkspaceConfig,
+    action_state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    action_state = action_state if isinstance(action_state, dict) else {}
+    state = str(action_state.get("state") or "")
+    resolution_command = str(action_state.get("dry_run_command") or action_state.get("command") or next_action or config.cli_invoke)
+    if state == "blocking_incompatible" or status == "blocking-drift":
         return {
             "force": "required_before_execution",
             "allowed_now": "switch-to-compatible-invocation-before-running-workspace-actions",
@@ -962,16 +979,16 @@ def _installed_state_action_effect(*, status: str, next_action: str | None, conf
             "resolution_selector": "installed_state_compatibility",
             "resolution_command": resolution_command,
         }
-    if status == "payload-upgrade-required":
+    if state == "safe_payload_sync_available" or status == "payload-upgrade-required":
         return {
             "force": "required_before_claim",
-            "allowed_now": "continue-bounded-work-with-repo-local-invocation",
+            "allowed_now": "continue-bounded-work-with-compatible-claim-limits",
             "blocked_until_reconciled": ["claim-installed-state-fresh", "claim-payload-synced", "claim-generated-surfaces-current"],
             "claim_boundary": "do-not-claim-local-installed-state-or-generated-payload-freshness-before-running-the-sync-check",
             "resolution_selector": "installed_state_compatibility",
             "resolution_command": resolution_command,
         }
-    if status == "upgrade-recommended":
+    if state == "manual_review_required" or status == "upgrade-recommended":
         return {
             "force": "advisory",
             "allowed_now": "continue-bounded-work-with-compatible-claim-limits",
@@ -987,6 +1004,85 @@ def _installed_state_action_effect(*, status: str, next_action: str | None, conf
         "claim_boundary": "installed-state-compatible-does-not-replace-task-proof-or-acceptance-reconciliation",
         "resolution_selector": "installed_state_compatibility",
         "resolution_command": resolution_command,
+    }
+
+
+def _installed_state_action_state_packet(
+    *,
+    state: str,
+    reason: str,
+    target_root: Path,
+    config: WorkspaceConfig,
+    payload_provenance_drift: str,
+    provenance_status: dict[str, Any],
+    stale_generated_surfaces: Sequence[str],
+    cli_status: str,
+) -> dict[str, Any]:
+    target = target_root.as_posix()
+    dry_run_sync_command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --dry-run --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    apply_sync_command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --format json",
+        cli_invoke=config.cli_invoke,
+    )
+    sync_available = state == "safe_payload_sync_available"
+    manual_review = state == "manual_review_required"
+    blocking = state == "blocking_incompatible"
+    command = dry_run_sync_command if sync_available else config.cli_invoke if blocking or manual_review else ""
+    payload_schema = ""
+    provenance_payload = provenance_status.get("payload") if isinstance(provenance_status.get("payload"), dict) else {}
+    if isinstance(provenance_payload, dict):
+        payload_schema = str(provenance_payload.get("payload_schema") or "")
+    return {
+        "kind": "agentic-workspace/installed-state-action-state/v1",
+        "state": state,
+        "status": state,
+        "reason": reason,
+        "repo_payload_authority": "repo-state-authoritative",
+        "invoked_cli_role": "compatibility-evaluator-and-projection-source",
+        "compatibility_basis": {
+            "payload_schema": payload_schema or WORKSPACE_PAYLOAD_SCHEMA,
+            "current_supported_payload_schema": WORKSPACE_PAYLOAD_SCHEMA,
+            "schema_compatible": payload_schema in {"", WORKSPACE_PAYLOAD_SCHEMA} and str(provenance_status.get("status", "")) != "invalid",
+            "version_match_required": False,
+            "payload_provenance_drift": payload_provenance_drift,
+            "cli_compatibility_status": cli_status,
+        },
+        "repair_mechanism": "upgrade"
+        if sync_available
+        else "manual-review"
+        if manual_review
+        else "select-compatible-cli"
+        if blocking
+        else "none",
+        "action_id": "sync-installed-payload-from-invoked-cli"
+        if sync_available
+        else "review-installed-state-manually"
+        if manual_review
+        else "select-compatible-cli-or-payload"
+        if blocking
+        else "none",
+        "command": command,
+        "dry_run_command": dry_run_sync_command if sync_available else "",
+        "apply_command": apply_sync_command if sync_available else "",
+        "safe_to_apply": sync_available,
+        "mutates_on_start": False,
+        "package_owned_surfaces": [
+            WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+            *[relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES],
+            *[str(surface) for surface in stale_generated_surfaces],
+        ]
+        if sync_available
+        else [],
+        "manual_review_surfaces": ["invoked_cli_identity", WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix()]
+        if manual_review or blocking
+        else [],
+        "rule": (
+            "Installed-state actions are classified from repo-authoritative payload contract state; "
+            "the invoked CLI may propose explicit package-owned sync but start never mutates the repo."
+        ),
     }
 
 
@@ -1027,35 +1123,41 @@ def _installed_state_compatibility_payload(
     elif installed_version and _version_key(installed_version) < _version_key(__version__):
         payload_provenance_drift = "payload-installed-by-older-aw"
     if cli_payload.get("status") == "blocking-drift":
+        action_state_name = "blocking_incompatible"
         status = "blocking-drift"
         next_action = cli_payload.get("remediation", {}).get("command") or config.cli_invoke
         reason = "executable compatibility is blocking"
     elif payload_provenance_drift == "executable-too-old":
+        action_state_name = "blocking_incompatible"
         status = "blocking-drift"
         next_action = config.cli_invoke
         reason = "repo payload provenance was installed by a newer AW version than the current executable"
     elif stale_generated_surfaces:
+        action_state_name = "safe_payload_sync_available"
         status = "payload-upgrade-required"
         next_action = _command_with_cli_invoke(
             command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
             cli_invoke=config.cli_invoke,
         )
         reason = "module-managed or generated payload surfaces are stale"
-    elif payload_provenance_drift in {"missing-provenance", "invalid-provenance", "payload-installed-by-older-aw"}:
+    elif payload_provenance_drift in {"missing-provenance", "invalid-provenance"}:
+        action_state_name = "safe_payload_sync_available"
         status = "payload-upgrade-required"
         next_action = _command_with_cli_invoke(
             command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
             cli_invoke=config.cli_invoke,
         )
-        reason = "repo payload provenance must be synced before strong installed-state compatibility claims"
+        reason = "repo payload provenance needs an explicit package-owned sync"
     elif cli_payload.get("status") == "advisory-drift":
+        action_state_name = "manual_review_required"
         status = "upgrade-recommended"
         next_action = cli_payload.get("remediation", {}).get("command") or config.cli_invoke
         reason = "executable compatibility drift is advisory"
     else:
+        action_state_name = "no_repair_needed"
         status = "compatible"
         next_action = None
-        reason = "no executable or payload drift detected by current compatibility checks"
+        reason = "repo payload contract is compatible; provenance version drift alone does not require sync"
     executable_class = "compatible"
     if failed_cli_checks & {"exact_version", "minimum_version"}:
         executable_class = "executable-too-old-or-wrong-version"
@@ -1065,9 +1167,6 @@ def _installed_state_compatibility_payload(
         executable_class = "use-repo-runner-required"
     elif cli_payload.get("status") == "advisory-drift":
         executable_class = "upgrade-recommended"
-    generated_status = "stale" if stale_generated_surfaces else "compatible"
-    payload_status = "sync-required" if stale_generated_surfaces or payload_provenance_drift != "none" else "observed-compatible"
-    action_effect = _installed_state_action_effect(status=status, next_action=next_action, config=config)
     dry_run_sync_command = _command_with_cli_invoke(
         command=f"agentic-workspace upgrade --target {target_root.as_posix()} --dry-run --format json",
         cli_invoke=config.cli_invoke,
@@ -1076,11 +1175,32 @@ def _installed_state_compatibility_payload(
         command=f"agentic-workspace upgrade --target {target_root.as_posix()} --format json",
         cli_invoke=config.cli_invoke,
     )
+    action_state = _installed_state_action_state_packet(
+        state=action_state_name,
+        reason=reason,
+        target_root=target_root,
+        config=config,
+        payload_provenance_drift=payload_provenance_drift,
+        provenance_status=provenance_status,
+        stale_generated_surfaces=stale_generated_surfaces,
+        cli_status=str(cli_payload.get("status") or ""),
+    )
+    generated_status = "stale" if stale_generated_surfaces else "compatible"
+    if action_state_name == "safe_payload_sync_available":
+        payload_status = "sync-required"
+    elif action_state_name == "manual_review_required":
+        payload_status = "manual-review-required"
+    elif action_state_name == "blocking_incompatible":
+        payload_status = "incompatible"
+    else:
+        payload_status = "observed-compatible"
+    action_effect = _installed_state_action_effect(status=status, next_action=next_action, config=config, action_state=action_state)
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/installed-state-compatibility/v1",
         "status": status,
         "reason": reason,
         "authority": "repo-state-authoritative",
+        "action_state": action_state,
         "executable": {
             "package": "agentic-workspace",
             "version": __version__,
@@ -1133,11 +1253,20 @@ def _installed_state_compatibility_payload(
         ],
         "next_action": next_action,
         "repair_route": {
-            "status": "available" if status == "payload-upgrade-required" else "not-required",
+            "status": "available"
+            if action_state_name == "safe_payload_sync_available"
+            else "manual-review-required"
+            if action_state_name == "manual_review_required"
+            else "blocking"
+            if action_state_name == "blocking_incompatible"
+            else "not-required",
+            "action_state": action_state_name,
+            "action_id": action_state["action_id"],
+            "repair_mechanism": action_state["repair_mechanism"],
             "dry_run_command": dry_run_sync_command,
             "apply_command": apply_sync_command,
             "waiver": {
-                "allowed": status == "payload-upgrade-required",
+                "allowed": action_state_name == "safe_payload_sync_available",
                 "claim": "source-behavior-validated-installed-payload-freshness-unproven",
                 "rule": "A waiver can keep narrow source work moving, but final reporting must not claim installed payload freshness.",
             },
@@ -1153,6 +1282,7 @@ def _installed_state_compatibility_payload(
             "kind": payload["kind"],
             "status": payload["status"],
             "authority": payload["authority"],
+            "action_state": payload["action_state"],
             "executable": {
                 key: payload["executable"][key]
                 for key in ("compatibility_status", "classification", "failed_checks")
@@ -23248,6 +23378,7 @@ def _apply_lane_shaping_gate_to_start_payload(
 
 
 def _compact_startup_installed_state_signal(installed_state: dict[str, Any]) -> dict[str, Any]:
+    action_state = _as_dict(installed_state.get("action_state"))
     executable = _as_dict(installed_state.get("executable"))
     payload = _as_dict(installed_state.get("payload"))
     generated_artifacts = _as_dict(installed_state.get("generated_artifacts"))
@@ -23256,6 +23387,23 @@ def _compact_startup_installed_state_signal(installed_state: dict[str, Any]) -> 
         "status": installed_state.get("status", ""),
         "reason": installed_state.get("reason", ""),
         "authority": installed_state.get("authority", "repo-state-authoritative"),
+        "action_state": {
+            key: action_state.get(key)
+            for key in (
+                "kind",
+                "state",
+                "status",
+                "reason",
+                "repair_mechanism",
+                "action_id",
+                "command",
+                "dry_run_command",
+                "apply_command",
+                "safe_to_apply",
+                "mutates_on_start",
+            )
+            if action_state.get(key) not in (None, "", [], {})
+        },
         "executable": {
             key: executable.get(key)
             for key in ("compatibility_status", "classification", "failed_checks")
@@ -24862,6 +25010,18 @@ def _installed_state_drift_triage_payload(
     *, installed_state: dict[str, Any], task_text: str | None, changed_paths: Sequence[str], cli_invoke: str
 ) -> dict[str, Any]:
     status = str(installed_state.get("status") or "compatible")
+    action_state = installed_state.get("action_state", {}) if isinstance(installed_state.get("action_state"), dict) else {}
+    action_state_name = str(action_state.get("state") or "")
+    if not action_state_name:
+        action_state_name = (
+            "safe_payload_sync_available"
+            if status == "payload-upgrade-required"
+            else "blocking_incompatible"
+            if status == "blocking-drift"
+            else "manual_review_required"
+            if status == "upgrade-recommended"
+            else "no_repair_needed"
+        )
     action_effect = installed_state.get("action_effect", {}) if isinstance(installed_state.get("action_effect"), dict) else {}
     force = str(action_effect.get("force") or "advisory")
     task = " ".join(str(task_text or "").lower().split())
@@ -24881,9 +25041,9 @@ def _installed_state_drift_triage_payload(
     )
     claim_relevant_paths = _installed_state_drift_relevant_changed_paths(changed_paths)
     claim_relevant = bool(claim_relevant_paths) or any(term in task for term in freshness_terms)
-    if status == "compatible":
+    if action_state_name == "no_repair_needed" or status == "compatible":
         triage = "not_applicable"
-    elif force == "required_before_execution":
+    elif action_state_name == "blocking_incompatible" or force == "required_before_execution":
         triage = "claim_blocking"
     elif claim_relevant:
         triage = "actionable_now"
@@ -24898,6 +25058,23 @@ def _installed_state_drift_triage_payload(
         "kind": "agentic-workspace/installed-state-drift-triage/v1",
         "status": triage,
         "installed_state_status": status,
+        "action_state": {
+            key: action_state.get(key)
+            for key in (
+                "kind",
+                "state",
+                "status",
+                "reason",
+                "repair_mechanism",
+                "action_id",
+                "command",
+                "dry_run_command",
+                "apply_command",
+                "safe_to_apply",
+                "mutates_on_start",
+            )
+            if action_state.get(key) not in (None, "", [], {})
+        },
         "force": force,
         "claim_relevant": claim_relevant,
         "claim_relevant_paths": claim_relevant_paths,
@@ -24920,6 +25097,7 @@ def _compact_installed_state_drift_triage(triage: Any) -> dict[str, Any]:
             "kind",
             "status",
             "installed_state_status",
+            "action_state",
             "force",
             "claim_relevant",
             "claim_relevant_paths",
