@@ -880,6 +880,7 @@ def _start_payload(
     task_switch_visible_by_default = isinstance(task_switch, dict) and task_switch.get("status") in {
         "active",
         "bounded-reflection-reporting",
+        "current-task-route-acknowledged",
         "completed-active-plan-route",
     }
     if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default:
@@ -887,6 +888,7 @@ def _start_payload(
     if isinstance(task_switch, dict) and task_switch.get("status") in {
         "active",
         "bounded-reflection-reporting",
+        "current-task-route-acknowledged",
         "completed-active-plan-route",
     }:
         next_packet = task_switch.get("next_action_packet", {})
@@ -896,6 +898,8 @@ def _start_payload(
                 if task_switch.get("status") == "completed-active-plan-route"
                 else ["active-plan claim boundary preserved"]
                 if task_switch.get("status") == "bounded-reflection-reporting"
+                else ["current-task proof", "active-plan claim boundary preserved"]
+                if task_switch.get("status") == "current-task-route-acknowledged"
                 else ["current-task route chosen without claiming active-plan progress"]
             )
             payload["workflow_sufficiency"] = _workflow_sufficiency_payload(

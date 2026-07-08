@@ -726,6 +726,48 @@ def _task_switch_reconciliation_payload(
     }
 
 
+def _acknowledged_current_task_switch_payload(
+    task_switch: dict[str, Any], *, changed_paths: list[str], path_classification: dict[str, Any]
+) -> dict[str, Any]:
+    if task_switch.get("status") != "active" or not changed_paths:
+        return task_switch
+    dirty_shape = str(path_classification.get("dirty_shape") or "")
+    if dirty_shape in {"planning-only", "planning-plus-implementation", "implementation-with-archived-planning-residue"}:
+        return task_switch
+    acknowledged = dict(task_switch)
+    acknowledged["status"] = "current-task-route-acknowledged"
+    acknowledged["intent_conflict_state"] = "current-task-route-acknowledged-active-plan-protected"
+    acknowledged["summary"] = (
+        "Current task route is acknowledged from the changed-path implementation context; continue current-task proof "
+        "without claiming active-plan progress."
+    )
+    acknowledged["recommended_next_action"] = "prove-current-task"
+    acknowledged["next_action_packet"] = {
+        "action": "prove-current-task",
+        "summary": "Continue current-task implementation proof; active-plan progress remains out of scope.",
+        "command": "",
+        "run": None,
+        "risk": "active-plan-protected-current-task",
+        "required_inputs": ["changed paths", "current task", "active plan claim boundary"],
+        "next_proof": "run implement/proof-selected commands for the changed paths; do not claim active-plan progress",
+        "read_first": [],
+        "open_execplan_only_when": "the task mutates active-plan-owned surfaces or needs active plan ownership changed",
+    }
+    acknowledged["route_acknowledgement"] = {
+        "status": "acknowledged",
+        "route": "current-task",
+        "acknowledged_by": "changed-path implementation context",
+        "changed_path_count": len(changed_paths),
+        "claim_boundary": "Current task is intentionally separate; do not claim active-plan progress, completion, or abandonment.",
+        "proof_rule": "Use current-task proof only.",
+    }
+    acknowledged["rule"] = (
+        "Changed-path implementation context can acknowledge the current-task route when planning-owned surfaces are not being "
+        "mutated; active-plan protection still blocks active-plan progress claims."
+    )
+    return acknowledged
+
+
 def _bounded_reflection_reporting_payload(*, task_text: str | None) -> dict[str, Any]:
     text = " ".join((task_text or "").lower().split())
     if not text:
@@ -1077,6 +1119,11 @@ def _planning_safety_gate_payload(
         config=config,
         planning_revision=planning_revision,
     )
+    task_switch_reconciliation = _acknowledged_current_task_switch_payload(
+        task_switch_reconciliation,
+        changed_paths=changed_paths,
+        path_classification=path_classification,
+    )
     closeout_publication_residue = (
         path_classification.get("dirty_shape") == "implementation-with-archived-planning-residue"
         and _as_dict(path_classification.get("archived_planning_residue")).get("status") == "completed-closeout-residue"
@@ -1122,6 +1169,14 @@ def _planning_safety_gate_payload(
             or "Bounded reflection/reporting may proceed while preserving active-plan claim boundaries."
         )
         required_next_action = "produce-bounded-reflection-report"
+        workflow_sufficient = True
+    elif task_switch_reconciliation.get("status") == "current-task-route-acknowledged":
+        status = "satisfied"
+        decision = "current-task-route-acknowledged"
+        reason = str(
+            task_switch_reconciliation.get("summary") or "Current task route is acknowledged; active-plan state remains protected."
+        )
+        required_next_action = "prove-current-task"
         workflow_sufficient = True
     elif task_switch_reconciliation.get("status") == "active":
         status = "attention"

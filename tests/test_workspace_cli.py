@@ -1067,7 +1067,10 @@ candidates = []
     current = payload["current_task_closeout"]
     assert current["status"] == "active"
     assert current["scope"]["relationship"] == "bounded-task-switch"
-    assert current["scope"]["planning_safety_gate"]["gate_result"] == "active-plan-task-switch"
+    assert current["scope"]["planning_safety_gate"]["gate_result"] == "current-task-route-acknowledged"
+    switch = current["scope"]["planning_safety_gate"]["task_switch_reconciliation"]
+    assert switch["status"] == "current-task-route-acknowledged"
+    assert switch["route_acknowledgement"]["status"] == "acknowledged"
     assert current["strict_closeout_gate"]["blocking"] is False
     assert current["strict_closeout_gate"]["current_task_blocking"] is False
     assert current["operating_loop"]["planning"]["state"] == "unrelated_active_plan"

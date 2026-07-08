@@ -444,7 +444,15 @@ candidates = []
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "enough-for-bounded-implementation"
-    assert payload["context"]["planning_safety_gate"]["gate_result"] == "active-plan-task-switch"
+    gate = payload["context"]["planning_safety_gate"]
+    assert gate["gate_result"] == "current-task-route-acknowledged"
+    switch = gate["task_switch_reconciliation"]
+    assert switch["status"] == "current-task-route-acknowledged"
+    assert switch["recommended_next_action"] == "prove-current-task"
+    assert switch["route_acknowledgement"]["status"] == "acknowledged"
+    assert switch["route_acknowledgement"]["route"] == "current-task"
+    assert switch["route_acknowledgement"]["changed_path_count"] == 1
+    assert "claim-active-plan-progress" in switch["blocked_claims"]
     packet = payload["operating_loop"]
     assert packet["verification"]["state"] == "proof_missing"
     assert packet["closeout_state"] == "blocked_missing_proof"
@@ -453,6 +461,56 @@ candidates = []
     assert packet["planning"]["plan_ref"] == ".agentic-workspace/planning/execplans/active-plan.plan.json"
     assert packet["planning"]["blocks_full_closure"] is False
     assert packet["required_before_full_closure"] == ["run_or_refresh_proof"]
+
+
+def test_implement_task_switch_still_warns_for_planning_owned_changes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Unrelated active plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        {"kind": "planning-execplan/v1", "id": "active-plan", "title": "Unrelated active plan"},
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/planning/execplans/active-plan.plan.json",
+                "--task",
+                "Implement issue #3000 parser cache cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning_safety_gate"]
+    assert gate["gate_result"] == "active-plan-task-switch"
+    assert gate["task_switch_reconciliation"]["status"] == "active"
+    assert "route_acknowledgement" not in gate["task_switch_reconciliation"]
 
 
 def test_implement_does_not_require_stale_deleted_test_inventory_sweep(tmp_path: Path, capsys) -> None:
