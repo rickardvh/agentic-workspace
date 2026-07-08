@@ -1,0 +1,306 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Issues 2075 2076 doctor compact output",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement issues #2075 and #2076: make doctor/status default JSON repair-oriented and compact, while moving detailed lifecycle, payload-closure, and compatible provenance-drift diagnostics behind verbose output or selectors.",
+    "hard_constraints": "Keep this slice to doctor/status diagnostic output shape and tests. Do not implement the root AGENTS.md repair command (#2073), local-only adoption flow (#2074), ordinary-command IR migration (#2044), or close parent issue #1969 in this PR.",
+    "agent_may_decide": "Exact compact field names and helper boundaries, provided action-required drift remains visible by default and full detail remains reachable with --verbose or --select.",
+    "escalate_when": "A correct fix requires changing lifecycle mutation semantics, module install/upgrade behavior, or selector contracts outside doctor/status output projection.",
+    "next_action": "Implement the compact doctor/status projection and focused regressions for default, verbose, selector, healthy compatible-drift, and action-required drift paths.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_doctor_status_cli.py tests/test_workspace_cli.py -q",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --select payload_closure_plan,installed_state_compatibility --format json",
+      "uv run python scripts/run_agentic_workspace.py implement --target . --changed src/agentic_workspace/workspace_runtime_core.py src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_doctor_status_cli.py tests/test_workspace_cli.py .agentic-workspace/planning/execplans/issue-2075-2076-doctor-compact.plan.json .agentic-workspace/planning/state.toml --task \"Implement issues #2075 and #2076 doctor compact output\" --format json"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_doctor_status_cli.py",
+      "tests/test_workspace_cli.py",
+      ".agentic-workspace/planning/execplans/issue-2075-2076-doctor-compact.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "completion_criteria": [
+      "Default doctor/status JSON keeps repair fields and compact summaries first and does not repeat full healthy payload/provenance detail.",
+      "Verbose doctor/status JSON still exposes the full lifecycle, installed-state compatibility, and payload-closure diagnostics.",
+      "Selectors can retrieve full installed_state_compatibility and payload_closure_plan even when the default output is compact.",
+      "Action-required payload/provenance drift remains visible in default doctor output with a concrete next action.",
+      "Issues #2075/#2076 are implemented, validated, and routed to a first stacked PR."
+    ],
+    "continuation_owner": "GitHub issues #2073, #2074, #2044, and #1969 remain separate follow-on lanes after this stacked PR.",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Implement #2075/#2076 by making doctor/status default JSON compact and repair-oriented while preserving full detail through --verbose and --select."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement issues #2075 and #2076: compact default doctor/status diagnostics with full detail behind verbose/selectors.",
+      "constraints": "Keep scope bounded to doctor/status output projection and focused tests; leave #2073, #2074, #2044, and #1969 to later stacked lanes.",
+      "latitude": "Choose helper names, summary fields, and exact compact projection mechanics while preserving selector and verbose access.",
+      "escalation": "Escalate if output compaction requires changing lifecycle mutation behavior or broad command contracts."
+    },
+    "execution": {
+      "milestone": "issue-2075-2076-doctor-compact",
+      "status": "active",
+      "next_step": "Implement the compact projection and regressions.",
+      "proof": "Run focused doctor/status tests, live doctor default/selector commands, and AW implement changed-path proof selection."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_doctor_status_cli.py",
+        "tests/test_workspace_cli.py",
+        ".agentic-workspace/planning/execplans/issue-2075-2076-doctor-compact.plan.json",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Implement all open GitHub issues by lane in stacked PRs.",
+    "this slice completes the larger intended outcome": "no; it completes only the doctor-output lane for #2075/#2076.",
+    "continuation surface": "Follow-on stacked lanes for #2073, #2074, #2044, then reassess parent #1969."
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Quieter doctor/status operation and focused repair fields for later workflow lanes.",
+    "intentionally deferred": "#2073 root AGENTS.md repair, #2074 checked-in adoption, #2044 ordinary-command IR/codegen migration, and #1969 parent closeout.",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Implement all open issues, by lane in stacked PRs.",
+    "inferred intended outcome": "Start with the doctor-output lane because #2075 and #2076 share the same diagnostic surface and can be proven together.",
+    "chosen concrete what": "Compact doctor/status default JSON, keep full detail behind --verbose/selectors, and add focused regressions.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_doctor_status_cli.py; tests/test_workspace_cli.py; this execplan; planning state.",
+    "max changed files": "six expected files; stop before adding docs or touching unrelated workflow commands unless proof shows a direct need.",
+    "required validation commands": "Focused pytest for doctor/status CLI tests, live doctor default/selector smoke commands, and AW implement changed-path proof selection.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue #2075/#2076 doctor compact output implementation on branch codex/2075-2076-doctor-compact.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement #2075/#2076 doctor/status compact diagnostics.",
+    "hard constraints": "No mutation semantics changes; no #2073/#2074/#2044 implementation in this slice; no #1969 closure claim.",
+    "agent may decide locally": "Helper extraction, compact summary shape, and focused regression placement.",
+    "escalate when": "Selector compatibility or action-required drift visibility cannot be preserved within doctor/status output projection."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-2075-2076-doctor-compact",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement compact default doctor/status output and regressions for #2075/#2076."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "tests/test_workspace_doctor_status_cli.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/execplans/issue-2075-2076-doctor-compact.plan.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_doctor_status_cli.py tests/test_workspace_cli.py -q",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --select payload_closure_plan,installed_state_compatibility --format json",
+    "uv run python scripts/run_agentic_workspace.py implement --target . --changed src/agentic_workspace/workspace_runtime_core.py src/agentic_workspace/workspace_runtime_primitives.py tests/test_workspace_doctor_status_cli.py tests/test_workspace_cli.py .agentic-workspace/planning/execplans/issue-2075-2076-doctor-compact.plan.json .agentic-workspace/planning/state.toml --task \"Implement issues #2075 and #2076 doctor compact output\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Default doctor/status JSON keeps repair counts, repair_plan, next_action, and compact drift summaries without full healthy diagnostic payloads.",
+    "Verbose output and exact selectors preserve full diagnostic payloads.",
+    "Action-required drift remains visible and concrete in default doctor output.",
+    "Focused tests and live AW smoke commands pass.",
+    "First stacked PR is opened for #2075/#2076."
+  ],
+  "execution_run": {
+    "run status": "proof-complete",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented compact default doctor/status diagnostics with installed_state_summary, payload_closure_summary, diagnostic_detail routes, selector-preserved full payloads, setup internal full-status use, and focused regressions.",
+    "scope touched": "doctor/status runtime projection, runtime primitives mirror, focused CLI tests, active planning state",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_doctor_status_cli.py; tests/test_workspace_cli.py; planning execplan/state",
+    "validations run": "uv run pytest tests/test_workspace_doctor_status_cli.py tests/test_workspace_cli.py -q; live doctor default and selector smoke commands; AW implement changed-path proof selection; make test-workspace; make lint-workspace; AW summary; AW doctor --modules planning; uv run pytest tests/test_workspace_cli.py -q; make typecheck; AW report --section runtime_mirror_consistency",
+    "result for continuation": "Ready to commit, push, and open the first stacked PR for #2075/#2076.",
+    "next step": "Publish the #2075/#2076 stacked PR, then continue with #2073, #2074, #2044, and #1969 follow-on lanes."
+  },
+  "finished_run_review": {
+    "review status": "self-reviewed",
+    "scope respected": "yes; changes stayed within doctor/status output projection, tests, and active planning state",
+    "proof status": "passed",
+    "intent served": "slice served for #2075/#2076; parent all-open-issues intent remains open",
+    "config compliance": "AW startup, active planning, implement changed-path proof, and required validation were used",
+    "misinterpretation risk": "low for this slice; user correction was honored by using current open GitHub issues, not the stale referenced issue stack",
+    "follow-on decision": "continue stacked lanes for #2073, #2074, #2044, then reassess #1969"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "206 passed in focused doctor/status suite; make test-workspace passed; make lint-workspace passed; AW summary passed; AW doctor --modules planning passed with only pre-existing legacy footprint warnings; tests/test_workspace_cli.py passed; make typecheck passed; runtime_mirror_consistency reported in_sync."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement all open issues by lane in stacked PRs; this execplan covers the first #2075/#2076 lane.",
+    "was original intent fully satisfied?": "no; this branch completes the first #2075/#2076 lane only",
+    "evidence of intent satisfaction": "The #2075/#2076 compact doctor/status lane is implemented and proven; remaining open issues are explicitly routed as follow-on lanes.",
+    "unsolved intent passed to": "Follow-on stacked lanes for #2073, #2074, #2044, and #1969 after this PR."
+  },
+  "execution_summary": {
+    "outcome delivered": "#2075/#2076 doctor compact output implementation is ready for PR",
+    "validation confirmed": "passed",
+    "follow-on routed to": "GitHub issues #2073, #2074, #2044, and #1969",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "Doctor/status default output should not repeat full compatible payload/provenance detail when a selector or verbose command can serve it.",
+    "motivation worth preserving": "Keep default diagnostic packets action-first so ordinary agent loops are cheaper and less noisy.",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-08: Scaffolded by agentic-planning new-plan."
+  ]
+}

@@ -315,7 +315,25 @@ def test_doctor_compact_payload_closure_plan_names_full_repair_lane(monkeypatch,
     assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    plan = payload["payload_closure_plan"]
+    assert "payload_closure_plan" not in payload
+    summary = payload["payload_closure_summary"]
+    assert summary["kind"] == "agentic-workspace/payload-closure-summary/v1"
+    assert summary["action_state"] == "no_repair_needed"
+    assert "payload_closure_plan" in payload["diagnostic_detail"]["selectors"]
+    compact_surface_classes = {item["id"]: item for item in summary["surface_statuses"]}
+    assert set(compact_surface_classes) == {
+        "installed_payload",
+        "source_payload_mirrors",
+        "generated_payload_projections",
+        "local_scratch_blockers",
+        "provenance",
+        "proof",
+    }
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json", "--select", "payload_closure_plan"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    plan = selected["values"]["payload_closure_plan"]
     assert plan["kind"] == "agentic-workspace/payload-doctor-closure-plan/v1"
     assert plan["action_state"]["state"] == "no_repair_needed"
     surface_classes = {item["id"]: item for item in plan["surface_classes"]}
@@ -376,7 +394,14 @@ def test_doctor_payload_closure_plan_omits_source_maintainer_proof_for_installed
     assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    plan = payload["payload_closure_plan"]
+    assert "payload_closure_plan" not in payload
+    assert payload["payload_closure_summary"]["action_state"] == "no_repair_needed"
+    assert "payload_closure_plan" in payload["diagnostic_detail"]["selectors"]
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json", "--select", "payload_closure_plan"]) == 0
+
+    selected = json.loads(capsys.readouterr().out)
+    plan = selected["values"]["payload_closure_plan"]
     assert plan["source_checkout"] is False
     surface_classes = {item["id"]: item for item in plan["surface_classes"]}
     assert surface_classes["source_payload_mirrors"]["status"] == "not-source-checkout"
@@ -773,6 +798,28 @@ def test_doctor_select_returns_requested_fields(tmp_path: Path, capsys) -> None:
     assert payload["values"]["warnings_count"] == 0
     assert payload["values"]["next_action"]["action"] == "no-immediate-action"
     assert "available_selectors" not in payload
+
+
+@pytest.mark.parametrize("command", ["status", "doctor"])
+def test_lifecycle_default_output_keeps_payload_diagnostics_compact(tmp_path: Path, capsys, command: str) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+
+    assert cli.main([command, "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert "installed_state_compatibility" not in payload
+    assert "payload_closure_plan" not in payload
+    assert payload["installed_state_summary"]["status"] == "compatible"
+    assert payload["installed_state_summary"]["provenance_drift"] == "none"
+    assert payload["installed_state_summary"]["action_required"] is False
+    assert payload["payload_closure_summary"]["action_state"] == "no_repair_needed"
+    assert "installed_state_compatibility" in payload["diagnostic_detail"]["selectors"]
+    assert "payload_closure_plan" in payload["diagnostic_detail"]["selectors"]
+    assert json.dumps(payload, sort_keys=True).count("provenance_drift") == 1
 
 
 def test_doctor_select_reports_available_fields_for_missing_selector(tmp_path: Path, capsys) -> None:

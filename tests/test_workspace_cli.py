@@ -320,7 +320,14 @@ def test_doctor_requires_adoption_receipt_before_treating_missing_payload_as_hea
     assert payload["health"] == "attention-needed"
     warning_text = "\n".join(payload["warnings"])
     assert ".agentic-workspace/WORKFLOW.md" in warning_text or "payload-provenance.json" in warning_text
-    assert payload["installed_state_compatibility"]["payload"]["provenance_drift"] == "missing-provenance"
+    assert "installed_state_compatibility" not in payload
+    assert payload["installed_state_summary"]["provenance_drift"] == "missing-provenance"
+    assert payload["installed_state_summary"]["action_required"] is True
+    assert "installed_state_compatibility" in payload["diagnostic_detail"]["selectors"]
+
+    assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json", "--select", "installed_state_compatibility"]) == 0
+    selected = json.loads(capsys.readouterr().out)
+    assert selected["values"]["installed_state_compatibility"]["payload"]["provenance_drift"] == "missing-provenance"
 
 
 @pytest.mark.parametrize(
@@ -1797,9 +1804,17 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
 
     assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
     doctor_payload = json.loads(capsys.readouterr().out)
-    assert doctor_payload["installed_state_compatibility"]["payload"]["target"]["status"] == "target-mismatch"
-    assert doctor_payload["installed_state_compatibility"]["action_effect"]["force"] == "required_before_execution"
-    assert doctor_payload["installed_state_compatibility"]["payload_upgrade_attention_plan"]["status"] == attention_plan["status"]
+    assert "installed_state_compatibility" not in doctor_payload
+    assert doctor_payload["installed_state_summary"]["target_status"] == "target-mismatch"
+    assert doctor_payload["installed_state_summary"]["action_effect"]["force"] == "required_before_execution"
+    assert doctor_payload["installed_state_summary"]["action_required"] is True
+    assert "installed_state_compatibility" in doctor_payload["diagnostic_detail"]["selectors"]
+
+    assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json", "--select", "installed_state_compatibility"]) == 0
+    selected_doctor = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    assert selected_doctor["payload"]["target"]["status"] == "target-mismatch"
+    assert selected_doctor["action_effect"]["force"] == "required_before_execution"
+    assert selected_doctor["payload_upgrade_attention_plan"]["status"] == attention_plan["status"]
 
     assert (
         cli.main(
