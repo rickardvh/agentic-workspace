@@ -22,4 +22,9 @@ Inventory proving whether generated Python runtime projection files are rendered
 | `accepted_runtime_boundaries.status` | enum `"exact-symbol-proof-required"`, `"exact-symbol-proof-satisfied"` | yes |  | Whether exact symbol-level proof is still required or satisfied. |  |  |
 | `accepted_runtime_boundaries.baseline_symbols` | array of string | yes |  | Exact accepted runtime boundary symbol ids captured before the #1079 reduction slices so reports can show added and removed accepted runtime symbols. |  |  |
 | `accepted_runtime_boundaries.entries` | array of ref `#/$defs/accepted_runtime_boundary` | yes |  | Exact source-symbol package-domain runtime boundaries. |  |  |
+| `ordinary_command_migration` | object | yes |  | Representative ordinary command behavior that has moved behind command-package IR/codegen, plus the remaining runtime primitive boundary. |  |  |
+| `ordinary_command_migration.kind` | const `"agentic-workspace/ordinary-command-migration/v1"` | yes |  | Stable document kind for the ordinary-command migration proof section. |  |  |
+| `ordinary_command_migration.status` | enum `"representative-slice-present"`, `"missing-representative-slice"` | yes |  | Whether the inventory includes at least one ordinary command migration representative. |  |  |
+| `ordinary_command_migration.rule` | string | yes |  | Rule for proving migrated ordinary command behavior is IR/codegen-owned and fail-closed. |  |  |
+| `ordinary_command_migration.representative_migrations` | array of ref `#/$defs/ordinary_command_migration` | yes |  | Representative ordinary command migrations that prove the IR/codegen ownership boundary. |  |  |
 | `entries` | array of ref `#/$defs/entry` | yes |  | Runtime projection files that must be accounted for before Python generated CLI completion can be claimed. |  |  |

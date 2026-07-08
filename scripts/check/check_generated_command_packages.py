@@ -2050,6 +2050,100 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
     return errors, accepted_nonblocking_paths
 
 
+def _find_command_adapter(payload: object, *, adapter_id: str) -> dict[str, object] | None:
+    if isinstance(payload, dict):
+        if payload.get("adapter_id") == adapter_id:
+            return payload
+        for value in payload.values():
+            found = _find_command_adapter(value, adapter_id=adapter_id)
+            if found is not None:
+                return found
+    elif isinstance(payload, list):
+        for item in payload:
+            found = _find_command_adapter(item, adapter_id=adapter_id)
+            if found is not None:
+                return found
+    return None
+
+
+def _validate_ordinary_command_migration_inventory() -> list[str]:
+    errors: list[str] = []
+    try:
+        inventory = python_runtime_projection_inventory_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return [f"python_runtime_projection_inventory.json is missing or invalid: {exc}"]
+    migration = inventory.get("ordinary_command_migration", {})
+    if not isinstance(migration, dict):
+        return ["python_runtime_projection_inventory.json missing ordinary_command_migration"]
+    if migration.get("status") != "representative-slice-present":
+        errors.append("python_runtime_projection_inventory.json ordinary_command_migration must be representative-slice-present")
+    records = migration.get("representative_migrations", [])
+    if not isinstance(records, list) or not records:
+        return [*errors, "python_runtime_projection_inventory.json ordinary_command_migration representative_migrations is empty"]
+    ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+    accepted = inventory.get("accepted_runtime_boundaries", {})
+    boundary_entries = accepted.get("entries", []) if isinstance(accepted, dict) else []
+    boundary_index = {
+        (str(entry.get("source_module", "")), str(entry.get("source_symbol", ""))): entry
+        for entry in boundary_entries
+        if isinstance(entry, dict)
+    }
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            errors.append(f"ordinary_command_migration.representative_migrations[{index}] must be an object")
+            continue
+        location = f"ordinary_command_migration.representative_migrations[{index}]"
+        operation_id = str(record.get("operation_id", ""))
+        adapter_id = str(record.get("adapter_id", ""))
+        adapter = _find_command_adapter(ir, adapter_id=adapter_id)
+        if adapter is None:
+            errors.append(f"{location} adapter_id {adapter_id!r} is not present in command_package_ir.json")
+            continue
+        operation_ref = adapter.get("operation_ref", {})
+        if not isinstance(operation_ref, dict) or operation_ref.get("id") != operation_id:
+            errors.append(f"{location} adapter {adapter_id!r} must reference operation_id {operation_id!r}")
+        runtime_binding = adapter.get("runtime_binding", {})
+        primitive_refs = runtime_binding.get("primitive_refs", []) if isinstance(runtime_binding, dict) else []
+        migrated_fields = set(record.get("migrated_behavior_fields", [])) if isinstance(record.get("migrated_behavior_fields"), list) else set()
+        for required_field in ("command identity", "option schema", "effect hints", "primitive refs", "generated Python command module"):
+            if required_field not in migrated_fields:
+                errors.append(f"{location} migrated_behavior_fields must include {required_field!r}")
+        if not primitive_refs:
+            errors.append(f"{location} adapter {adapter_id!r} must have primitive_refs in command_package_ir.json")
+        generated_command = REPO_ROOT / str(record.get("generated_command_module", ""))
+        if not generated_command.is_file():
+            errors.append(f"{location} generated_command_module {record.get('generated_command_module')!r} does not exist")
+        else:
+            command_text = generated_command.read_text(encoding="utf-8")
+            if f"Operation: {operation_id}" not in command_text or "DO NOT EDIT DIRECTLY" not in command_text:
+                errors.append(f"{location} generated command module must name operation {operation_id!r} and reject direct edits")
+        generated_operation = REPO_ROOT / str(record.get("generated_operation_path", ""))
+        if not generated_operation.is_file():
+            errors.append(f"{location} generated_operation_path {record.get('generated_operation_path')!r} does not exist")
+        else:
+            try:
+                generated_operation_payload = json.loads(generated_operation.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                errors.append(f"{location} generated operation JSON is invalid: {exc}")
+            else:
+                if generated_operation_payload.get("id") != operation_id:
+                    errors.append(f"{location} generated operation must have id {operation_id!r}")
+        boundary = record.get("remaining_runtime_boundary", {})
+        if not isinstance(boundary, dict):
+            errors.append(f"{location} remaining_runtime_boundary must be an object")
+            continue
+        boundary_key = (str(boundary.get("source_module", "")), str(boundary.get("source_symbol", "")))
+        accepted_entry = boundary_index.get(boundary_key)
+        if accepted_entry is None:
+            errors.append(f"{location} remaining_runtime_boundary {boundary_key!r} is not accepted at source-symbol granularity")
+            continue
+        if accepted_entry.get("runtime_boundary_class") != boundary.get("runtime_boundary_class"):
+            errors.append(f"{location} remaining runtime boundary class must match accepted_runtime_boundaries")
+        if operation_id not in set(accepted_entry.get("operation_ids", [])):
+            errors.append(f"{location} remaining runtime boundary must name operation_id {operation_id!r}")
+    return errors
+
+
 def _validate_python_completion_output_boundary_audit(entry: dict[str, object], *, location: str) -> list[str]:
     source_symbol = str(entry.get("source_symbol", ""))
     if "emit" not in source_symbol:
@@ -4944,6 +5038,7 @@ def _validate_static_surfaces() -> list[str]:
                     full_completion=python_cli_completion.get("current_state") == "full-generated-cli-complete",
                 )
             )
+            errors.extend(_validate_ordinary_command_migration_inventory())
         errors.extend(_validate_python_operation_execution_inventory(ir))
         errors.extend(_validate_retired_command_generation_primitive_usage_inventory())
         errors.extend(_validate_generated_command_check_inventory_removals())
@@ -5327,6 +5422,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     blockers.extend(_validate_full_python_completion_runtime_ownership(forced_full_ir))
     blockers.extend(_validate_full_python_completion_executable_ownership(forced_full_ir))
     blockers.extend(_validate_python_runtime_projection_inventory(full_completion=True))
+    blockers.extend(_validate_ordinary_command_migration_inventory())
     blockers.extend(_validate_python_operation_execution_inventory(forced_full_ir))
     blockers.extend(_validate_lifecycle_dry_run_generation())
     blockers.extend(_validate_declarative_view_specs())

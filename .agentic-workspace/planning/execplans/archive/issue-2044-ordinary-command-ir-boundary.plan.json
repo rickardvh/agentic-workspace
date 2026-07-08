@@ -1,0 +1,394 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Issue 2044 ordinary-command IR boundary",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement a first #2044 slice that makes one ordinary command migration explicitly IR/codegen-owned and fail-closed.",
+    "hard_constraints": "Keep scope bounded to runtime projection inventory contracts, generated-command package checker validation, focused checker tests, and planning state.",
+    "agent_may_decide": "Representative command selection, exact inventory field names, checker validation shape, and focused test placement.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Validate the planning.closeout representative migration against command-package IR, generated Python command/operation files, and exact runtime boundary metadata.",
+    "proof_expectations": [
+      "uv run pytest tests/test_generated_command_package_proof_runner.py -q",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "uv run ruff check scripts/check/check_generated_command_packages.py tests/test_generated_command_package_proof_runner.py",
+      "make schema-reference-docs",
+      "make test-workspace",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+      "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+      "scripts/check/check_generated_command_packages.py",
+      "tests/test_generated_command_package_proof_runner.py",
+      "docs/reference/python-runtime-projection-inventory.md",
+      ".agentic-workspace/planning/execplans/issue-2044-ordinary-command-ir-boundary.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "completion_criteria": [
+      "The runtime projection inventory names a representative ordinary command migration and the remaining runtime primitive boundary.",
+      "The generated-command package checker fails closed if the representative generated command, generated operation, IR adapter, or accepted runtime boundary drift.",
+      "Focused tests cover current validity and failure when generated command evidence is missing."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Make a representative ordinary command migration explicitly IR/codegen-owned and fail-closed."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Make a representative ordinary command migration explicitly IR/codegen-owned and fail-closed.",
+      "constraints": "Keep scope bounded to runtime projection inventory contracts, generated-command package checker validation, focused checker tests, and planning state.",
+      "latitude": "Representative command selection, exact inventory field names, checker validation shape, and focused test placement.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "passed"
+    },
+    "execution": {
+      "milestone": "issue-2044-ordinary-command-ir-boundary",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+        "scripts/check/check_generated_command_packages.py",
+        "tests/test_generated_command_package_proof_runner.py",
+        "docs/reference/python-runtime-projection-inventory.md",
+        ".agentic-workspace/planning/execplans/issue-2044-ordinary-command-ir-boundary.plan.json",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Move ordinary Agentic Workspace command behavior authority behind IR/codegen so runtime-owned code is limited to named primitives.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "A representative ordinary command can now prove which behavior is IR/codegen-owned and which exact runtime boundary remains.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "none for this slice",
+    "next likely slice": "none"
+  },
+  "intent_interpretation": {
+    "literal request": "Issue 2044 ordinary-command IR boundary",
+    "inferred intended outcome": "Make a representative ordinary command migration explicitly IR/codegen-owned and fail-closed.",
+    "chosen concrete what": "Add inventory metadata and checker enforcement for planning.closeout.lifecycle as the representative migrated ordinary command path.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Runtime projection inventory schema/data, generated command package checker, focused checker tests, and planning state.",
+    "max changed files": "About 6 files.",
+    "required validation commands": "uv run pytest tests/test_generated_command_package_proof_runner.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check scripts/check/check_generated_command_packages.py tests/test_generated_command_package_proof_runner.py; make schema-reference-docs; make test-workspace; make lint-workspace.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue #2044 by validating ordinary_command_migration metadata and checker enforcement for planning.closeout.lifecycle.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make a representative ordinary command migration explicitly IR/codegen-owned and fail-closed.",
+    "hard constraints": "Keep scope bounded to runtime projection inventory contracts, generated-command package checker validation, focused checker tests, and planning state.",
+    "agent may decide locally": "Representative command selection, exact inventory field names, checker validation shape, and focused test placement.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-2044-ordinary-command-ir-boundary",
+    "status": "completed",
+    "scope": "Representative ordinary-command migration inventory and fail-closed checker for #2044.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run focused validation for the ordinary-command migration inventory checker."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+    "src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json",
+    "scripts/check/check_generated_command_packages.py",
+    "tests/test_generated_command_package_proof_runner.py",
+    "docs/reference/python-runtime-projection-inventory.md",
+    ".agentic-workspace/planning/execplans/issue-2044-ordinary-command-ir-boundary.plan.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_generated_command_package_proof_runner.py -q",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run ruff check scripts/check/check_generated_command_packages.py tests/test_generated_command_package_proof_runner.py",
+    "make schema-reference-docs",
+    "make test-workspace",
+    "make lint-workspace"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "The runtime projection inventory names a representative ordinary command migration and the remaining runtime primitive boundary.",
+    "The generated-command package checker fails closed if the representative generated command, generated operation, IR adapter, or accepted runtime boundary drift.",
+    "Focused tests cover current validity and failure when generated command evidence is missing."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added ordinary_command_migration contract metadata for planning.closeout.lifecycle, checker enforcement that cross-checks the IR adapter, generated command module, generated operation contract, and accepted runtime boundary, plus focused positive and fail-closed tests.",
+    "scope touched": "Runtime projection inventory schema/data, generated-command package checker, focused checker tests, rendered schema reference docs, and planning state.",
+    "changed surfaces": "src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; docs/reference/python-runtime-projection-inventory.md; planning closeout state.",
+    "validations run": "uv run pytest tests/test_generated_command_package_proof_runner.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check scripts/check/check_generated_command_packages.py tests/test_generated_command_package_proof_runner.py; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run python scripts/check/run_operation_conformance_tests.py --target all; make schema-reference-docs; make test-workspace; make lint-workspace.",
+    "result for continuation": "No continuation required for the #2044 slice.",
+    "next step": "Archive and close the plan item."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Passed: uv run pytest tests/test_generated_command_package_proof_runner.py -q; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run ruff check scripts/check/check_generated_command_packages.py tests/test_generated_command_package_proof_runner.py; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; uv run python scripts/check/run_operation_conformance_tests.py --target all; make schema-reference-docs; make test-workspace; make lint-workspace. Doctor exited 0 with inherited checked-in payload reduction advisory."
+  },
+  "intent_satisfaction": {
+    "original intent": "Make a representative ordinary command migration explicitly IR/codegen-owned and fail-closed.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The inventory names planning.closeout.lifecycle as the representative migrated ordinary command, records its command-package IR source, generated command module, generated operation path, migrated behavior fields, and remaining runtime boundary. The checker now fails closed when those surfaces drift, including missing generated command evidence.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Representative ordinary-command migration boundary proof and fail-closed checker enforcement for #2044.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "plan closeout",
+    "resume from": "none",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "This was an issue-specific implementation with no new durable operating rule beyond existing contract/check surfaces.",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "high",
+    "needs review": false,
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The issue requested a representative ordinary command migration behind IR/codegen, not a full migration of every command. The implemented representative is contract-recorded and fail-closed by generated-command package checks.",
+    "evidence carried forward": "Runtime projection inventory ordinary_command_migration section plus generated-command package checker tests.",
+    "reopen trigger": "Reopen if ordinary_command_migration metadata can drift from command_package_ir, generated command modules, generated operation contracts, or accepted runtime boundaries without check failure."
+  },
+  "improvement_signal_review": {
+    "status": "signals_fixed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "schema-reference-docs caught missing descriptions for the new schema section and stale rendered reference docs during closeout validation."
+    ],
+    "signals fixed": [
+      "Added missing schema descriptions and regenerated docs/reference/python-runtime-projection-inventory.md."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Added missing schema descriptions and regenerated docs/reference/python-runtime-projection-inventory.md.",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-08: Scaffolded by agentic-planning new-plan.",
+    "2026-07-08: Completed representative ordinary-command migration boundary proof for planning.closeout.lifecycle and fixed schema reference documentation surfaced by validation."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Make a representative ordinary command migration explicitly IR/codegen-owned and fail-closed.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: passed\nChanged surfaces: src/agentic_workspace/contracts/python_runtime_projection_inventory.json; src/agentic_workspace/contracts/schemas/python_runtime_projection_inventory.schema.json; scripts/check/check_generated_command_packages.py; tests/test_generated_command_package_proof_runner.py; docs/reference/python-runtime-projection-inventory.md; planning closeout state.\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}

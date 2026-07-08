@@ -399,6 +399,26 @@ def test_full_python_completion_rejects_weak_output_boundary_audit() -> None:
     assert any("output-emission boundary audit must include 'generated-owned output coverage:'" in error for error in errors)
 
 
+def test_ordinary_command_migration_inventory_is_current() -> None:
+    checker = _load_checker()
+
+    assert checker._validate_ordinary_command_migration_inventory() == []
+
+
+def test_ordinary_command_migration_inventory_fails_closed_when_generated_command_missing() -> None:
+    errors = _checker_case_errors(
+        """
+        inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+        migration = inventory["ordinary_command_migration"]["representative_migrations"][0]
+        migration["generated_command_module"] = "generated/planning/python/commands/missing_closeout.py"
+        checker.python_runtime_projection_inventory_manifest = lambda: inventory
+        _emit({"errors": checker._validate_ordinary_command_migration_inventory()})
+        """
+    )
+
+    assert any("generated_command_module" in error and "does not exist" in error for error in errors)
+
+
 def test_current_python_completion_state_is_satisfied_by_exact_symbol_proof() -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
