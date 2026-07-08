@@ -4116,6 +4116,57 @@ def test_start_uses_retrofit_repair_command_for_missing_implementation_owner(tmp
     assert repair_route["work_context"] == "already-started-continuation-or-review-repair"
 
 
+def test_implement_allows_bounded_pr_comment_repair_without_active_plan_owner(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "runtime.py", "VALUE = 1\n")
+    archive_path = ".agentic-workspace/planning/execplans/archive/open-slice.plan.json"
+    _write(
+        tmp_path / archive_path,
+        json.dumps(
+            {
+                "schema_version": "execplan/v1",
+                "id": "open-slice",
+                "status": "completed",
+                "intent_satisfaction": {"was original intent fully satisfied?": "no"},
+                "closure_check": {
+                    "larger-intent status": "open",
+                    "closure decision": "archive-but-keep-lane-open",
+                },
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/runtime.py",
+                archive_path,
+                "--task",
+                "Address PR review comments on #2061",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["planning_safety_gate"]
+    assert gate["status"] == "attention"
+    assert gate["gate_result"] == "bounded-pr-comment-repair"
+    assert gate["implementation_allowed"] is True
+    assert gate["repair_route"]["status"] == "retired"
+    assert gate["pr_comment_repair_context"]["status"] == "active"
+    assert gate["pr_comment_repair_context"]["claim_class"] == "pr_feedback_addressed"
+    assert gate["changed_path_facts"]["dirty_shape"] == "planning-plus-implementation"
+
+
 def test_implement_blocks_epic_work_with_multiple_roadmap_candidates(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(

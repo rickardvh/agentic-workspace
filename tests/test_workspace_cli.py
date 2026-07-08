@@ -898,6 +898,46 @@ candidates = []
     assert "completion_gate" not in claim_slice["blocking_fields"]
 
 
+def test_closeout_trust_scopes_pr_comment_repair_to_feedback_claim(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_primitives.py", "VALUE = 1\n")
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "closeout_trust",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_primitives.py",
+                "--task",
+                "Address PR review comments",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    current = payload["current_task_closeout"]
+    assert current["status"] == "active"
+    assert current["scope"]["relationship"] == "bounded-pr-comment-repair"
+    assert "does not authorize issue, lane, parent, or full-intent completion" in current["scope"]["rule"]
+    claim_feedback = next(option for option in current["completion_options"] if option["id"] == "claim-slice-complete")
+    assert claim_feedback["required_claim_class"] == "pr_feedback_addressed"
+    assert claim_feedback["bounded_claim_class"] == "pr_feedback_addressed"
+    assert "PR feedback-addressed claim" in claim_feedback["why"]
+    claim_work = next(option for option in current["completion_options"] if option["id"] == "claim-work-complete")
+    close_parent = next(option for option in current["completion_options"] if option["id"] == "close-parent-lane")
+    assert claim_work["allowed"] is False
+    assert close_parent["allowed"] is False
+
+
 def test_verbose_aliases_full_diagnostic_output_for_major_workspace_commands(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     (tmp_path / "README.md").write_text("# Fixture\n", encoding="utf-8")
