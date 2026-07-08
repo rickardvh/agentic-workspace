@@ -111,6 +111,36 @@ def test_root_startup_pointer_repair_preserves_repo_content_and_clears_doctor_wa
     assert not any(action["id"] == "restore-root-startup-pointer-fence" for action in after_doctor["repair_actions"])
 
 
+def test_root_startup_pointer_repair_does_not_create_missing_startup_entrypoint(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    agents_path = target / "AGENTS.md"
+    agents_path.unlink()
+
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    doctor_payload = json.loads(capsys.readouterr().out)
+    workspace_report = next(report for report in doctor_payload["reports"] if report["module"] == "workspace")
+    assert not any(action["id"] == "restore-root-startup-pointer-fence" for action in workspace_report["repair_actions"])
+    manual = next(action for action in workspace_report["manual_review_actions"] if action["id"] == "restore-startup-entrypoint-manually")
+    assert manual["safe_to_apply"] is False
+    assert manual["affected_surfaces"] == ["AGENTS.md"]
+    assert "startup files are repo-owned authority surfaces" in manual["risk"]
+
+    assert cli.main(["upgrade", "--target", str(target), "--repair-root-startup-pointer", "--format", "json"]) == 0
+    repair_payload = json.loads(capsys.readouterr().out)
+    assert not agents_path.exists()
+    assert repair_payload["repair_mode"] == "root-startup-pointer"
+    assert repair_payload["health"] == "attention-needed"
+    assert repair_payload["updated_managed"] == []
+    assert repair_payload["warnings"] == [
+        "AGENTS.md: configured root startup entrypoint missing; scoped fence repair does not create repo-owned startup files"
+    ]
+
+
 def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

@@ -444,7 +444,7 @@ def _git_source_identity(root: Path | None) -> str:
     try:
         head_text = head_path.read_text(encoding="utf-8").strip()
     except OSError:
-        return root.as_posix()
+        return f"path:{root.name}"
     if head_text.startswith("ref:"):
         ref = head_text.split(":", 1)[1].strip()
         try:
@@ -453,7 +453,7 @@ def _git_source_identity(root: Path | None) -> str:
             revision = ""
     else:
         revision = head_text
-    return f"git:{revision[:12]}" if revision else root.as_posix()
+    return f"git:{revision[:12]}" if revision else f"path:{root.name}"
 
 
 def _portable_path_identity(path_value: Any, *, target_root: Path | None = None) -> str:
