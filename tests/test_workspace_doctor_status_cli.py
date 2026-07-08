@@ -590,6 +590,24 @@ def test_doctor_json_exposes_standardised_summary_fields(monkeypatch, tmp_path: 
         cli._workspace_managed_agent_instructions_text(config=cli.config_lib.load_workspace_config(target_root=tmp_path)),
         encoding="utf-8",
     )
+    _write(
+        tmp_path / ".agentic-workspace" / "adoption-receipt.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace/adoption-receipt/v1",
+                "checked_in_rule": "necessary-surfaces-only",
+                "adopted_state": [],
+                "omitted_package_payload": [],
+                "local_only": [],
+                "payload_mirror": True,
+                "recheck_command": "agentic-workspace doctor --target . --format json",
+                "rule": "Test fixture declares explicit mirror intent so doctor has no bootstrap-footprint migration warning.",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+    )
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(tmp_path, calls))
 
     assert cli.main(["doctor", "--verbose", "--modules", "planning,memory", "--target", str(tmp_path), "--format", "json"]) == 0

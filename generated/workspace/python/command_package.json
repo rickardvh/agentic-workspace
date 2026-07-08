@@ -5094,6 +5094,14 @@
             ],
             "help": "Read [payload] from repo config and sync managed payload/provenance to the declared target.",
             "name": "to_payload_target"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--to-necessary-surfaces"
+            ],
+            "help": "Migrate legacy checked-in AW package payload to necessary repo surfaces while preserving durable Planning, Memory, and Verification state.",
+            "name": "to_necessary_surfaces"
           }
         ]
       },

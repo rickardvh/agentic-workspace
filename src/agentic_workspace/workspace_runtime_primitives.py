@@ -11089,6 +11089,18 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "immediately before final messages, PR readiness, issue closure, or closeout handoff",
     },
     {
+        "section": "local_footprint",
+        "kind": "agentic-workspace/local-footprint/v1",
+        "purpose": "tracked-vs-ignored AW footprint, local scratch retention, budgets, and largest local offenders",
+        "when_to_use": "when .agentic-workspace size, local scratch growth, or cleanup routing needs diagnosis",
+    },
+    {
+        "section": "bootstrap_footprint",
+        "kind": "agentic-workspace/necessary-surface-migration/v1",
+        "purpose": "legacy checked-in AW payload reduction plan with preserve/remove/write actions and mirror-intent guard",
+        "when_to_use": "when a repo has historical checked-in AW package payload and should converge to necessary surfaces",
+    },
+    {
         "section": "workflow_compliance_summary",
         "kind": "agentic-workspace/workflow-compliance-summary/v1",
         "purpose": ("review/recovery summary of expected entrypoint, observed workflow use, gates, trust impact, and recovery action"),
@@ -13549,6 +13561,15 @@ def _run_lazy_report_section_command(
 
     if normalized == "local_footprint":
         payload["local_footprint"] = _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "bootstrap_footprint":
+        payload["bootstrap_footprint"] = _workspace_runtime_core._necessary_surfaces_migration_payload(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            config=config,
+            dry_run=True,
+        )
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "local_overlay":
@@ -39413,6 +39434,31 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
+    if command_name == "upgrade" and bool(getattr(args, "to_necessary_surfaces", False)):
+        migration = _workspace_runtime_core._necessary_surfaces_migration_payload(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            config=config,
+            dry_run=bool(getattr(args, "dry_run", False)),
+        )
+        report = _workspace_report(
+            target_root=target_root,
+            message="Necessary surface migration",
+            dry_run=bool(getattr(args, "dry_run", False)),
+            actions=cast(list[dict[str, str]], migration.get("actions", [])),
+            warnings=cast(list[dict[str, str]], migration.get("warnings", [])),
+        )
+        summary = _summarise_reports(target_root=target_root, reports=[report], descriptors={}, command_name="upgrade")
+        payload = {
+            "kind": "agentic-workspace/necessary-surface-migration-command/v1",
+            "command": "upgrade",
+            "dry_run": bool(getattr(args, "dry_run", False)),
+            "migration": migration,
+            "reports": [report],
+            **summary,
+        }
         _emit_payload(payload=payload, format_name=args.format)
         return 0
     payload = _run_lifecycle_command(

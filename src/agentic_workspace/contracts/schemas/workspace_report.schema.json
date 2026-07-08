@@ -284,6 +284,11 @@
       "description": "Tracked-vs-ignored AW footprint, local scratch retention budgets, largest offenders, and cleanup routing.",
       "additionalProperties": true
     },
+    "bootstrap_footprint": {
+      "type": "object",
+      "description": "Legacy checked-in AW payload migration plan with preserve/remove/write actions, durable state preservation, and explicit mirror-intent guard.",
+      "additionalProperties": true
+    },
     "stale_cleanup": {
       "type": "object",
       "description": "Cleanup routing for stale local and checked-in planning surfaces.",

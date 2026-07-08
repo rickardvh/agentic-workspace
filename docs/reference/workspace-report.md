@@ -181,6 +181,7 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `architecture_principles` | object | yes |  | Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths. |  |  |
 | `local_aw_state` | object | yes |  | Compact ownership-aware status for tracked, ignored, local-only, cache, payload, policy, and proof AW surfaces. |  |  |
 | `local_footprint` | object | yes |  | Tracked-vs-ignored AW footprint, local scratch retention budgets, largest offenders, and cleanup routing. |  |  |
+| `bootstrap_footprint` | object | no |  | Legacy checked-in AW payload migration plan with preserve/remove/write actions, durable state preservation, and explicit mirror-intent guard. |  |  |
 | `stale_cleanup` | object | no |  | Cleanup routing for stale local and checked-in planning surfaces. |  |  |
 | `workflow_obligations` | object | yes |  | Repo-configured workflow obligations surfaced for report consumers. |  |  |
 | `workflow_obligation_effects` | array of object | no |  | Evaluated behavior and closeout effects for configured workflow obligations. |  |  |
