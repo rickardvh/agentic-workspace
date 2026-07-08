@@ -17125,9 +17125,9 @@ def _operating_loop_planning_state(
         }
     task_switch = _as_dict(gate.get("task_switch_reconciliation"))
     if (
-        str(gate.get("gate_result") or "") == "active-plan-task-switch"
+        str(gate.get("gate_result") or "") in {"active-plan-task-switch", "current-task-route-acknowledged"}
         and gate.get("workflow_sufficient") is True
-        and str(task_switch.get("status") or "") == "active"
+        and str(task_switch.get("status") or "") in {"active", "current-task-route-acknowledged"}
     ):
         return {"state": "unrelated_active_plan", "plan_ref": plan_ref, "blocks_full_closure": False}
     if str(reliance.get("status") or "") not in {"", "no-active-plan", "not-applicable", "clear", "satisfied"}:
@@ -20476,9 +20476,9 @@ def _report_closeout_trust_payload(
         )
         task_switch = _as_dict(planning_safety_gate.get("task_switch_reconciliation"))
         if (
-            str(planning_safety_gate.get("gate_result") or "") != "active-plan-task-switch"
+            str(planning_safety_gate.get("gate_result") or "") not in {"active-plan-task-switch", "current-task-route-acknowledged"}
             or planning_safety_gate.get("workflow_sufficient") is not True
-            or str(task_switch.get("status") or "") != "active"
+            or str(task_switch.get("status") or "") not in {"active", "current-task-route-acknowledged"}
         ):
             return {
                 "kind": "agentic-workspace/current-task-closeout-scope/v1",
@@ -26372,6 +26372,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
     task_switch = gate.get("task_switch_reconciliation")
     compact_route = isinstance(task_switch, dict) and task_switch.get("status") in {
         "bounded-reflection-reporting",
+        "current-task-route-acknowledged",
         "completed-active-plan-route",
     }
     compact: dict[str, Any] = {
@@ -26428,6 +26429,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
     if isinstance(task_switch, dict) and task_switch.get("status") in {
         "active",
         "bounded-reflection-reporting",
+        "current-task-route-acknowledged",
         "completed-active-plan-route",
     }:
         safe_routes = [
@@ -26446,6 +26448,13 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             "blocked_claims": active_plan_protection.get("blocked_claims", []),
             "detail_selector": "planning_safety_gate.task_switch_reconciliation",
         }
+        route_acknowledgement = _as_dict(task_switch.get("route_acknowledgement"))
+        if route_acknowledgement:
+            compact_switch["route_acknowledgement"] = {
+                key: route_acknowledgement.get(key)
+                for key in ("status", "route", "changed_path_count", "claim_boundary", "proof_rule")
+                if route_acknowledgement.get(key) not in (None, "", [], {})
+            }
         if active_plan_protection.get("claim_boundary"):
             compact_switch["claim_boundary"] = _task_excerpt(str(active_plan_protection.get("claim_boundary") or ""), limit=180)
         completed_plan = _as_dict(task_switch.get("completed_active_plan"))
