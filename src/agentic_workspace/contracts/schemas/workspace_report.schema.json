@@ -1432,6 +1432,19 @@
               "type": "string",
               "description": "Resolved apply sync command for safe package-owned repair."
             },
+            "recheck_command": {
+              "type": "string",
+              "description": "Command that rechecks installed-state compatibility after the repair command runs."
+            },
+            "policy": {
+              "type": "string",
+              "description": "Repo-declared payload target policy that influenced this action state, when applicable."
+            },
+            "payload_target": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Repo-declared payload target status used for this action state, when applicable."
+            },
             "safe_to_apply": {
               "type": "boolean",
               "description": "Whether the action is bounded to package-owned sync surfaces."

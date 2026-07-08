@@ -2672,6 +2672,14 @@
           ],
           "action": "store_true",
           "help": "Refresh only the workspace-managed .agentic-workspace local agent instructions file."
+        },
+        {
+          "name": "to_payload_target",
+          "flags": [
+            "--to-payload-target"
+          ],
+          "action": "store_true",
+          "help": "Read [payload] from repo config and sync managed payload/provenance to the declared target."
         }
       ],
       "role": "core_lifecycle",

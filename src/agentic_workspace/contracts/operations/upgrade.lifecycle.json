@@ -38,6 +38,11 @@
       "required": false
     },
     {
+      "name": "to_payload_target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false

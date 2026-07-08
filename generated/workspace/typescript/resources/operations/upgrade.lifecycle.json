@@ -48,6 +48,11 @@
       "source": "cli-option"
     },
     {
+      "name": "to_payload_target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "format",
       "required": false,
       "source": "cli-option"

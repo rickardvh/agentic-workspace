@@ -896,6 +896,55 @@
       },
       "additionalProperties": true
     },
+    "payload": {
+      "description": "Repo-owned installed payload target policy. Use this when the checked-in payload must be kept aligned with a release or source-checkout capability target independent of the CLI install location.",
+      "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "maintainer",
+      "x-agentic-workspace-unknown-properties": "warn",
+      "properties": {
+        "target_release": {
+          "description": "Desired checked-in Agentic Workspace payload release. Use source-current for source-checkout dogfooding.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "0.24.0",
+            "source-current"
+          ]
+        },
+        "minimum_capabilities": {
+          "description": "Payload capabilities that must be present in checked-in payload provenance before the target is satisfied.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One required payload capability."
+          },
+          "uniqueItems": true,
+          "default": [],
+          "examples": [
+            [
+              "installed-state-sync-v2"
+            ]
+          ]
+        },
+        "policy": {
+          "description": "How strongly startup should gate work when the installed payload does not satisfy the repo-declared target.",
+          "enum": [
+            "advisory",
+            "required-before-claim",
+            "required-before-work"
+          ],
+          "default": "advisory"
+        },
+        "dogfood_latest": {
+          "description": "For the Agentic Workspace source repo, require the checked-in payload to track the latest source-checkout payload before ordinary work.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": true
+    },
     "cli_compatibility": {
       "description": "Expected CLI identity and posture for commands executed in this repo.",
       "type": "object",

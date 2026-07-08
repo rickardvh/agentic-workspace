@@ -1143,6 +1143,12 @@ def _start_payload(
         or task_posture_packet.get("dogfooding_obligations")
     ) and _task_posture_packet_changes_routing(task_posture_packet):
         payload["task_posture_packet"] = task_posture_packet
+    _apply_required_payload_target_start_gate(
+        payload=payload,
+        target_root=target_root,
+        config=config,
+        startup_template=startup_template,
+    )
     if profile == "tiny":
         payload["routine_work_context"] = _routine_work_context_payload(
             source_payload=payload,
@@ -1396,6 +1402,40 @@ def _compact_start_continuation_reorientation(packet: Any) -> dict[str, Any]:
             "continuation_view": "agentic-workspace summary --select continuation_view --format json",
             "active_intent_contract": "agentic-workspace start --target . --select active_intent_contract --format json",
         },
+    }
+
+
+def _apply_required_payload_target_start_gate(
+    *, payload: dict[str, Any], target_root: Path, config: WorkspaceConfig, startup_template: dict[str, Any]
+) -> None:
+    installed_state = payload.get("installed_state_compatibility")
+    if not isinstance(installed_state, dict):
+        return
+    action_effect = _as_dict(installed_state.get("action_effect"))
+    action_state = _as_dict(installed_state.get("action_state"))
+    payload_target = _as_dict(action_state.get("payload_target"))
+    if action_effect.get("force") != "required_before_execution" or payload_target.get("policy") != "required-before-work":
+        return
+    command = str(action_effect.get("resolution_command") or action_state.get("dry_run_command") or "")
+    recheck_command = str(action_state.get("recheck_command") or payload_target.get("recheck_command") or "")
+    payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+        surface="start",
+        decision="installed-payload-target-required-before-work",
+        reason="Repo-declared payload target policy requires explicit sync before ordinary workspace work.",
+        required_next_action="run-installed-payload-target-upgrade",
+        evidence_required=["installed payload target recheck"],
+        hard_gate=True,
+    )
+    payload["immediate_next_allowed_action"] = {
+        "action": "run-installed-payload-target-upgrade",
+        "summary": str(installed_state.get("reason") or action_effect.get("claim_boundary") or ""),
+        "command": command,
+        "run": command,
+        "risk": "required-before-work payload target gate",
+        "required_inputs": ["target repo"],
+        "next_proof": recheck_command or f"{config.cli_invoke} start --target {target_root.as_posix()} --format json",
+        "read_first": [command] if command else [],
+        "open_execplan_only_when": startup_template["open_execplan_only_when"],
     }
 
 

@@ -3763,6 +3763,14 @@ const commandDefinitions = [
           ],
           "help": "Refresh only the workspace-managed .agentic-workspace local agent instructions file.",
           "name": "repair_managed_local_instructions"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--to-payload-target"
+          ],
+          "help": "Read [payload] from repo config and sync managed payload/provenance to the declared target.",
+          "name": "to_payload_target"
         }
       ]
     },
