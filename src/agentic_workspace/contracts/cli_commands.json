@@ -2683,6 +2683,14 @@
           "help": "Refresh only the workspace-managed .agentic-workspace local agent instructions file."
         },
         {
+          "name": "repair_root_startup_pointer",
+          "flags": [
+            "--repair-root-startup-pointer"
+          ],
+          "action": "store_true",
+          "help": "Patch only the managed workflow pointer fence in the configured root startup file."
+        },
+        {
           "name": "to_payload_target",
           "flags": [
             "--to-payload-target"

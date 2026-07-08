@@ -3792,6 +3792,14 @@ const commandDefinitions = [
         {
           "action": "store_true",
           "flags": [
+            "--repair-root-startup-pointer"
+          ],
+          "help": "Patch only the managed workflow pointer fence in the configured root startup file.",
+          "name": "repair_root_startup_pointer"
+        },
+        {
+          "action": "store_true",
+          "flags": [
             "--to-payload-target"
           ],
           "help": "Read [payload] from repo config and sync managed payload/provenance to the declared target.",

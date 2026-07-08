@@ -46,13 +46,13 @@ def test_doctor_emits_affordance_shaped_repair_and_manual_review_actions(tmp_pat
     assert safe_action["do_not"]
     assert safe_action["improvement_signal_candidate"]["kind"] == "repair_recurrence"
 
-    manual_action = workspace_report["manual_review_actions"][0]
-    assert manual_action["id"] == "restore-workspace-pointer-manually"
-    assert manual_action["invariant"] == "workspace.startup_pointer_present"
-    assert manual_action["safe_to_apply"] is False
-    assert manual_action["command"] is None
-    assert manual_action["proof_after"][0].startswith("agentic-workspace doctor --target ")
-    pointer_repair = manual_action["repair_affordance"]
+    pointer_action = next(action for action in workspace_report["repair_actions"] if action["id"] == "restore-root-startup-pointer-fence")
+    assert pointer_action["invariant"] == "workspace.startup_pointer_present"
+    assert pointer_action["safe_to_apply"] is True
+    assert "--repair-root-startup-pointer" in pointer_action["command"]
+    assert "--dry-run" in pointer_action["dry_run"]
+    assert pointer_action["proof_after"][0].startswith("agentic-workspace doctor --target ")
+    pointer_repair = pointer_action["repair_affordance"]
     assert pointer_repair["kind"] == "workspace-startup-pointer-repair/v1"
     assert pointer_repair["expected_managed_fence"]["start"] == "<!-- agentic-workspace:workflow:start -->"
     assert pointer_repair["expected_managed_fence"]["end"] == "<!-- agentic-workspace:workflow:end -->"
@@ -64,11 +64,51 @@ def test_doctor_emits_affordance_shaped_repair_and_manual_review_actions(tmp_pat
     repair_plan = workspace_report["repair_plan"]
     assert repair_plan["status"] == "safe-action-available"
     assert repair_plan["primary_next_action"]["id"] == "restore-missing-workspace-surface"
-    assert repair_plan["repair_action_count"] == 1
-    assert repair_plan["manual_review_action_count"] == 1
+    assert repair_plan["repair_action_count"] == 2
+    assert repair_plan["manual_review_action_count"] == 0
     assert payload["repair_plan"]["primary_next_action"]["id"] == "restore-missing-workspace-surface"
     assert payload["repair_actions"][0]["id"] == "restore-missing-workspace-surface"
-    assert payload["manual_review_actions"][0]["id"] == "restore-workspace-pointer-manually"
+    assert any(action["id"] == "restore-root-startup-pointer-fence" for action in payload["repair_actions"])
+    assert payload["manual_review_actions"] == []
+
+
+def test_root_startup_pointer_repair_preserves_repo_content_and_clears_doctor_warning(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    agents_path = target / "AGENTS.md"
+    before = "Repo-owned instructions before the fence.\n\n"
+    after = "\n\nRepo-owned instructions after the fence.\n"
+    stale_fence = f"{cli.WORKSPACE_WORKFLOW_MARKER_START}\nRun an old startup command.\n{cli.WORKSPACE_WORKFLOW_MARKER_END}"
+    original = before + stale_fence + after
+    agents_path.write_text(original, encoding="utf-8")
+
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    doctor_payload = json.loads(capsys.readouterr().out)
+    workspace_report = next(report for report in doctor_payload["reports"] if report["module"] == "workspace")
+    repair = next(action for action in workspace_report["repair_actions"] if action["id"] == "restore-root-startup-pointer-fence")
+    assert repair["safe_patch_target"] == "configured root startup file managed workflow pointer fence only"
+    assert "--repair-root-startup-pointer" in repair["command"]
+
+    assert cli.main(["upgrade", "--target", str(target), "--repair-root-startup-pointer", "--dry-run", "--format", "json"]) == 0
+    dry_run_payload = json.loads(capsys.readouterr().out)
+    assert dry_run_payload["repair_mode"] == "root-startup-pointer"
+    assert dry_run_payload["updated_managed"] == ["AGENTS.md"]
+    assert agents_path.read_text(encoding="utf-8") == original
+
+    assert cli.main(["upgrade", "--target", str(target), "--repair-root-startup-pointer", "--format", "json"]) == 0
+    repair_payload = json.loads(capsys.readouterr().out)
+    assert repair_payload["repair_scope"]["affected_surfaces"] == ["AGENTS.md"]
+    updated = agents_path.read_text(encoding="utf-8")
+    assert updated == before + cli.workspace_pointer_block(cli_invoke=REPO_LOCAL_CLI_INVOKE) + after
+
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
+    after_doctor = json.loads(capsys.readouterr().out)
+    assert not any("workspace workflow pointer block missing" in warning for warning in after_doctor["warnings"])
+    assert not any(action["id"] == "restore-root-startup-pointer-fence" for action in after_doctor["repair_actions"])
 
 
 def test_doctor_repair_actions_use_resolved_cli_invoke(tmp_path: Path, capsys) -> None:
