@@ -201,6 +201,7 @@ def workspace_pointer_block(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> str:
         "Boundaries:\n"
         "- Known dedicated Agentic Workspace commands are allowed only when the request maps directly to that command and no takeover, recovery, active-planning, or ambiguous safety decision is needed first.\n"
         "- Do not bake machine-local AW invocation paths into checked-in generic guidance; concrete commands come from the configured invocation or live router output.\n"
+        "- Treat checked-in `.agentic-workspace/skills` and module skill trees as required operating surfaces, not optional payload mirror content.\n"
         "- Treat `preflight`, `config`, `defaults`, `skills`, `modules`, `ownership`, and `report` as routed drill-down or recovery surfaces, not the ordinary startup loop.\n"
         "- Report repo-relative paths, not local absolute paths.\n"
         f"{WORKSPACE_WORKFLOW_MARKER_END}"
