@@ -29,7 +29,6 @@ Planning and Memory remain behavior modules inside that substrate rather than am
 ## Authority Map
 
 - **Repo-owned workspace policy** lives in `.agentic-workspace/config.toml`.
-- **Effective operation enablement** is `[workspace].enabled`. It defaults to `true`; `.agentic-workspace/config.local.toml` may override it for one machine.
 - **Workspace-owned shared contract docs** live in `.agentic-workspace/docs/`.
 - **Ownership and authority lookup** live in `.agentic-workspace/OWNERSHIP.toml` and `agentic-workspace ownership --target ./repo --format json`.
 - **Module descriptors** define installed module capabilities, workflow surfaces, generated artifacts, dependencies, and conflicts.
@@ -38,19 +37,6 @@ Planning and Memory remain behavior modules inside that substrate rather than am
 - **Repo-owned prose startup surfaces** remain useful, but they are adapters over the structured substrate once the workspace is installed.
 
 Do not treat prose surfaces as the primary authority once the structured substrate can answer the same question directly.
-
-## Operation Enablement
-
-`[workspace].enabled` controls whether ordinary Agentic Workspace workflow is active for a repository.
-
-- Default: `enabled = true`.
-- Repo-owned policy: `.agentic-workspace/config.toml [workspace] enabled = true|false`.
-- Machine-local override: `.agentic-workspace/config.local.toml [workspace] enabled = true|false`.
-- Precedence: local config overrides repo config for the effective value.
-
-When the effective value is `false`, ordinary workflow commands such as `start`, `summary`, `report`, `implement`, `proof`, and closeout routes stop before normal workflow loading and return an `agentic-workspace/disabled-state/v1` packet. Diagnostic and recovery commands remain available enough to inspect or re-enable the workspace, including `config`, `status`, `doctor`, `defaults`, `modules`, `skills`, and `preflight`.
-
-This switch does not uninstall Agentic Workspace, delete workspace files, disable individual modules, or supersede host repo instructions. It is an operation gate for AW workflow participation.
 
 ## Managed File Headers
 
