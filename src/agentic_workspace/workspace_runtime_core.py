@@ -350,6 +350,7 @@ WORKSPACE_CONFIG_SOURCE_SCHEMA = "src/agentic_workspace/contracts/schemas/worksp
 WORKSPACE_CONFIG_REFERENCE_DOC = "docs/reference/workspace-config.md"
 WORKSPACE_PAYLOAD_PROVENANCE_PATH = Path(".agentic-workspace") / "payload-provenance.json"
 WORKSPACE_PAYLOAD_SCHEMA = "agentic-workspace/payload/v1"
+SUPPORTED_PAYLOAD_CAPABILITIES = ("installed-state-sync-v2",)
 WORKSPACE_POINTER_BLOCK = workspace_pointer_block()
 SYSTEM_INTENT_MIRROR_KIND = str(_WORKSPACE_SURFACES_MANIFEST["system_intent_mirror_kind"])
 SUBSYSTEM_INTENT_KIND = str(_WORKSPACE_SURFACES_MANIFEST["subsystem_intent_kind"])
@@ -640,6 +641,7 @@ def _payload_provenance_payload(*, target_root: Path) -> dict[str, Any]:
             "version": __version__,
             "tag": f"v{__version__}",
         },
+        "payload_capabilities": list(SUPPORTED_PAYLOAD_CAPABILITIES),
         "installed_by": _payload_installer_identity(target_root=target_root),
         "command_generation": _command_generation_package_identity(target_root=target_root),
         "installed_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -655,7 +657,7 @@ def _stable_payload_provenance(payload: dict[str, Any]) -> dict[str, Any]:
     return {key: copy.deepcopy(value) for key, value in payload.items() if key != "installed_at"}
 
 
-def _write_payload_provenance_action(*, target_root: Path, dry_run: bool) -> dict[str, str]:
+def _write_payload_provenance_action(*, target_root: Path, dry_run: bool, force: bool = False) -> dict[str, str]:
     relative = WORKSPACE_PAYLOAD_PROVENANCE_PATH
     path = target_root / relative
     existing_text = path.read_text(encoding="utf-8") if path.exists() else None
@@ -668,10 +670,10 @@ def _write_payload_provenance_action(*, target_root: Path, dry_run: bool) -> dic
         if isinstance(parsed_existing, dict):
             existing_payload = parsed_existing
     payload = _payload_provenance_payload(target_root=target_root)
-    if existing_payload is not None and _stable_payload_provenance(existing_payload) == _stable_payload_provenance(payload):
+    if not force and existing_payload is not None and _stable_payload_provenance(existing_payload) == _stable_payload_provenance(payload):
         return {"kind": "current", "path": relative.as_posix(), "detail": "payload provenance already current"}
     existing_validation_errors = _validate_payload_provenance(existing_payload) if existing_payload is not None else []
-    if existing_payload is not None and not existing_validation_errors:
+    if not force and existing_payload is not None and not existing_validation_errors:
         existing_payload_files = existing_payload.get("payload_files")
         if existing_payload.get("payload_schema") == WORKSPACE_PAYLOAD_SCHEMA and existing_payload_files == payload["payload_files"]:
             return {
@@ -751,6 +753,11 @@ def _validate_payload_provenance(payload: dict[str, Any]) -> list[str]:
     payload_files = payload.get("payload_files")
     if not isinstance(payload_files, list) or not all(isinstance(item, str) and item for item in payload_files):
         errors.append("payload_files must be a list of non-empty strings")
+    capabilities = payload.get("payload_capabilities", [])
+    if capabilities is not None and (
+        not isinstance(capabilities, list) or not all(isinstance(item, str) and item.strip() for item in capabilities)
+    ):
+        errors.append("payload_capabilities must be a list of non-empty strings")
     return errors
 
 
@@ -804,6 +811,115 @@ def _version_at_least(current: str, minimum: str) -> bool:
     minimum_parts = _version_key(minimum)
     width = max(len(current_parts), len(minimum_parts), 1)
     return current_parts + (0,) * (width - len(current_parts)) >= minimum_parts + (0,) * (width - len(minimum_parts))
+
+
+def _payload_target_configured(config: WorkspaceConfig) -> bool:
+    target = config.payload_target
+    return bool(target.target_release or target.minimum_capabilities or target.dogfood_latest)
+
+
+def _payload_target_sync_commands(*, target_root: Path, config: WorkspaceConfig) -> dict[str, str]:
+    target = target_root.as_posix()
+    return {
+        "dry_run_command": _command_with_cli_invoke(
+            command=f"agentic-workspace upgrade --target {target} --to-payload-target --dry-run --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        "apply_command": _command_with_cli_invoke(
+            command=f"agentic-workspace upgrade --target {target} --to-payload-target --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        "recheck_command": _command_with_cli_invoke(
+            command=f"agentic-workspace start --target {target} --select installed_state_compatibility --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+    }
+
+
+def _payload_target_status_payload(
+    *,
+    config: WorkspaceConfig,
+    target_root: Path,
+    provenance_status: dict[str, Any],
+    installed_version: str,
+    current_identity: dict[str, Any],
+) -> dict[str, Any]:
+    target = config.payload_target
+    configured = _payload_target_configured(config)
+    commands = _payload_target_sync_commands(target_root=target_root, config=config)
+    provenance_payload = provenance_status.get("payload") if isinstance(provenance_status.get("payload"), dict) else {}
+    raw_capabilities = provenance_payload.get("payload_capabilities", []) if isinstance(provenance_payload, dict) else []
+    current_capabilities = [str(item) for item in raw_capabilities if isinstance(item, str) and item.strip()]
+    desired_release = target.target_release
+    target_basis = "not-configured"
+    if desired_release == "source-current":
+        resolved_release = __version__
+        target_basis = "source-current"
+    elif desired_release:
+        resolved_release = desired_release
+        target_basis = "explicit-release"
+    else:
+        resolved_release = ""
+        target_basis = "capabilities-only" if target.minimum_capabilities else "not-configured"
+    unsupported_capabilities = [
+        capability for capability in target.minimum_capabilities if capability not in SUPPORTED_PAYLOAD_CAPABILITIES
+    ]
+    if not configured:
+        status = "not-configured"
+        invoked_cli_can_satisfy = True
+        satisfied = True
+        reason = "No repo-declared payload target is configured."
+    else:
+        if unsupported_capabilities:
+            invoked_cli_can_satisfy = False
+        elif desired_release == "source-current":
+            invoked_cli_can_satisfy = current_identity.get("source_class") == "source-checkout"
+        elif desired_release:
+            invoked_cli_can_satisfy = __version__ == desired_release
+        else:
+            invoked_cli_can_satisfy = True
+        release_satisfied = not resolved_release or installed_version == resolved_release
+        capabilities_satisfied = all(capability in current_capabilities for capability in target.minimum_capabilities)
+        provenance_present = provenance_status.get("status") == "present"
+        satisfied = provenance_present and release_satisfied and capabilities_satisfied
+        if satisfied:
+            status = "satisfied"
+            reason = "Installed payload satisfies the repo-declared payload target."
+        elif not invoked_cli_can_satisfy:
+            status = "unsupported-target" if unsupported_capabilities else "compatible-cli-required"
+            reason = "The invoked CLI cannot satisfy the repo-declared payload target."
+        else:
+            status = "target-mismatch"
+            reason = "Installed payload does not satisfy the repo-declared payload target."
+    return {
+        "kind": "agentic-workspace/payload-target-status/v1",
+        "status": status,
+        "configured": configured,
+        "satisfied": satisfied,
+        "policy": target.policy,
+        "source": target.source,
+        "target_release": target.target_release,
+        "resolved_target_release": resolved_release,
+        "target_basis": target_basis,
+        "minimum_capabilities": list(target.minimum_capabilities),
+        "unsupported_capabilities": unsupported_capabilities,
+        "dogfood_latest": target.dogfood_latest,
+        "current_installed_release": installed_version,
+        "current_installed_capabilities": current_capabilities,
+        "current_supported_capabilities": list(SUPPORTED_PAYLOAD_CAPABILITIES),
+        "invoked_cli_version": __version__,
+        "invoked_cli_source_class": current_identity.get("source_class"),
+        "invoked_cli_source_identity": current_identity.get("source_identity"),
+        "invoked_cli_can_satisfy": invoked_cli_can_satisfy,
+        "dry_run_command": commands["dry_run_command"],
+        "apply_command": commands["apply_command"],
+        "recheck_command": commands["recheck_command"],
+        "reason": reason,
+        "rule": (
+            "Repo-declared payload targets compare checked-in payload provenance against a repo-owned target; "
+            "start reports the gate and only explicit upgrade --to-payload-target mutates."
+        ),
+    }
 
 
 def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False) -> dict[str, Any]:
@@ -969,6 +1085,9 @@ def _installed_state_action_effect(
 ) -> dict[str, Any]:
     action_state = action_state if isinstance(action_state, dict) else {}
     state = str(action_state.get("state") or "")
+    raw_payload_target = action_state.get("payload_target")
+    payload_target = raw_payload_target if isinstance(raw_payload_target, dict) else {}
+    target_policy = str(action_state.get("policy") or payload_target.get("policy") or "")
     resolution_command = str(action_state.get("dry_run_command") or action_state.get("command") or next_action or config.cli_invoke)
     if state == "blocking_incompatible" or status == "blocking-drift":
         return {
@@ -980,11 +1099,40 @@ def _installed_state_action_effect(
             "resolution_command": resolution_command,
         }
     if state == "safe_payload_sync_available" or status == "payload-upgrade-required":
+        if target_policy == "required-before-work":
+            return {
+                "force": "required_before_execution",
+                "allowed_now": "run-payload-target-upgrade-before-ordinary-work",
+                "blocked_until_reconciled": [
+                    "run-workspace-action",
+                    "claim-installed-state-fresh",
+                    "claim-payload-target-satisfied",
+                ],
+                "claim_boundary": "repo-declared payload target must be synced before ordinary workspace work continues",
+                "resolution_selector": "installed_state_compatibility",
+                "resolution_command": resolution_command,
+            }
+        if target_policy == "advisory":
+            return {
+                "force": "advisory",
+                "allowed_now": "continue-bounded-work-with-compatible-claim-limits",
+                "blocked_until_reconciled": ["claim-payload-target-satisfied"],
+                "claim_boundary": "repo-declared payload target drift is advisory but prevents strong payload-target satisfaction claims",
+                "resolution_selector": "installed_state_compatibility",
+                "resolution_command": resolution_command,
+            }
+        blocked_until_reconciled = ["claim-installed-state-fresh", "claim-payload-synced", "claim-generated-surfaces-current"]
+        if target_policy:
+            blocked_until_reconciled.append("claim-payload-target-satisfied")
         return {
             "force": "required_before_claim",
             "allowed_now": "continue-bounded-work-with-compatible-claim-limits",
-            "blocked_until_reconciled": ["claim-installed-state-fresh", "claim-payload-synced", "claim-generated-surfaces-current"],
-            "claim_boundary": "do-not-claim-local-installed-state-or-generated-payload-freshness-before-running-the-sync-check",
+            "blocked_until_reconciled": blocked_until_reconciled,
+            "claim_boundary": (
+                "do-not-claim-local-installed-state, generated-payload freshness, or payload-target satisfaction before running the sync check"
+                if target_policy
+                else "do-not-claim-local-installed-state-or-generated-payload-freshness-before-running-the-sync-check"
+            ),
             "resolution_selector": "installed_state_compatibility",
             "resolution_command": resolution_command,
         }
@@ -1017,16 +1165,22 @@ def _installed_state_action_state_packet(
     provenance_status: dict[str, Any],
     stale_generated_surfaces: Sequence[str],
     cli_status: str,
+    payload_target: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     target = target_root.as_posix()
+    target_commands = _payload_target_sync_commands(target_root=target_root, config=config) if payload_target else {}
+    sync_to_payload_target = bool(payload_target and payload_target.get("status") == "target-mismatch")
     dry_run_sync_command = _command_with_cli_invoke(
-        command=f"agentic-workspace upgrade --target {target} --dry-run --format json",
+        command=f"agentic-workspace upgrade --target {target} {'--to-payload-target ' if sync_to_payload_target else ''}--dry-run --format json",
         cli_invoke=config.cli_invoke,
     )
     apply_sync_command = _command_with_cli_invoke(
-        command=f"agentic-workspace upgrade --target {target} --format json",
+        command=f"agentic-workspace upgrade --target {target} {'--to-payload-target ' if sync_to_payload_target else ''}--format json",
         cli_invoke=config.cli_invoke,
     )
+    if sync_to_payload_target and target_commands:
+        dry_run_sync_command = str(target_commands["dry_run_command"])
+        apply_sync_command = str(target_commands["apply_command"])
     sync_available = state == "safe_payload_sync_available"
     manual_review = state == "manual_review_required"
     blocking = state == "blocking_incompatible"
@@ -1048,16 +1202,21 @@ def _installed_state_action_state_packet(
             "schema_compatible": payload_schema in {"", WORKSPACE_PAYLOAD_SCHEMA} and str(provenance_status.get("status", "")) != "invalid",
             "version_match_required": False,
             "payload_provenance_drift": payload_provenance_drift,
+            "payload_target_status": payload_target.get("status") if isinstance(payload_target, dict) else "not-configured",
             "cli_compatibility_status": cli_status,
         },
-        "repair_mechanism": "upgrade"
+        "repair_mechanism": "payload-target-upgrade"
+        if sync_available and sync_to_payload_target
+        else "upgrade"
         if sync_available
         else "manual-review"
         if manual_review
         else "select-compatible-cli"
         if blocking
         else "none",
-        "action_id": "sync-installed-payload-from-invoked-cli"
+        "action_id": "sync-installed-payload-to-repo-target"
+        if sync_available and sync_to_payload_target
+        else "sync-installed-payload-from-invoked-cli"
         if sync_available
         else "review-installed-state-manually"
         if manual_review
@@ -1067,6 +1226,9 @@ def _installed_state_action_state_packet(
         "command": command,
         "dry_run_command": dry_run_sync_command if sync_available else "",
         "apply_command": apply_sync_command if sync_available else "",
+        "recheck_command": payload_target.get("recheck_command", "") if isinstance(payload_target, dict) else "",
+        "policy": payload_target.get("policy", "") if isinstance(payload_target, dict) else "",
+        "payload_target": payload_target or {},
         "safe_to_apply": sync_available,
         "mutates_on_start": False,
         "package_owned_surfaces": [
@@ -1122,6 +1284,13 @@ def _installed_state_compatibility_payload(
         payload_provenance_drift = "executable-too-old"
     elif installed_version and _version_key(installed_version) < _version_key(__version__):
         payload_provenance_drift = "payload-installed-by-older-aw"
+    payload_target = _payload_target_status_payload(
+        config=config,
+        target_root=target_root,
+        provenance_status=provenance_status,
+        installed_version=installed_version,
+        current_identity=current_identity,
+    )
     if cli_payload.get("status") == "blocking-drift":
         action_state_name = "blocking_incompatible"
         status = "blocking-drift"
@@ -1132,6 +1301,16 @@ def _installed_state_compatibility_payload(
         status = "blocking-drift"
         next_action = config.cli_invoke
         reason = "repo payload provenance was installed by a newer AW version than the current executable"
+    elif payload_target["configured"] and not payload_target["satisfied"] and not payload_target["invoked_cli_can_satisfy"]:
+        action_state_name = "blocking_incompatible"
+        status = "blocking-drift"
+        next_action = config.cli_invoke
+        reason = "repo-declared payload target cannot be satisfied by the invoked CLI"
+    elif payload_target["configured"] and not payload_target["satisfied"]:
+        action_state_name = "safe_payload_sync_available"
+        status = "payload-upgrade-required"
+        next_action = payload_target["dry_run_command"]
+        reason = "repo-declared payload target requires an explicit payload sync"
     elif stale_generated_surfaces:
         action_state_name = "safe_payload_sync_available"
         status = "payload-upgrade-required"
@@ -1184,6 +1363,7 @@ def _installed_state_compatibility_payload(
         provenance_status=provenance_status,
         stale_generated_surfaces=stale_generated_surfaces,
         cli_status=str(cli_payload.get("status") or ""),
+        payload_target=payload_target if payload_target["configured"] else None,
     )
     generated_status = "stale" if stale_generated_surfaces else "compatible"
     if action_state_name == "safe_payload_sync_available":
@@ -1221,15 +1401,16 @@ def _installed_state_compatibility_payload(
             "stale_generated_surfaces": stale_generated_surfaces,
             "provenance": provenance_status,
             "provenance_drift": payload_provenance_drift,
+            "target": payload_target,
             "expected_release_identity": {
                 "package": "agentic-workspace",
-                "version": __version__,
+                "version": payload_target["resolved_target_release"] or __version__,
                 "source_class": current_identity.get("source_class"),
                 "source_identity": current_identity.get("source_identity"),
             },
-            "sync_command": dry_run_sync_command,
-            "dry_run_command": dry_run_sync_command,
-            "apply_command": apply_sync_command,
+            "sync_command": action_state["dry_run_command"] or dry_run_sync_command,
+            "dry_run_command": action_state["dry_run_command"] or dry_run_sync_command,
+            "apply_command": action_state["apply_command"] or apply_sync_command,
             "rule": "Repo payload state is authoritative; stale payloads should be synced deliberately before trusting newer executables.",
         },
         "generated_artifacts": {
@@ -1263,8 +1444,8 @@ def _installed_state_compatibility_payload(
             "action_state": action_state_name,
             "action_id": action_state["action_id"],
             "repair_mechanism": action_state["repair_mechanism"],
-            "dry_run_command": dry_run_sync_command,
-            "apply_command": apply_sync_command,
+            "dry_run_command": action_state["dry_run_command"] or dry_run_sync_command,
+            "apply_command": action_state["apply_command"] or apply_sync_command,
             "waiver": {
                 "allowed": action_state_name == "safe_payload_sync_available",
                 "claim": "source-behavior-validated-installed-payload-freshness-unproven",
@@ -1298,6 +1479,7 @@ def _installed_state_compatibility_payload(
                     "stale_generated_surfaces",
                     "provenance",
                     "provenance_drift",
+                    "target",
                     "dry_run_command",
                     "apply_command",
                 )
@@ -6898,6 +7080,7 @@ def _workspace_init_or_upgrade_report(
     inspection_mode: str,
     command_name: str,
     config: WorkspaceConfig,
+    to_payload_target: bool = False,
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
@@ -6965,7 +7148,7 @@ def _workspace_init_or_upgrade_report(
                 else "refresh workspace shared-layer file from package payload",
             }
         )
-    actions.append(_write_payload_provenance_action(target_root=target_root, dry_run=dry_run))
+    actions.append(_write_payload_provenance_action(target_root=target_root, dry_run=dry_run, force=to_payload_target))
     local_agent_actions, local_agent_warnings = _sync_workspace_managed_agent_instructions(
         target_root=target_root,
         config=config,
@@ -7726,6 +7909,7 @@ def _run_lifecycle_command(
     config: WorkspaceConfig,
     compact_status: bool = True,
     module_scope_explicit: bool = False,
+    to_payload_target: bool = False,
 ) -> dict[str, Any]:
     if command_name == "upgrade" and local_only_repo_root is None and _has_local_only_workspace_state(target_root=target_root):
         local_only_repo_root = target_root
@@ -7767,6 +7951,7 @@ def _run_lifecycle_command(
                 inspection_mode="upgrade",
                 command_name=command_name,
                 config=config,
+                to_payload_target=to_payload_target,
             )
         )
     elif command_name == "install":
@@ -22820,6 +23005,13 @@ def _next_safe_action_packet(
                 "promote or create a slice before lane shaping is recorded",
             ]
         )
+    if action == "run-installed-payload-target-upgrade":
+        forbidden_actions.extend(
+            [
+                "begin ordinary workspace work before installed payload target is satisfied",
+                "claim installed payload target satisfied before recheck passes",
+            ]
+        )
     if "closeout" in action:
         forbidden_actions.append("claim completion before closeout trust is reconciled")
     if decision in {
@@ -26207,6 +26399,40 @@ def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke
     }
 
 
+def _apply_installed_state_fast_start_gate(
+    *, payload: dict[str, Any], target_root: Path, config: WorkspaceConfig, startup_template: dict[str, Any]
+) -> None:
+    installed_state = payload.get("installed_state_compatibility")
+    if not isinstance(installed_state, dict):
+        return
+    action_effect = _as_dict(installed_state.get("action_effect"))
+    action_state = _as_dict(installed_state.get("action_state"))
+    payload_target = _as_dict(action_state.get("payload_target"))
+    if action_effect.get("force") != "required_before_execution" or payload_target.get("policy") != "required-before-work":
+        return
+    command = str(action_effect.get("resolution_command") or action_state.get("dry_run_command") or "")
+    recheck_command = str(action_state.get("recheck_command") or payload_target.get("recheck_command") or "")
+    payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
+        surface="start",
+        decision="installed-payload-target-required-before-work",
+        reason="Repo-declared payload target policy requires explicit sync before ordinary workspace work.",
+        required_next_action="run-installed-payload-target-upgrade",
+        evidence_required=["installed payload target recheck"],
+        hard_gate=True,
+    )
+    payload["immediate_next_allowed_action"] = {
+        "action": "run-installed-payload-target-upgrade",
+        "summary": str(installed_state.get("reason") or action_effect.get("claim_boundary") or ""),
+        "command": command,
+        "run": command,
+        "risk": "required-before-work payload target gate",
+        "required_inputs": ["target repo"],
+        "next_proof": recheck_command or f"{config.cli_invoke} start --target {target_root.as_posix()} --format json",
+        "read_first": [command] if command else [],
+        "open_execplan_only_when": startup_template["open_execplan_only_when"],
+    }
+
+
 def _start_tiny_payload_fast(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, config: WorkspaceConfig, startup_template: dict[str, Any]
 ) -> dict[str, Any]:
@@ -26395,6 +26621,12 @@ def _start_tiny_payload_fast(
             task_text=task_text,
             changed_paths=changed_paths,
             cli_invoke=config.cli_invoke,
+        )
+        _apply_installed_state_fast_start_gate(
+            payload=payload,
+            target_root=target_root,
+            config=config,
+            startup_template=startup_template,
         )
     sibling_freshness = _sibling_repo_aw_freshness_payload(target_root=target_root, task_text=task_text, cli_invoke=config.cli_invoke)
     if sibling_freshness["status"] != "not-referenced":
@@ -40528,6 +40760,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
         non_interactive=args.non_interactive,
         config=config,
         module_scope_explicit=bool(getattr(args, "modules", None)),
+        to_payload_target=bool(getattr(args, "to_payload_target", False)),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0
@@ -45346,6 +45579,19 @@ def _config_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "wrapper_rule": "normal update execution stays behind agentic-workspace",
             "modules": _module_update_policy_payload(config=config, target_root=config.target_root),
         },
+        "payload": {
+            "target_release": config.payload_target.target_release,
+            "minimum_capabilities": list(config.payload_target.minimum_capabilities),
+            "policy": config.payload_target.policy,
+            "dogfood_latest": config.payload_target.dogfood_latest,
+            "source": config.payload_target.source,
+            "supported_policies": list(config_lib.SUPPORTED_PAYLOAD_TARGET_POLICIES),
+            "supported_capabilities": list(SUPPORTED_PAYLOAD_CAPABILITIES),
+            "rule": (
+                "Repo payload target policy declares the checked-in payload release/capability state startup should require "
+                "before work or claims."
+            ),
+        },
         "assurance": {
             "default_level": assurance.default_level,
             "default_level_source": assurance.default_level_source,
@@ -45461,6 +45707,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "workflow_obligations": compact_obligations,
             "system_intent_sources": workspace["system_intent"]["sources"],
         },
+        "payload": payload["payload"],
         "reporting_posture": {
             "status": "present",
             "summary": "Use this compact config payload as source evidence; do not read raw config files only to cite line numbers.",

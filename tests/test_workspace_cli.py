@@ -1513,6 +1513,224 @@ def test_start_installed_state_treats_stale_compatible_provenance_as_no_repair_n
     assert compatibility["action_effect"]["blocked_until_reconciled"] == []
 
 
+def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[payload]\n"
+        'target_release = "source-current"\n'
+        'minimum_capabilities = ["installed-state-sync-v2"]\n'
+        'policy = "required-before-work"\n'
+        "dogfood_latest = true\n",
+        encoding="utf-8",
+    )
+    provenance_path = workspace / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance.pop("payload_capabilities", None)
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Do ordinary work", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
+    assert payload["next_safe_action"]["implementation_allowed"] is False
+    assert "--to-payload-target --dry-run" in payload["next_safe_action"]["preferred_cli"]
+    assert "installed_state_compatibility=payload-upgrade-required" in payload["action_signals"]["changed_signals"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    assert compatibility["payload"]["target"]["status"] == "target-mismatch"
+    assert compatibility["payload"]["target"]["policy"] == "required-before-work"
+    assert compatibility["action_state"]["repair_mechanism"] == "payload-target-upgrade"
+    assert compatibility["action_state"]["mutates_on_start"] is False
+    assert "--to-payload-target --dry-run" in compatibility["action_state"]["dry_run_command"]
+    assert compatibility["action_effect"]["force"] == "required_before_execution"
+    assert compatibility["action_effect"]["allowed_now"] == "run-payload-target-upgrade-before-ordinary-work"
+
+    assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
+    doctor_payload = json.loads(capsys.readouterr().out)
+    assert doctor_payload["installed_state_compatibility"]["payload"]["target"]["status"] == "target-mismatch"
+    assert doctor_payload["installed_state_compatibility"]["action_effect"]["force"] == "required_before_execution"
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    report_payload = json.loads(capsys.readouterr().out)
+    assert report_payload["answer"]["payload"]["target"]["status"] == "target-mismatch"
+    assert report_payload["answer"]["action_state"]["recheck_command"]
+
+
+def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[payload]\n"
+        'target_release = "source-current"\n'
+        'minimum_capabilities = ["installed-state-sync-v2"]\n'
+        'policy = "required-before-claim"\n',
+        encoding="utf-8",
+    )
+    provenance_path = workspace / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance.pop("payload_capabilities", None)
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-payload-target", "--dry-run", "--format", "json"]) == 0
+    dry_run_payload = json.loads(capsys.readouterr().out)
+    dry_run_workspace_report = next(report for report in dry_run_payload["reports"] if report["module"] == "workspace")
+    dry_run_action = next(
+        action for action in dry_run_workspace_report["actions"] if action["path"] == ".agentic-workspace/payload-provenance.json"
+    )
+    assert dry_run_action["kind"] == "would update"
+    assert "payload_capabilities" not in json.loads(provenance_path.read_text(encoding="utf-8"))
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-payload-target", "--format", "json"]) == 0
+    capsys.readouterr()
+    updated = json.loads(provenance_path.read_text(encoding="utf-8"))
+    assert "installed-state-sync-v2" in updated["payload_capabilities"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    assert compatibility["status"] == "compatible"
+    assert compatibility["payload"]["target"]["status"] == "satisfied"
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+    ordinary_dry_run_payload = json.loads(capsys.readouterr().out)
+    ordinary_workspace_report = next(report for report in ordinary_dry_run_payload["reports"] if report["module"] == "workspace")
+    ordinary_action = next(
+        action for action in ordinary_workspace_report["actions"] if action["path"] == ".agentic-workspace/payload-provenance.json"
+    )
+    assert ordinary_action["kind"] == "current"
+
+
+def test_payload_target_required_before_claim_limits_claims_without_blocking_work(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[payload]\n"
+        'target_release = "source-current"\n'
+        'minimum_capabilities = ["installed-state-sync-v2"]\n'
+        'policy = "required-before-claim"\n',
+        encoding="utf-8",
+    )
+    provenance_path = workspace / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance.pop("payload_capabilities", None)
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "installed_state_compatibility,next_safe_action",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected = json.loads(capsys.readouterr().out)["values"]
+    compatibility = selected["installed_state_compatibility"]
+    assert compatibility["payload"]["target"]["status"] == "target-mismatch"
+    assert compatibility["action_effect"]["force"] == "required_before_claim"
+    assert "claim-payload-target-satisfied" in compatibility["action_effect"]["blocked_until_reconciled"]
+    assert selected["next_safe_action"]["implementation_allowed"] is True
+
+
+def test_payload_target_blocks_when_invoked_cli_cannot_satisfy_explicit_target(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        'schema_version = 1\n\n[payload]\ntarget_release = "999.0.0"\npolicy = "required-before-work"\n',
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+
+    assert compatibility["status"] == "blocking-drift"
+    assert compatibility["payload"]["target"]["status"] == "compatible-cli-required"
+    assert compatibility["payload"]["target"]["invoked_cli_can_satisfy"] is False
+    assert compatibility["action_state"]["state"] == "blocking_incompatible"
+    assert compatibility["action_state"]["safe_to_apply"] is False
+    assert "--to-payload-target" not in compatibility["action_state"]["command"]
+
+
+def test_workspace_config_rejects_invalid_payload_target_policy(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        'schema_version = 1\n\n[payload]\ntarget_release = "source-current"\npolicy = "sometimes"\n',
+    )
+
+    with pytest.raises(cli.WorkspaceUsageError, match="policy must be one of"):
+        cli._load_workspace_config(target_root=tmp_path)
+
+
 def test_start_installed_state_blocks_newer_repo_payload_instead_of_downgrading(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

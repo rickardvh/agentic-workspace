@@ -13,10 +13,13 @@
     "python_executable": ".venv/Scripts/python.exe",
     "source": "local-source",
     "source_class": "source-checkout",
-    "source_identity": "git:f6cfade0a059",
-    "version": "0.21.1"
+    "source_identity": "git:5efdd6485bb2",
+    "version": "0.23.1"
   },
   "kind": "agentic-workspace/payload-provenance/v1",
+  "payload_capabilities": [
+    "installed-state-sync-v2"
+  ],
   "payload_files": [
     ".agentic-workspace/WORKFLOW.md",
     ".agentic-workspace/OWNERSHIP.toml",
@@ -37,8 +40,8 @@
   "release_identity": {
     "package": "agentic-workspace",
     "release_model": "coordinated-workspace",
-    "tag": "v0.21.1",
-    "version": "0.21.1"
+    "tag": "v0.23.1",
+    "version": "0.23.1"
   },
   "rule": "Repo payload provenance records the coordinated AW release identity and executable/source identity that installed or last synced the AW payload."
 }

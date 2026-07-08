@@ -67,6 +67,9 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `installed_state_compatibility.action_state.command` | string | no |  | Primary command for the action when one is available. |  |  |
 | `installed_state_compatibility.action_state.dry_run_command` | string | no |  | Resolved dry-run sync command for safe package-owned repair. |  |  |
 | `installed_state_compatibility.action_state.apply_command` | string | no |  | Resolved apply sync command for safe package-owned repair. |  |  |
+| `installed_state_compatibility.action_state.recheck_command` | string | no |  | Command that rechecks installed-state compatibility after the repair command runs. |  |  |
+| `installed_state_compatibility.action_state.policy` | string | no |  | Repo-declared payload target policy that influenced this action state, when applicable. |  |  |
+| `installed_state_compatibility.action_state.payload_target` | object | no |  | Repo-declared payload target status used for this action state, when applicable. |  |  |
 | `installed_state_compatibility.action_state.safe_to_apply` | boolean | yes |  | Whether the action is bounded to package-owned sync surfaces. |  |  |
 | `installed_state_compatibility.action_state.mutates_on_start` | const `false` | yes |  | Startup may report this state but must not mutate the repo. |  |  |
 | `installed_state_compatibility.action_state.package_owned_surfaces` | array of string | no |  | Managed surfaces covered by safe sync. |  |  |

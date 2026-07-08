@@ -138,6 +138,11 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.closeout_postures.<name>.certification_limits` | array of string | no | `[]` | Domain certification limits that final claims must not exceed. |  |  |
 | `assurance.closeout_postures.<name>.notes` | string | no |  | Optional repo-local note about this posture. |  |  |
 | `assurance.test_data_policy` | object | no | `{}` | Repo-specific policy for test data, privacy, fixtures, or generated samples. |  | x-agentic-workspace-unknown-properties: "warn" |
+| `payload` | object | no | `{}` | Repo-owned installed payload target policy. Use this when the checked-in payload must be kept aligned with a release or source-checkout capability target independent of the CLI install location. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
+| `payload.target_release` | string | no |  | Desired checked-in Agentic Workspace payload release. Use source-current for source-checkout dogfooding. | `"0.24.0"`<br>`"source-current"` |  |
+| `payload.minimum_capabilities` | array of string | no | `[]` | Payload capabilities that must be present in checked-in payload provenance before the target is satisfied. | `["installed-state-sync-v2"]` |  |
+| `payload.policy` | enum `"advisory"`, `"required-before-claim"`, `"required-before-work"` | no | `"advisory"` | How strongly startup should gate work when the installed payload does not satisfy the repo-declared target. |  |  |
+| `payload.dogfood_latest` | boolean | no | `false` | For the Agentic Workspace source repo, require the checked-in payload to track the latest source-checkout payload before ordinary work. |  |  |
 | `cli_compatibility` | object | no | `{}` | Expected CLI identity and posture for commands executed in this repo. |  | x-agentic-workspace-doc-role: "maintainer"<br>x-agentic-workspace-unknown-properties: "warn" |
 | `cli_compatibility.enforcement` | enum `"off"`, `"advisory"`, `"blocking"` | no | `"off"` | How strictly CLI compatibility expectations should be enforced. |  |  |
 | `cli_compatibility.minimum_version` | string | no |  | Minimum accepted Agentic Workspace CLI version. | `"0.4.0"` |  |

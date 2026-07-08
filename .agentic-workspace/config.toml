@@ -93,6 +93,12 @@ enforcement = "advisory"
 source_classes = ["source-checkout"]
 target_relations = ["inside-target"]
 
+[payload]
+target_release = "source-current"
+minimum_capabilities = ["installed-state-sync-v2"]
+policy = "required-before-work"
+dogfood_latest = true
+
 [system_intent]
 sources = ["SYSTEM_INTENT.md", "README.md"]
 preferred_source = "SYSTEM_INTENT.md"

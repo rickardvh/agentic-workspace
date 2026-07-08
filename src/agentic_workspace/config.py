@@ -232,6 +232,11 @@ SUPPORTED_CLI_TARGET_RELATIONS = (
     "outside-target",
     "no-target",
 )
+SUPPORTED_PAYLOAD_TARGET_POLICIES = (
+    "advisory",
+    "required-before-claim",
+    "required-before-work",
+)
 SUPPORTED_LOCAL_HIGH_RISK_IMPACTS = (
     "advisory",
     "blocking",
@@ -470,6 +475,15 @@ class CLICompatibilityExpectation:
 
 
 @dataclass(frozen=True)
+class PayloadTargetConfig:
+    target_release: str | None
+    minimum_capabilities: tuple[str, ...]
+    policy: str
+    dogfood_latest: bool
+    source: str
+
+
+@dataclass(frozen=True)
 class WorkspaceConfig:
     target_root: Path | None
     path: Path | None
@@ -498,6 +512,7 @@ class WorkspaceConfig:
     system_intent: SystemIntentDeclaration
     assurance: AssuranceConfig
     cli_compatibility: CLICompatibilityExpectation
+    payload_target: PayloadTargetConfig
     local_override: MixedAgentLocalOverride
     warnings: tuple[str, ...] = ()
 
@@ -697,6 +712,21 @@ def _validate_version_string(*, value: Any, field: str, config_path: Path) -> st
     return normalized
 
 
+def _validate_payload_target_release(*, value: Any, config_path: Path) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise WorkspaceUsageError(f"{config_path.as_posix()} payload.target_release must be a non-empty string.")
+    normalized = value.strip()
+    if normalized == "source-current":
+        return normalized
+    if not re.match(r"^\d+(?:\.\d+){0,3}(?:[-+][A-Za-z0-9.-]+)?$", normalized):
+        raise WorkspaceUsageError(
+            f"{config_path.as_posix()} payload.target_release must be `source-current` or a simple version string like 1.2.3."
+        )
+    return normalized
+
+
 def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_path: Path) -> tuple[CLICompatibilityExpectation, list[str]]:
     warnings: list[str] = []
     if raw_cli_compatibility is None:
@@ -748,6 +778,47 @@ def _load_cli_compatibility_expectation(*, raw_cli_compatibility: Any, config_pa
             target_relations=target_relations,
             command=command.strip() if isinstance(command, str) else None,
             source="repo-config" if raw_cli_compatibility else "product-default",
+        ),
+        warnings,
+    )
+
+
+def _load_payload_target_config(*, raw_payload: Any, config_path: Path) -> tuple[PayloadTargetConfig, list[str]]:
+    warnings: list[str] = []
+    if raw_payload is None:
+        raw_payload = {}
+    if not isinstance(raw_payload, dict):
+        raise WorkspaceUsageError(f"{config_path.as_posix()} [payload] section must be a table.")
+    supported_fields = {
+        "target_release",
+        "minimum_capabilities",
+        "policy",
+        "dogfood_latest",
+    }
+    unknown = sorted(set(raw_payload) - supported_fields)
+    if unknown:
+        warnings.append(f"{config_path.as_posix()} [payload] contains unsupported field(s): {', '.join(unknown)}.")
+    dogfood_latest = _require_bool(payload=raw_payload, key="dogfood_latest", default=False, config_path=config_path)
+    target_release = _validate_payload_target_release(value=raw_payload.get("target_release"), config_path=config_path)
+    if dogfood_latest and target_release is None:
+        target_release = "source-current"
+    return (
+        PayloadTargetConfig(
+            target_release=target_release,
+            minimum_capabilities=require_optional_string_list(
+                payload=raw_payload,
+                key="minimum_capabilities",
+                config_path=config_path,
+            ),
+            policy=require_optional_enum(
+                payload=raw_payload,
+                key="policy",
+                config_path=config_path,
+                allowed=SUPPORTED_PAYLOAD_TARGET_POLICIES,
+                default="advisory",
+            ),
+            dogfood_latest=dogfood_latest,
+            source="repo-config" if raw_payload else "product-default",
         ),
         warnings,
     )
@@ -2484,6 +2555,11 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         config_path=WORKSPACE_CONFIG_PATH,
     )
     warnings.extend(cli_compatibility_warnings)
+    payload_target, payload_target_warnings = _load_payload_target_config(
+        raw_payload={},
+        config_path=WORKSPACE_CONFIG_PATH,
+    )
+    warnings.extend(payload_target_warnings)
     if local_override.enabled is not None:
         enabled = local_override.enabled
         enabled_source = local_override.field_sources.get("workspace.enabled", "local-override")
@@ -2543,6 +2619,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             ),
             assurance=assurance,
             cli_compatibility=cli_compatibility,
+            payload_target=payload_target,
             local_override=local_override,
             warnings=tuple(warnings),
         )
@@ -2576,6 +2653,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
             "system_intent",
             "assurance",
             "cli_compatibility",
+            "payload",
         }
     )
     if unknown_top_level:
@@ -2771,6 +2849,11 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         config_path=WORKSPACE_CONFIG_PATH,
     )
     warnings.extend(cli_compatibility_warnings)
+    payload_target, payload_target_warnings = _load_payload_target_config(
+        raw_payload=payload.get("payload", {}),
+        config_path=WORKSPACE_CONFIG_PATH,
+    )
+    warnings.extend(payload_target_warnings)
 
     agent_instructions_file, agent_instructions_source, detected_agent_instruction_files = resolve_effective_agent_instructions_file(
         target_root=effective_root,
@@ -2804,6 +2887,7 @@ def load_workspace_config(*, target_root: Path, valid_presets: set[str] | None =
         system_intent=system_intent,
         assurance=assurance,
         cli_compatibility=cli_compatibility,
+        payload_target=payload_target,
         local_override=local_override,
         warnings=tuple(warnings),
     )
