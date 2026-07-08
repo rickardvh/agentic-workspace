@@ -577,6 +577,7 @@ def _write_issue_1981_closeout_fixture(
     include_proof: bool,
     external_status: str = "closed",
     include_stale_task_posture_residue: bool = False,
+    active_milestone_status: str = "active",
 ) -> None:
     from repo_planning_bootstrap import installer as planning_installer
 
@@ -601,7 +602,7 @@ candidates = []
     record = planning_installer._build_execplan_record_from_todo_item(
         title="Issue 1981 state-delta shared core",
         item_id="issue-1981",
-        status="active",
+        status=active_milestone_status,
         why_now="regress closeout trust alignment.",
         next_action="Close complete.",
         done_when="Issue 1981 can honestly be closed.",
@@ -623,6 +624,14 @@ candidates = []
             "agentic-workspace report --section closeout_trust passed",
             "pytest passed",
         ],
+    }
+    record["execution_summary"] = {
+        "outcome delivered": "The shared state-delta core was implemented.",
+        "validation confirmed": "agentic-workspace summary, closeout_trust, and pytest passed",
+        "follow-on routed to": "none",
+        "post-work posterity capture": "none",
+        "knowledge promoted (Memory/Docs/Config)": "none",
+        "resume from": "archive",
     }
     if include_proof:
         record["proof_report"] = {
@@ -705,7 +714,7 @@ def test_closeout_trust_derives_intent_proof_from_satisfied_active_execplan(tmp_
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
-    _write_issue_1981_closeout_fixture(tmp_path, include_proof=True)
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, active_milestone_status="completed")
 
     assert cli.main(["report", "--target", str(tmp_path), "--section", "closeout_trust", "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)["answer"]
@@ -2146,7 +2155,7 @@ def test_start_routes_high_assurance_milestone_to_planning_before_implementation
     assert payload["context"]["planning"]["planning_safety_gate"]["decision_maturity"]["level"] == "hard_gate"
 
 
-def test_start_reconciles_unrelated_active_plan_with_explicit_maintenance_task(tmp_path: Path, capsys) -> None:
+def test_start_reconciles_unrelated_active_plan_with_bounded_reflection_task(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
@@ -2184,7 +2193,7 @@ candidates = []
                 "--target",
                 str(tmp_path),
                 "--task",
-                "Report AW session experience and upgrade AW payload",
+                "Estimate AW net effect on this thread",
                 "--format",
                 "json",
             ]
@@ -2193,28 +2202,80 @@ candidates = []
     )
     payload = json.loads(capsys.readouterr().out)
 
-    assert payload["next_safe_action"]["next_safe_action"] == "choose-task-switch-route"
+    assert payload["next_safe_action"]["next_safe_action"] == "produce-bounded-reflection-report"
     assert payload["next_safe_action"]["implementation_allowed"] is True
     assert payload["action_signals"]["implementation_allowed"] is True
-    _assert_json_payload_under(payload, 12_000, label="active-plan maintenance start payload", sort_keys=False)
+    _assert_json_payload_under(payload, 9_000, label="active-plan reflection start payload", sort_keys=False)
     decision = payload["decision_packet"]
     assert decision["phase_question"] == "Startup posture?"
-    assert decision["next_action"] == "choose-task-switch-route"
+    assert decision["next_action"] == "produce-bounded-reflection-report"
     assert decision["absence_states"]["verbose_planning_detail"] == "detail_omitted"
     gate = payload["context"]["planning"]["planning_safety_gate"]
     assert gate["label"] == "work gate"
     assert gate["provenance"] == "planning"
-    assert gate["gate_result"] == "active-plan-task-switch"
+    assert gate["gate_result"] == "bounded-reflection-reporting"
     switch = gate["task_switch_reconciliation"]
-    assert switch["status"] == "active"
-    assert switch["recommended_next_action"] == "proceed-bounded-repo-maintenance"
+    assert switch["status"] == "bounded-reflection-reporting"
+    assert switch["recommended_next_action"] == "produce-bounded-reflection-report"
     assert switch["detail_selector"] == "planning_safety_gate.task_switch_reconciliation"
     assert set(switch["safe_route_ids"]) == {
-        "continue-active-plan",
-        "proceed-bounded-repo-maintenance",
+        "produce-bounded-reflection-report",
+        "inspect-active-plan",
         "reconcile-active-plan-before-implementation",
     }
     assert "claim-active-plan-complete" in switch["blocked_claims"]
+    assert "does not authorize active-plan progress" in switch["claim_boundary"]
+    assert "work_threads" not in payload["context"]
+    assert "architecture_principles_forecast" not in payload["context"]
+    assert payload["context"]["read_only_response"]["compact_default"] is True
+    assert "work_threads" in payload["drill_down"]["omitted_detail"]["selectors"]
+
+
+def test_start_reconciles_unrelated_active_plan_for_dogfooding_issue_shaping(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Unrelated active plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Create concrete AW dogfooding feedback issues from this thread",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    switch = payload["context"]["planning"]["planning_safety_gate"]["task_switch_reconciliation"]
+
+    _assert_json_payload_under(payload, 9_000, label="dogfooding issue-shaping start payload", sort_keys=False)
+    assert payload["next_safe_action"]["next_safe_action"] == "produce-bounded-reflection-report"
+    assert switch["status"] == "bounded-reflection-reporting"
+    assert switch["current_task_class"] == "bounded-dogfooding-issue-shaping"
+    assert "claim-active-plan-progress" in switch["blocked_claims"]
+    assert "work_threads" not in payload["context"]
 
 
 def test_start_reconciles_unrelated_active_plan_with_new_issue_implementation_task(tmp_path: Path, capsys) -> None:
@@ -2274,6 +2335,108 @@ candidates = []
         "proceed-bounded-repo-maintenance",
         "reconcile-active-plan-before-implementation",
     }
+
+
+def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, active_milestone_status="completed")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Estimate AW net effect on this thread",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning"]["planning_safety_gate"]
+    switch = gate["task_switch_reconciliation"]
+    completed = switch["completed_active_plan"]
+
+    assert payload["next_safe_action"]["next_safe_action"] == "archive-or-retire-completed-plan"
+    assert gate["gate_result"] == "archive-or-retire-completed-plan"
+    assert switch["status"] == "completed-active-plan-route"
+    assert completed["active_execplan"] == ".agentic-workspace/planning/execplans/issue-1981.plan.json"
+    assert "closure_check.slice status" in completed["evidence_fields"]
+    assert "proof_report" in completed["evidence_fields"]
+    assert "planning archive-plan --plan issue-1981" in completed["archive_command"]
+    assert completed["parent_lane_boundary"] == "parent-or-lane-closure-still-requires-explicit-closeout-authorization"
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "archive-plan",
+                "--plan",
+                "issue-1981",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--retain-archive",
+                "--apply-cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Estimate AW net effect on this thread",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    after = json.loads(capsys.readouterr().out)
+
+    assert after["next_safe_action"]["next_safe_action"] != "archive-or-retire-completed-plan"
+    assert "planning_safety_gate" not in after["context"]["planning"]
+
+
+def test_start_keeps_incomplete_active_plan_on_task_switch_route(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=False)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement unrelated parser cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning"]["planning_safety_gate"]
+
+    assert payload["next_safe_action"]["next_safe_action"] == "choose-task-switch-route"
+    assert gate["gate_result"] == "active-plan-task-switch"
+    assert gate["task_switch_reconciliation"]["status"] == "active"
 
 
 def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Path, capsys) -> None:

@@ -815,18 +815,34 @@ def _start_payload(
     payload["active_plan_reliance"] = planning_safety_gate.get("active_plan_reliance", {})
     custody_planning = planning_safety_gate.get("custody_planning", {})
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
-    if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies:
-        payload["planning_safety_gate"] = planning_safety_gate
     task_switch = planning_safety_gate.get("task_switch_reconciliation", {})
-    if isinstance(task_switch, dict) and task_switch.get("status") == "active":
+    task_switch_visible_by_default = isinstance(task_switch, dict) and task_switch.get("status") in {
+        "active",
+        "bounded-reflection-reporting",
+        "completed-active-plan-route",
+    }
+    if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default:
+        payload["planning_safety_gate"] = planning_safety_gate
+    if isinstance(task_switch, dict) and task_switch.get("status") in {
+        "active",
+        "bounded-reflection-reporting",
+        "completed-active-plan-route",
+    }:
         next_packet = task_switch.get("next_action_packet", {})
         if isinstance(next_packet, dict):
+            evidence_required = (
+                ["completed active-plan route accepted or dismissed"]
+                if task_switch.get("status") == "completed-active-plan-route"
+                else ["active-plan claim boundary preserved"]
+                if task_switch.get("status") == "bounded-reflection-reporting"
+                else ["current-task route chosen without claiming active-plan progress"]
+            )
             payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
                 surface="start",
                 decision=planning_safety_gate["decision"],
                 reason=planning_safety_gate["reason"],
                 required_next_action=planning_safety_gate["required_next_action"],
-                evidence_required=["current-task route chosen without claiming active-plan progress"],
+                evidence_required=evidence_required,
             )
             payload["immediate_next_allowed_action"] = next_packet
     if not planning_safety_gate["workflow_sufficient"] and (not _is_config_posture_task(task_text)):
@@ -1450,6 +1466,21 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         memory_consult=payload.get("memory_consult"),
     )
     next_safe_action = _compact_selector_next_safe_action(next_safe_action)
+    workflow_payload = payload.get(
+        "workflow_sufficiency",
+        _workflow_sufficiency_payload(
+            surface="start",
+            decision="enough-for-first-contact-routing",
+            reason="Use the next action and selectors; no raw workspace files are needed yet.",
+        ),
+    )
+    compact_workflow = _tiny_workflow_sufficiency(workflow_payload)
+    if read_only_compact_default:
+        compact_workflow = {
+            key: compact_workflow.get(key)
+            for key in ("kind", "surface", "sufficiency_result", "required_next_action", "evidence_required")
+            if compact_workflow.get(key) not in (None, "", [], {})
+        }
     context: dict[str, Any] = {
         "primary_action": payload["immediate_next_allowed_action"],
         "active_state": payload["active_state_summary"],
@@ -1459,23 +1490,21 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             "preferred_routes": list(skill_routing.get("preferred_routes", [])[:2]) if isinstance(skill_routing, dict) else [],
         },
         "planning": {
-            "workflow_sufficiency": _tiny_workflow_sufficiency(
-                payload.get(
-                    "workflow_sufficiency",
-                    _workflow_sufficiency_payload(
-                        surface="start",
-                        decision="enough-for-first-contact-routing",
-                        reason="Use the next action and selectors; no raw workspace files are needed yet.",
-                    ),
-                )
-            ),
+            "workflow_sufficiency": compact_workflow,
             **(
                 {"planning_safety_gate": _selector_first_planning_safety_gate(payload["planning_safety_gate"])}
                 if "planning_safety_gate" in payload
                 else {}
             ),
         },
-        "memory": payload.get("memory_consult", {}),
+        "memory": {
+            "status": payload.get("memory_consult", {}).get("status", "unknown")
+            if isinstance(payload.get("memory_consult"), dict)
+            else "unknown",
+            "detail_selector": "memory_decision_packet",
+        }
+        if read_only_compact_default
+        else payload.get("memory_consult", {}),
     }
     compact_closeout_obligations = _selector_first_closeout_obligations(payload)
     if compact_closeout_obligations:
@@ -1503,7 +1532,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             )
             if key in local_checkpoint
         }
-    if isinstance(work_threads, dict) and _local_work_threads_default_visible(work_threads):
+    if isinstance(work_threads, dict) and _local_work_threads_default_visible(work_threads) and not read_only_compact_default:
         context["work_threads"] = {
             key: work_threads.get(key)
             for key in (
@@ -1559,10 +1588,15 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(task_path_references, dict) and task_path_references.get("status") == "present":
         context["task_path_references"] = task_path_references
     architecture_forecast = payload.get("architecture_principles_forecast", {})
-    if isinstance(architecture_forecast, dict) and architecture_forecast.get("status") in {
-        "provisional-match",
-        "needs-planned-scope",
-    }:
+    if (
+        isinstance(architecture_forecast, dict)
+        and architecture_forecast.get("status")
+        in {
+            "provisional-match",
+            "needs-planned-scope",
+        }
+        and not read_only_compact_default
+    ):
         context["architecture_principles_forecast"] = architecture_forecast
     pr_comment_attention = payload.get("pr_comment_attention", {})
     if isinstance(pr_comment_attention, dict) and pr_comment_attention.get("status") not in {None, "", "not_applicable"}:
@@ -1612,26 +1646,32 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         context["installed_state_drift_triage"] = _compact_installed_state_drift_triage(installed_state_triage)
     dogfooding_signal_status = payload.get("dogfooding_signal_status", {})
     if isinstance(dogfooding_signal_status, dict) and dogfooding_signal_status.get("status") not in {None, "", "not_applicable"}:
-        context["dogfooding_signal_status"] = {
-            key: dogfooding_signal_status.get(key)
-            for key in (
-                "kind",
-                "status",
-                "outcome",
-                "closeout_blocked",
-                "destinations",
-                "dismissal_reason",
-                "deferred_reason",
-                "signal_count",
-                "sample_signals",
-                "durability",
-                "durable_residue",
-                "canonical_repo_history",
-                "detail_command",
-                "selector",
-            )
-            if key in dogfooding_signal_status and dogfooding_signal_status.get(key) not in (None, "", [], {}, False, 0)
-        }
+        if read_only_compact_default:
+            context["dogfooding_signal_status"] = {
+                "status": dogfooding_signal_status.get("status"),
+                "selector": dogfooding_signal_status.get("selector", "dogfooding_signal_status"),
+            }
+        else:
+            context["dogfooding_signal_status"] = {
+                key: dogfooding_signal_status.get(key)
+                for key in (
+                    "kind",
+                    "status",
+                    "outcome",
+                    "closeout_blocked",
+                    "destinations",
+                    "dismissal_reason",
+                    "deferred_reason",
+                    "signal_count",
+                    "sample_signals",
+                    "durability",
+                    "durable_residue",
+                    "canonical_repo_history",
+                    "detail_command",
+                    "selector",
+                )
+                if key in dogfooding_signal_status and dogfooding_signal_status.get(key) not in (None, "", [], {}, False, 0)
+            }
     uv_guidance = payload.get("uv_cache_guidance", {})
     if not (isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available"):
         cli_invocation = payload.get("cli_invocation", {})
@@ -1653,7 +1693,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "status": task_intent.get("status", "unknown") if isinstance(task_intent, dict) else "unknown",
                 "requested_outcomes": task_intent.get("requested_outcomes", [])[:8] if isinstance(task_intent, dict) else [],
                 "task_argument_mode": task_intent.get("task_argument_mode") if isinstance(task_intent, dict) else None,
-                "response_posture": read_only_response,
                 "detail_selector": "acceptance",
             }
             if read_only_compact_default
@@ -1671,7 +1710,11 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             )
             context["task"]["acceptance_detail_selector"] = "acceptance"
         if read_only_compact_default:
-            context["read_only_response"] = read_only_response
+            context["read_only_response"] = {
+                "status": read_only_response.get("status", "unknown") if isinstance(read_only_response, dict) else "unknown",
+                "compact_default": True,
+                "detail_selector": "read_only_response",
+            }
         for optional_key in ("task_file", "task_file_instruction", "task_excerpt", "task_digest", "task_text_length"):
             if isinstance(task_intent, dict) and optional_key in task_intent:
                 context["task"][optional_key] = task_intent[optional_key]
@@ -1810,7 +1853,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                     else "",
                     *startup_proof_commands,
                 ]
-                if str(item).strip()
+                if item not in (None, "", []) and str(item).strip() and str(item).strip().lower() != "none"
             ],
             claim_boundary=next_safe_action.get("claim_boundary", "completion claim requires proof"),
             residue_owner="active continuation state" if payload.get("active_state_summary", {}).get("active_execplan") else "none",
@@ -1827,16 +1870,31 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             },
         ),
         "communication_contract": compact_communication_contract_payload(surface="startup"),
-        "skills": _startup_skills_projection(
-            payload=payload,
-            next_safe_action=next_safe_action,
-            target_root=target_root,
-            cli_invoke=cli_invoke,
+        "skills": (
+            {
+                "kind": "agentic-workspace/startup-skills-projection/v1",
+                "status": "selector-only",
+                "rule": "Read-only compact startup omits skill packet detail; use the catalog selector only when needed.",
+                "required": [],
+                "recommended": [],
+                "catalog": {
+                    "available": True,
+                    "detail_selector": "skills",
+                    "command": f'{cli_invoke} skills --target "{target_root or Path(".")}" --task "<task>" --format json',
+                },
+            }
+            if read_only_compact_default
+            else _startup_skills_projection(
+                payload=payload,
+                next_safe_action=next_safe_action,
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+            )
         ),
         "context": context,
         "drill_down": {
-            "ordinary_profile": "primary=next_safe_action;skills=proj;legacy=select/context",
-            "rule": "Compact default omits selector inventory and schemas. Use exact --select for one field; use --verbose only for broad diagnostics.",
+            "ordinary_profile": "primary=next;skills=proj;detail=select",
+            "rule": "Compact default omits selector inventory/schemas; use --select or --verbose for detail.",
             "selector_inventory": {
                 "status": "omitted-from-compact-default",
                 "available_count": len(available_selectors),
@@ -1846,11 +1904,53 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             },
         },
     }
+    if read_only_compact_default:
+        decision = selected.get("decision_packet", {})
+        if isinstance(decision, dict):
+            selected["decision_packet"] = {
+                key: decision.get(key)
+                for key in (
+                    "kind",
+                    "surface",
+                    "phase_question",
+                    "next_action",
+                    "blocked_actions",
+                    "reasons",
+                    "shown_because",
+                    "absence_states",
+                )
+                if decision.get(key) not in (None, "", [], {})
+            }
+            if decision.get("claim_boundary") not in (None, "", [], {}):
+                claim_boundary = str(decision.get("claim_boundary"))
+                selected["decision_packet"]["claim_boundary"] = (
+                    claim_boundary if len(claim_boundary) <= 180 else f"{claim_boundary[:177]}..."
+                )
+        selected["communication_contract"] = {
+            "status": "selector-only",
+            "detail_selector": "communication_contract",
+            "rule": "Read-only compact startup keeps the decision visible; use the selector for full response-shape detail.",
+        }
+        selected["drill_down"]["omitted_detail"] = {
+            "selectors": [
+                "planning_safety_gate",
+                "active_state_summary",
+                "work_threads",
+                "installed_state_compatibility",
+                "installed_state_drift_triage",
+                "memory_decision_packet",
+                "architecture_principles_forecast",
+                "drill_down.selector_inventory",
+            ],
+            "rule": "Reflection/reporting defaults stay decision-first; exact selectors expose omitted diagnostics.",
+        }
     task_posture_packet = payload.get("task_posture_packet", {})
     if isinstance(task_posture_packet, dict) and task_posture_packet:
         selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
-    show_state_delta_packets = str(next_safe_action.get("next_safe_action", "")) != "choose-task-switch-route" and not isinstance(
-        payload.get("installed_state_compatibility"), dict
+    show_state_delta_packets = (
+        str(next_safe_action.get("next_safe_action", "")) != "choose-task-switch-route"
+        and not isinstance(payload.get("installed_state_compatibility"), dict)
+        and not read_only_compact_default
     )
     if show_state_delta_packets:
         state_delta_core = state_delta_core_payload(

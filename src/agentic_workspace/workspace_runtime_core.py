@@ -23454,12 +23454,16 @@ def _next_safe_action_packet(
         skill = "workspace-intent-discovery"
     elif action == "present-lane-shaping-prompt":
         skill = "planning-decompose"
+    elif action in {"produce-bounded-reflection-report", "archive-or-retire-completed-plan"}:
+        skill = ""
     elif action != "choose-smallest-workflow-shape" and isinstance(preferred_routes, list):
         for route in preferred_routes:
             if isinstance(route, dict) and route.get("skill"):
                 skill = str(route.get("skill"))
                 break
-    if action.startswith(("create", "promote", "checkpoint", "update", "validate-planning", "continue-active-planning")):
+    if action == "archive-or-retire-completed-plan":
+        module_slot = "planning"
+    elif action.startswith(("create", "promote", "checkpoint", "update", "validate-planning", "continue-active-planning")):
         module_slot = "planning"
     elif "closeout" in action:
         module_slot = "planning.closeout"
@@ -23494,6 +23498,8 @@ def _next_safe_action_packet(
         )
     if "closeout" in action:
         forbidden_actions.append("claim completion before closeout trust is reconciled")
+    if action == "archive-or-retire-completed-plan":
+        forbidden_actions.extend(["claim parent or lane completion from active-plan archival alone"])
     if decision in {
         "active-execplan-required",
         "candidate-lane-promotion-required",
@@ -25272,6 +25278,11 @@ def _compact_selector_active_plan_reliance(value: Any) -> dict[str, Any]:
 def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
     if not isinstance(gate, dict):
         return {}
+    task_switch = gate.get("task_switch_reconciliation")
+    compact_route = isinstance(task_switch, dict) and task_switch.get("status") in {
+        "bounded-reflection-reporting",
+        "completed-active-plan-route",
+    }
     compact: dict[str, Any] = {
         "kind": gate.get("kind"),
         "label": "work gate",
@@ -25279,19 +25290,20 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "status": gate.get("status"),
         "gate_result": gate.get("gate_result") or gate.get("decision"),
         "workflow_sufficient": gate.get("workflow_sufficient"),
-        "reason": gate.get("reason"),
+        "reason": _task_excerpt(str(gate.get("reason") or ""), limit=180) if compact_route else gate.get("reason"),
         "decision_maturity": _tiny_decision_maturity(gate.get("decision_maturity")),
         "required_next_action": gate.get("required_next_action"),
         "active_planning_present": gate.get("active_planning_present"),
         "issue_refs": gate.get("issue_refs", []),
-        "promotion_command": gate.get("promotion_command"),
-        "delegation_decision_command": gate.get("delegation_decision_command"),
-        "new_plan_command": gate.get("new_plan_command"),
         "planning_revision": _compact_selector_planning_revision(gate.get("planning_revision")),
         "implementation_allowed": gate.get("implementation_allowed"),
         "delegation_decision_required": gate.get("delegation_decision_required"),
         "authority_boundary": _compact_authority_boundary(gate.get("authority_boundary")),
     }
+    if not compact_route:
+        compact["promotion_command"] = gate.get("promotion_command")
+        compact["delegation_decision_command"] = gate.get("delegation_decision_command")
+        compact["new_plan_command"] = gate.get("new_plan_command")
     active_plan_reliance = _compact_selector_active_plan_reliance(gate.get("active_plan_reliance"))
     if active_plan_reliance.get("permission_claim") != "direct-work-not-active-plan-continuation" or active_plan_reliance.get(
         "blocked_until_reconciled"
@@ -25322,24 +25334,46 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         }
     if "work_shape_guidance" in gate and gate.get("workflow_sufficient") is False:
         compact["work_shape_guidance"] = _tiny_work_shape_guidance(gate["work_shape_guidance"])
-    task_switch = gate.get("task_switch_reconciliation")
-    if isinstance(task_switch, dict) and task_switch.get("status") == "active":
+    if isinstance(task_switch, dict) and task_switch.get("status") in {
+        "active",
+        "bounded-reflection-reporting",
+        "completed-active-plan-route",
+    }:
         safe_routes = [
             {key: route.get(key) for key in ("id", "command") if isinstance(route, dict) and route.get(key) not in (None, "", [], {})}
             for route in _list_payload(task_switch.get("safe_routes"))[:3]
             if isinstance(route, dict)
         ]
         active_plan_protection = _as_dict(task_switch.get("active_plan_protection"))
-        compact["task_switch_reconciliation"] = {
+        compact_switch = {
             "kind": task_switch.get("kind"),
             "status": task_switch.get("status"),
-            "summary": task_switch.get("summary"),
+            "summary": _task_excerpt(str(task_switch.get("summary") or ""), limit=180),
             "current_task_class": task_switch.get("current_task_class"),
             "recommended_next_action": task_switch.get("recommended_next_action"),
             "safe_route_ids": [route.get("id") for route in safe_routes if route.get("id")],
             "blocked_claims": active_plan_protection.get("blocked_claims", []),
             "detail_selector": "planning_safety_gate.task_switch_reconciliation",
         }
+        if active_plan_protection.get("claim_boundary"):
+            compact_switch["claim_boundary"] = _task_excerpt(str(active_plan_protection.get("claim_boundary") or ""), limit=180)
+        completed_plan = _as_dict(task_switch.get("completed_active_plan"))
+        if completed_plan:
+            compact_switch["completed_active_plan"] = {
+                key: completed_plan.get(key)
+                for key in (
+                    "status",
+                    "active_execplan",
+                    "plan_id",
+                    "evidence_fields",
+                    "archive_command",
+                    "recheck_command",
+                    "parent_lane_boundary",
+                    "claim_boundary",
+                )
+                if completed_plan.get(key) not in (None, "", [], {})
+            }
+        compact["task_switch_reconciliation"] = compact_switch
     custody_planning = gate.get("custody_planning")
     if isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable"):
         compact["custody_planning"] = {
@@ -25630,11 +25664,21 @@ def _read_only_meta_task(task_text: str | None) -> bool:
     meta_terms = (
         "dogfooding report",
         "dogfood report",
+        "dogfooding feedback",
         "retrospective",
+        "reflection",
+        "reflect",
+        "estimate aw",
+        "net effect",
         "status report",
         "status check",
         "summarize",
         "summary",
+        "concrete aw dogfooding feedback issues",
+        "feedback issues",
+        "follow-up issues",
+        "issue-shaping",
+        "shape follow-up",
         "review current",
         "read-only",
         "meta analysis",
@@ -27200,18 +27244,34 @@ def _start_tiny_payload_fast(
     payload["active_plan_reliance"] = planning_safety_gate.get("active_plan_reliance", {})
     custody_planning = planning_safety_gate.get("custody_planning", {})
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
-    if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies:
-        payload["planning_safety_gate"] = planning_safety_gate
     task_switch = planning_safety_gate.get("task_switch_reconciliation", {})
-    if isinstance(task_switch, dict) and task_switch.get("status") == "active":
+    task_switch_visible_by_default = isinstance(task_switch, dict) and task_switch.get("status") in {
+        "active",
+        "bounded-reflection-reporting",
+        "completed-active-plan-route",
+    }
+    if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default:
+        payload["planning_safety_gate"] = planning_safety_gate
+    if isinstance(task_switch, dict) and task_switch.get("status") in {
+        "active",
+        "bounded-reflection-reporting",
+        "completed-active-plan-route",
+    }:
         next_packet = task_switch.get("next_action_packet", {})
         if isinstance(next_packet, dict):
+            evidence_required = (
+                ["completed active-plan route accepted or dismissed"]
+                if task_switch.get("status") == "completed-active-plan-route"
+                else ["active-plan claim boundary preserved"]
+                if task_switch.get("status") == "bounded-reflection-reporting"
+                else ["current-task route chosen without claiming active-plan progress"]
+            )
             payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
                 surface="start",
                 decision=planning_safety_gate["decision"],
                 reason=planning_safety_gate["reason"],
                 required_next_action=planning_safety_gate["required_next_action"],
-                evidence_required=["current-task route chosen without claiming active-plan progress"],
+                evidence_required=evidence_required,
             )
             payload["immediate_next_allowed_action"] = next_packet
     intent_acknowledgement = _intent_acknowledgement_payload(
