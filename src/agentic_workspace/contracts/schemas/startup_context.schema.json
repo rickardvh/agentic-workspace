@@ -1110,6 +1110,106 @@
           "const": "repo-state-authoritative",
           "description": "Repo payload state owns compatibility for the current target."
         },
+        "action_state": {
+          "type": "object",
+          "required": [
+            "kind",
+            "state",
+            "status",
+            "repo_payload_authority",
+            "invoked_cli_role",
+            "compatibility_basis",
+            "repair_mechanism",
+            "action_id",
+            "safe_to_apply",
+            "mutates_on_start"
+          ],
+          "properties": {
+            "kind": {
+              "const": "agentic-workspace/installed-state-action-state/v1",
+              "description": "Discriminator for the installed-state action-state packet."
+            },
+            "state": {
+              "enum": [
+                "no_repair_needed",
+                "safe_payload_sync_available",
+                "manual_review_required",
+                "blocking_incompatible"
+              ],
+              "description": "Decisive action state for installed repo payload freshness."
+            },
+            "status": {
+              "enum": [
+                "no_repair_needed",
+                "safe_payload_sync_available",
+                "manual_review_required",
+                "blocking_incompatible"
+              ],
+              "description": "Alias of state for compact routing surfaces."
+            },
+            "reason": {
+              "type": "string",
+              "description": "Short explanation for the selected action state."
+            },
+            "repo_payload_authority": {
+              "const": "repo-state-authoritative",
+              "description": "The checked-in repo payload contract owns freshness decisions."
+            },
+            "invoked_cli_role": {
+              "const": "compatibility-evaluator-and-projection-source",
+              "description": "The invoked CLI evaluates and proposes explicit repair but is not automatically authoritative."
+            },
+            "compatibility_basis": {
+              "type": "object",
+              "additionalProperties": true,
+              "description": "Payload contract and provenance facts used for the action-state decision."
+            },
+            "repair_mechanism": {
+              "type": "string",
+              "description": "Visible repair mechanism, if any."
+            },
+            "action_id": {
+              "type": "string",
+              "description": "Stable internal action identifier."
+            },
+            "command": {
+              "type": "string",
+              "description": "Primary command for the action when one is available."
+            },
+            "dry_run_command": {
+              "type": "string",
+              "description": "Resolved dry-run sync command for safe package-owned repair."
+            },
+            "apply_command": {
+              "type": "string",
+              "description": "Resolved apply sync command for safe package-owned repair."
+            },
+            "safe_to_apply": {
+              "type": "boolean",
+              "description": "Whether the action is bounded to package-owned sync surfaces."
+            },
+            "mutates_on_start": {
+              "const": false,
+              "description": "Startup may report this state but must not mutate the repo."
+            },
+            "package_owned_surfaces": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Managed surfaces covered by safe sync."
+            },
+            "manual_review_surfaces": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Surfaces requiring explicit manual review."
+            },
+            "rule": {
+              "type": "string",
+              "description": "Policy rule for applying this action state."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Public installed-state action-state machine result."
+        },
         "executable": {
           "type": "object",
           "description": "Executable identity and compatibility classification.",
