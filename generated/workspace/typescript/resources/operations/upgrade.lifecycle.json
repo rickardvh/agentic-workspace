@@ -15,6 +15,7 @@
     "Respect dry-run mode by avoiding writes.",
     "Keep legacy scratch cleanup explicit and scoped to guarded entries under .agentic-workspace/local/scratch.",
     "Keep root startup pointer repair scoped to the managed workflow fence in the configured root startup file.",
+    "Keep local-only checked-in adoption explicit; preserve durable AW state, remove only managed local-only markers, and ignore machine-local AW state through repo-owned ignore rules.",
     "Keep necessary-surface migration explicit, preserve durable Planning/Memory/Verification state, and do not reduce explicit full-payload mirror intent automatically."
   ],
   "id": "upgrade.lifecycle",
@@ -51,6 +52,11 @@
     },
     {
       "name": "repair_root_startup_pointer",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "adopt_local_only",
       "required": false,
       "source": "cli-option"
     },

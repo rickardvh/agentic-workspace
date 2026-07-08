@@ -6445,6 +6445,14 @@
                 "help": "Patch only the managed workflow pointer fence in the configured root startup file."
               },
               {
+                "name": "adopt_local_only",
+                "flags": [
+                  "--adopt-local-only"
+                ],
+                "action": "store_true",
+                "help": "Transition a local-only Agentic Workspace install to checked-in mode while preserving durable AW state."
+              },
+              {
                 "name": "to_payload_target",
                 "flags": [
                   "--to-payload-target"

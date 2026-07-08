@@ -3800,6 +3800,14 @@ const commandDefinitions = [
         {
           "action": "store_true",
           "flags": [
+            "--adopt-local-only"
+          ],
+          "help": "Transition a local-only Agentic Workspace install to checked-in mode while preserving durable AW state.",
+          "name": "adopt_local_only"
+        },
+        {
+          "action": "store_true",
+          "flags": [
             "--to-payload-target"
           ],
           "help": "Read [payload] from repo config and sync managed payload/provenance to the declared target.",

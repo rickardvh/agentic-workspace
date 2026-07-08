@@ -6161,11 +6161,14 @@ def _workspace_repair_payload(
     missing_startup_surfaces: list[str] = []
     pointer_surfaces: list[str] = []
     contract_drift_surfaces: list[str] = []
+    local_only_adoption_surfaces: list[str] = []
     merge_conflict_findings = _workspace_merge_conflict_findings(target_root=target_root)
     for action in actions:
         path = str(action.get("path", ""))
         kind = str(action.get("kind", ""))
         detail = str(action.get("detail", ""))
+        if kind == "warning" and detail.startswith("local-only workspace state present"):
+            local_only_adoption_surfaces.append(path)
         if kind == "missing" and path in {relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES}:
             missing_workspace_surfaces.append(path)
         if kind in {"missing", "warning"} and detail.startswith("managed .agentic-workspace local instructions "):
@@ -6179,6 +6182,14 @@ def _workspace_repair_payload(
         message = str(warning.get("message", ""))
         if "contract drift:" in message:
             contract_drift_surfaces.append(path)
+    if local_only_adoption_surfaces:
+        repair_actions.append(
+            _workspace_checked_in_adoption_repair_action(
+                target_root=target_root,
+                cli_invoke=cli_invoke,
+                affected_surfaces=_dedupe(local_only_adoption_surfaces),
+            )
+        )
     if missing_workspace_surfaces:
         repair_actions.append(
             _workspace_safe_repair_action(
@@ -6423,6 +6434,44 @@ def _workspace_managed_local_instructions_repair_action(
             "route": "agentic-workspace defaults --section improvement_intake --format json",
             "preferred_remedy": "make scoped repair commands visible from doctor instead of relying on broad lifecycle upgrades",
         },
+    }
+
+
+def _workspace_checked_in_adoption_repair_action(*, target_root: Path, cli_invoke: str, affected_surfaces: list[str]) -> dict[str, Any]:
+    target = target_root.as_posix()
+    dry_run = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --adopt-local-only --dry-run --format json",
+        cli_invoke=cli_invoke,
+    )
+    command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --adopt-local-only --format json",
+        cli_invoke=cli_invoke,
+    )
+    proof_after = [_command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke)]
+    return {
+        "id": "adopt-local-only-workspace-checked-in",
+        "action": "adopt-local-only-workspace-checked-in",
+        "invariant": "workspace.local_only_mode_absent_when_checked_in",
+        "fault_class": "agent_operation_fault",
+        "severity": "warning",
+        "owner": "workspace",
+        "safe_to_apply": True,
+        "risk": (
+            "low; removes only Agentic Workspace local-only markers and local git exclude entries created by the lifecycle command, "
+            "then seeds checked-in adoption metadata"
+        ),
+        "command": command,
+        "run": command,
+        "dry_run": dry_run,
+        "proof_after": proof_after,
+        "affected_surfaces": affected_surfaces,
+        "current_fault_summary": "Workspace is still marked as local-only while checked-in adoption is available.",
+        "do_not": [
+            "Do not remove .agentic-workspace/ manually; adoption should preserve durable Planning and Memory state.",
+            "Do not hand-edit .git/info/exclude when this command can remove the managed local-only block exactly.",
+            "Do not commit machine-local AW state; keep only .agentic-workspace/local/ ignored in repo-owned ignore rules.",
+        ],
+        "recurrence": "first_seen",
     }
 
 
@@ -6766,11 +6815,25 @@ def _workspace_status_report(
         )
         if not exists:
             warnings.append({"path": relative.as_posix(), "message": "required workspace file missing"})
-    local_actions, local_warnings = _sync_workspace_managed_agent_instructions(
-        target_root=target_root, config=config, dry_run=False, apply=False
-    )
-    actions.extend(local_actions)
-    warnings.extend(local_warnings)
+        local_actions, local_warnings = _sync_workspace_managed_agent_instructions(
+            target_root=target_root, config=config, dry_run=False, apply=False
+        )
+        actions.extend(local_actions)
+        warnings.extend(local_warnings)
+    if _has_local_only_workspace_state(target_root=target_root):
+        actions.append(
+            {
+                "kind": "warning",
+                "path": LOCAL_ONLY_STATE_FILE.as_posix(),
+                "detail": "local-only workspace state present; checked-in adoption is available",
+            }
+        )
+        warnings.append(
+            {
+                "path": LOCAL_ONLY_STATE_FILE.as_posix(),
+                "message": "local-only workspace state present; run upgrade --adopt-local-only --dry-run to inspect checked-in adoption.",
+            }
+        )
     scratch_path = target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH
     actions.append(
         {
@@ -7277,6 +7340,26 @@ def _seed_workspace_config_action(
         "kind": "would create" if dry_run else "created",
         "path": WORKSPACE_CONFIG_PATH.as_posix(),
         "detail": "seed schema-valid workspace config with managed config header and repo-local reference",
+    }
+
+
+def _seed_checked_in_adoption_config_action(
+    *, target_root: Path, selected_modules: list[str], dry_run: bool, config: WorkspaceConfig
+) -> dict[str, str]:
+    config_path = target_root / WORKSPACE_CONFIG_PATH
+    if config_path.exists():
+        return {
+            "kind": "current",
+            "path": WORKSPACE_CONFIG_PATH.as_posix(),
+            "detail": "workspace config already present; preserved repo-owned policy during checked-in adoption",
+        }
+    if not dry_run:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(_seeded_workspace_config_text(config=config, enabled_modules=selected_modules), encoding="utf-8")
+    return {
+        "kind": "would create" if dry_run else "created",
+        "path": WORKSPACE_CONFIG_PATH.as_posix(),
+        "detail": "seed schema-valid workspace config for checked-in adoption",
     }
 
 
@@ -39609,6 +39692,18 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
         )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
+    if command_name == "upgrade" and bool(getattr(args, "adopt_local_only", False)):
+        adoption_modules = [entry.name for entry in _module_registry(descriptors=descriptors, target_root=target_root) if entry.installed]
+        payload = _run_checked_in_adoption_from_local_only(
+            target_root=target_root,
+            config=config,
+            dry_run=bool(getattr(args, "dry_run", False)),
+            selected_modules=adoption_modules or selected_modules,
+            resolved_preset=resolved_preset,
+            non_interactive=args.non_interactive,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
     if command_name == "upgrade" and bool(getattr(args, "to_necessary_surfaces", False)):
         migration = _workspace_runtime_core._necessary_surfaces_migration_payload(
             target_root=target_root,
@@ -39695,6 +39790,123 @@ def _run_managed_local_instructions_repair(
         "next_action": {
             "action": "verify-with-doctor",
             "summary": "Run doctor to confirm the managed local instructions surface is current.",
+            "commands": [
+                _command_with_cli_invoke(
+                    command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=config.cli_invoke
+                )
+            ],
+        },
+    }
+
+
+def _sync_checked_in_adoption_from_local_only(
+    *, target_root: Path, config: WorkspaceConfig, selected_modules: list[str], dry_run: bool
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    actions: list[dict[str, str]] = []
+    warnings: list[dict[str, str]] = []
+    actions.append(
+        _seed_checked_in_adoption_config_action(target_root=target_root, selected_modules=selected_modules, dry_run=dry_run, config=config)
+    )
+    actions.extend(
+        _workspace_runtime_core._required_skill_surface_actions(target_root=target_root, selected_modules=selected_modules, dry_run=dry_run)
+    )
+    if _has_local_only_workspace_state(target_root=target_root):
+        actions.append(_remove_local_only_state(target_root=target_root, dry_run=dry_run))
+    else:
+        actions.append(
+            {
+                "kind": "skipped",
+                "path": LOCAL_ONLY_STATE_FILE.as_posix(),
+                "detail": "no local-only workspace state was present",
+            }
+        )
+    actions.append(_remove_local_only_git_exclude(repo_root=target_root, dry_run=dry_run))
+    actions.append(_remove_legacy_local_only_gitignore(repo_root=target_root, dry_run=dry_run))
+    actions.append(_ensure_repo_owned_local_gitignore(target_root=target_root, dry_run=dry_run))
+    actions.append(_ensure_local_scratch(target_root=target_root, dry_run=dry_run))
+    actions.extend(
+        _remove_local_agent_startup(
+            repo_root=target_root,
+            reference_file=Path(config.agent_instructions_file),
+            dry_run=dry_run,
+            cli_invoke=config.cli_invoke,
+        )
+    )
+    pointer_actions, pointer_warnings = _sync_root_startup_pointer_fence(target_root=target_root, config=config, dry_run=dry_run)
+    actions.extend(pointer_actions)
+    warnings.extend(pointer_warnings)
+    receipt_reports = [{"actions": actions, "warnings": warnings}]
+    actions.append(
+        _workspace_runtime_core._write_adoption_receipt_action(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            reports=receipt_reports,
+            payload_mirror=False,
+            dry_run=dry_run,
+        )
+    )
+    return (actions, warnings)
+
+
+def _run_checked_in_adoption_from_local_only(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    dry_run: bool,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    non_interactive: bool,
+) -> dict[str, Any]:
+    actions, warnings = _sync_checked_in_adoption_from_local_only(
+        target_root=target_root,
+        config=config,
+        selected_modules=selected_modules,
+        dry_run=dry_run,
+    )
+    report = _workspace_report(
+        target_root=target_root,
+        message="Checked-in adoption from local-only workspace",
+        dry_run=dry_run,
+        actions=actions,
+        warnings=warnings,
+    )
+    summary = _summarise_reports(target_root=target_root, reports=[report], descriptors={}, command_name="upgrade")
+    return {
+        "command": "upgrade",
+        "repair_mode": "checked-in-adoption-from-local-only",
+        "target": target_root.as_posix(),
+        "modules": selected_modules,
+        "preset": resolved_preset,
+        "dry_run": dry_run,
+        "non_interactive": non_interactive,
+        "health": "healthy" if not warnings and not summary["needs_review"] else "attention-needed",
+        "created": summary["created"],
+        "updated_managed": summary["updated_managed"],
+        "preserved_existing": summary["preserved_existing"],
+        "needs_review": summary["needs_review"],
+        "generated_artifacts": summary["generated_artifacts"],
+        "warnings": summary["warnings"],
+        "reports": [report],
+        "config": _config_payload(config=config),
+        "adoption_scope": {
+            "from": "local-only",
+            "to": "checked-in",
+            "affected_surfaces": [
+                LOCAL_ONLY_STATE_FILE.as_posix(),
+                ".git/info/exclude",
+                ".gitignore",
+                ".agentic-workspace/adoption-receipt.json",
+                Path(config.agent_instructions_file).as_posix(),
+                LOCAL_AGENT_INSTRUCTIONS_FILE.as_posix(),
+            ],
+            "rule": (
+                "Preserve durable .agentic-workspace state, remove only managed local-only markers, "
+                "and ignore machine-local AW state through repo-owned .gitignore."
+            ),
+        },
+        "next_action": {
+            "action": "verify-with-doctor",
+            "summary": "Run doctor to confirm local-only residue is gone and checked-in adoption state is healthy.",
             "commands": [
                 _command_with_cli_invoke(
                     command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=config.cli_invoke

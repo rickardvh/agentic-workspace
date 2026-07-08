@@ -152,11 +152,13 @@
   "references": [],
   "active_milestone": {
     "id": "issue-2073-root-agents-fence-repair",
-    "status": "active",
+    "status": "planned",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
-    "ready": "ready",
+    "ready": "queued",
     "blocked": "none",
-    "optional_deps": "none"
+    "optional_deps": "none",
+    "switched_from_active_by": "issue-2074-checked-in-adoption-flow",
+    "switch_reason": "Switched active lane to Issue 2074 checked-in adoption flow."
   },
   "immediate_next_action": [
     "Fill in execution bounds, touched paths, and validation before implementation starts."
@@ -288,6 +290,7 @@
     }
   },
   "drift_log": [
-    "2026-07-08: Scaffolded by agentic-planning new-plan."
+    "2026-07-08: Scaffolded by agentic-planning new-plan.",
+    "2026-07-08: Demoted from active by agentic-planning new-plan --switch-active (issue-2074-checked-in-adoption-flow)."
   ]
 }
