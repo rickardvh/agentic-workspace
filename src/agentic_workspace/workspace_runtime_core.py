@@ -815,6 +815,12 @@ NECESSARY_SURFACE_DURABLE_PREFIXES = (
     ".agentic-workspace/verification/",
 )
 
+NECESSARY_SURFACE_REQUIRED_SKILL_PREFIXES = (
+    ".agentic-workspace/skills",
+    ".agentic-workspace/planning/skills",
+    ".agentic-workspace/memory/skills",
+)
+
 NECESSARY_SURFACE_REPO_OWNED_PATHS = (
     "AGENTS.md",
     ".agentic-workspace/config.toml",
@@ -836,8 +842,6 @@ NECESSARY_SURFACE_PACKAGE_PAYLOAD_PATHS = (
     ".agentic-workspace/bootstrap-handoff.md",
     ".agentic-workspace/bootstrap-handoff.json",
     ".agentic-workspace/docs",
-    ".agentic-workspace/skills",
-    ".agentic-workspace/planning/skills",
     ".agentic-workspace/planning/schemas",
     ".agentic-workspace/planning/decompositions/README.md",
     ".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
@@ -851,7 +855,6 @@ NECESSARY_SURFACE_PACKAGE_PAYLOAD_PATHS = (
     ".agentic-workspace/planning/pre-ingestion-refinement.md",
     ".agentic-workspace/planning/agent-manifest.json",
     ".agentic-workspace/memory/bootstrap",
-    ".agentic-workspace/memory/skills",
     ".agentic-workspace/memory/SKILLS.md",
     ".agentic-workspace/memory/VERSION.md",
     ".agentic-workspace/memory/WORKFLOW.md",
@@ -872,10 +875,17 @@ def _path_is_under_or_equal(path: str, parent: str) -> bool:
     return path == parent or path.startswith(parent.rstrip("/") + "/")
 
 
+def _is_necessary_skill_surface_path(path: str) -> bool:
+    normalized = path.replace("\\", "/")
+    return any(_path_is_under_or_equal(normalized, candidate) for candidate in NECESSARY_SURFACE_REQUIRED_SKILL_PREFIXES)
+
+
 def _necessary_surface_path_class(path: str) -> str:
     normalized = path.replace("\\", "/")
     if any(_path_is_under_or_equal(normalized, candidate) for candidate in NECESSARY_SURFACE_REPO_OWNED_PATHS):
         return "necessary-repo-owned-state"
+    if _is_necessary_skill_surface_path(normalized):
+        return "required-skill-surface"
     if normalized in {WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(), *[p.as_posix() for p in MODULE_UPGRADE_SOURCE_PATHS.values()]}:
         return "local-environment-provenance"
     if normalized in NECESSARY_SURFACE_TRANSIENT_PATHS:
@@ -918,6 +928,7 @@ def _necessary_surface_preserve_candidates(target_root: Path) -> list[str]:
         ".agentic-workspace/memory/repo",
         ".agentic-workspace/verification",
         WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+        *NECESSARY_SURFACE_REQUIRED_SKILL_PREFIXES,
     ):
         path = target_root / relative
         if path.exists():
@@ -1006,7 +1017,13 @@ def _necessary_surfaces_migration_payload(
             }
         )
     else:
-        status = "safe-apply-available" if remove_candidates else "already-necessary-surfaces"
+        skill_actions = [
+            _necessary_surface_action(action["kind"], action["path"], action["detail"])
+            for action in _required_skill_surface_actions(target_root=target_root, selected_modules=selected_modules, dry_run=dry_run)
+        ]
+        skill_write_actions = [action for action in skill_actions if action["kind"] not in {"current"}]
+        status = "safe-apply-available" if remove_candidates or skill_write_actions else "already-necessary-surfaces"
+        actions.extend(skill_actions)
         for relative in remove_candidates:
             actions.append(
                 _necessary_surface_action(
@@ -1060,11 +1077,7 @@ def _necessary_surfaces_migration_payload(
             )
         status = "applied" if any(action["kind"] in {"removed", "created", "updated"} for action in actions) else status
     remove_actions = [action for action in actions if action["kind"] in {"would remove", "remove", "removed"}]
-    write_actions = [
-        action
-        for action in actions
-        if action["path"] == WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix() and action["kind"] not in {"current", "preserve"}
-    ]
+    write_actions = [action for action in actions if action["kind"] not in {"current", "preserve", "would remove", "remove", "removed"}]
     return {
         "kind": "agentic-workspace/necessary-surface-migration/v1",
         "status": status,
@@ -7943,12 +7956,13 @@ def _workspace_init_or_upgrade_report(
             config_modules = [module_name for module_name in ordered_names if module_name in requested]
         actions.append(_set_enabled_modules_action(target_root=target_root, enabled_modules=config_modules, dry_run=dry_run))
     if minimal_footprint:
+        actions.extend(_workspace_required_skill_actions(target_root=target_root, dry_run=dry_run))
         actions.append(
             {
                 "kind": "omitted",
                 "path": ".agentic-workspace/package-payload",
                 "detail": (
-                    "ordinary bootstrap omits generic workspace docs, templates, schemas, and bundled skills; "
+                    "ordinary bootstrap omits generic workspace docs, templates, schemas, and provenance; "
                     "use --mirror-payload to copy the package payload"
                 ),
             }
@@ -8191,6 +8205,120 @@ def _workspace_init_or_upgrade_report(
     return _workspace_report(
         target_root=target_root, message=f"{command_name.title()} report", dry_run=dry_run, actions=actions, warnings=warnings
     )
+
+
+def _sync_bytes_surface_action(
+    *,
+    target_root: Path,
+    relative: Path,
+    source_bytes: bytes,
+    dry_run: bool,
+    detail: str,
+) -> dict[str, str]:
+    destination = target_root / relative
+    existing = destination.read_bytes() if destination.is_file() else None
+    if existing == source_bytes:
+        return {"kind": "current", "path": relative.as_posix(), "detail": detail + "; already current"}
+    if not dry_run:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(source_bytes)
+    return {
+        "kind": "would create"
+        if dry_run and existing is None
+        else "would update"
+        if dry_run
+        else "created"
+        if existing is None
+        else "updated",
+        "path": relative.as_posix(),
+        "detail": detail,
+    }
+
+
+def _sync_tree_surface_actions(
+    *,
+    source_root: Path,
+    target_root: Path,
+    destination_root: Path,
+    dry_run: bool,
+    detail: str,
+) -> list[dict[str, str]]:
+    if not source_root.is_dir():
+        return [{"kind": "manual review", "path": destination_root.as_posix(), "detail": f"{detail}; source directory is missing"}]
+    actions: list[dict[str, str]] = []
+    for source in sorted(source_root.rglob("*")):
+        if not source.is_file() or "__pycache__" in source.parts or source.suffix == ".pyc":
+            continue
+        relative = destination_root / source.relative_to(source_root)
+        actions.append(
+            _sync_bytes_surface_action(
+                target_root=target_root,
+                relative=relative,
+                source_bytes=source.read_bytes(),
+                dry_run=dry_run,
+                detail=detail,
+            )
+        )
+    return actions
+
+
+def _workspace_required_skill_actions(*, target_root: Path, dry_run: bool) -> list[dict[str, str]]:
+    actions: list[dict[str, str]] = []
+    for relative in sorted(
+        (relative for relative in WORKSPACE_PAYLOAD_FILES if _is_necessary_skill_surface_path(relative.as_posix())),
+        key=lambda path: path.as_posix(),
+    ):
+        source = _workspace_payload_source(relative)
+        if not source.is_file():
+            actions.append(
+                {
+                    "kind": "manual review",
+                    "path": relative.as_posix(),
+                    "detail": "required workspace skill payload source is missing",
+                }
+            )
+            continue
+        actions.append(
+            _sync_bytes_surface_action(
+                target_root=target_root,
+                relative=relative,
+                source_bytes=source.read_bytes(),
+                dry_run=dry_run,
+                detail="sync required workspace skill surface for routed agent workflows",
+            )
+        )
+    return actions
+
+
+def _module_required_skill_actions(*, module_name: str, target_root: Path, dry_run: bool) -> list[dict[str, str]]:
+    if module_name == "planning":
+        from repo_planning_bootstrap.installer import skills_root as planning_skills_root
+
+        return _sync_tree_surface_actions(
+            source_root=planning_skills_root(),
+            target_root=target_root,
+            destination_root=Path(".agentic-workspace/planning/skills"),
+            dry_run=dry_run,
+            detail="sync required planning skill surface for routed agent workflows",
+        )
+    if module_name == "memory":
+        from repo_memory_bootstrap._installer_paths import payload_root as memory_payload_root
+
+        return _sync_tree_surface_actions(
+            source_root=memory_payload_root() / ".agentic-workspace" / "memory" / "skills",
+            target_root=target_root,
+            destination_root=Path(".agentic-workspace/memory/skills"),
+            dry_run=dry_run,
+            detail="sync required memory skill surface for routed agent workflows",
+        )
+    return []
+
+
+def _required_skill_surface_actions(*, target_root: Path, selected_modules: list[str], dry_run: bool) -> list[dict[str, str]]:
+    actions = _workspace_required_skill_actions(target_root=target_root, dry_run=dry_run)
+    for module_name in selected_modules:
+        actions.extend(_module_required_skill_actions(module_name=module_name, target_root=target_root, dry_run=dry_run))
+    return actions
 
 
 def _workspace_uninstall_report(
@@ -8667,12 +8795,13 @@ def _minimal_module_footprint_report(
                 "detail": f"ordinary bootstrap does not define state anchors for module '{module_name}'",
             }
         )
+    actions.extend(_module_required_skill_actions(module_name=module_name, target_root=target_root, dry_run=dry_run))
     actions.append(
         {
             "kind": "omitted",
             "path": f".agentic-workspace/{module_name}",
             "detail": (
-                f"ordinary bootstrap keeps generic {module_name} package payload out of the repository; "
+                f"ordinary bootstrap keeps generic {module_name} docs, templates, schemas, and provenance out of the repository; "
                 "use --mirror-payload for an explicit mirrored install"
             ),
         }
@@ -40099,6 +40228,7 @@ def _bootstrap_footprint_payload(
         "repo_owned_config": [],
         "adopted_local_state": [],
         "package_supplied_payload": [],
+        "required_skill_surfaces": [],
         "transient_handoff": [],
         "local_environment_provenance": [],
         "intentional_full_mirror": [],
@@ -40124,6 +40254,9 @@ def _bootstrap_footprint_payload(
                 _add("adopted_local_state", path)
             if path == WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix() or path.endswith("/UPGRADE-SOURCE.toml"):
                 _add("local_environment_provenance", path)
+            if _is_necessary_skill_surface_path(path):
+                _add("required_skill_surfaces", path)
+                continue
             if kind == "omitted" and (
                 path == ".agentic-workspace/package-payload"
                 or path in {".agentic-workspace/planning", ".agentic-workspace/memory", ".agentic-workspace/AGENTS.md"}

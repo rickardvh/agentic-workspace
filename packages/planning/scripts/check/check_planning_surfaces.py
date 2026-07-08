@@ -1123,6 +1123,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         "skills",
         "before opening raw `.agentic-workspace` files",
         "do not bake machine-local aw invocation paths into checked-in generic guidance",
+        "module skill trees as required operating surfaces",
         "routed drill-down or recovery surfaces",
         ".agentic-workspace/workflow.md",
         "<!-- agentic-workspace:workflow:end -->",

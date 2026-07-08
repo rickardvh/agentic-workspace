@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import re
+import shutil
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
@@ -219,7 +220,9 @@ def test_init_ordinary_footprint_omits_package_payload_and_writes_receipt(tmp_pa
     assert not (tmp_path / ".agentic-workspace" / "payload-provenance.json").exists()
     assert not (tmp_path / ".agentic-workspace" / "AGENTS.md").exists()
     assert not (tmp_path / ".agentic-workspace" / "planning" / "UPGRADE-SOURCE.toml").exists()
-    assert not (tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "memory" / "skills" / "memory-router" / "SKILL.md").exists()
     assert ".agentic-workspace/package-payload" in payload["bootstrap_footprint"]["omitted_package_payload_paths"]
     assert payload["validation"] == ["agentic-workspace doctor --target .", "agentic-workspace status --target ."]
 
@@ -271,7 +274,9 @@ def test_install_ordinary_footprint_omits_package_payload(tmp_path: Path, capsys
     receipt = json.loads((tmp_path / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
     assert receipt["payload_mirror"] is False
     assert not (tmp_path / ".agentic-workspace" / "payload-provenance.json").exists()
-    assert not (tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "skills" / "workspace-startup" / "SKILL.md").exists()
+    assert (tmp_path / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json").exists()
+    assert (tmp_path / ".agentic-workspace" / "memory" / "skills" / "memory-router" / "SKILL.md").exists()
 
 
 def test_init_mirror_payload_writes_payload_and_receipt(tmp_path: Path, capsys) -> None:
@@ -1896,10 +1901,9 @@ def test_report_bootstrap_footprint_recommends_legacy_payload_migration(tmp_path
     assert plan["status"] == "safe-apply-available"
     assert plan["safe_to_apply"] is True
     assert "--to-necessary-surfaces --dry-run" in plan["dry_run_command"]
+    assert not any(action["kind"] == "would remove" and action["path"] == ".agentic-workspace/skills" for action in plan["actions"])
     assert any(
-        action["kind"] == "would remove"
-        and action["path"] == ".agentic-workspace/skills"
-        and action["class"] == "removable-package-owned-payload"
+        action["kind"] == "preserve" and action["path"] == ".agentic-workspace/skills" and action["class"] == "required-skill-surface"
         for action in plan["actions"]
     )
     assert any(
@@ -1944,9 +1948,9 @@ def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_
     assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
     applied = json.loads(capsys.readouterr().out)["migration"]
     assert applied["status"] == "applied"
-    assert not (workspace / "skills").exists()
-    assert not (workspace / "planning" / "skills").exists()
-    assert not (workspace / "memory" / "skills").exists()
+    assert (workspace / "skills" / "workspace-operating-loop" / "SKILL.md").exists()
+    assert (workspace / "planning" / "skills" / "planning-reporting" / "SKILL.md").exists()
+    assert (workspace / "memory" / "skills" / "memory-router" / "SKILL.md").exists()
     assert not (workspace / "payload-provenance.json").exists()
     for path in package_seed_paths:
         assert not path.exists()
@@ -1985,6 +1989,24 @@ def test_upgrade_to_necessary_surfaces_leaves_doctor_healthy_after_apply(tmp_pat
     assert doctor_payload["health"] == "healthy"
     assert doctor_payload["needs_review"] == []
     assert doctor_payload["warnings"] == []
+
+
+def test_upgrade_to_necessary_surfaces_repairs_missing_required_skills(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--format", "json"]) == 0
+    capsys.readouterr()
+    shutil.rmtree(workspace / "skills")
+    shutil.rmtree(workspace / "planning" / "skills")
+    shutil.rmtree(workspace / "memory" / "skills")
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
+    applied = json.loads(capsys.readouterr().out)["migration"]
+
+    assert applied["status"] == "applied"
+    assert (workspace / "skills" / "workspace-startup" / "SKILL.md").exists()
+    assert (workspace / "planning" / "skills" / "planning-reporting" / "SKILL.md").exists()
+    assert (workspace / "memory" / "skills" / "memory-router" / "SKILL.md").exists()
 
 
 def test_upgrade_to_necessary_surfaces_preserves_verification_state(tmp_path: Path, capsys) -> None:
