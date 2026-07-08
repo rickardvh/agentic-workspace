@@ -30,7 +30,7 @@
     "hard_constraints": "Do not weaken proof, task-switch, parent-closure, or Memory capture safety. Do not rely on arbitrary prose keyword matching. Keep #2046 closed and treat these as follow-up issues.",
     "agent_may_decide": "Exact branch split, helper names, budget ceilings, and whether to use stacked or independent PRs after the implementation shape is clear.",
     "escalate_when": "Any issue needs a broader redesign than its comment acceptance criteria, or proof cannot distinguish the fixed behavior from advisory text.",
-    "next_action": "Implement the four issue fixes with focused fixtures, then publish reviewable PRs.",
+    "next_action": "No active implementation remains; review the published PR stack.",
     "proof_expectations": [
       "Focused CLI tests for #2045 #2047 #2048 #2049 behavior.",
       "AW implement proof selection for changed paths.",
@@ -43,7 +43,7 @@
       "src/agentic_workspace/workspace_runtime_implement.py",
       "tests/test_workspace_cli.py",
       "tests/test_workspace_implement_cli.py",
-      ".agentic-workspace/planning/execplans/issues-2045-2047-2048-2049-followups.plan.json"
+      ".agentic-workspace/planning/execplans/archive/issues-2045-2047-2048-2049-followups.plan.json"
     ],
     "completion_criteria": [
       "#2045: ordinary default output budgets or shape invariants are checked and budget state is visible in operational_compression/proof-equivalent output.",
@@ -53,7 +53,7 @@
       "New PRs are created for the completed work with validation evidence."
     ],
     "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "closeout_decision": "archive-and-close"
   },
   "goal": [
     "GitHub issues #2045 #2047 #2048 #2049 post-#2046 comments"
@@ -70,9 +70,9 @@
     },
     "execution": {
       "milestone": "issues-2045-2047-2048-2049-followups",
-      "status": "active",
-      "next_step": "Fill in execution bounds, touched paths, and validation before implementation starts.",
-      "proof": "Fill in the narrowest command that proves the promoted work."
+      "status": "completed",
+      "next_step": "No active implementation remains; review PRs #2053 and #2054.",
+      "proof": "Focused regression tests and required workspace proof passed."
     },
     "scope": {
       "touched": [
@@ -159,14 +159,14 @@
   ],
   "active_milestone": {
     "id": "issues-2045-2047-2048-2049-followups",
-    "status": "active",
-    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "status": "completed",
+    "scope": "Completed follow-up implementation for issues #2045, #2047, #2048, and #2049.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Fill in execution bounds, touched paths, and validation before implementation starts."
+    "No active implementation remains; review PRs #2053 and #2054."
   ],
   "blockers": [
     "None."
@@ -180,14 +180,14 @@
     "tests/test_workspace_implement_cli.py",
     "tests/test_workspace_summary_cli.py",
     ".agentic-workspace/planning/state.toml",
-    ".agentic-workspace/planning/execplans/issues-2045-2047-2048-2049-followups.plan.json"
+    ".agentic-workspace/planning/execplans/archive/issues-2045-2047-2048-2049-followups.plan.json"
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
   ],
   "validation_commands": [
     "uv run pytest tests/test_workspace_cli.py::test_start_treats_shared_issue_ref_as_active_plan_continuation tests/test_workspace_cli.py::test_start_reconciles_unrelated_active_plan_with_new_issue_implementation_task tests/test_workspace_cli.py::test_closeout_trust_prefers_retained_closeout_evidence_over_newer_archive tests/test_workspace_cli.py::test_operational_compression_surfaces_checked_default_output_budget tests/test_workspace_cli.py::test_start_default_stays_under_tiny_output_budget_for_docs_task tests/test_workspace_summary_cli.py::test_memory_decision_packet_pull_statuses_distinguish_route_inspection tests/test_workspace_implement_cli.py::test_implement_surfaces_memory_decision_packet_for_changed_paths tests/test_workspace_implement_cli.py::test_implement_memory_decision_packet_reports_relevant_route_matches -q",
-    "uv run python scripts/run_agentic_workspace.py implement --changed src/agentic_workspace/workspace_runtime_core.py src/agentic_workspace/workspace_runtime_primitives.py src/agentic_workspace/workspace_runtime_planning.py src/agentic_workspace/reporting_support.py tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/issues-2045-2047-2048-2049-followups.plan.json --task \"Finish issues #2045 #2047 #2048 #2049 and create new pull requests\" --format json",
+    "uv run python scripts/run_agentic_workspace.py implement --changed src/agentic_workspace/workspace_runtime_core.py src/agentic_workspace/workspace_runtime_primitives.py src/agentic_workspace/workspace_runtime_planning.py src/agentic_workspace/reporting_support.py tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archive/issues-2045-2047-2048-2049-followups.plan.json --task \"Finish issues #2045 #2047 #2048 #2049 and create new pull requests\" --format json",
     "make test-workspace",
     "make lint-workspace",
     "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
