@@ -1602,11 +1602,19 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
     assert "--to-payload-target --dry-run" in compatibility["action_state"]["dry_run_command"]
     assert compatibility["action_effect"]["force"] == "required_before_execution"
     assert compatibility["action_effect"]["allowed_now"] == "run-payload-target-upgrade-before-ordinary-work"
+    attention_plan = compatibility["payload_upgrade_attention_plan"]
+    assert attention_plan["kind"] == "agentic-workspace/payload-upgrade-attention-plan/v1"
+    assert attention_plan["strategy"] == "converge-to-current-contract"
+    assert attention_plan["release_instruction_policy"]["uses_release_history"] is False
+    assert attention_plan["category_counts"]["auto_applied"] >= 1
+    assert all("release" not in item["required_action"].lower() for item in attention_plan["attention_items"])
+    assert compatibility["payload_surface_manifest"]["kind"] == "agentic-workspace/payload-surface-manifest/v1"
 
     assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
     doctor_payload = json.loads(capsys.readouterr().out)
     assert doctor_payload["installed_state_compatibility"]["payload"]["target"]["status"] == "target-mismatch"
     assert doctor_payload["installed_state_compatibility"]["action_effect"]["force"] == "required_before_execution"
+    assert doctor_payload["installed_state_compatibility"]["payload_upgrade_attention_plan"]["status"] == attention_plan["status"]
 
     assert (
         cli.main(
@@ -1625,6 +1633,7 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
     report_payload = json.loads(capsys.readouterr().out)
     assert report_payload["answer"]["payload"]["target"]["status"] == "target-mismatch"
     assert report_payload["answer"]["action_state"]["recheck_command"]
+    assert report_payload["answer"]["payload_upgrade_attention_plan"]["status"] == attention_plan["status"]
 
 
 def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: Path, capsys) -> None:
@@ -1647,6 +1656,10 @@ def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: P
 
     assert cli.main(["upgrade", "--target", str(tmp_path), "--to-payload-target", "--dry-run", "--format", "json"]) == 0
     dry_run_payload = json.loads(capsys.readouterr().out)
+    dry_run_plan = dry_run_payload["installed_state_compatibility"]["payload_upgrade_attention_plan"]
+    assert dry_run_plan["strategy"] == "converge-to-current-contract"
+    assert dry_run_plan["release_instruction_policy"]["uses_release_history"] is False
+    assert dry_run_plan["category_counts"]["auto_applied"] >= 1
     dry_run_workspace_report = next(report for report in dry_run_payload["reports"] if report["module"] == "workspace")
     dry_run_action = next(
         action for action in dry_run_workspace_report["actions"] if action["path"] == ".agentic-workspace/payload-provenance.json"
@@ -1684,6 +1697,79 @@ def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: P
         action for action in ordinary_workspace_report["actions"] if action["path"] == ".agentic-workspace/payload-provenance.json"
     )
     assert ordinary_action["kind"] == "current"
+
+
+def test_payload_upgrade_attention_plan_classifies_repo_surfaces(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,verification", "--format", "json"]) == 0
+    capsys.readouterr()
+    (tmp_path / "AGENTS.md").write_text("Repo-owned instructions without a managed workflow fence.\n", encoding="utf-8")
+    verification_manifest = workspace / "verification" / "manifest.toml"
+    if verification_manifest.exists():
+        verification_manifest.unlink()
+    planning_state = workspace / "planning" / "state.toml"
+    planning_state.parent.mkdir(parents=True, exist_ok=True)
+    planning_state.write_text('kind = "agentic-workspace/planning-state"\n', encoding="utf-8")
+    (tmp_path / "llms.txt").write_text("legacy model-facing instructions\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    plan = compatibility["payload_upgrade_attention_plan"]
+    by_category = {item["category"]: item for item in plan["attention_items"]}
+
+    assert by_category["agent_review_required"]["surface"] == "AGENTS.md"
+    assert by_category["agent_populate_required"]["surface"] == ".agentic-workspace/verification/manifest.toml"
+    assert by_category["deprecated_surface"]["surface"] == "llms.txt"
+    assert by_category["machine_migration_required"]["surface"] == ".agentic-workspace/planning/state.toml"
+    assert plan["status"] == "manual_attention_required"
+    assert plan["release_instruction_policy"]["uses_release_history"] is False
+
+
+def test_payload_upgrade_attention_plan_routes_unsupported_long_hop(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance["payload_schema"] = "agentic-workspace/payload/v0"
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    plan = compatibility["payload_upgrade_attention_plan"]
+    unsupported_items = [item for item in plan["attention_items"] if item["category"] == "unsupported_long_hop"]
+
+    assert unsupported_items
+    assert unsupported_items[0]["surface"] == ".agentic-workspace/payload-provenance.json"
+    assert unsupported_items[0]["blocking"] is True
+    assert plan["release_instruction_policy"]["uses_release_history"] is False
 
 
 def test_payload_target_required_before_claim_limits_claims_without_blocking_work(tmp_path: Path, capsys) -> None:

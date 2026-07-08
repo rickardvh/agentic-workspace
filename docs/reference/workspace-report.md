@@ -75,6 +75,8 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `installed_state_compatibility.action_state.package_owned_surfaces` | array of string | no |  | Managed surfaces covered by safe sync. |  |  |
 | `installed_state_compatibility.action_state.manual_review_surfaces` | array of string | no |  | Surfaces requiring explicit manual review. |  |  |
 | `installed_state_compatibility.action_state.rule` | string | no |  | Policy rule for applying this action state. |  |  |
+| `installed_state_compatibility.payload_surface_manifest` | object | no |  | Current payload surface contract used to classify installed-state upgrade work. |  |  |
+| `installed_state_compatibility.payload_upgrade_attention_plan` | object | no |  | Structured current-state convergence plan for payload upgrade attention items. |  |  |
 | `installed_state_compatibility.executable` | object | yes |  | Executable identity and compatibility classification. |  |  |
 | `installed_state_compatibility.payload` | object | yes |  | Installed repo payload compatibility and sync guidance. |  |  |
 | `installed_state_compatibility.generated_artifacts` | object | yes |  | Generated artifact freshness classification. |  |  |
