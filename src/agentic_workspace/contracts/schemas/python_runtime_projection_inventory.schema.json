@@ -12,6 +12,7 @@
     "completion_rule",
     "allowed_provenance_statuses",
     "accepted_runtime_boundaries",
+    "ordinary_command_migration",
     "entries"
   ],
   "properties": {
@@ -90,6 +91,43 @@
         }
       },
       "description": "Exact package-domain runtime boundaries. Whole-file runtime source or generated facade entries are not accepted."
+    },
+    "ordinary_command_migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "status",
+        "rule",
+        "representative_migrations"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/ordinary-command-migration/v1",
+          "description": "Stable document kind for the ordinary-command migration proof section."
+        },
+        "status": {
+          "enum": [
+            "representative-slice-present",
+            "missing-representative-slice"
+          ],
+          "description": "Whether the inventory includes at least one ordinary command migration representative."
+        },
+        "rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Rule for proving migrated ordinary command behavior is IR/codegen-owned and fail-closed."
+        },
+        "representative_migrations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/ordinary_command_migration"
+          },
+          "description": "Representative ordinary command migrations that prove the IR/codegen ownership boundary."
+        }
+      },
+      "description": "Representative ordinary command behavior that has moved behind command-package IR/codegen, plus the remaining runtime primitive boundary."
     },
     "entries": {
       "type": "array",
@@ -181,6 +219,120 @@
           "description": "Resolution required if the entry blocks completion or maintenance action required if it does not."
         }
       }
+    },
+    "ordinary_command_migration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "operation_id",
+        "adapter_id",
+        "source_ir_path",
+        "generated_command_module",
+        "generated_operation_path",
+        "migrated_behavior_fields",
+        "remaining_runtime_boundary",
+        "fail_closed_rule"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable identifier for this representative ordinary command migration."
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Generated operation id that owns the migrated command behavior."
+        },
+        "adapter_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Command package IR adapter id that binds the command surface to the operation."
+        },
+        "source_ir_path": {
+          "const": "src/agentic_workspace/contracts/command_package_ir.json",
+          "description": "Repo-relative command package IR source path."
+        },
+        "generated_command_module": {
+          "type": "string",
+          "pattern": "^generated/(workspace|planning|memory|verification)/python/commands/[A-Za-z0-9_]+\\.py$",
+          "description": "Repo-relative generated Python command module rendered from the command package IR."
+        },
+        "generated_operation_path": {
+          "type": "string",
+          "pattern": "^generated/(workspace|planning|memory|verification)/python/operations/[A-Za-z0-9_.-]+\\.json$",
+          "description": "Repo-relative generated operation contract path reached by the command adapter."
+        },
+        "migrated_behavior_fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "command identity",
+              "option schema",
+              "help text",
+              "effect hints",
+              "operation steps",
+              "primitive refs",
+              "conformance refs",
+              "generated Python command module"
+            ]
+          },
+          "uniqueItems": true,
+          "description": "Command behavior fields that are now owned by command package IR and generated artifacts."
+        },
+        "remaining_runtime_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_module",
+            "source_symbol",
+            "runtime_boundary_class",
+            "owner",
+            "why_runtime_owned"
+          ],
+          "properties": {
+            "source_module": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Runtime source module that still owns nondeterministic or mutation behavior."
+            },
+            "source_symbol": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+              "description": "Exact runtime source symbol accepted as the remaining boundary."
+            },
+            "runtime_boundary_class": {
+              "enum": [
+                "front-door-dispatch",
+                "live-workspace-inspection",
+                "mutation-orchestration",
+                "package-specific-judgment",
+                "provider-integration"
+              ],
+              "description": "Accepted runtime boundary class for the remaining source symbol."
+            },
+            "owner": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Owner responsible for the remaining runtime boundary."
+            },
+            "why_runtime_owned": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Reason this behavior remains runtime-owned instead of deterministic IR/codegen data."
+            }
+          },
+          "description": "Exact accepted runtime boundary that remains after the representative command migration."
+        },
+        "fail_closed_rule": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Rule enforced by checks when the IR, generated command, generated operation, or runtime boundary drifts."
+        }
+      },
+      "description": "One representative ordinary command migration from handwritten behavior to IR/codegen ownership."
     },
     "accepted_runtime_boundary": {
       "type": "object",
