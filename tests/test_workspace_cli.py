@@ -1879,6 +1879,161 @@ def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: P
     assert ordinary_action["kind"] == "current"
 
 
+def test_report_bootstrap_footprint_recommends_legacy_payload_migration(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "adoption-receipt.json").unlink()
+    _write(workspace / "planning" / "state.toml", 'kind = "agentic-workspace/planning-state"\n')
+    _write(workspace / "memory" / "repo" / "decisions" / "kept.md", "# Kept decision\n")
+
+    assert cli.main(["report", "--target", str(tmp_path), "--section", "bootstrap_footprint", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    plan = payload["answer"]
+
+    assert plan["kind"] == "agentic-workspace/necessary-surface-migration/v1"
+    assert plan["status"] == "safe-apply-available"
+    assert plan["safe_to_apply"] is True
+    assert "--to-necessary-surfaces --dry-run" in plan["dry_run_command"]
+    assert any(
+        action["kind"] == "would remove"
+        and action["path"] == ".agentic-workspace/skills"
+        and action["class"] == "removable-package-owned-payload"
+        for action in plan["actions"]
+    )
+    assert any(
+        action["kind"] == "preserve"
+        and action["path"] == ".agentic-workspace/planning/state.toml"
+        and action["class"] == "adopted-durable-state"
+        for action in plan["actions"]
+    )
+    assert any(action["path"] == ".agentic-workspace/adoption-receipt.json" for action in plan["actions"])
+
+
+def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_skills(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "adoption-receipt.json").unlink()
+    _write(workspace / "planning" / "state.toml", 'kind = "agentic-workspace/planning-state"\n')
+    _write(workspace / "planning" / "execplans" / "active.plan.json", '{"kind":"planning-execplan/v1"}\n')
+    _write(workspace / "memory" / "repo" / "decisions" / "decision.md", "# Durable decision\n")
+    package_seed_paths = [
+        workspace / "planning" / "execplans" / "TEMPLATE.plan.json",
+        workspace / "planning" / "execplans" / "README.md",
+        workspace / "planning" / "execplans" / "archive" / "README.md",
+        workspace / "memory" / "repo" / "templates",
+        workspace / "memory" / "repo" / "decisions" / "README.md",
+        workspace / "memory" / "repo" / "domains" / "README.md",
+        workspace / "memory" / "repo" / "invariants" / "README.md",
+        workspace / "memory" / "repo" / "runbooks" / "README.md",
+    ]
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--dry-run", "--format", "json"]) == 0
+    dry_run = json.loads(capsys.readouterr().out)["migration"]
+    assert dry_run["status"] == "safe-apply-available"
+    remove_actions = {action["path"]: action for action in dry_run["actions"] if action["kind"] == "would remove"}
+    for path in package_seed_paths:
+        relative = path.relative_to(tmp_path).as_posix()
+        assert remove_actions[relative]["class"] == "removable-package-owned-payload"
+    assert (workspace / "skills" / "workspace-operating-loop" / "SKILL.md").exists()
+    assert (workspace / "memory" / "repo" / "decisions" / "decision.md").exists()
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
+    applied = json.loads(capsys.readouterr().out)["migration"]
+    assert applied["status"] == "applied"
+    assert not (workspace / "skills").exists()
+    assert not (workspace / "planning" / "skills").exists()
+    assert not (workspace / "memory" / "skills").exists()
+    assert not (workspace / "payload-provenance.json").exists()
+    for path in package_seed_paths:
+        assert not path.exists()
+    assert (workspace / "planning" / "state.toml").exists()
+    assert (workspace / "planning" / "execplans" / "active.plan.json").exists()
+    assert (workspace / "memory" / "repo" / "decisions" / "decision.md").exists()
+    receipt = json.loads((workspace / "adoption-receipt.json").read_text(encoding="utf-8"))
+    assert receipt["payload_mirror"] is False
+    assert "planning/state.toml" in receipt["adopted_state"]
+    assert any(path.startswith("memory/repo/decisions/decision.md") for path in receipt["adopted_state"])
+
+    assert cli.main(["skills", "--target", str(tmp_path), "--format", "json"]) == 0
+    skills_payload = json.loads(capsys.readouterr().out)
+    skill_ids = {entry["id"] for entry in skills_payload["skills"]}
+    assert "workspace-operating-loop" in skill_ids
+    assert "memory-router" in skill_ids
+
+    assert cli.main(["status", "--target", str(tmp_path), "--format", "json"]) == 0
+    status_payload = json.loads(capsys.readouterr().out)
+    assert "necessary surfaces" not in json.dumps(status_payload).lower()
+
+
+def test_upgrade_to_necessary_surfaces_leaves_doctor_healthy_after_apply(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "adoption-receipt.json").unlink()
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
+    applied = json.loads(capsys.readouterr().out)["migration"]
+    assert applied["status"] == "applied"
+
+    assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
+    doctor_payload = json.loads(capsys.readouterr().out)
+    assert doctor_payload["health"] == "healthy"
+    assert doctor_payload["needs_review"] == []
+    assert doctor_payload["warnings"] == []
+
+
+def test_upgrade_to_necessary_surfaces_preserves_verification_state(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "adoption-receipt.json").unlink()
+    _write(workspace / "verification" / "manifest.toml", "schema_version = 1\n")
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (workspace / "verification" / "manifest.toml").exists()
+
+
+def test_upgrade_to_necessary_surfaces_respects_explicit_mirror_receipt(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--dry-run", "--format", "json"]) == 0
+    dry_run = json.loads(capsys.readouterr().out)["migration"]
+    assert dry_run["status"] == "mirror-intent-present"
+    assert dry_run["safe_to_apply"] is False
+    assert not any(action["kind"] == "would remove" for action in dry_run["actions"])
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
+    applied = json.loads(capsys.readouterr().out)["migration"]
+    assert applied["status"] == "mirror-intent-present"
+    assert (workspace / "skills" / "workspace-operating-loop" / "SKILL.md").exists()
+    receipt = json.loads((workspace / "adoption-receipt.json").read_text(encoding="utf-8"))
+    assert receipt["payload_mirror"] is True
+
+
+def test_doctor_surfaces_legacy_bootstrap_footprint_migration(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "adoption-receipt.json").unlink()
+
+    assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert any("bootstrap_footprint" in warning for warning in payload["warnings"])
+
+
 def test_payload_upgrade_attention_plan_classifies_repo_surfaces(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"

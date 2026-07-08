@@ -22,6 +22,8 @@ Mutating commands are conservative. They operate on package-owned surfaces, mana
 
 Use `--mirror-payload` only when a host repo explicitly wants the full package payload checked in for offline or tool-agnostic operation. Ordinary handoff files are written under `.agentic-workspace/local/scratch/` and should not become durable tracked state.
 
+Existing repositories that adopted AW before the necessary-surface default may still have checked-in generic package payload. Inspect that footprint with `agentic-workspace report --target . --section bootstrap_footprint --format json`. The dry-run classifies exact preserve, remove, and receipt-write actions. Apply the reviewed plan with `agentic-workspace upgrade --target . --to-necessary-surfaces --format json`. The migration preserves repo-owned config/startup and adopted Planning, Memory, and Verification state, removes known package-owned docs/templates/schemas/skill trees/provenance, refreshes the adoption receipt, and refuses to reduce an explicit full-payload mirror receipt automatically.
+
 ## Context Commands
 
 | Command | First question answered |

@@ -13,7 +13,8 @@
   "guards": [
     "Enforce strict preflight when configured.",
     "Respect dry-run mode by avoiding writes.",
-    "Keep legacy scratch cleanup explicit and scoped to guarded entries under .agentic-workspace/local/scratch."
+    "Keep legacy scratch cleanup explicit and scoped to guarded entries under .agentic-workspace/local/scratch.",
+    "Keep necessary-surface migration explicit, preserve durable Planning/Memory/Verification state, and do not reduce explicit full-payload mirror intent automatically."
   ],
   "id": "upgrade.lifecycle",
   "inputs": [
@@ -49,6 +50,11 @@
     },
     {
       "name": "to_payload_target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "to_necessary_surfaces",
       "required": false,
       "source": "cli-option"
     },
@@ -138,12 +144,12 @@
       "uses": "workspace.selection.resolve"
     },
     {
-      "description": "Plan upgrade changes or explicit legacy scratch cleanup when selected.",
+      "description": "Plan upgrade changes, explicit legacy scratch cleanup, or necessary-surface migration when selected.",
       "id": "plan_lifecycle",
       "uses": "workspace.lifecycle.plan"
     },
     {
-      "description": "Apply upgrade changes when not a dry run; apply legacy scratch cleanup only when explicitly requested.",
+      "description": "Apply upgrade changes when not a dry run; apply legacy scratch cleanup and necessary-surface migration only when explicitly requested.",
       "id": "apply_lifecycle",
       "uses": "workspace.lifecycle.apply"
     },

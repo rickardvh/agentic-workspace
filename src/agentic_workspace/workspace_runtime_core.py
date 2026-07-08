@@ -808,6 +808,295 @@ def _read_adoption_receipt(*, target_root: Path) -> dict[str, Any]:
     return {"status": "present", "path": WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(), "payload": payload}
 
 
+NECESSARY_SURFACE_DURABLE_PREFIXES = (
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/",
+    ".agentic-workspace/memory/repo/",
+    ".agentic-workspace/verification/",
+)
+
+NECESSARY_SURFACE_REPO_OWNED_PATHS = (
+    "AGENTS.md",
+    ".agentic-workspace/config.toml",
+    ".agentic-workspace/config.local.toml",
+    ".agentic-workspace/OWNERSHIP.toml",
+    ".agentic-workspace/system-intent",
+    ".agentic-workspace/subsystem-intent",
+)
+
+NECESSARY_SURFACE_TRANSIENT_PATHS = (
+    ".agentic-workspace/bootstrap-handoff.md",
+    ".agentic-workspace/bootstrap-handoff.json",
+    ".agentic-workspace/local/scratch/bootstrap-handoff.md",
+    ".agentic-workspace/local/scratch/bootstrap-handoff.json",
+)
+
+NECESSARY_SURFACE_PACKAGE_PAYLOAD_PATHS = (
+    ".agentic-workspace/AGENTS.md",
+    ".agentic-workspace/bootstrap-handoff.md",
+    ".agentic-workspace/bootstrap-handoff.json",
+    ".agentic-workspace/docs",
+    ".agentic-workspace/skills",
+    ".agentic-workspace/planning/skills",
+    ".agentic-workspace/planning/schemas",
+    ".agentic-workspace/planning/decompositions/README.md",
+    ".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json",
+    ".agentic-workspace/planning/execplans/README.md",
+    ".agentic-workspace/planning/execplans/TEMPLATE.plan.json",
+    ".agentic-workspace/planning/execplans/archive/README.md",
+    ".agentic-workspace/planning/lanes/README.md",
+    ".agentic-workspace/planning/lanes/TEMPLATE.lane.json",
+    ".agentic-workspace/planning/reviews",
+    ".agentic-workspace/planning/upstream-task-intake.md",
+    ".agentic-workspace/planning/pre-ingestion-refinement.md",
+    ".agentic-workspace/planning/agent-manifest.json",
+    ".agentic-workspace/memory/bootstrap",
+    ".agentic-workspace/memory/skills",
+    ".agentic-workspace/memory/SKILLS.md",
+    ".agentic-workspace/memory/VERSION.md",
+    ".agentic-workspace/memory/WORKFLOW.md",
+    ".agentic-workspace/memory/repo/templates",
+    ".agentic-workspace/memory/repo/decisions/README.md",
+    ".agentic-workspace/memory/repo/domains/README.md",
+    ".agentic-workspace/memory/repo/invariants/README.md",
+    ".agentic-workspace/memory/repo/runbooks/README.md",
+)
+
+
+def _necessary_surface_cli_command(*, cli_invoke: str, dry_run: bool) -> str:
+    command = f"agentic-workspace upgrade --target . --to-necessary-surfaces {'--dry-run ' if dry_run else ''}--format json"
+    return _command_with_cli_invoke(command=command, cli_invoke=cli_invoke)
+
+
+def _path_is_under_or_equal(path: str, parent: str) -> bool:
+    return path == parent or path.startswith(parent.rstrip("/") + "/")
+
+
+def _necessary_surface_path_class(path: str) -> str:
+    normalized = path.replace("\\", "/")
+    if any(_path_is_under_or_equal(normalized, candidate) for candidate in NECESSARY_SURFACE_REPO_OWNED_PATHS):
+        return "necessary-repo-owned-state"
+    if normalized in {WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(), *[p.as_posix() for p in MODULE_UPGRADE_SOURCE_PATHS.values()]}:
+        return "local-environment-provenance"
+    if normalized in NECESSARY_SURFACE_TRANSIENT_PATHS:
+        return "transient-handoff-scratch"
+    if normalized in {relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES} or any(
+        _path_is_under_or_equal(normalized, candidate) for candidate in NECESSARY_SURFACE_PACKAGE_PAYLOAD_PATHS
+    ):
+        return "removable-package-owned-payload"
+    if any(_path_is_under_or_equal(normalized, candidate) for candidate in NECESSARY_SURFACE_DURABLE_PREFIXES):
+        return "adopted-durable-state"
+    if normalized == WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix():
+        return "footprint-adoption-receipt"
+    if normalized.startswith(".agentic-workspace/local/"):
+        return "local-runtime-state"
+    return "manual-review"
+
+
+def _necessary_surface_remove_candidates() -> list[str]:
+    candidates = {
+        WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+        *[relative.as_posix() for relative in WORKSPACE_PAYLOAD_FILES],
+        *[relative.as_posix() for relative in MODULE_UPGRADE_SOURCE_PATHS.values()],
+        *NECESSARY_SURFACE_PACKAGE_PAYLOAD_PATHS,
+        ".agentic-workspace/local/scratch/bootstrap-handoff.md",
+        ".agentic-workspace/local/scratch/bootstrap-handoff.json",
+    }
+    return sorted(candidates, key=lambda item: (item.count("/"), item))
+
+
+def _necessary_surface_preserve_candidates(target_root: Path) -> list[str]:
+    candidates: set[str] = set()
+    for relative in NECESSARY_SURFACE_REPO_OWNED_PATHS:
+        path = target_root / relative
+        if path.exists():
+            candidates.add(relative)
+    aw_root = target_root / ".agentic-workspace"
+    for relative in (
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans",
+        ".agentic-workspace/memory/repo",
+        ".agentic-workspace/verification",
+        WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix(),
+    ):
+        path = target_root / relative
+        if path.exists():
+            candidates.add(relative)
+    if aw_root.exists():
+        for prefix in NECESSARY_SURFACE_DURABLE_PREFIXES:
+            root = target_root / prefix
+            if root.is_file():
+                candidates.add(prefix)
+            elif root.is_dir():
+                for child in root.rglob("*"):
+                    if child.is_file():
+                        candidates.add(_repo_relative_path(child, target_root))
+    return sorted(candidates)
+
+
+def _existing_necessary_surface_remove_candidates(target_root: Path) -> list[str]:
+    selected: list[str] = []
+    for relative in _necessary_surface_remove_candidates():
+        path = target_root / relative
+        if not path.exists() and not path.is_symlink():
+            continue
+        if _necessary_surface_path_class(relative) not in {
+            "removable-package-owned-payload",
+            "local-environment-provenance",
+            "transient-handoff-scratch",
+        }:
+            continue
+        if any((target_root / parent).is_dir() and _path_is_under_or_equal(relative, parent) for parent in selected):
+            continue
+        selected.append(relative)
+    return selected
+
+
+def _necessary_surface_action(kind: str, path: str, detail: str) -> dict[str, str]:
+    return {
+        "kind": kind,
+        "path": path,
+        "class": _necessary_surface_path_class(path),
+        "detail": detail,
+    }
+
+
+def _remove_necessary_surface_candidate(*, target_root: Path, relative: str) -> tuple[bool, str | None]:
+    path = target_root / relative
+    if not path.exists() and not path.is_symlink():
+        return False, None
+    candidate = path.resolve(strict=False)
+    aw_root = (target_root / ".agentic-workspace").resolve(strict=False)
+    if not _path_under_root(candidate, aw_root):
+        return False, "candidate failed .agentic-workspace path guard"
+    if _necessary_surface_path_class(relative) not in {
+        "removable-package-owned-payload",
+        "local-environment-provenance",
+        "transient-handoff-scratch",
+    }:
+        return False, "candidate is not classified as removable package/local residue"
+    _remove_tree_no_follow(path)
+    return True, None
+
+
+def _necessary_surfaces_migration_payload(
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    config: WorkspaceConfig,
+    dry_run: bool,
+) -> dict[str, Any]:
+    receipt_status = _read_adoption_receipt(target_root=target_root)
+    receipt = receipt_status.get("payload") if receipt_status.get("status") == "present" else {}
+    payload_mirror = receipt.get("payload_mirror") if isinstance(receipt, dict) else None
+    explicit_mirror = payload_mirror is True
+    remove_candidates = _existing_necessary_surface_remove_candidates(target_root)
+    preserve_actions = [
+        _necessary_surface_action("preserve", relative, "preserve necessary repo-owned or adopted durable AW state")
+        for relative in _necessary_surface_preserve_candidates(target_root)
+    ]
+    actions: list[dict[str, str]] = list(preserve_actions)
+    warnings: list[dict[str, str]] = []
+    if explicit_mirror:
+        status = "mirror-intent-present"
+        warnings.append(
+            {
+                "path": receipt_status.get("path", WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix()),
+                "message": "explicit payload mirror intent is present; necessary-surface reduction requires changing that intent first",
+            }
+        )
+    else:
+        status = "safe-apply-available" if remove_candidates else "already-necessary-surfaces"
+        for relative in remove_candidates:
+            actions.append(
+                _necessary_surface_action(
+                    "would remove" if dry_run else "remove",
+                    relative,
+                    "remove package-owned generic AW payload, transient handoff residue, or local executable provenance",
+                )
+            )
+        receipt_report = {"actions": preserve_actions}
+        receipt_action = _write_adoption_receipt_action(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            reports=[receipt_report],
+            payload_mirror=False,
+            dry_run=True,
+        )
+        if receipt_action["kind"] != "current":
+            actions.append(
+                _necessary_surface_action(
+                    "would " + receipt_action["kind"].removeprefix("would ") if dry_run else receipt_action["kind"].replace("would ", ""),
+                    receipt_action["path"],
+                    "write necessary-surfaces adoption receipt after preserving durable state",
+                )
+            )
+    if not dry_run and not explicit_mirror:
+        applied_actions: list[dict[str, str]] = []
+        for action in actions:
+            if action["kind"] != "remove":
+                applied_actions.append(action)
+                continue
+            removed, warning = _remove_necessary_surface_candidate(target_root=target_root, relative=action["path"])
+            if removed:
+                applied_actions.append({**action, "kind": "removed"})
+            elif warning:
+                warnings.append({"path": action["path"], "message": warning})
+        actions = applied_actions
+        receipt_action = _write_adoption_receipt_action(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            reports=[{"actions": preserve_actions}],
+            payload_mirror=False,
+            dry_run=False,
+        )
+        if receipt_action["kind"] != "current":
+            actions.append(
+                _necessary_surface_action(
+                    receipt_action["kind"],
+                    receipt_action["path"],
+                    "write necessary-surfaces adoption receipt after preserving durable state",
+                )
+            )
+        status = "applied" if any(action["kind"] in {"removed", "created", "updated"} for action in actions) else status
+    remove_actions = [action for action in actions if action["kind"] in {"would remove", "remove", "removed"}]
+    write_actions = [
+        action
+        for action in actions
+        if action["path"] == WORKSPACE_ADOPTION_RECEIPT_PATH.as_posix() and action["kind"] not in {"current", "preserve"}
+    ]
+    return {
+        "kind": "agentic-workspace/necessary-surface-migration/v1",
+        "status": status,
+        "dry_run": dry_run,
+        "target_state": "necessary-surfaces-only",
+        "payload_mirror_intent": "explicit-full-mirror"
+        if explicit_mirror
+        else "necessary-surfaces"
+        if payload_mirror is False
+        else "absent",
+        "safe_to_apply": not explicit_mirror,
+        "actions": actions,
+        "warnings": warnings,
+        "summary": {
+            "preserve_count": len(preserve_actions),
+            "remove_count": len(remove_actions),
+            "write_count": len(write_actions),
+        },
+        "dry_run_command": _necessary_surface_cli_command(cli_invoke=config.cli_invoke, dry_run=True),
+        "apply_command": _necessary_surface_cli_command(cli_invoke=config.cli_invoke, dry_run=False),
+        "recheck_command": _command_with_cli_invoke(
+            command="agentic-workspace doctor --target . --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        "rule": (
+            "Necessary-surface migration removes only known package-owned AW payload, transient handoff residue, "
+            "and local executable provenance while preserving repo-owned config/startup state and adopted Planning, "
+            "Memory, and Verification state. Explicit full-payload mirror intent is not reduced automatically."
+        ),
+    }
+
+
 def _validate_payload_provenance(payload: dict[str, Any]) -> list[str]:
     errors: list[str] = []
     if payload.get("payload_schema") != WORKSPACE_PAYLOAD_SCHEMA:
@@ -7091,6 +7380,29 @@ def _workspace_status_report(
                 "message": "AW local footprint exceeds budget or has scratch eligible for retention cleanup; inspect report --section local_footprint.",
             }
         )
+    bootstrap_footprint = _necessary_surfaces_migration_payload(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        config=config,
+        dry_run=True,
+    )
+    if bootstrap_footprint.get("status") == "safe-apply-available":
+        actions.append(
+            {
+                "kind": "warning",
+                "path": ".agentic-workspace",
+                "detail": "legacy checked-in AW package payload can be migrated to necessary surfaces",
+            }
+        )
+        warnings.append(
+            {
+                "path": ".agentic-workspace",
+                "message": (
+                    "legacy checked-in AW package payload can be reduced; inspect report --section bootstrap_footprint "
+                    "or run upgrade --to-necessary-surfaces --dry-run."
+                ),
+            }
+        )
     agents_path = target_root / agents_relative
     if not agents_path.exists():
         actions.append({"kind": "missing", "path": agents_relative.as_posix(), "detail": "root startup entrypoint missing"})
@@ -11340,6 +11652,12 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "when_to_use": "when .agentic-workspace size, local scratch growth, or cleanup routing needs diagnosis",
     },
     {
+        "section": "bootstrap_footprint",
+        "kind": "agentic-workspace/necessary-surface-migration/v1",
+        "purpose": "legacy checked-in AW payload reduction plan with preserve/remove/write actions and mirror-intent guard",
+        "when_to_use": "when a repo has historical checked-in AW package payload and should converge to necessary surfaces",
+    },
+    {
         "section": "workflow_compliance_summary",
         "kind": "agentic-workspace/workflow-compliance-summary/v1",
         "purpose": ("review/recovery summary of expected entrypoint, observed workflow use, gates, trust impact, and recovery action"),
@@ -14379,6 +14697,15 @@ def _run_lazy_report_section_command(
 
     if normalized == "local_footprint":
         payload["local_footprint"] = _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke)
+        return _select_report_payload(payload, profile="router", section=normalized)
+
+    if normalized == "bootstrap_footprint":
+        payload["bootstrap_footprint"] = _necessary_surfaces_migration_payload(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            config=config,
+            dry_run=True,
+        )
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "architecture_principles":
@@ -41874,6 +42201,31 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
+    if command_name == "upgrade" and bool(getattr(args, "to_necessary_surfaces", False)):
+        migration = _necessary_surfaces_migration_payload(
+            target_root=target_root,
+            selected_modules=selected_modules,
+            config=config,
+            dry_run=bool(getattr(args, "dry_run", False)),
+        )
+        report = _workspace_report(
+            target_root=target_root,
+            message="Necessary surface migration",
+            dry_run=bool(getattr(args, "dry_run", False)),
+            actions=cast(list[dict[str, str]], migration.get("actions", [])),
+            warnings=cast(list[dict[str, str]], migration.get("warnings", [])),
+        )
+        summary = _summarise_reports(target_root=target_root, reports=[report], descriptors={}, command_name="upgrade")
+        payload = {
+            "kind": "agentic-workspace/necessary-surface-migration-command/v1",
+            "command": "upgrade",
+            "dry_run": bool(getattr(args, "dry_run", False)),
+            "migration": migration,
+            "reports": [report],
+            **summary,
+        }
         _emit_payload(payload=payload, format_name=args.format)
         return 0
     payload = _run_lifecycle_command(
