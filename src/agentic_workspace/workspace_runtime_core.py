@@ -580,7 +580,7 @@ def _git_source_identity(root: Path | None) -> str:
     try:
         head_text = head_path.read_text(encoding="utf-8").strip()
     except OSError:
-        return root.as_posix()
+        return f"path:{root.name}"
     if head_text.startswith("ref:"):
         ref = head_text.split(":", 1)[1].strip()
         try:
@@ -589,7 +589,7 @@ def _git_source_identity(root: Path | None) -> str:
             revision = ""
     else:
         revision = head_text
-    return f"git:{revision[:12]}" if revision else root.as_posix()
+    return f"git:{revision[:12]}" if revision else f"path:{root.name}"
 
 
 def _portable_path_identity(path_value: Any, *, target_root: Path | None = None) -> str:
@@ -6746,23 +6746,12 @@ def _workspace_repair_payload(
                 ],
             )
         )
-    for surface in pointer_surfaces:
-        manual_review_actions.append(
-            _workspace_manual_review_action(
-                id="restore-workspace-pointer-manually",
-                invariant="workspace.startup_pointer_present",
-                fault_class="agent_operation_fault",
-                owner="repo",
+    if pointer_surfaces:
+        repair_actions.append(
+            _workspace_root_startup_pointer_repair_action(
                 target_root=target_root,
                 cli_invoke=cli_invoke,
-                affected_surfaces=[surface],
-                current_fault_summary="Root startup entrypoint no longer points at the workspace workflow.",
-                risk="manual review required; the surrounding startup file is repo-owned",
-                do_not=[
-                    "Do not replace unfenced repo instructions while restoring the workspace pointer.",
-                    "Do not widen the pointer into a second workflow handbook.",
-                ],
-                repair_affordance=_workspace_pointer_repair_affordance(cli_invoke=cli_invoke),
+                affected_surfaces=_dedupe(pointer_surfaces),
             )
         )
     if contract_drift_surfaces:
@@ -9597,6 +9586,42 @@ def _cli_compatibility_manual_review_action(
         "payload_drift_separate": True,
     }
     return action
+
+
+def _workspace_root_startup_pointer_repair_action(*, target_root: Path, cli_invoke: str, affected_surfaces: list[str]) -> dict[str, Any]:
+    target = target_root.as_posix()
+    dry_run = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --repair-root-startup-pointer --dry-run --format json",
+        cli_invoke=cli_invoke,
+    )
+    command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --repair-root-startup-pointer --format json",
+        cli_invoke=cli_invoke,
+    )
+    proof_after = [_command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke)]
+    return {
+        "id": "restore-root-startup-pointer-fence",
+        "action": "repair-root-startup-pointer",
+        "invariant": "workspace.startup_pointer_present",
+        "fault_class": "agent_operation_fault",
+        "severity": "warning",
+        "owner": "repo",
+        "safe_to_apply": True,
+        "risk": "low; patches only the managed workflow fence in the configured root startup file",
+        "command": command,
+        "run": command,
+        "dry_run": dry_run,
+        "proof_after": proof_after,
+        "affected_surfaces": affected_surfaces,
+        "current_fault_summary": "Root startup entrypoint no longer contains the managed Agentic Workspace workflow fence.",
+        "safe_patch_target": "configured root startup file managed workflow pointer fence only",
+        "do_not": [
+            "Do not replace repo-owned startup instructions outside the managed workflow fence.",
+            "Do not widen the managed fence into a workflow handbook.",
+        ],
+        "repair_affordance": _workspace_pointer_repair_affordance(cli_invoke=cli_invoke),
+        "recurrence": "first_seen",
+    }
 
 
 def _aggregate_repair_actions_from_reports(
@@ -42473,6 +42498,17 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
         )
         _emit_payload(payload=payload, format_name=args.format)
         return 0
+    if command_name == "upgrade" and bool(getattr(args, "repair_root_startup_pointer", False)):
+        payload = _run_root_startup_pointer_repair(
+            target_root=target_root,
+            config=config,
+            dry_run=bool(getattr(args, "dry_run", False)),
+            selected_modules=selected_modules,
+            resolved_preset=resolved_preset,
+            non_interactive=args.non_interactive,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
     if command_name == "upgrade" and bool(getattr(args, "to_necessary_surfaces", False)):
         migration = _necessary_surfaces_migration_payload(
             target_root=target_root,
@@ -42607,6 +42643,97 @@ def _run_managed_local_instructions_repair(
         "next_action": {
             "action": "verify-with-doctor",
             "summary": "Run doctor to confirm the managed local instructions surface is current.",
+            "commands": [
+                _command_with_cli_invoke(
+                    command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=config.cli_invoke
+                )
+            ],
+        },
+    }
+
+
+def _sync_root_startup_pointer_fence(
+    *, target_root: Path, config: WorkspaceConfig, dry_run: bool
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    relative = Path(config.agent_instructions_file)
+    path = target_root / relative
+    if not path.exists():
+        action = {
+            "kind": "missing",
+            "path": relative.as_posix(),
+            "detail": "configured root startup entrypoint missing; scoped fence repair does not create repo-owned startup files",
+        }
+        warning = {"path": relative.as_posix(), "message": action["detail"]}
+        return ([action], [warning])
+    existing = path.read_text(encoding="utf-8")
+    updated, changed = _replace_or_insert_fenced_block(
+        text=existing,
+        block=workspace_pointer_block(cli_invoke=config.cli_invoke),
+        start_marker=WORKSPACE_WORKFLOW_MARKER_START,
+        end_marker=WORKSPACE_WORKFLOW_MARKER_END,
+    )
+    if not changed:
+        return (
+            [{"kind": "current", "path": relative.as_posix(), "detail": "managed root workflow pointer fence already current"}],
+            [],
+        )
+    if not dry_run:
+        path.write_text(updated, encoding="utf-8")
+    return (
+        [
+            {
+                "kind": "would update" if dry_run else "updated",
+                "path": relative.as_posix(),
+                "detail": "repair only the managed root workflow pointer fence",
+            }
+        ],
+        [],
+    )
+
+
+def _run_root_startup_pointer_repair(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    dry_run: bool,
+    selected_modules: list[str],
+    resolved_preset: str | None,
+    non_interactive: bool,
+) -> dict[str, Any]:
+    actions, warnings = _sync_root_startup_pointer_fence(target_root=target_root, config=config, dry_run=dry_run)
+    report = _workspace_report(
+        target_root=target_root,
+        message="Root startup pointer repair",
+        dry_run=dry_run,
+        actions=actions,
+        warnings=warnings,
+    )
+    summary = _summarise_reports(target_root=target_root, reports=[report], descriptors={}, command_name="upgrade")
+    return {
+        "command": "upgrade",
+        "repair_mode": "root-startup-pointer",
+        "target": target_root.as_posix(),
+        "modules": selected_modules,
+        "preset": resolved_preset,
+        "dry_run": dry_run,
+        "non_interactive": non_interactive,
+        "health": "healthy" if not warnings else "attention-needed",
+        "created": summary["created"],
+        "updated_managed": summary["updated_managed"],
+        "preserved_existing": summary["preserved_existing"],
+        "needs_review": summary["needs_review"],
+        "generated_artifacts": summary["generated_artifacts"],
+        "warnings": summary["warnings"],
+        "reports": [report],
+        "config": _config_payload(config=config),
+        "repair_scope": {
+            "affected_surfaces": [Path(config.agent_instructions_file).as_posix()],
+            "safe_patch_target": "configured root startup file managed workflow pointer fence only",
+            "rule": "This scoped repair writes only the managed Agentic Workspace workflow fence and preserves repo-owned content outside it.",
+        },
+        "next_action": {
+            "action": "verify-with-doctor",
+            "summary": "Run doctor to confirm the root startup workflow pointer fence is current.",
             "commands": [
                 _command_with_cli_invoke(
                     command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=config.cli_invoke

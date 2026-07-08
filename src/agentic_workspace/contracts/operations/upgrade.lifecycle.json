@@ -38,6 +38,11 @@
       "required": false
     },
     {
+      "name": "repair_root_startup_pointer",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "to_payload_target",
       "source": "cli-option",
       "required": false
@@ -130,6 +135,7 @@
     "Enforce strict preflight when configured.",
     "Respect dry-run mode by avoiding writes.",
     "Keep legacy scratch cleanup explicit and scoped to guarded entries under .agentic-workspace/local/scratch.",
+    "Keep root startup pointer repair scoped to the managed workflow fence in the configured root startup file.",
     "Keep necessary-surface migration explicit, preserve durable Planning/Memory/Verification state, and do not reduce explicit full-payload mirror intent automatically."
   ],
   "proof": [
