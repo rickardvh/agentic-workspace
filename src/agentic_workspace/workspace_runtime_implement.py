@@ -1044,6 +1044,50 @@ def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, An
     }
 
 
+def _tiny_proof_command_tiers_payload(value: Any, *, required_commands: list[str]) -> dict[str, Any]:
+    packet = value if isinstance(value, dict) else {}
+    raw_tiers = packet.get("tiers", [])
+    tiers: list[dict[str, Any]] = []
+    for tier in raw_tiers if isinstance(raw_tiers, list) else []:
+        if not isinstance(tier, dict):
+            continue
+        raw_commands = tier.get("commands", [])
+        commands = [
+            {
+                "command": str(item.get("command", "")),
+                "evidence_type": str(item.get("evidence_type", "")),
+                **(
+                    {"extra_evidence": str(item.get("duplicates_ok_reason", ""))}
+                    if str(item.get("duplicates_ok_reason", "")).strip()
+                    else {}
+                ),
+            }
+            for item in raw_commands
+            if isinstance(item, dict) and str(item.get("command", "")).strip()
+        ][:1]
+        if commands:
+            tiers.append({"id": str(tier.get("id", "")), "commands": commands})
+    if len(tiers) <= 1:
+        return {}
+    minimal_required = ""
+    for tier in tiers:
+        if tier["id"] == "must_run" and tier["commands"]:
+            minimal_required = tier["commands"][0]["command"]
+            break
+    if not minimal_required and required_commands:
+        minimal_required = required_commands[0]
+    return {
+        "selected_set": {
+            key: _as_dict(packet.get("selected_set")).get(key)
+            for key in ("status",)
+            if _as_dict(packet.get("selected_set")).get(key) not in (None, "", [], {})
+        },
+        "minimal_required_command": minimal_required,
+        "tiers": tiers,
+        "closeout_rule": "List overlap only when it adds extra_evidence.",
+    }
+
+
 def _implement_tiny_proof_narrowness_payload(value: Any) -> dict[str, Any]:
     packet = value if isinstance(value, dict) else {}
     if not _include_tiny_proof_narrowness(packet):
@@ -1319,6 +1363,11 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
             )
             if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("proof_obligations"), dict)
+            else {},
+            "proof_command_tiers": _tiny_proof_command_tiers_payload(
+                payload.get("proof", {}).get("proof_command_tiers", {}), required_commands=proof_commands
+            )
+            if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("proof_command_tiers"), dict)
             else {},
             "proof_narrowness": _implement_tiny_proof_narrowness_payload(payload.get("proof", {}).get("proof_narrowness", {}))
             if isinstance(payload.get("proof"), dict)

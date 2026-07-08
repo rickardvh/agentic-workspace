@@ -801,16 +801,28 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
             "missing_evidence": item.get("missing_evidence", []),
             "reference_material": item.get("reference_material", []),
             "claim_boundary": str(item.get("claim_boundary", "")),
+            "resolution": {
+                "inspect": item.get("reference_material", []) or item.get("missing_evidence", []),
+                "record": item.get("missing_evidence", []) or ["manual_review_result"],
+                "detail_selector": "proof.proof_obligations.required_proof.manual_obligations",
+                "closeout_format": "manual obligation <id>: inspected <refs>; recorded <evidence>; claim boundary <claim_boundary>",
+            },
         }
         for item in manual_obligations
     ]
     manual_obligation_projection: dict[str, Any]
-    if len(compact_manual_obligations) <= 1:
+    if len(compact_manual_obligations) <= 3:
         manual_obligation_projection = {"manual_obligations": compact_manual_obligations}
     else:
         manual_obligation_projection = {
             "manual_obligation_ids": [str(item.get("id", "")) for item in manual_obligations[:4] if str(item.get("id", "")).strip()],
             "manual_obligations_detail_selector": "proof.proof_obligations.required_proof.manual_obligations",
+            "manual_obligation_record_shape": {
+                "inspect": "reference_material or the affected surface named by the obligation",
+                "record": "missing_evidence item plus review result",
+                "detail_selector": "proof.proof_obligations.required_proof.manual_obligations",
+                "closeout_format": "manual obligation <id>: inspected <refs>; recorded <evidence>; claim boundary <claim_boundary>",
+            },
         }
     return {
         "kind": value.get("kind", "agentic-workspace/proof-obligations/v1"),

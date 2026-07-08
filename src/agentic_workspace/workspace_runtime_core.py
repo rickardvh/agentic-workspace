@@ -45511,17 +45511,62 @@ def _proof_command_tier(command: str, *, lane: str = "") -> str:
     return "must_run"
 
 
+def _proof_command_evidence_type(command: str, *, tier: str) -> str:
+    text = command.lower()
+    if "lint" in text or "ruff" in text:
+        return "lint"
+    if "typecheck" in text or "mypy" in text or "pyright" in text:
+        return "typecheck"
+    if "generated_command" in text or "command_package" in text:
+        return "generated-command-contract"
+    if "conformance" in text:
+        return "operation-conformance"
+    if "schema-reference" in text:
+        return "schema-reference"
+    if "check_contract" in text or "check_structured" in text:
+        return "contract-surface"
+    if tier == "manual_review":
+        return "manual-review"
+    return "behavior"
+
+
+def _proof_command_cost(tier: str) -> str:
+    return {
+        "must_run": "workspace",
+        "contract_surface": "focused-contract",
+        "generated_contract": "generated-contract",
+        "environmental": "expensive-environmental",
+        "manual_review": "manual",
+    }.get(tier, "unknown")
+
+
+def _proof_command_reliability(tier: str) -> str:
+    if tier == "manual_review":
+        return "manual-required"
+    if tier == "environmental":
+        return "authoritative-when-environment-available"
+    return "authoritative"
+
+
 def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_commands: list[str]) -> dict[str, Any]:
     commands_by_text = {str(command.get("command", "")): command for command in selected_commands}
     tiers: dict[str, list[dict[str, Any]]] = {}
     for command in required_commands:
         selected = commands_by_text.get(str(command), {})
         tier = _proof_command_tier(str(command), lane=str(selected.get("lane", "")))
+        evidence_type = _proof_command_evidence_type(str(command), tier=tier)
+        obligation = str(selected.get("intent_type", "")) or "prove changed-path behavior or surface"
+        duplicate_reason = "" if tier == "must_run" else f"adds {evidence_type} evidence not represented by the minimal command"
         tiers.setdefault(tier, []).append(
             {
                 "command": str(command),
                 "lane": str(selected.get("lane", "")),
-                "obligation": str(selected.get("intent_type", "")) or "prove changed-path behavior or surface",
+                "obligation": obligation,
+                "covers": [obligation],
+                "cost": _proof_command_cost(tier),
+                "evidence_type": evidence_type,
+                "reliability": _proof_command_reliability(tier),
+                **({"duplicates_ok_reason": duplicate_reason} if duplicate_reason else {}),
             }
         )
     ordered = [
@@ -45532,6 +45577,13 @@ def _proof_command_tiers(*, selected_commands: list[dict[str, Any]], required_co
     return {
         "kind": "agentic-workspace/proof-command-tiers/v1",
         "status": "present" if ordered else "empty",
+        "selected_set": {
+            "status": "minimal-sufficient" if len(ordered) <= 1 else "conservative-expanded",
+            "reason": "single evidence tier covers required obligations"
+            if len(ordered) <= 1
+            else "multiple evidence tiers are required; overlap is retained only when it adds distinct evidence",
+            "omitted_candidate_state": "not-reported-in-compact-tier-packet",
+        },
         "rule": "Tiers explain proof obligation and cost; they do not relax required_commands.",
         "tiers": ordered,
     }

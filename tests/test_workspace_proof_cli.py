@@ -230,9 +230,13 @@ def test_tiny_proof_obligations_summarizes_multiple_manual_obligations() -> None
 
     required = payload["required_proof"]
     assert required["manual_obligation_count"] == 2
-    assert required["manual_obligation_ids"] == ["verification:first", "verification:second"]
-    assert required["manual_obligations_detail_selector"] == "proof.proof_obligations.required_proof.manual_obligations"
-    assert "manual_obligations" not in required
+    assert [item["id"] for item in required["manual_obligations"]] == ["verification:first", "verification:second"]
+    assert required["manual_obligations"][0]["resolution"] == {
+        "inspect": ["docs/first.md"],
+        "record": ["first"],
+        "detail_selector": "proof.proof_obligations.required_proof.manual_obligations",
+        "closeout_format": "manual obligation <id>: inspected <refs>; recorded <evidence>; claim boundary <claim_boundary>",
+    }
 
 
 def test_proof_command_reports_routes_and_current_health(tmp_path: Path, monkeypatch, capsys) -> None:
