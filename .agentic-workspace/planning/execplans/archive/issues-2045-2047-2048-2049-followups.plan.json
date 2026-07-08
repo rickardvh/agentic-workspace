@@ -1,0 +1,325 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Finish issue follow-ups 2045 2047 2048 2049",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Finish GitHub issues #2045, #2047, #2048, and #2049, then publish new PRs.",
+    "hard_constraints": "Do not weaken proof, task-switch, parent-closure, or Memory capture safety. Do not rely on arbitrary prose keyword matching. Keep #2046 closed and treat these as follow-up issues.",
+    "agent_may_decide": "Exact branch split, helper names, budget ceilings, and whether to use stacked or independent PRs after the implementation shape is clear.",
+    "escalate_when": "Any issue needs a broader redesign than its comment acceptance criteria, or proof cannot distinguish the fixed behavior from advisory text.",
+    "next_action": "No active implementation remains; review the published PR stack.",
+    "proof_expectations": [
+      "Focused CLI tests for #2045 #2047 #2048 #2049 behavior.",
+      "AW implement proof selection for changed paths.",
+      "make test-workspace, make lint-workspace, tests/test_workspace_cli.py, make typecheck, runtime mirror consistency where runtime mirror helpers change."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "src/agentic_workspace/workspace_runtime_implement.py",
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_implement_cli.py",
+      ".agentic-workspace/planning/execplans/archive/issues-2045-2047-2048-2049-followups.plan.json"
+    ],
+    "completion_criteria": [
+      "#2045: ordinary default output budgets or shape invariants are checked and budget state is visible in operational_compression/proof-equivalent output.",
+      "#2047: Memory baseline-only, relevant-note, and capture decision states are distinct and fixture-covered.",
+      "#2048: issue-matched active plan continuation does not emit generic active-plan task-switch pressure, while unrelated task-switch protection remains.",
+      "#2049: closeout_trust prefers fresh closeout-evidence for the just-closed plan or explains ineligibility, with stale archive evidence distinguished.",
+      "New PRs are created for the completed work with validation evidence."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "GitHub issues #2045 #2047 #2048 #2049 post-#2046 comments"
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "GitHub issues #2045 #2047 #2048 #2049 post-#2046 comments",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "issues-2045-2047-2048-2049-followups",
+      "status": "completed",
+      "next_step": "No active implementation remains; review PRs #2053 and #2054.",
+      "proof": "Focused regression tests and required workspace proof passed."
+    },
+    "scope": {
+      "touched": [
+        "Fill in the concrete files before implementation starts."
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "GitHub issues #2045 #2047 #2048 #2049 post-#2046 comments",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "pending",
+    "validation still needed": "current milestone validation remains pending",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Finish issue follow-ups 2045 2047 2048 2049",
+    "inferred intended outcome": "GitHub issues #2045 #2047 #2048 #2049 post-#2046 comments",
+    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Fill in the concrete write scope before implementation starts.",
+    "max changed files": "Fill in an expected upper bound before implementation starts.",
+    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "GitHub issues #2045 #2047 #2048 #2049 post-#2046 comments",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "GitHub issues #2045 #2047 #2048 #2049 post-#2046 comments",
+      "label": "GitHub issues #2045 #2047 #2048 #2049 post-#2046 comments",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "active_milestone": {
+    "id": "issues-2045-2047-2048-2049-followups",
+    "status": "completed",
+    "scope": "Completed follow-up implementation for issues #2045, #2047, #2048, and #2049.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "No active implementation remains; review PRs #2053 and #2054."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/workspace_runtime_planning.py",
+    "src/agentic_workspace/reporting_support.py",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    "tests/test_workspace_summary_cli.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/archive/issues-2045-2047-2048-2049-followups.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py::test_start_treats_shared_issue_ref_as_active_plan_continuation tests/test_workspace_cli.py::test_start_reconciles_unrelated_active_plan_with_new_issue_implementation_task tests/test_workspace_cli.py::test_closeout_trust_prefers_retained_closeout_evidence_over_newer_archive tests/test_workspace_cli.py::test_operational_compression_surfaces_checked_default_output_budget tests/test_workspace_cli.py::test_start_default_stays_under_tiny_output_budget_for_docs_task tests/test_workspace_summary_cli.py::test_memory_decision_packet_pull_statuses_distinguish_route_inspection tests/test_workspace_implement_cli.py::test_implement_surfaces_memory_decision_packet_for_changed_paths tests/test_workspace_implement_cli.py::test_implement_memory_decision_packet_reports_relevant_route_matches -q",
+    "uv run python scripts/run_agentic_workspace.py implement --changed src/agentic_workspace/workspace_runtime_core.py src/agentic_workspace/workspace_runtime_primitives.py src/agentic_workspace/workspace_runtime_planning.py src/agentic_workspace/reporting_support.py tests/test_workspace_cli.py tests/test_workspace_implement_cli.py tests/test_workspace_summary_cli.py .agentic-workspace/planning/state.toml .agentic-workspace/planning/execplans/archive/issues-2045-2047-2048-2049-followups.plan.json --task \"Finish issues #2045 #2047 #2048 #2049 and create new pull requests\" --format json",
+    "make test-workspace",
+    "make lint-workspace",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "make typecheck",
+    "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
+    "git diff --check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Finish issues #2045, #2047, #2048, and #2049 and publish new PRs."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented the #2045, #2047, #2048, and #2049 issue-comment follow-ups with focused runtime behavior and regression tests.",
+    "scope touched": "workspace runtime/reporting helpers, focused CLI tests, and this planning record",
+    "changed surfaces": "#2045 operational_compression/default-output budget evidence; #2047 Memory baseline-only and capture outcomes; #2048 shared issue-ref task-switch continuation; #2049 retained closeout-evidence selection and source-class reporting",
+    "validations run": [
+      "focused regression pytest set passed",
+      "AW implement changed-path packet passed and dogfooded planning-backed after plural issue-ref fix",
+      "make test-workspace passed",
+      "make lint-workspace passed",
+      "AW summary passed",
+      "AW planning doctor passed with existing installed-payload freshness attention only",
+      "uv run pytest tests/test_workspace_cli.py -q passed",
+      "make typecheck passed",
+      "runtime_mirror_consistency passed",
+      "git diff --check passed"
+    ],
+    "result for continuation": "publish the stacked PRs; no implementation continuation remains for these issues",
+    "next step": "Create stacked PRs for the completed issue fixes."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "followed AGENTS start/implement route; doctor payload freshness attention is pre-existing and not claimed fresh",
+    "misinterpretation risk": "low",
+    "follow-on decision": "publish stacked PRs"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "focused regression tests, make test-workspace, lint, AW summary/doctor, tests/test_workspace_cli.py, typecheck, runtime mirror consistency, and git diff --check passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "The focused tests cover each issue acceptance behavior, and the broad required proof set passed on 2026-07-07."
+  },
+  "intent_satisfaction": {
+    "original intent": "GitHub issues #2045 #2047 #2048 #2049 post-#2046 comments",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "#2045, #2047, #2048, and #2049 completion criteria are each represented by code changes and focused tests; PR publication remains the final external step.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Issue follow-up implementations are complete and ready for stacked PRs.",
+    "validation confirmed": "focused and broad validation passed",
+    "follow-on routed to": "stacked PR publication",
+    "post-work posterity capture": "no new durable Memory note required; the #2048 plural issue-ref dogfooding finding was fixed directly in scope",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "Structured task-switch issue refs must normalize active lane ids like issues-2045 as well as issue-2045.",
+    "motivation worth preserving": "The finding was fixed directly and covered by regression tests.",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "All four issue acceptance surfaces are implemented and validated; the remaining action is PR publication, not more implementation.",
+    "evidence carried forward": "focused tests, make test-workspace, lint, AW summary/doctor, tests/test_workspace_cli.py, typecheck, runtime mirror consistency, git diff --check",
+    "reopen trigger": "Reviewer finds an unaddressed issue comment acceptance criterion or validation fails on the PR stack."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-07: Scaffolded by agentic-planning new-plan."
+  ]
+}

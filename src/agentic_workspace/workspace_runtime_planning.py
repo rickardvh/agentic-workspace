@@ -503,6 +503,59 @@ def _task_switch_reconciliation_payload(
     classification_basis = "bounded-maintenance-marker-hint" if maintenance_like else "no-maintenance-marker-hint"
     recommended = "proceed-bounded-repo-maintenance" if maintenance_like else "choose-between-new-task-and-active-plan"
     mismatch_evidence = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
+    shared_refs = [str(ref) for ref in mismatch_evidence.get("shared_refs", []) if str(ref).strip()]
+    if shared_refs:
+        return {
+            "kind": "agentic-workspace/task-switch-reconciliation/v1",
+            "status": "issue-matched-continuation",
+            "summary": "Current task shares explicit structured issue or PR refs with the active plan; treat it as active-plan continuation unless other gates name a concrete mismatch.",
+            "active_execplan": active_summary.get("active_execplan", ""),
+            "intent_conflict_state": "explicit-reference-continuation",
+            "mismatch_evidence": mismatch_evidence,
+            "current_task_class": "active-plan-continuation",
+            "classification_basis": "shared-structured-reference",
+            "matched_maintenance_markers": matched_maintenance_markers,
+            "classification_inputs": [
+                "active_plan_reliance.status=not-needed-for-current-task",
+                f"shared_refs={','.join(str(ref) for ref in shared_refs[:8])}",
+                f"shared_ref_count={len(shared_refs)}",
+                f"shared_term_count={len(mismatch_evidence.get('shared_terms', []))}",
+            ],
+            "semantic_boundary": (
+                "Only structured issue/PR reference overlap can suppress generic active-plan task-switch pressure here. "
+                "This does not close the active plan or override other planning, proof, parent-closure, or delegation gates."
+            ),
+            "recommended_next_action": "continue-active-plan",
+            "next_action_packet": {
+                "action": "continue-active-plan",
+                "summary": "The task and active plan share explicit refs; continue through the active plan route unless a concrete structured mismatch appears.",
+                "command": summary_command,
+                "run": summary_command,
+                "risk": "issue-matched-continuation",
+                "required_inputs": ["current task", "active plan boundary", "shared issue/PR refs"],
+                "next_proof": "use implement/proof for changed paths and keep active plan closeout separate from task-switch classification",
+                "read_first": [summary_command],
+                "open_execplan_only_when": "the continuation needs active plan contract or proof detail",
+            },
+            "safe_routes": [
+                {
+                    "id": "continue-active-plan",
+                    "command": summary_command,
+                    "when": "the shared issue/PR reference is the intended active plan continuation",
+                },
+                {
+                    "id": "reconcile-active-plan-before-implementation",
+                    "command": closeout_command,
+                    "when": "another structured field names a concrete mismatch despite the shared reference",
+                },
+            ],
+            "implementation_allowed": True,
+            "active_plan_protection": {
+                "claim_boundary": "Shared refs allow continuation routing only; do not claim active-plan completion from this gate.",
+                "blocked_claims": ["claim-active-plan-complete", "silently-abandon-active-plan"],
+            },
+            "rule": "Structured issue/PR ref overlap is active-plan continuation evidence; arbitrary prose keyword overlap is not.",
+        }
     return {
         "kind": "agentic-workspace/task-switch-reconciliation/v1",
         "status": "active",
@@ -614,9 +667,14 @@ def _task_switch_terms(text: str) -> list[str]:
 
 
 def _task_switch_refs(text: str) -> list[str]:
-    refs = {match.lower() for match in re.findall(r"#\d+", text)}
+    hash_refs = re.findall(r"#(\d+)", text)
+    refs = {f"#{match}" for match in hash_refs}
+    refs.update(f"issue-{match}" for match in hash_refs)
     refs.update(f"issue-{match}" for match in re.findall(r"\bissue\s+#?(\d+)\b", text, flags=re.IGNORECASE))
+    refs.update(f"issue-{match}" for match in re.findall(r"\bissue[-_](\d+)\b", text, flags=re.IGNORECASE))
+    refs.update(f"issue-{match}" for match in re.findall(r"\bissues[-_](\d+)\b", text, flags=re.IGNORECASE))
     refs.update(f"pr-{match}" for match in re.findall(r"\bpr\s+#?(\d+)\b", text, flags=re.IGNORECASE))
+    refs.update(f"pr-{match}" for match in re.findall(r"\bpr[-_](\d+)\b", text, flags=re.IGNORECASE))
     return sorted(refs)
 
 
