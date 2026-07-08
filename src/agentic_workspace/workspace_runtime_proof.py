@@ -32,6 +32,7 @@ from agentic_workspace.workspace_runtime_core import (
     _PROOF_SELECTION_RULES,
     PROOF_RECEIPT_HISTORY_RELATIVE_PATH,
     PROOF_RECEIPT_RELATIVE_PATH,
+    PROOF_ROUTE_HINTS_PATH,
     _active_planning_assurance_for_proof,
     _adapt_make_proof_command_for_target,
     _applicable_intent_status_payload,
@@ -1902,6 +1903,28 @@ def _proof_route_maintenance_payload(
     ]
     manual_missing = [item for item in manual_proof_obligations if isinstance(item, dict) and item.get("required")]
     suggestions: list[dict[str, Any]] = []
+    route_hints_status = str(learned_route_hints.get("status") or "unavailable")
+    route_hints_surface = PROOF_ROUTE_HINTS_PATH.as_posix()
+    route_hints_surface_contract = {
+        "kind": "proof-route-hints-surface-contract/v1",
+        "surface": route_hints_surface,
+        "surface_status": "present" if route_hints_status == "loaded" else "absent",
+        "owner": "repo",
+        "schema": "agentic-workspace/proof-route-hints/v1",
+        "schema_path": "src/agentic_workspace/contracts/schemas/proof_route_hints.schema.json",
+        "create_when": "only after repeated fallback reliance or explicit setup/adopt proof-route learning needs durable capture",
+        "authority_boundary": "advisory route memory; configured proof policy and live target capabilities remain primary",
+    }
+
+    def attach_route_hints_contract(suggestion: dict[str, Any]) -> dict[str, Any]:
+        if suggestion.get("target_surface") == route_hints_surface:
+            suggestion = {
+                **suggestion,
+                "target_surface_status": route_hints_surface_contract["surface_status"],
+                "target_surface_contract": route_hints_surface_contract,
+            }
+        return suggestion
+
     for command in fallback_commands:
         command_text = str(command.get("command", ""))
         reason = (
@@ -1910,55 +1933,66 @@ def _proof_route_maintenance_payload(
             else "selected proof relies on fallback or seed route"
         )
         suggestions.append(
-            {
-                "kind": "proof-route-maintenance-suggestion/v1",
-                "reason": reason,
-                "route_id": f"promote-{str(command.get('lane', 'proof-route')).replace(':', '-')}",
-                "matcher": {"selected_lane": str(command.get("lane", ""))},
-                "command": command_text,
-                "target_surface": ".agentic-workspace/proof-route-hints.json",
-                "source_observation": str(command.get("selected_from", "")),
-                "recommended_state": "confirmed",
-            }
-        )
-        if str(command.get("ci_relationship", "")).strip():
-            suggestions.append(
+            attach_route_hints_contract(
                 {
                     "kind": "proof-route-maintenance-suggestion/v1",
-                    "reason": "CI-learned proof gap should be captured as repo route authority",
-                    "route_id": f"ci-gap-{str(command.get('lane', 'proof-route')).replace(':', '-')}",
-                    "matcher": {"selected_lane": str(command.get("lane", "")), "ci_relationship": str(command.get("ci_relationship", ""))},
+                    "reason": reason,
+                    "route_id": f"promote-{str(command.get('lane', 'proof-route')).replace(':', '-')}",
+                    "matcher": {"selected_lane": str(command.get("lane", ""))},
                     "command": command_text,
                     "target_surface": ".agentic-workspace/proof-route-hints.json",
                     "source_observation": str(command.get("selected_from", "")),
-                    "recommended_state": "confirmed-with-ci-provenance",
+                    "recommended_state": "confirmed",
                 }
+            )
+        )
+        if str(command.get("ci_relationship", "")).strip():
+            suggestions.append(
+                attach_route_hints_contract(
+                    {
+                        "kind": "proof-route-maintenance-suggestion/v1",
+                        "reason": "CI-learned proof gap should be captured as repo route authority",
+                        "route_id": f"ci-gap-{str(command.get('lane', 'proof-route')).replace(':', '-')}",
+                        "matcher": {
+                            "selected_lane": str(command.get("lane", "")),
+                            "ci_relationship": str(command.get("ci_relationship", "")),
+                        },
+                        "command": command_text,
+                        "target_surface": ".agentic-workspace/proof-route-hints.json",
+                        "source_observation": str(command.get("selected_from", "")),
+                        "recommended_state": "confirmed-with-ci-provenance",
+                    }
+                )
             )
     for hint in stale_hints:
         suggestions.append(
-            {
-                "kind": "proof-route-maintenance-suggestion/v1",
-                "reason": "learned proof route is stale or unavailable",
-                "route_id": str(hint.get("id", "")),
-                "matcher": {"scope": str(hint.get("scope", "")), "intent_type": str(hint.get("intent_type", ""))},
-                "command": str(hint.get("candidate_command", "")),
-                "target_surface": str(hint.get("source_path") or ".agentic-workspace/proof-route-hints.json"),
-                "source_observation": str(hint.get("confirmation", "stale-or-unavailable")),
-                "recommended_state": "negative-or-superseded-or-reconfirmed",
-            }
+            attach_route_hints_contract(
+                {
+                    "kind": "proof-route-maintenance-suggestion/v1",
+                    "reason": "learned proof route is stale or unavailable",
+                    "route_id": str(hint.get("id", "")),
+                    "matcher": {"scope": str(hint.get("scope", "")), "intent_type": str(hint.get("intent_type", ""))},
+                    "command": str(hint.get("candidate_command", "")),
+                    "target_surface": str(hint.get("source_path") or ".agentic-workspace/proof-route-hints.json"),
+                    "source_observation": str(hint.get("confirmation", "stale-or-unavailable")),
+                    "recommended_state": "negative-or-superseded-or-reconfirmed",
+                }
+            )
         )
     for hint in invalid_hints:
         suggestions.append(
-            {
-                "kind": "proof-route-maintenance-suggestion/v1",
-                "reason": "learned proof route lacks authority metadata",
-                "route_id": str(hint.get("id", "")),
-                "matcher": {"missing_fields": ", ".join(str(item) for item in _list_payload(hint.get("missing_fields")))},
-                "command": str(hint.get("candidate_command", "")),
-                "target_surface": str(hint.get("source_path") or ".agentic-workspace/proof-route-hints.json"),
-                "source_observation": str(hint.get("recovery", "")),
-                "recommended_state": "recapture-with-authority",
-            }
+            attach_route_hints_contract(
+                {
+                    "kind": "proof-route-maintenance-suggestion/v1",
+                    "reason": "learned proof route lacks authority metadata",
+                    "route_id": str(hint.get("id", "")),
+                    "matcher": {"missing_fields": ", ".join(str(item) for item in _list_payload(hint.get("missing_fields")))},
+                    "command": str(hint.get("candidate_command", "")),
+                    "target_surface": str(hint.get("source_path") or ".agentic-workspace/proof-route-hints.json"),
+                    "source_observation": str(hint.get("recovery", "")),
+                    "recommended_state": "recapture-with-authority",
+                }
+            )
         )
     for obligation in manual_missing:
         suggestions.append(
@@ -1987,6 +2021,7 @@ def _proof_route_maintenance_payload(
         "stale_route_count": len(stale_hints),
         "invalid_authority_count": len(invalid_hints),
         "manual_obligation_count": len(manual_missing),
+        "route_hints_surface_contract": route_hints_surface_contract,
         "suggested_updates": suggestions,
         "closeout_rule": (
             "Stale, invalid, or missing manual proof routes require closeout disclosure or durable routing."

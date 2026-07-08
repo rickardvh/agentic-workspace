@@ -4872,6 +4872,68 @@ candidates = []
     assert grounding["authority_boundary"]["agent_owned_decisions"]
 
 
+def test_requirement_grounding_ignores_unrelated_active_plan_for_ad_hoc_task(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / ".agentic-workspace" / "OWNERSHIP.toml", "schema_version = 1\n")
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "issues-2060-2062-2064-remainder", status = "active", maturity = "active", surface = ".agentic-workspace/planning/execplans/issues-2060-2062-2064-remainder.plan.json" }
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "issues-2060-2062-2064-remainder.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "title": "Issues #2060 #2062 #2064 remainder",
+            "intent_interpretation": {"chosen concrete what": "Stack #2060, #2064, and #2062 as implementation branches."},
+            "traceability_refs": {"requirement_refs": ["GitHub #2060", "GitHub #2062", "GitHub #2064"]},
+            "canonical_core": {
+                "hard_constraints": "Preserve unrelated active plan constraints.",
+                "touched_scope": ["src/agentic_workspace/workspace_runtime_core.py"],
+            },
+        },
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                ".agentic-workspace/OWNERSHIP.toml",
+                "--task",
+                "Apply remaining recommendation: add verification to ownership ledger and payload mirror",
+                "--select",
+                "requirement_grounding",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    grounding = json.loads(capsys.readouterr().out)["values"]["requirement_grounding"]
+    assert grounding["source_facts"]["active_plan_present"] is True
+    assert grounding["source_facts"]["active_plan_relevance"]["status"] == "unrelated-to-current-task"
+    assert grounding["source_facts"]["active_plan_relevance"]["used_for_grounding"] is False
+    assert grounding["requirement_refs"] == []
+    assert grounding["agent_interpretation"]["summary"] == ""
+    assert grounding["planning_context_fallback"]["items"] == []
+
+
 def test_proof_surfaces_requirement_grounding_chain(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "src" / "runtime.py", "VALUE = 1\n")

@@ -459,7 +459,7 @@ def test_workspace_agents_template_keeps_descriptor_guidance_out_of_root_entrypo
     assert "Read `signals.md` when the signals module is installed." not in rendered
     assert "Signal routing: `signals.md`" not in rendered
     assert "Open module, planning, memory, or deeper routing files only when the compact answers point there." not in rendered
-    assert 'start --task "<task>"' in rendered
+    assert '<configured AW invocation> start --target . --task "<task>" --format json' in rendered
     assert "## Module Notes" not in rendered
 
 
@@ -467,7 +467,8 @@ def test_workspace_agents_template_renders_resolved_cli_invocation() -> None:
     rendered = cli._workspace_agents_template(selected_modules=[], descriptors={}, cli_invoke="uv run agentic-workspace")
 
     assert "- canonical_source: `.agentic-workspace/config.toml` and `uv run agentic-workspace start --target . --format json`" in rendered
-    assert 'Use `uv run agentic-workspace start --task "<task>" --format json` before non-trivial answers' in rendered
-    assert 'Use `uv run agentic-workspace implement --changed <paths> --task "<task>" --format json`' in rendered
+    assert 'Run `<configured AW invocation> start --target . --task "<task>" --format json` before non-trivial answers' in rendered
+    assert 'Run `<configured AW invocation> implement --target . --changed <paths> --task "<task>" --format json`' in rendered
+    assert "Do not bake machine-local AW invocation paths into checked-in generic guidance" in rendered
     assert "When implementing an issue, satisfy the intended end state in the ordinary path" in rendered
     assert "use the effective CLI invocation from `agentic-workspace start" not in rendered

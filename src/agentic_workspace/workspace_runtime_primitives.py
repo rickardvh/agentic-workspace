@@ -30174,6 +30174,52 @@ def _requirement_grounding_payload(
             "trust_note": "routing/index metadata only; AW does not copy or store the requirement corpus",
         }
 
+    task_issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
+    active_plan_relevance: dict[str, Any] = {"status": "not-present", "rule": "No active plan was available for requirement grounding."}
+    active_grounding_record = active_planning_record
+    if active_planning_record:
+        intent_interpretation = _as_dict(active_planning_record.get("intent_interpretation"))
+        plan_issue_text = " ".join(
+            str(active_planning_record.get(field, "")) for field in ("id", "title", "refs", "issues", "parent_lane", "parent_issue")
+        )
+        plan_issue_text = " ".join(
+            [
+                plan_issue_text,
+                str(intent_interpretation.get("chosen concrete what") or ""),
+                str(intent_interpretation.get("inferred intended outcome") or ""),
+                str(intent_interpretation.get("literal request") or ""),
+            ]
+        )
+        plan_issue_refs = sorted(set(re.findall("#\\d+", plan_issue_text)))
+        relevance = _candidate_relevance_payload(
+            {
+                "id": active_planning_record.get("id", ""),
+                "title": active_planning_record.get("title", ""),
+                "refs": " ".join(plan_issue_refs),
+                "outcome": intent_interpretation.get("chosen concrete what")
+                or intent_interpretation.get("inferred intended outcome")
+                or intent_interpretation.get("literal request")
+                or "",
+                "owner_surface": active_planning_record.get("_path", ""),
+            },
+            issue_refs=task_issue_refs,
+            task_text=task_text,
+        )
+        strong_evidence = relevance.get("strong_evidence", [])
+        shared_issue_refs = sorted(set(task_issue_refs) & set(plan_issue_refs))
+        unrelated = bool(task_text) and bool(plan_issue_refs) and not (strong_evidence or shared_issue_refs)
+        if unrelated:
+            active_grounding_record = {}
+        active_plan_relevance = {
+            "status": "unrelated-to-current-task" if unrelated else "related",
+            "plan_issue_refs": plan_issue_refs,
+            "task_issue_refs": task_issue_refs,
+            "strong_evidence": strong_evidence,
+            "weak_hints": relevance.get("weak_hints", []),
+            "used_for_grounding": not unrelated,
+            "rule": "Active-plan requirement text is used only when the current task has issue, title, or explicit relevance evidence.",
+        }
+
     requirement_refs: list[dict[str, Any]] = []
     for issue in _list_payload(issue_scope_evidence.get("evidence")):
         if not isinstance(issue, dict):
@@ -30197,7 +30243,7 @@ def _requirement_grounding_payload(
                     },
                 }
             )
-    traceability = _as_dict(active_planning_record.get("traceability_refs"))
+    traceability = _as_dict(active_grounding_record.get("traceability_refs"))
     for key, authority in (
         ("requirement_refs", "active-plan-requirement-ref"),
         ("acceptance_refs", "active-plan-acceptance-ref"),
@@ -30307,7 +30353,7 @@ def _requirement_grounding_payload(
                     "authority": "subsystem-assurance-profile",
                 }
             )
-    applicable_intent = _as_dict(active_planning_record.get("applicable_intents") or active_planning_record.get("applicable_intent"))
+    applicable_intent = _as_dict(active_grounding_record.get("applicable_intents") or active_grounding_record.get("applicable_intent"))
     for source in _list_payload(applicable_intent.get("sources")):
         if not isinstance(source, dict):
             continue
@@ -30324,14 +30370,14 @@ def _requirement_grounding_payload(
             }
         )
 
-    interpretation = _as_dict(active_planning_record.get("intent_interpretation"))
+    interpretation = _as_dict(active_grounding_record.get("intent_interpretation"))
     interpretation_summary = str(
         interpretation.get("chosen concrete what")
         or interpretation.get("inferred intended outcome")
         or interpretation.get("literal request")
         or ""
     ).strip()
-    explicit_grounding = _as_dict(active_planning_record.get("requirement_grounding"))
+    explicit_grounding = _as_dict(active_grounding_record.get("requirement_grounding"))
     design_effects = _plan_string_list(
         explicit_grounding,
         "design_effects",
@@ -30340,7 +30386,7 @@ def _requirement_grounding_payload(
         "implementation_constraints",
     )
     planning_context_fallback = _plan_string_list(
-        active_planning_record,
+        active_grounding_record,
         "canonical_core.hard_constraints",
         "canonical_core.agent_may_decide",
         "execution_bounds.allowed paths",
@@ -30349,7 +30395,7 @@ def _requirement_grounding_payload(
     )
     decisions = [
         {"selected": item, "rejected_alternatives": []}
-        for item in _plan_string_list(active_planning_record, "contract_decisions_to_freeze")
+        for item in _plan_string_list(active_grounding_record, "contract_decisions_to_freeze")
         if item.lower() not in {"none", "none."}
     ]
     verification_refs: list[dict[str, Any]] = []
@@ -30453,7 +30499,7 @@ def _requirement_grounding_payload(
         "agent_interpretation": {
             "status": "present" if interpretation_summary else "not-recorded",
             "summary": interpretation_summary,
-            "assumptions": _plan_string_list(active_planning_record, "intent_interpretation.assumptions"),
+            "assumptions": _plan_string_list(active_grounding_record, "intent_interpretation.assumptions"),
             "needs_human_confirmation": str(interpretation.get("review guidance") or "").strip().lower() not in {"", "none", "none."},
             "confidence": "medium" if interpretation_summary else "low",
         },
@@ -30469,8 +30515,9 @@ def _requirement_grounding_payload(
         "closeout_claims": {"allowed": allowed_claims, "blocked": _dedupe(blocked_claims)},
         "source_facts": {
             "changed_paths": changed_paths,
-            "task_issue_refs": sorted(set(re.findall("#\\d+", task_text or ""))),
+            "task_issue_refs": task_issue_refs,
             "active_plan_present": bool(active_planning_record),
+            "active_plan_relevance": active_plan_relevance,
             "assurance_active_count": assurance_requirements.get("active_count", 0),
             "subsystem_assurance_matched_count": subsystem_assurance.get("matched_count", 0),
             "verification_active_count": verification.get("active_count", 0),
@@ -38002,6 +38049,32 @@ def _setup_payload(
         else:
             setup_warnings.append(warning_text)
     setup_status_payload = {**status_payload, "warnings": setup_warnings}
+    installed_state_compatibility = status_payload.get("installed_state_compatibility", {})
+    if not isinstance(installed_state_compatibility, dict):
+        installed_state_compatibility = {}
+    installed_state_attention: dict[str, Any] | None = None
+    if installed_state_compatibility.get("status") not in {None, "", "compatible"}:
+        action_state = installed_state_compatibility.get("action_state", {})
+        action_state = action_state if isinstance(action_state, dict) else {}
+        action_effect = installed_state_compatibility.get("action_effect", {})
+        action_effect = action_effect if isinstance(action_effect, dict) else {}
+        installed_state_attention = {
+            "kind": "agentic-workspace/setup-installed-state-attention/v1",
+            "status": installed_state_compatibility.get("status", "unknown"),
+            "reason": installed_state_compatibility.get("reason") or action_state.get("reason", ""),
+            "selector": "installed_state_compatibility",
+            "detail_command": _command_with_cli_invoke(
+                command="agentic-workspace start --target . --select installed_state_compatibility --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "dry_run_command": action_state.get("dry_run_command", ""),
+            "apply_command": action_state.get("apply_command", ""),
+            "recheck_command": action_state.get("recheck_command", ""),
+            "claim_boundary": action_effect.get(
+                "claim_boundary", "installed-state compatibility must be reconciled before setup freshness claims"
+            ),
+            "rule": "Setup is read-only discovery; installed-state drift is surfaced for action pressure but setup does not mutate payload surfaces.",
+        }
     discovery = setup_discovery_payload(
         target_root=target_root, status_payload=setup_status_payload, active_todo_surface=_active_todo_surface(target_root=target_root)
     )
@@ -38077,6 +38150,15 @@ def _setup_payload(
                     "agentic-workspace report --target ./repo --format json",
                 ],
             }
+    if installed_state_attention is not None:
+        commands = [
+            str(installed_state_attention.get("dry_run_command") or "").strip(),
+            str(installed_state_attention.get("detail_command") or "").strip(),
+        ]
+        next_action = {
+            "summary": "Resolve installed-state compatibility before durable setup seeding or payload freshness claims",
+            "commands": [command for command in commands if command],
+        }
     return {
         "kind": "workspace-setup/v1",
         "schema": _reporting_schema_payload(),
@@ -38095,6 +38177,8 @@ def _setup_payload(
         },
         "analysis_input": findings_input,
         "host_orientation": host_orientation,
+        **({"installed_state_compatibility": installed_state_compatibility} if installed_state_attention is not None else {}),
+        **({"installed_state_attention": installed_state_attention} if installed_state_attention is not None else {}),
         "proof_route_hints": {
             "path": PROOF_ROUTE_HINTS_PATH.as_posix(),
             "status": proof_route_hints["status"],
@@ -38110,6 +38194,7 @@ def _setup_payload(
             "optional_module_notices": optional_module_notices,
             "needs_review": [item for item in status_payload.get("needs_review", []) if str(item) in setup_warnings],
             "stale_generated_surfaces": list(status_payload.get("stale_generated_surfaces", [])),
+            **({"installed_state_status": installed_state_attention["status"]} if installed_state_attention is not None else {}),
         },
     }
 
