@@ -615,6 +615,28 @@ def _task_switch_reconciliation_payload(
     }
 
 
+def _pr_comment_repair_context_payload(*, task_text: str | None, changed_paths: list[str]) -> dict[str, Any]:
+    text = " ".join(str(task_text or "").lower().split())
+    pr_markers = ("pr", "pull request", "review", "review comment", "review feedback")
+    repair_markers = ("address", "addressing", "fix", "repair", "respond", "resolve", "comment", "feedback")
+    matched_pr_markers = [marker for marker in pr_markers if re.search(rf"(?<![a-z0-9]){re.escape(marker)}(?![a-z0-9])", text)]
+    matched_repair_markers = [marker for marker in repair_markers if marker in text]
+    active = bool(changed_paths and matched_pr_markers and matched_repair_markers)
+    return {
+        "kind": "agentic-workspace/pr-comment-repair-context/v1",
+        "status": "active" if active else "not-detected",
+        "matched_pr_markers": matched_pr_markers,
+        "matched_repair_markers": matched_repair_markers,
+        "changed_path_count": len(changed_paths),
+        "claim_class": "pr_feedback_addressed",
+        "claim_boundary": (
+            "Authorizes only a bounded PR-feedback-addressed claim after proof; it does not authorize lane, parent, "
+            "issue, or full-intent completion."
+        ),
+        "rule": "PR-comment repair routing requires explicit task wording and changed paths; it remains a bounded closeout scope.",
+    }
+
+
 _TASK_SWITCH_STOPWORDS = {
     "about",
     "active",
@@ -783,6 +805,7 @@ def _planning_safety_gate_payload(
         path_classification.get("dirty_shape") == "implementation-with-archived-planning-residue"
         and _as_dict(path_classification.get("archived_planning_residue")).get("status") == "completed-closeout-residue"
     )
+    pr_comment_repair_context = _pr_comment_repair_context_payload(task_text=task_text, changed_paths=changed_paths)
     if active_planning_present and active_delegation_requirement.get("required"):
         status = "blocked"
         decision = "delegation-decision-required"
@@ -824,6 +847,15 @@ def _planning_safety_gate_payload(
         decision = "planning-recovery-or-prep"
         reason = "Only planning surfaces are named; validate planning state before implementation."
         required_next_action = "validate-planning-state"
+        workflow_sufficient = True
+    elif path_classification["dirty_shape"] == "planning-plus-implementation" and pr_comment_repair_context.get("status") == "active":
+        status = "attention"
+        decision = "bounded-pr-comment-repair"
+        reason = (
+            "Implementation paths are mixed with planning residue, but the task is bounded PR-comment repair; "
+            "planning-owner warnings stay visible while only a PR-feedback-addressed claim is in scope."
+        )
+        required_next_action = "prove-pr-feedback-addressed"
         workflow_sufficient = True
     elif path_classification["dirty_shape"] == "planning-plus-implementation":
         status = "violation"
@@ -904,6 +936,7 @@ def _planning_safety_gate_payload(
             f"active_planning_present={active_planning_present}",
             f"dirty_shape={path_classification.get('dirty_shape')}",
             f"hierarchy_owner_status={hierarchy_owner_requirement.get('status')}",
+            f"pr_comment_repair={pr_comment_repair_context.get('status')}",
             *[f"issue_ref={issue_ref}" for issue_ref in issue_refs],
         ],
         recommended_by_aw=[required_next_action] if workflow_sufficient else [],
@@ -955,6 +988,8 @@ def _planning_safety_gate_payload(
                 if decision == "external-issue-scope-unknown"
                 else ["changed-path scope decision"]
                 if decision == "agent-work-shape-decision-required"
+                else ["PR feedback proof"]
+                if decision == "bounded-pr-comment-repair"
                 else []
             ),
             hard_gate=hard_gate,
@@ -973,6 +1008,7 @@ def _planning_safety_gate_payload(
             "rule": "PR/review/merge-conflict wording is provider context, not unknown issue scope. Fetch PR/review state when needed.",
             "provider_requirement": "provider-aware; GitHub is one possible source, not assumed as the only provider.",
         },
+        "pr_comment_repair_context": pr_comment_repair_context,
         "issue_scope_evidence": issue_scope_evidence,
         "candidate_pressure": candidate_pressure,
         "custody_planning": custody_planning,

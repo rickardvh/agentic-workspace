@@ -211,6 +211,12 @@ def _planning_safety_gate_payload(*args: Any, **kwargs: Any) -> Any:
     return owner(*args, **kwargs)
 
 
+def _pr_comment_repair_context_payload(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_planning import _pr_comment_repair_context_payload as owner
+
+    return owner(*args, **kwargs)
+
+
 def _run_reconcile_report_adapter(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_planning import _run_reconcile_report_adapter as owner
 
@@ -19049,6 +19055,37 @@ def _report_closeout_trust_payload(
             "rule": "The active plan remains protected repo-wide residue; this scope only classifies current bounded-task closeout blockers.",
         }
 
+    def current_pr_comment_repair_scope() -> dict[str, Any]:
+        if target_root is None or config is None or not normalized_changed_paths or not str(task_text or "").strip():
+            return {"kind": "agentic-workspace/current-task-closeout-scope/v1", "status": "not-applicable"}
+        repair_context = _pr_comment_repair_context_payload(task_text=task_text, changed_paths=normalized_changed_paths)
+        if repair_context.get("status") != "active":
+            return {"kind": "agentic-workspace/current-task-closeout-scope/v1", "status": "not-applicable"}
+        execution_posture = _execution_posture_payload(
+            config=config,
+            changed_paths=normalized_changed_paths,
+            task_text=task_text,
+            target_root=target_root,
+        )
+        planning_safety_gate = _planning_safety_gate_payload(
+            target_root=target_root,
+            config=config,
+            changed_paths=normalized_changed_paths,
+            task_text=task_text,
+            execution_posture=execution_posture,
+        )
+        return {
+            "kind": "agentic-workspace/current-task-closeout-scope/v1",
+            "status": "active",
+            "relationship": "bounded-pr-comment-repair",
+            "changed_paths": normalized_changed_paths,
+            "claim_class": "pr_feedback_addressed",
+            "claim_boundary": repair_context.get("claim_boundary", ""),
+            "planning_safety_gate": _selector_first_planning_safety_gate(planning_safety_gate),
+            "pr_comment_repair_context": repair_context,
+            "rule": "This scope only supports claiming PR feedback addressed with proof; it does not authorize issue, lane, parent, or full-intent completion.",
+        }
+
     def archived_slice_closeout_evidence() -> dict[str, Any]:
         archived_record = _closeout_planning_record_for_report(active_planning_record={}, target_root=target_root)
         if not archived_record:
@@ -19144,6 +19181,8 @@ def _report_closeout_trust_payload(
         return adjusted
 
     task_switch_scope = current_task_switch_scope()
+    pr_comment_repair_scope = current_pr_comment_repair_scope() if task_switch_scope.get("status") != "active" else {}
+    current_bounded_scope = task_switch_scope if task_switch_scope.get("status") == "active" else pr_comment_repair_scope
     planning_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"), None)
     if not isinstance(planning_report, dict):
         gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
@@ -19467,15 +19506,20 @@ def _report_closeout_trust_payload(
     )
     completion_options = allow_archived_slice_claim(completion_options, slice_closeout_evidence)
     current_task_closeout: dict[str, Any] = {"status": "not-applicable"}
-    if task_switch_scope.get("status") == "active":
+    if current_bounded_scope.get("status") == "active":
+        relationship = str(current_bounded_scope.get("relationship") or "bounded-task")
         current_task_gate = copy.deepcopy(gate)
         current_task_gate.update(
             {
-                "status": "unrelated-active-plan-residue",
+                "status": "bounded-current-task-residue",
                 "blocking": False,
                 "current_task_blocking": False,
-                "relationship": "bounded-task-switch",
-                "summary": "Strict closeout still protects the unrelated active plan, but it is not a current bounded-task slice blocker.",
+                "relationship": relationship,
+                "summary": (
+                    "Strict closeout still protects broader planning residue, but it is not a bounded PR-feedback-addressed blocker."
+                    if relationship == "bounded-pr-comment-repair"
+                    else "Strict closeout still protects the unrelated active plan, but it is not a current bounded-task slice blocker."
+                ),
             }
         )
         proof_selection = _proof_selection_for_changed_paths(
@@ -19498,17 +19542,35 @@ def _report_closeout_trust_payload(
             durable_residue_action=residue_action,
             lower_trust_closeout_count=effective_lower_trust_count,
             cli_invoke=cli_invoke,
-            current_task_switch_scope=task_switch_scope,
+            current_task_switch_scope=current_bounded_scope,
         )
+        if relationship == "bounded-pr-comment-repair":
+            adjusted_options: list[dict[str, Any]] = []
+            for option in current_task_options:
+                updated = dict(option)
+                if updated.get("id") == "claim-slice-complete":
+                    updated["required_claim_class"] = "pr_feedback_addressed"
+                    updated["bounded_claim_class"] = "pr_feedback_addressed"
+                    updated["why"] = (
+                        "PR feedback proof supports a bounded feedback-addressed claim"
+                        if updated.get("allowed") is True
+                        else "PR feedback-addressed claim is blocked until proof for the repair is visible"
+                    )
+                adjusted_options.append(updated)
+            current_task_options = adjusted_options
         current_task_operating_loop = _operating_loop_decision_payload(
             claim_context="closeout",
-            planning_safety_gate=_as_dict(task_switch_scope.get("planning_safety_gate")),
+            planning_safety_gate=_as_dict(current_bounded_scope.get("planning_safety_gate")),
             proof=proof_selection,
         )
         current_task_closeout = {
             "kind": "agentic-workspace/current-task-closeout/v1",
             "status": "active",
-            "scope": task_switch_scope,
+            "scope": current_bounded_scope,
+            "allowed_claim_classes": [current_bounded_scope.get("claim_class", "slice_complete")]
+            if current_bounded_scope.get("claim_class")
+            else ["slice_complete"],
+            "blocked_claim_classes": ["full_intent_complete", "issue_closure", "lane_complete", "parent_complete"],
             "strict_closeout_gate": current_task_gate,
             "completion_options": current_task_options,
             "operating_loop": current_task_operating_loop,
@@ -19519,7 +19581,10 @@ def _report_closeout_trust_payload(
                 "trust": trust,
                 "lower_trust_closeout_count": effective_lower_trust_count,
             },
-            "rule": "Current-task closeout options do not authorize active-plan progress, parent closure, or issue closure for unrelated planning residue.",
+            "rule": (
+                "Current-task closeout options do not authorize active-plan progress, parent closure, issue closure, "
+                "or full-intent completion for bounded PR-comment repair or unrelated planning residue."
+            ),
         }
     memory_consult = (
         _memory_consult_payload(target_root=target_root, compact=True, cli_invoke=cli_invoke)
