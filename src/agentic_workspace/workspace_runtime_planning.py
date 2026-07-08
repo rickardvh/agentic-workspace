@@ -486,8 +486,6 @@ def _task_switch_reconciliation_payload(
 ) -> dict[str, Any]:
     if not active_planning_present:
         return {"kind": "agentic-workspace/task-switch-reconciliation/v1", "status": "not-applicable"}
-    if active_plan_reliance.get("status") != "not-needed-for-current-task":
-        return {"kind": "agentic-workspace/task-switch-reconciliation/v1", "status": "not-applicable"}
     summary_command = _command_with_cli_invoke(command="agentic-workspace summary --target . --format json", cli_invoke=config.cli_invoke)
     closeout_command = _command_with_expected_planning_revision(
         _command_with_cli_invoke(
@@ -496,10 +494,66 @@ def _task_switch_reconciliation_payload(
         ),
         planning_revision=planning_revision,
     )
+    configured_target_root = getattr(config, "target_root", None)
+    if isinstance(configured_target_root, Path):
+        completed_route_target_root = configured_target_root
+    elif configured_target_root:
+        completed_route_target_root = Path(configured_target_root)
+    else:
+        completed_route_target_root = Path.cwd()
+    completed_plan_route = _completed_active_plan_route_payload(
+        target_root=completed_route_target_root,
+        active_summary=active_summary,
+        config=config,
+        planning_revision=planning_revision,
+    )
+    if completed_plan_route.get("status") == "archive-or-retire-recommended":
+        return {
+            "kind": "agentic-workspace/task-switch-reconciliation/v1",
+            "status": "completed-active-plan-route",
+            "summary": "The active execplan has explicit slice completion evidence; route it to archive or retire before treating it as current work.",
+            "active_execplan": active_summary.get("active_execplan", ""),
+            "intent_conflict_state": "completed-active-plan-residue",
+            "mismatch_evidence": _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text),
+            "current_task_class": "completed-active-plan-cleanup",
+            "classification_basis": "active-execplan-closeout-evidence",
+            "recommended_next_action": "archive-or-retire-completed-plan",
+            "completed_active_plan": completed_plan_route,
+            "next_action_packet": {
+                "action": "archive-or-retire-completed-plan",
+                "summary": "A completed active execplan is still active; archive, retire, demote, or explicitly keep it active before relying on later startup routing.",
+                "command": completed_plan_route.get("archive_command", ""),
+                "run": completed_plan_route.get("archive_command", ""),
+                "risk": "completed-active-plan-residue",
+                "required_inputs": ["active execplan", "completion evidence"],
+                "next_proof": completed_plan_route.get("recheck_command", summary_command),
+                "read_first": [summary_command],
+                "open_execplan_only_when": "the archive/retire route needs verification of plan-local closeout evidence",
+            },
+            "safe_routes": [
+                {
+                    "id": "archive-completed-active-plan",
+                    "command": completed_plan_route.get("archive_command", ""),
+                    "when": "plan-local proof and closeout evidence are accepted as current-slice completion",
+                },
+                {
+                    "id": "record-plan-remains-active",
+                    "command": summary_command,
+                    "when": "completion evidence is insufficient or the plan intentionally remains active",
+                },
+            ],
+            "implementation_allowed": False,
+            "active_plan_protection": {
+                "claim_boundary": "Completed-plan routing may retire the current slice only; parent/lane closure still requires separate closeout evidence.",
+                "blocked_claims": ["claim-lane-complete", "claim-parent-complete", "silently-close-planning-state"],
+            },
+            "rule": "Completed active-plan cleanup is command-routed; startup never silently archives or closes planning state.",
+        }
     text = " ".join((task_text or "").lower().split())
     maintenance_markers = ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status")
     matched_maintenance_markers = [marker for marker in maintenance_markers if marker in text]
     maintenance_like = bool(matched_maintenance_markers)
+    bounded_reflection = _bounded_reflection_reporting_payload(task_text=task_text)
     classification_basis = "bounded-maintenance-marker-hint" if maintenance_like else "no-maintenance-marker-hint"
     recommended = "proceed-bounded-repo-maintenance" if maintenance_like else "choose-between-new-task-and-active-plan"
     mismatch_evidence = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
@@ -556,6 +610,63 @@ def _task_switch_reconciliation_payload(
             },
             "rule": "Structured issue/PR ref overlap is active-plan continuation evidence; arbitrary prose keyword overlap is not.",
         }
+    if bounded_reflection.get("status") == "bounded":
+        return {
+            "kind": "agentic-workspace/task-switch-reconciliation/v1",
+            "status": "bounded-reflection-reporting",
+            "summary": "Current task is bounded reflection, reporting, dogfooding, or issue-shaping; active-plan state remains protected but does not require a generic task-switch choice.",
+            "active_execplan": active_summary.get("active_execplan", ""),
+            "intent_conflict_state": "bounded-current-task-active-plan-protected",
+            "mismatch_evidence": mismatch_evidence,
+            "current_task_class": bounded_reflection.get("current_task_class", "bounded-reflection-reporting"),
+            "classification_basis": bounded_reflection.get("classification_basis", "read-only-reporting-task-shape"),
+            "matched_maintenance_markers": matched_maintenance_markers,
+            "classification_inputs": [
+                "active_plan_reliance.status=not-needed-for-current-task",
+                f"shared_term_count={len(mismatch_evidence.get('shared_terms', []))}",
+                f"shared_ref_count={len(mismatch_evidence.get('shared_refs', []))}",
+                f"matched_reflection_signal_count={len(bounded_reflection.get('matched_reflection_signals', []))}",
+                f"matched_mutation_signal_count={len(bounded_reflection.get('matched_mutation_signals', []))}",
+            ],
+            "semantic_boundary": bounded_reflection["claim_boundary"],
+            "recommended_next_action": "produce-bounded-reflection-report",
+            "next_action_packet": {
+                "action": "produce-bounded-reflection-report",
+                "summary": "Produce the requested bounded reflection/reporting/dogfooding output without claiming active-plan progress.",
+                "command": "",
+                "run": None,
+                "risk": "bounded-reflection-active-plan-protected",
+                "required_inputs": ["current task", "active plan claim boundary"],
+                "next_proof": "no file proof unless the task later becomes an edit",
+                "read_first": [],
+                "open_execplan_only_when": "the task changes from reflection/reporting into active-plan mutation or implementation",
+            },
+            "safe_routes": [
+                {
+                    "id": "produce-bounded-reflection-report",
+                    "command": "",
+                    "when": "the current task remains read-only reflection, reporting, dogfooding, or issue shaping",
+                },
+                {
+                    "id": "inspect-active-plan",
+                    "command": summary_command,
+                    "when": "the reflection needs active-plan audit detail",
+                },
+                {
+                    "id": "reconcile-active-plan-before-implementation",
+                    "command": closeout_command,
+                    "when": "the task changes into implementation or active-plan mutation",
+                },
+            ],
+            "implementation_allowed": True,
+            "active_plan_protection": {
+                "claim_boundary": bounded_reflection["claim_boundary"],
+                "blocked_claims": ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"],
+            },
+            "rule": "Bounded reflection/reporting may proceed while preserving active-plan claim boundaries and selector-backed audit detail.",
+        }
+    if active_plan_reliance.get("status") != "not-needed-for-current-task":
+        return {"kind": "agentic-workspace/task-switch-reconciliation/v1", "status": "not-applicable"}
     return {
         "kind": "agentic-workspace/task-switch-reconciliation/v1",
         "status": "active",
@@ -612,6 +723,171 @@ def _task_switch_reconciliation_payload(
             "blocked_claims": ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"],
         },
         "rule": "An unrelated active plan is protected state, not an automatic hard block for explicit bounded maintenance or reporting.",
+    }
+
+
+def _bounded_reflection_reporting_payload(*, task_text: str | None) -> dict[str, Any]:
+    text = " ".join((task_text or "").lower().split())
+    if not text:
+        return {"kind": "agentic-workspace/bounded-reflection-reporting/v1", "status": "not-detected"}
+    reflection_signals = (
+        "estimate",
+        "net effect",
+        "reflection",
+        "reflect",
+        "retrospective",
+        "report",
+        "status",
+        "summarize",
+        "summary",
+        "dogfood",
+        "dogfooding",
+        "feedback",
+        "issue-shaping",
+        "shape follow-up",
+        "concrete feedback",
+    )
+    issue_shaping_signals = (
+        "create concrete",
+        "feedback issues",
+        "dogfooding feedback issues",
+        "new issues",
+        "follow-up issues",
+    )
+    mutation_signals = (
+        "implement",
+        "fix",
+        "edit",
+        "change",
+        "modify",
+        "delete",
+        "write code",
+        "refactor",
+        "make new pull request",
+    )
+    matched_reflection = [signal for signal in reflection_signals if signal in text]
+    matched_issue_shaping = [signal for signal in issue_shaping_signals if signal in text]
+    matched_mutation = [signal for signal in mutation_signals if signal in text]
+    if not matched_reflection and not matched_issue_shaping:
+        return {
+            "kind": "agentic-workspace/bounded-reflection-reporting/v1",
+            "status": "not-detected",
+            "matched_reflection_signals": [],
+            "matched_mutation_signals": matched_mutation,
+        }
+    if matched_mutation:
+        return {
+            "kind": "agentic-workspace/bounded-reflection-reporting/v1",
+            "status": "implementation-like",
+            "matched_reflection_signals": matched_reflection,
+            "matched_issue_shaping_signals": matched_issue_shaping,
+            "matched_mutation_signals": matched_mutation,
+            "rule": "Implementation-like signals win over issue-shaping signals; mixed tasks keep active-plan task-switch protection.",
+        }
+    current_task_class = "bounded-dogfooding-issue-shaping" if matched_issue_shaping else "bounded-reflection-reporting"
+    return {
+        "kind": "agentic-workspace/bounded-reflection-reporting/v1",
+        "status": "bounded",
+        "current_task_class": current_task_class,
+        "classification_basis": "explicit-read-only-or-issue-shaping-task-shape",
+        "matched_reflection_signals": matched_reflection,
+        "matched_issue_shaping_signals": matched_issue_shaping,
+        "matched_mutation_signals": matched_mutation,
+        "claim_boundary": (
+            "This task may produce reflection, reporting, dogfooding, or issue-shaping output, but it does not authorize "
+            "active-plan progress, completion, abandonment, or unrelated implementation claims."
+        ),
+        "rule": "This classifier only permits bounded reporting/issue-shaping; implementation-like tasks keep active-plan protection.",
+    }
+
+
+def _completed_active_plan_route_payload(
+    *,
+    target_root: Path,
+    active_summary: dict[str, Any],
+    config: WorkspaceConfig,
+    planning_revision: dict[str, Any],
+) -> dict[str, Any]:
+    active_surface, record = _active_execplan_record_payload(target_root=target_root)
+    active_surface = active_surface or str(active_summary.get("active_execplan") or "")
+    if not active_surface or not record:
+        return {"kind": "agentic-workspace/completed-active-plan-route/v1", "status": "not-detected"}
+    closure_check = _as_dict(record.get("closure_check"))
+    proof_report = _as_dict(record.get("proof_report"))
+    intent_satisfaction = _as_dict(record.get("intent_satisfaction"))
+    intent_continuity = _as_dict(record.get("intent_continuity"))
+    required_continuation = _as_dict(record.get("required_continuation"))
+    closure_values = " ".join(
+        str(value).lower()
+        for value in (
+            closure_check.get("slice status"),
+            closure_check.get("larger-intent status"),
+            closure_check.get("closure decision"),
+            intent_satisfaction.get("was original intent fully satisfied?"),
+            intent_continuity.get("this slice completes the larger intended outcome"),
+            required_continuation.get("required follow-on for the larger intended outcome"),
+        )
+        if value
+    )
+    evidence_fields: list[str] = []
+    if "complete" in str(closure_check.get("slice status", "")).lower():
+        evidence_fields.append("closure_check.slice status")
+    if proof_report and any(str(value).strip() for value in proof_report.values()):
+        evidence_fields.append("proof_report")
+    if str(intent_satisfaction.get("was original intent fully satisfied?", "")).strip().lower() in {"yes", "true", "satisfied"}:
+        evidence_fields.append("intent_satisfaction.was original intent fully satisfied?")
+    if str(required_continuation.get("required follow-on for the larger intended outcome", "")).strip().lower() in {"no", "none"}:
+        evidence_fields.append("required_continuation.required follow-on for the larger intended outcome")
+    completed = (
+        "closure_check.slice status" in evidence_fields
+        and "proof_report" in evidence_fields
+        and "intent_satisfaction.was original intent fully satisfied?" in evidence_fields
+    )
+    if not completed:
+        return {
+            "kind": "agentic-workspace/completed-active-plan-route/v1",
+            "status": "insufficient-evidence",
+            "active_execplan": active_surface,
+            "evidence_fields": evidence_fields,
+            "missing_fields": [
+                field
+                for field in (
+                    "closure_check.slice status",
+                    "proof_report",
+                    "intent_satisfaction.was original intent fully satisfied?",
+                )
+                if field not in evidence_fields
+            ],
+            "rule": "Incomplete active plans keep ordinary active-plan protection.",
+        }
+    plan_id = str(record.get("id") or Path(active_surface).name.removesuffix(".plan.json").removesuffix(".json")).strip()
+    archive_command = _command_with_expected_planning_revision(
+        _command_with_cli_invoke(
+            command=(
+                f"agentic-workspace planning archive-plan --plan {plan_id} --target . "
+                "--prepare-closeout --retain-archive --apply-cleanup --format json"
+            ),
+            cli_invoke=config.cli_invoke,
+        ),
+        planning_revision=planning_revision,
+    )
+    recheck_command = _command_with_cli_invoke(command="agentic-workspace start --target . --format json", cli_invoke=config.cli_invoke)
+    parent_boundary = (
+        "current-slice-complete-only"
+        if "closed" not in closure_values and "complete" not in str(closure_check.get("larger-intent status", "")).lower()
+        else "parent-or-lane-closure-still-requires-explicit-closeout-authorization"
+    )
+    return {
+        "kind": "agentic-workspace/completed-active-plan-route/v1",
+        "status": "archive-or-retire-recommended",
+        "active_execplan": active_surface,
+        "plan_id": plan_id,
+        "evidence_fields": evidence_fields,
+        "archive_command": archive_command,
+        "recheck_command": recheck_command,
+        "parent_lane_boundary": parent_boundary,
+        "claim_boundary": "Archive/retire removes stale active-plan pressure; it does not silently close parent or lane intent.",
+        "rule": "Completed active plans require an explicit command-owned archive/retire route; startup reports but does not mutate.",
     }
 
 
@@ -830,6 +1106,23 @@ def _planning_safety_gate_payload(
         reason = "The active execplan is a slice with a recorded parent lane, but no first-class lane owner artifact exists."
         required_next_action = "create-or-promote-lane-owner"
         workflow_sufficient = False
+    elif task_switch_reconciliation.get("status") == "completed-active-plan-route":
+        status = "attention"
+        decision = "archive-or-retire-completed-plan"
+        reason = str(
+            task_switch_reconciliation.get("summary") or "The active execplan appears complete and should be routed to archive or retire."
+        )
+        required_next_action = "archive-or-retire-completed-plan"
+        workflow_sufficient = True
+    elif task_switch_reconciliation.get("status") == "bounded-reflection-reporting":
+        status = "satisfied"
+        decision = "bounded-reflection-reporting"
+        reason = str(
+            task_switch_reconciliation.get("summary")
+            or "Bounded reflection/reporting may proceed while preserving active-plan claim boundaries."
+        )
+        required_next_action = "produce-bounded-reflection-report"
+        workflow_sufficient = True
     elif task_switch_reconciliation.get("status") == "active":
         status = "attention"
         decision = "active-plan-task-switch"

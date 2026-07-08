@@ -44,7 +44,7 @@
             "drill_down",
             "rule"
           ],
-          "equals": "Compact default omits selector inventory and schemas. Use exact --select for one field; use --verbose only for broad diagnostics."
+          "equals": "Compact default omits selector inventory/schemas; use --select or --verbose for detail."
         },
         {
           "path": [
