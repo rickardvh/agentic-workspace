@@ -147,8 +147,42 @@ def test_implement_exposes_communication_contract_for_changed_paths(tmp_path: Pa
         "repeated_rereads",
         "context_reconstruction",
     ]
-    assert "current_decision" not in payload
-    assert "message_economy" not in payload
+    current_decision = payload["current_decision"]
+    assert current_decision["kind"] == "agentic-workspace/current-decision/v1"
+    assert current_decision["surface"] == "implementation"
+    assert current_decision["decision_question"] == "What narrow working set is safe to touch now?"
+    assert current_decision["known_evidence"] == ["implement.decision_packet"]
+    assert current_decision["missing_evidence"]
+    assert current_decision["safe_probe"] == "agentic-workspace proof --verbose --changed <paths> --format json"
+    assert current_decision["response_shape"] == [
+        "decision_or_finding",
+        "evidence_or_proof_boundary",
+        "residue_or_claim_boundary",
+        "next_safe_action",
+    ]
+    assert current_decision["proof_boundary"] == payload["decision_packet"]["claim_boundary"]
+    assert current_decision["next_action"] == payload["next"]["action"]
+    assert "repeated_context_reconstruction" in current_decision["avoid_repeat"]
+    assert current_decision["state_backed"] is True
+    message_economy = payload["message_economy"]
+    assert message_economy["kind"] == "agentic-workspace/message-economy/v1"
+    assert message_economy["surface"] == "implementation"
+    assert "decision_changed" in message_economy["speak_when"]
+    assert "detail_route_available" in message_economy["stay_compact_when"]
+    assert "stale_missing_or_failed_proof" in message_economy["expand_when"]
+    assert "proof_boundary" in message_economy["preserve"]
+    assert message_economy["state_backed"] is True
+    bundle = payload["evidence_bundle"]
+    assert bundle["kind"] == "agentic-workspace/evidence-bundle/v1"
+    assert bundle["surface"] == "implementation"
+    assert bundle["supports_decision"] == "What narrow working set is safe to touch now?"
+    assert {item["id"] for item in bundle["minimal_evidence_surfaces"]} == {
+        "proof_detail",
+        "why_blocked",
+        "omitted_diagnostics",
+    }
+    assert bundle["missing_evidence"] == current_decision["missing_evidence"]
+    assert bundle["state_backed"] is True
 
 
 def _write_architecture_principles(target_root: Path) -> None:
@@ -2400,8 +2434,13 @@ def test_implement_default_stays_under_tiny_output_budget_for_docs_task(tmp_path
     )
     payload = json.loads(capsys.readouterr().out)
 
-    _assert_json_payload_under(payload, 13_000, label="implement tiny docs-task payload", sort_keys=False)
+    _assert_json_payload_under(payload, 15_000, label="implement tiny docs-task payload", sort_keys=False)
     assert payload["kind"] == "implementer-context-tiny/v1"
+    assert payload["current_decision"]["state_backed"] is True
+    assert payload["current_decision"]["known_evidence"] == ["implement.decision_packet"]
+    assert payload["message_economy"]["state_backed"] is True
+    assert "repeated_state_recaps" in payload["message_economy"]["discourage"]
+    assert payload["evidence_bundle"]["state_backed"] is True
     assert payload["next"]["action"]
     assert payload["proof"]["required_commands"]
     assert payload["proof"]["proof_obligations"]["required_proof"]["status"] == "required"
@@ -2449,8 +2488,13 @@ def test_implement_default_stays_under_tiny_output_budget_for_code_task(tmp_path
     )
     payload = json.loads(capsys.readouterr().out)
 
-    _assert_json_payload_under(payload, 12_000, label="implement tiny code-task payload", sort_keys=False)
+    _assert_json_payload_under(payload, 14_000, label="implement tiny code-task payload", sort_keys=False)
     assert payload["kind"] == "implementer-context-tiny/v1"
+    assert payload["current_decision"]["state_backed"] is True
+    assert payload["current_decision"]["known_evidence"] == ["implement.decision_packet"]
+    assert payload["message_economy"]["state_backed"] is True
+    assert "repeated_state_recaps" in payload["message_economy"]["discourage"]
+    assert payload["evidence_bundle"]["state_backed"] is True
     assert payload["next"]["action"]
     assert payload["proof"]["proof_obligations"]["required_proof"]["status"] == "required"
     assert payload["proof"]["proof_obligations"]["required_proof"]["manual_verification_required"] is True
@@ -2581,6 +2625,9 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
         "communication_contract",
         "action_signals",
         "decision_packet",
+        "current_decision",
+        "message_economy",
+        "evidence_bundle",
         "next",
         "proof",
         "generated_surface_trust",
@@ -2596,6 +2643,23 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert decision["phase_question"] == "What narrow working set is safe to touch now?"
     assert decision["next_action"] == payload["next"]["action"]
     assert decision["absence_states"]["full_selector_inventory"] == "hidden_behind_detail_route"
+    assert payload["current_decision"]["surface"] == "implementation"
+    assert payload["current_decision"]["known_evidence"] == ["implement.decision_packet"]
+    assert payload["current_decision"]["safe_probe"] == "make test-workspace"
+    assert payload["current_decision"]["response_shape"] == [
+        "decision_or_finding",
+        "evidence_or_proof_boundary",
+        "residue_or_claim_boundary",
+        "next_safe_action",
+    ]
+    assert payload["message_economy"]["state_backed"] is True
+    assert "repeated_state_recaps" in payload["message_economy"]["discourage"]
+    assert payload["evidence_bundle"]["minimal_evidence_surfaces"] == [
+        {"id": "proof_detail"},
+        {"id": "why_blocked"},
+        {"id": "omitted_diagnostics"},
+    ]
+    assert payload["evidence_bundle"]["state_backed"] is True
     assert signals["kind"] == "agentic-workspace/action-signals/v1"
     assert signals["order"] == [
         "hard_blockers",
@@ -2674,7 +2738,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
         sort_keys=False,
     )
     _assert_json_payload_under(payload["operating_loop"], 1000, label="implement operating-loop compact projection", sort_keys=False)
-    _assert_json_payload_under(payload, 18000, label="implement generated-surface tiny payload", sort_keys=False)
+    _assert_json_payload_under(payload, 21000, label="implement generated-surface tiny payload", sort_keys=False)
 
 
 def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundary(tmp_path: Path, capsys) -> None:

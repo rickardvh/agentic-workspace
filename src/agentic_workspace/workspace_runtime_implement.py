@@ -15,6 +15,10 @@ from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
+    current_decision_payload,
+    evidence_bundle_payload,
+    message_economy_payload,
+    state_delta_core_payload,
 )
 from agentic_workspace.runtime_source_review import (
     tiny_generated_cli_freshness_payload,
@@ -1125,10 +1129,69 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         ),
         "takeover_or_recovery": _command_with_cli_invoke(command="agentic-workspace preflight --format json", cli_invoke=config.cli_invoke),
     }
+    communication_contract = compact_communication_contract_payload(surface="implementation")
+    decision_packet = _ordinary_decision_packet(
+        surface="implement",
+        phase_question="What narrow working set is safe to touch now?",
+        next_action=next_action,
+        blocked_actions=[str(item) for item in _as_dict(payload.get("applicable_intent_status")).get("blocked_claims", [])],
+        required_commands=[str(item) for item in proof_commands if str(item).strip()],
+        claim_boundary=_as_dict(payload.get("parent_intent_status")).get("proof_boundary")
+        or "claim after changed-path proof and acceptance reconciliation",
+        residue_owner="active continuation state"
+        if _as_dict(payload.get("planning_safety_gate")).get("active_planning_present")
+        else "none",
+        reasons=[
+            f"changed_path_count={len(_normalize_changed_paths(payload.get('changed_paths', [])))}",
+            f"workflow={workflow_sufficiency.get('sufficiency_result', workflow_sufficiency.get('decision', 'unknown'))}"
+            if isinstance(workflow_sufficiency, dict)
+            else "workflow=unknown",
+        ],
+        detail_routes={
+            "proof_detail": _command_with_cli_invoke(
+                command="agentic-workspace proof --target . --changed <paths> --format json", cli_invoke=config.cli_invoke
+            ),
+            "why_blocked": _command_with_cli_invoke(
+                command="agentic-workspace implement --changed <paths> --select context.planning_safety_gate,next,proof --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "omitted_diagnostics": detail_commands["full_context"],
+        },
+        shown_because=[
+            "command_phase=implement",
+            "changed_path_ownership=present" if payload.get("changed_paths") else "changed_path_ownership=absent",
+            "proof_selection=changed_paths",
+        ],
+        absence_states={
+            "full_selector_inventory": "hidden_behind_detail_route",
+            "architecture_detail": "not_action_changing",
+            "raw_workspace_files": "not_action_changing",
+        },
+    )
+    state_delta_missing_evidence = [str(item) for item in proof_commands if str(item).strip()] or [
+        "proof execution evidence before hard completion claim"
+    ]
+    state_delta_core = state_delta_core_payload(
+        surface="implementation",
+        decision_packet=decision_packet,
+        communication_contract=communication_contract,
+        evidence_basis=[
+            "implement.decision_packet",
+            "implement.proof.required_commands",
+            "implement.context.scope.changed_paths",
+        ],
+        missing_evidence=state_delta_missing_evidence,
+        safe_probe=primary_command or detail_commands["proof_detail"],
+    )
+    current_decision = current_decision_payload(
+        surface="implementation",
+        decision_packet=decision_packet,
+        state_delta_core=state_delta_core,
+    )
     projected = {
         "kind": "implementer-context-tiny/v1",
         "target": payload.get("target"),
-        "communication_contract": compact_communication_contract_payload(surface="implementation"),
+        "communication_contract": communication_contract,
         "action_signals": _compact_action_signals_payload(
             surface="implement",
             allowed_next_action=str(next_action),
@@ -1216,43 +1279,17 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "status": payload.get("orientation", {}).get("status", "unknown"),
             "ask_human_only_if": "blocked",
         },
-        "decision_packet": _ordinary_decision_packet(
-            surface="implement",
-            phase_question="What narrow working set is safe to touch now?",
-            next_action=next_action,
-            blocked_actions=[str(item) for item in _as_dict(payload.get("applicable_intent_status")).get("blocked_claims", [])],
-            required_commands=[str(item) for item in proof_commands if str(item).strip()],
-            claim_boundary=_as_dict(payload.get("parent_intent_status")).get("proof_boundary")
-            or "claim after changed-path proof and acceptance reconciliation",
-            residue_owner="active continuation state"
-            if _as_dict(payload.get("planning_safety_gate")).get("active_planning_present")
-            else "none",
-            reasons=[
-                f"changed_path_count={len(_normalize_changed_paths(payload.get('changed_paths', [])))}",
-                f"workflow={workflow_sufficiency.get('sufficiency_result', workflow_sufficiency.get('decision', 'unknown'))}"
-                if isinstance(workflow_sufficiency, dict)
-                else "workflow=unknown",
-            ],
-            detail_routes={
-                "proof_detail": _command_with_cli_invoke(
-                    command="agentic-workspace proof --target . --changed <paths> --format json", cli_invoke=config.cli_invoke
-                ),
-                "why_blocked": _command_with_cli_invoke(
-                    command="agentic-workspace implement --changed <paths> --select context.planning_safety_gate,next,proof --format json",
-                    cli_invoke=config.cli_invoke,
-                ),
-                "omitted_diagnostics": detail_commands["full_context"],
-            },
-            shown_because=[
-                "command_phase=implement",
-                "changed_path_ownership=present" if payload.get("changed_paths") else "changed_path_ownership=absent",
-                "proof_selection=changed_paths",
-            ],
-            absence_states={
-                "full_selector_inventory": "hidden_behind_detail_route",
-                "architecture_detail": "not_action_changing",
-                "raw_workspace_files": "not_action_changing",
-            },
+        "decision_packet": decision_packet,
+        "current_decision": current_decision,
+        "message_economy": message_economy_payload(
+            surface="implementation",
+            communication_contract=communication_contract,
+            state_delta_core=state_delta_core,
+        ),
+        "evidence_bundle": evidence_bundle_payload(
+            surface="implementation",
+            current_decision=current_decision,
+            state_delta_core=state_delta_core,
         ),
         "proof": {
             "kind": payload.get("proof", {}).get("kind", "proof-selection/v1")
