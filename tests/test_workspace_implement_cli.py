@@ -867,6 +867,10 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert "Python-only proof" in parity["claim_rule"]
     proof_tiers = {tier["id"]: tier["commands"] for tier in payload["proof"]["proof_command_tiers"]["tiers"]}
     assert proof_tiers["generated_contract"][0]["command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert proof_tiers["generated_contract"][0]["evidence_type"] == "generated-command-contract"
+    assert proof_tiers["generated_contract"][0]["cost"] == "generated-contract"
+    assert proof_tiers["generated_contract"][0]["reliability"] == "authoritative"
+    assert "not represented by the minimal command" in proof_tiers["generated_contract"][0]["duplicates_ok_reason"]
     assert any(item["command"].endswith("--require-docker") for item in proof_tiers["environmental"])
     retry = payload["proof"]["transient_validation_retry"]
     assert retry["status"] == "available"
@@ -2705,10 +2709,14 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
     tiers = payload["proof"]["proof_command_tiers"]
     assert tiers["minimal_required_command"] == "make test-workspace"
-    assert "overlapping commands only with extra tier evidence" in tiers["closeout_rule"]
+    assert tiers["selected_set"]["status"] == "conservative-expanded"
+    assert "extra_evidence" in tiers["closeout_rule"]
     tier_ids = {tier["id"] for tier in tiers["tiers"]}
     assert "must_run" in tier_ids
     assert "generated_contract" in tier_ids
+    generated_tier = next(tier for tier in tiers["tiers"] if tier["id"] == "generated_contract")
+    assert generated_tier["commands"][0]["evidence_type"] == "generated-command-contract"
+    assert "not represented by the minimal command" in generated_tier["commands"][0]["extra_evidence"]
     trust = payload["generated_surface_trust"]
     assert trust["status"] == "present"
     assert trust["items"][0]["path"] == "generated/workspace/python/cli.py"

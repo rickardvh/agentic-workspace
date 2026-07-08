@@ -1055,14 +1055,18 @@ def _tiny_proof_command_tiers_payload(value: Any, *, required_commands: list[str
         commands = [
             {
                 "command": str(item.get("command", "")),
-                "lane": str(item.get("lane", "")),
-                "obligation": str(item.get("obligation", "")),
+                "evidence_type": str(item.get("evidence_type", "")),
+                **(
+                    {"extra_evidence": str(item.get("duplicates_ok_reason", ""))}
+                    if str(item.get("duplicates_ok_reason", "")).strip()
+                    else {}
+                ),
             }
             for item in raw_commands
             if isinstance(item, dict) and str(item.get("command", "")).strip()
         ][:1]
         if commands:
-            tiers.append({"id": str(tier.get("id", "")), "command_count": len(raw_commands), "commands": commands})
+            tiers.append({"id": str(tier.get("id", "")), "commands": commands})
     if len(tiers) <= 1:
         return {}
     minimal_required = ""
@@ -1073,11 +1077,14 @@ def _tiny_proof_command_tiers_payload(value: Any, *, required_commands: list[str
     if not minimal_required and required_commands:
         minimal_required = required_commands[0]
     return {
-        "kind": packet.get("kind", "agentic-workspace/proof-command-tiers/v1"),
-        "status": packet.get("status", "present" if tiers else "empty"),
+        "selected_set": {
+            key: _as_dict(packet.get("selected_set")).get(key)
+            for key in ("status",)
+            if _as_dict(packet.get("selected_set")).get(key) not in (None, "", [], {})
+        },
         "minimal_required_command": minimal_required,
         "tiers": tiers,
-        "closeout_rule": "Name minimal_required_command first; list overlapping commands only with extra tier evidence.",
+        "closeout_rule": "List overlap only when it adds extra_evidence.",
     }
 
 
