@@ -285,16 +285,17 @@ def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: P
     assert packet["kind"] == "agentic-workspace/memory-decision-packet/v1"
     assert packet["stage"] == "implement"
     assert packet["force"] in {"recommended_before_work", "required_before_claim"}
-    assert packet["pull"]["status"] == "checked_none"
+    assert packet["pull"]["status"] == "baseline_only"
     assert "--stage implement" in packet["pull"]["recommended_command"]
     assert "docs/package/knowledge-routing.md" in packet["pull"]["recommended_command"]
     assert packet["pull"]["route_count"] >= 1
     assert packet["pull"]["relevant_route_count"] == 0
     assert packet["capture"]["candidate_owner_surface_count"] >= 3
+    assert packet["capture"]["outcome_count"] == 5
     assert "candidate_owner_surfaces" not in packet["capture"]
     assert "authority_boundary" not in packet
     assert "limits" not in packet
-    assert packet["detail_visibility"] == ("full authority, limits, owner, and candidate detail stay behind verbose implement context")
+    assert packet["detail_visibility"] == "details stay behind verbose implement context"
     assert len(json.dumps(packet, separators=(",", ":")).encode()) < 900
 
     capsys.readouterr()
@@ -319,6 +320,13 @@ def test_implement_surfaces_memory_decision_packet_for_changed_paths(tmp_path: P
     assert "repo_memory" in verbose_packet["capture"]["candidate_owner_surfaces"]
     assert "local_memory" in verbose_packet["capture"]["candidate_owner_surfaces"]
     assert "planning" in verbose_packet["capture"]["candidate_owner_surfaces"]
+    assert verbose_packet["capture"]["allowed_outcomes"] == [
+        "capture",
+        "update_existing",
+        "route_elsewhere",
+        "dismiss",
+        "follow_up_required",
+    ]
     assert verbose_packet["authority_boundary"]["agent_owns"]
 
 

@@ -1340,6 +1340,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "trust",
                     "scope",
                     "canonical_evidence",
+                    "evidence_source_class",
                     "owner_surface",
                     "owner_kind",
                     "evidence_relationship",
