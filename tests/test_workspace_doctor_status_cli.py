@@ -188,6 +188,65 @@ def test_doctor_accepts_local_only_startup_indirection(tmp_path: Path, capsys) -
     assert not any(action["id"] == "restore-workspace-pointer-manually" for action in payload["manual_review_actions"])
 
 
+def test_upgrade_adopt_local_only_transitions_to_checked_in_mode(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert cli.main(["install", "--modules", "planning", "--target", str(target), "--local-only", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    local_only_state = target / ".agentic-workspace" / "LOCAL-ONLY.toml"
+    exclude_path = target / ".git" / "info" / "exclude"
+    assert local_only_state.exists()
+    assert cli.LOCAL_ONLY_IGNORE_BLOCK in exclude_path.read_text(encoding="utf-8")
+
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    doctor_payload = json.loads(capsys.readouterr().out)
+    workspace_report = next(report for report in doctor_payload["reports"] if report["module"] == "workspace")
+    adoption_action = next(
+        action for action in workspace_report["repair_actions"] if action["id"] == "adopt-local-only-workspace-checked-in"
+    )
+    assert "--adopt-local-only" in adoption_action["dry_run"]
+    assert adoption_action["safe_to_apply"] is True
+    assert adoption_action["affected_surfaces"] == [".agentic-workspace/LOCAL-ONLY.toml"]
+
+    assert cli.main(["upgrade", "--target", str(target), "--adopt-local-only", "--dry-run", "--format", "json"]) == 0
+
+    dry_run_payload = json.loads(capsys.readouterr().out)
+    assert dry_run_payload["repair_mode"] == "checked-in-adoption-from-local-only"
+    assert dry_run_payload["dry_run"] is True
+    assert any(
+        action["path"] == ".git/info/exclude" and action["kind"] == "would remove" for action in dry_run_payload["reports"][0]["actions"]
+    )
+    assert local_only_state.exists()
+    assert cli.LOCAL_ONLY_IGNORE_BLOCK in exclude_path.read_text(encoding="utf-8")
+
+    assert cli.main(["upgrade", "--target", str(target), "--adopt-local-only", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["repair_mode"] == "checked-in-adoption-from-local-only"
+    assert payload["adoption_scope"]["from"] == "local-only"
+    assert payload["adoption_scope"]["to"] == "checked-in"
+    assert not local_only_state.exists()
+    assert cli.LOCAL_ONLY_IGNORE_BLOCK not in exclude_path.read_text(encoding="utf-8")
+    gitignore_text = (target / ".gitignore").read_text(encoding="utf-8")
+    assert ".agentic-workspace/local/" in gitignore_text
+    assert not (target / "AGENTS.local.md").exists()
+    assert cli.workspace_pointer_block(cli_invoke=REPO_LOCAL_CLI_INVOKE) in (target / "AGENTS.md").read_text(encoding="utf-8")
+    receipt = json.loads((target / ".agentic-workspace" / "adoption-receipt.json").read_text(encoding="utf-8"))
+    assert receipt["payload_mirror"] is False
+
+    assert cli.main(["doctor", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    followup_payload = json.loads(capsys.readouterr().out)
+    followup_report = next(report for report in followup_payload["reports"] if report["module"] == "workspace")
+    assert not any(action["id"] == "adopt-local-only-workspace-checked-in" for action in followup_report["repair_actions"])
+    assert not any("local-only workspace state present" in warning for warning in followup_payload["warnings"])
+    assert followup_payload["health"] == "healthy"
+
+
 def test_doctor_requires_local_only_state_for_local_startup_indirection(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

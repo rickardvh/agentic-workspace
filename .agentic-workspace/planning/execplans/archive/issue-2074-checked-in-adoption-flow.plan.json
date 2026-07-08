@@ -1,0 +1,409 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Issue 2074 checked-in adoption flow",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement GitHub issue #2074 by adding a command-owned checked-in adoption path for local-only Agentic Workspace installs.",
+    "hard_constraints": "Keep scope bounded to workspace lifecycle command contracts, generated adapters, local-only adoption runtime behavior, and focused lifecycle tests.",
+    "agent_may_decide": "Exact command flag naming, structured payload fields, focused test placement, and validation tightening within the lifecycle command boundary.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Add a scoped upgrade adoption flag, doctor repair action, local-only residue cleanup/reporting, and focused fixture proof.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_doctor_status_cli.py -q",
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/contracts/cli_commands.json",
+      "src/agentic_workspace/contracts/command_package_ir.json",
+      "src/agentic_workspace/contracts/operations/upgrade.lifecycle.json",
+      "generated/workspace/python/adapter_commands.json",
+      "generated/workspace/python/command_package.json",
+      "generated/workspace/typescript/resources/command_package.json",
+      "generated/workspace/typescript/resources/operations/upgrade.lifecycle.json",
+      "generated/workspace/typescript/src/cli.mjs",
+      "tests/test_workspace_doctor_status_cli.py"
+    ],
+    "completion_criteria": [
+      "Doctor detects local-only mode and offers a safe checked-in adoption command.",
+      "The adoption command removes the local-only sentinel and AW-added .git/info/exclude block, ensures repo local-state ignores, and reports changed/manual-review surfaces.",
+      "A fixture covers sentinel, .git/info/exclude, repo .gitignore, and clean follow-up doctor behavior."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement issue #2074 with a first-class checked-in adoption flow for local-only Agentic Workspace installs."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement issue #2074 with a first-class checked-in adoption flow for local-only Agentic Workspace installs.",
+      "constraints": "Keep scope bounded to workspace lifecycle command contracts, generated adapters, local-only adoption runtime behavior, and focused lifecycle tests.",
+      "latitude": "Exact command flag naming, structured payload fields, focused test placement, and validation tightening within the lifecycle command boundary.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "issue-2074-checked-in-adoption-flow",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/contracts/cli_commands.json",
+        "src/agentic_workspace/contracts/command_package_ir.json",
+        "src/agentic_workspace/contracts/operations/upgrade.lifecycle.json",
+        "generated/workspace/python/adapter_commands.json",
+        "generated/workspace/python/command_package.json",
+        "generated/workspace/typescript/resources/command_package.json",
+        "generated/workspace/typescript/resources/operations/upgrade.lifecycle.json",
+        "generated/workspace/typescript/src/cli.mjs",
+        "tests/test_workspace_doctor_status_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Implement issue #2074 with a first-class checked-in adoption flow for local-only Agentic Workspace installs.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "passed",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Issue 2074 checked-in adoption flow",
+    "inferred intended outcome": "Implement issue #2074 with a first-class checked-in adoption flow for local-only Agentic Workspace installs.",
+    "chosen concrete what": "Add a scoped upgrade adoption flag, doctor repair action, local-only residue cleanup/reporting, and focused fixture proof.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Workspace lifecycle runtime mirrors, workspace command contract/generated adapter surfaces, focused doctor lifecycle tests, and this execplan.",
+    "max changed files": "About 12 files including generated command package outputs.",
+    "required validation commands": "uv run pytest tests/test_workspace_doctor_status_cli.py -q; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs non-lifecycle behavior, non-generated docs, or unrelated module changes outside the bounded issue #2074 surfaces.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue issue #2074 from the lifecycle adoption command, doctor repair action, and focused sentinel/exclude/gitignore fixture.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement issue #2074 with a first-class checked-in adoption flow for local-only Agentic Workspace installs.",
+    "hard constraints": "Keep scope bounded to workspace lifecycle command contracts, generated adapters, local-only adoption runtime behavior, and focused lifecycle tests.",
+    "agent may decide locally": "Exact command flag naming, structured payload fields, focused test placement, and validation tightening within the lifecycle command boundary.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-2074-checked-in-adoption-flow",
+    "status": "completed",
+    "scope": "Add and validate the local-only to checked-in lifecycle adoption path only.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Patch runtime, command contracts, generated adapters, and focused tests for issue #2074."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/contracts/cli_commands.json",
+    "src/agentic_workspace/contracts/command_package_ir.json",
+    "src/agentic_workspace/contracts/operations/upgrade.lifecycle.json",
+    "generated/workspace/python/adapter_commands.json",
+    "generated/workspace/python/command_package.json",
+    "generated/workspace/typescript/resources/command_package.json",
+    "generated/workspace/typescript/resources/operations/upgrade.lifecycle.json",
+    "generated/workspace/typescript/src/cli.mjs",
+    "tests/test_workspace_doctor_status_cli.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_doctor_status_cli.py -q",
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/check/check_generated_command_packages.py",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Doctor detects local-only mode and offers a safe checked-in adoption command.",
+    "The adoption command removes the local-only sentinel and AW-added .git/info/exclude block, ensures repo local-state ignores, and reports changed/manual-review surfaces.",
+    "A fixture covers sentinel, .git/info/exclude, repo .gitignore, and clean follow-up doctor behavior."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added upgrade --adopt-local-only, doctor repair discovery for local-only state, checked-in adoption cleanup/reporting, generated adapter metadata, and a local-only fixture covering sentinel/exclude/gitignore/follow-up doctor behavior.",
+    "scope touched": "workspace lifecycle runtime, command contracts/generated adapters, focused doctor/status test, and planning closeout.",
+    "changed surfaces": "workspace_runtime_core.py, workspace_runtime_primitives.py, command contract JSON, generated command packages, tests/test_workspace_doctor_status_cli.py, planning state.",
+    "validations run": "Focused doctor/status tests; command package generation/static checks; operation conformance; AW summary/doctor/defaults; contract and structured inventory checks; routed ruff; make test-workspace; make lint-workspace; tests/test_workspace_cli.py; make typecheck; runtime mirror consistency.",
+    "result for continuation": "Issue #2074 implementation is ready for stacked PR review.",
+    "next step": "Open the stacked PR for issue #2074."
+  },
+  "finished_run_review": {
+    "review status": "completed",
+    "scope respected": "yes; changes stayed within lifecycle adoption, generated adapters, focused tests, and planning closeout.",
+    "proof status": "passed; source checkout doctor still reports its pre-existing payload-migration attention item, but command exits successfully and the new adoption fixture proves clean follow-up doctor in a target repo.",
+    "intent served": "yes; local-only workspaces now have a doctor-discoverable checked-in adoption command path.",
+    "config compliance": "contract-backed flag and generated Python/TypeScript package surfaces were refreshed and checked.",
+    "misinterpretation risk": "low; the command preserves durable AW state and removes only managed local-only markers/ignores.",
+    "follow-on decision": "continue to PR; no separate follow-up needed for #2074."
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "passed",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_doctor_status_cli.py -q; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/run_operation_conformance_tests.py --target all; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py -q; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
+    "proof achieved now": "passed",
+    "evidence for \"proof achieved\" state": "Focused fixture passed with 38 doctor/status tests; generated package, operation conformance, workspace test/lint/typecheck, and mirror consistency proof passed."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement issue #2074 with a first-class checked-in adoption flow for local-only Agentic Workspace installs.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Doctor emits adopt-local-only-workspace-checked-in; upgrade --adopt-local-only dry-run/apply reports checked-in adoption; apply removes LOCAL-ONLY.toml and the AW local exclude block, writes repo .gitignore local-state ignore and adoption receipt, removes managed AGENTS.local.md, restores root pointer, and follow-up doctor is healthy in the fixture.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "first-class checked-in adoption flow for local-only workspaces",
+    "validation confirmed": "passed",
+    "follow-on routed to": "stacked PR for #2074",
+    "post-work posterity capture": "no separate durable signal needed; issue implementation and regression test capture the learning.",
+    "resume from": "PR review",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "The ordinary command path now owns local-only to checked-in adoption and focused proof covers the required target repo outcomes.",
+    "evidence carried forward": "tests/test_workspace_doctor_status_cli.py::test_upgrade_adopt_local_only_transitions_to_checked_in_mode plus routed validation commands in proof_report.",
+    "reopen trigger": "A reviewed local-only adoption scenario leaves managed local-only residue, hides the adoption command from doctor, or cannot reach healthy target-repo doctor after adoption."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "stacked PR for #2074",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-08: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Implement issue #2074 with a first-class checked-in adoption flow for local-only Agentic Workspace installs.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest tests/test_workspace_doctor_status_cli.py -q; uv run python scripts/generate/generate_command_packages.py --check; uv run python scripts/check/check_generated_command_packages.py; uv run python scripts/check/run_operation_conformance_tests.py --target all; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make test-workspace; make lint-workspace; uv run pytest tests/test_workspace_cli.py -q; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json\nChanged surfaces: workspace_runtime_core.py, workspace_runtime_primitives.py, command contract JSON, generated command packages, tests/test_workspace_doctor_status_cli.py, planning state.\nDurable residue: none (none)\nMemory learning: none\nFollow-up: stacked PR for #2074\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}
