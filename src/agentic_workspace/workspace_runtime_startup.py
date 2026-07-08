@@ -476,6 +476,67 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         ],
         agent_judgment="Agent owns work-shape unless blocked.",
     )
+    startup_proof_commands = _tiny_required_proof_commands(payload.get("proof", {})) if isinstance(payload.get("proof"), dict) else []
+    projected["decision_packet"] = _ordinary_decision_packet(
+        surface="start",
+        phase_question="Startup posture?",
+        next_action=str(projected["next_safe_action"].get("next_safe_action", "")),
+        blocked_actions=[str(item) for item in projected["next_safe_action"].get("forbidden_actions", []) if str(item).strip()],
+        required_commands=list(
+            dict.fromkeys(
+                str(item)
+                for item in [
+                    projected["next_safe_action"].get("preferred_cli"),
+                    immediate.get("command") if isinstance(immediate, dict) else "",
+                    *startup_proof_commands,
+                ]
+                if item not in (None, "", []) and str(item).strip() and str(item).strip().lower() != "none"
+            )
+        ),
+        claim_boundary=projected["next_safe_action"].get("claim_boundary", "completion claim requires proof"),
+        residue_owner="active continuation state" if payload.get("active_state_summary", {}).get("active_execplan") else "none",
+        reasons=list(projected["action_signals"].get("changed_signals", []))[:6],
+        detail_routes={
+            "why_blocked": "agentic-workspace start --target . --select next_safe_action,action_signals --format json",
+            "active_plan": "agentic-workspace summary --target . --format json",
+            "proof_detail": "agentic-workspace proof --target . --changed <paths> --format json",
+        },
+        shown_because=["command_phase=start", *list(projected["action_signals"].get("changed_signals", []))[:3]],
+        absence_states={
+            "full_selector_inventory": "hidden_behind_detail_route",
+            "verbose_planning_detail": "detail_omitted",
+        },
+    )
+    state_delta_core = state_delta_core_payload(
+        surface="startup",
+        decision_packet=projected["decision_packet"],
+        communication_contract=compact_communication_contract_payload(surface="startup"),
+        evidence_basis=[
+            "next_safe_action",
+            "action_signals",
+            "active planning summary" if payload.get("active_state_summary", {}).get("active_execplan") else "startup routing state",
+        ],
+        safe_probe=str(
+            projected["next_safe_action"].get("preferred_cli")
+            or projected["decision_packet"].get("detail_routes", {}).get("active_plan")
+            or ""
+        ),
+    )
+    projected["message_economy"] = message_economy_payload(
+        surface="startup",
+        communication_contract=compact_communication_contract_payload(surface="startup"),
+        state_delta_core=state_delta_core,
+    )
+    projected["current_decision"] = current_decision_payload(
+        surface="startup",
+        decision_packet=projected["decision_packet"],
+        state_delta_core=state_delta_core,
+    )
+    projected["evidence_bundle"] = evidence_bundle_payload(
+        surface="startup",
+        current_decision=projected["current_decision"],
+        state_delta_core=state_delta_core,
+    )
     return projected
 
 
@@ -1188,8 +1249,96 @@ def _hydrate_selected_start_advisory_payloads(
     task_text: str | None,
     config: WorkspaceConfig,
 ) -> None:
-    if _selector_requests(select, "next_safe_action") or _selector_requests(select, "action_signals"):
+    state_delta_requested = any(
+        _selector_requests(select, field)
+        for field in (
+            "decision_packet",
+            "current_decision",
+            "message_economy",
+            "evidence_bundle",
+            "continuation_capsule",
+        )
+    )
+    if _selector_requests(select, "next_safe_action") or _selector_requests(select, "action_signals") or state_delta_requested:
         _attach_start_router_fields(payload)
+    if state_delta_requested:
+        next_safe_action = payload.get("next_safe_action", {}) if isinstance(payload.get("next_safe_action"), dict) else {}
+        action_signals = payload.get("action_signals", {}) if isinstance(payload.get("action_signals"), dict) else {}
+        startup_proof_commands = _tiny_required_proof_commands(payload.get("proof", {})) if isinstance(payload.get("proof"), dict) else []
+        if "decision_packet" not in payload:
+            payload["decision_packet"] = _ordinary_decision_packet(
+                surface="start",
+                phase_question="Startup posture?",
+                next_action=str(next_safe_action.get("next_safe_action", "")),
+                blocked_actions=[str(item) for item in next_safe_action.get("forbidden_actions", []) if str(item).strip()],
+                required_commands=list(
+                    dict.fromkeys(
+                        str(item)
+                        for item in [
+                            next_safe_action.get("preferred_cli"),
+                            payload.get("immediate_next_allowed_action", {}).get("command")
+                            if isinstance(payload.get("immediate_next_allowed_action"), dict)
+                            else "",
+                            *startup_proof_commands,
+                        ]
+                        if item not in (None, "", []) and str(item).strip() and str(item).strip().lower() != "none"
+                    )
+                ),
+                claim_boundary=next_safe_action.get("claim_boundary", "completion claim requires proof"),
+                residue_owner="active continuation state" if payload.get("active_state_summary", {}).get("active_execplan") else "none",
+                reasons=list(action_signals.get("changed_signals", []))[:6],
+                detail_routes={
+                    "why_blocked": f"{config.cli_invoke} start --target . --select next_safe_action,action_signals --format json",
+                    "active_plan": f"{config.cli_invoke} summary --target . --format json",
+                    "proof_detail": f"{config.cli_invoke} proof --target . --changed <paths> --format json",
+                },
+                shown_because=["command_phase=start", *list(action_signals.get("changed_signals", []))[:3]],
+                absence_states={
+                    "full_selector_inventory": "hidden_behind_detail_route",
+                    "verbose_planning_detail": "detail_omitted",
+                },
+            )
+        state_delta_core = state_delta_core_payload(
+            surface="startup",
+            decision_packet=payload["decision_packet"],
+            communication_contract=compact_communication_contract_payload(surface="startup"),
+            evidence_basis=[
+                "next_safe_action",
+                "action_signals",
+                "active planning summary"
+                if isinstance(payload.get("active_state_summary"), dict) and payload["active_state_summary"].get("active_execplan")
+                else "startup routing state",
+            ],
+            safe_probe=str(
+                next_safe_action.get("preferred_cli") or payload["decision_packet"].get("detail_routes", {}).get("active_plan") or ""
+            ),
+        )
+        payload["message_economy"] = message_economy_payload(
+            surface="startup",
+            communication_contract=compact_communication_contract_payload(surface="startup"),
+            state_delta_core=state_delta_core,
+        )
+        payload["current_decision"] = current_decision_payload(
+            surface="startup",
+            decision_packet=payload["decision_packet"],
+            state_delta_core=state_delta_core,
+        )
+        payload["evidence_bundle"] = evidence_bundle_payload(
+            surface="startup",
+            current_decision=payload["current_decision"],
+            state_delta_core=state_delta_core,
+        )
+        if _selector_requests(select, "continuation_capsule") and isinstance(payload.get("continuation_view"), dict):
+            continuation_answers = (
+                payload.get("continuation_view", {}).get("answers", {}) if isinstance(payload.get("continuation_view"), dict) else {}
+            )
+            payload["continuation_capsule"] = continuation_capsule_payload(
+                surface="startup",
+                current_decision=payload["current_decision"],
+                message_economy=payload["message_economy"],
+                preserved_intent=str(continuation_answers.get("preserved_intent", "")) if isinstance(continuation_answers, dict) else "",
+                state_delta_core=state_delta_core,
+            )
     vague_orientation: dict[str, Any] | None = None
     if _selector_requests(select, "vague_outcome_orientation"):
         vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)

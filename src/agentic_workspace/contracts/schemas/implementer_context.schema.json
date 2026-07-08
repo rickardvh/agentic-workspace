@@ -53,6 +53,21 @@
       "description": "Compact communication and reasoning-economy contract for decision-first, state-backed implementer output.",
       "additionalProperties": true
     },
+    "current_decision": {
+      "type": "object",
+      "description": "Compact state-delta decision packet for the implementation workflow, derived from the implement decision packet rather than prompt prose.",
+      "additionalProperties": true
+    },
+    "message_economy": {
+      "type": "object",
+      "description": "State-backed message economy packet that tells agents when to speak, stay compact, or expand during implementation.",
+      "additionalProperties": true
+    },
+    "evidence_bundle": {
+      "type": "object",
+      "description": "Minimal selector-backed evidence bundle for the implementation current decision, including missing proof evidence when stronger claims are blocked.",
+      "additionalProperties": true
+    },
     "action_signals": {
       "type": "object",
       "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",

@@ -14,6 +14,9 @@ Cheap implementer context for a bounded changed-path scope.
 | `kind` | const `"implementer-context/v1"` | yes |  | Discriminator for the implementer context payload shape. |  |  |
 | `target` | string | yes |  | Resolved target repository for the implementation context. |  |  |
 | `communication_contract` | object | no |  | Compact communication and reasoning-economy contract for decision-first, state-backed implementer output. |  |  |
+| `current_decision` | object | no |  | Compact state-delta decision packet for the implementation workflow, derived from the implement decision packet rather than prompt prose. |  |  |
+| `message_economy` | object | no |  | State-backed message economy packet that tells agents when to speak, stay compact, or expand during implementation. |  |  |
+| `evidence_bundle` | object | no |  | Minimal selector-backed evidence bundle for the implementation current decision, including missing proof evidence when stronger claims are blocked. |  |  |
 | `action_signals` | object | no |  | Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment. |  |  |
 | `task_posture_packet` | ref `#/$defs/task_posture_packet` | no |  | Optional dynamic instruction packet emitted when changed paths, task facts, config posture, workflow obligations, or module contributions affect implementation routing. |  |  |
 | `task_posture_packet.kind` | const `"agentic-workspace/task-posture-packet/v1"` | yes |  | Discriminator for dynamic task posture. |  |  |

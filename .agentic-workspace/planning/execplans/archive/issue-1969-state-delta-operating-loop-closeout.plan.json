@@ -1,0 +1,401 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Issue 1969 state-delta operating loop closeout",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Close #1969 honestly by making the state-delta-first packet model visible across startup and implementation workflows.",
+    "hard_constraints": "Keep scope bounded to structured packet projection, implementer schema/reference docs, focused CLI tests, generated mirrors, and planning state.",
+    "agent_may_decide": "Exact implement packet evidence basis, test assertions, and proof command set.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Expose current_decision, message_economy, and evidence_bundle in implement tiny output from the existing decision_packet.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_implement_cli.py::test_implement_exposes_communication_contract_for_changed_paths tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q",
+      "uv run pytest tests/test_workspace_cli.py::test_start_exposes_communication_contract_in_ordinary_path tests/test_workspace_cli.py::test_start_select_surfaces_state_delta_packets -q",
+      "make schema-reference-docs",
+      "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+      "make test-workspace",
+      "make lint-workspace",
+      "make maintainer-surfaces",
+      "make typecheck"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_implement.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+      "docs/reference/implementer-context.md",
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_implement_cli.py",
+      ".agentic-workspace/planning/execplans/issue-1969-state-delta-operating-loop-closeout.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "completion_criteria": [
+      "Startup continues to expose the state-delta-first model.",
+      "Implement exposes current decision, known/missing evidence, safe probe, response shape, message economy, and evidence bundle before a visible implementation update.",
+      "Schema/reference docs name the implement state-delta packets.",
+      "The closure claim is explicit that the mechanism is structured-state-backed and avoids prompt-prose classifiers or broad dumps."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Make state-delta-first operating-loop packets visible across startup and implementation workflows so #1969 can close honestly."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Close #1969 honestly by making the state-delta-first packet model visible across startup and implementation workflows.",
+      "constraints": "Keep scope bounded to structured packet projection, implementer schema/reference docs, focused CLI tests, generated mirrors, and planning state.",
+      "latitude": "Exact implement packet evidence basis, test assertions, and proof command set.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "passed"
+    },
+    "execution": {
+      "milestone": "issue-1969-state-delta-operating-loop-closeout",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "passed"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_implement.py",
+        "src/agentic_workspace/workspace_runtime_startup.py",
+        "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+        "docs/reference/implementer-context.md",
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_implement_cli.py",
+        ".agentic-workspace/planning/execplans/issue-1969-state-delta-operating-loop-closeout.plan.json",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make ordinary AW operating-loop messages state-delta-first across more than one workflow class.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement all open issues, including #1969.",
+    "inferred intended outcome": "Close the state-delta-first parent only if startup plus another ordinary workflow expose structured packets that let agents answer in compact deltas.",
+    "chosen concrete what": "Add implement tiny-output current_decision, message_economy, and evidence_bundle derived from the existing implement decision_packet, then prove startup and implement both expose the model.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "workspace_runtime_implement packet projection, workspace_runtime_startup selector hydration, implementer-context schema/reference docs, focused implement/start tests, and planning state.",
+    "max changed files": "About 8 files.",
+    "required validation commands": "Focused implement/start packet tests; schema-reference-docs; contract tooling; implement changed-path AW routing; standard workspace test/lint if generated mirrors change.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Continue #1969 by exposing shared state-delta packets through implement tiny output and proving startup + implement packet behavior.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Close #1969 honestly by making the state-delta-first packet model visible across startup and implementation workflows.",
+    "hard constraints": "Keep scope bounded to structured packet projection, implementer schema/reference docs, focused CLI tests, generated mirrors, and planning state.",
+    "agent may decide locally": "Exact implement packet evidence basis, test assertions, and proof command set.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-1969-state-delta-operating-loop-closeout",
+    "status": "completed",
+    "scope": "Implement state-delta packet projection for implement tiny output and prove #1969 across startup plus implementation.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Expose current_decision, message_economy, and evidence_bundle in implement tiny output from the existing decision_packet."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_implement.py",
+    "src/agentic_workspace/workspace_runtime_startup.py",
+    "src/agentic_workspace/contracts/schemas/implementer_context.schema.json",
+    "docs/reference/implementer-context.md",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_implement_cli.py",
+    ".agentic-workspace/planning/execplans/issue-1969-state-delta-operating-loop-closeout.plan.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_implement_cli.py::test_implement_exposes_communication_contract_for_changed_paths tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q",
+    "uv run pytest tests/test_workspace_cli.py::test_start_exposes_communication_contract_in_ordinary_path tests/test_workspace_cli.py::test_start_select_surfaces_state_delta_packets -q",
+    "make schema-reference-docs",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "make test-workspace",
+    "make lint-workspace",
+    "make maintainer-surfaces",
+    "make typecheck"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Startup continues to expose the state-delta-first model.",
+    "Implement exposes current decision, known/missing evidence, safe probe, response shape, message economy, and evidence bundle before a visible implementation update.",
+    "Schema/reference docs name the implement state-delta packets.",
+    "The closure claim is explicit that the mechanism is structured-state-backed and avoids prompt-prose classifiers or broad dumps."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented state-delta-first packets across startup and implementation. Implement tiny output now derives current_decision, message_economy, and evidence_bundle from its existing decision_packet. Startup --select now hydrates the same state-delta packets so they are queryable, not only present in default output.",
+    "scope touched": "Startup selector hydration, implement tiny packet projection, implementer schema/reference docs, startup and implement CLI tests, and planning state.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_startup.py; src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/contracts/schemas/implementer_context.schema.json; docs/reference/implementer-context.md; tests/test_workspace_cli.py; tests/test_workspace_implement_cli.py; planning closeout state.",
+    "validations run": "uv run pytest tests/test_workspace_cli.py::test_start_exposes_communication_contract_in_ordinary_path tests/test_workspace_cli.py::test_start_select_surfaces_state_delta_packets tests/test_workspace_implement_cli.py::test_implement_exposes_communication_contract_for_changed_paths tests/test_workspace_implement_cli.py::test_implement_tiny_profile_returns_next_decision_without_diagnostics -q; make test-workspace; make lint-workspace; uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py; make maintainer-surfaces; uv run pytest tests/test_workspace_cli.py -q; make schema-reference-docs; make typecheck; startup/implement selector samples for current_decision,message_economy,evidence_bundle; summary; doctor.",
+    "result for continuation": "No continuation required for #1969; the parent completion rule is satisfied across startup and implementation workflow classes.",
+    "next step": "Archive and close the plan item."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "Passed broad proof commands plus selector samples: start --select and implement --select both returned current_decision, message_economy, and evidence_bundle with known_evidence, missing_evidence, safe_probe, response_shape, proof/residue boundary, expansion triggers, avoid_repeat, and state_backed=true. Doctor exited 0 with inherited checked-in payload reduction advisory."
+  },
+  "intent_satisfaction": {
+    "original intent": "Make operating-loop messages state-delta-first across the ordinary AW loop.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "The mechanism is now present and queryable across startup and implementation workflow classes. Startup supplies state-delta packets in default output and --select. Implement supplies the same packet family before visible implementation updates. Both packets are derived from structured decision packets and selector routes, preserve proof/residue/next-action boundaries, expose explicit expansion triggers, and discourage repeated recaps.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "State-delta-first operating-loop packets are visible and queryable across startup and implementation.",
+    "validation confirmed": "yes",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "plan closeout",
+    "resume from": "none",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "The durable product rule is now encoded in runtime packet builders, schema/reference docs, skill text already present, and tests.",
+    "target scope": "none",
+    "proposed durable intent": "none yet",
+    "confidence": "high",
+    "needs review": false,
+    "owner surface": "none"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "#1969 allowed closure only when the ordinary AW loop had a demonstrated state-delta-first mechanism across more than one workflow class. Startup and implementation now both expose current decision, evidence, missing proof, safe probe, response shape, proof/residue boundary, next action, expansion triggers, and recap-avoidance policy from structured state.",
+    "evidence carried forward": "Focused tests plus real start/implement selector samples; implementer schema/reference docs; startup selector hydration; implement tiny packet projection.",
+    "reopen trigger": "Reopen if state-delta packets disappear from startup or implement, become prompt-prose-classifier driven, stop exposing missing evidence/safe probes, or force broad always-on context dumps."
+  },
+  "improvement_signal_review": {
+    "status": "signals_fixed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "Startup default exposed state-delta packets, but --select current_decision,message_economy,evidence_bundle initially reported them missing."
+    ],
+    "signals fixed": [
+      "Hydrated startup state-delta packets in selector handling and added a focused selector test."
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Hydrated startup state-delta packets in selector handling and added a focused selector test.",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-08: Scaffolded by agentic-planning new-plan.",
+    "2026-07-08: Completed #1969 closeout slice with startup and implementation state-delta packets plus selector-backed proof."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Make operating-loop messages state-delta-first across the ordinary AW loop.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: passed\nChanged surfaces: src/agentic_workspace/workspace_runtime_startup.py; src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/contracts/schemas/implementer_context.schema.json; docs/reference/implementer-context.md; tests/test_workspace_cli.py; tests/test_workspace_implement_cli.py; planning closeout state.\nDurable residue: none (none)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}

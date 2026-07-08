@@ -1520,6 +1520,49 @@ def test_start_exposes_communication_contract_in_ordinary_path(tmp_path: Path, c
     assert operating_loop_skill["packets"] == ["current_decision", "message_economy", "evidence_bundle"]
 
 
+def test_start_select_surfaces_state_delta_packets(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Fix one docs typo",
+                "--select",
+                "current_decision,message_economy,evidence_bundle",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    values = payload["values"]
+    assert payload.get("missing", []) == []
+    assert values["current_decision"]["kind"] == "agentic-workspace/current-decision/v1"
+    assert values["current_decision"]["decision_question"] == "Startup posture?"
+    assert values["current_decision"]["known_evidence"] == ["next_safe_action"]
+    assert values["current_decision"]["response_shape"] == [
+        "decision_or_finding",
+        "evidence_or_proof_boundary",
+        "residue_or_claim_boundary",
+        "next_safe_action",
+    ]
+    assert values["current_decision"]["state_backed"] is True
+    assert values["message_economy"]["surface"] == "startup"
+    assert values["message_economy"]["state_backed"] is True
+    assert "repeated_state_recaps" in values["message_economy"]["discourage"]
+    assert values["evidence_bundle"]["supports_decision"] == "Startup posture?"
+    assert values["evidence_bundle"]["minimal_evidence_surfaces"][0]["id"] == "why_blocked"
+    assert values["evidence_bundle"]["state_backed"] is True
+
+
 def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
