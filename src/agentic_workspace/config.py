@@ -173,23 +173,28 @@ WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 
 
 def workspace_pointer_block(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> str:
-    effective_cli = cli_invoke.strip() or DEFAULT_CLI_INVOKE
     return (
         f"{WORKSPACE_WORKFLOW_MARKER_START}\n"
+        "Use the main Agentic Workspace operating skill: `.agentic-workspace/skills/workspace-startup/SKILL.md`.\n"
+        "\n"
+        "Invocation rule:\n"
+        "1. Use `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present.\n"
+        "2. Otherwise use `.agentic-workspace/config.toml` `[workspace].cli_invoke`.\n"
+        "3. Otherwise use the package default `agentic-workspace`.\n"
+        "4. If no CLI invocation works, read `.agentic-workspace/WORKFLOW.md` before other workspace files.\n"
+        "\n"
         "Ordinary route:\n"
-        f'1. Use `{effective_cli} start --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions.\n'
-        f'2. Use `{effective_cli} implement --changed <paths> --task "<task>" --format json` when changed paths are already known.\n'
+        '1. Run `<configured AW invocation> start --target . --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions.\n'
+        '2. Run `<configured AW invocation> implement --target . --changed <paths> --task "<task>" --format json` when changed paths are already known.\n'
         "3. Follow `next_safe_action`, `action_signals`, and `skills` before opening raw `.agentic-workspace` files or running drill-down commands.\n"
         "4. Use the returned `communication_contract` for decision-first, evidence-backed, compact output; expand only for its safety/proof/detail triggers.\n"
         "5. When implementing an issue, satisfy the intended end state in the ordinary path; ask for clarification instead of closing with a partial path when the full outcome appears larger than the issue safely permits.\n"
         "\n"
         "Boundaries:\n"
-        "- The effective invocation comes from `.agentic-workspace/config.toml` `[workspace].cli_invoke`; `.agentic-workspace/config.local.toml` may override it.\n"
         "- Known dedicated Agentic Workspace commands are allowed only when the request maps directly to that command and no takeover, recovery, active-planning, or ambiguous safety decision is needed first.\n"
-        "- Do not try a bare `agentic-workspace` command first when the effective invocation names a repo-local or dev-dependency command; PATH may resolve a stale installed selector.\n"
+        "- Do not bake machine-local AW invocation paths into checked-in generic guidance; concrete commands come from the configured invocation or live router output.\n"
         "- Treat `preflight`, `config`, `defaults`, `skills`, `modules`, `ownership`, and `report` as routed drill-down or recovery surfaces, not the ordinary startup loop.\n"
         "- Report repo-relative paths, not local absolute paths.\n"
-        "- If the effective CLI is unavailable after trying it, immediately read `.agentic-workspace/WORKFLOW.md` before any other files.\n"
         f"{WORKSPACE_WORKFLOW_MARKER_END}"
     )
 

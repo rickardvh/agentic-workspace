@@ -82,6 +82,12 @@ ASSURANCE_FIRST_LANE_CANDIDATES = (
         "suggested_protocol": "integration_export_ai_verification",
     },
 )
+WEAK_ASSURANCE_FIRST_TOKENS_BY_LANE = {
+    "access_audit": {"auth", "role"},
+    "api_error_privacy": {"log", "logs"},
+    "domain_legal_boundary": {"contract"},
+    "integration_export_ai": {"model"},
+}
 PROOF_PROFILE_CANDIDATES = (
     {
         "id": "unit",
@@ -1926,6 +1932,16 @@ def _token_matches(text: str, tokens: tuple[str, ...]) -> list[str]:
     return [token for token in tokens if token in lowered]
 
 
+def _strong_lane_matches(*, lane: dict[str, Any], matches: list[str]) -> list[str]:
+    weak = WEAK_ASSURANCE_FIRST_TOKENS_BY_LANE.get(str(lane.get("id", "")), set())
+    return [match for match in matches if match not in weak]
+
+
+def _is_local_scratch_path(relative_path: str) -> bool:
+    normalized = relative_path.replace("\\", "/").lstrip("./")
+    return normalized == "scratch" or normalized.startswith("scratch/") or normalized.startswith(".agentic-workspace/local/scratch/")
+
+
 def _assurance_first_signal(
     *,
     task_text: str | None,
@@ -1985,8 +2001,9 @@ def _assurance_first_signal(
 
 def _host_file_evidence_by_lane(
     *, target_root: Path, lanes: tuple[dict[str, Any], ...], per_lane_limit: int = 4, scan_limit: int = 1500
-) -> dict[str, list[dict[str, Any]]]:
+) -> tuple[dict[str, list[dict[str, Any]]], dict[str, list[dict[str, Any]]]]:
     evidence_by_lane: dict[str, list[dict[str, Any]]] = {str(lane["id"]): [] for lane in lanes}
+    weak_hints_by_lane: dict[str, list[dict[str, Any]]] = {str(lane["id"]): [] for lane in lanes}
     ignored_dir_names = {
         ".git",
         ".hg",
@@ -1998,6 +2015,7 @@ def _host_file_evidence_by_lane(
         "__pycache__",
         "node_modules",
         ".agentic-workspace",
+        "scratch",
     }
     stack = [target_root]
     scanned = 0
@@ -2016,6 +2034,8 @@ def _host_file_evidence_by_lane(
                 continue
             scanned += 1
             relative = _repo_relative_path(child, target_root)
+            if _is_local_scratch_path(relative):
+                continue
             for lane in lanes:
                 lane_id = str(lane["id"])
                 if len(evidence_by_lane[lane_id]) >= per_lane_limit:
@@ -2023,15 +2043,35 @@ def _host_file_evidence_by_lane(
                 matches = _token_matches(relative, tuple(str(token) for token in lane.get("tokens", ())))
                 if not matches:
                     continue
+                strong_matches = _strong_lane_matches(lane=lane, matches=matches)
+                if not strong_matches:
+                    if len(weak_hints_by_lane[lane_id]) < per_lane_limit:
+                        weak_hints_by_lane[lane_id].append(
+                            {
+                                "source": "host_path",
+                                "path": relative,
+                                "matches": matches,
+                                "authority": "weak-host-owned-file-path",
+                                "confidence": "low",
+                                "reason": "only generic path tokens matched; corroborating host-owned evidence is required before durable seeding",
+                            }
+                        )
+                    continue
                 evidence_by_lane[lane_id].append(
                     {
                         "source": "host_path",
                         "path": relative,
-                        "matches": matches,
+                        "matches": strong_matches,
+                        **(
+                            {"weak_matches": [match for match in matches if match not in strong_matches]}
+                            if set(matches) - set(strong_matches)
+                            else {}
+                        ),
                         "authority": "host-owned-file-path",
+                        "confidence": "medium",
                     }
                 )
-    return evidence_by_lane
+    return evidence_by_lane, weak_hints_by_lane
 
 
 def _protocol_evidence_for_lane(*, protocols: list[dict[str, Any]], lane: dict[str, Any], limit: int = 4) -> list[dict[str, Any]]:
@@ -2051,13 +2091,22 @@ def _protocol_evidence_for_lane(*, protocols: list[dict[str, Any]], lane: dict[s
             matches = _token_matches(text, tokens)
             if not matches:
                 continue
+            strong_matches = _strong_lane_matches(lane=lane, matches=matches)
+            if not strong_matches:
+                continue
             evidence.append(
                 {
                     "source": "verification_manifest",
                     "protocol_id": protocol.get("id"),
                     "field": field,
-                    "matches": matches,
+                    "matches": strong_matches,
+                    **(
+                        {"weak_matches": [match for match in matches if match not in strong_matches]}
+                        if set(matches) - set(strong_matches)
+                        else {}
+                    ),
                     "authority": "host-declared-verification-manifest",
+                    "confidence": "medium",
                 }
             )
             break
@@ -2122,12 +2171,15 @@ def _assurance_first_jumpstart_payload(
         }
     candidate_lanes: list[dict[str, Any]] = []
     omitted_lanes: list[dict[str, Any]] = []
-    host_evidence_by_lane = _host_file_evidence_by_lane(target_root=target_root, lanes=ASSURANCE_FIRST_LANE_CANDIDATES)
+    host_evidence_by_lane, weak_host_hints_by_lane = _host_file_evidence_by_lane(
+        target_root=target_root, lanes=ASSURANCE_FIRST_LANE_CANDIDATES
+    )
     for lane in ASSURANCE_FIRST_LANE_CANDIDATES:
         evidence = [
             *_protocol_evidence_for_lane(protocols=protocols, lane=lane),
             *host_evidence_by_lane.get(str(lane["id"]), []),
         ]
+        weak_hints = weak_host_hints_by_lane.get(str(lane["id"]), [])
         if evidence:
             candidate_lanes.append(
                 {
@@ -2135,6 +2187,7 @@ def _assurance_first_jumpstart_payload(
                     "title": lane["title"],
                     "status": "candidate",
                     "evidence": evidence,
+                    **({"weak_host_path_hints": weak_hints} if weak_hints else {}),
                     "suggested_assurance_requirement": lane["suggested_requirement"],
                     "suggested_verification_protocol": lane["suggested_protocol"],
                     "claim_boundary": "Advisory jumpstart suggestion only; seed durable routes only after agent/human review.",
@@ -2145,7 +2198,10 @@ def _assurance_first_jumpstart_payload(
                 {
                     "id": lane["id"],
                     "title": lane["title"],
-                    "reason": "no host-owned evidence found for this lane",
+                    "reason": "no host-owned evidence found for this lane"
+                    if not weak_hints
+                    else "only weak generic path hints found; durable seeding needs stronger corroborating host-owned evidence",
+                    **({"weak_host_path_hint_count": len(weak_hints), "weak_host_path_hints": weak_hints} if weak_hints else {}),
                 }
             )
     broad_gap = _broad_protocol_gap(protocols=protocols, candidate_lanes=candidate_lanes)
@@ -2159,7 +2215,7 @@ def _assurance_first_jumpstart_payload(
         "broad_protocol_gap": broad_gap,
         "rule": (
             "Suggest narrower assurance lanes only when an assurance-first signal and host-owned lane evidence are both present. "
-            "Suggestions are advisory and must cite host evidence."
+            "Suggestions are advisory and must cite host evidence; local scratch paths are ignored and generic token matches stay weak until corroborated."
         ),
     }
 

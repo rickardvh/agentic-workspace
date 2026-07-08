@@ -1521,6 +1521,14 @@ def test_start_default_compacts_noncompatible_installed_state_signal(tmp_path: P
     assert "agentic-workspace upgrade" in full["action_effect"]["resolution_command"]
     assert full["adapter_contracts"]
 
+    assert cli.main(["setup", "--target", str(tmp_path), "--format", "json"]) == 0
+    setup_payload = json.loads(capsys.readouterr().out)
+    assert setup_payload["installed_state_attention"]["status"] == "payload-upgrade-required"
+    assert setup_payload["installed_state_attention"]["selector"] == "installed_state_compatibility"
+    assert "start --target . --select installed_state_compatibility" in setup_payload["installed_state_attention"]["detail_command"]
+    assert setup_payload["installed_state_compatibility"]["action_state"]["state"] == "safe_payload_sync_available"
+    assert setup_payload["next_action"]["summary"].startswith("Resolve installed-state compatibility")
+
 
 def test_start_installed_state_treats_stale_compatible_provenance_as_no_repair_needed(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)

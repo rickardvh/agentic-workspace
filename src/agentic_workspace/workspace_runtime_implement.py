@@ -1021,6 +1021,7 @@ def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, An
             "reason": str(item.get("reason", "")),
             "route_id": str(item.get("route_id", "")),
             "target_surface": str(item.get("target_surface", "")),
+            "target_surface_status": str(item.get("target_surface_status", "")),
             "recommended_state": str(item.get("recommended_state", "")),
         }
         for item in value.get("suggested_updates", [])

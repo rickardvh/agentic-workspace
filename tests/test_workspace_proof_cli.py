@@ -3329,8 +3329,17 @@ def test_proof_changed_selector_includes_workspace_runtime_typecheck_ci_parity(t
     assert authority["make typecheck"]["route_authority"] == "package-seed-or-default-route"
     assert answer["proof_route_maintenance"]["fallback_selected_count"] >= 1
     assert answer["proof_route_maintenance"]["ci_gap_candidate_count"] >= 1
+    maintenance = answer["proof_route_maintenance"]
+    assert maintenance["route_hints_surface_contract"]["surface"] == ".agentic-workspace/proof-route-hints.json"
+    assert maintenance["route_hints_surface_contract"]["surface_status"] == "absent"
     reasons = {item["reason"] for item in answer["proof_route_maintenance"]["suggested_updates"]}
     assert "CI-learned proof gap should be captured as repo route authority" in reasons
+    route_hint_suggestions = [
+        item for item in maintenance["suggested_updates"] if item.get("target_surface") == ".agentic-workspace/proof-route-hints.json"
+    ]
+    assert route_hint_suggestions
+    assert all(item["target_surface_status"] == "absent" for item in route_hint_suggestions)
+    assert all(item["target_surface_contract"]["owner"] == "repo" for item in route_hint_suggestions)
 
 
 def test_proof_changed_learned_route_table_can_override_package_default_authority(tmp_path: Path, capsys) -> None:

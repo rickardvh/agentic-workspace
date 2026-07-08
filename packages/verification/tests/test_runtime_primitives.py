@@ -78,6 +78,34 @@ review_owner = "assurance-owner"
     assert access_lane["claim_boundary"].startswith("Advisory jumpstart suggestion only")
 
 
+def test_verification_report_ignores_scratch_and_weak_generic_jumpstart_hints(tmp_path: Path) -> None:
+    for relative in (
+        ".agentic-workspace/local/scratch/command-logs/workspace-tests.log",
+        "scratch/command-logs/workspace-tests.log",
+        "src/agentic_workspace/contracts/authority_markers.json",
+        "docs/model-contract.md",
+    ):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# shallow path hint\n", encoding="utf-8")
+
+    payload = verification_report_payload(
+        target_root=tmp_path,
+        changed_paths=[],
+        task_text="Jumpstart high assurance verification for this repo",
+    )
+
+    jumpstart = payload["assurance_first_jumpstart"]
+    assert jumpstart["status"] == "assurance_signal_without_lane_evidence"
+    assert jumpstart["candidate_lanes"] == []
+    omitted_by_id = {lane["id"]: lane for lane in jumpstart["omitted_lanes"]}
+    assert omitted_by_id["access_audit"]["weak_host_path_hint_count"] >= 1
+    assert omitted_by_id["domain_legal_boundary"]["weak_host_path_hint_count"] >= 1
+    privacy_hints = omitted_by_id["api_error_privacy"].get("weak_host_path_hints", [])
+    assert all("scratch" not in item["path"] for item in privacy_hints)
+    assert "generic token matches stay weak" in jumpstart["rule"]
+
+
 def test_verification_report_keeps_low_evidence_repo_on_low_cost_path(tmp_path: Path) -> None:
     (tmp_path / "README.md").write_text("# Small repo\n", encoding="utf-8")
 
