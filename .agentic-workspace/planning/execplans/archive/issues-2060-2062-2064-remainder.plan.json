@@ -56,7 +56,7 @@
       "The stack is published as PRs with semver labels and ready state after local and GitHub proof pass."
     ],
     "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "closeout_decision": "archive-and-close"
   },
   "goal": [
     "Create a bounded plan for Issues 2060 2062 2064 lane remainder."
@@ -69,13 +69,14 @@
       "outcome": "Implement #2060, #2064, and #2062 as the remaining payload/dogfooding lane stack.",
       "constraints": "Keep evidence durable and structured, keep closeout claims honest, and keep payload upgrade attention recheckable without hidden startup mutation.",
       "latitude": "Choose bounded packet/helper/test shapes and stack order.",
-      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "See proof_report.validation proof."
     },
     "execution": {
       "milestone": "issues-2060-2062-2064-remainder",
-      "status": "active",
-      "next_step": "Start the #2060 branch from current master and implement the issue-evidence reuse slice.",
-      "proof": "Focused tests plus AW implement proof selection, then lint/typecheck/broad workspace checks before publishing."
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
     },
     "scope": {
       "touched": [
@@ -103,9 +104,9 @@
     "what this slice enabled": "none yet",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
   },
   "intent_interpretation": {
     "literal request": "Merged. Implement the remainder of the lane.",
@@ -133,7 +134,7 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "tiny resumability note": "Archived slice is complete; reopen only if closeout evidence is invalidated.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
@@ -159,7 +160,7 @@
   "references": [],
   "active_milestone": {
     "id": "issues-2060-2062-2064-remainder",
-    "status": "active",
+    "status": "completed",
     "scope": "Stack controller for issues #2060, #2064, and #2062.",
     "ready": "ready",
     "blocked": "none",
@@ -211,79 +212,79 @@
     "Any remaining residue is explicitly outside this lane."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Fill in execution bounds, touched paths, and validation before implementation starts."
+    "what happened": "The requested issue stack had already landed on master as merged PRs #2065, #2066, and #2067. I reconciled the remaining local AW payload target drift by syncing .agentic-workspace/payload-provenance.json to 0.29.1.",
+    "scope touched": "GitHub issue/PR state, AW payload provenance, active planning closeout.",
+    "changed surfaces": ".agentic-workspace/payload-provenance.json and this planning closeout record.",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "complete",
+    "scope respected": "Intent satisfied by merged stacked PR sequence: #2060 issue evidence reuse, #2064 bounded PR-comment repair closeout, #2062 payload upgrade attention plan. No further issue implementation remains.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "pending",
-    "route skipped reason": "pending",
-    "expected savings": "pending",
-    "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "GitHub: PR #2065, #2066, and #2067 merged; issues #2060, #2064, and #2062 closed. Local verification after payload sync: start installed_state_compatibility compatible; doctor clean repair plan; git diff --check passed; make lint-workspace passed; make test-workspace passed.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
   },
   "intent_satisfaction": {
     "original intent": "Create a bounded plan for Issues 2060 2062 2064 lane remainder.",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
-    "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "outcome delivered": "Merged stack verified and local installed payload compatibility restored.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
   },
   "durable_residue": {
-    "status": "none",
-    "learned constraint": "none yet",
-    "motivation worth preserving": "none yet",
-    "canonical owner now": "none",
+    "status": "evidence_only",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
     "promotion trigger": "none",
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
     "confidence": "low",
     "needs review": true,
-    "owner surface": ""
+    "owner surface": "archive"
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
   },
   "improvement_signal_review": {
     "status": "not_checked",
@@ -303,11 +304,17 @@
     "signals fixed": [],
     "signals routed": [],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "agent closeout reflection"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
       "continuation": [],
       "memory": [],
       "config_check": [],
@@ -317,5 +324,76 @@
   },
   "drift_log": [
     "2026-07-08: Scaffolded by agentic-planning new-plan."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "evidence_only",
+    "target": "archive",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Issues 2060 2062 2064 lane remainder.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: GitHub: PR #2065, #2066, and #2067 merged; issues #2060, #2064, and #2062 closed. Local verification after payload sync: start installed_state_compatibility compatible; doctor clean repair plan; git diff --check passed; make lint-workspace passed; make test-workspace passed.\nChanged surfaces: .agentic-workspace/payload-provenance.json and this planning closeout record.\nDurable residue: evidence_only (archive)\nMemory learning: evidence_only\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
 }
