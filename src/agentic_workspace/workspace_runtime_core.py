@@ -9294,6 +9294,106 @@ def _run_lifecycle_command(
     return payload
 
 
+def _lifecycle_diagnostic_detail_command(*, command_name: str, cli_invoke: str) -> str:
+    return _command_with_cli_invoke(
+        command=f"agentic-workspace {command_name} --target ./repo --verbose --format json", cli_invoke=cli_invoke
+    )
+
+
+def _lifecycle_diagnostic_select_command(*, command_name: str, selector: str, cli_invoke: str) -> str:
+    return _command_with_cli_invoke(
+        command=f"agentic-workspace {command_name} --target ./repo --select {selector} --format json", cli_invoke=cli_invoke
+    )
+
+
+def _compact_installed_state_summary(installed_state: Any, *, command_name: str, cli_invoke: str) -> dict[str, Any] | None:
+    if not isinstance(installed_state, dict):
+        return None
+    action_state = installed_state.get("action_state", {})
+    if not isinstance(action_state, dict):
+        action_state = {}
+    payload_state = installed_state.get("payload", {})
+    if not isinstance(payload_state, dict):
+        payload_state = {}
+    target_state = payload_state.get("target", {})
+    if not isinstance(target_state, dict):
+        target_state = {}
+    repair_route = installed_state.get("repair_route", {})
+    if not isinstance(repair_route, dict):
+        repair_route = {}
+    action_effect = installed_state.get("action_effect", {})
+    if not isinstance(action_effect, dict):
+        action_effect = {}
+    summary: dict[str, Any] = {
+        "kind": "agentic-workspace/installed-state-summary/v1",
+        "status": installed_state.get("status", "unknown"),
+        "action_state": action_state.get("state", action_state.get("status", "unknown")),
+        "payload_status": payload_state.get("status", "unknown"),
+        "provenance_drift": payload_state.get("provenance_drift", "unknown"),
+        "target_status": target_state.get("status", "not-configured"),
+        "repair_route_status": repair_route.get("status", "not-required"),
+        "selector": "installed_state_compatibility",
+        "select_command": _lifecycle_diagnostic_select_command(
+            command_name=command_name, selector="installed_state_compatibility", cli_invoke=cli_invoke
+        ),
+        "detail_command": _lifecycle_diagnostic_detail_command(command_name=command_name, cli_invoke=cli_invoke),
+    }
+    next_action = installed_state.get("next_action")
+    if isinstance(next_action, dict):
+        summary["next_action"] = {
+            key: next_action.get(key) for key in ("action", "summary", "command", "run") if next_action.get(key) not in (None, "", [], {})
+        }
+    if str(summary["status"]) != "compatible" or str(summary["action_state"]) != "no_repair_needed":
+        summary["action_required"] = str(summary["repair_route_status"]) not in {"not-required", "none", ""}
+        summary["action_effect"] = {
+            key: action_effect.get(key)
+            for key in ("force", "allowed_now", "blocked_until_reconciled", "claim_boundary", "resolution_command")
+            if action_effect.get(key) not in (None, "", [], {})
+        }
+    else:
+        summary["action_required"] = False
+    return summary
+
+
+def _compact_payload_closure_summary(payload_closure_plan: Any, *, command_name: str, cli_invoke: str) -> dict[str, Any] | None:
+    if not isinstance(payload_closure_plan, dict):
+        return None
+    action_state = payload_closure_plan.get("action_state", {})
+    if not isinstance(action_state, dict):
+        action_state = {}
+    surface_classes = payload_closure_plan.get("surface_classes", [])
+    compact_surfaces: list[dict[str, Any]] = []
+    if isinstance(surface_classes, list):
+        for surface in surface_classes:
+            if not isinstance(surface, dict):
+                continue
+            compact_surfaces.append(
+                {key: surface.get(key) for key in ("id", "status", "action_required") if surface.get(key) not in (None, "", [], {})}
+            )
+    primary_next_action = payload_closure_plan.get("primary_next_action", {})
+    if not isinstance(primary_next_action, dict):
+        primary_next_action = {}
+    summary: dict[str, Any] = {
+        "kind": "agentic-workspace/payload-closure-summary/v1",
+        "status": payload_closure_plan.get("status", "unknown"),
+        "action_state": action_state.get("state", action_state.get("status", "unknown")),
+        "payload_action_required": bool(payload_closure_plan.get("payload_action_required")),
+        "surface_statuses": compact_surfaces,
+        "selector": "payload_closure_plan",
+        "select_command": _lifecycle_diagnostic_select_command(
+            command_name=command_name, selector="payload_closure_plan", cli_invoke=cli_invoke
+        ),
+        "detail_command": _lifecycle_diagnostic_detail_command(command_name=command_name, cli_invoke=cli_invoke),
+    }
+    if primary_next_action:
+        summary["primary_next_action"] = {
+            key: primary_next_action.get(key)
+            for key in ("action", "summary", "command", "run")
+            if primary_next_action.get(key) not in (None, "", [], {})
+        }
+    return summary
+
+
 def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict[str, Any]:
     reports = payload.get("reports", [])
     compact_reports = []
@@ -9358,9 +9458,40 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             {"name": entry.get("name", ""), "installed": entry.get("installed", False)} for entry in registry if isinstance(entry, dict)
         ]
     payload = dict(payload)
+    command_name = str(payload.get("command", "status") or "status")
+    installed_state_compatibility = payload.get("installed_state_compatibility")
+    payload_closure_plan = payload.get("payload_closure_plan")
     payload["reports"] = compact_reports
     payload["config"] = compact_config
     payload["registry"] = compact_registry
+    installed_state_summary = _compact_installed_state_summary(
+        installed_state_compatibility, command_name=command_name, cli_invoke=cli_invoke
+    )
+    if installed_state_summary is not None:
+        payload["installed_state_summary"] = installed_state_summary
+        payload.pop("installed_state_compatibility", None)
+    payload_closure_summary = _compact_payload_closure_summary(payload_closure_plan, command_name=command_name, cli_invoke=cli_invoke)
+    if payload_closure_summary is not None:
+        payload["payload_closure_summary"] = payload_closure_summary
+        payload.pop("payload_closure_plan", None)
+    detail_selectors = [
+        key
+        for key, value in (
+            ("installed_state_compatibility", installed_state_compatibility),
+            ("payload_closure_plan", payload_closure_plan),
+        )
+        if isinstance(value, dict)
+    ]
+    if detail_selectors:
+        payload["diagnostic_detail"] = {
+            "kind": "agentic-workspace/lifecycle-diagnostic-detail-route/v1",
+            "omitted_from_default": detail_selectors,
+            "selectors": detail_selectors,
+            "select_command": _lifecycle_diagnostic_select_command(
+                command_name=command_name, selector=",".join(detail_selectors), cli_invoke=cli_invoke
+            ),
+            "verbose_command": _lifecycle_diagnostic_detail_command(command_name=command_name, cli_invoke=cli_invoke),
+        }
     for key in ("warnings", "needs_review", "repair_actions", "manual_review_actions"):
         values = payload.get(key, [])
         if isinstance(values, list):
@@ -9388,7 +9519,6 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             command="agentic-workspace report --target ./repo --section operational_compression --format json", cli_invoke=cli_invoke
         ),
     }
-    command_name = str(payload.get("command", "status") or "status")
     if str(payload.get("health", "")) == "healthy":
         payload["next_action"] = {"action": "no-immediate-action", "summary": "No immediate lifecycle action is required.", "commands": []}
     else:
@@ -41066,6 +41196,7 @@ def _setup_payload(
         dry_run=False,
         non_interactive=False,
         config=config,
+        compact_status=False,
     )
     installed_modules = [entry["name"] for entry in status_payload.get("registry", []) if entry.get("installed")]
     setup_warnings: list[str] = []
@@ -42212,6 +42343,12 @@ def _run_setup_guidance_adapter(args: argparse.Namespace) -> int:
 def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
     command_name = str(args.command)
     target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name=command_name)
+    select = getattr(args, "select", None)
+    detail_selector_requested = any(
+        _selector_requests(str(select), selector)
+        for selector in ("installed_state_compatibility", "payload_closure_plan")
+        if select is not None
+    )
     payload = _run_lifecycle_command(
         command_name=command_name,
         target_root=target_root,
@@ -42222,11 +42359,11 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         dry_run=False,
         non_interactive=bool(getattr(args, "non_interactive", False)),
         config=config,
-        compact_status=_diagnostic_profile(args, default="tiny") == "tiny",
+        compact_status=_diagnostic_profile(args, default="tiny") == "tiny" and not detail_selector_requested,
         module_scope_explicit=bool(getattr(args, "modules", None)),
     )
-    if getattr(args, "select", None):
-        payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command=command_name)
+    if select:
+        payload = _select_payload_fields(payload, select=select, source_command=command_name)
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
