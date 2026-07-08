@@ -56,6 +56,15 @@
         "limit_source": {
           "type": "string"
         },
+        "issue_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fetch_mode": {
+          "type": "string"
+        },
         "command": {
           "type": "string"
         }

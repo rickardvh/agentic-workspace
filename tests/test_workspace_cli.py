@@ -3872,6 +3872,113 @@ def test_start_issue_reference_wording_keeps_issue_scope_warning(tmp_path: Path,
     assert effect["blocked_until_reconciled"] == ["claim-external-issue-scope-confirmed", "claim-task-complete"]
     assert effect["resolution_selector"] == "context.issue_reference_intent"
     assert "external-intent refresh-github" in effect["resolution_command"]
+    assert "--issue 103" in effect["resolution_command"]
+    assert "--state all" not in effect["resolution_command"]
+
+
+def test_external_intent_issue_scoped_refresh_satisfies_issue_reference_intent(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement issue #103",
+                "--select",
+                "issue_reference_intent",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    before = json.loads(capsys.readouterr().out)["values"]["issue_reference_intent"]
+    assert before["status"] == "details-needed"
+    assert "--issue 103" in before["next_command"]
+
+    class Result:
+        def __init__(self, stdout: str) -> None:
+            self.returncode = 0
+            self.stdout = stdout
+            self.stderr = ""
+
+    calls: list[list[str]] = []
+    real_run = cli.subprocess.run
+
+    def fake_run(command, *args, **kwargs):
+        calls.append(command)
+        if command[:1] != ["gh"]:
+            return real_run(command, *args, **kwargs)
+        if command[:3] == ["gh", "repo", "view"]:
+            return Result(json.dumps({"nameWithOwner": "acme/project"}))
+        if command[:3] == ["gh", "pr", "view"]:
+            return Result("null")
+        assert command[:3] == ["gh", "issue", "view"]
+        assert command[3] == "103"
+        return Result(
+            json.dumps(
+                {
+                    "number": 103,
+                    "title": "Issue-scoped evidence",
+                    "state": "OPEN",
+                    "url": "https://github.com/acme/project/issues/103",
+                    "labels": [{"name": "workflow"}],
+                    "createdAt": "2026-07-08T00:00:00Z",
+                    "updatedAt": "2026-07-08T01:00:00Z",
+                    "closedAt": "",
+                    "body": "## Problem\nDurable issue body.",
+                    "comments": [{"body": "Review comment"}],
+                }
+            )
+        )
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(tmp_path),
+                "--issue",
+                "103",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    refresh = json.loads(capsys.readouterr().out)
+    assert refresh["fetch_mode"] == "issue-view"
+    assert refresh["issue_refs"] == ["#103"]
+    assert refresh["item_count"] == 1
+    assert not any(call[:3] == ["gh", "issue", "list"] for call in calls)
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement issue #103",
+                "--select",
+                "issue_reference_intent",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    after = json.loads(capsys.readouterr().out)["values"]["issue_reference_intent"]
+    assert after["status"] == "evidence-available"
+    assert after["action_effect"]["blocked_until_reconciled"] == []
 
 
 def test_start_open_issue_intake_routes_refresh_and_grouping(tmp_path: Path, capsys) -> None:

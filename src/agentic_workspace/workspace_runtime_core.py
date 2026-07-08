@@ -21492,6 +21492,45 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
     }
 
 
+def _normalize_external_intent_issue_refs(raw_issue_refs: list[str] | None) -> list[str]:
+    normalized: list[str] = []
+    for raw_ref in raw_issue_refs or []:
+        text = str(raw_ref or "").strip()
+        if not text:
+            continue
+        refs = sorted(_issue_refs_from_text(text), key=lambda value: int(value.lstrip("#")))
+        if not refs and text.isdigit():
+            refs = [f"#{text}"]
+        for ref in refs:
+            if ref not in normalized:
+                normalized.append(ref)
+    return normalized
+
+
+def _fetch_github_external_intent_issue_items(*, target_root: Path, repo: str, issue_refs: list[str]) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    for issue_ref in issue_refs:
+        issue_number = issue_ref.lstrip("#")
+        raw_issue = _run_gh_json(
+            [
+                "issue",
+                "view",
+                issue_number,
+                "--repo",
+                repo,
+                "--json",
+                "number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments",
+            ],
+            cwd=target_root,
+        )
+        if not isinstance(raw_issue, dict):
+            raise WorkspaceUsageError(f"GitHub issue view for {issue_ref} did not return a JSON object.")
+        item = _github_issue_to_external_intent_item(issue=raw_issue, repo=repo)
+        if item is not None:
+            items.append(item)
+    return items
+
+
 def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> list[dict[str, Any]]:
     try:
         raw_pr = _run_gh_json(
@@ -22019,9 +22058,11 @@ def _refresh_github_external_intent_evidence(
     storage: str,
     dry_run: bool,
     apply_planning_candidates: bool = False,
+    issue_refs: list[str] | None = None,
 ) -> dict[str, Any]:
     evidence_path, evidence_relative_path, storage_class = _external_intent_evidence_write_location(target_root, storage)
     previous_payload = _load_existing_external_intent_evidence(evidence_path)
+    normalized_issue_refs = _normalize_external_intent_issue_refs(issue_refs)
     resolved_state = str(state).strip() if state is not None else ""
     state_source = "explicit" if resolved_state else "default"
     if not resolved_state:
@@ -22037,30 +22078,44 @@ def _refresh_github_external_intent_evidence(
     if resolved_limit <= 0:
         raise WorkspaceUsageError("--limit must be greater than 0.")
     resolved_repo = _resolve_github_repo_for_external_intent(target_root=target_root, repo=repo)
-    raw_issues = _run_gh_json(
-        [
-            "issue",
-            "list",
-            "--repo",
-            resolved_repo,
-            "--state",
-            resolved_state,
-            "--limit",
-            str(resolved_limit),
-            "--json",
-            "number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments",
-        ],
-        cwd=target_root,
-    )
-    if not isinstance(raw_issues, list):
-        raise WorkspaceUsageError("GitHub issue list did not return a JSON list.")
-    items = [
-        item
-        for item in (
-            _github_issue_to_external_intent_item(issue=issue, repo=resolved_repo) for issue in raw_issues if isinstance(issue, dict)
+    fetch_mode = "issue-view" if normalized_issue_refs else "issue-list"
+    if normalized_issue_refs:
+        fetched_items = _fetch_github_external_intent_issue_items(
+            target_root=target_root,
+            repo=resolved_repo,
+            issue_refs=normalized_issue_refs,
         )
-        if item is not None
-    ]
+        previous_items_for_merge = [item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)]
+        by_id = {str(item.get("id", "")).strip(): item for item in previous_items_for_merge if str(item.get("id", "")).strip()}
+        for item in fetched_items:
+            by_id[str(item.get("id", "")).strip()] = item
+        items = list(by_id.values())
+    else:
+        raw_issues = _run_gh_json(
+            [
+                "issue",
+                "list",
+                "--repo",
+                resolved_repo,
+                "--state",
+                resolved_state,
+                "--limit",
+                str(resolved_limit),
+                "--json",
+                "number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments",
+            ],
+            cwd=target_root,
+        )
+        if not isinstance(raw_issues, list):
+            raise WorkspaceUsageError("GitHub issue list did not return a JSON list.")
+        fetched_items = [
+            item
+            for item in (
+                _github_issue_to_external_intent_item(issue=issue, repo=resolved_repo) for issue in raw_issues if isinstance(issue, dict)
+            )
+            if item is not None
+        ]
+        items = fetched_items
     items.sort(key=lambda item: int(str(item["id"]).lstrip("#") or "0"))
     pull_requests = _github_current_pull_request_evidence(target_root=target_root, repo=resolved_repo)
     previous_count = len([item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)])
@@ -22085,7 +22140,16 @@ def _refresh_github_external_intent_evidence(
         "state": resolved_state,
         "state_source": state_source,
         "limit_source": limit_source,
-        "command": f"gh issue list --state {resolved_state} --json number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments",
+        "issue_refs": normalized_issue_refs,
+        "fetch_mode": fetch_mode,
+        "command": (
+            "; ".join(
+                f"gh issue view {ref.lstrip('#')} --json number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments"
+                for ref in normalized_issue_refs
+            )
+            if normalized_issue_refs
+            else f"gh issue list --state {resolved_state} --json number,title,state,url,labels,createdAt,updatedAt,closedAt,body,comments"
+        ),
     }
     next_payload: dict[str, Any] = {
         "kind": "planning-external-intent-evidence/v1",
@@ -22154,6 +22218,8 @@ def _refresh_github_external_intent_evidence(
         "limit": resolved_limit,
         "state_source": state_source,
         "limit_source": limit_source,
+        "issue_refs": normalized_issue_refs,
+        "fetch_mode": fetch_mode,
         "planning_candidate_suggestions": planning_candidate_suggestions,
         "planning_candidate_grouping": planning_candidate_grouping,
         "planning_candidate_apply": planning_candidate_apply,
@@ -27536,6 +27602,12 @@ def _issue_scope_evidence_payload(*, target_root: Path, config: WorkspaceConfig,
         status = "unknown"
     else:
         status = "available"
+    refresh_issue_refs = missing or issue_refs
+    refresh_issue_args = " ".join(f"--issue {issue_ref.lstrip('#')}" for issue_ref in refresh_issue_refs)
+    refresh_command = _command_with_cli_invoke(
+        command=f"agentic-workspace external-intent refresh-github --target . {refresh_issue_args} --format json",
+        cli_invoke=config.cli_invoke,
+    )
     return {
         "kind": "agentic-workspace/issue-scope-evidence/v1",
         "status": status,
@@ -27545,10 +27617,12 @@ def _issue_scope_evidence_payload(*, target_root: Path, config: WorkspaceConfig,
         "source_path": relative_path if path.exists() else "",
         "storage": storage if path.exists() else "none",
         "risk": "high" if missing else "evidence-backed",
-        "refresh_command": _command_with_cli_invoke(
+        "refresh_command": refresh_command,
+        "broad_refresh_command": _command_with_cli_invoke(
             command="agentic-workspace external-intent refresh-github --target . --state all --format json",
             cli_invoke=config.cli_invoke,
         ),
+        "refresh_scope": "missing-issue-refs" if missing else "referenced-issue-refs",
         "rule": "Issue refs are external-intent handles until cached provider-agnostic evidence or active Planning owns the scope.",
     }
 
@@ -40305,6 +40379,7 @@ def _run_external_intent_refresh_github_adapter(args: argparse.Namespace) -> int
         storage=str(getattr(args, "storage", "cache") or "cache"),
         dry_run=bool(getattr(args, "dry_run", False)),
         apply_planning_candidates=bool(getattr(args, "apply_planning_candidates", False)),
+        issue_refs=list(getattr(args, "issue", []) or []),
     )
     _emit_payload(payload=payload, format_name=args.format)
     return 0

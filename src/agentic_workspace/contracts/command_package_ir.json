@@ -5320,6 +5320,15 @@
                     "help": "GitHub issue state to import. Defaults to open; closed or all are explicit audit scopes."
                   },
                   {
+                    "name": "issue",
+                    "flags": [
+                      "--issue"
+                    ],
+                    "action": "append",
+                    "default": [],
+                    "help": "Specific GitHub issue number or reference to import via gh issue view. May be repeated."
+                  },
+                  {
                     "name": "limit",
                     "flags": [
                       "--limit"
