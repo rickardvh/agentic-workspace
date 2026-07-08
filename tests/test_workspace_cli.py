@@ -2235,6 +2235,15 @@ def test_start_reconciles_unrelated_active_plan_for_dogfooding_issue_shaping(tmp
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "id": "active-plan",
+            "title": "Unrelated active plan",
+            "post_decomposition_delegation": {"status": "ready"},
+        },
+    )
     _write(
         tmp_path / ".agentic-workspace" / "planning" / "state.toml",
         """
@@ -2276,6 +2285,60 @@ candidates = []
     assert switch["current_task_class"] == "bounded-dogfooding-issue-shaping"
     assert "claim-active-plan-progress" in switch["blocked_claims"]
     assert "work_threads" not in payload["context"]
+
+
+def test_start_keeps_mixed_issue_shaping_and_mutation_on_task_switch_route(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        {
+            "kind": "planning-execplan/v1",
+            "id": "active-plan",
+            "title": "Unrelated active plan",
+            "post_decomposition_delegation": {"status": "ready"},
+        },
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Unrelated active plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Create concrete AW dogfooding feedback issues and change the runtime",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    switch = payload["context"]["planning"]["planning_safety_gate"]["task_switch_reconciliation"]
+
+    assert payload["next_safe_action"]["next_safe_action"] == "choose-task-switch-route"
+    assert switch["status"] == "active"
+    assert switch["recommended_next_action"] == "proceed-bounded-repo-maintenance"
+    assert "claim-active-plan-progress" in switch["blocked_claims"]
 
 
 def test_start_reconciles_unrelated_active_plan_with_new_issue_implementation_task(tmp_path: Path, capsys) -> None:

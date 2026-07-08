@@ -775,13 +775,14 @@ def _bounded_reflection_reporting_payload(*, task_text: str | None) -> dict[str,
             "matched_reflection_signals": [],
             "matched_mutation_signals": matched_mutation,
         }
-    if matched_mutation and not matched_issue_shaping:
+    if matched_mutation:
         return {
             "kind": "agentic-workspace/bounded-reflection-reporting/v1",
             "status": "implementation-like",
             "matched_reflection_signals": matched_reflection,
+            "matched_issue_shaping_signals": matched_issue_shaping,
             "matched_mutation_signals": matched_mutation,
-            "rule": "Implementation-like tasks keep active-plan task-switch protection.",
+            "rule": "Implementation-like signals win over issue-shaping signals; mixed tasks keep active-plan task-switch protection.",
         }
     current_task_class = "bounded-dogfooding-issue-shaping" if matched_issue_shaping else "bounded-reflection-reporting"
     return {
