@@ -1574,6 +1574,45 @@ def test_upgrade_dry_run_does_not_rewrite_valid_provenance_for_identity_only_dri
     assert "installer identity drift does not require rewrite" in provenance_action["detail"]
 
 
+def test_upgrade_dry_run_repairs_structurally_invalid_provenance_with_matching_file_set(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    provenance_path = tmp_path / ".agentic-workspace" / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance.pop("release_identity")
+    provenance.pop("installed_by")
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "installed_state_compatibility",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    compatibility = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
+    assert compatibility["status"] == "payload-upgrade-required"
+    assert compatibility["payload"]["provenance"]["status"] == "invalid"
+    assert compatibility["action_state"]["state"] == "safe_payload_sync_available"
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    workspace_report = next(report for report in payload["reports"] if report["module"] == "workspace")
+    provenance_action = next(
+        action for action in workspace_report["actions"] if action["path"] == ".agentic-workspace/payload-provenance.json"
+    )
+    assert provenance_action["kind"] == "would update"
+
+
 def test_payload_provenance_payload_uses_portable_path_identities(tmp_path: Path) -> None:
     payload = cli._payload_provenance_payload(target_root=tmp_path)
     encoded = json.dumps(payload, sort_keys=True)

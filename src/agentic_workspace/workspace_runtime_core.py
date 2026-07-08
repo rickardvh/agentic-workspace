@@ -670,13 +670,14 @@ def _write_payload_provenance_action(*, target_root: Path, dry_run: bool) -> dic
     payload = _payload_provenance_payload(target_root=target_root)
     if existing_payload is not None and _stable_payload_provenance(existing_payload) == _stable_payload_provenance(payload):
         return {"kind": "current", "path": relative.as_posix(), "detail": "payload provenance already current"}
-    if existing_payload is not None and not _validate_payload_provenance(existing_payload):
+    existing_validation_errors = _validate_payload_provenance(existing_payload) if existing_payload is not None else []
+    if existing_payload is not None and not existing_validation_errors:
         existing_payload_files = existing_payload.get("payload_files")
         if existing_payload.get("payload_schema") == WORKSPACE_PAYLOAD_SCHEMA and existing_payload_files == payload["payload_files"]:
             return {
                 "kind": "current",
                 "path": relative.as_posix(),
-                "detail": "payload provenance schema and managed file set are compatible; installer identity drift does not require rewrite",
+                "detail": "valid payload provenance schema and managed file set are compatible; installer identity drift does not require rewrite",
             }
     if existing_payload is not None and existing_payload.get("installed_at"):
         payload["installed_at"] = existing_payload["installed_at"]
