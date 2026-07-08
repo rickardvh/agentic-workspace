@@ -2566,6 +2566,12 @@ review_aids = ["Record the manual policy finding."]
     assert required["manual_obligations"][0]["id"] == "verification:policy_review"
     assert required["manual_obligations"][0]["missing_evidence"] == ["manual_policy_review"]
     assert required["manual_obligations"][0]["reference_material"] == ["docs/policy.md#rule-1"]
+    assert required["manual_obligations"][0]["resolution"] == {
+        "inspect": ["docs/policy.md#rule-1"],
+        "record": ["manual_policy_review"],
+        "detail_selector": "proof.proof_obligations.required_proof.manual_obligations",
+        "closeout_format": "manual obligation <id>: inspected <refs>; recorded <evidence>; claim boundary <claim_boundary>",
+    }
     assert payload["proof"]["proof_route_maintenance"]["status"] == "attention"
 
 
@@ -2697,6 +2703,12 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert obligations["recommended_confidence_checks"]["status"] == "available"
     assert "do not replace or relax required proof" in obligations["recommended_confidence_checks"]["rule"]
     assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
+    tiers = payload["proof"]["proof_command_tiers"]
+    assert tiers["minimal_required_command"] == "make test-workspace"
+    assert "overlapping commands only with extra tier evidence" in tiers["closeout_rule"]
+    tier_ids = {tier["id"] for tier in tiers["tiers"]}
+    assert "must_run" in tier_ids
+    assert "generated_contract" in tier_ids
     trust = payload["generated_surface_trust"]
     assert trust["status"] == "present"
     assert trust["items"][0]["path"] == "generated/workspace/python/cli.py"

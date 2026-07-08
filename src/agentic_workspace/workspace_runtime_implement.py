@@ -1044,6 +1044,43 @@ def _tiny_proof_route_maintenance_payload(value: dict[str, Any]) -> dict[str, An
     }
 
 
+def _tiny_proof_command_tiers_payload(value: Any, *, required_commands: list[str]) -> dict[str, Any]:
+    packet = value if isinstance(value, dict) else {}
+    raw_tiers = packet.get("tiers", [])
+    tiers: list[dict[str, Any]] = []
+    for tier in raw_tiers if isinstance(raw_tiers, list) else []:
+        if not isinstance(tier, dict):
+            continue
+        raw_commands = tier.get("commands", [])
+        commands = [
+            {
+                "command": str(item.get("command", "")),
+                "lane": str(item.get("lane", "")),
+                "obligation": str(item.get("obligation", "")),
+            }
+            for item in raw_commands
+            if isinstance(item, dict) and str(item.get("command", "")).strip()
+        ][:1]
+        if commands:
+            tiers.append({"id": str(tier.get("id", "")), "command_count": len(raw_commands), "commands": commands})
+    if len(tiers) <= 1:
+        return {}
+    minimal_required = ""
+    for tier in tiers:
+        if tier["id"] == "must_run" and tier["commands"]:
+            minimal_required = tier["commands"][0]["command"]
+            break
+    if not minimal_required and required_commands:
+        minimal_required = required_commands[0]
+    return {
+        "kind": packet.get("kind", "agentic-workspace/proof-command-tiers/v1"),
+        "status": packet.get("status", "present" if tiers else "empty"),
+        "minimal_required_command": minimal_required,
+        "tiers": tiers,
+        "closeout_rule": "Name minimal_required_command first; list overlapping commands only with extra tier evidence.",
+    }
+
+
 def _implement_tiny_proof_narrowness_payload(value: Any) -> dict[str, Any]:
     packet = value if isinstance(value, dict) else {}
     if not _include_tiny_proof_narrowness(packet):
@@ -1319,6 +1356,11 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 payload.get("proof", {}).get("proof_obligations", {}), required_commands=proof_commands
             )
             if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("proof_obligations"), dict)
+            else {},
+            "proof_command_tiers": _tiny_proof_command_tiers_payload(
+                payload.get("proof", {}).get("proof_command_tiers", {}), required_commands=proof_commands
+            )
+            if isinstance(payload.get("proof"), dict) and isinstance(payload.get("proof", {}).get("proof_command_tiers"), dict)
             else {},
             "proof_narrowness": _implement_tiny_proof_narrowness_payload(payload.get("proof", {}).get("proof_narrowness", {}))
             if isinstance(payload.get("proof"), dict)
