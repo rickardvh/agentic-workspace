@@ -1471,6 +1471,16 @@
           "additionalProperties": false,
           "description": "Public installed-state action-state machine result."
         },
+        "payload_surface_manifest": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Current payload surface contract used to classify installed-state upgrade work."
+        },
+        "payload_upgrade_attention_plan": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Structured current-state convergence plan for payload upgrade attention items."
+        },
         "executable": {
           "type": "object",
           "description": "Executable identity and compatibility classification.",

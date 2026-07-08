@@ -928,6 +928,340 @@ def _payload_target_status_payload(
     }
 
 
+def _payload_surface_manifest_payload(
+    *, config: WorkspaceConfig, selected_modules: list[str], installed_modules: list[str]
+) -> dict[str, Any]:
+    selected_set = set(selected_modules)
+    installed_set = set(installed_modules)
+    surfaces: list[dict[str, Any]] = [
+        {
+            "id": f"workspace-payload:{relative.as_posix()}",
+            "path": relative.as_posix(),
+            "owner": "package",
+            "mode": "managed-payload",
+            "schema": "agentic-workspace/shared-layer/v1",
+            "safe_action": "auto-apply-current-payload",
+            "applies": True,
+        }
+        for relative in WORKSPACE_PAYLOAD_FILES
+    ]
+    surfaces.append(
+        {
+            "id": f"payload-provenance:{WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix()}",
+            "path": WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+            "owner": "package",
+            "mode": "generated-provenance",
+            "schema": WORKSPACE_PAYLOAD_SCHEMA,
+            "safe_action": "auto-apply-current-payload",
+            "applies": True,
+        }
+    )
+    surfaces.append(
+        {
+            "id": f"startup-pointer:{config.agent_instructions_file}",
+            "path": config.agent_instructions_file,
+            "owner": "repo",
+            "mode": "managed-fence",
+            "schema": "agentic-workspace/root-startup-pointer/v1",
+            "safe_action": "agent-review-managed-fence",
+            "applies": True,
+        }
+    )
+    verification_applies = (
+        "verification" in selected_set or "verification" in installed_set or "verification" in set(config.enabled_modules)
+    )
+    surfaces.append(
+        {
+            "id": "verification-manifest:.agentic-workspace/verification/manifest.toml",
+            "path": ".agentic-workspace/verification/manifest.toml",
+            "owner": "repo",
+            "mode": "repo-populated",
+            "schema": "agentic-workspace/verification-manifest/v1",
+            "safe_action": "agent-populate-required",
+            "applies": verification_applies,
+        }
+    )
+    surfaces.append(
+        {
+            "id": "planning-state:.agentic-workspace/planning/state.toml",
+            "path": ".agentic-workspace/planning/state.toml",
+            "owner": "repo",
+            "mode": "structured-state",
+            "schema": "agentic-workspace/planning-state/v1",
+            "safe_action": "machine-migration-or-review",
+            "applies": "planning" in selected_set or "planning" in installed_set or "planning" in set(config.enabled_modules),
+        }
+    )
+    surfaces.append(
+        {
+            "id": "retired-adapter:llms.txt",
+            "path": "llms.txt",
+            "owner": "repo",
+            "mode": "deprecated-surface",
+            "schema": "agentic-workspace/retired-llms-adapter",
+            "safe_action": "deprecated-surface-review",
+            "applies": True,
+        }
+    )
+    return {
+        "kind": "agentic-workspace/payload-surface-manifest/v1",
+        "status": "current-contract",
+        "version": __version__,
+        "strategy": "converge-to-current-contract",
+        "surface_count": len(surfaces),
+        "surfaces": surfaces,
+        "rule": "Payload upgrades compare the installed repo state directly to the current surface contract, not to each intermediate release.",
+    }
+
+
+def _workspace_surface_text_contains(path: Path, needle: str) -> bool:
+    try:
+        return needle in path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+
+
+def _payload_upgrade_attention_item(
+    *,
+    category: str,
+    surface: str,
+    reason: str,
+    required_action: str,
+    owner: str,
+    blocking: bool,
+    recheck_command: str,
+    surface_id: str | None = None,
+    acceptance: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "category": category,
+        "surface": surface,
+        "surface_id": surface_id or surface,
+        "reason": reason,
+        "required_action": required_action,
+        "owner": owner,
+        "blocking": blocking,
+        "acceptance": acceptance or f"{surface} satisfies the current payload surface contract.",
+        "recheck_command": recheck_command,
+    }
+
+
+def _payload_upgrade_attention_plan_payload(
+    *,
+    config: WorkspaceConfig,
+    target_root: Path,
+    selected_modules: list[str],
+    installed_modules: list[str],
+    provenance_status: dict[str, Any],
+    payload_target: dict[str, Any],
+    action_state: dict[str, Any],
+    stale_generated_surfaces: Sequence[str],
+) -> dict[str, Any]:
+    manifest = _payload_surface_manifest_payload(config=config, selected_modules=selected_modules, installed_modules=installed_modules)
+    recheck_command = str(
+        action_state.get("recheck_command")
+        or payload_target.get("recheck_command")
+        or _payload_target_sync_commands(target_root=target_root, config=config)["recheck_command"]
+    )
+    apply_command = str(action_state.get("apply_command") or payload_target.get("apply_command") or "")
+    dry_run_command = str(action_state.get("dry_run_command") or payload_target.get("dry_run_command") or "")
+    provenance_payload = provenance_status.get("payload") if isinstance(provenance_status.get("payload"), dict) else {}
+    if not provenance_payload and provenance_status.get("status") == "invalid":
+        try:
+            raw_payload = json.loads((target_root / WORKSPACE_PAYLOAD_PROVENANCE_PATH).read_text(encoding="utf-8"))
+            if isinstance(raw_payload, dict):
+                provenance_payload = raw_payload
+        except (OSError, json.JSONDecodeError):
+            pass
+    release_identity = provenance_payload.get("release_identity", {}) if isinstance(provenance_payload, dict) else {}
+    installed_by = provenance_payload.get("installed_by", {}) if isinstance(provenance_payload, dict) else {}
+    from_payload = (
+        str(release_identity.get("version", ""))
+        if isinstance(release_identity, dict) and release_identity.get("version")
+        else str(installed_by.get("version", ""))
+        if isinstance(installed_by, dict) and installed_by.get("version")
+        else "unknown"
+    )
+    to_payload = str(payload_target.get("resolved_target_release") or __version__)
+    items: list[dict[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def add(item: dict[str, Any]) -> None:
+        key = (str(item.get("category", "")), str(item.get("surface", "")))
+        if key in seen:
+            return
+        seen.add(key)
+        items.append(item)
+
+    package_blocking = payload_target.get("policy") == "required-before-work"
+    for surface in action_state.get("package_owned_surfaces", []):
+        surface_text = str(surface)
+        add(
+            _payload_upgrade_attention_item(
+                category="auto_applied",
+                surface=surface_text,
+                surface_id=f"package-owned:{surface_text}",
+                reason="Package-owned or generated payload surface differs from the current target contract.",
+                required_action=apply_command or "run agentic-workspace upgrade to refresh package-owned payload surfaces",
+                owner="package",
+                blocking=package_blocking,
+                acceptance="Explicit upgrade refreshes this surface from the current package payload without overwriting repo-owned content.",
+                recheck_command=recheck_command,
+            )
+        )
+    for surface in stale_generated_surfaces:
+        surface_text = str(surface)
+        add(
+            _payload_upgrade_attention_item(
+                category="auto_applied",
+                surface=surface_text,
+                surface_id=f"stale-generated:{surface_text}",
+                reason="Generated surface is stale relative to the current package generator.",
+                required_action=apply_command or "run agentic-workspace upgrade to regenerate managed output",
+                owner="package",
+                blocking=package_blocking,
+                acceptance="Generated surface is current according to workspace generated-artifact checks.",
+                recheck_command=recheck_command,
+            )
+        )
+
+    agents_relative = Path(config.agent_instructions_file)
+    agents_path = target_root / agents_relative
+    if not agents_path.exists() or not _workspace_surface_text_contains(agents_path, WORKSPACE_WORKFLOW_MARKER_START):
+        add(
+            _payload_upgrade_attention_item(
+                category="agent_review_required",
+                surface=agents_relative.as_posix(),
+                surface_id=f"startup-pointer:{agents_relative.as_posix()}",
+                reason="Root startup instructions are missing the current managed Agentic Workspace workflow fence.",
+                required_action=dry_run_command or "run upgrade dry-run and review the managed startup fence patch",
+                owner="agent",
+                blocking=False,
+                acceptance="The configured startup file contains the managed workflow fence while preserving repo-owned content outside it.",
+                recheck_command=recheck_command,
+            )
+        )
+
+    verification_manifest = target_root / ".agentic-workspace" / "verification" / "manifest.toml"
+    verification_selected = "verification" in set(selected_modules) or "verification" in set(installed_modules)
+    if verification_selected and not verification_manifest.exists():
+        add(
+            _payload_upgrade_attention_item(
+                category="agent_populate_required",
+                surface=".agentic-workspace/verification/manifest.toml",
+                surface_id="verification-manifest:.agentic-workspace/verification/manifest.toml",
+                reason="Verification is selected but the repo-owned proof manifest is not populated.",
+                required_action="create the smallest repo-owned verification manifest or explicitly record why verification is not applicable",
+                owner="agent",
+                blocking=False,
+                acceptance="Verification manifest exists with repo proof protocols or a structured non-applicable disposition.",
+                recheck_command=recheck_command,
+            )
+        )
+
+    llms_path = target_root / "llms.txt"
+    if llms_path.exists():
+        deprecated_reason = "Retired llms.txt adapter remains in the repo."
+        owner = "agent"
+        required_action = "remove the recognized retired generated adapter or review the repo-owned legacy file"
+        try:
+            if not _is_retired_generated_llms_adapter(llms_path.read_text(encoding="utf-8", errors="replace")):
+                deprecated_reason = "Legacy llms.txt exists but is not recognized as the retired generated adapter."
+                owner = "human"
+                required_action = "review whether the repo-owned legacy llms.txt should remain, move, or be removed"
+        except OSError:
+            owner = "human"
+            required_action = "review the unreadable legacy llms.txt surface"
+        add(
+            _payload_upgrade_attention_item(
+                category="deprecated_surface",
+                surface="llms.txt",
+                surface_id="retired-adapter:llms.txt",
+                reason=deprecated_reason,
+                required_action=required_action,
+                owner=owner,
+                blocking=False,
+                acceptance="Deprecated llms.txt surface is removed or has an explicit repo-owned disposition.",
+                recheck_command=recheck_command,
+            )
+        )
+
+    planning_state = target_root / ".agentic-workspace" / "planning" / "state.toml"
+    if planning_state.exists() and not _workspace_surface_text_contains(planning_state, "schema_version"):
+        add(
+            _payload_upgrade_attention_item(
+                category="machine_migration_required",
+                surface=".agentic-workspace/planning/state.toml",
+                surface_id="planning-state:.agentic-workspace/planning/state.toml",
+                reason="Structured Planning state exists without an explicit schema_version marker.",
+                required_action="run the Planning state migration or route the state to manual review if no migration applies",
+                owner="machine",
+                blocking=True,
+                acceptance="Planning state has a current schema marker or a machine migration reports no applicable change.",
+                recheck_command=recheck_command,
+            )
+        )
+
+    payload_schema = str(provenance_payload.get("payload_schema") or "") if isinstance(provenance_payload, dict) else ""
+    if payload_schema and payload_schema != WORKSPACE_PAYLOAD_SCHEMA:
+        add(
+            _payload_upgrade_attention_item(
+                category="unsupported_long_hop",
+                surface=WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix(),
+                surface_id=f"payload-provenance:{WORKSPACE_PAYLOAD_PROVENANCE_PATH.as_posix()}",
+                reason=f"Installed payload schema {payload_schema!r} is outside the supported current-state contract.",
+                required_action="review the installed payload manually or use a supported migration before applying package sync",
+                owner="human",
+                blocking=True,
+                acceptance="Payload provenance is rewritten by a supported current contract or the long-hop migration is explicitly approved.",
+                recheck_command=recheck_command,
+            )
+        )
+
+    category_counts: dict[str, int] = {}
+    for item in items:
+        category = str(item["category"])
+        category_counts[category] = category_counts.get(category, 0) + 1
+    status = "satisfied"
+    if any(item["blocking"] for item in items):
+        status = "manual_attention_required"
+    elif any(item["category"] != "auto_applied" for item in items):
+        status = "manual_attention_required"
+    elif items:
+        status = "auto_apply_available"
+    return {
+        "kind": "agentic-workspace/payload-upgrade-attention-plan/v1",
+        "status": status,
+        "strategy": "converge-to-current-contract",
+        "from_payload": from_payload,
+        "to_payload": to_payload,
+        "surface_manifest": manifest,
+        "attention_item_count": len(items),
+        "category_counts": category_counts,
+        "attention_items": items,
+        "recheck_command": recheck_command,
+        "release_instruction_policy": {
+            "uses_release_history": False,
+            "rule": "Evaluate installed repo state against the current payload surface manifest instead of replaying per-release instructions.",
+        },
+    }
+
+
+def _compact_payload_upgrade_attention_plan(plan: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "kind": plan.get("kind"),
+        "status": plan.get("status"),
+        "strategy": plan.get("strategy"),
+        "from_payload": plan.get("from_payload"),
+        "to_payload": plan.get("to_payload"),
+        "attention_item_count": plan.get("attention_item_count", 0),
+        "category_counts": plan.get("category_counts", {}),
+        "attention_items": plan.get("attention_items", []),
+        "recheck_command": plan.get("recheck_command", ""),
+        "release_instruction_policy": plan.get("release_instruction_policy", {}),
+    }
+
+
 def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False) -> dict[str, Any]:
     expectation = config.cli_compatibility
     identity = _invoked_cli_identity_payload(target_root=config.target_root)
@@ -1381,12 +1715,24 @@ def _installed_state_compatibility_payload(
     else:
         payload_status = "observed-compatible"
     action_effect = _installed_state_action_effect(status=status, next_action=next_action, config=config, action_state=action_state)
+    payload_upgrade_attention_plan = _payload_upgrade_attention_plan_payload(
+        config=config,
+        target_root=target_root,
+        selected_modules=selected_modules,
+        installed_modules=installed_modules,
+        provenance_status=provenance_status,
+        payload_target=payload_target,
+        action_state=action_state,
+        stale_generated_surfaces=stale_generated_surfaces,
+    )
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/installed-state-compatibility/v1",
         "status": status,
         "reason": reason,
         "authority": "repo-state-authoritative",
         "action_state": action_state,
+        "payload_surface_manifest": payload_upgrade_attention_plan["surface_manifest"],
+        "payload_upgrade_attention_plan": payload_upgrade_attention_plan,
         "executable": {
             "package": "agentic-workspace",
             "version": __version__,
@@ -1408,6 +1754,7 @@ def _installed_state_compatibility_payload(
             "provenance": provenance_status,
             "provenance_drift": payload_provenance_drift,
             "target": payload_target,
+            "upgrade_attention_plan_status": payload_upgrade_attention_plan["status"],
             "expected_release_identity": {
                 "package": "agentic-workspace",
                 "version": payload_target["resolved_target_release"] or __version__,
@@ -1470,6 +1817,8 @@ def _installed_state_compatibility_payload(
             "status": payload["status"],
             "authority": payload["authority"],
             "action_state": payload["action_state"],
+            "payload_surface_manifest": payload_upgrade_attention_plan["surface_manifest"],
+            "payload_upgrade_attention_plan": _compact_payload_upgrade_attention_plan(payload_upgrade_attention_plan),
             "executable": {
                 key: payload["executable"][key]
                 for key in ("compatibility_status", "classification", "failed_checks")
