@@ -3043,6 +3043,15 @@ const commandDefinitions = [
               "name": "state"
             },
             {
+              "action": "append",
+              "default": [],
+              "flags": [
+                "--issue"
+              ],
+              "help": "Specific GitHub issue number or reference to import via gh issue view. May be repeated.",
+              "name": "issue"
+            },
+            {
               "flags": [
                 "--limit"
               ],
