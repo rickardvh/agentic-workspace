@@ -12813,10 +12813,111 @@ def _prepare_execplan_closeout(
         )
         return True
 
-    record.update(patch)
-    _write_execplan_record(record_path=record_path, record=record, render_markdown=plan_path != record_path)
+    updated_record = copy.deepcopy(record)
+    updated_record.update(patch)
+    if updated_record == record:
+        result.add("current", record_path, "normalized closeout fields already current before archive validation")
+        return True
+
+    _write_execplan_record(record_path=record_path, record=updated_record, render_markdown=plan_path != record_path)
     result.add("updated", record_path, "prepared normalized closeout fields before archive validation")
     return True
+
+
+def _prepare_archived_execplan_closeout(
+    *,
+    plan_path: Path,
+    target_root: Path,
+    result: InstallResult,
+    dry_run: bool,
+    closure_decision: str | None,
+    intent_satisfied: str | None,
+    unsolved_intent: str | None,
+    intent_evidence: str | None,
+    closure_reason: str | None,
+    closure_evidence: str | None,
+    reopen_trigger: str | None,
+    discard_summary: str | None,
+    continuation_summary: str | None,
+) -> InstallResult:
+    record_path = _canonical_execplan_record_path(plan_path)
+    if not record_path.exists():
+        result.add("blocked-with-reason", record_path, "archived closeout update requires a canonical .plan.json record")
+        return result
+
+    schema_findings = planning_record_schema_findings(record_path)
+    if schema_findings:
+        for finding in schema_findings:
+            result.warnings.append(
+                {
+                    "warning_class": "archived_closeout_schema_drift",
+                    "path": record_path.relative_to(target_root).as_posix(),
+                    "message": finding,
+                }
+            )
+        result.add("blocked-with-reason", record_path, "archived execplan record must validate before closeout update")
+        return result
+
+    status = _execplan_status(plan_path)
+    if status not in {"completed", "done", "closed"}:
+        result.add(
+            "blocked-with-reason",
+            record_path,
+            "archived closeout update requires active_milestone.status to be completed/done/closed",
+        )
+        return result
+
+    before_hash = _short_file_hash(record_path)
+    before_action_count = len(result.actions)
+    prepared = _prepare_execplan_closeout(
+        plan_path=plan_path,
+        target_root=target_root,
+        result=result,
+        dry_run=dry_run,
+        closure_decision=closure_decision,
+        intent_satisfied=intent_satisfied,
+        unsolved_intent=unsolved_intent,
+        intent_evidence=intent_evidence,
+        closure_reason=closure_reason,
+        closure_evidence=closure_evidence,
+        reopen_trigger=reopen_trigger,
+        discard_summary=discard_summary,
+        continuation_summary=continuation_summary,
+    )
+    if not prepared:
+        blocker = next(
+            (
+                action.detail
+                for action in reversed(result.actions[before_action_count:])
+                if action.kind in {"manual review", "blocked-with-reason"}
+            ),
+            "archived closeout update was blocked by closeout validation",
+        )
+        result.add("blocked-with-reason", record_path, blocker)
+        return result
+
+    if dry_run:
+        result.add(
+            "would-update-archived-closeout",
+            record_path,
+            "archived execplan closeout evidence can be normalized without re-archiving",
+        )
+        return result
+
+    after_hash = _short_file_hash(record_path)
+    if before_hash == after_hash:
+        result.add(
+            "already-current",
+            record_path,
+            "archived execplan closeout evidence is already normalized; no archive mutation required",
+        )
+    else:
+        result.add(
+            "updated-archived-closeout",
+            record_path,
+            "updated normalized closeout evidence on archived execplan without re-archiving",
+        )
+    return result
 
 
 def _parent_lane_state_item(state: dict[str, Any] | None, parent_id: str) -> tuple[str, dict[str, Any]] | None:
@@ -13845,6 +13946,22 @@ def archive_execplan(
 
     archive_dir = target_root / ".agentic-workspace" / "planning" / "execplans" / "archive"
     if archive_dir in plan_path.parents:
+        if prepare_closeout:
+            return _prepare_archived_execplan_closeout(
+                plan_path=plan_path,
+                target_root=target_root,
+                result=result,
+                dry_run=dry_run,
+                closure_decision=closure_decision,
+                intent_satisfied=intent_satisfied,
+                unsolved_intent=unsolved_intent,
+                intent_evidence=intent_evidence,
+                closure_reason=closure_reason,
+                closure_evidence=closure_evidence,
+                reopen_trigger=reopen_trigger,
+                discard_summary=discard_summary,
+                continuation_summary=continuation_summary,
+            )
         result.add("manual review", plan_path, "execplan is already archived")
         return result
 
