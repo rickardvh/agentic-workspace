@@ -1587,6 +1587,9 @@ def _apply_required_payload_target_start_gate(
         return
     command = str(action_effect.get("resolution_command") or action_state.get("dry_run_command") or "")
     recheck_command = str(action_state.get("recheck_command") or payload_target.get("recheck_command") or "")
+    payload_repair_subflow = _as_dict(installed_state.get("payload_repair_subflow"))
+    if payload_repair_subflow:
+        payload["payload_repair_subflow"] = payload_repair_subflow
     payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
         surface="start",
         decision="installed-payload-target-required-before-work",
@@ -1605,6 +1608,7 @@ def _apply_required_payload_target_start_gate(
         "next_proof": recheck_command or f"{config.cli_invoke} start --target {target_root.as_posix()} --format json",
         "read_first": [command] if command else [],
         "open_execplan_only_when": startup_template["open_execplan_only_when"],
+        **({"payload_repair_subflow": payload_repair_subflow} if payload_repair_subflow else {}),
     }
 
 
@@ -1662,6 +1666,26 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     compact_closeout_obligations = _selector_first_closeout_obligations(payload)
     if compact_closeout_obligations:
         context["closeout_obligations"] = compact_closeout_obligations
+    payload_repair_subflow = payload.get("payload_repair_subflow")
+    if isinstance(payload_repair_subflow, dict) and payload_repair_subflow:
+        context["payload_repair_subflow"] = {
+            key: payload_repair_subflow.get(key)
+            for key in (
+                "kind",
+                "status",
+                "repair_mechanism",
+                "safe_explicit_apply",
+                "manual_review_required",
+                "start_mutates",
+                "next_action",
+                "steps",
+                "reportable_commands",
+                "machine_commands",
+                "detail_selector",
+                "rule",
+            )
+            if payload_repair_subflow.get(key) not in (None, "", [], {})
+        }
     local_checkpoint = payload.get("local_chat_checkpoint", {})
     work_threads = payload.get("work_threads", {})
     if isinstance(local_checkpoint, dict) and _local_chat_checkpoint_default_visible(local_checkpoint, payload=payload):

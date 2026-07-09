@@ -251,6 +251,11 @@ def test_skills_command_recommends_planning_autopilot_for_active_milestone_task(
     )
 
     payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "recommendation-first"
+    assert payload["recommendation_summary"]["recommended_skill"] == "planning-autopilot"
+    assert payload["recommendation_summary"]["next_skill_path"]
+    assert payload["inventory_detail"]["status"] == "omitted-from-default-task-output"
+    assert "skills" not in payload
     assert payload["recommendations"][0]["id"] == "planning-autopilot"
     assert payload["recommendations"][0]["score"] > 0
     assert any("phrase match" in reason for reason in payload["recommendations"][0]["reasons"])
@@ -408,7 +413,7 @@ def test_skills_command_recommends_jumpstart_for_assurance_verification_populati
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["recommendations"][0]["id"] == "workspace-setup-jumpstart"
-    jumpstart = next(skill for skill in payload["skills"] if skill["id"] == "workspace-setup-jumpstart")
+    jumpstart = payload["recommendations"][0]
     nouns = jumpstart["activation_hints"]["nouns"]
     assert "assurance onboarding" in nouns
     assert "verification onboarding" in nouns
@@ -620,6 +625,8 @@ def test_skills_command_discovers_temporary_memory_bootstrap_skills(tmp_path: Pa
                 str(target),
                 "--task",
                 "finish bootstrap installation review for memory",
+                "--select",
+                "skills,sources,recommendations,warnings",
                 "--format",
                 "json",
             ]
@@ -627,7 +634,7 @@ def test_skills_command_discovers_temporary_memory_bootstrap_skills(tmp_path: Pa
         == 0
     )
 
-    payload = json.loads(capsys.readouterr().out)
+    payload = json.loads(capsys.readouterr().out)["values"]
     install_skill = next(entry for entry in payload["skills"] if entry["id"] == "install")
 
     assert install_skill["source_kind"] == "temporary-memory-bootstrap-skills"

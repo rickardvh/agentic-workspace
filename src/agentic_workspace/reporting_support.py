@@ -863,6 +863,7 @@ def closeout_claim_boundary_payload(
                     "allowed_claim_classes",
                     "blocked_claim_classes",
                     "closure_actions",
+                    "closure_keyword_guard",
                     "rule",
                 )
                 if key in claim_authorization
