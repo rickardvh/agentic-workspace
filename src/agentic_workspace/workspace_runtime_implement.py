@@ -1067,7 +1067,7 @@ def _tiny_proof_command_tiers_payload(value: Any, *, required_commands: list[str
         ][:1]
         if commands:
             tiers.append({"id": str(tier.get("id", "")), "commands": commands})
-    if len(tiers) <= 1:
+    if len(tiers) <= 1 and not required_commands:
         return {}
     minimal_required = ""
     for tier in tiers:
@@ -1076,12 +1076,18 @@ def _tiny_proof_command_tiers_payload(value: Any, *, required_commands: list[str
             break
     if not minimal_required and required_commands:
         minimal_required = required_commands[0]
+    if len(tiers) <= 1 and minimal_required:
+        return {
+            "status": "required-commands-present",
+            "detail_selector": "proof.proof_command_tiers",
+        }
     return {
         "selected_set": {
             key: _as_dict(packet.get("selected_set")).get(key)
             for key in ("status",)
             if _as_dict(packet.get("selected_set")).get(key) not in (None, "", [], {})
         },
+        "status": "present" if tiers else "empty",
         "minimal_required_command": minimal_required,
         "tiers": tiers,
         "closeout_rule": "List overlap only when it adds extra_evidence.",
@@ -1119,8 +1125,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     planning_safety_gate = payload.get("planning_safety_gate", {})
     if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("workflow_sufficient") is False:
         next_action = "Create or promote an active execplan before continuing implementation."
-    elif path_warnings:
-        next_action = "Resolve path authority warnings before editing."
     elif not payload.get("changed_paths"):
         next_action = "Provide --changed paths or use start/preflight before broad implementation."
     proof_payload = payload.get("proof", {})
@@ -1240,7 +1244,6 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             surface="implement",
             allowed_next_action=str(next_action),
             hard_blockers=[
-                *[f"path_authority:{item.get('path')}" for item in path_warnings if isinstance(item, dict) and item.get("path")],
                 *(
                     [str(planning_safety_gate.get("gate_result") or planning_safety_gate.get("decision"))]
                     if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("workflow_sufficient") is False
@@ -1267,6 +1270,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("status") not in {None, "", "clear"}
                     else []
                 ),
+                *([f"path_authority_attention={len(path_warnings)}"] if path_warnings else []),
                 *(
                     [f"generated_surface_trust={payload.get('generated_surface_trust', {}).get('status')}"]
                     if isinstance(payload.get("generated_surface_trust"), dict)

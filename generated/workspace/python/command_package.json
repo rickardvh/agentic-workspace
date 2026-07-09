@@ -40,6 +40,13 @@
             "name": "format"
           },
           {
+            "flags": [
+              "--section"
+            ],
+            "help": "Return one module detail section such as package_footprint or participation_model.",
+            "name": "section"
+          },
+          {
             "action": "store_true",
             "flags": [
               "--verbose"
@@ -2673,6 +2680,13 @@
                 ],
                 "help": "Optional repo-relative session log path; defaults to the current session pointer.",
                 "name": "path"
+              },
+              {
+                "flags": [
+                  "--id"
+                ],
+                "help": "Optional session id or aw-session-<id>.md filename to analyze.",
+                "name": "id"
               },
               {
                 "choices": [
@@ -6000,6 +6014,11 @@
             "default": "tiny",
             "kind": "diagnostic_profile",
             "name": "profile"
+          },
+          {
+            "attr": "section",
+            "kind": "attr",
+            "name": "section"
           }
         ],
         "function": "_emit_modules",

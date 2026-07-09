@@ -773,9 +773,10 @@ def suggest_memory_note_capture(
     best_score = best.get("score", 0) if best else 0
     strong_best = best if isinstance(best_score, int) and best_score >= 20 else None
     local_capture = _local_memory_capture_requested(surfaces=tuple(effective_surfaces))
+    low_confidence_capture = strong_best is None and not force_reason
     create_command = (
         f"agentic-memory create-note {safe_slug} --local --local-reason <why-local> --target ./repo --summary <text> --format json"
-        if local_capture
+        if local_capture or low_confidence_capture
         else f"agentic-memory create-note {safe_slug} --target ./repo --summary <text> --format json"
     )
 
@@ -788,12 +789,12 @@ def suggest_memory_note_capture(
         next_command = create_command
         reason = "an existing candidate exists, but --force-new-reason records why a separate note is justified"
     else:
-        recommended_action = "create-local-note" if local_capture else "create-new-note"
+        recommended_action = "create-local-note" if local_capture else "dismiss-route-elsewhere-or-create-local-note"
         next_command = create_command
         reason = (
             "the capture request supplied the explicit local_memory surface, so local-only Memory is the safer default"
             if local_capture
-            else "no existing Memory note matched the capture request"
+            else "no strong existing Memory owner matched; prefer dismissal, local Memory, or a non-Memory owner before repo Memory"
         )
 
     payload: dict[str, object] = {
@@ -806,10 +807,17 @@ def suggest_memory_note_capture(
         "force_new_reason": force_reason,
         "candidate_count": len(candidates),
         "candidates": candidates[:5],
+        "confidence": "high" if strong_best else "low",
+        "low_confidence_warning": (
+            "No strong Memory owner matched; do not create repo Memory unless the lesson is confirmed repo-shared and durable."
+            if low_confidence_capture
+            else ""
+        ),
+        "owner_alternatives": _memory_owner_alternatives(low_confidence=low_confidence_capture),
         "non_memory_owner_routes": ["planning", "docs", "tests", "contracts", "config", "review", "issue"],
         "memory_owner_routes": ["repo_memory", "local_memory"],
         "storage_decision": {
-            "recommended_owner": "local_memory" if local_capture else "repo_memory",
+            "recommended_owner": "local_memory" if local_capture or low_confidence_capture else "repo_memory",
             "local_memory_command": f"agentic-memory create-note {safe_slug} --local --local-reason <why-local> --target ./repo --summary <text> --format json",
             "repo_memory_command": f"agentic-memory create-note {safe_slug} --target ./repo --summary <text> --format json",
             "rule": "Use local Memory for machine-local, user-local, runtime-specific, private, or low-confidence lessons; use repo Memory only for repo-shared durable knowledge.",
@@ -1645,6 +1653,44 @@ def _looks_like_active_current_memory_claim(value: str) -> bool:
     return any(marker in normalized for marker in ("active", "current", "in progress", "focus", "execplan", "lane", "proof pass"))
 
 
+def _memory_route_recovery_options() -> list[dict[str, str]]:
+    return [
+        {
+            "id": "add-files",
+            "command": "agentic-memory route --target ./repo --files <changed-path> --format json",
+            "why": "Changed files are direct routing evidence.",
+        },
+        {
+            "id": "add-surface",
+            "command": "agentic-memory route --target ./repo --surface <surface> --format json",
+            "why": "Explicit surfaces are route authority when files are not enough.",
+        },
+        {
+            "id": "add-stage",
+            "command": "agentic-memory route --target ./repo --stage <startup|implement|proof|closeout> --format json",
+            "why": "Stage is structured context; task prose remains context-only.",
+        },
+    ]
+
+
+def _memory_owner_alternatives(*, low_confidence: bool) -> list[dict[str, str]]:
+    if low_confidence:
+        return [
+            {"owner": "dismiss", "use_when": "the lesson is one-off or not durable"},
+            {"owner": "local_memory", "use_when": "the lesson is machine-local, private, runtime-specific, or uncertain"},
+            {"owner": "planning", "use_when": "the fact is active task state, lane state, or closeout residue"},
+            {"owner": "issue", "use_when": "the fact is backlog work or needs product follow-through"},
+            {"owner": "repo_memory", "use_when": "the lesson is confirmed repo-shared anti-rediscovery knowledge"},
+        ]
+    return [
+        {"owner": "repo_memory", "use_when": "confirmed repo-shared anti-rediscovery knowledge"},
+        {"owner": "local_memory", "use_when": "machine-local or private knowledge"},
+        {"owner": "planning", "use_when": "active execution state"},
+        {"owner": "issue", "use_when": "backlog follow-through"},
+        {"owner": "dismiss", "use_when": "not durable"},
+    ]
+
+
 def route_memory(
     *,
     target: str | Path | None = None,
@@ -1674,6 +1720,10 @@ def route_memory(
             "optional_count": 0,
             "confidence": "low",
             "confidence_reasons": ["no structured route signal was supplied"],
+            "insufficient_route_signal": True,
+            "task_prose_role": "context-only",
+            "recovery_options": _memory_route_recovery_options(),
+            "owner_alternatives": _memory_owner_alternatives(low_confidence=True),
             "route_context": {
                 "files": [],
                 "surfaces": [],
@@ -1776,6 +1826,12 @@ def route_memory(
 
     kept_suggestions = [*required, *kept_optionals]
     result.route_summary = _build_route_summary(kept_suggestions)
+    if result.route_summary.get("confidence") == "low":
+        result.route_summary["confidence_warning"] = (
+            "Low-confidence Memory routes should be treated as recovery hints; prefer explicit files, surfaces, or stage before adding repo Memory."
+        )
+        result.route_summary["recovery_options"] = _memory_route_recovery_options()
+        result.route_summary["owner_alternatives"] = _memory_owner_alternatives(low_confidence=True)
     result.route_summary["route_context"] = {
         "files": list(files or []),
         "surfaces": sorted(selected_surfaces),

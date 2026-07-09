@@ -13778,6 +13778,22 @@ def closeout_execplan(
                 else "slice completion is blocked until closeout evidence is repaired",
             },
             {
+                "id": "claim-lane-or-local-intent-complete",
+                "allowed": normalized_claim in {"lane", "epic"} and not blocked,
+                "command": "",
+                "why": f"{normalized_claim} claim may be stated locally because closeout scope and intent-status were recorded"
+                if normalized_claim in {"lane", "epic"} and not blocked
+                else "only bounded slice completion is authorized by this closeout",
+            },
+            {
+                "id": "archive-retention",
+                "allowed": True,
+                "command": "",
+                "why": non_blocking_retention_note
+                if retention_skipped
+                else "archive retained or discarded according to closeout flags and size guardrails; this is separate from issue closure",
+            },
+            {
                 "id": "keep-larger-intent-open",
                 "allowed": (closure_decision == "archive-but-keep-lane-open" or not larger_intent_close_allowed) and not blocked,
                 "owner": continuation_owner if closure_decision == "archive-but-keep-lane-open" else PLANNING_STATE_PATH.as_posix(),
@@ -13795,6 +13811,12 @@ def closeout_execplan(
                 else "slice closeout does not authorize larger-intent closure"
                 if normalized_claim == "slice"
                 else "parent or larger intent remains open",
+            },
+            {
+                "id": "host-side-issue-closure",
+                "allowed": False,
+                "command": "",
+                "why": "core Planning records closeout evidence only; host tracker issue closure must be performed explicitly by the host integration or PR metadata",
             },
         ]
     )

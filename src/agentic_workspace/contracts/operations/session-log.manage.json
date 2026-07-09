@@ -41,6 +41,13 @@
       "description": "Optional session log path populated by the analyze subcommand."
     },
     {
+      "name": "id",
+      "source": "cli-option",
+      "required": false,
+      "command_visibility": "runtime-only",
+      "description": "Optional session id or aw-session filename populated by the analyze subcommand."
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false

@@ -753,7 +753,30 @@ function executeTypescriptDomainOperation(operationId, values) {
   const target = resolve(String(values.target ?? '.'));
   if (operationId === 'planning.front-door') return { kind: 'agentic-workspace/planning-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
   if (operationId === 'memory.front-door') return { kind: 'agentic-workspace/memory-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
-  if (operationId === 'modules.report') return { kind: 'agentic-workspace/modules-router/v1', profile: 'tiny', target_root: target, detail_commands: { full: 'agentic-workspace modules --target . --verbose --format json' } };
+  if (operationId === 'modules.report') {
+    const availableSections = ['advanced_features', 'component_model', 'modules', 'package_footprint', 'participation_model', 'terminology', 'workspace_components'];
+    const section = String(values.section ?? '').trim();
+    if (section) {
+      return {
+        kind: 'agentic-workspace/modules-router/v1',
+        profile: 'section',
+        target_root: target,
+        selector: { section },
+        matched: availableSections.includes(section),
+        answer: {},
+        available_sections: availableSections,
+        detail_commands: { compact: 'agentic-workspace modules --target . --format json', full: 'agentic-workspace modules --target . --verbose --format json' },
+      };
+    }
+    return {
+      kind: 'agentic-workspace/modules-router/v1',
+      profile: 'tiny',
+      target_root: target,
+      available_sections: availableSections,
+      section_commands: Object.fromEntries(availableSections.map((name) => [name, `agentic-workspace modules --target . --section ${name} --format json`])),
+      detail_commands: { full: 'agentic-workspace modules --target . --verbose --format json' },
+    };
+  }
   if (operationId === 'summary.report') return { kind: 'planning-summary/v1', profile: values.verbose ? 'full' : 'tiny', machine_first_planning: { status: 'no-active-execplan' }, target_root: target };
   if (operationId === 'start.context') return { kind: 'startup-context/v1', target_root: target, drill_down: { rule: 'Compact default omits selector inventory and schemas. Use exact --select for one field; use --verbose only for broad diagnostics.' }, context: { proof: { kind: 'proof-selection/v1' } } };
   if (operationId === 'implement.context') return { kind: 'implementer-context-tiny/v1', target_root: target, proof: { kind: 'proof-selection/v1' } };

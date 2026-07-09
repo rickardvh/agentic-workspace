@@ -133,6 +133,31 @@
       "additionalProperties": false,
       "description": "Machine-local memory opt-in and path configuration."
     },
+    "session_logging": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this checkout should keep ignored local AW command session logs."
+        },
+        "redact_local_paths": {
+          "type": "boolean",
+          "description": "Compatibility alias for path_mode = redacted."
+        },
+        "path_mode": {
+          "type": "string",
+          "enum": [
+            "absolute",
+            "repo-relative",
+            "redacted"
+          ],
+          "default": "absolute",
+          "description": "How local filesystem paths should be represented in session log markdown, indexes, and summaries."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Machine-local session logging and share-safety preferences."
+    },
     "local_overlay": {
       "type": "object",
       "properties": {

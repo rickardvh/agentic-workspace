@@ -41011,7 +41011,7 @@ def _write_json_file(*, destination: Path, payload: dict[str, Any], dry_run: boo
     return destination
 
 
-def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = "tiny") -> None:
+def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = "tiny", section: str | None = None) -> None:
     descriptors = _module_operations()
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     full_payload = {
@@ -41052,6 +41052,27 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
             for entry in registry
         ],
     }
+    sections = sorted(full_payload)
+    target_arg = " --target ." if target_root is not None else ""
+    section_commands = {name: f"agentic-workspace modules{target_arg} --section {name} --format json" for name in sections}
+    if section:
+        selected = str(section).strip()
+        payload = {
+            "kind": "agentic-workspace/modules-router/v1",
+            "profile": "section",
+            "target": target_root.as_posix() if target_root is not None else None,
+            "selector": {"section": selected},
+            "matched": selected in full_payload,
+            "section": selected,
+            "answer": copy.deepcopy(full_payload.get(selected, {})),
+            "available_sections": sections,
+            "detail_commands": {
+                "compact": f"agentic-workspace modules{target_arg} --format json",
+                "full": f"agentic-workspace modules{target_arg} --verbose --format json",
+            },
+        }
+        _emit_payload(payload=payload, format_name=format_name)
+        return
     if profile == "tiny":
         installed = [entry for entry in registry if entry.installed]
         payload = {
@@ -41062,13 +41083,17 @@ def _emit_modules(*, format_name: str, target_root: Path | None, profile: str = 
             "active_modules": [entry.name for entry in installed],
             "default_enabled_modules": [entry.name for entry in registry if entry.default_enabled],
             "selection_rule": "Repo intent is [modules].enabled; installed files are reported as state evidence.",
+            "available_sections": sections,
+            "section_commands": section_commands,
             "detail_commands": {
-                "full": "agentic-workspace modules --target . --verbose --format json",
+                "package_footprint": section_commands["package_footprint"],
+                "participation_model": section_commands["participation_model"],
+                "full": f"agentic-workspace modules{target_arg} --verbose --format json",
                 "status": "agentic-workspace status --target . --format json",
             },
         }
     else:
-        payload = full_payload
+        payload = {**full_payload, "available_sections": sections}
     _emit_payload(payload=payload, format_name=format_name)
 
 

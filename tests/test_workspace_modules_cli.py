@@ -4,6 +4,35 @@ from __future__ import annotations
 from tests.workspace_cli_support import *
 
 
+def test_modules_command_defaults_to_compact_section_router(monkeypatch, capsys) -> None:
+    repo_root = Path("./repo")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(repo_root, []))
+
+    assert cli.main(["modules", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/modules-router/v1"
+    assert payload["profile"] == "tiny"
+    assert "package_footprint" in payload["available_sections"]
+    assert "participation_model" in payload["available_sections"]
+    assert payload["detail_commands"]["package_footprint"].endswith("--section package_footprint --format json")
+    assert "modules" not in payload
+
+
+def test_modules_command_returns_selected_section(monkeypatch, capsys) -> None:
+    repo_root = Path("./repo")
+    monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(repo_root, []))
+
+    assert cli.main(["modules", "--section", "participation_model", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"] == "section"
+    assert payload["selector"] == {"section": "participation_model"}
+    assert payload["matched"] is True
+    assert payload["answer"]["schema_version"] == "agentic-workspace/module-participation/v1"
+    assert "package_footprint" in payload["available_sections"]
+
+
 def test_modules_command_lists_available_modules_as_json(monkeypatch, capsys) -> None:
     repo_root = Path("./repo")
     monkeypatch.setattr(cli, "_module_operations", lambda: _fake_descriptors(repo_root, []))

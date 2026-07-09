@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
+import shlex
 from collections.abc import Callable
 from importlib.metadata import PackageNotFoundError, version as package_version
 from importlib.resources import files
@@ -67,10 +68,12 @@ class GeneratedArgumentParser(argparse.ArgumentParser):
         return super().parse_args(args, namespace)
 
     def error(self, message: str) -> None:
+        argv = self.__class__._generated_current_argv
+        suggested_command = ''
+        alternatives: list[str] = []
         for hint in getattr(self, '_generated_usage_error_hints', []):
             contains = hint.get('when_message_contains', [])
             argv_contains = hint.get('when_argv_contains', [])
-            argv = self.__class__._generated_current_argv
             if all(str(fragment) in message for fragment in contains) and _argv_contains_sequence(argv, argv_contains):
                 hint_text = str(hint.get('message', '')).strip()
                 if hint_text:
@@ -80,11 +83,26 @@ class GeneratedArgumentParser(argparse.ArgumentParser):
             suggestions = difflib.get_close_matches(unknown, generated_command_names(), n=1, cutoff=0.55)
             if suggestions:
                 message = f"{message}\nDid you mean: {', '.join(suggestions)}?"
+                suggested_command = _command_with_replaced_token(self.prog, argv, unknown, suggestions[0])
             if 'start' in _GENERATED_COMMANDS_BY_NAME and 'preflight' in _GENERATED_COMMANDS_BY_NAME:
                 message = (
                     f"{message}\nStartup tip: run '{self.prog} start --task \"<task>\" --format json' "
                     f"for normal startup or '{self.prog} preflight --format json' to recover a compact takeover context."
                 )
+        if _is_selector_conflict(argv, message):
+            alternatives = _selector_conflict_alternatives(self.prog, argv)
+            if alternatives and not suggested_command:
+                suggested_command = alternatives[0]
+        structured_error = ('invalid choice' in message and 'command' in message) or _is_selector_conflict(argv, message)
+        if _json_requested(argv) and structured_error:
+            print(json.dumps(_retryable_cli_error_payload(
+                prog=self.prog,
+                argv=argv,
+                message=message,
+                suggested_command=suggested_command,
+                alternatives=alternatives,
+            ), indent=2))
+            raise SystemExit(2)
         super().error(message)
 
 
@@ -93,6 +111,61 @@ def _extract_unknown_command(message: str) -> str:
     if prefix not in message:
         return ''
     return message.split(prefix, 1)[1].split("'", 1)[0]
+
+
+def _json_requested(argv: list[str]) -> bool:
+    for index, token in enumerate(argv):
+        if token == '--format' and index + 1 < len(argv) and argv[index + 1] == 'json':
+            return True
+        if token == '--format=json':
+            return True
+    return False
+
+
+def _command_with_replaced_token(prog: str, argv: list[str], old: str, new: str) -> str:
+    replaced = [new if token == old else token for token in argv]
+    return f"{prog} {shlex.join(replaced)}"
+
+
+def _is_selector_conflict(argv: list[str], message: str) -> bool:
+    return (
+        ('--verbose' in argv and '--section' in argv)
+        or 'not allowed with argument' in message
+        or 'mutually exclusive' in message
+    )
+
+
+def _selector_conflict_alternatives(prog: str, argv: list[str]) -> list[str]:
+    if not argv:
+        return []
+    without_verbose = [token for token in argv if token != '--verbose']
+    without_section: list[str] = []
+    skip_next = False
+    for token in argv:
+        if skip_next:
+            skip_next = False
+            continue
+        if token == '--section':
+            skip_next = True
+            continue
+        without_section.append(token)
+    return [f"{prog} {shlex.join(without_verbose)}", f"{prog} {shlex.join(without_section)}"]
+
+
+def _retryable_cli_error_payload(
+    *, prog: str, argv: list[str], message: str, suggested_command: str, alternatives: list[str]
+) -> dict[str, Any]:
+    failure_class = 'selector-conflict' if _is_selector_conflict(argv, message) else 'invalid-command' if 'invalid choice' in message and 'command' in message else 'usage-error'
+    return {
+        'kind': 'agentic-workspace/retryable-cli-error/v1',
+        'exit_status': 2,
+        'input_command': f"{prog} {shlex.join(argv)}",
+        'failure_class': failure_class,
+        'safe_to_retry': True,
+        'message': message,
+        'suggested_command': suggested_command,
+        'alternatives': alternatives,
+    }
 
 
 def _argv_contains_sequence(argv: list[str], sequence: Any) -> bool:

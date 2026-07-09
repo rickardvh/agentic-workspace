@@ -1,1 +1,93 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"modules.report","command_surface":{"command":"modules","format_option":"format"},"summary":"List workspace modules available to the orchestrator and installed-module signals for the target repository.","classification":"read-only-report","inputs":[{"name":"target","source":"cli-option","required":false},{"name":"verbose","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false}],"output":{"kind":"text-or-json"},"effects":{"read_only":true,"destructive":false,"idempotent":true,"writes_repo_state":false,"requires_preflight_gate":false},"locality":{"requires_repo":false,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":"module descriptors","required":true},{"surface":"target repository install signals","required":false},{"surface":"verbose flag for broad diagnostic output","required":false}],"writes":[],"steps":[{"id":"resolve_root","uses":"workspace.target-root.resolve","description":"Resolve the target root when provided."},{"id":"inspect_modules","uses":"workspace.modules.inspect","description":"Inspect available module descriptors and installed signals."},{"id":"emit_output","uses":"output.emit","description":"Emit module information in the requested format."}],"guards":["Do not mutate module install state while reporting module availability."],"proof":["operation contract validates against operation.schema.json","contract registry has one modules operation"],"migration_status":"draft-contract-only"}
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "modules.report",
+  "command_surface": {
+    "command": "modules",
+    "format_option": "format"
+  },
+  "summary": "List workspace modules available to the orchestrator and installed-module signals for the target repository.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "verbose",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "section",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "module descriptors",
+      "required": true
+    },
+    {
+      "surface": "target repository install signals",
+      "required": false
+    },
+    {
+      "surface": "section selector for compact drill-down",
+      "required": false
+    },
+    {
+      "surface": "verbose flag for broad diagnostic output",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root when provided."
+    },
+    {
+      "id": "inspect_modules",
+      "uses": "workspace.modules.inspect",
+      "description": "Inspect available module descriptors and installed signals."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit module information in the requested format."
+    }
+  ],
+  "guards": [
+    "Do not mutate module install state while reporting module availability.",
+    "Default modules output stays compact and points to section drill-downs; --verbose remains the full registry surface."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "contract registry has one modules operation",
+    "modules tests cover compact output, section output, and verbose full output"
+  ],
+  "migration_status": "draft-contract-only"
+}

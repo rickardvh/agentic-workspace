@@ -176,6 +176,11 @@ SUPPORTED_CLARIFICATION_CONTROL_MODES = (
     "suggest",
     "auto-continue",
 )
+SUPPORTED_SESSION_LOGGING_PATH_MODES = (
+    "absolute",
+    "repo-relative",
+    "redacted",
+)
 WORKSPACE_WORKFLOW_MARKER_START = "<!-- agentic-workspace:workflow:start -->"
 WORKSPACE_WORKFLOW_MARKER_END = "<!-- agentic-workspace:workflow:end -->"
 
@@ -323,6 +328,7 @@ class DelegationTargetProfile:
 class SessionLoggingConfig:
     enabled: bool | None
     redact_local_paths: bool
+    path_mode: str
     source: str
 
 
@@ -1624,7 +1630,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         clarification_mode=None,
         local_memory_enabled=None,
         local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
-        session_logging=SessionLoggingConfig(enabled=None, redact_local_paths=False, source="unset"),
+        session_logging=SessionLoggingConfig(enabled=None, redact_local_paths=False, path_mode="absolute", source="unset"),
         delegation_targets=(),
         local_overlay={},
         high_risk_overlay={},
@@ -2369,7 +2375,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         raw_session_logging = {}
     if not isinstance(raw_session_logging, dict):
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [session_logging] section must be a table.")
-    unknown_session_logging = sorted(set(raw_session_logging) - {"enabled", "redact_local_paths"})
+    unknown_session_logging = sorted(set(raw_session_logging) - {"enabled", "redact_local_paths", "path_mode"})
     if unknown_session_logging:
         unknown_text = ", ".join(unknown_session_logging)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [session_logging] contains unsupported field(s): {unknown_text}.")
@@ -2382,6 +2388,13 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         payload=raw_session_logging,
         key="redact_local_paths",
         config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+    session_logging_path_mode = require_optional_enum(
+        payload=raw_session_logging,
+        key="path_mode",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        allowed=SUPPORTED_SESSION_LOGGING_PATH_MODES,
+        default="redacted" if session_logging_redact_local_paths else "absolute",
     )
 
     raw_delegation_targets = payload.get("delegation_targets", {})
@@ -2458,7 +2471,8 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         ),
         session_logging=SessionLoggingConfig(
             enabled=session_logging_enabled,
-            redact_local_paths=bool(session_logging_redact_local_paths),
+            redact_local_paths=session_logging_path_mode == "redacted",
+            path_mode=session_logging_path_mode,
             source=_local_config_field_source(
                 local_payload=local_payload,
                 shared_payload=shared_payload,
@@ -2519,6 +2533,13 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
                 ("local_memory.enabled", "local_memory", "enabled", raw_local_memory.get("enabled")),
                 ("local_memory.path", "local_memory", "path", raw_local_memory.get("path")),
                 ("session_logging.enabled", "session_logging", "enabled", raw_session_logging.get("enabled")),
+                (
+                    "session_logging.redact_local_paths",
+                    "session_logging",
+                    "redact_local_paths",
+                    raw_session_logging.get("redact_local_paths"),
+                ),
+                ("session_logging.path_mode", "session_logging", "path_mode", raw_session_logging.get("path_mode")),
             )
             if configured is not None
         },

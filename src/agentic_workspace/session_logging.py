@@ -116,7 +116,7 @@ def run_with_session_logging(
                 exit_code=exit_code,
                 stdout=captured_stdout.getvalue(),
                 stderr=captured_stderr.getvalue(),
-                exception="SystemExit",
+                exception="SystemExit" if exit_code != 0 else None,
             )
             raise
         except Exception as exc:
@@ -149,7 +149,11 @@ def _run_session_log_adapter(args: Any) -> int:
         elif command == "new-session":
             payload = reset_session(state=state)
         elif command == "analyze":
-            payload = analyze_session_log(state=state, path=str(getattr(args, "path", "") or ""))
+            payload = analyze_session_log(
+                state=state,
+                path=str(getattr(args, "path", "") or ""),
+                session_id=str(getattr(args, "id", "") or ""),
+            )
         else:
             payload = status_payload(state=state)
     except Exception as exc:  # pragma: no cover - non-fatal command wrapper guard
@@ -360,12 +364,13 @@ def _effective_config_snapshot(state: SessionLoggingState) -> dict[str, Any]:
         "cli_identity": {
             "package": "agentic-workspace",
             "version": __version__,
-            "argv0": sys.argv[0] if sys.argv else "",
-            "python_executable": sys.executable,
+            "argv0": _normalize_for_log(state, sys.argv[0] if sys.argv else ""),
+            "python_executable": _normalize_for_log(state, sys.executable),
         },
         "session_logging": {
             "enabled": config.local_override.session_logging.enabled,
             "redact_local_paths": config.local_override.session_logging.redact_local_paths,
+            "path_mode": config.local_override.session_logging.path_mode,
             "source": config.local_override.session_logging.source,
             "config_path": _normalize_for_log(
                 state,
@@ -386,8 +391,8 @@ def _command_entry_markdown(
     capture: CommandCapture,
 ) -> str:
     normalized_capture = _normalized_capture(state, capture)
-    output = {"stdout": normalized_capture.stdout, "stderr": normalized_capture.stderr}
     output_size = _output_size(normalized_capture)
+    output_digest = _output_digest(normalized_capture)
     stdout_summary = _summarize_stream(stream="stdout", text=normalized_capture.stdout)
     stderr_summary = _summarize_stream(stream="stderr", text=normalized_capture.stderr)
     should_artifact = output_size > DEFAULT_MAX_INLINE_OUTPUT_BYTES or _structured_output_present(stdout_summary, stderr_summary)
@@ -402,7 +407,14 @@ def _command_entry_markdown(
         lines.append(f"- exception: `{normalized_capture.exception}`")
     lines.extend(["", "```sh", _normalize_for_log(state, command_text), "```"])
     if should_artifact:
-        artifact = _write_output_artifact(state=state, session=session, entry_id=entry_id, output=output)
+        raw_output = {"stdout": capture.stdout, "stderr": capture.stderr}
+        artifact = _write_output_artifact(
+            state=state,
+            session=session,
+            entry_id=entry_id,
+            output=raw_output,
+            output_digest=output_digest,
+        )
         lines.extend(
             [
                 "",
@@ -412,6 +424,8 @@ def _command_entry_markdown(
                 f"- bytes: `{artifact['bytes']}`",
             ]
         )
+        if artifact.get("duplicate_of"):
+            lines.append(f"- duplicate_of: `{artifact['duplicate_of']}`")
         lines.extend(["", *_output_summary_lines(stdout_summary), *_output_summary_lines(stderr_summary)])
     else:
         lines.extend(
@@ -440,11 +454,22 @@ def _write_output_artifact(
     session: dict[str, str],
     entry_id: str,
     output: dict[str, str],
+    output_digest: str,
 ) -> dict[str, Any]:
+    existing = _artifact_for_output_digest(state=state, session=session, output_digest=output_digest)
+    if existing is not None:
+        return {
+            **existing,
+            "duplicate_of": str(existing.get("entry_id", "")),
+            "storage_mode": "reused-duplicate",
+        }
     artifact_path = SESSION_LOG_ROOT / "artifacts" / session["session_id"] / f"{entry_id}-output.json"
     payload = {
         "kind": "agentic-workspace/session-log-output-artifact/v1",
         "entry_id": entry_id,
+        "storage_mode": "raw-local-artifact",
+        "share_safe": False,
+        "rule": "Raw command output is recoverable locally from ignored session-log artifacts; markdown and indexes use the configured path mode.",
         "stdout": output["stdout"],
         "stderr": output["stderr"],
     }
@@ -453,7 +478,13 @@ def _write_output_artifact(
     absolute_path = state.target_root / artifact_path
     absolute_path.parent.mkdir(parents=True, exist_ok=True)
     absolute_path.write_text(raw + "\n", encoding="utf-8")
-    return {"path": artifact_path.as_posix(), "sha256": digest, "bytes": len(raw.encode("utf-8"))}
+    return {
+        "path": artifact_path.as_posix(),
+        "sha256": digest,
+        "bytes": len(raw.encode("utf-8")),
+        "entry_id": entry_id,
+        "storage_mode": "raw-local-artifact",
+    }
 
 
 def _append_text(path: Path, text: str) -> None:
@@ -525,19 +556,29 @@ def _append_index_command(
     stderr_summary = _summarize_stream(stream="stderr", text=normalized_capture.stderr)
     output_digest = _output_digest(normalized_capture)
     artifact = _artifact_for_entry(state=state, session=session, entry_id=entry_id)
+    if artifact is None:
+        artifact = _artifact_for_output_digest(state=state, session=session, output_digest=output_digest)
+        if artifact is not None:
+            artifact = {**artifact, "duplicate_of": str(artifact.get("entry_id", "")), "storage_mode": "reused-duplicate"}
+    failure_class = _failure_class(command_text=command_text, capture=normalized_capture)
     entries.append(
         {
             "id": entry_id,
             "timestamp": timestamp,
+            "started_at": timestamp,
+            "finished_at": timestamp,
             "command": _normalize_for_log(state, command_text),
             "argv": [_normalize_for_log(state, item) for item in argv],
             "target": _normalize_for_log(state, state.target_root.as_posix()),
             "exit_status": normalized_capture.exit_code,
+            "exit_class": "success" if normalized_capture.exit_code == 0 else "failure",
+            "failure_class": failure_class,
             "exception": normalized_capture.exception or "",
             "stdout": _summary_payload(stdout_summary),
             "stderr": _summary_payload(stderr_summary),
             "output_bytes": _output_size(normalized_capture),
             "output_digest": output_digest,
+            "storage_mode": artifact.get("storage_mode", "inline") if isinstance(artifact, dict) else "inline",
             "packet_kinds": sorted(set(stdout_summary.packet_kinds + stderr_summary.packet_kinds)),
             "artifact": artifact,
         }
@@ -574,25 +615,60 @@ def _normalized_capture(state: SessionLoggingState, capture: CommandCapture) -> 
 
 
 def _normalize_for_log(state: SessionLoggingState, text: str) -> str:
-    if not text or state.config is None or not state.config.local_override.session_logging.redact_local_paths:
+    if not text or state.config is None:
         return text
-    replacements = {
-        state.target_root.as_posix(),
-        str(state.target_root),
-        str(state.target_root).replace("\\", "\\\\"),
-    }
+    mode = state.config.local_override.session_logging.path_mode
+    if mode == "absolute":
+        return text
     normalized = text
-    for value in sorted(replacements, key=len, reverse=True):
+    target_native = str(state.target_root)
+    target_escaped = target_native.replace("\\", "\\\\")
+    home_native = str(Path.home())
+    home_escaped = home_native.replace("\\", "\\\\")
+    python_native = sys.executable
+    python_escaped = python_native.replace("\\", "\\\\")
+    if mode == "repo-relative":
+        replacements = {
+            f"{state.target_root.as_posix()}/": "./",
+            f"{target_native}\\": ".\\",
+            f"{target_escaped}\\\\": ".\\\\",
+            state.target_root.as_posix(): ".",
+            target_native: ".",
+            target_escaped: ".",
+        }
+    elif mode == "redacted":
+        replacements = {
+            state.target_root.as_posix(): "<target>",
+            target_native: "<target>",
+            target_escaped: "<target>",
+            home_native: "<home>",
+            Path.home().as_posix(): "<home>",
+            home_escaped: "<home>",
+            python_native: "<python>",
+            Path(python_native).as_posix(): "<python>",
+            python_escaped: "<python>",
+        }
+    else:
+        return text
+    for value, replacement in sorted(replacements.items(), key=lambda item: len(item[0]), reverse=True):
         if value:
-            normalized = normalized.replace(value, "<target>")
+            normalized = normalized.replace(value, replacement)
     return normalized
 
 
 def _path_redaction_payload(state: SessionLoggingState) -> dict[str, Any]:
-    enabled = bool(state.config and state.config.local_override.session_logging.redact_local_paths)
+    mode = state.config.local_override.session_logging.path_mode if state.config else "absolute"
+    placeholders = {
+        "absolute": [],
+        "repo-relative": ["."],
+        "redacted": ["<target>", "<home>", "<python>"],
+    }.get(mode, [])
     return {
-        "local_paths": "target-root-normalized" if enabled else "none",
-        "placeholder": "<target>" if enabled else "",
+        "mode": mode,
+        "local_paths": "absolute" if mode == "absolute" else "normalized",
+        "placeholders": placeholders,
+        "raw_artifact_recoverability": "raw output may remain in ignored local artifacts; do not share .agentic-workspace/local artifacts without review",
+        "limitations": "Only known AW command text, target-root, user-home, and Python executable path strings are normalized.",
         "rule": "Logs capture AW command argv and AW stdout/stderr only; environment variables and secrets are not logged by default.",
     }
 
@@ -691,15 +767,60 @@ def _artifact_for_entry(*, state: SessionLoggingState, session: dict[str, str], 
         raw = absolute_path.read_bytes()
     except OSError:
         return {"path": artifact_path.as_posix()}
-    return {"path": artifact_path.as_posix(), "bytes": len(raw), "sha256": hashlib.sha256(raw).hexdigest()}
+    return {
+        "path": artifact_path.as_posix(),
+        "bytes": len(raw),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "entry_id": entry_id,
+        "storage_mode": "raw-local-artifact",
+    }
 
 
-def _analysis_log_path(*, state: SessionLoggingState, path: str, session: dict[str, str] | None) -> Path | None:
+def _artifact_for_output_digest(*, state: SessionLoggingState, session: dict[str, str], output_digest: str) -> dict[str, Any] | None:
+    index = _read_index(state=state, session=session) or {}
+    for entry in _entries_from_index(index):
+        if str(entry.get("output_digest", "")) != output_digest:
+            continue
+        artifact = entry.get("artifact")
+        if not isinstance(artifact, dict) or not artifact.get("path"):
+            continue
+        return {**artifact, "entry_id": str(entry.get("id", ""))}
+    return None
+
+
+def _failure_class(*, command_text: str, capture: CommandCapture) -> str:
+    if capture.exit_code == 0:
+        return ""
+    parsed = _parse_jsonish(capture.stdout.strip()) or _parse_jsonish(capture.stderr.strip())
+    if isinstance(parsed, dict) and parsed.get("kind") == "agentic-workspace/retryable-cli-error/v1":
+        return str(parsed.get("failure_class") or "retryable-cli-usage")
+    command = command_text.lower()
+    stderr = capture.stderr.lower()
+    if "--verbose" in command and "--section" in command:
+        return "selector-conflict"
+    if "invalid choice" in stderr or "did you mean" in stderr:
+        return "invalid-command"
+    if "usage:" in stderr or "error:" in stderr:
+        return "usage-error"
+    return "command-failure"
+
+
+def _analysis_log_path(*, state: SessionLoggingState, path: str, session_id: str = "", session: dict[str, str] | None) -> Path | None:
     if path:
         valid = _valid_session_log_path(path)
         if not valid:
             return None
         candidate = state.target_root / valid
+        return candidate if candidate.exists() else None
+    if session_id:
+        cleaned = session_id.strip()
+        if cleaned.startswith("aw-session-") and cleaned.endswith(".md"):
+            candidate_name = cleaned
+        elif cleaned.startswith("aw-session-"):
+            candidate_name = f"{cleaned}.md"
+        else:
+            candidate_name = f"aw-session-{cleaned}.md"
+        candidate = state.target_root / SESSION_LOG_ROOT / candidate_name
         return candidate if candidate.exists() else None
     if not session:
         return None
@@ -761,6 +882,8 @@ def _entry_brief(entry: dict[str, Any]) -> dict[str, Any]:
         "timestamp": entry.get("timestamp", ""),
         "command": entry.get("command", ""),
         "exit_status": entry.get("exit_status", 0),
+        "exit_class": entry.get("exit_class", ""),
+        "failure_class": entry.get("failure_class", ""),
         "output_bytes": entry.get("output_bytes", 0),
         "artifact_path": artifact.get("path", "") if isinstance(artifact, dict) else "",
         "packet_kinds": entry.get("packet_kinds", []),
@@ -829,9 +952,9 @@ def _friction_candidates(
     return candidates[:20]
 
 
-def analyze_session_log(*, state: SessionLoggingState, path: str = "") -> dict[str, Any]:
+def analyze_session_log(*, state: SessionLoggingState, path: str = "", session_id: str = "") -> dict[str, Any]:
     session = read_session_pointer(target_root=state.target_root)
-    log_path = _analysis_log_path(state=state, path=path, session=session)
+    log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
     if log_path is None:
         return {
             "kind": "agentic-workspace/session-log-analysis/v1",
@@ -839,7 +962,7 @@ def analyze_session_log(*, state: SessionLoggingState, path: str = "") -> dict[s
             "enabled": state.enabled,
             "path": "",
             "index_status": "missing",
-            "rule": "Pass --path or create a session with session-log new-session before analyzing logs.",
+            "rule": "Pass --path, --id, or create a session with session-log new-session before analyzing logs.",
         }
 
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
@@ -848,6 +971,15 @@ def analyze_session_log(*, state: SessionLoggingState, path: str = "") -> dict[s
     command_counter = Counter(str(entry.get("command", "")) for entry in entries if entry.get("command"))
     digest_counter = Counter(str(entry.get("output_digest", "")) for entry in entries if entry.get("output_digest"))
     failures = [entry for entry in entries if int(entry.get("exit_status", 0) or 0) != 0]
+    repeated_failure_counter = Counter(str(entry.get("command", "")) for entry in failures if entry.get("command"))
+    repeated_failures = [
+        {"command": command, "count": count} for command, count in repeated_failure_counter.most_common() if count > 1 and command
+    ]
+    usage_mistakes = [
+        entry
+        for entry in failures
+        if str(entry.get("failure_class", "")) in {"invalid-command", "selector-conflict", "usage-error", "retryable-cli-usage"}
+    ]
     largest = sorted(entries, key=lambda entry: int(entry.get("output_bytes", 0) or 0), reverse=True)[:LARGE_OUTPUT_SUMMARY_LIMIT]
     repeated = [{"command": command, "count": count} for command, count in command_counter.most_common() if count > 1 and command]
     duplicates = [{"sha256": digest, "count": count} for digest, count in digest_counter.most_common() if count > 1 and digest]
@@ -872,15 +1004,21 @@ def analyze_session_log(*, state: SessionLoggingState, path: str = "") -> dict[s
             "command_count": len(entries),
             "note_count": len(notes),
             "failure_count": len(failures),
+            "failed_count": len(failures),
+            "usage_mistake_count": len(usage_mistakes),
             "repeated_command_count": len(repeated),
+            "repeated_failure_count": len(repeated_failures),
             "duplicate_output_count": len(duplicates),
             "artifact_count": sum(1 for entry in entries if entry.get("artifact")),
         },
         "failed_commands": [_entry_brief(entry) for entry in failures],
+        "usage_mistakes": [_entry_brief(entry) for entry in usage_mistakes],
         "repeated_commands": repeated[:LARGE_OUTPUT_SUMMARY_LIMIT],
+        "repeated_failures": repeated_failures[:LARGE_OUTPUT_SUMMARY_LIMIT],
         "largest_outputs": [_entry_brief(entry) for entry in largest],
         "duplicate_outputs": duplicates[:LARGE_OUTPUT_SUMMARY_LIMIT],
         "packet_kinds": dict(sorted(packet_kinds.items())),
+        "parsed_packet_kinds": dict(sorted(packet_kinds.items())),
         "friction_candidates": friction_candidates,
         "local_only": True,
         "authoritative": False,

@@ -36,6 +36,13 @@ const commandDefinitions = [
           "name": "format"
         },
         {
+          "flags": [
+            "--section"
+          ],
+          "help": "Return one module detail section such as package_footprint or participation_model.",
+          "name": "section"
+        },
+        {
           "action": "store_true",
           "flags": [
             "--verbose"
@@ -2371,6 +2378,13 @@ const commandDefinitions = [
               ],
               "help": "Optional repo-relative session log path; defaults to the current session pointer.",
               "name": "path"
+            },
+            {
+              "flags": [
+                "--id"
+              ],
+              "help": "Optional session id or aw-session-<id>.md filename to analyze.",
+              "name": "id"
             },
             {
               "choices": [

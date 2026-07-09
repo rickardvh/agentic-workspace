@@ -52,6 +52,13 @@
       "source": "cli-option"
     },
     {
+      "command_visibility": "runtime-only",
+      "description": "Optional session id or aw-session filename populated by the analyze subcommand.",
+      "name": "id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "format",
       "required": false,
       "source": "cli-option"
