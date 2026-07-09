@@ -1063,8 +1063,11 @@
           "items": {
             "enum": [
               "partial_progress",
+              "local_pr_complete",
               "slice_complete",
+              "leaf_issue_complete",
               "lane_complete",
+              "parent_issue_complete",
               "parent_complete",
               "full_intent_complete",
               "issue_closure"
@@ -1077,8 +1080,11 @@
           "items": {
             "enum": [
               "partial_progress",
+              "local_pr_complete",
               "slice_complete",
+              "leaf_issue_complete",
               "lane_complete",
+              "parent_issue_complete",
               "parent_complete",
               "full_intent_complete",
               "issue_closure"
