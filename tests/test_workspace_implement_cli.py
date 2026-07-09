@@ -5465,6 +5465,79 @@ candidates = []
     assert grounding["agent_interpretation"]["summary"] == "Report the requirement grounding chain."
 
 
+def test_report_sections_preserve_task_and_changed_scope_for_verification_and_grounding(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path)]) == 0
+    capsys.readouterr()
+    _write_empty_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "verification" / "manifest.toml",
+        """
+schema_version = "agentic-workspace/verification-manifest/v1"
+
+[protocols.privacy_review]
+title = "Privacy review"
+purpose = "Configured privacy verification protocol."
+applies_to_task_markers = ["privacy"]
+expected_evidence = ["privacy_reviewed"]
+review_owner = "privacy-review"
+authority_refs = ["docs/compliance/privacy.md"]
+""",
+    )
+
+    task = "Implement privacy lane #2098"
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "verification",
+                "--task",
+                task,
+                "--changed",
+                "src/privacy.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    verification = json.loads(capsys.readouterr().out)["answer"]
+    assert verification["active_protocols"][0]["id"] == "privacy_review"
+    assert verification["active_protocols"][0]["applies_because"] == ["task marker matched privacy"]
+    assert verification["match_evidence"]["observed_scope_source"] == "changed paths, task text"
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "requirement_grounding",
+                "--task",
+                task,
+                "--changed",
+                "src/privacy.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    grounding = json.loads(capsys.readouterr().out)["answer"]
+    assert grounding["status"] == "attention"
+    assert grounding["source_facts"]["changed_paths"] == ["src/privacy.py"]
+    assert grounding["source_facts"]["task_issue_refs"] == ["#2098"]
+    assert grounding["source_facts"]["verification_active_count"] == 1
+    assert grounding["verification_refs"][0]["protocol_id"] == "privacy_review"
+    assert "requirement-grounded-completion" in grounding["closeout_claims"]["blocked"]
+
+
 def test_report_section_scopes_subsystem_assurance_from_active_plan(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path)]) == 0

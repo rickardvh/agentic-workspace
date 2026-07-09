@@ -15088,30 +15088,37 @@ def _run_lazy_report_section_command(
         )
         return _select_report_payload(payload, profile="router", section=normalized)
 
+    normalized_changed_paths = _normalize_changed_paths(changed_paths or [])
+    task_issue_refs = sorted(set(re.findall("#\\d+", task_text or "")))
+
     if normalized in {"assurance_requirements", "verification", "requirement_grounding", "applicable_intent"}:
         assurance_requirements = _assurance_requirements_report_payload(
             config=config,
             target_root=target_root,
             active_planning_record=active_planning_record,
+            task_text=task_text,
+            changed_paths=normalized_changed_paths,
         )
         verification = _verification_report_payload(
             target_root=target_root,
             active_planning_record=active_planning_record,
             assurance_requirements=assurance_requirements,
+            task_text=task_text,
+            changed_paths=normalized_changed_paths,
         )
         payload["verification"] = verification
         payload["assurance_requirements"] = _assurance_requirements_with_verification(assurance_requirements, verification)
         if normalized == "requirement_grounding":
             payload["requirement_grounding"] = _requirement_grounding_payload(
                 target_root=target_root,
-                task_text=None,
-                changed_paths=[],
+                task_text=task_text,
+                changed_paths=normalized_changed_paths,
                 active_planning_record=active_planning_record,
-                issue_scope_evidence={
-                    "kind": "agentic-workspace/issue-scope-evidence/v1",
-                    "status": "not-applicable",
-                    "issue_refs": [],
-                },
+                issue_scope_evidence=_issue_scope_evidence_payload(
+                    target_root=target_root,
+                    config=config,
+                    issue_refs=task_issue_refs,
+                ),
                 assurance_requirements=payload["assurance_requirements"],
                 verification=verification,
             )
@@ -15199,11 +15206,15 @@ def _run_lazy_report_section_command(
             config=config,
             target_root=target_root,
             active_planning_record=active_planning_record,
+            task_text=task_text,
+            changed_paths=normalized_changed_paths,
         )
         verification = _verification_report_payload(
             target_root=target_root,
             active_planning_record=active_planning_record,
             assurance_requirements=assurance_requirements,
+            task_text=task_text,
+            changed_paths=normalized_changed_paths,
         )
         payload["verification"] = verification
         payload["assurance_requirements"] = _assurance_requirements_with_verification(assurance_requirements, verification)
