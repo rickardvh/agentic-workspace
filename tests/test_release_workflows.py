@@ -119,6 +119,9 @@ def test_post_merge_release_workflow_bumps_all_packages_from_pr_label() -> None:
     assert "contents: write" in workflow
     assert "issues: read" in workflow
     assert "pull-requests: read" in workflow
+    assert "concurrency:" in workflow
+    assert "release-from-semver-label-${{ github.ref }}" in workflow
+    assert "cancel-in-progress: false" in workflow
     assert ".github/release-ownership.json" in workflow
     assert 'ownership["packages"]' in workflow
     assert 'ownership["first_coordinated_release"]["floor_version"]' in workflow
@@ -153,7 +156,13 @@ def test_post_merge_release_workflow_bumps_all_packages_from_pr_label() -> None:
     assert "agentic-workspace-release-manifest.json" in workflow
     assert "SHA256SUMS" in workflow
     assert "Release commit contains disallowed product changes" in workflow
+    assert "git fetch origin master --tags" in workflow
+    assert "origin/master advanced while this release proof was running" in workflow
     assert 'git commit -m "Release ${{ steps.release-bump.outputs.tag }}"' in workflow
+    assert workflow.index("git fetch origin master --tags") < workflow.index(
+        'git commit -m "Release ${{ steps.release-bump.outputs.tag }}"'
+    )
+    assert "git push origin HEAD:master" in workflow
     assert 'git push origin "${{ steps.release-bump.outputs.tag }}"' in workflow
     assert "softprops/action-gh-release@v3.0.0" in workflow
 

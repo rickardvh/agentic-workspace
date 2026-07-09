@@ -10,6 +10,10 @@ permissions:
   issues: read
   pull-requests: read
 
+concurrency:
+  group: release-from-semver-label-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release-from-label:
     name: Bump coordinated workspace version and tag merged package changes
@@ -430,6 +434,11 @@ jobs:
           git add pyproject.toml packages/memory/pyproject.toml packages/planning/pyproject.toml packages/verification/pyproject.toml generated/workspace/typescript/package.json generated/memory/typescript/package.json generated/planning/typescript/package.json generated/verification/typescript/package.json uv.lock
           RELEASE_DIFF="$(git diff --cached --name-only)"
           if [ -n "$RELEASE_DIFF" ]; then
+            git fetch origin master --tags
+            if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/master)" ]; then
+              echo "::notice::origin/master advanced while this release proof was running; skip this stale release attempt and let the newer master run decide the release."
+              exit 0
+            fi
             python - <<'PY'
           import json
           import subprocess
@@ -447,9 +456,7 @@ jobs:
             git commit -m "Release ${{ steps.release-bump.outputs.tag }}"
           fi
           git tag "${{ steps.release-bump.outputs.tag }}"
-          if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/master)" ]; then
-            git push origin HEAD:master
-          fi
+          git push origin HEAD:master
           git push origin "${{ steps.release-bump.outputs.tag }}"
 
       - name: Publish GitHub release
