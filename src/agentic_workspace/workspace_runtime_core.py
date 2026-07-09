@@ -19634,18 +19634,28 @@ def _completion_gate_claim_authorization(
 ) -> dict[str, Any]:
     all_claim_classes = [
         "partial_progress",
+        "local_pr_complete",
         "slice_complete",
+        "leaf_issue_complete",
         "lane_complete",
+        "parent_issue_complete",
         "parent_complete",
         "full_intent_complete",
         "issue_closure",
     ]
     rank = {
         "partial_progress": 0,
+        "local_pr_complete": 1,
+        "local_pr": 1,
         "slice_complete": 1,
         "slice": 1,
-        "lane_complete": 2,
-        "lane": 2,
+        "leaf_issue_complete": 2,
+        "leaf_issue": 2,
+        "issue_complete": 2,
+        "lane_complete": 3,
+        "lane": 3,
+        "parent_issue_complete": 3,
+        "parent_issue": 3,
         "parent_complete": 3,
         "parent": 3,
         "full_intent_complete": 4,
@@ -19666,7 +19676,7 @@ def _completion_gate_claim_authorization(
         if requested_rank >= rank["full_intent_complete"] and issue_refs:
             allowed_claim_classes.append("issue_closure")
     elif proof_records_slice and status in {"blocked", "continue-required"} and not human_accepted_partial:
-        allowed_claim_classes = ["partial_progress", "slice_complete"]
+        allowed_claim_classes = ["partial_progress", "local_pr_complete", "slice_complete"]
     elif human_accepted_partial or status == "continue-required":
         allowed_claim_classes = ["partial_progress"]
     else:
@@ -20537,6 +20547,144 @@ def _report_closeout_trust_payload(
             "rule": "This scope only supports claiming PR feedback addressed with proof; it does not authorize issue, lane, parent, or full-intent completion.",
         }
 
+    def current_direct_task_scope() -> dict[str, Any]:
+        if target_root is None or config is None or not normalized_changed_paths or not str(task_text or "").strip():
+            return {"kind": "agentic-workspace/current-task-closeout-scope/v1", "status": "not-applicable"}
+        execution_posture = _execution_posture_payload(
+            config=config,
+            changed_paths=normalized_changed_paths,
+            task_text=task_text,
+            target_root=target_root,
+        )
+        planning_safety_gate = _planning_safety_gate_payload(
+            target_root=target_root,
+            config=config,
+            changed_paths=normalized_changed_paths,
+            task_text=task_text,
+            execution_posture=execution_posture,
+        )
+        return {
+            "kind": "agentic-workspace/current-task-closeout-scope/v1",
+            "status": "active",
+            "relationship": "bounded-current-task",
+            "changed_paths": normalized_changed_paths,
+            "claim_classes": ["local_pr_complete", "slice_complete"],
+            "planning_safety_gate": _selector_first_planning_safety_gate(planning_safety_gate),
+            "rule": (
+                "This scope supports only local PR or current-slice completion claims with proof; it does not authorize "
+                "leaf issue, lane, parent issue, full-intent, or issue-closure claims."
+            ),
+        }
+
+    def current_task_proof_state(proof_selection: dict[str, Any]) -> dict[str, Any]:
+        required_commands = [
+            str(command).strip() for command in _list_payload(proof_selection.get("required_commands")) if str(command).strip()
+        ]
+        manual_verification = current_task_manual_verification_state(proof_selection)
+        if target_root is None:
+            return {
+                "kind": "agentic-workspace/current-task-proof-state/v1",
+                "status": "unavailable",
+                "manual_verification": manual_verification,
+                "proof_execution_evidence": {
+                    "kind": "proof-execution-evidence/v1",
+                    "status": "unavailable",
+                    "state_model": list(_PROOF_EXECUTION_STATUSES),
+                    "expected_commands": required_commands,
+                    "manual_verification_expected": manual_verification.get("expected"),
+                    "manual_verification": manual_verification,
+                    "receipt_reconciliation": {"status": "unavailable", "commands": []},
+                    "missing_evidence_diagnostics": {
+                        "unavailable": "proof receipt reconciliation requires a target root",
+                    },
+                },
+                "receipt_bridge": {"status": "unavailable", "missing_receipt_count": len(required_commands)},
+                "rule": "Current-task closeout preserves proof execution state; unavailable proof state blocks completion claims.",
+            }
+        from agentic_workspace.workspace_runtime_proof import _proof_receipt_bridge_payload, _proof_receipt_reconciliation_payload
+
+        proof_receipt_reconciliation = _proof_receipt_reconciliation_payload(
+            target_root=target_root,
+            required_commands=required_commands,
+            changed_paths=normalized_changed_paths,
+        )
+        proof_execution_evidence = {
+            "kind": "proof-execution-evidence/v1",
+            "status": "recorded-and-accepted" if proof_receipt_reconciliation.get("status") == "accepted" else "not-run-or-not-recorded",
+            "state_model": list(_PROOF_EXECUTION_STATUSES),
+            "expected_commands": required_commands,
+            "manual_verification_expected": manual_verification.get("expected"),
+            "manual_verification": manual_verification,
+            "receipt_reconciliation": proof_receipt_reconciliation,
+            "missing_evidence_diagnostics": {
+                "not-run-or-not-recorded": "no trusted receipt exists for this selected command",
+                "run-but-not-recorded": "a receipt exists, but not for this selected command",
+                "record-stale-untrusted": "a receipt exists, but command/path/result trust does not match the current proof selection",
+                "recorded-failed": "the selected command was recorded as failed",
+                "accepted": "the selected command has an exact matching passed receipt",
+            },
+            "rule": (
+                "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, "
+                "or was manually verified. Latest receipts are reconciled but do not bypass intent or closeout review."
+            ),
+        }
+        proof_receipt_bridge = _proof_receipt_bridge_payload(
+            changed_paths=normalized_changed_paths,
+            proof_receipt_reconciliation=proof_receipt_reconciliation,
+            cli_invoke=cli_invoke,
+        )
+        return {
+            "kind": "agentic-workspace/current-task-proof-state/v1",
+            "status": proof_execution_evidence["status"],
+            "manual_verification": manual_verification,
+            "proof_execution_evidence": proof_execution_evidence,
+            "receipt_bridge": {
+                "status": str(proof_receipt_bridge.get("status", "")),
+                "missing_receipt_count": int(proof_receipt_bridge.get("missing_receipt_count", 0) or 0),
+                "detail_selector": "proof_receipt_bridge",
+            },
+            "rule": "Current-task closeout preserves selected proof, receipt reconciliation, and missing/stale/failed proof state separately.",
+        }
+
+    def current_task_manual_verification_state(proof_selection: dict[str, Any]) -> dict[str, Any]:
+        proof_obligations = _as_dict(proof_selection.get("proof_obligations"))
+        required_proof = _as_dict(proof_obligations.get("required_proof"))
+        selected_manual = _as_dict(proof_selection.get("manual_verification"))
+        manual_obligations = [
+            obligation for obligation in _list_payload(required_proof.get("manual_obligations")) if isinstance(obligation, dict)
+        ]
+        manual_required_value = required_proof.get("manual_verification_required")
+        manual_required_known = isinstance(manual_required_value, bool)
+        if selected_manual or manual_obligations or manual_required_value is True:
+            status = str(selected_manual.get("status") or "required")
+            expected: bool | None = True
+        elif manual_required_known:
+            status = "not-required"
+            expected = False
+        else:
+            status = "unknown"
+            expected = None
+        declared_count = _as_int(required_proof.get("manual_obligation_count"))
+        manual_obligation_count = max(declared_count, len(manual_obligations))
+        payload: dict[str, Any] = {
+            "kind": "agentic-workspace/current-task-manual-verification-state/v1",
+            "status": status,
+            "expected": expected,
+            "manual_verification_expected": expected,
+            "manual_verification_required": expected is True,
+            "manual_obligation_count": manual_obligation_count,
+            "manual_obligations": manual_obligations,
+            "rule": (
+                "Current-task proof state derives manual verification from selected proof obligations; unknown means the "
+                "selected proof packet did not expose a manual-verification decision."
+            ),
+        }
+        if selected_manual:
+            payload["selected_manual_verification"] = selected_manual
+        if proof_obligations:
+            payload["proof_obligations_status"] = str(proof_obligations.get("status") or required_proof.get("status") or "")
+        return payload
+
     def archived_slice_closeout_evidence() -> dict[str, Any]:
         archived_record = _closeout_planning_record_for_report(active_planning_record={}, target_root=target_root)
         if not archived_record:
@@ -20633,7 +20781,18 @@ def _report_closeout_trust_payload(
 
     task_switch_scope = current_task_switch_scope()
     pr_comment_repair_scope = current_pr_comment_repair_scope() if task_switch_scope.get("status") != "active" else {}
-    current_bounded_scope = task_switch_scope if task_switch_scope.get("status") == "active" else pr_comment_repair_scope
+    direct_task_scope = (
+        current_direct_task_scope()
+        if task_switch_scope.get("status") != "active" and pr_comment_repair_scope.get("status") != "active"
+        else {}
+    )
+    current_bounded_scope = (
+        task_switch_scope
+        if task_switch_scope.get("status") == "active"
+        else pr_comment_repair_scope
+        if pr_comment_repair_scope.get("status") == "active"
+        else direct_task_scope
+    )
     planning_report = next((report for report in module_reports if isinstance(report, dict) and report.get("module") == "planning"), None)
     if not isinstance(planning_report, dict):
         gate = strict_gate(trust="unavailable", reason="planning module is not installed", active_planning_record=False)
@@ -20981,6 +21140,7 @@ def _report_closeout_trust_payload(
             include_assurance_requirements=False,
             include_routine_work_context=False,
         )
+        proof_state = current_task_proof_state(proof_selection)
         current_task_options = _closeout_completion_options(
             status="present",
             trust=trust,
@@ -21009,23 +21169,57 @@ def _report_closeout_trust_payload(
                     )
                 adjusted_options.append(updated)
             current_task_options = adjusted_options
+        elif relationship == "bounded-current-task":
+            adjusted_options = []
+            for option in current_task_options:
+                updated = dict(option)
+                if updated.get("id") == "claim-slice-complete":
+                    updated["required_claim_class"] = "local_pr_complete"
+                    updated["bounded_claim_classes"] = ["local_pr_complete", "slice_complete"]
+                    updated["why"] = (
+                        "current task proof supports a bounded local PR or slice completion claim"
+                        if updated.get("allowed") is True
+                        else "current task completion is blocked until proof for the changed scope is visible"
+                    )
+                adjusted_options.append(updated)
+            current_task_options = adjusted_options
         current_task_operating_loop = _operating_loop_decision_payload(
             claim_context="closeout",
             planning_safety_gate=_as_dict(current_bounded_scope.get("planning_safety_gate")),
             proof=proof_selection,
         )
+        claim_slice_option = next(
+            (option for option in current_task_options if isinstance(option, dict) and option.get("id") == "claim-slice-complete"),
+            {},
+        )
+        if relationship == "bounded-pr-comment-repair":
+            bounded_claim_classes = ["pr_feedback_addressed"]
+        else:
+            bounded_claim_classes = ["local_pr_complete", "slice_complete"]
+        allowed_claim_classes = bounded_claim_classes if claim_slice_option.get("allowed") is True else []
+        blocked_claim_classes = [
+            "local_pr_complete",
+            "slice_complete",
+            "leaf_issue_complete",
+            "lane_complete",
+            "parent_issue_complete",
+            "parent_complete",
+            "full_intent_complete",
+            "issue_closure",
+        ]
+        blocked_claim_classes = [claim for claim in blocked_claim_classes if claim not in allowed_claim_classes]
         current_task_closeout = {
             "kind": "agentic-workspace/current-task-closeout/v1",
             "status": "active",
             "scope": current_bounded_scope,
-            "allowed_claim_classes": [current_bounded_scope.get("claim_class", "slice_complete")]
-            if current_bounded_scope.get("claim_class")
-            else ["slice_complete"],
-            "blocked_claim_classes": ["full_intent_complete", "issue_closure", "lane_complete", "parent_complete"],
+            "bounded_claim_classes": bounded_claim_classes,
+            "allowed_claim_classes": allowed_claim_classes,
+            "blocked_claim_classes": blocked_claim_classes,
             "strict_closeout_gate": current_task_gate,
             "completion_options": current_task_options,
             "operating_loop": current_task_operating_loop,
             "proof": proof_selection,
+            "proof_state": proof_state,
             "repo_wide_residue": {
                 "strict_closeout_gate": gate,
                 "completion_gate": completion_gate,
@@ -21033,8 +21227,8 @@ def _report_closeout_trust_payload(
                 "lower_trust_closeout_count": effective_lower_trust_count,
             },
             "rule": (
-                "Current-task closeout options do not authorize active-plan progress, parent closure, issue closure, "
-                "or full-intent completion for bounded PR-comment repair or unrelated planning residue."
+                "Current-task closeout options do not authorize active-plan progress, leaf issue completion, parent lane "
+                "or issue completion, issue closure, or full-intent completion unless those classes are explicitly allowed."
             ),
         }
     memory_consult = (

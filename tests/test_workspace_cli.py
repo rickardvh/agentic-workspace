@@ -1085,6 +1085,117 @@ candidates = []
     assert "completion_gate" not in claim_slice["blocking_fields"]
 
 
+def test_closeout_trust_composes_current_task_closeout_for_ordinary_changed_scope(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "closeout_trust",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Implement a focused runtime report fix",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    current = payload["current_task_closeout"]
+    assert current["status"] == "active"
+    assert current["scope"]["relationship"] == "bounded-current-task"
+    assert current["bounded_claim_classes"] == ["local_pr_complete", "slice_complete"]
+    assert current["allowed_claim_classes"] == []
+    assert "leaf_issue_complete" in current["blocked_claim_classes"]
+    assert "parent_issue_complete" in current["blocked_claim_classes"]
+    assert "full_intent_complete" in current["blocked_claim_classes"]
+    assert "issue_closure" in current["blocked_claim_classes"]
+    claim_slice = next(option for option in current["completion_options"] if option["id"] == "claim-slice-complete")
+    assert claim_slice["allowed"] is False
+    assert claim_slice["required_claim_class"] == "local_pr_complete"
+    assert claim_slice["bounded_claim_classes"] == ["local_pr_complete", "slice_complete"]
+    assert "intent_satisfaction.closure_scope.validation_proof" in claim_slice["blocking_fields"]
+    proof_state = current["proof_state"]
+    assert proof_state["status"] == "not-run-or-not-recorded"
+    assert proof_state["proof_execution_status"] == "not-run-or-not-recorded"
+    assert proof_state["state_model"] == ["selected", "run", "passed", "failed", "skipped", "unavailable", "waived", "missing"]
+    assert "expected_commands" in proof_state
+    assert proof_state["manual_verification_expected"] is True
+    assert proof_state["manual_verification"]["status"] == "required"
+    assert proof_state["receipt_reconciliation_status"] in {"missing", "partial", "accepted", "not-recorded", "unavailable"}
+    assert proof_state["receipt_bridge"]["status"] in {"action-required", "complete", "unavailable"}
+    assert "do not authorize active-plan progress, leaf issue completion" in current["rule"]
+
+
+def test_closeout_trust_preserves_current_task_manual_proof_obligations(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
+    import agentic_workspace.workspace_runtime_core as runtime_core
+
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+    capsys.readouterr()
+
+    original_proof_selection = runtime_core._proof_selection_for_changed_paths
+
+    def proof_selection_with_manual_obligation(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        payload = original_proof_selection(*args, **kwargs)
+        payload["proof_obligations"] = {
+            "kind": "agentic-workspace/proof-obligations/v1",
+            "required_proof": {
+                "status": "required",
+                "manual_verification_required": True,
+                "manual_obligation_count": 1,
+                "manual_obligations": [
+                    {
+                        "id": "verification:manual-review",
+                        "status": "missing-evidence",
+                        "missing_evidence": ["manual_review"],
+                        "claim_boundary": "completion-claims-qualified-until-manual-evidence-recorded-or-waived",
+                    }
+                ],
+            },
+        }
+        return payload
+
+    monkeypatch.setattr(runtime_core, "_proof_selection_for_changed_paths", proof_selection_with_manual_obligation)
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "closeout_trust",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Implement a focused runtime report fix",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)["answer"]
+
+    proof_state = payload["current_task_closeout"]["proof_state"]
+    assert proof_state["manual_verification_expected"] is True
+    assert proof_state["manual_verification"]["status"] == "required"
+    assert proof_state["manual_verification"]["manual_verification_required"] is True
+    assert proof_state["manual_verification"]["manual_obligation_count"] == 1
+
+
 def test_closeout_trust_scopes_pr_comment_repair_to_feedback_claim(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0

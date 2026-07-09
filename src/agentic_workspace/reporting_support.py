@@ -1200,6 +1200,16 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             task_switch = task_switch if isinstance(task_switch, dict) else {}
             proof = value.get("proof", {})
             proof = proof if isinstance(proof, dict) else {}
+            proof_state = value.get("proof_state", {})
+            proof_state = proof_state if isinstance(proof_state, dict) else {}
+            proof_execution = proof_state.get("proof_execution_evidence", {})
+            proof_execution = proof_execution if isinstance(proof_execution, dict) else {}
+            manual_verification = proof_execution.get("manual_verification", proof_state.get("manual_verification", {}))
+            manual_verification = manual_verification if isinstance(manual_verification, dict) else {}
+            receipt_reconciliation = proof_execution.get("receipt_reconciliation", {})
+            receipt_reconciliation = receipt_reconciliation if isinstance(receipt_reconciliation, dict) else {}
+            receipt_bridge = proof_state.get("receipt_bridge", {})
+            receipt_bridge = receipt_bridge if isinstance(receipt_bridge, dict) else {}
             proof_commands = _support_list_payload(proof.get("required_commands"))
             changed_paths = _support_list_payload(scope.get("changed_paths"))
             repo_wide = value.get("repo_wide_residue", {})
@@ -1253,6 +1263,9 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "rule": scope.get("rule", ""),
                 },
                 "strict_closeout_gate": value.get("strict_closeout_gate", {}),
+                "bounded_claim_classes": value.get("bounded_claim_classes", []),
+                "allowed_claim_classes": value.get("allowed_claim_classes", []),
+                "blocked_claim_classes": value.get("blocked_claim_classes", []),
                 "completion_options": value.get("completion_options", []),
                 "operating_loop": value.get("operating_loop", {}),
                 "proof": {
@@ -1262,6 +1275,30 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "required_command_count": len(proof_commands),
                     "proof_strategy": proof.get("proof_strategy", {}),
                     "detail_omitted": "full proof packet is available with report --section closeout_trust --verbose",
+                },
+                "proof_state": {
+                    "kind": proof_state.get("kind", "agentic-workspace/current-task-proof-state/v1"),
+                    "status": proof_state.get("status", ""),
+                    "proof_execution_status": proof_execution.get("status", ""),
+                    "state_model": proof_execution.get("state_model", []),
+                    "expected_commands": proof_execution.get("expected_commands", []),
+                    "manual_verification_expected": proof_execution.get("manual_verification_expected"),
+                    "manual_verification": {
+                        key: manual_verification.get(key)
+                        for key in (
+                            "kind",
+                            "status",
+                            "expected",
+                            "manual_verification_required",
+                            "manual_obligation_count",
+                            "proof_obligations_status",
+                            "rule",
+                        )
+                        if key in manual_verification
+                    },
+                    "receipt_reconciliation_status": receipt_reconciliation.get("status", ""),
+                    "receipt_bridge": receipt_bridge,
+                    "rule": proof_state.get("rule", ""),
                 },
                 "repo_wide_residue": {
                     "strict_closeout_gate": repo_wide_gate,
