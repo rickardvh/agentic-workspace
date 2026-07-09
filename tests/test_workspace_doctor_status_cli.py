@@ -657,6 +657,9 @@ def test_doctor_module_filter_does_not_warn_about_omitted_installed_modules(tmp_
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["modules"] == ["planning"]
+    assert payload["scoped_health"]["selected_modules"] == ["planning"]
+    assert payload["scoped_health"]["selected_module_health"] == "healthy"
+    assert payload["scoped_health"]["global_warnings_block_scoped_check"] is False
     assert payload["residue_modules"] == []
     assert not any("installed module 'memory' is not enabled" in warning for warning in payload["warnings"])
     assert not any("installed module 'verification' is not enabled" in warning for warning in payload["warnings"])
@@ -666,6 +669,55 @@ def test_doctor_module_filter_does_not_warn_about_omitted_installed_modules(tmp_
     unscoped_payload = json.loads(capsys.readouterr().out)
     assert unscoped_payload["residue_modules"] == ["verification"]
     assert any("installed module 'verification' is not enabled" in warning for warning in unscoped_payload["warnings"])
+
+
+def test_scoped_lifecycle_health_does_not_block_selected_module_on_global_warnings() -> None:
+    from agentic_workspace.workspace_runtime_core import _scoped_lifecycle_health_payload
+
+    payload = {
+        "selected_modules": ["planning"],
+        "health": "attention-needed",
+        "warnings": ["workspace-level warning outside the selected module"],
+        "needs_review": [],
+        "reports": [
+            {
+                "module": "planning",
+                "warnings": [],
+                "actions": [],
+            }
+        ],
+    }
+
+    scoped_health = _scoped_lifecycle_health_payload(payload)
+
+    assert scoped_health["selected_module_health"] == "healthy"
+    assert scoped_health["global_warning_count"] == 1
+    assert scoped_health["global_warnings_block_scoped_check"] is False
+
+
+def test_scoped_lifecycle_health_reports_selected_module_attention_without_global_warning_blocking() -> None:
+    from agentic_workspace.workspace_runtime_core import _scoped_lifecycle_health_payload
+
+    payload = {
+        "selected_modules": ["planning"],
+        "health": "attention-needed",
+        "warnings": [],
+        "needs_review": [],
+        "reports": [
+            {
+                "module": "planning",
+                "warnings": ["planning manifest needs review"],
+                "actions": [],
+            }
+        ],
+    }
+
+    scoped_health = _scoped_lifecycle_health_payload(payload)
+
+    assert scoped_health["selected_module_health"] == "attention-needed"
+    assert scoped_health["selected_warning_count"] == 1
+    assert scoped_health["global_warning_count"] == 0
+    assert scoped_health["global_warnings_block_scoped_check"] is False
 
 
 def test_status_flags_missing_workspace_shared_layer(tmp_path: Path, capsys) -> None:
