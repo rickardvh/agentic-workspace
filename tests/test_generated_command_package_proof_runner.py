@@ -195,7 +195,7 @@ def test_operation_conformance_runner_executes_python_cases(capsys) -> None:
     assert payload["artifact_registry"] == "operation_artifact_registry.json"
     assert payload["summary"]["state"] == "pass"
     assert payload["summary"]["fail_count"] == 0
-    assert payload["summary"]["pass_count"] == 9
+    assert payload["summary"]["pass_count"] == 10
     cases = {(case["case_id"], case["target"]): case for case in payload["cases"]}
     assert cases[("defaults.selected-output.success", "python")]["state"] == "pass"
     assert cases[("defaults.selected-output.success", "python")]["adapter_id"] == "python.function"
@@ -205,6 +205,7 @@ def test_operation_conformance_runner_executes_python_cases(capsys) -> None:
     assert cases[("config.selected-output.success", "python")]["exit_code"] == 0
     assert cases[("defaults.tiny-router-text.success", "python")]["exit_code"] == 0
     assert cases[("modules.report-router.success", "python")]["state"] == "pass"
+    assert cases[("session-log.manage-status.boundary", "python")]["selected_fields"]["enabled"] is False
     assert cases[("delegation-outcome.append-write.boundary", "python")]["selected_fields"]["recorded.outcome"] == "success"
     assert cases[("memory.list-skills.parity", "python")]["selected_fields"] == {"mode": "skills"}
 

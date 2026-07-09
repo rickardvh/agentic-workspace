@@ -1417,6 +1417,18 @@
       "conformance_ref": "work-thread.prune.process plus workspace work-thread tests",
       "migration_path": "Keep as workspace runtime until local-only prune-candidate policy can be represented by portable file-delete primitives with equivalent safety.",
       "generic_behavior_audit": "Not counted as portable codegen completion; prune safety depends on AW-owned work-thread projection and local-only authority boundaries."
+    },
+    {
+      "id": "workspace.session-log.manage",
+      "summary": "Read, rotate, or annotate ignored local AW session logs under .agentic-workspace/local/.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Local session logging enforces AW-specific ignored-local path limits, pointer containment, and non-evidence semantics.",
+      "conformance_ref": "session-log.manage.process plus workspace session logging tests",
+      "migration_path": "Keep as workspace runtime until local-only session log status, rotation, and append policy can be represented by portable file primitives with equivalent containment safety.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; session log safety depends on AW-owned local-only authority boundaries and compatibility output."
     }
   ],
   "primitive_taxonomy": {

@@ -17,6 +17,12 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "session-log.manage",
+      "path": "operations/session-log.manage.json",
+      "command": "session-log",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "config.report",
       "path": "operations/config.report.json",
       "command": "config",

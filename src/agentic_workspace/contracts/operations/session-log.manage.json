@@ -1,0 +1,106 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "session-log.manage",
+  "command_surface": {
+    "command": "session-log",
+    "subcommands": [
+      "status",
+      "new-session",
+      "note"
+    ],
+    "format_option": "format"
+  },
+  "summary": "Inspect or annotate ignored local AW session logs.",
+  "classification": "local-record-append",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "session_log_command",
+      "source": "cli-option",
+      "required": true,
+      "command_visibility": "runtime-only",
+      "description": "Generated parser destination for the selected session-log subcommand."
+    },
+    {
+      "name": "text",
+      "source": "cli-option",
+      "required": false,
+      "command_visibility": "runtime-only",
+      "description": "Runtime field populated only by the note subcommand."
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/local/session-logging/current.json",
+      "required": false
+    },
+    {
+      "surface": ".agentic-workspace/local/logs/",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/local/session-logging/current.json",
+      "required": false,
+      "when": "create or rotate the current local session log"
+    },
+    {
+      "surface": ".agentic-workspace/local/logs/",
+      "required": false,
+      "when": "create a local session log or append an optional note"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "manage_session_log",
+      "uses": "workspace.session-log.manage",
+      "description": "Read status, create a new session, or append a local-only note."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit command result."
+    }
+  ],
+  "guards": [
+    "Write only under .agentic-workspace/local/session-logging/ and .agentic-workspace/local/logs/.",
+    "Do not capture non-AW shell output.",
+    "Do not treat local session logs as proof, Planning state, Memory, or closeout authority."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated command package checks include the session-log surface",
+    "session logging tests cover status and note behavior through the generated CLI"
+  ],
+  "migration_status": "runtime-consumed"
+}

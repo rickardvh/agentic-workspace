@@ -319,6 +319,32 @@
         "delegation outcome TypeScript wrapper output or write boundary changes",
         "delegation-outcome.append-text.process conformance expectations change"
       ]
+    },
+    {
+      "artifact_id": "root-workspace.session-log.python",
+      "operation_id": "session-log.manage",
+      "package_id": "root-workspace",
+      "target": "python",
+      "adapter_id": "cli.process",
+      "proof_role": "wrapper-smoke",
+      "source_ref": "command_package_ir:root-workspace/session-log",
+      "wrapper_refs": [
+        "session-log.manage.cli"
+      ],
+      "case_ids": [
+        "session-log.manage-status.boundary"
+      ],
+      "path_refs": [
+        "generated/workspace/python/cli.py",
+        "generated/workspace/python/commands/session_log_manage.py",
+        "src/agentic_workspace/contracts/operations/session-log.manage.json",
+        "src/agentic_workspace/contracts/conformance/session-log.manage.process.json"
+      ],
+      "stale_when": [
+        "session-log.manage operation contract changes",
+        "session-log Python wrapper output or no-write boundary changes",
+        "session-log.manage.process conformance expectations change"
+      ]
     }
   ],
   "proof_routing": {

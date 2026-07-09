@@ -1218,6 +1218,114 @@
         ],
         "rationale": "This case remains wrapper-smoke because its current acceptance is cross-target CLI parity for generated Memory transport and stable JSON fields. Composite parity assumes primitive executor behavior is tested by primitive cases, and a later TypeScript function target should promote this to direct operation conformance when both direct function adapters are available."
       }
+    },
+    {
+      "id": "session-log.manage-status.boundary",
+      "title": "Session log status reports disabled local-only state through generated wrappers",
+      "behavioral_class": "boundary",
+      "operation_ref": {
+        "package_id": "root-workspace",
+        "operation_id": "session-log.manage",
+        "operation_path": "operations/session-log.manage.json",
+        "conformance_ref": "session-log.manage.process"
+      },
+      "artifacts": [
+        {
+          "artifact_id": "root-workspace.session-log.python",
+          "target": "python",
+          "adapter_id": "cli.process",
+          "proof_role": "wrapper-smoke",
+          "source_ref": "command_package_ir:root-workspace/session-log",
+          "wrapper_refs": [
+            "session-log.manage.cli"
+          ]
+        }
+      ],
+      "schema_refs": {
+        "operation_contract": "operations/session-log.manage.json",
+        "input": [],
+        "output": []
+      },
+      "composition": {
+        "case_focus": "Generated wrapper exposes the session-log status command without enabling local session logging or creating local records.",
+        "assumes_primitives": [
+          "workspace.target-root.resolve",
+          "workspace.session-log.manage",
+          "output.emit"
+        ],
+        "reuses_case_ids": []
+      },
+      "targets": [
+        {
+          "kind": "python",
+          "mode": "run"
+        }
+      ],
+      "input": {
+        "json": {
+          "target": ".",
+          "session_log_command": "status",
+          "format": "json"
+        },
+        "argv": [
+          "session-log",
+          "status",
+          "--target",
+          ".",
+          "--format",
+          "json"
+        ],
+        "fixture_id": "minimal-repo",
+        "fixture_files": {
+          ".git/.keep": "",
+          "README.md": "# Fixture\n"
+        }
+      },
+      "expected": {
+        "exit_code": 0,
+        "stdout": {
+          "format": "json",
+          "selected_fields": {
+            "kind": "agentic-workspace/session-logging-status/v1",
+            "enabled": false,
+            "local_only": true
+          }
+        },
+        "stderr": {
+          "format": "none",
+          "allow_non_empty": false
+        },
+        "filesystem": {
+          "allowed_write_paths": [],
+          "required_paths": [
+            ".git/.keep",
+            "README.md"
+          ],
+          "forbidden_paths": [
+            ".agentic-workspace"
+          ]
+        }
+      },
+      "freshness": {
+        "source_refs": [
+          "src/agentic_workspace/contracts/command_package_ir.json",
+          "src/agentic_workspace/contracts/conformance/session-log.manage.process.json"
+        ],
+        "stale_when": [
+          "session-log.manage operation or artifact mapping changes",
+          "session-log.manage.process expectations change",
+          "session log generated wrapper or disabled-status boundary changes"
+        ]
+      },
+      "migration": {
+        "replaces_handwritten_tests": [
+          "session-log generated status JSON and no-write assertions for session-log.manage.process are represented by this IR case and executed by scripts/check/run_operation_conformance_tests.py"
+        ],
+        "retain_handwritten_tests": [
+          "session logging runtime tests for enabled capture, disabled no-capture, note append, and pointer containment"
+        ],
+        "rationale": "This Python wrapper-smoke case proves the generated session-log command surface and disabled no-write boundary for the target that delegates to the AW session logging runtime; focused runtime tests cover local append behavior."
+      }
     }
   ]
 }

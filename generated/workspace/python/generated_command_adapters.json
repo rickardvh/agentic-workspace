@@ -643,6 +643,44 @@
       },
       "status": "generated"
     },
+    "session-log": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "session-log",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommands": [
+          "status",
+          "new-session",
+          "note"
+        ]
+      },
+      "conformance_refs": [
+        "session-log.manage.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "session-log.manage.cli",
+      "operation_id": "session-log.manage",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "workspace.session-log.manage",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "setup": {
       "command": {
         "command_manifest": "cli_commands.json",

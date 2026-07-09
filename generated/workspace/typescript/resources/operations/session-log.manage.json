@@ -1,0 +1,134 @@
+{
+  "classification": "local-record-append",
+  "command_surface": {
+    "command": "session-log",
+    "format_option": "format",
+    "subcommands": [
+      "status",
+      "new-session",
+      "note"
+    ]
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Write only under .agentic-workspace/local/session-logging/ and .agentic-workspace/local/logs/.",
+    "Do not capture non-AW shell output.",
+    "Do not treat local session logs as proof, Planning state, Memory, or closeout authority."
+  ],
+  "id": "session-log.manage",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Generated parser destination for the selected session-log subcommand.",
+      "name": "session_log_command",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Runtime field populated only by the note subcommand.",
+      "name": "text",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "session-log.manage"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated command package checks include the session-log surface",
+    "session logging tests cover status and note behavior through the generated CLI"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/session-logging/current.json"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/logs/"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Read status, create a new session, or append a local-only note.",
+      "id": "manage_session_log",
+      "uses": "workspace.session-log.manage"
+    },
+    {
+      "description": "Emit command result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Inspect or annotate ignored local AW session logs.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/session-logging/current.json",
+      "when": "create or rotate the current local session log"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/logs/",
+      "when": "create a local session log or append an optional note"
+    }
+  ]
+}

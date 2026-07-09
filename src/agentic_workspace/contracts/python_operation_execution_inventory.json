@@ -72,6 +72,29 @@
       "generic_behavior_audit": "Classified as package-specific-judgment; generated command surfaces own parser and help projection while workspace runtime owns local work-thread prune eligibility, local-only path safety, and non-evidence policy."
     },
     {
+      "operation_id": "session-log.manage",
+      "program": "agentic-workspace",
+      "command": "session-log",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/session-log.manage.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "session logging state resolution",
+        "local-only session log pointer and log file writes",
+        "session log text/json compatibility formatting"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "session-log.manage.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the session-log command; AW runtime owns local-only ignored session log state, containment checks, and compatibility output.",
+      "what_would_make_portable_later": "Represent session log status/note/new-session as schema-backed generated operation steps once dynamic ignored-local log path creation and append policy are declarative primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned session_logging functions own local-only path policy, pointer validation, optional note append, and status payload compatibility.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:session-log.manage"
+      ]
+    },
+    {
       "operation_id": "defaults.report",
       "program": "agentic-workspace",
       "command": "defaults",
