@@ -1127,6 +1127,53 @@ def test_planning_closeout_reads_shell_sensitive_proof_from_file(tmp_path: Path,
     assert archived["execution_run"]["validations run"] == proof_text
 
 
+def test_planning_closeout_reports_unusable_proof_file_without_last_fallback(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--proof-file",
+                ".agentic-workspace/local/proof-receipts/missing-closeout.md",
+                "--what-happened",
+                "attempted closeout with a missing proof file.",
+                "--scope-touched",
+                "packages/planning/src/repo_planning_bootstrap/installer.py",
+                "--changed-surfaces",
+                "planning closeout command",
+                "--review-summary",
+                "blocked on proof-file input.",
+                "--outcome-summary",
+                "proof-file rejection is explicit.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    warning = payload["warnings"][0]
+    payload_text = json.dumps(payload)
+
+    assert warning["warning_class"] == "closeout_proof_file_unusable"
+    assert warning["path"] == ".agentic-workspace/local/proof-receipts/missing-closeout.md"
+    assert warning["message"] == "--proof-file path does not exist or is not a file"
+    assert "--proof-file <path>" in warning["suggested_fix"]
+    assert any(
+        action["kind"] == "manual review"
+        and str(action["path"]).replace("\\", "/").endswith(".agentic-workspace/local/proof-receipts/missing-closeout.md")
+        for action in payload["actions"]
+    )
+    assert "--proof-from last" not in payload_text
+    assert not (tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json").exists()
+
+
 def test_planning_closeout_dry_run_previews_normalized_completed_state(tmp_path: Path, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
