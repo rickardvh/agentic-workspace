@@ -36,6 +36,13 @@ const commandDefinitions = [
           "name": "format"
         },
         {
+          "flags": [
+            "--section"
+          ],
+          "help": "Return one module detail section such as package_footprint or participation_model.",
+          "name": "section"
+        },
+        {
           "action": "store_true",
           "flags": [
             "--verbose"
@@ -2335,6 +2342,49 @@ const commandDefinitions = [
               "help": "Note text to append.",
               "name": "text",
               "required": true
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Analyze an ignored local AW session log into counts, repeated commands, failures, artifacts, packet kinds, and friction candidates.",
+          "name": "analyze",
+          "operation_ref": {
+            "id": "session-log.manage",
+            "path": "operations/session-log.manage.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--path"
+              ],
+              "help": "Optional repo-relative session log path; defaults to the current session pointer.",
+              "name": "path"
+            },
+            {
+              "flags": [
+                "--id"
+              ],
+              "help": "Optional session id or aw-session-<id>.md filename to analyze.",
+              "name": "id"
             },
             {
               "choices": [

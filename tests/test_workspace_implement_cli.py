@@ -2786,6 +2786,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
         "action_effect": trust["action_effect"],
         "detail_selector": "generated_surface_trust",
     }
+
     assert context["generated_surface_trust"]["action_effect"]["force"] == "required_before_claim"
     assert payload["proof"]["acceptance_guidance"]["status"] == "present"
     assert "guidance" not in context
@@ -2817,6 +2818,41 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     )
     _assert_json_payload_under(payload["operating_loop"], 1000, label="implement operating-loop compact projection", sort_keys=False)
     _assert_json_payload_under(payload, 21000, label="implement generated-surface tiny payload", sort_keys=False)
+
+
+def test_implement_tiny_proof_tiers_explain_required_single_tier() -> None:
+    packet = workspace_runtime_implement._tiny_proof_command_tiers_payload({}, required_commands=["uv run pytest tests/test_a.py"])
+
+    assert packet["status"] == "required-commands-present"
+    assert packet["detail_selector"] == "proof.proof_command_tiers"
+
+
+def test_implement_path_authority_warning_is_not_hard_blocker_when_allowed(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write(tmp_path / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "installer.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "packages/memory/src/repo_memory_bootstrap/installer.py",
+                "--task",
+                "Adjust memory route payload.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["action_signals"]["implementation_allowed"] is True
+    assert payload["action_signals"]["hard_blockers"] == []
+    assert "path_authority_attention=1" in payload["action_signals"]["changed_signals"]
 
 
 def test_implement_surfaces_runtime_source_edit_review_for_generated_cli_boundary(tmp_path: Path, capsys) -> None:

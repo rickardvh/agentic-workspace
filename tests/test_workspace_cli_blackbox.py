@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 
@@ -44,15 +45,47 @@ def test_blackbox_invalid_targets_report_usage_errors_without_tracebacks(tmp_pat
 def test_blackbox_near_miss_command_guides_to_startup() -> None:
     result = _run_cli("summry", "--format", "json", cwd=Path.cwd())
 
-    _assert_usage_error_without_traceback(result, expected="Did you mean: summary?")
-    assert "Startup tip: run 'agentic-workspace start --task \"<task>\" --format json'" in result.stderr
+    combined = f"{result.stdout}\n{result.stderr}"
+    assert result.returncode == 2
+    assert "Traceback" not in combined
+    payload = json.loads(result.stdout)
+    assert payload["kind"] == "agentic-workspace/retryable-cli-error/v1"
+    assert payload["exit_status"] == 2
+    assert payload["failure_class"] == "invalid-command"
+    assert payload["safe_to_retry"] is True
+    assert payload["suggested_command"] == "agentic-workspace summary --format json"
+    assert "Did you mean: summary?" in payload["message"]
+    assert "Startup tip: run 'agentic-workspace start --task \"<task>\" --format json'" in payload["message"]
 
 
 def test_blackbox_selector_conflict_guides_to_correct_usage() -> None:
     result = _run_cli("report", "--verbose", "--section", "agent_aids", "--format", "json", cwd=Path.cwd())
 
-    _assert_usage_error_without_traceback(result, expected="report detail selectors are mutually exclusive")
-    assert "use either --verbose or --section" in result.stderr
+    combined = f"{result.stdout}\n{result.stderr}"
+    assert result.returncode == 2
+    assert "Traceback" not in combined
+    payload = json.loads(result.stdout)
+    assert payload["kind"] == "agentic-workspace/retryable-cli-error/v1"
+    assert payload["failure_class"] == "selector-conflict"
+    assert payload["safe_to_retry"] is True
+    assert "report detail selectors are mutually exclusive" in payload["message"]
+    assert any("--section agent_aids --format json" in command and "--verbose" not in command for command in payload["alternatives"])
+
+
+def test_blackbox_module_cli_retryable_error_kind_uses_module_namespace() -> None:
+    result = subprocess.run(
+        ["uv", "run", "agentic-memory", "rout", "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    assert payload["kind"] == "agentic-memory/retryable-cli-error/v1"
+    assert payload["failure_class"] == "invalid-command"
 
 
 def test_blackbox_memory_route_task_misuse_guides_to_memory_consult() -> None:

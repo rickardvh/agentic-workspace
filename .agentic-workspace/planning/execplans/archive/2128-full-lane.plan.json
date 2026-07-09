@@ -1,0 +1,393 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement full #2128 session-log lane",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the full #2128 lane in PR #2141, including all child issues before using auto-close references.",
+    "hard_constraints": "Do not close #2128 from partial work; keep changes bounded to the #2128 child issue surfaces and required generated command contracts.",
+    "agent_may_decide": "Exact implementation details, focused tests, validation order, and PR body wording, as long as every lane child is covered.",
+    "escalate_when": "A child issue requires a broader redesign, external service dependency, or irreversible migration outside the lane scope.",
+    "next_action": "Implement remaining #2128 lane children, then run focused proof and update PR #2141 with complete auto-close references.",
+    "proof_expectations": [
+      "Focused tests for session-log analyze/index/path modes, structured CLI errors, modules sections, Memory route/capture recovery, proof/closeout semantics, and #2123 proof-file wording.",
+      "Regenerate/check command surfaces after CLI contract changes.",
+      "Run lane-relevant workspace validation and document any unrelated known failures separately."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/session_logging.py",
+      "src/agentic_workspace/config.py",
+      "src/agentic_workspace/workspace_runtime*.py",
+      "packages/memory/src/**",
+      "packages/planning/src/**",
+      "src/agentic_workspace/contracts/**",
+      "generated/workspace/**",
+      "tests/**",
+      "packages/*/tests/**",
+      ".agentic-workspace/planning/execplans/2128-full-lane.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "completion_criteria": [
+      "#2129 session-log analyzer accepts current log and explicit path/id and reports requested counts, failures, duplicate outputs, parsed packet kinds, and friction candidates.",
+      "#2130 session-log sidecar/index records command/output metadata and content-aware artifact summaries with duplicate output reuse.",
+      "#2131 retryable CLI usage errors produce structured JSON suggestions and repeated-failure hints.",
+      "#2132 session logging supports configured path modes that avoid leaking home/python paths when configured.",
+      "#2133 modules output is compact by default and supports section-addressable drilldown while retaining verbose output.",
+      "#2134 Memory route/capture reports weak-signal recovery options and low-confidence ownership alternatives.",
+      "#2136 implement/proof/closeout semantics distinguish blockers, proof tiers, archive/closure options, and successful help logging.",
+      "#2123 proof-file rejection wording names the rejected path and rule.",
+      "PR #2141 body auto-closes #2128 and all implemented child issues only after proof."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement the full #2128 lane in PR #2141, including all child issues before using auto-close references."
+  ],
+  "non_goals": [
+    "Do not implement unrelated AW backlog, payload synchronization, or broad refactors unless directly required by a lane child."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement the full #2128 lane in PR #2141, including all child issues before using auto-close references.",
+      "constraints": "Do not close #2128 from partial work; keep changes bounded to the #2128 child issue surfaces and required generated command contracts.",
+      "latitude": "Exact implementation details, focused tests, validation order, and PR body wording, as long as every lane child is covered.",
+      "escalation": "Escalate when a child issue requires a broader redesign, external service dependency, or irreversible migration outside the lane scope.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "2128-full-lane",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "session logging/config/runtime, generated command contracts, Memory, Planning, and focused tests"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Create a bounded plan for Implement full #2128 session-log lane.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement full #2128 session-log lane",
+    "inferred intended outcome": "Create a bounded plan for Implement full #2128 session-log lane.",
+    "chosen concrete what": "Full #2128 lane is implemented and validated in one PR from master.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "closeout scope recorded in closure_check and generated_closeout.",
+    "max changed files": "closed slice; no further writes expected without reopening a fresh plan.",
+    "required validation commands": "See proof_report.validation proof.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Archived slice is complete; reopen only if closeout evidence is invalidated.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Implement full #2128 session-log lane.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "2128-full-lane",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "No required continuation remains for this archived slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "closeout scope recorded in closure_check and generated_closeout."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "See proof_report.validation proof."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Implement full #2128 session-log lane is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented the full #2128 lane in PR #2141, including all lane child issues before closure references.",
+    "scope touched": "session logging analysis/indexing/path modes/artifact reuse; generated CLI retryable error envelopes; modules compact and section reports; Memory routing and capture guidance; Planning closeout completion options; implement hard-blocker/proof-tier semantics; contracts/generated adapters/tests/reference docs.",
+    "changed surfaces": "src/agentic_workspace/session_logging.py; src/agentic_workspace/config.py; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/contracts/**; generated/**; packages/memory/**; packages/planning/**; tests/**; docs/reference/workspace-local-override.md",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Lane reconciliation: #2129, #2130, #2131, #2132, #2133, #2134, and #2136 are implemented; #2123 proof-file closeout behavior was verified by existing planning archive tests; PR #2141 will carry auto-close references for #2128 and each lane child.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Validation passed: focused lane pytest suite 187 passed; make lint-workspace; make test-workspace; make test-memory; make lint-memory; make test-planning; make lint-planning; make typecheck-planning; make typecheck; defaults root_cli_authority; pytest tests/test_workspace_cli.py 178 passed; generate/adapter/package checks; schema-reference-docs; structured file inventory; operation conformance --target all; runtime_mirror_consistency. Known unrelated check_contract_tooling_surfaces.py failures are tracked in #2140.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement full #2128 session-log lane.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Full #2128 lane is implemented and validated in one PR from master.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to #2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains.",
+    "motivation worth preserving": "Future agents should continue from #2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains rather than rediscover this closeout residue.",
+    "canonical owner now": "#2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "#2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains",
+    "proposed durable intent": "Future agents should continue from #2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "#2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      {
+        "summary": "Closeout routed issue residue to #2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains.",
+        "owner": "#2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains",
+        "source": "durable_residue"
+      }
+    ],
+    "signals fixed": [],
+    "signals routed": [
+      {
+        "summary": "Closeout routed issue residue to #2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains.",
+        "owner": "#2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains",
+        "source": "durable_residue"
+      }
+    ],
+    "signals dismissed": [],
+    "next owner": "see routed signal owner"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-09: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": "#2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "blocked_claim_classes": [],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#2128",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        }
+      ],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Implement full #2128 session-log lane.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Validation passed: focused lane pytest suite 187 passed; make lint-workspace; make test-workspace; make test-memory; make lint-memory; make test-planning; make lint-planning; make typecheck-planning; make typecheck; defaults root_cli_authority; pytest tests/test_workspace_cli.py 178 passed; generate/adapter/package checks; schema-reference-docs; structured file inventory; operation conformance --target all; runtime_mirror_consistency. Known unrelated check_contract_tooling_surfaces.py failures are tracked in #2140.\nChanged surfaces: src/agentic_workspace/session_logging.py; src/agentic_workspace/config.py; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/contracts/**; generated/**; packages/memory/**; packages/planning/**; tests/**; docs/reference/workspace-local-override.md\nDurable residue: planning (#2140 tracks unrelated contract-tooling drift; no residual #2128 lane implementation work remains)\nMemory learning: route_to_planning\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}

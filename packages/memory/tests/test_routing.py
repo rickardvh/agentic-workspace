@@ -144,6 +144,10 @@ surfaces = ["startup"]
     assert first.route_summary["route_context"]["stage"] == "startup"
     assert first.route_summary["route_context"]["task_supplied"] is True
     assert first.route_summary["route_context"]["task_used_for_matching"] is False
+    assert second.route_summary["insufficient_route_signal"] is True
+    assert second.route_summary["task_prose_role"] == "context-only"
+    assert [item["id"] for item in second.route_summary["recovery_options"]] == ["add-files", "add-surface", "add-stage"]
+    assert [item["owner"] for item in second.route_summary["owner_alternatives"]][:2] == ["dismiss", "local_memory"]
 
 
 def test_route_memory_preserves_explicit_surfaces_separately_from_stage(tmp_path: Path) -> None:
@@ -269,6 +273,9 @@ routing_only = true
     assert "planning" in payload["non_memory_owner_routes"]
     assert "docs" in payload["non_memory_owner_routes"]
     assert payload["route_context"]["stage"] == "closeout"
+    assert payload["confidence"] == "low"
+    assert payload["storage_decision"]["recommended_owner"] == "local_memory"
+    assert [item["owner"] for item in payload["owner_alternatives"]][:3] == ["dismiss", "local_memory", "planning"]
 
 
 def test_route_memory_does_not_invent_test_remediation_for_plain_mistake_note(tmp_path: Path) -> None:

@@ -1074,8 +1074,13 @@ candidates = []
     assert archived["task_intent_promotion"]["needs review"] is True
     options = {option["id"]: option for option in payload["completion_options"]}
     assert options["claim-slice-complete"]["allowed"] is True
+    assert options["claim-lane-or-local-intent-complete"]["allowed"] is False
+    assert options["archive-retention"]["allowed"] is True
+    assert "separate from issue closure" in options["archive-retention"]["why"]
     assert options["close-larger-intent"]["allowed"] is False
     assert options["close-larger-intent"]["why"] == "slice closeout does not authorize larger-intent closure"
+    assert options["host-side-issue-closure"]["allowed"] is False
+    assert "host tracker issue closure" in options["host-side-issue-closure"]["why"]
     assert options["keep-larger-intent-open"]["allowed"] is True
     assert options["keep-larger-intent-open"]["owner"] == ".agentic-workspace/planning/state.toml"
     assert any(

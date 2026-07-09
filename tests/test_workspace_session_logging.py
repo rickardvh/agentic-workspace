@@ -24,6 +24,12 @@ def _current_log(target: Path) -> Path:
     return target / pointer["log_path"]
 
 
+def _current_index(target: Path) -> Path:
+    pointer = json.loads((target / ".agentic-workspace/local/session-logging/current.json").read_text(encoding="utf-8"))
+    session_id = pointer["session_id"]
+    return target / ".agentic-workspace/local/logs/indexes" / f"{session_id}.json"
+
+
 def test_session_logging_disabled_does_not_create_log(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
 
@@ -83,7 +89,15 @@ def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelu
     assert text.count("## Command - ") == 2
     assert "agentic-workspace config --target" in text
     assert "- exit_status: `0`" in text
-    assert "stdout:" in text
+    assert "Output stored as local artifact:" in text
+    assert "stdout summary:" in text
+    assert "`json`" in text
+
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    assert index["kind"] == "agentic-workspace/session-log-index/v1"
+    assert len(index["entries"]) == 2
+    assert index["entries"][0]["stdout"]["kind"] == "json"
+    assert index["entries"][0]["artifact"]["path"].startswith(".agentic-workspace/local/logs/artifacts/")
 
 
 def test_session_logging_note_command_appends_optional_note(tmp_path: Path, capsys) -> None:
@@ -148,11 +162,287 @@ def test_session_logging_large_output_uses_recoverable_artifact(tmp_path: Path, 
     assert artifact["stderr"] == ""
 
 
-def test_config_accepts_local_session_logging_without_unknown_field_warning(tmp_path: Path, capsys) -> None:
+def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packets(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
 
+    def runner(_argv: list[str]) -> int:
+        print(json.dumps({"kind": "agentic-workspace/example-packet/v1", "value": 1}))
+        return 2
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--format", "json"], runner) == 2
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--format", "json"], runner) == 2
+    capsys.readouterr()
+
+    assert source_cli.main(["session-log", "--target", str(target), "analyze", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/session-log-analysis/v1"
+    assert payload["status"] == "analyzed"
+    assert payload["index_status"] == "present"
+    assert payload["summary"]["command_count"] == 2
+    assert payload["summary"]["failure_count"] == 2
+    assert payload["summary"]["failed_count"] == 2
+    assert payload["summary"]["repeated_failure_count"] == 1
+    assert payload["summary"]["repeated_command_count"] == 1
+    assert payload["summary"]["duplicate_output_count"] == 1
+    assert payload["summary"]["artifact_count"] == 2
+    assert payload["packet_kinds"]["agentic-workspace/example-packet/v1"] == 2
+    assert payload["parsed_packet_kinds"]["agentic-workspace/example-packet/v1"] == 2
+    assert payload["repeated_failures"][0]["count"] == 2
+    assert {candidate["id"] for candidate in payload["friction_candidates"]} >= {
+        "failed-command",
+        "repeated-command",
+        "duplicate-output",
+    }
+
+    pointer = json.loads((target / ".agentic-workspace/local/session-logging/current.json").read_text(encoding="utf-8"))
+    assert source_cli.main(["session-log", "--target", str(target), "analyze", "--id", pointer["session_id"], "--format", "json"]) == 0
+    by_id = json.loads(capsys.readouterr().out)
+    assert by_id["path"] == payload["path"]
+
+
+def test_session_log_analyze_markdown_fallback_extracts_legacy_inline_output(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 12)
+    log_path = target / ".agentic-workspace/local/logs/aw-session-legacy-upload.md"
+    modules_payload = json.dumps({"kind": "agentic-workspace/modules-report/v1", "items": ["x" * 40]})
+    _write(
+        log_path,
+        f"""# Agentic Workspace Session Log
+
+## Command - 2026-07-09T15:46:03+00:00
+
+- id: `cmd-summry`
+- exit_status: `2`
+
+```sh
+agentic-workspace summry --format json
+```
+
+stdout:
+```text
+
+```
+
+stderr:
+```text
+usage: agentic-workspace
+error: argument command: invalid choice: 'summry' (choose from 'summary')
+Did you mean: summary?
+```
+
+## Command - 2026-07-09T15:46:04+00:00
+
+- id: `cmd-selector`
+- exit_status: `2`
+
+```sh
+agentic-workspace report --verbose --section agent_aids --format json
+```
+
+stdout:
+```text
+
+```
+
+stderr:
+```text
+error: report detail selectors are mutually exclusive
+```
+
+## Command - 2026-07-09T15:46:05+00:00
+
+- id: `cmd-modules-1`
+- exit_status: `0`
+
+```sh
+agentic-workspace modules --verbose --format json
+```
+
+stdout:
+```text
+{modules_payload}
+```
+
+stderr:
+```text
+
+```
+
+## Command - 2026-07-09T15:46:06+00:00
+
+- id: `cmd-modules-2`
+- exit_status: `0`
+
+```sh
+agentic-workspace modules --verbose --format json
+```
+
+stdout:
+```text
+{modules_payload}
+```
+
+stderr:
+```text
+
+```
+""",
+    )
+
+    assert (
+        source_cli.main(
+            ["session-log", "--target", str(target), "analyze", "--path", log_path.relative_to(target).as_posix(), "--format", "json"]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["index_status"] == "markdown-fallback"
+    assert payload["summary"]["command_count"] == 4
+    assert payload["summary"]["failure_count"] == 2
+    assert payload["summary"]["usage_mistake_count"] == 2
+    assert payload["summary"]["repeated_command_count"] == 1
+    assert payload["summary"]["duplicate_output_count"] == 1
+    assert payload["packet_kinds"]["agentic-workspace/modules-report/v1"] == 2
+    assert payload["usage_mistakes"][0]["failure_class"] == "invalid-command"
+    assert payload["usage_mistakes"][1]["failure_class"] == "selector-conflict"
+    assert any(entry["command"] == "agentic-workspace modules --verbose --format json" for entry in payload["largest_outputs"])
+    assert {candidate["id"] for candidate in payload["friction_candidates"]} >= {
+        "missing-index",
+        "failed-command",
+        "repeated-command",
+        "duplicate-output",
+        "large-output",
+        "oversized-modules-output",
+    }
+
+
+def test_session_logging_reuses_duplicate_large_output_artifacts(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 12)
+
+    def runner(_argv: list[str]) -> int:
+        print("same output payload")
+        return 0
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
+    capsys.readouterr()
+
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    artifacts = [entry["artifact"] for entry in index["entries"]]
+    assert artifacts[0]["path"] == artifacts[1]["path"]
+    assert artifacts[1]["duplicate_of"] == index["entries"][0]["id"]
+    artifact_files = list((target / ".agentic-workspace/local/logs/artifacts").rglob("*-output.json"))
+    assert len(artifact_files) == 1
+
+
+def test_session_logging_redacts_target_root_when_configured(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[session_logging]\nenabled = true\nredact_local_paths = true\n",
+    )
+
+    def runner(_argv: list[str]) -> int:
+        print(f"local path: {target}")
+        return 0
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
+    assert str(target) in capsys.readouterr().out
+
+    log_text = _current_log(target).read_text(encoding="utf-8")
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    assert str(target) not in log_text
+    assert target.as_posix() not in log_text
+    assert "<target>" in log_text
+    assert index["path_redaction"]["mode"] == "redacted"
+    assert index["entries"][0]["target"] == "<target>"
+
+
+def test_session_logging_path_mode_redacts_home_and_python_but_keeps_raw_artifact_local(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[session_logging]\nenabled = true\npath_mode = "redacted"\n',
+    )
+    monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 12)
+
+    def runner(_argv: list[str]) -> int:
+        print(f"home={Path.home()} python={sys.executable} target={target}")
+        return 0
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
+    capsys.readouterr()
+
+    log_text = _current_log(target).read_text(encoding="utf-8")
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    assert str(Path.home()) not in log_text
+    assert sys.executable not in log_text
+    assert "<home>" in log_text
+    assert "<python>" in log_text
+    assert index["path_redaction"]["raw_artifact_recoverability"].startswith("raw output may remain")
+    artifact_path = target / index["entries"][0]["artifact"]["path"]
+    assert str(Path.home()).replace("\\", "\\\\") in artifact_path.read_text(encoding="utf-8")
+
+
+def test_session_logging_path_mode_repo_relative_for_repo_contained_paths(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[session_logging]\nenabled = true\npath_mode = "repo-relative"\n',
+    )
+
+    def runner(_argv: list[str]) -> int:
+        print(f"repo path: {target / 'src' / 'app.py'}")
+        return 0
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
+    capsys.readouterr()
+
+    log_text = _current_log(target).read_text(encoding="utf-8")
+    assert str(target) not in log_text
+    assert "./src/app.py" in log_text or ".\\src\\app.py" in log_text
+
+
+def test_session_logging_successful_system_exit_help_is_not_exception(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+
+    def runner(_argv: list[str]) -> int:
+        print("usage: agentic-workspace config")
+        raise SystemExit(0)
+
+    try:
+        session_logging.run_with_session_logging(["config", "--target", str(target), "--help"], runner)
+    except SystemExit as exc:
+        assert exc.code == 0
+
+    capsys.readouterr()
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    assert index["entries"][0]["exit_status"] == 0
+    assert index["entries"][0]["exception"] == ""
+
+
+def test_config_accepts_local_session_logging_without_unknown_field_warning(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[session_logging]\nenabled = true\nredact_local_paths = true\n",
+    )
+
     assert source_cli.main(["config", "--target", str(target), "--format", "json"]) == 0
 
+    payload = json.loads(capsys.readouterr().out)
+    assert not any("session_logging" in warning for warning in payload["warnings"])
+
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        'schema_version = 1\n\n[session_logging]\nenabled = true\npath_mode = "repo-relative"\n',
+    )
+    assert source_cli.main(["config", "--target", str(target), "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert not any("session_logging" in warning for warning in payload["warnings"])

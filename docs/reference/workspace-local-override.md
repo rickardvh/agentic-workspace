@@ -33,6 +33,10 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | `local_memory` | object | no |  | Machine-local memory opt-in and path configuration. |  |  |
 | `local_memory.enabled` | boolean | no |  | Whether this machine may use local-only repo memory in addition to checked-in shared Memory. |  |  |
 | `local_memory.path` | string | no |  | Repository-relative path for local-only memory; it must stay ignored and non-authoritative. |  |  |
+| `session_logging` | object | no |  | Machine-local session logging and share-safety preferences. |  |  |
+| `session_logging.enabled` | boolean | no |  | Whether this checkout should keep ignored local AW command session logs. |  |  |
+| `session_logging.redact_local_paths` | boolean | no |  | Compatibility alias for path_mode = redacted. |  |  |
+| `session_logging.path_mode` | enum `"absolute"`, `"repo-relative"`, `"redacted"` | no | `"absolute"` | How local filesystem paths should be represented in session log markdown, indexes, and summaries. |  |  |
 | `local_overlay` | object | no |  | Machine-local guidance overlay. It may shape the acting checkout workflow but is not checked-in host policy. |  |  |
 | `local_overlay.guidance` | ref `#/$defs/local_guidance_items` | no |  | General local guidance overlay items for ordinary checkout-local facts such as tool availability, validation commands, branch conventions, access constraints, and adoption-time hints. |  |  |
 | `local_overlay.guidance.<^.+$>` | object | no |  | One named ordinary local guidance overlay item. It can shape this checkout's workflow but is not shared host policy. |  |  |

@@ -1895,6 +1895,40 @@
           "audience": "local_only",
           "classification_note": "local-only session log note; not durable proof",
           "mutates_state": true
+        },
+        {
+          "name": "analyze",
+          "help": "Analyze an ignored local AW session log into counts, repeated commands, failures, artifacts, packet kinds, and friction candidates.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "path",
+              "flags": [
+                "--path"
+              ],
+              "help": "Optional repo-relative session log path; defaults to the current session pointer."
+            },
+            {
+              "name": "id",
+              "flags": [
+                "--id"
+              ],
+              "help": "Optional session id or aw-session-<id>.md filename to analyze."
+            }
+          ],
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "local_only",
+          "classification_note": "local-only session log analysis; not durable proof",
+          "mutates_state": false
         }
       ],
       "role": "reusable_host_repo_diagnostics",

@@ -26,8 +26,9 @@ def run(args: argparse.Namespace) -> int:
     if _arg_1_target_root is not None:
         _validate_target_root(command_name='modules', target_root=_arg_1_target_root)
     _arg_2_profile = _diagnostic_profile(args, default='tiny')
+    _arg_3_section = getattr(args, 'section', None)
     from agentic_workspace.workspace_runtime_primitives import _emit_modules
-    _emit_modules(format_name=_arg_0_format_name, target_root=_arg_1_target_root, profile=_arg_2_profile)
+    _emit_modules(format_name=_arg_0_format_name, target_root=_arg_1_target_root, profile=_arg_2_profile, section=_arg_3_section)
     return 0
 
 

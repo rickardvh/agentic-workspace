@@ -654,8 +654,10 @@ def test_memory_capture_note_does_not_update_unrelated_note_from_weak_tokens(tmp
         surfaces=["python", "shell", "codex", "local_memory"],
     )
 
-    assert prose_only["recommended_action"] == "create-new-note"
-    assert prose_only["storage_decision"]["recommended_owner"] == "repo_memory"
+    assert prose_only["recommended_action"] == "dismiss-route-elsewhere-or-create-local-note"
+    assert prose_only["storage_decision"]["recommended_owner"] == "local_memory"
+    assert prose_only["low_confidence_warning"]
+    assert [item["owner"] for item in prose_only["owner_alternatives"]][:2] == ["dismiss", "local_memory"]
     assert explicit_local["recommended_action"] == "create-local-note"
     assert explicit_local["storage_decision"]["recommended_owner"] == "local_memory"
     assert "--local" in explicit_local["commands"][0]

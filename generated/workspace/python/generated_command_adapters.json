@@ -652,7 +652,8 @@
         "subcommands": [
           "status",
           "new-session",
-          "note"
+          "note",
+          "analyze"
         ]
       },
       "conformance_refs": [

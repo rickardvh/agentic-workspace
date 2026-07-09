@@ -685,6 +685,11 @@
                 "name": "profile",
                 "kind": "diagnostic_profile",
                 "default": "tiny"
+              },
+              {
+                "name": "section",
+                "kind": "attr",
+                "attr": "section"
               }
             ]
           },
@@ -1393,6 +1398,13 @@
                 ],
                 "default": "text",
                 "help": "Output format."
+              },
+              {
+                "name": "section",
+                "flags": [
+                  "--section"
+                ],
+                "help": "Return one module detail section such as package_footprint or participation_model."
               },
               {
                 "name": "verbose",
@@ -3993,6 +4005,49 @@
                     ],
                     "required": true,
                     "help": "Note text to append."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "analyze",
+                "help": "Analyze an ignored local AW session log into counts, repeated commands, failures, artifacts, packet kinds, and friction candidates.",
+                "operation_ref": {
+                  "id": "session-log.manage",
+                  "path": "operations/session-log.manage.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "path",
+                    "flags": [
+                      "--path"
+                    ],
+                    "help": "Optional repo-relative session log path; defaults to the current session pointer."
+                  },
+                  {
+                    "name": "id",
+                    "flags": [
+                      "--id"
+                    ],
+                    "help": "Optional session id or aw-session-<id>.md filename to analyze."
                   },
                   {
                     "name": "format",
