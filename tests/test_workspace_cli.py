@@ -75,6 +75,8 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
         evidence_bundle_payload,
         message_economy_payload,
         state_delta_core_payload,
+        state_delta_replay_evidence_payload,
+        visible_state_delta_response_payload,
     )
 
     decision_packet = {
@@ -107,6 +109,13 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
         state_delta_core=core,
     )
     bundle = evidence_bundle_payload(surface="startup", current_decision=current, state_delta_core=core)
+    visible = visible_state_delta_response_payload(
+        surface="startup",
+        current_decision=current,
+        message_economy=economy,
+        evidence_bundle=bundle,
+    )
+    replay = state_delta_replay_evidence_payload()
 
     assert core["kind"] == "agentic-workspace/state-delta-core/v1"
     assert current["proof_boundary"] == core["boundary"]["proof"]
@@ -121,6 +130,17 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
     assert economy["expand_when"] == core["output_policy"]["expand_when"]
     assert current["avoid_repeat"] == core["output_policy"]["avoid"]
     assert capsule["do_not_repeat"] == core["output_policy"]["avoid"]
+    assert visible["kind"] == "agentic-workspace/visible-state-delta-response/v1"
+    assert visible["parts"] == {
+        "decision_or_finding": "What changed?",
+        "evidence_or_proof_boundary": "partial-progress",
+        "residue_or_claim_boundary": "planning",
+        "next_safe_action": "Run the focused proof.",
+    }
+    assert visible["ownership_boundary"].endswith("not a new truth source.")
+    assert replay["workflow_class_count"] >= 2
+    assert {"review", "handoff", "closeout"} == {item["workflow_class"] for item in replay["examples"]}
+    assert all("next_safe_action" in item["visible_parts"] for item in replay["examples"])
 
 
 def _assert_selector_inventory_omitted_from_compact_start(payload: dict[str, Any]) -> dict[str, Any]:
@@ -6726,6 +6746,11 @@ def test_report_exposes_reasoning_economy_evidence_section(tmp_path: Path, capsy
         "residue_or_boundary",
         "next_action_or_closure_status",
     ]
+    assert answer["visible_response_compiler"]["kind"] == "agentic-workspace/visible-state-delta-response/v1"
+    assert answer["visible_response_compiler"]["parts"]["next_safe_action"] == "Use the compact visible-state-delta response parts."
+    assert answer["state_delta_replay_evidence"]["kind"] == "agentic-workspace/state-delta-replay-evidence/v1"
+    assert answer["state_delta_replay_evidence"]["workflow_class_count"] >= 2
+    assert "review-rereview" in answer["state_delta_replay_evidence"]["example_ids"]
     assert answer["ledger_refs"] == []
     assert "PR #1955" not in json.dumps(answer)
     fixture_results = {item["id"]: item for item in answer["fixture_results"]}
@@ -6745,6 +6770,14 @@ def test_report_exposes_reasoning_economy_evidence_section(tmp_path: Path, capsy
         "handoff summary",
     ]
     assert full["reasoning_economy"]["evidence_ledger_source"]["status"] == "absent"
+    assert full["reasoning_economy"]["visible_response_compiler"]["source_packets"] == [
+        "current_decision",
+        "message_economy",
+        "evidence_bundle",
+    ]
+    replay_examples = {item["id"]: item for item in full["reasoning_economy"]["state_delta_replay_evidence"]["examples"]}
+    assert replay_examples["handoff-continuation"]["workflow_class"] == "handoff"
+    assert "proof boundary remains visible" in full["reasoning_economy"]["state_delta_replay_evidence"]["safety_preserved"]
 
 
 def test_report_reasoning_economy_reads_repo_owned_evidence_ledger(tmp_path: Path, capsys) -> None:
