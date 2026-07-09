@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["checkpoint", "config", "defaults", "doctor", "external-intent", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.prune"]);
+const supportedCommands = new Set(["checkpoint", "config", "defaults", "doctor", "external-intent", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
+const nativeOperationIds = new Set(["checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.prune"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -2226,6 +2226,137 @@ const commandDefinitions = [
     "operation_ref": {
       "id": "work-thread.prune",
       "path": "operations/work-thread.prune.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Inspect or annotate ignored local AW session logs.",
+      "name": "session-log",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ],
+      "subcommand_dest": "session_log_command",
+      "subcommands": [
+        {
+          "help": "Report local AW session logging status.",
+          "name": "status",
+          "operation_ref": {
+            "id": "session-log.manage",
+            "path": "operations/session-log.manage.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Start a new ignored local AW session log.",
+          "name": "new-session",
+          "operation_ref": {
+            "id": "session-log.manage",
+            "path": "operations/session-log.manage.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Append an optional note to the current ignored local AW session log.",
+          "name": "note",
+          "operation_ref": {
+            "id": "session-log.manage",
+            "path": "operations/session-log.manage.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--text"
+              ],
+              "help": "Note text to append.",
+              "name": "text",
+              "required": true
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        }
+      ],
+      "subcommands_required": false
+    },
+    "name": "session-log",
+    "operation_ref": {
+      "id": "session-log.manage",
+      "path": "operations/session-log.manage.json"
     }
   },
   {

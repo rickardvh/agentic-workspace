@@ -1811,6 +1811,98 @@
       "mutates_state": true
     },
     {
+      "name": "session-log",
+      "help": "Inspect or annotate ignored local AW session logs.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path."
+        }
+      ],
+      "subcommand_dest": "session_log_command",
+      "subcommands_required": false,
+      "subcommands": [
+        {
+          "name": "status",
+          "help": "Report local AW session logging status.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            }
+          ],
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "local_only",
+          "classification_note": "local-only session logging status; not durable proof",
+          "mutates_state": false
+        },
+        {
+          "name": "new-session",
+          "help": "Start a new ignored local AW session log.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            }
+          ],
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "local_only",
+          "classification_note": "local-only session log rotation; not durable proof",
+          "mutates_state": true
+        },
+        {
+          "name": "note",
+          "help": "Append an optional note to the current ignored local AW session log.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "text",
+              "flags": [
+                "--text"
+              ],
+              "required": true,
+              "help": "Note text to append."
+            }
+          ],
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "local_only",
+          "classification_note": "local-only session log note; not durable proof",
+          "mutates_state": true
+        }
+      ],
+      "role": "reusable_host_repo_diagnostics",
+      "audience": "local_only",
+      "classification_note": "local-only session log helper; not durable proof",
+      "mutates_state": true
+    },
+    {
       "name": "start",
       "help": "Return the minimum safe startup context for beginning work in a target repository.",
       "uses_option_groups": [

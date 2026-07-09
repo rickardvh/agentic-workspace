@@ -488,6 +488,11 @@
             "function": "_run_work_thread_prune_adapter"
           },
           {
+            "operation_id": "session-log.manage",
+            "import_module": "agentic_workspace.session_logging",
+            "function": "_run_session_log_adapter"
+          },
+          {
             "operation_id": "external-intent.refresh-github",
             "import_module": "agentic_workspace.workspace_runtime_primitives",
             "function": "_run_external_intent_refresh_github_adapter"
@@ -3869,6 +3874,184 @@
             ],
             "runtime_owned": [
               "local-only work-thread prune",
+              "target root validation",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "session-log.manage.cli",
+          "status": "generated",
+          "command": {
+            "name": "session-log",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "session-log",
+            "help": "Inspect or annotate ignored local AW session logs.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ],
+            "subcommand_dest": "session_log_command",
+            "subcommands_required": false,
+            "subcommands": [
+              {
+                "name": "status",
+                "help": "Report local AW session logging status.",
+                "operation_ref": {
+                  "id": "session-log.manage",
+                  "path": "operations/session-log.manage.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "new-session",
+                "help": "Start a new ignored local AW session log.",
+                "operation_ref": {
+                  "id": "session-log.manage",
+                  "path": "operations/session-log.manage.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "note",
+                "help": "Append an optional note to the current ignored local AW session log.",
+                "operation_ref": {
+                  "id": "session-log.manage",
+                  "path": "operations/session-log.manage.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "text",
+                    "flags": [
+                      "--text"
+                    ],
+                    "required": true,
+                    "help": "Note text to append."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "session-log.manage",
+            "path": "operations/session-log.manage.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.target-root.resolve",
+              "workspace.session-log.manage",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "session-log.manage.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "effect hints",
+              "runtime primitive reference",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "help text layout",
+              "package entrypoint wiring"
+            ],
+            "runtime_owned": [
+              "local-only session log writes",
               "target root validation",
               "output emission"
             ]

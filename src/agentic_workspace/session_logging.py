@@ -76,10 +76,10 @@ def run_with_session_logging(
     stderr: Any | None = None,
 ) -> int:
     argv_list = list(argv)
-    if argv_list and argv_list[0] == "log":
-        return run_log_command(argv_list[1:], cwd=cwd, stdout=stdout, stderr=stderr)
-
     state = load_state_for_argv(argv_list, cwd=cwd)
+    if not state.enabled:
+        return runner(argv_list)
+
     output_stdout = stdout or sys.stdout
     output_stderr = stderr or sys.stderr
     captured_stdout = io.StringIO()
@@ -122,94 +122,27 @@ def run_with_session_logging(
             print(f"AW session logging warning: {warning}", file=output_stderr)
 
 
-def run_log_command(
-    argv: Sequence[str],
-    *,
-    cwd: Path | None = None,
-    stdout: Any | None = None,
-    stderr: Any | None = None,
-) -> int:
-    output_stderr = stderr or sys.stderr
+def _run_session_log_adapter(args: Any) -> int:
+    target = getattr(args, "target", None)
+    effective_argv = ["--target", str(target)] if target else []
+    state = load_state_for_argv(effective_argv)
+    output_stderr = sys.stderr
     try:
-        args = _read_log_command_options(argv)
-    except ValueError as exc:
-        print(f"agentic-workspace log: {exc}", file=output_stderr)
-        return 2
-    effective_argv: list[str] = []
-    if args["target"]:
-        effective_argv.extend(["--target", str(args["target"])])
-    state = load_state_for_argv(effective_argv, cwd=cwd)
-    output_stdout = stdout or sys.stdout
-    try:
-        if args["subcommand"] == "note":
-            payload = append_note(state=state, text=str(args["text"]))
-        elif args["subcommand"] == "new-session":
+        command = str(getattr(args, "session_log_command", "status") or "status")
+        if command == "note":
+            payload = append_note(state=state, text=str(getattr(args, "text", "")))
+        elif command == "new-session":
             payload = reset_session(state=state)
         else:
             payload = status_payload(state=state)
     except Exception as exc:  # pragma: no cover - non-fatal command wrapper guard
         print(f"AW session logging warning: {exc}", file=output_stderr)
         return 0
-    if args["format"] == "json":
-        print(json.dumps(serialise_value(payload), indent=2), file=output_stdout)
+    if getattr(args, "format", "text") == "json":
+        print(json.dumps(serialise_value(payload), indent=2))
     else:
-        print(_log_command_text(payload), file=output_stdout)
+        print(_log_command_text(payload))
     return 0
-
-
-def _read_log_command_options(argv: Sequence[str]) -> dict[str, str]:
-    tokens = list(argv)
-    options = {"target": "", "format": "text", "subcommand": "", "text": ""}
-    index = 0
-    while index < len(tokens):
-        token = tokens[index]
-        if token == "--target":
-            index += 1
-            if index >= len(tokens):
-                raise ValueError("--target requires a value")
-            options["target"] = tokens[index]
-        elif token.startswith("--target="):
-            options["target"] = token.split("=", 1)[1]
-        elif token == "--format":
-            index += 1
-            if index >= len(tokens):
-                raise ValueError("--format requires a value")
-            options["format"] = _validate_log_output_format(tokens[index])
-        elif token.startswith("--format="):
-            options["format"] = _validate_log_output_format(token.split("=", 1)[1])
-        elif token in {"note", "new-session", "status"}:
-            options["subcommand"] = token
-            index += 1
-            break
-        else:
-            raise ValueError(f"unknown option or subcommand: {token}")
-        index += 1
-    if not options["subcommand"]:
-        raise ValueError("expected one of: note, new-session, status")
-    if options["subcommand"] == "note":
-        while index < len(tokens):
-            token = tokens[index]
-            if token == "--text":
-                index += 1
-                if index >= len(tokens):
-                    raise ValueError("--text requires a value")
-                options["text"] = tokens[index]
-            elif token.startswith("--text="):
-                options["text"] = token.split("=", 1)[1]
-            else:
-                raise ValueError(f"unknown note option: {token}")
-            index += 1
-        if not options["text"]:
-            raise ValueError("note requires --text")
-    elif index < len(tokens):
-        raise ValueError(f"{options['subcommand']} does not accept extra arguments")
-    return options
-
-
-def _validate_log_output_format(value: str) -> str:
-    if value not in {"text", "json"}:
-        raise ValueError("--format must be one of: text, json")
-    return value
 
 
 def append_command_entry(*, state: SessionLoggingState, argv: Sequence[str], capture: CommandCapture) -> str | None:
@@ -321,7 +254,7 @@ def read_session_pointer(*, target_root: Path) -> dict[str, str] | None:
     if not isinstance(payload, dict) or payload.get("kind") != SESSION_POINTER_KIND:
         return None
     session_id = str(payload.get("session_id", "")).strip()
-    log_path = str(payload.get("log_path", "")).strip()
+    log_path = _valid_session_log_path(str(payload.get("log_path", "")).strip())
     if not session_id or not log_path:
         return None
     return {
@@ -330,6 +263,19 @@ def read_session_pointer(*, target_root: Path) -> dict[str, str] | None:
         "created_at": str(payload.get("created_at", "")),
         "log_path": log_path,
     }
+
+
+def _valid_session_log_path(value: str) -> str:
+    if not value:
+        return ""
+    path = Path(value)
+    if path.is_absolute() or path.drive or any(part == ".." for part in path.parts):
+        return ""
+    normalized = Path(*path.parts).as_posix()
+    log_root = SESSION_LOG_ROOT.as_posix()
+    if normalized == log_root or normalized.startswith(f"{log_root}/"):
+        return normalized
+    return ""
 
 
 def _session_prelude(*, state: SessionLoggingState, session: dict[str, str]) -> str:

@@ -31,6 +31,7 @@ from . import prompt_upgrade as _command_prompt_upgrade
 from . import proof_report as _command_proof_report
 from . import reconcile_report as _command_reconcile_report
 from . import report_combined as _command_report_combined
+from . import session_log_manage as _command_session_log_manage
 from . import setup_guidance as _command_setup_guidance
 from . import skills_report as _command_skills_report
 from . import start_context as _command_start_context
@@ -63,6 +64,7 @@ GENERATED_COMMAND_HANDLERS = {
     'proof.report': _command_proof_report.run,
     'reconcile.report': _command_reconcile_report.run,
     'report.combined': _command_report_combined.run,
+    'session-log.manage': _command_session_log_manage.run,
     'setup.guidance': _command_setup_guidance.run,
     'skills.report': _command_skills_report.run,
     'start.context': _command_start_context.run,

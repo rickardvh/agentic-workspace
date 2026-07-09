@@ -1,0 +1,74 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "session-log.manage.process",
+  "operation_id": "session-log.manage",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "session-log",
+      "status",
+      "--target",
+      ".",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "agentic-workspace/session-logging-status/v1"
+        },
+        {
+          "path": [
+            "enabled"
+          ],
+          "equals": false
+        },
+        {
+          "path": [
+            "local_only"
+          ],
+          "equals": true
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": [
+        ".agentic-workspace"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

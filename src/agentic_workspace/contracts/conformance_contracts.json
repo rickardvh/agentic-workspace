@@ -16,6 +16,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "session-log.manage.process",
+      "operation_id": "session-log.manage",
+      "path": "conformance/session-log.manage.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "config.report.process",
       "operation_id": "config.report",
       "path": "conformance/config.report.process.json",

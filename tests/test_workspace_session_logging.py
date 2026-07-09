@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 from agentic_workspace import cli as source_cli
@@ -30,6 +31,33 @@ def test_session_logging_disabled_does_not_create_log(tmp_path: Path, capsys) ->
 
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"].startswith("agentic-workspace/config")
+    assert not (target / ".agentic-workspace/local/logs").exists()
+
+
+def test_session_logging_disabled_does_not_redirect_command_output(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    observed_stdout = None
+    original_stdout = sys.stdout
+
+    def runner(_argv: list[str]) -> int:
+        nonlocal observed_stdout
+        observed_stdout = sys.stdout
+        return 0
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
+
+    assert observed_stdout is original_stdout
+    assert not (target / ".agentic-workspace/local/logs").exists()
+
+
+def test_session_logging_status_defaults_for_parent_command(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+
+    assert source_cli.main(["session-log", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/session-logging-status/v1"
+    assert payload["enabled"] is False
     assert not (target / ".agentic-workspace/local/logs").exists()
 
 
@@ -65,7 +93,10 @@ def test_session_logging_note_command_appends_optional_note(tmp_path: Path, caps
     assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled", "--format", "json"]) == 0
     capsys.readouterr()
     assert (
-        source_cli.main(["log", "--target", str(target), "--format", "json", "note", "--text", "This output changed the next action."]) == 0
+        source_cli.main(
+            ["session-log", "--target", str(target), "--format", "json", "note", "--text", "This output changed the next action."]
+        )
+        == 0
     )
 
     payload = json.loads(capsys.readouterr().out)
@@ -73,6 +104,27 @@ def test_session_logging_note_command_appends_optional_note(tmp_path: Path, caps
     text = _current_log(target).read_text(encoding="utf-8")
     assert "## Agent Note - " in text
     assert "This output changed the next action." in text
+
+
+def test_session_logging_invalid_pointer_path_is_ignored(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+
+    assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled", "--format", "json"]) == 0
+    capsys.readouterr()
+    first_log = _current_log(target)
+    pointer_path = target / ".agentic-workspace/local/session-logging/current.json"
+    pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    pointer["log_path"] = "../../outside-session-log.md"
+    pointer_path.write_text(json.dumps(pointer), encoding="utf-8")
+
+    assert source_cli.main(["config", "--target", str(target), "--select", "workspace.enabled_source", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    second_log = _current_log(target)
+    assert second_log != first_log
+    assert not (target.parent / "outside-session-log.md").exists()
+    assert ".agentic-workspace/local/logs/" in second_log.as_posix()
 
 
 def test_session_logging_large_output_uses_recoverable_artifact(tmp_path: Path, capsys, monkeypatch) -> None:
