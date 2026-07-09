@@ -45747,6 +45747,10 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
         if summary_overlap:
             score += len(summary_overlap)
             reasons.append(f"summary overlap: {', '.join(summary_overlap)}")
+        if _dogfooding_skill_route_boost(task_tokens=task_tokens, skill=skill):
+            score += 8
+            hint_score += 8
+            reasons.append("explicit dogfooding task route")
         if score > 0:
             recommendations.append(SkillRecommendation(skill=skill, hint_score=hint_score, score=score, reasons=tuple(reasons)))
     if any((recommendation.hint_score > 0 for recommendation in recommendations)):
@@ -45820,6 +45824,13 @@ def _summary_overlap_tokens(*, skill: RegisteredSkill, task_tokens: set[str]) ->
         if len(token) >= 4 and token not in {"skill", "skills", "task", "tasks", "repo", "repository", "current"}
     }
     return sorted(candidate_tokens & task_tokens)
+
+
+def _dogfooding_skill_route_boost(*, task_tokens: set[str], skill: RegisteredSkill) -> bool:
+    if not ({"dogfood", "dogfooding"} & task_tokens):
+        return False
+    skill_tokens = set(_skill_match_tokens(f"{skill.skill_id} {skill.summary}"))
+    return bool({"dogfood", "dogfooding"} & skill_tokens)
 
 
 def _skill_match_tokens(text: str) -> list[str]:
