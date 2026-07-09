@@ -2153,6 +2153,59 @@ def test_upgrade_to_necessary_surfaces_preserves_durable_state_and_uses_package_
     assert "necessary surfaces" not in json.dumps(status_payload).lower()
 
 
+def test_upgrade_to_necessary_surfaces_keeps_current_memory_skill_eof_stable(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "memory", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    package_root = tmp_path / "memory-package-payload"
+    package_skills = package_root / ".agentic-workspace" / "memory" / "skills"
+    cases = {
+        Path("REGISTRY.json"): b'{\n  "skills": []\n}\n',
+        Path("memory-refresh") / "SKILL.md": b"---\nname: memory-refresh\n---\n\n# Memory Refresh\n",
+        Path("memory-upgrade") / "agents" / "openai.yaml": b"instructions: keep stable\n",
+    }
+    for relative, canonical in cases.items():
+        source = package_skills / relative
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_bytes(canonical + b"\n")
+        target = workspace / "memory" / "skills" / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(canonical)
+
+    import repo_memory_bootstrap._installer_paths as memory_paths
+
+    monkeypatch.setattr(memory_paths, "payload_root", lambda: package_root)
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-necessary-surfaces", "--format", "json"]) == 0
+    migration = json.loads(capsys.readouterr().out)["migration"]
+
+    actions_by_path = {action["path"]: action for action in migration["actions"]}
+    checked_paths = []
+    for relative, canonical in cases.items():
+        installed = workspace / "memory" / "skills" / relative
+        assert installed.read_bytes() == canonical
+        installed_relative = installed.relative_to(tmp_path).as_posix()
+        checked_paths.append(installed_relative)
+        assert actions_by_path[installed_relative]["kind"] == "current"
+
+    diff_check = subprocess.run(["git", "diff", "--check"], cwd=tmp_path, capture_output=True, text=True, check=False)
+    assert diff_check.returncode == 0, diff_check.stdout + diff_check.stderr
+    skill_diff = subprocess.run(
+        ["git", "diff", "--name-only", "--", *checked_paths],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert skill_diff.returncode == 0
+    assert skill_diff.stdout == ""
+
+
 def test_upgrade_to_necessary_surfaces_leaves_doctor_healthy_after_apply(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"
