@@ -1,0 +1,396 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement opt-in local AW session logging",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement GitHub #2122's first narrow slice: opt-in local AW session logging for ordinary AW CLI invocations.",
+    "hard_constraints": "Keep logs under .agentic-workspace/local/, keep logging opt-in and non-authoritative, preserve generated CLI parser ownership, and keep logging failures non-fatal.",
+    "agent_may_decide": "Implementation details for local session pointer, markdown log format, large-output artifact threshold, optional note command, and focused tests.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Validate the implemented session logging slice, reconcile acceptance, and close out with proof.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_session_logging.py -q",
+      "make test-workspace",
+      "make lint-workspace",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/cli.py",
+      "src/agentic_workspace/config.py",
+      "src/agentic_workspace/session_logging.py",
+      "tests/test_workspace_session_logging.py",
+      ".agentic-workspace payload sync and planning ownership files"
+    ],
+    "completion_criteria": [
+      "Local [session_logging] enabled = true is accepted from .agentic-workspace/config.local.toml without repo-owned policy changes.",
+      "Enabled logging creates/reuses one local session log under .agentic-workspace/local/logs/ with a stable current pointer and config prelude.",
+      "AW command stdout/stderr, normalized command input, target context, and exit status are appended, with large output recoverable from local artifacts.",
+      "agentic-workspace log note can append optional short notes without making notes mandatory.",
+      "Logging disabled and logging failures do not block ordinary AW commands."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Implement GitHub #2122's first narrow slice: local opt-in AW session logging for command I/O, config prelude, optional notes, and local-only artifacts."
+  ],
+  "non_goals": [
+    "Do not add remote telemetry or upload.",
+    "Do not log non-AW shell commands automatically.",
+    "Do not treat logs as Planning, Memory, proof receipts, or closeout authorization.",
+    "Do not move generated CLI parser/interface ownership into handwritten code beyond the source facade wrapper."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement GitHub #2122's first narrow session-logging slice.",
+      "constraints": "Local-only, opt-in, non-authoritative, non-fatal logging under .agentic-workspace/local/.",
+      "latitude": "Choose the local pointer, file naming, markdown entry shape, large-output artifact shape, and tests.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "github-2122-session-logging",
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/cli.py",
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/session_logging.py",
+        "tests/test_workspace_session_logging.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/github-2122-session-logging.plan.json"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make transcript-style AW command I/O evidence cheap to collect for dogfooding and replay.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement #2122",
+    "inferred intended outcome": "Add opt-in local AW session logging that captures AW command I/O and optional notes without changing repo-owned policy.",
+    "chosen concrete what": "Source CLI facade wraps generated command execution with best-effort local logging when [session_logging] enabled = true.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/cli.py, src/agentic_workspace/config.py, src/agentic_workspace/session_logging.py, tests/test_workspace_session_logging.py, and AW planning/payload ownership files produced by routed commands.",
+    "max changed files": "About 10 files, excluding generated caches and local ignored logs.",
+    "required validation commands": "uv run pytest tests/test_workspace_session_logging.py -q; make test-workspace; make lint-workspace; AW summary and planning doctor.",
+    "ask-before-refactor threshold": "Ask before changing generated command interface contracts or adding non-local telemetry.",
+    "stop before touching": "Generated CLI parser files, remote telemetry, checked-in logs, and non-AW shell command capture."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Session logging code is implemented; run broad proof, fix failures, then close out with acceptance and issue-boundary reconciliation.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement GitHub #2122's first narrow session-logging slice.",
+    "hard constraints": "Local-only, opt-in, non-authoritative, non-fatal, and generated parser ownership preserved.",
+    "agent may decide locally": "Local session pointer/log format/artifact format/note command mechanics and focused tests.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "skipped-local-bounded-slice",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    "GitHub #2122"
+  ],
+  "active_milestone": {
+    "id": "github-2122-session-logging",
+    "status": "completed",
+    "scope": "Implement the first #2122 local session-logging slice.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run broad proof, repair failures, and record closeout."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/cli.py",
+    "src/agentic_workspace/config.py",
+    "src/agentic_workspace/session_logging.py",
+    "tests/test_workspace_session_logging.py",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/github-2122-session-logging.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_session_logging.py -q",
+    "make test-workspace",
+    "make lint-workspace",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Opt-in local config enables session logging without changing repo-owned policy config.",
+    "One session log is created/reused under .agentic-workspace/local/logs/ and starts with an effective config/logging prelude.",
+    "AW command input/output, target context, and exit status are appended; large output remains recoverable from local artifact files.",
+    "Optional notes can be appended cheaply.",
+    "Disabled logging and logging failures do not block ordinary AW command behavior."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented opt-in local Agentic Workspace session logging for generated AW command invocations and notes.",
+    "scope touched": "Source CLI facade, local config parsing, local session log writer, behavior tests, and AW planning state.",
+    "changed surfaces": "src/agentic_workspace/cli.py; src/agentic_workspace/config.py; src/agentic_workspace/session_logging.py; tests/test_workspace_session_logging.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/github-2122-session-logging.plan.json; .agentic-workspace/payload-provenance.json; .agentic-workspace/planning/execplans/archive/issue-2097-2098-2103.plan.json",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Implementation satisfies issue #2122 acceptance for opt-in local-only logs while preserving generated CLI command ownership and non-authoritative proof boundaries.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
+  },
+  "proof_report": {
+    "validation proof": "Passed: uv run pytest tests/test_workspace_session_logging.py -q; uv run pytest tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_accepts_current_static_surfaces tests/test_structured_file_inventory.py::test_current_tracked_structured_files_are_classified -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; git diff --check. Manual test obligation checked docs/maintainer/testing-strategy.md, docs/maintainer/test-knowledge-inventory.md, packages/verification/src/repo_verification_bootstrap/runtime_primitives.py.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement opt-in local AW session logging.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "Local session logging is available behind config.local [session_logging] enabled = true, with reusable session pointer, command append, large-output artifacts, and optional notes.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "agent closeout reflection"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-09: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "blocked_claim_classes": [],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#2122",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        }
+      ],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Implement opt-in local AW session logging.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Passed: uv run pytest tests/test_workspace_session_logging.py -q; uv run pytest tests/test_generated_command_package_proof_runner.py::test_static_generated_package_proof_accepts_current_static_surfaces tests/test_structured_file_inventory.py::test_current_tracked_structured_files_are_classified -q; uv run python scripts/check/check_structured_file_inventory.py --quiet-success; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; git diff --check. Manual test obligation checked docs/maintainer/testing-strategy.md, docs/maintainer/test-knowledge-inventory.md, packages/verification/src/repo_verification_bootstrap/runtime_primitives.py.\nChanged surfaces: src/agentic_workspace/cli.py; src/agentic_workspace/config.py; src/agentic_workspace/session_logging.py; tests/test_workspace_session_logging.py; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/github-2122-session-logging.plan.json; .agentic-workspace/payload-provenance.json; .agentic-workspace/planning/execplans/archive/issue-2097-2098-2103.plan.json\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}

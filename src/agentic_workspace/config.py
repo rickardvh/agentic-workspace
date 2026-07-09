@@ -320,6 +320,12 @@ class DelegationTargetProfile:
 
 
 @dataclass(frozen=True)
+class SessionLoggingConfig:
+    enabled: bool | None
+    source: str
+
+
+@dataclass(frozen=True)
 class MixedAgentLocalOverride:
     path: Path | None
     exists: bool
@@ -340,6 +346,7 @@ class MixedAgentLocalOverride:
     clarification_mode: str | None
     local_memory_enabled: bool | None
     local_memory_path: Path
+    session_logging: SessionLoggingConfig
     delegation_targets: tuple[DelegationTargetProfile, ...]
     local_overlay: dict[str, Any]
     high_risk_overlay: dict[str, Any]
@@ -1616,6 +1623,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         clarification_mode=None,
         local_memory_enabled=None,
         local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
+        session_logging=SessionLoggingConfig(enabled=None, source="unset"),
         delegation_targets=(),
         local_overlay={},
         high_risk_overlay={},
@@ -2215,6 +2223,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             "clarification",
             "local_scratch_retention",
             "local_memory",
+            "session_logging",
             "local_overlay",
             "high_risk_overlay",
             "delegation_targets",
@@ -2354,6 +2363,21 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         unknown_text = ", ".join(unknown_local_memory)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_memory] contains unsupported field(s): {unknown_text}.")
 
+    raw_session_logging = payload.get("session_logging", {})
+    if raw_session_logging is None:
+        raw_session_logging = {}
+    if not isinstance(raw_session_logging, dict):
+        raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [session_logging] section must be a table.")
+    unknown_session_logging = sorted(set(raw_session_logging) - {"enabled"})
+    if unknown_session_logging:
+        unknown_text = ", ".join(unknown_session_logging)
+        warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [session_logging] contains unsupported field(s): {unknown_text}.")
+    session_logging_enabled = require_optional_bool(
+        payload=raw_session_logging,
+        key="enabled",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+
     raw_delegation_targets = payload.get("delegation_targets", {})
     if raw_delegation_targets is None:
         raw_delegation_targets = {}
@@ -2426,6 +2450,17 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             config_path=WORKSPACE_LOCAL_CONFIG_PATH,
             default=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         ),
+        session_logging=SessionLoggingConfig(
+            enabled=session_logging_enabled,
+            source=_local_config_field_source(
+                local_payload=local_payload,
+                shared_payload=shared_payload,
+                table="session_logging",
+                key="enabled",
+            )
+            if session_logging_enabled is not None
+            else "unset",
+        ),
         delegation_targets=delegation_targets,
         local_overlay=local_overlay,
         high_risk_overlay=high_risk_overlay,
@@ -2476,6 +2511,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
                 ),
                 ("local_memory.enabled", "local_memory", "enabled", raw_local_memory.get("enabled")),
                 ("local_memory.path", "local_memory", "path", raw_local_memory.get("path")),
+                ("session_logging.enabled", "session_logging", "enabled", raw_session_logging.get("enabled")),
             )
             if configured is not None
         },

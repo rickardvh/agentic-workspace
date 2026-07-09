@@ -4,6 +4,8 @@ import importlib
 import sys
 from pathlib import Path
 
+from agentic_workspace.session_logging import run_with_session_logging
+
 
 def _load_main():
     try:
@@ -16,6 +18,12 @@ def _load_main():
         return importlib.import_module("generated.workspace.python.cli").main
 
 
-main = _load_main()
+def _run_cli(argv: list[str] | None = None) -> int:
+    args = list(sys.argv[1:] if argv is None else argv)
+    generated_main = _load_main()
+    return run_with_session_logging(args, generated_main)
+
+
+main = _run_cli
 
 __all__ = ["main"]
