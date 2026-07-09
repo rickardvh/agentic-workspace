@@ -792,7 +792,7 @@ def _failure_class(*, command_text: str, capture: CommandCapture) -> str:
     if capture.exit_code == 0:
         return ""
     parsed = _parse_jsonish(capture.stdout.strip()) or _parse_jsonish(capture.stderr.strip())
-    if isinstance(parsed, dict) and parsed.get("kind") == "agentic-workspace/retryable-cli-error/v1":
+    if isinstance(parsed, dict) and str(parsed.get("kind", "")).endswith("/retryable-cli-error/v1"):
         return str(parsed.get("failure_class") or "retryable-cli-usage")
     command = command_text.lower()
     stderr = capture.stderr.lower()
@@ -853,21 +853,39 @@ def _entries_from_markdown(log_path: Path) -> list[dict[str, Any]]:
         status = _regex_value(section, r"- exit_status: `([^`]+)`")
         command_match = re.search(r"```sh\n(?P<command>.*?)\n```", section, re.S)
         command = command_match.group("command").strip() if command_match else ""
+        stdout = _markdown_labeled_fence(section, "stdout")
+        stderr = _markdown_labeled_fence(section, "stderr")
+        exit_status = int(status or 0)
+        capture = CommandCapture(exit_code=exit_status, stdout=stdout, stderr=stderr)
+        stdout_summary = _summarize_stream(stream="stdout", text=stdout)
+        stderr_summary = _summarize_stream(stream="stderr", text=stderr)
         artifact = _regex_value(section, r"- path: `([^`]+)`")
-        output_bytes = int(_regex_value(section, r"- bytes: `?([0-9]+)`?") or 0)
+        artifact_bytes = int(_regex_value(section, r"- bytes: `?([0-9]+)`?") or 0)
+        output_bytes = _output_size(capture) or artifact_bytes
+        packet_kinds = sorted(set(stdout_summary.packet_kinds + stderr_summary.packet_kinds))
         entries.append(
             {
                 "id": entry_id,
                 "timestamp": timestamp,
                 "command": command,
-                "exit_status": int(status or 0),
+                "exit_status": exit_status,
+                "exit_class": "success" if exit_status == 0 else "failure",
+                "failure_class": _failure_class(command_text=command, capture=capture),
                 "output_bytes": output_bytes,
-                "output_digest": "",
-                "packet_kinds": [],
-                "artifact": {"path": artifact} if artifact else None,
+                "output_digest": _output_digest(capture) if output_bytes else "",
+                "stdout": _summary_payload(stdout_summary),
+                "stderr": _summary_payload(stderr_summary),
+                "packet_kinds": packet_kinds,
+                "artifact": {"path": artifact, "bytes": artifact_bytes, "storage_mode": "raw-local-artifact"} if artifact else None,
+                "storage_mode": "raw-local-artifact" if artifact else "inline-markdown",
             }
         )
     return entries
+
+
+def _markdown_labeled_fence(section: str, label: str) -> str:
+    match = re.search(rf"\n{re.escape(label)}:\s*\n```[^\n]*\n(?P<body>.*?)\n```", section, re.S)
+    return match.group("body") if match else ""
 
 
 def _regex_value(text: str, pattern: str) -> str:

@@ -72,6 +72,22 @@ def test_blackbox_selector_conflict_guides_to_correct_usage() -> None:
     assert any("--section agent_aids --format json" in command and "--verbose" not in command for command in payload["alternatives"])
 
 
+def test_blackbox_module_cli_retryable_error_kind_uses_module_namespace() -> None:
+    result = subprocess.run(
+        ["uv", "run", "agentic-memory", "rout", "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    assert payload["kind"] == "agentic-memory/retryable-cli-error/v1"
+    assert payload["failure_class"] == "invalid-command"
+
+
 def test_blackbox_memory_route_task_misuse_guides_to_memory_consult() -> None:
     result = _run_cli(
         "memory",

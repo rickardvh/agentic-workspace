@@ -157,7 +157,7 @@ def _retryable_cli_error_payload(
 ) -> dict[str, Any]:
     failure_class = 'selector-conflict' if _is_selector_conflict(argv, message) else 'invalid-command' if 'invalid choice' in message and 'command' in message else 'usage-error'
     return {
-        'kind': 'agentic-workspace/retryable-cli-error/v1',
+        'kind': _retryable_cli_error_kind(prog),
         'exit_status': 2,
         'input_command': f"{prog} {shlex.join(argv)}",
         'failure_class': failure_class,
@@ -166,6 +166,11 @@ def _retryable_cli_error_payload(
         'suggested_command': suggested_command,
         'alternatives': alternatives,
     }
+
+
+def _retryable_cli_error_kind(prog: str) -> str:
+    namespace = prog if prog.startswith('agentic-') else 'agentic-workspace'
+    return f"{namespace}/retryable-cli-error/v1"
 
 
 def _argv_contains_sequence(argv: list[str], sequence: Any) -> bool:

@@ -202,6 +202,123 @@ def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packe
     assert by_id["path"] == payload["path"]
 
 
+def test_session_log_analyze_markdown_fallback_extracts_legacy_inline_output(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 12)
+    log_path = target / ".agentic-workspace/local/logs/aw-session-legacy-upload.md"
+    modules_payload = json.dumps({"kind": "agentic-workspace/modules-report/v1", "items": ["x" * 40]})
+    _write(
+        log_path,
+        f"""# Agentic Workspace Session Log
+
+## Command - 2026-07-09T15:46:03+00:00
+
+- id: `cmd-summry`
+- exit_status: `2`
+
+```sh
+agentic-workspace summry --format json
+```
+
+stdout:
+```text
+
+```
+
+stderr:
+```text
+usage: agentic-workspace
+error: argument command: invalid choice: 'summry' (choose from 'summary')
+Did you mean: summary?
+```
+
+## Command - 2026-07-09T15:46:04+00:00
+
+- id: `cmd-selector`
+- exit_status: `2`
+
+```sh
+agentic-workspace report --verbose --section agent_aids --format json
+```
+
+stdout:
+```text
+
+```
+
+stderr:
+```text
+error: report detail selectors are mutually exclusive
+```
+
+## Command - 2026-07-09T15:46:05+00:00
+
+- id: `cmd-modules-1`
+- exit_status: `0`
+
+```sh
+agentic-workspace modules --verbose --format json
+```
+
+stdout:
+```text
+{modules_payload}
+```
+
+stderr:
+```text
+
+```
+
+## Command - 2026-07-09T15:46:06+00:00
+
+- id: `cmd-modules-2`
+- exit_status: `0`
+
+```sh
+agentic-workspace modules --verbose --format json
+```
+
+stdout:
+```text
+{modules_payload}
+```
+
+stderr:
+```text
+
+```
+""",
+    )
+
+    assert (
+        source_cli.main(
+            ["session-log", "--target", str(target), "analyze", "--path", log_path.relative_to(target).as_posix(), "--format", "json"]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["index_status"] == "markdown-fallback"
+    assert payload["summary"]["command_count"] == 4
+    assert payload["summary"]["failure_count"] == 2
+    assert payload["summary"]["usage_mistake_count"] == 2
+    assert payload["summary"]["repeated_command_count"] == 1
+    assert payload["summary"]["duplicate_output_count"] == 1
+    assert payload["packet_kinds"]["agentic-workspace/modules-report/v1"] == 2
+    assert payload["usage_mistakes"][0]["failure_class"] == "invalid-command"
+    assert payload["usage_mistakes"][1]["failure_class"] == "selector-conflict"
+    assert any(entry["command"] == "agentic-workspace modules --verbose --format json" for entry in payload["largest_outputs"])
+    assert {candidate["id"] for candidate in payload["friction_candidates"]} >= {
+        "missing-index",
+        "failed-command",
+        "repeated-command",
+        "duplicate-output",
+        "large-output",
+        "oversized-modules-output",
+    }
+
+
 def test_session_logging_reuses_duplicate_large_output_artifacts(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")

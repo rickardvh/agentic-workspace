@@ -1916,6 +1916,13 @@
                 "--path"
               ],
               "help": "Optional repo-relative session log path; defaults to the current session pointer."
+            },
+            {
+              "name": "id",
+              "flags": [
+                "--id"
+              ],
+              "help": "Optional session id or aw-session-<id>.md filename to analyze."
             }
           ],
           "role": "reusable_host_repo_diagnostics",
