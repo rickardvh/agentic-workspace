@@ -6,7 +6,8 @@
     "subcommands": [
       "status",
       "new-session",
-      "note"
+      "note",
+      "analyze"
     ]
   },
   "effects": {
@@ -19,7 +20,8 @@
   "guards": [
     "Write only under .agentic-workspace/local/session-logging/ and .agentic-workspace/local/logs/.",
     "Do not capture non-AW shell output.",
-    "Do not treat local session logs as proof, Planning state, Memory, or closeout authority."
+    "Do not treat local session logs as proof, Planning state, Memory, or closeout authority.",
+    "Session-log analysis is local dogfooding evidence until promoted intentionally."
   ],
   "id": "session-log.manage",
   "inputs": [
@@ -39,6 +41,13 @@
       "command_visibility": "runtime-only",
       "description": "Runtime field populated only by the note subcommand.",
       "name": "text",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Optional session log path populated by the analyze subcommand.",
+      "name": "path",
       "required": false,
       "source": "cli-option"
     },
@@ -88,7 +97,7 @@
   "proof": [
     "operation contract validates against operation.schema.json",
     "generated command package checks include the session-log surface",
-    "session logging tests cover status and note behavior through the generated CLI"
+    "session logging tests cover status, note, index, artifact, redaction, and analysis behavior through the generated CLI"
   ],
   "reads": [
     {
@@ -108,7 +117,7 @@
       "uses": "workspace.target-root.resolve"
     },
     {
-      "description": "Read status, create a new session, or append a local-only note.",
+      "description": "Read status, create a new session, append a local-only note, or analyze a local session log.",
       "id": "manage_session_log",
       "uses": "workspace.session-log.manage"
     },

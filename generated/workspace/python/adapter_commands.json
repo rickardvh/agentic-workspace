@@ -2326,6 +2326,42 @@
               "name": "format"
             }
           ]
+        },
+        {
+          "help": "Analyze an ignored local AW session log into counts, repeated commands, failures, artifacts, packet kinds, and friction candidates.",
+          "name": "analyze",
+          "operation_ref": {
+            "id": "session-log.manage",
+            "path": "operations/session-log.manage.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--path"
+              ],
+              "help": "Optional repo-relative session log path; defaults to the current session pointer.",
+              "name": "path"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
         }
       ],
       "subcommands_required": false

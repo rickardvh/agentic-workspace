@@ -24,6 +24,12 @@ def _current_log(target: Path) -> Path:
     return target / pointer["log_path"]
 
 
+def _current_index(target: Path) -> Path:
+    pointer = json.loads((target / ".agentic-workspace/local/session-logging/current.json").read_text(encoding="utf-8"))
+    session_id = pointer["session_id"]
+    return target / ".agentic-workspace/local/logs/indexes" / f"{session_id}.json"
+
+
 def test_session_logging_disabled_does_not_create_log(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
 
@@ -83,7 +89,15 @@ def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelu
     assert text.count("## Command - ") == 2
     assert "agentic-workspace config --target" in text
     assert "- exit_status: `0`" in text
-    assert "stdout:" in text
+    assert "Output stored as local artifact:" in text
+    assert "stdout summary:" in text
+    assert "`json`" in text
+
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    assert index["kind"] == "agentic-workspace/session-log-index/v1"
+    assert len(index["entries"]) == 2
+    assert index["entries"][0]["stdout"]["kind"] == "json"
+    assert index["entries"][0]["artifact"]["path"].startswith(".agentic-workspace/local/logs/artifacts/")
 
 
 def test_session_logging_note_command_appends_optional_note(tmp_path: Path, capsys) -> None:
@@ -148,9 +162,66 @@ def test_session_logging_large_output_uses_recoverable_artifact(tmp_path: Path, 
     assert artifact["stderr"] == ""
 
 
-def test_config_accepts_local_session_logging_without_unknown_field_warning(tmp_path: Path, capsys) -> None:
+def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packets(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+
+    def runner(_argv: list[str]) -> int:
+        print(json.dumps({"kind": "agentic-workspace/example-packet/v1", "value": 1}))
+        return 2
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--format", "json"], runner) == 2
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--format", "json"], runner) == 2
+    capsys.readouterr()
+
+    assert source_cli.main(["session-log", "--target", str(target), "analyze", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/session-log-analysis/v1"
+    assert payload["status"] == "analyzed"
+    assert payload["index_status"] == "present"
+    assert payload["summary"]["command_count"] == 2
+    assert payload["summary"]["failure_count"] == 2
+    assert payload["summary"]["repeated_command_count"] == 1
+    assert payload["summary"]["duplicate_output_count"] == 1
+    assert payload["summary"]["artifact_count"] == 2
+    assert payload["packet_kinds"]["agentic-workspace/example-packet/v1"] == 2
+    assert {candidate["id"] for candidate in payload["friction_candidates"]} >= {
+        "failed-command",
+        "repeated-command",
+        "duplicate-output",
+    }
+
+
+def test_session_logging_redacts_target_root_when_configured(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[session_logging]\nenabled = true\nredact_local_paths = true\n",
+    )
+
+    def runner(_argv: list[str]) -> int:
+        print(f"local path: {target}")
+        return 0
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
+    assert str(target) in capsys.readouterr().out
+
+    log_text = _current_log(target).read_text(encoding="utf-8")
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    assert str(target) not in log_text
+    assert target.as_posix() not in log_text
+    assert "<target>" in log_text
+    assert index["path_redaction"]["local_paths"] == "target-root-normalized"
+    assert index["entries"][0]["target"] == "<target>"
+
+
+def test_config_accepts_local_session_logging_without_unknown_field_warning(tmp_path: Path, capsys) -> None:
+    target = _target(tmp_path)
+    _write(
+        target / ".agentic-workspace" / "config.local.toml",
+        "schema_version = 1\n\n[session_logging]\nenabled = true\nredact_local_paths = true\n",
+    )
 
     assert source_cli.main(["config", "--target", str(target), "--format", "json"]) == 0
 

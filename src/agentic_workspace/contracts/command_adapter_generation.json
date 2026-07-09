@@ -5665,7 +5665,8 @@
         "subcommands": [
           "status",
           "new-session",
-          "note"
+          "note",
+          "analyze"
         ]
       },
       "operation_ref": {

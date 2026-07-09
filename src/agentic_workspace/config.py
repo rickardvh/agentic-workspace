@@ -322,6 +322,7 @@ class DelegationTargetProfile:
 @dataclass(frozen=True)
 class SessionLoggingConfig:
     enabled: bool | None
+    redact_local_paths: bool
     source: str
 
 
@@ -1623,7 +1624,7 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         clarification_mode=None,
         local_memory_enabled=None,
         local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
-        session_logging=SessionLoggingConfig(enabled=None, source="unset"),
+        session_logging=SessionLoggingConfig(enabled=None, redact_local_paths=False, source="unset"),
         delegation_targets=(),
         local_overlay={},
         high_risk_overlay={},
@@ -2368,13 +2369,18 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         raw_session_logging = {}
     if not isinstance(raw_session_logging, dict):
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [session_logging] section must be a table.")
-    unknown_session_logging = sorted(set(raw_session_logging) - {"enabled"})
+    unknown_session_logging = sorted(set(raw_session_logging) - {"enabled", "redact_local_paths"})
     if unknown_session_logging:
         unknown_text = ", ".join(unknown_session_logging)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [session_logging] contains unsupported field(s): {unknown_text}.")
     session_logging_enabled = require_optional_bool(
         payload=raw_session_logging,
         key="enabled",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+    session_logging_redact_local_paths = require_optional_bool(
+        payload=raw_session_logging,
+        key="redact_local_paths",
         config_path=WORKSPACE_LOCAL_CONFIG_PATH,
     )
 
@@ -2452,6 +2458,7 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         ),
         session_logging=SessionLoggingConfig(
             enabled=session_logging_enabled,
+            redact_local_paths=bool(session_logging_redact_local_paths),
             source=_local_config_field_source(
                 local_payload=local_payload,
                 shared_payload=shared_payload,
