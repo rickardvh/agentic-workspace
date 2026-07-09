@@ -1953,9 +1953,14 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
     assert compatibility["action_effect"]["allowed_now"] == "run-payload-target-upgrade-before-ordinary-work"
     attention_plan = compatibility["payload_upgrade_attention_plan"]
     assert attention_plan["kind"] == "agentic-workspace/payload-upgrade-attention-plan/v1"
+    assert attention_plan["status"] == "explicit_apply_required"
     assert attention_plan["strategy"] == "converge-to-current-contract"
     assert attention_plan["release_instruction_policy"]["uses_release_history"] is False
     assert attention_plan["category_counts"]["auto_applied"] >= 1
+    assert attention_plan["action_semantics"]["safe_explicit_apply"] is True
+    assert attention_plan["action_semantics"]["manual_review_required"] is False
+    assert attention_plan["command_boundary"]["reportable_commands"]["dry_run"].startswith("agentic-workspace upgrade --target .")
+    assert tmp_path.as_posix() in attention_plan["command_boundary"]["machine_commands"]["dry_run"]
     assert all("release" not in item["required_action"].lower() for item in attention_plan["attention_items"])
     assert compatibility["payload_surface_manifest"]["kind"] == "agentic-workspace/payload-surface-manifest/v1"
 
@@ -1971,7 +1976,10 @@ def test_payload_target_required_before_work_blocks_start_until_target_sync(tmp_
     selected_doctor = json.loads(capsys.readouterr().out)["values"]["installed_state_compatibility"]
     assert selected_doctor["payload"]["target"]["status"] == "target-mismatch"
     assert selected_doctor["action_effect"]["force"] == "required_before_execution"
-    assert selected_doctor["payload_upgrade_attention_plan"]["status"] == attention_plan["status"]
+    selected_plan = selected_doctor["payload_upgrade_attention_plan"]
+    assert selected_plan["status"] in {"explicit_apply_required", "manual_attention_required"}
+    if selected_plan["status"] == "manual_attention_required":
+        assert selected_plan["action_semantics"]["manual_review_required"] is True
 
     assert (
         cli.main(
@@ -5749,7 +5757,9 @@ def _pr_comment_attention_payload():
     primitives.write_text(core.read_text(encoding="utf-8"), encoding="utf-8")
     assert cli.main(["report", "--target", str(tmp_path), "--section", "runtime_mirror_consistency", "--format", "json"]) == 0
     in_sync = json.loads(capsys.readouterr().out)["answer"]
-    assert in_sync["status"] == "in_sync"
+    assert in_sync["status"] == "shape_in_sync"
+    assert in_sync["proof_strength"] == "return-key-shape-plus-selector-ownership"
+    assert in_sync["semantic_equivalence_checked"] is False
 
 
 def test_report_runtime_mirror_consistency_surfaces_active_selector_shadowing(tmp_path: Path, capsys) -> None:

@@ -1247,6 +1247,9 @@ def _payload_target_sync_commands(*, target_root: Path, config: WorkspaceConfig)
             command=f"agentic-workspace start --target {target} --select installed_state_compatibility --format json",
             cli_invoke=config.cli_invoke,
         ),
+        "reportable_dry_run_command": "agentic-workspace upgrade --target . --to-payload-target --dry-run --format json",
+        "reportable_apply_command": "agentic-workspace upgrade --target . --to-payload-target --format json",
+        "reportable_recheck_command": "agentic-workspace start --target . --select installed_state_compatibility --format json",
     }
 
 
@@ -1328,6 +1331,9 @@ def _payload_target_status_payload(
         "dry_run_command": commands["dry_run_command"],
         "apply_command": commands["apply_command"],
         "recheck_command": commands["recheck_command"],
+        "reportable_dry_run_command": commands["reportable_dry_run_command"],
+        "reportable_apply_command": commands["reportable_apply_command"],
+        "reportable_recheck_command": commands["reportable_recheck_command"],
         "reason": reason,
         "rule": (
             "Repo-declared payload targets compare checked-in payload provenance against a repo-owned target; "
@@ -1631,10 +1637,12 @@ def _payload_upgrade_attention_plan_payload(
         category = str(item["category"])
         category_counts[category] = category_counts.get(category, 0) + 1
     status = "satisfied"
-    if any(item["blocking"] for item in items):
+    blocking_count = sum(1 for item in items if item["blocking"])
+    non_auto_count = sum(1 for item in items if item["category"] != "auto_applied")
+    if non_auto_count:
         status = "manual_attention_required"
-    elif any(item["category"] != "auto_applied" for item in items):
-        status = "manual_attention_required"
+    elif blocking_count:
+        status = "explicit_apply_required"
     elif items:
         status = "auto_apply_available"
     return {
@@ -1646,6 +1654,35 @@ def _payload_upgrade_attention_plan_payload(
         "surface_manifest": manifest,
         "attention_item_count": len(items),
         "category_counts": category_counts,
+        "action_semantics": {
+            "blocking_count": blocking_count,
+            "non_auto_attention_count": non_auto_count,
+            "safe_explicit_apply": bool(items) and non_auto_count == 0,
+            "manual_review_required": non_auto_count > 0,
+            "rule": "Package-owned auto-apply drift may require explicit apply without implying manual review.",
+        },
+        "command_boundary": {
+            "reportable_commands": {
+                "dry_run": str(
+                    payload_target.get("reportable_dry_run_command")
+                    or "agentic-workspace upgrade --target . --to-payload-target --dry-run --format json"
+                ),
+                "apply": str(
+                    payload_target.get("reportable_apply_command")
+                    or "agentic-workspace upgrade --target . --to-payload-target --format json"
+                ),
+                "recheck": str(
+                    payload_target.get("reportable_recheck_command")
+                    or "agentic-workspace start --target . --select installed_state_compatibility --format json"
+                ),
+            },
+            "machine_commands": {
+                "dry_run": dry_run_command,
+                "apply": apply_command,
+                "recheck": recheck_command,
+            },
+            "rule": "Reportable commands stay repo-relative; machine commands may include the configured invocation or absolute target path.",
+        },
         "attention_items": items,
         "recheck_command": recheck_command,
         "release_instruction_policy": {
@@ -1664,6 +1701,8 @@ def _compact_payload_upgrade_attention_plan(plan: dict[str, Any]) -> dict[str, A
         "to_payload": plan.get("to_payload"),
         "attention_item_count": plan.get("attention_item_count", 0),
         "category_counts": plan.get("category_counts", {}),
+        "action_semantics": plan.get("action_semantics", {}),
+        "command_boundary": plan.get("command_boundary", {}),
         "attention_items": plan.get("attention_items", []),
         "recheck_command": plan.get("recheck_command", ""),
         "release_instruction_policy": plan.get("release_instruction_policy", {}),
@@ -9349,6 +9388,8 @@ def _run_lifecycle_command(
         cli_invoke=_lifecycle_cli_invoke(config=config),
     )
     if command_name in {"status", "doctor"}:
+        payload["scoped_health"] = _scoped_lifecycle_health_payload(payload)
+    if command_name in {"status", "doctor"}:
         repair_actions, manual_review_actions = _aggregate_repair_actions_from_reports(
             reports, target_root=target_root, cli_invoke=config.cli_invoke, command_name=command_name
         )
@@ -9621,6 +9662,47 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             "detail_command": detail_command,
         }
     return payload
+
+
+def _scoped_lifecycle_health_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    selected_modules = set(_list_payload(payload.get("selected_modules") or payload.get("modules") or []))
+    reports = payload.get("reports", [])
+    selected_warning_count = 0
+    selected_action_count = 0
+    if isinstance(reports, list):
+        for report in reports:
+            if not isinstance(report, dict):
+                continue
+            module_name = str(report.get("module", ""))
+            if selected_modules and module_name not in selected_modules:
+                continue
+            warnings = report.get("warnings", [])
+            actions = report.get("actions", [])
+            selected_warning_count += len(warnings) if isinstance(warnings, list) else int(report.get("warning_count", 0) or 0)
+            if isinstance(actions, list):
+                selected_action_count += sum(
+                    1
+                    for action in actions
+                    if isinstance(action, dict) and str(action.get("kind", "")) not in {"current", "mode", "source", "source age"}
+                )
+            else:
+                selected_action_count += int(report.get("action_count", 0) or 0)
+    global_warning_count = len(payload.get("warnings", [])) if isinstance(payload.get("warnings"), list) else 0
+    global_review_count = len(payload.get("needs_review", [])) if isinstance(payload.get("needs_review"), list) else 0
+    selected_module_health = "attention-needed" if selected_warning_count or selected_action_count else "healthy"
+    global_health = str(payload.get("health", "unknown") or "unknown")
+    return {
+        "kind": "agentic-workspace/scoped-lifecycle-health/v1",
+        "selected_modules": payload.get("selected_modules", payload.get("modules", [])),
+        "selected_module_health": selected_module_health,
+        "selected_warning_count": selected_warning_count,
+        "selected_action_count": selected_action_count,
+        "global_workspace_health": global_health,
+        "global_warning_count": global_warning_count,
+        "global_review_count": global_review_count,
+        "global_warnings_block_scoped_check": False,
+        "rule": "Top-level health includes global workspace warnings; selected_module_health reports only the scoped module lifecycle reports.",
+    }
 
 
 def _cli_compatibility_warning_messages(cli_compatibility: dict[str, Any]) -> list[str]:
@@ -28187,7 +28269,7 @@ def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke
                 status = "shape_mismatch"
                 reason = "mirrored helper return-key shape differs"
             else:
-                status = "in_sync"
+                status = "shape_in_sync"
                 reason = "mirrored helper return-key shape matches"
         records.append(
             {
@@ -28198,6 +28280,7 @@ def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke
                 "core_keys": sorted(core_keys),
                 "runtime_mirror_keys": sorted(primitive_keys),
                 "reason": reason,
+                "proof_strength": "return-key-shape",
             }
         )
     failing = [record for record in records if record["status"] in {"mirror_missing", "shape_mismatch"}]
@@ -28208,10 +28291,12 @@ def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke
         relative_primitives=relative_primitives,
     )
     selector_branch_mismatch = report_runtime_shadowing["status"] == "selector_branch_mismatch"
-    status = "shape_mismatch" if failing else "shadow_mismatch" if selector_branch_mismatch else "in_sync"
+    status = "shape_mismatch" if failing else "shadow_mismatch" if selector_branch_mismatch else "shape_in_sync"
     return {
         "kind": "agentic-workspace/runtime-mirror-surface-consistency/v1",
         "status": status,
+        "proof_strength": "return-key-shape-plus-selector-ownership",
+        "semantic_equivalence_checked": False,
         "mirrored_surface_count": len(records),
         "records": records,
         "report_runtime_shadowing": report_runtime_shadowing,
@@ -28224,7 +28309,7 @@ def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke
             command="agentic-workspace report --target ./repo --section runtime_mirror_consistency --format json",
             cli_invoke=cli_invoke,
         ),
-        "rule": "Compare the smallest durable mirrored contract: known helper existence, public packet return-key shape, and active report selector ownership.",
+        "rule": "Compare the smallest durable mirrored contract: known helper existence, public packet return-key shape, and active report selector ownership; this is not semantic equivalence proof.",
     }
 
 
