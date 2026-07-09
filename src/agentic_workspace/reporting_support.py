@@ -390,6 +390,113 @@ def evidence_bundle_payload(
     }
 
 
+def visible_state_delta_response_payload(
+    *,
+    surface: str,
+    current_decision: dict[str, Any],
+    message_economy: dict[str, Any] | None = None,
+    evidence_bundle: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    economy = message_economy if isinstance(message_economy, dict) else message_economy_payload(surface=surface)
+    evidence = evidence_bundle if isinstance(evidence_bundle, dict) else {}
+    minimal_surfaces = [
+        str(item.get("id"))
+        for item in _support_list_payload(evidence.get("minimal_evidence_surfaces"))
+        if isinstance(item, dict) and str(item.get("id", "")).strip()
+    ]
+    missing_evidence = [str(item) for item in _support_list_payload(evidence.get("missing_evidence")) if str(item).strip()]
+    expansion_triggers = list(economy.get("expand_when", []))
+    omitted_details = [
+        {
+            "detail": "chronological recap",
+            "reason": "not needed when decision, evidence, boundary, and next action are state-backed",
+            "route": "detail selectors or verbose report output",
+        },
+        {
+            "detail": "full evidence payload",
+            "reason": "minimal evidence surfaces and missing evidence are enough for the visible update",
+            "route": ",".join(minimal_surfaces) if minimal_surfaces else "evidence_bundle",
+        },
+    ]
+    parts = {
+        "decision_or_finding": str(current_decision.get("decision_question") or current_decision.get("status") or ""),
+        "evidence_or_proof_boundary": str(current_decision.get("proof_boundary") or "not-evaluated"),
+        "residue_or_claim_boundary": str(current_decision.get("residue_owner") or "none"),
+        "next_safe_action": str(current_decision.get("next_action") or current_decision.get("safe_probe") or ""),
+    }
+    return {
+        "kind": "agentic-workspace/visible-state-delta-response/v1",
+        "surface": surface,
+        "status": "ready" if all(parts.values()) else "incomplete",
+        "parts": parts,
+        "expansion_triggers": expansion_triggers,
+        "omitted_details": omitted_details,
+        "missing_evidence": missing_evidence,
+        "source_packets": [
+            "current_decision",
+            *([] if message_economy is None else ["message_economy"]),
+            *([] if evidence_bundle is None else ["evidence_bundle"]),
+        ],
+        "ownership_boundary": (
+            "This packet compiles visible answer parts from existing AW packets; it is a renderer and not a new truth source."
+        ),
+        "state_backed": bool(current_decision.get("state_backed", True)),
+    }
+
+
+def state_delta_replay_evidence_payload() -> dict[str, Any]:
+    examples = [
+        {
+            "id": "review-rereview",
+            "workflow_class": "review",
+            "input_packets": ["current_decision", "message_economy", "evidence_bundle"],
+            "visible_parts": ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
+            "avoided": ["full prose recap", "manual reconstruction of proof boundary"],
+            "comparison": "Review update can lead with the finding and proof boundary instead of replaying inspected files.",
+        },
+        {
+            "id": "handoff-continuation",
+            "workflow_class": "handoff",
+            "input_packets": ["current_decision", "continuation_capsule", "evidence_bundle"],
+            "visible_parts": ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
+            "avoided": ["chat-history reconstruction", "duplicated context already carried by continuation capsule"],
+            "comparison": "Continuation update resumes from preserved intent, unresolved residue, and next safe action.",
+        },
+        {
+            "id": "closeout",
+            "workflow_class": "closeout",
+            "input_packets": ["closeout_ready", "current_decision", "message_economy"],
+            "visible_parts": ["decision_or_finding", "evidence_or_proof_boundary", "residue_or_claim_boundary", "next_safe_action"],
+            "avoided": ["joining multiple closeout reports by hand", "unsafe closure wording without claim boundary"],
+            "comparison": "Closeout update can state strongest safe claim, proof state, residue, and closure boundary directly.",
+        },
+    ]
+    return {
+        "kind": "agentic-workspace/state-delta-replay-evidence/v1",
+        "status": "available",
+        "workflow_class_count": len({example["workflow_class"] for example in examples}),
+        "examples": examples,
+        "required_visible_parts": [
+            "decision_or_finding",
+            "evidence_or_proof_boundary",
+            "residue_or_claim_boundary",
+            "next_safe_action",
+        ],
+        "safety_preserved": [
+            "proof boundary remains visible",
+            "residue or claim boundary remains visible",
+            "next action remains visible",
+            "expansion triggers remain explicit",
+        ],
+        "non_goals": [
+            "hidden reasoning evaluation",
+            "prompt-keyword scoring",
+            "shorter output without proof or residue boundaries",
+        ],
+        "rule": "Replay evidence demonstrates visible response construction from structured packets across ordinary workflow classes.",
+    }
+
+
 def _load_reasoning_economy_evidence_ledger(*, target_root: Path | None) -> dict[str, Any]:
     if target_root is None:
         return {
@@ -487,11 +594,31 @@ def reasoning_economy_evidence_payload(*, target_root: Path | None = None, cli_i
             }
         )
     evidence_ledger_source = _load_reasoning_economy_evidence_ledger(target_root=target_root)
+    sample_decision_packet = {
+        "phase_question": "What changed for the visible update?",
+        "next_action": "Use the compact visible-state-delta response parts.",
+        "claim_boundary": "claim requires proof/residue boundary",
+        "residue_owner": "none",
+        "detail_routes": {"reasoning_economy": "report --section reasoning_economy"},
+    }
+    sample_core = state_delta_core_payload(surface="report", decision_packet=sample_decision_packet)
+    sample_current = current_decision_payload(surface="report", decision_packet=sample_decision_packet, state_delta_core=sample_core)
+    sample_economy = message_economy_payload(surface="report", state_delta_core=sample_core)
+    sample_evidence = evidence_bundle_payload(surface="report", current_decision=sample_current, state_delta_core=sample_core)
+    visible_response_compiler = visible_state_delta_response_payload(
+        surface="report",
+        current_decision=sample_current,
+        message_economy=sample_economy,
+        evidence_bundle=sample_evidence,
+    )
+    replay_evidence = state_delta_replay_evidence_payload()
     return {
         "kind": "agentic-workspace/reasoning-economy-evidence/v1",
         "status": "available",
         "scope": "visible_external_artifacts_only",
         "evidence_ledger_source": evidence_ledger_source,
+        "visible_response_compiler": visible_response_compiler,
+        "state_delta_replay_evidence": replay_evidence,
         "non_goals": [
             "hidden chain-of-thought grading",
             "semantic scoring of private reasoning",
@@ -927,6 +1054,10 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
     if section == "reasoning_economy" and isinstance(answer, dict):
         behavior = answer.get("behavior_check", {})
         behavior = behavior if isinstance(behavior, dict) else {}
+        compiler = answer.get("visible_response_compiler", {})
+        compiler = compiler if isinstance(compiler, dict) else {}
+        replay = answer.get("state_delta_replay_evidence", {})
+        replay = replay if isinstance(replay, dict) else {}
         return _localize_command_fields(
             {
                 "kind": answer.get("kind", "agentic-workspace/reasoning-economy-evidence/v1"),
@@ -936,6 +1067,18 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                 if isinstance(answer.get("evidence_classes"), dict)
                 else [],
                 "required_visible_fields": behavior.get("required_visible_fields", []),
+                "visible_response_compiler": {
+                    key: compiler.get(key)
+                    for key in ("kind", "status", "surface", "parts", "expansion_triggers", "ownership_boundary")
+                    if key in compiler
+                },
+                "state_delta_replay_evidence": {
+                    "kind": replay.get("kind", "agentic-workspace/state-delta-replay-evidence/v1"),
+                    "status": replay.get("status", "available"),
+                    "workflow_class_count": replay.get("workflow_class_count", 0),
+                    "example_ids": [item.get("id", "") for item in _support_list_payload(replay.get("examples")) if isinstance(item, dict)],
+                    "safety_preserved": replay.get("safety_preserved", []),
+                },
                 "ledger_refs": [
                     item.get("ref", "") for item in _support_list_payload(answer.get("evidence_ledger")) if isinstance(item, dict)
                 ],
