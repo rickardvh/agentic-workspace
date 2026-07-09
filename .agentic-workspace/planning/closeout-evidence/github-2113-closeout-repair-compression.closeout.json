@@ -1,0 +1,102 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Implement #2113 closeout and repair compression lane",
+  "plan_id": "github-2113-closeout-repair-compression",
+  "created_at": "2026-07-09T16:26:14.350695+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/github-2113-closeout-repair-compression.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/github-2113-closeout-repair-compression.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive is omitted or skipped."
+  },
+  "active_milestone": {
+    "id": "github-2113-closeout-repair-compression",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the #2113 child stack and the runtime/report/test surfaces named in execution_bounds.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the #2113 closeout/repair compression lane as stacked PR slices covering #2111 and #2114-#2119.",
+    "hard constraints": "Preserve proof, Planning, payload, and claim gates; keep each stack slice reviewable and avoid closing the parent lane until all child outcomes are satisfied.",
+    "agent may decide locally": "Exact branch boundaries, helper names, packet composition, and focused tests as long as each child issue has a bounded owner slice and proof.",
+    "escalate when": "A fix requires weakening gates, storing transcript logs durably, creating broad tracker-specific workflow, or touching surfaces outside the declared runtime/report/test scope."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented the #2113 closeout and repair compression lane as a three-commit stack covering runtime closeout/proof/payload/skills composition, archived closeout idempotence, and checked-in Planning state.",
+    "scope touched": "Workspace runtime closeout/proof/startup/skills surfaces; planning archive closeout update path; focused workspace and planning tests.",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_proof.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_startup.py; src/agentic_workspace/reporting_support.py; packages/planning/src/repo_planning_bootstrap/installer.py; tests/test_workspace_*.py; packages/planning/tests/test_archive.py",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "bounded closeout complete",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Preserved proof, Planning, payload, and claim gates; closure keyword guard remains conservative; dogfooding state is explicit and drilldown-backed in closeout_ready.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "make test-workspace; make test-planning (passed on retry after initial GitHub 504 dependency fetch); make lint-workspace; make lint-planning; make typecheck-planning; make typecheck; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; focused pytest set: 167 passed, 2 skipped",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Create a bounded plan for Implement #2113 closeout and repair compression lane.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Closeout-ready output, aggregate proof receipt reconciliation, payload repair subflow, recommendation-first skills output, archived-plan idempotence, and closure keyword guard are implemented and covered by focused tests.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  }
+}
