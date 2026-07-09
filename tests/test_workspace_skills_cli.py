@@ -708,6 +708,29 @@ def test_skills_command_prefers_dogfooding_for_evaluation_scenarios(capsys) -> N
     assert payload["recommendations"][0]["id"] == "self-improvement-dogfooding"
 
 
+def test_skills_command_prefers_dogfooding_for_closeout_review(capsys) -> None:
+    assert (
+        cli.main(
+            [
+                "skills",
+                "--target",
+                ".",
+                "--task",
+                "dogfooding closeout review",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recommendations"]
+    assert payload["recommendations"][0]["id"] == "self-improvement-dogfooding"
+    assert payload["top_recommendations"][0]["id"] == "self-improvement-dogfooding"
+    assert "explicit dogfooding task route" in payload["recommendations"][0]["reasons"]
+
+
 def test_skills_command_recommends_self_improvement_for_hyphenated_dogfooding_task(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
