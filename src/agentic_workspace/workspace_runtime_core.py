@@ -8350,6 +8350,20 @@ def _sync_bytes_surface_action(
     }
 
 
+_NECESSARY_MEMORY_SKILL_TEXT_SUFFIXES = {".json", ".md", ".yaml", ".yml"}
+
+
+def _canonical_necessary_memory_skill_bytes(*, relative: Path, source_bytes: bytes) -> bytes:
+    if (
+        relative.suffix.lower() not in _NECESSARY_MEMORY_SKILL_TEXT_SUFFIXES
+        or not relative.as_posix().startswith(".agentic-workspace/memory/skills/")
+        or not source_bytes.endswith((b"\n", b"\r"))
+    ):
+        return source_bytes
+    newline = b"\r\n" if source_bytes.endswith(b"\r\n") else b"\n"
+    return source_bytes.rstrip(b"\r\n") + newline
+
+
 def _sync_tree_surface_actions(
     *,
     source_root: Path,
@@ -8369,7 +8383,10 @@ def _sync_tree_surface_actions(
             _sync_bytes_surface_action(
                 target_root=target_root,
                 relative=relative,
-                source_bytes=source.read_bytes(),
+                source_bytes=_canonical_necessary_memory_skill_bytes(
+                    relative=relative,
+                    source_bytes=source.read_bytes(),
+                ),
                 dry_run=dry_run,
                 detail=detail,
             )
