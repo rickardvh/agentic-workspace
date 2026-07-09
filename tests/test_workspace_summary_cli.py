@@ -194,6 +194,72 @@ def test_closeout_report_keeps_installed_state_drift_blocking_for_owned_surfaces
     assert residue["changed_paths_considered"] == ["src/agentic_workspace/workspace_runtime_core.py"]
 
 
+def test_closeout_report_composes_closeout_ready_phase_answer(tmp_path: Path) -> None:
+    report = _closeout_report_with_installed_state(
+        tmp_path,
+        changed_surfaces="src/agentic_workspace/workspace_runtime_core.py",
+        requested_outcome="Verify payload freshness before release.",
+    )
+
+    ready = report["closeout_ready"]
+    remaining_by_id = {item["id"]: item for item in ready["remaining_actions"]}
+
+    assert ready["kind"] == "agentic-workspace/closeout-ready-phase-answer/v1"
+    assert ready["status"] == "blocked"
+    assert ready["proof_status"]["state"] == "satisfied"
+    assert ready["planning_owner"]["state"] == "active"
+    assert ready["payload_status"]["status"] == "current_task_blocking"
+    assert ready["dogfooding_status"]["status"] == "not-inspected"
+    assert ready["claim_authorization"]["blocked_claim_classes"]
+    assert "payload" in remaining_by_id
+    assert "dogfooding" in remaining_by_id
+    assert "dogfooding_signal_status" in ready["drilldowns"]
+    assert "Unknown, stale, or omitted evidence" in ready["conservative_unknown_rule"]
+
+
+def test_closeout_ready_phase_answer_surfaces_unsafe_closure_actions() -> None:
+    from agentic_workspace.workspace_runtime_proof import _closeout_ready_phase_answer_payload
+
+    ready = _closeout_ready_phase_answer_payload(
+        completion_gate={
+            "status": "blocked",
+            "claim_authorization": {
+                "allowed_claim_classes": ["slice_complete"],
+                "blocked_claim_classes": ["full_intent_complete", "issue_closure"],
+                "closure_actions": [
+                    {
+                        "kind": "issue_closure",
+                        "target": "#2113",
+                        "authorized": False,
+                        "reason": "parent issue closure requires full-intent completion",
+                    }
+                ],
+                "closure_keyword_guard": {
+                    "rule": "Use safe references unless issue closure is authorized.",
+                    "targets": [
+                        {
+                            "target": "#2113",
+                            "status": "blocked",
+                            "unsafe_examples": ["Closes #2113"],
+                            "safe_reference": "Refs #2113; does not close.",
+                        }
+                    ],
+                },
+            },
+        },
+        proof_execution={"status": "recorded", "proof": "pytest"},
+        planning_evidence={"state": "archived", "authority": "archived-planning-evidence"},
+        installed_state_residue={"status": "separate_maintenance_residue", "current_task_proof_effect": "not_blocking_narrow_task_proof"},
+        workflow_compliance_summary={"status": "clear"},
+        detail_commands={},
+    )
+
+    assert ready["status"] == "blocked"
+    assert ready["strongest_safe_claim"] == "slice_complete"
+    assert {item["kind"] for item in ready["unsafe_closure_actions"]} == {"issue_closure", "closure_keyword"}
+    assert any(item["id"] == "closure_actions" for item in ready["remaining_actions"])
+
+
 def test_closeout_report_section_reads_installed_state_residue(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -616,6 +682,26 @@ def test_memory_decision_packet_closeout_states_are_pressure_driven() -> None:
     assert local_memory["capture"]["status"] == "follow_up_required"
     assert follow_up["force"] == "required_at_closeout"
     assert follow_up["capture"]["status"] == "follow_up_required"
+
+
+def test_completion_gate_claim_authorization_surfaces_closure_keyword_guard() -> None:
+    from agentic_workspace.workspace_runtime_primitives import _completion_gate_claim_authorization
+
+    authorization = _completion_gate_claim_authorization(
+        status="continue-required",
+        active_intent_satisfied=False,
+        human_accepted_partial=False,
+        claim_level_requested="full-intent-complete",
+        proof_status="representative",
+        issue_refs={"#2113"},
+    )
+
+    guard = authorization["closure_keyword_guard"]
+    assert "issue_closure" in authorization["blocked_claim_classes"]
+    assert guard["status"] == "blocked"
+    assert guard["severity"] == "strong-warning"
+    assert guard["targets"][0]["safe_reference"] == "Refs #2113; does not close."
+    assert "Closes #2113" in guard["targets"][0]["unsafe_examples"]
 
 
 def test_memory_decision_packet_pull_statuses_distinguish_route_inspection() -> None:

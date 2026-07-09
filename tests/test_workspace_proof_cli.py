@@ -2991,6 +2991,80 @@ def test_proof_changed_reconciles_receipt_history_without_duplicate_runs(tmp_pat
     assert "closeout review" in answer["proof_execution_evidence"]["rule"]
 
 
+def test_proof_changed_accepts_aggregate_receipt_for_selected_proof_set(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    receipt_dir = tmp_path / ".agentic-workspace" / "local" / "proof-receipts"
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": "selected proof set",
+        "result": "passed",
+        "recorded_at": "2026-07-09T00:00:00+00:00",
+        "changed_paths": ["src/agentic_workspace/workspace_runtime_proof.py"],
+        "proof_commands": ["make test-workspace", "make typecheck"],
+        "plan_id": "aggregate-proof",
+    }
+    _write(receipt_dir / "last.json", json.dumps(receipt, indent=2))
+    _write(receipt_dir / "history.jsonl", json.dumps(receipt, sort_keys=True) + "\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    reconciliation = answer["proof_receipt_reconciliation"]
+    states = {item["command"]: item for item in reconciliation["commands"]}
+    assert reconciliation["status"] == "accepted"
+    assert reconciliation["accepted_count"] == 2
+    assert states["make test-workspace"]["receipt_match"] == "aggregate-selected-proof"
+    assert states["make typecheck"]["diagnostic"] == "aggregate proof_commands receipt accepted"
+    assert answer["proof_receipt_bridge"]["status"] == "complete"
+    assert answer["proof_execution_evidence"]["status"] == "recorded-and-accepted"
+
+
+def test_proof_requirement_tiers_keep_environmental_probes_non_blocking() -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload, _proof_requirement_tiers_payload
+
+    selected_commands = [
+        {"command": "make test-workspace", "lane": "workspace_cli", "intent_type": "behavior-test"},
+        {"command": "docker compose run conformance", "lane": "release_conformance", "intent_type": "environment-check"},
+    ]
+    required_commands = ["make test-workspace", "docker compose run conformance"]
+
+    tiers = _proof_requirement_tiers_payload(
+        selected_commands=selected_commands,
+        required_commands=required_commands,
+        optional_commands=["agentic-workspace summary --format json"],
+        manual_proof_obligations=[],
+        unavailable_commands=[],
+        host_policy_blocked_commands=[],
+    )
+    assert tiers["counts"]["selected_required"] == 1
+    assert tiers["counts"]["optional_environmental"] == 1
+    assert tiers["categories"]["optional_environmental"][0]["blocking"] is False
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=None,
+        required_commands=required_commands,
+        changed_paths=["src/app.py"],
+        selected_commands=selected_commands,
+    )
+    assert reconciliation["required_command_count"] == 1
+    assert reconciliation["non_blocking_selected_count"] == 1
+    assert [item["command"] for item in reconciliation["commands"]] == ["make test-workspace"]
+
+
 def test_proof_changed_marks_receipt_stale_for_changed_path_mismatch(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 

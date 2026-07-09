@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import fnmatch
+import hashlib
 import json
 import re
 import tomllib
@@ -80,6 +81,7 @@ from agentic_workspace.workspace_runtime_core import (
     _project_roots_for_changed_paths,
     _proof_adequacy_payload,
     _proof_command_for_target,
+    _proof_command_tier,
     _proof_command_tiers,
     _proof_completion_options,
     _proof_confidence_payload,
@@ -496,13 +498,21 @@ def _proof_receipt_failed(result: Any) -> bool:
 
 
 def _proof_receipt_summary(receipt: dict[str, Any]) -> dict[str, Any]:
-    return {
+    summary = {
         "command": str(receipt.get("command") or "").strip(),
         "result": str(receipt.get("result") or "").strip(),
         "changed_paths": [str(path).strip() for path in _list_payload(receipt.get("changed_paths")) if str(path).strip()],
         "recorded_at": receipt.get("recorded_at", ""),
         "plan_id": receipt.get("plan_id", ""),
     }
+    proof_commands = [str(command).strip() for command in _list_payload(receipt.get("proof_commands")) if str(command).strip()]
+    if proof_commands:
+        summary["proof_commands"] = proof_commands
+    for key in ("selected_proof_id", "selected_proof_fingerprint"):
+        value = str(receipt.get(key) or "").strip()
+        if value:
+            summary[key] = value
+    return summary
 
 
 def _proof_receipt_identity(receipt: dict[str, Any]) -> str:
@@ -562,19 +572,158 @@ def _proof_receipt_path_scope_matches(*, receipt: dict[str, Any], changed_paths:
     return set(normalized_changed_paths).issubset(set(receipt_paths)) if normalized_changed_paths else True
 
 
-def _proof_receipt_reconciliation_payload(
-    *, target_root: Path | None, required_commands: list[str], changed_paths: list[str]
+def _selected_proof_identity(required_commands: list[str]) -> dict[str, Any]:
+    normalized = [str(command).strip() for command in required_commands if str(command).strip()]
+    digest = hashlib.sha256(json.dumps(normalized, sort_keys=True, ensure_ascii=True).encode("utf-8")).hexdigest()
+    return {
+        "kind": "agentic-workspace/selected-proof-identity/v1",
+        "id": f"selected-proof:{digest[:16]}",
+        "fingerprint": digest,
+        "command_count": len(normalized),
+    }
+
+
+def _proof_receipt_aggregate_matches(*, receipt: dict[str, Any], required_commands: list[str]) -> tuple[bool, str]:
+    required = [str(command).strip() for command in required_commands if str(command).strip()]
+    if not required:
+        return False, "no selected commands require aggregate proof"
+    identity = _selected_proof_identity(required)
+    receipt_fingerprint = str(receipt.get("selected_proof_fingerprint") or "").strip()
+    if receipt_fingerprint and receipt_fingerprint == identity["fingerprint"]:
+        return True, "selected proof fingerprint accepted"
+    receipt_id = str(receipt.get("selected_proof_id") or "").strip()
+    if receipt_id and receipt_id == identity["id"]:
+        return True, "selected proof id accepted"
+    proof_commands = [str(command).strip() for command in _list_payload(receipt.get("proof_commands")) if str(command).strip()]
+    if proof_commands and set(required).issubset(set(proof_commands)):
+        return True, "aggregate proof_commands receipt accepted"
+    return False, "receipt is not for this selected proof set"
+
+
+def _proof_requirement_tier_for_command(command: str, *, selected: dict[str, Any]) -> str:
+    tier = _proof_command_tier(command, lane=str(selected.get("lane", "")))
+    if tier == "environmental":
+        return "optional_environmental"
+    if tier == "manual_review":
+        return "manual_required"
+    return "selected_required"
+
+
+def _proof_receipt_blocking_commands(*, required_commands: list[str], selected_commands: list[dict[str, Any]]) -> list[str]:
+    selected_by_text = {str(command.get("command", "")): command for command in selected_commands if isinstance(command, dict)}
+    blocking: list[str] = []
+    for command in required_commands:
+        text = str(command).strip()
+        if not text:
+            continue
+        tier = _proof_requirement_tier_for_command(text, selected=selected_by_text.get(text, {}))
+        if tier == "optional_environmental":
+            continue
+        blocking.append(text)
+    return blocking
+
+
+def _proof_requirement_tiers_payload(
+    *,
+    selected_commands: list[dict[str, Any]],
+    required_commands: list[str],
+    optional_commands: list[str],
+    manual_proof_obligations: list[dict[str, Any]],
+    unavailable_commands: list[dict[str, Any]],
+    host_policy_blocked_commands: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    selected_by_text = {str(command.get("command", "")): command for command in selected_commands if isinstance(command, dict)}
+    categories: dict[str, list[dict[str, Any]]] = {
+        "selected_required": [],
+        "manual_required": [],
+        "recommended_confidence": [],
+        "optional_environmental": [],
+        "not_selected": [],
+    }
+    for command in required_commands:
+        text = str(command).strip()
+        if not text:
+            continue
+        selected = selected_by_text.get(text, {})
+        requirement_tier = _proof_requirement_tier_for_command(text, selected=selected)
+        categories.setdefault(requirement_tier, []).append(
+            {
+                "command": text,
+                "lane": str(selected.get("lane", "")),
+                "blocking": requirement_tier in {"selected_required", "manual_required"},
+                "receipt_required": requirement_tier == "selected_required",
+                "reason": "environmental proof is surfaced as non-blocking context"
+                if requirement_tier == "optional_environmental"
+                else "selected proof blocks closeout until executed or reconciled",
+            }
+        )
+    for item in manual_proof_obligations:
+        if isinstance(item, dict):
+            categories["manual_required"].append(
+                {
+                    "id": str(item.get("id", "")),
+                    "blocking": bool(item.get("required", True)),
+                    "receipt_required": False,
+                    "reason": "manual proof obligation must be recorded outside executable receipt matching",
+                }
+            )
+    for command in optional_commands:
+        text = str(command).strip()
+        if text and text not in {item.get("command") for item in categories["selected_required"]}:
+            categories["recommended_confidence"].append(
+                {"command": text, "blocking": False, "receipt_required": False, "reason": "recommended confidence check"}
+            )
+    for command in [*unavailable_commands, *host_policy_blocked_commands]:
+        if isinstance(command, dict):
+            categories["manual_required"].append(
+                {
+                    "command": str(command.get("command", "")),
+                    "lane": str(command.get("lane", "")),
+                    "blocking": True,
+                    "receipt_required": False,
+                    "reason": str(command.get("reason", "")) or "selected proof is unavailable or blocked",
+                }
+            )
+    counts = {key: len(value) for key, value in categories.items()}
+    blocking_count = sum(1 for items in categories.values() for item in items if item.get("blocking"))
+    return {
+        "kind": "agentic-workspace/proof-requirement-tiers/v1",
+        "status": "present" if any(counts.values()) else "empty",
+        "counts": counts,
+        "blocking_count": blocking_count,
+        "categories": categories,
+        "blocking_rule": (
+            "Closeout blocks on selected_required and manual_required proof. Recommended confidence, optional "
+            "environmental, and not-selected proof remain visible without inflating missing receipt counts."
+        ),
+    }
+
+
+def _proof_receipt_reconciliation_payload(
+    *,
+    target_root: Path | None,
+    required_commands: list[str],
+    changed_paths: list[str],
+    selected_commands: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    blocking_commands = _proof_receipt_blocking_commands(
+        required_commands=required_commands,
+        selected_commands=selected_commands or [],
+    )
+    selected_identity = _selected_proof_identity(blocking_commands)
     command_states: list[dict[str, Any]] = []
     base = {
         "kind": "agentic-workspace/proof-receipt-reconciliation/v1",
         "receipt_path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
         "receipt_history_path": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
-        "required_command_count": len(required_commands),
+        "selected_command_count": len(required_commands),
+        "required_command_count": len(blocking_commands),
+        "non_blocking_selected_count": max(0, len(required_commands) - len(blocking_commands)),
+        "selected_proof_identity": selected_identity,
         "rule": (
             "Receipts are accepted only for exact command matches, compatible changed-path scope, and passed results; "
-            "proof selection alone is never treated as execution evidence. Receipt history may satisfy multiple selected "
-            "commands for the current changed-path boundary without forcing duplicate validation runs."
+            "aggregate receipts may satisfy the selected proof set when they carry matching selected proof identity or "
+            "proof_commands. Optional/environmental proof is reported outside the blocking receipt count."
         ),
     }
     if target_root is None:
@@ -584,7 +733,7 @@ def _proof_receipt_reconciliation_payload(
             "reason": "target root unavailable",
             "commands": [
                 {"command": command, "evidence_state": "not-run-or-not-recorded", "diagnostic": "not run or not recorded"}
-                for command in required_commands
+                for command in blocking_commands
             ],
         }
     receipt_records, latest_receipt, read_error = _read_proof_receipt_records(target_root)
@@ -595,7 +744,7 @@ def _proof_receipt_reconciliation_payload(
             "reason": read_error,
             "commands": [
                 {"command": command, "evidence_state": "record-stale-untrusted", "diagnostic": "record unreadable or untrusted"}
-                for command in required_commands
+                for command in blocking_commands
             ],
         }
     if not receipt_records:
@@ -604,10 +753,23 @@ def _proof_receipt_reconciliation_payload(
             "status": "not-recorded",
             "commands": [
                 {"command": command, "evidence_state": "not-run-or-not-recorded", "diagnostic": "not run or not recorded"}
-                for command in required_commands
+                for command in blocking_commands
             ],
         }
-    for command in required_commands:
+    aggregate_receipts = [
+        receipt
+        for receipt in receipt_records
+        if _proof_receipt_passed(str(receipt.get("result") or ""))
+        and _proof_receipt_path_scope_matches(receipt=receipt, changed_paths=changed_paths)
+        and _proof_receipt_aggregate_matches(receipt=receipt, required_commands=blocking_commands)[0]
+    ]
+    aggregate_receipt = aggregate_receipts[0] if aggregate_receipts else None
+    aggregate_match_reason = (
+        _proof_receipt_aggregate_matches(receipt=aggregate_receipt, required_commands=blocking_commands)[1]
+        if aggregate_receipt is not None
+        else ""
+    )
+    for command in blocking_commands:
         state: dict[str, Any]
         command_receipts = [receipt for receipt in receipt_records if str(receipt.get("command") or "").strip() == command]
         scoped_receipts = [
@@ -627,6 +789,14 @@ def _proof_receipt_reconciliation_payload(
                 "evidence_state": "accepted",
                 "diagnostic": "passed receipt accepted",
                 "receipt": _proof_receipt_summary(accepted_receipt),
+            }
+        elif aggregate_receipt is not None:
+            state = {
+                "command": command,
+                "evidence_state": "accepted",
+                "diagnostic": aggregate_match_reason,
+                "receipt": _proof_receipt_summary(aggregate_receipt),
+                "receipt_match": "aggregate-selected-proof",
             }
         elif failed_receipt is not None:
             state = {
@@ -654,6 +824,8 @@ def _proof_receipt_reconciliation_payload(
                 "diagnostic": "run but not recorded for this selected command",
             }
         state["required"] = True
+        state["blocking"] = True
+        state["proof_requirement_tier"] = "selected_required"
         command_states.append(state)
     accepted_count = sum(1 for state in command_states if state.get("evidence_state") == "accepted")
     return {
@@ -842,6 +1014,194 @@ def _tiny_proof_obligations_payload(value: dict[str, Any], *, required_commands:
             "rule": recommended.get("rule", ""),
         },
         "completion_claim_rule": value.get("completion_claim_rule", ""),
+    }
+
+
+def _closeout_ready_phase_answer_payload(
+    *,
+    completion_gate: dict[str, Any],
+    proof_execution: dict[str, Any],
+    planning_evidence: dict[str, Any],
+    installed_state_residue: dict[str, Any],
+    workflow_compliance_summary: dict[str, Any],
+    detail_commands: dict[str, str],
+) -> dict[str, Any]:
+    claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
+    allowed_claim_classes = [
+        str(item).strip() for item in _list_payload(claim_authorization.get("allowed_claim_classes")) if str(item).strip()
+    ]
+    blocked_claim_classes = [
+        str(item).strip() for item in _list_payload(claim_authorization.get("blocked_claim_classes")) if str(item).strip()
+    ]
+    closure_actions = [dict(item) for item in _list_payload(claim_authorization.get("closure_actions")) if isinstance(item, dict)]
+    closure_keyword_guard = _as_dict(claim_authorization.get("closure_keyword_guard"))
+    unsafe_closure_actions: list[dict[str, Any]] = [
+        {
+            "kind": str(action.get("kind") or "closure_action"),
+            "target": str(action.get("target") or ""),
+            "reason": str(action.get("reason") or "closure action is not authorized by closeout claim authorization"),
+        }
+        for action in closure_actions
+        if action.get("authorized") is not True
+    ]
+    for target in _list_payload(closure_keyword_guard.get("targets")):
+        if not isinstance(target, dict) or str(target.get("status") or "") != "blocked":
+            continue
+        unsafe_closure_actions.append(
+            {
+                "kind": "closure_keyword",
+                "target": str(target.get("target") or ""),
+                "reason": str(closure_keyword_guard.get("rule") or "closure keywords are blocked for this target"),
+                "unsafe_examples": _list_payload(target.get("unsafe_examples")),
+                "safe_reference": str(target.get("safe_reference") or ""),
+            }
+        )
+
+    claim_rank = {
+        "none": 0,
+        "partial_progress": 1,
+        "slice_complete": 2,
+        "lane_complete": 3,
+        "parent_complete": 4,
+        "full_intent_complete": 5,
+        "issue_closure": 6,
+    }
+    strongest_safe_claim = "none"
+    for claim_class in allowed_claim_classes:
+        if claim_rank.get(claim_class, 0) > claim_rank.get(strongest_safe_claim, 0):
+            strongest_safe_claim = claim_class
+
+    proof_status = str(proof_execution.get("status") or "unknown").strip() or "unknown"
+    proof_state = "satisfied" if proof_status in {"recorded", "passed", "satisfied"} else "missing-or-unknown"
+    planning_state = str(planning_evidence.get("state") or "absent").strip() or "absent"
+    payload_status = str(installed_state_residue.get("status") or "unknown").strip() or "unknown"
+    payload_effect = str(installed_state_residue.get("current_task_proof_effect") or "").strip()
+    workflow_status = str(workflow_compliance_summary.get("status") or "unknown").strip() or "unknown"
+    dogfooding_command = detail_commands.get(
+        "dogfooding_signal_status",
+        "agentic-workspace report --target ./repo --section dogfooding_signal_status --format json",
+    )
+    dogfooding_status = {
+        "status": "not-inspected",
+        "source": "dogfooding_signal_status",
+        "detail_selector": "dogfooding_signal_status",
+        "detail_command": dogfooding_command,
+        "claim_boundary": (
+            "Treat missing dogfooding disposition as unresolved for broad closeout; inspect or record no-signal/dismissed/routed state."
+        ),
+    }
+
+    remaining_actions: list[dict[str, Any]] = []
+
+    def add_remaining(action_id: str, status: str, summary: str, selector: str, command: str = "") -> None:
+        remaining_actions.append(
+            {
+                "id": action_id,
+                "status": status,
+                "summary": summary,
+                "detail_selector": selector,
+                **({"command": command} if command else {}),
+            }
+        )
+
+    if proof_state != "satisfied":
+        add_remaining(
+            "proof",
+            proof_status,
+            "Proof execution is not recorded as satisfied for this closeout claim.",
+            "closeout_report.validation",
+            detail_commands.get("closeout_trust", ""),
+        )
+    if payload_status in {"current_task_blocking", "payload-upgrade-required", "blocked", "unknown"} or payload_effect == "blocking":
+        add_remaining(
+            "payload",
+            payload_status,
+            "Installed payload state is missing, unknown, or claim-relevant before broad closeout.",
+            "closeout_report.installed_state_residue",
+        )
+    if workflow_status in {"attention", "unknown"}:
+        add_remaining(
+            "workflow",
+            workflow_status,
+            "Workflow compliance has unresolved or unknown closeout evidence.",
+            "closeout_report.gaps_and_residual_risk.workflow_trust_impact",
+            detail_commands.get("workflow_compliance_summary", ""),
+        )
+    add_remaining(
+        "dogfooding",
+        dogfooding_status["status"],
+        "Dogfooding disposition is not included in this closeout report packet; inspect the dedicated selector.",
+        "dogfooding_signal_status",
+        dogfooding_command,
+    )
+    if strongest_safe_claim == "none" or blocked_claim_classes:
+        add_remaining(
+            "claim_authorization",
+            str(completion_gate.get("status") or "unknown"),
+            "Completion claim classes are blocked or limited by claim authorization.",
+            "closeout_report.completion_gate.claim_authorization",
+        )
+    if unsafe_closure_actions:
+        add_remaining(
+            "closure_actions",
+            "blocked",
+            "One or more closure actions or closure keywords are unsafe for the current claim boundary.",
+            "closeout_report.closeout_ready.unsafe_closure_actions",
+        )
+
+    status = "ready"
+    if any(item["id"] in {"proof", "payload", "claim_authorization", "closure_actions"} for item in remaining_actions):
+        status = "blocked"
+    elif remaining_actions:
+        status = "review-required"
+
+    return {
+        "kind": "agentic-workspace/closeout-ready-phase-answer/v1",
+        "status": status,
+        "phase_question": "What proof remains, what residue matters, and what can safely be claimed now?",
+        "strongest_safe_claim": strongest_safe_claim,
+        "proof_status": {
+            "status": proof_status,
+            "state": proof_state,
+            "proof": proof_execution.get("proof", ""),
+            "source_field": proof_execution.get("source_field", ""),
+        },
+        "planning_owner": {
+            "state": planning_state,
+            "authority": planning_evidence.get("authority", ""),
+            "source": planning_evidence.get("source", {}),
+            "rule": planning_evidence.get("rule", ""),
+        },
+        "payload_status": {
+            "status": payload_status,
+            "current_task_proof_effect": payload_effect or "unknown",
+            "claim_boundary": _as_dict(installed_state_residue.get("triage")).get(
+                "claim_boundary", installed_state_residue.get("claim_boundary", "")
+            ),
+        },
+        "dogfooding_status": dogfooding_status,
+        "claim_authorization": {
+            "allowed_claim_classes": allowed_claim_classes,
+            "blocked_claim_classes": blocked_claim_classes,
+            "closure_actions": closure_actions,
+            "closure_keyword_guard": closure_keyword_guard,
+        },
+        "unsafe_closure_actions": unsafe_closure_actions,
+        "remaining_actions": remaining_actions,
+        "remaining_action_count": len(remaining_actions),
+        "drilldowns": {
+            "closeout_report": detail_commands.get("closeout_report", ""),
+            "closeout_trust": detail_commands.get("closeout_trust", ""),
+            "completion_contract": detail_commands.get("completion_contract", ""),
+            "workflow_compliance_summary": detail_commands.get("workflow_compliance_summary", ""),
+            "dogfooding_signal_status": dogfooding_command,
+        },
+        "conservative_unknown_rule": (
+            "Unknown, stale, or omitted evidence stays visible as remaining action and must not be promoted into a completion or closure claim."
+        ),
+        "boundary": (
+            "This packet composes existing closeout/proof/planning/payload/dogfooding/claim signals; detailed selectors remain canonical."
+        ),
     }
 
 
@@ -1060,6 +1420,14 @@ def _closeout_report_payload(
             command="agentic-workspace report --target ./repo --section decision_pressure --format json",
             cli_invoke=config.cli_invoke,
         ),
+        "workflow_compliance_summary": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section workflow_compliance_summary --format json",
+            cli_invoke=config.cli_invoke,
+        ),
+        "dogfooding_signal_status": _command_with_cli_invoke(
+            command="agentic-workspace report --target ./repo --section dogfooding_signal_status --format json",
+            cli_invoke=config.cli_invoke,
+        ),
     }
     follow_up_owner = str(
         _as_dict(options.get("keep-parent-open")).get("owner") or completion_boundary.get("required_follow_up_owner") or ""
@@ -1103,17 +1471,27 @@ def _closeout_report_payload(
             "semantic completion judgment."
         ),
     )
+    planning_evidence = {
+        "authority": evidence_authority or "no-planning-evidence",
+        "source": evidence_source,
+        "state": evidence_state,
+        "rule": "Retained or archived evidence may explain the just-finished lane, but only active Planning state can govern current work.",
+    }
+    closeout_ready = _closeout_ready_phase_answer_payload(
+        completion_gate=completion_gate,
+        proof_execution=proof_execution,
+        planning_evidence=planning_evidence,
+        installed_state_residue=installed_state_closeout_residue,
+        workflow_compliance_summary=workflow_compliance_summary,
+        detail_commands=detail_commands,
+    )
     return {
         "kind": "agentic-workspace/closeout-report/v1",
         "status": "present" if active_planning_record else "guidance-only",
         "authority": "derived-projection",
         "authority_boundary": closeout_authority_boundary,
-        "planning_evidence": {
-            "authority": evidence_authority or "no-planning-evidence",
-            "source": evidence_source,
-            "state": evidence_state,
-            "rule": "Retained or archived evidence may explain the just-finished lane, but only active Planning state can govern current work.",
-        },
+        "planning_evidence": planning_evidence,
+        "closeout_ready": closeout_ready,
         "profile": profile_policy["selected_profile"],
         "profile_policy": profile_policy,
         "trust": trust,
@@ -3352,12 +3730,19 @@ def _proof_selection_for_changed_paths(
         target_root=target_root,
         required_commands=required_commands,
         changed_paths=changed_paths,
+        selected_commands=selected_commands,
     )
     proof_execution_evidence = {
         "kind": "proof-execution-evidence/v1",
         "status": "recorded-and-accepted" if proof_receipt_reconciliation.get("status") == "accepted" else "not-run-or-not-recorded",
         "state_model": list(_PROOF_EXECUTION_STATUSES),
         "expected_commands": required_commands,
+        "blocking_expected_commands": [
+            str(item.get("command", ""))
+            for item in _list_payload(proof_receipt_reconciliation.get("commands"))
+            if isinstance(item, dict) and item.get("blocking")
+        ],
+        "non_blocking_selected_count": proof_receipt_reconciliation.get("non_blocking_selected_count", 0),
         "manual_verification_expected": manual_verification is not None,
         "receipt_reconciliation": proof_receipt_reconciliation,
         "missing_evidence_diagnostics": {
@@ -3366,6 +3751,7 @@ def _proof_selection_for_changed_paths(
             "record-stale-untrusted": "a receipt exists, but command/path/result trust does not match the current proof selection",
             "recorded-failed": "the selected command was recorded as failed",
             "accepted": "the selected command has an exact matching passed receipt",
+            "aggregate-selected-proof": "a passed receipt covers the selected proof set by identity or proof_commands",
         },
         "rule": (
             "Proof selection describes expected proof only; closeout must record what actually ran, failed, was skipped, "
@@ -3526,6 +3912,14 @@ def _proof_selection_for_changed_paths(
         selected_commands=selected_commands,
         manual_proof_obligations=manual_proof_obligations,
     )
+    proof_requirement_tiers = _proof_requirement_tiers_payload(
+        selected_commands=selected_commands,
+        required_commands=required_commands,
+        optional_commands=optional_commands,
+        manual_proof_obligations=manual_proof_obligations,
+        unavailable_commands=unavailable_commands,
+        host_policy_blocked_commands=host_policy_blocked_commands,
+    )
     intent_proof = _intent_proof_prompt_payload(task_text=task_text, acceptance=acceptance, claim_boundary="slice")
     proof_confidence = _proof_confidence_payload(
         intent_proof=intent_proof,
@@ -3664,6 +4058,7 @@ def _proof_selection_for_changed_paths(
         "proof_execution_evidence": proof_execution_evidence,
         "proof_receipt_reconciliation": proof_receipt_reconciliation,
         "proof_receipt_bridge": proof_receipt_bridge,
+        "proof_requirement_tiers": proof_requirement_tiers,
         "proof_decision": proof_decision,
         "high_assurance_closeout_posture": high_assurance_closeout_posture,
         "intent_proof": intent_proof,

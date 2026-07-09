@@ -2402,6 +2402,56 @@ def test_payload_target_required_before_claim_limits_claims_without_blocking_wor
     assert selected["next_safe_action"]["implementation_allowed"] is True
 
 
+def test_payload_target_required_before_work_exposes_repair_subflow(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    workspace = tmp_path / ".agentic-workspace"
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    (workspace / "config.toml").write_text(
+        "schema_version = 1\n\n"
+        "[payload]\n"
+        'target_release = "source-current"\n'
+        'minimum_capabilities = ["installed-state-sync-v2"]\n'
+        'policy = "required-before-work"\n',
+        encoding="utf-8",
+    )
+    provenance_path = workspace / "payload-provenance.json"
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    provenance.pop("payload_capabilities", None)
+    provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "installed_state_compatibility,next_safe_action",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected = json.loads(capsys.readouterr().out)["values"]
+    compatibility = selected["installed_state_compatibility"]
+    subflow = compatibility["payload_repair_subflow"]
+
+    assert compatibility["status"] == "payload-upgrade-required"
+    assert compatibility["payload_repair_subflow"] == subflow
+    assert subflow["kind"] == "agentic-workspace/payload-repair-subflow/v1"
+    assert subflow["status"] == "safe-explicit-apply"
+    assert subflow["safe_explicit_apply"] is True
+    assert subflow["manual_review_required"] is False
+    assert subflow["start_mutates"] is False
+    assert [step["id"] for step in subflow["steps"]] == ["dry_run", "apply", "recheck"]
+    assert all(step["reportable_command"].startswith("agentic-workspace ") for step in subflow["steps"])
+    assert subflow["reportable_commands"]["dry_run"] == "agentic-workspace upgrade --target . --to-payload-target --dry-run --format json"
+    assert "--to-payload-target --dry-run" in subflow["machine_commands"]["dry_run"]
+    assert selected["next_safe_action"]["next_safe_action"] == "run-installed-payload-target-upgrade"
+
+
 def test_payload_target_blocks_when_invoked_cli_cannot_satisfy_explicit_target(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     workspace = tmp_path / ".agentic-workspace"

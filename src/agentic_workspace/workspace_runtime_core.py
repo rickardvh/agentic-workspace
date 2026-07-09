@@ -1709,6 +1709,83 @@ def _compact_payload_upgrade_attention_plan(plan: dict[str, Any]) -> dict[str, A
     }
 
 
+def _payload_repair_subflow_payload(
+    *,
+    status: str,
+    action_state: dict[str, Any],
+    repair_route: dict[str, Any],
+    payload_upgrade_attention_plan: dict[str, Any],
+) -> dict[str, Any]:
+    action_state = _as_dict(action_state)
+    repair_route = _as_dict(repair_route)
+    plan = _as_dict(payload_upgrade_attention_plan)
+    command_boundary = _as_dict(plan.get("command_boundary"))
+    reportable = _as_dict(command_boundary.get("reportable_commands"))
+    machine = _as_dict(command_boundary.get("machine_commands"))
+    action_semantics = _as_dict(plan.get("action_semantics"))
+    route_status = str(repair_route.get("status") or "")
+    if status == "compatible" or route_status == "not-required":
+        subflow_status = "not-required"
+        next_action = "none"
+    elif route_status == "available" and action_semantics.get("safe_explicit_apply") is True:
+        subflow_status = "safe-explicit-apply"
+        next_action = "run dry-run, review, apply explicitly, then recheck"
+    elif route_status == "manual-review-required" or action_semantics.get("manual_review_required"):
+        subflow_status = "manual-review"
+        next_action = "run dry-run and review manual attention items before applying"
+    elif route_status == "blocking":
+        subflow_status = "blocked"
+        next_action = "select a compatible CLI or resolve the blocker before payload repair"
+    else:
+        subflow_status = "review"
+        next_action = "inspect installed_state_compatibility before applying payload repair"
+    steps = [
+        {
+            "id": "dry_run",
+            "reportable_command": str(reportable.get("dry_run") or ""),
+            "machine_command": str(
+                machine.get("dry_run") or action_state.get("dry_run_command") or repair_route.get("dry_run_command") or ""
+            ),
+            "mutates": False,
+            "purpose": "preview package-owned payload changes and manual attention items",
+        },
+        {
+            "id": "apply",
+            "reportable_command": str(reportable.get("apply") or ""),
+            "machine_command": str(machine.get("apply") or action_state.get("apply_command") or repair_route.get("apply_command") or ""),
+            "mutates": True,
+            "purpose": "explicitly apply the reviewed payload repair",
+        },
+        {
+            "id": "recheck",
+            "reportable_command": str(reportable.get("recheck") or ""),
+            "machine_command": str(machine.get("recheck") or action_state.get("recheck_command") or ""),
+            "mutates": False,
+            "purpose": "confirm installed payload target compatibility after repair",
+        },
+    ]
+    return {
+        "kind": "agentic-workspace/payload-repair-subflow/v1",
+        "status": subflow_status,
+        "source_status": status,
+        "repair_mechanism": str(action_state.get("repair_mechanism") or repair_route.get("repair_mechanism") or ""),
+        "safe_explicit_apply": action_semantics.get("safe_explicit_apply") is True,
+        "manual_review_required": action_semantics.get("manual_review_required") is True,
+        "start_mutates": False,
+        "next_action": next_action,
+        "steps": steps,
+        "reportable_commands": {step["id"]: step["reportable_command"] for step in steps},
+        "machine_commands": {step["id"]: step["machine_command"] for step in steps},
+        "attention_item_count": plan.get("attention_item_count", 0),
+        "category_counts": plan.get("category_counts", {}),
+        "detail_selector": "installed_state_compatibility.payload_repair_subflow",
+        "rule": (
+            "Startup may expose this dry-run/apply/recheck subflow, but only the explicit apply step mutates. "
+            "Reportable commands stay repo-relative while machine commands preserve configured invocation details."
+        ),
+    }
+
+
 def _cli_compatibility_payload(*, config: WorkspaceConfig, compact: bool = False) -> dict[str, Any]:
     expectation = config.cli_compatibility
     identity = _invoked_cli_identity_payload(target_root=config.target_root)
@@ -2172,6 +2249,31 @@ def _installed_state_compatibility_payload(
         action_state=action_state,
         stale_generated_surfaces=stale_generated_surfaces,
     )
+    repair_route = {
+        "status": "available"
+        if action_state_name == "safe_payload_sync_available"
+        else "manual-review-required"
+        if action_state_name == "manual_review_required"
+        else "blocking"
+        if action_state_name == "blocking_incompatible"
+        else "not-required",
+        "action_state": action_state_name,
+        "action_id": action_state["action_id"],
+        "repair_mechanism": action_state["repair_mechanism"],
+        "dry_run_command": action_state["dry_run_command"] or dry_run_sync_command,
+        "apply_command": action_state["apply_command"] or apply_sync_command,
+        "waiver": {
+            "allowed": action_state_name == "safe_payload_sync_available",
+            "claim": "source-behavior-validated-installed-payload-freshness-unproven",
+            "rule": "A waiver can keep narrow source work moving, but final reporting must not claim installed payload freshness.",
+        },
+    }
+    payload_repair_subflow = _payload_repair_subflow_payload(
+        status=status,
+        action_state=action_state,
+        repair_route=repair_route,
+        payload_upgrade_attention_plan=payload_upgrade_attention_plan,
+    )
     payload: dict[str, Any] = {
         "kind": "agentic-workspace/installed-state-compatibility/v1",
         "status": status,
@@ -2180,6 +2282,7 @@ def _installed_state_compatibility_payload(
         "action_state": action_state,
         "payload_surface_manifest": payload_upgrade_attention_plan["surface_manifest"],
         "payload_upgrade_attention_plan": payload_upgrade_attention_plan,
+        "payload_repair_subflow": payload_repair_subflow,
         "executable": {
             "package": "agentic-workspace",
             "version": __version__,
@@ -2233,25 +2336,7 @@ def _installed_state_compatibility_payload(
             },
         ],
         "next_action": next_action,
-        "repair_route": {
-            "status": "available"
-            if action_state_name == "safe_payload_sync_available"
-            else "manual-review-required"
-            if action_state_name == "manual_review_required"
-            else "blocking"
-            if action_state_name == "blocking_incompatible"
-            else "not-required",
-            "action_state": action_state_name,
-            "action_id": action_state["action_id"],
-            "repair_mechanism": action_state["repair_mechanism"],
-            "dry_run_command": action_state["dry_run_command"] or dry_run_sync_command,
-            "apply_command": action_state["apply_command"] or apply_sync_command,
-            "waiver": {
-                "allowed": action_state_name == "safe_payload_sync_available",
-                "claim": "source-behavior-validated-installed-payload-freshness-unproven",
-                "rule": "A waiver can keep narrow source work moving, but final reporting must not claim installed payload freshness.",
-            },
-        },
+        "repair_route": repair_route,
         "action_effect": action_effect,
         "rule": (
             "Every entry surface should classify executable, payload, generated-artifact, and adapter posture through this "
@@ -2266,6 +2351,7 @@ def _installed_state_compatibility_payload(
             "action_state": payload["action_state"],
             "payload_surface_manifest": payload_upgrade_attention_plan["surface_manifest"],
             "payload_upgrade_attention_plan": _compact_payload_upgrade_attention_plan(payload_upgrade_attention_plan),
+            "payload_repair_subflow": payload_repair_subflow,
             "executable": {
                 key: payload["executable"][key]
                 for key in ("compatibility_status", "classification", "failed_checks")
@@ -48742,9 +48828,12 @@ def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
 
 
 def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str | None, select: str | None = None) -> None:
-    payload = _skills_payload(target_root=target_root, task_text=task_text)
+    full_payload = _skills_payload(target_root=target_root, task_text=task_text)
+    payload = (
+        _skills_recommendation_first_payload(full_payload, target_root=target_root, task_text=task_text) if task_text else full_payload
+    )
     if select:
-        payload = _select_payload_fields(payload, select=select, source_command="skills")
+        payload = _select_payload_fields(full_payload, select=select, source_command="skills")
         _emit_payload(payload=payload, format_name=format_name)
         return
     if format_name == "json":
@@ -48766,7 +48855,7 @@ def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str |
     elif payload.get("task"):
         print("Recommended:")
         print("- none")
-    for skill in payload["skills"]:
+    for skill in payload.get("skills", []):
         print(f"{skill['id']}: {skill['summary']}")
         print(f"  path: {skill['path']}")
         print(f"  owner: {skill['owner']}")
@@ -48776,6 +48865,47 @@ def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str |
         print("Warnings:")
         for warning in payload["warnings"]:
             print(f"- {warning}")
+
+
+def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root: Path | None, task_text: str | None) -> dict[str, Any]:
+    recommendations = [item for item in _list_payload(payload.get("recommendations")) if isinstance(item, dict)]
+    top = recommendations[0] if recommendations else {}
+    top_score = int(top.get("score", 0) or 0) if top else 0
+    tied = [item for item in recommendations if int(item.get("score", 0) or 0) == top_score] if top else []
+    low_confidence = bool(top and top_score <= 1)
+    inventory_command = "agentic-workspace skills --target . --select skills,sources --format json"
+    if target_root is not None:
+        inventory_command = f"agentic-workspace skills --target {target_root.as_posix()} --select skills,sources --format json"
+    return {
+        "target": payload.get("target"),
+        "task": task_text,
+        "profile": "recommendation-first",
+        "status": "recommended" if recommendations else "no-match",
+        "recommendation_summary": {
+            "recommended_skill": top.get("id", "") if top else "",
+            "next_skill_path": top.get("path", "") if top else "",
+            "score": top_score if top else 0,
+            "reasons": top.get("reasons", [])[:3] if top else [],
+            "confidence": "low" if low_confidence else "tie" if len(tied) > 1 else "ranked",
+            "tie_count": len(tied),
+            "low_confidence": low_confidence,
+        },
+        "top_recommendations": payload.get("top_recommendations", recommendations[:3]),
+        "recommendations": recommendations,
+        "agent_aids": payload.get("agent_aids", []),
+        "agent_aid_recommendations": payload.get("agent_aid_recommendations", []),
+        "agent_aid_source": payload.get("agent_aid_source", {}),
+        "warnings": payload.get("warnings", []),
+        "catalog_summary": _skill_catalog_summary_from_payload(payload),
+        "inventory_detail": {
+            "status": "omitted-from-default-task-output",
+            "omitted_skill_count": len(_list_payload(payload.get("skills"))),
+            "command": inventory_command,
+            "selectors": ["skills", "sources", "agent_aids"],
+            "rule": "Default task output is recommendation-first; request the inventory selector when registry detail is needed.",
+        },
+        "rule": "Use top recommendations first. Full skill inventory remains available by explicit selector instead of default task output.",
+    }
 
 
 def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[str, Any]:
