@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import contextlib
 import hashlib
 import io
@@ -130,36 +129,87 @@ def run_log_command(
     stdout: Any | None = None,
     stderr: Any | None = None,
 ) -> int:
-    parser = argparse.ArgumentParser(prog="agentic-workspace log", description="Manage local AW session logs.")
-    parser.add_argument("--target", default=None)
-    parser.add_argument("--format", choices=("text", "json"), default="text")
-    subparsers = parser.add_subparsers(dest="subcommand", required=True)
-    note_parser = subparsers.add_parser("note", help="Append an optional short note to the current AW session log.")
-    note_parser.add_argument("--text", required=True)
-    subparsers.add_parser("new-session", help="Start a new local AW session log.")
-    subparsers.add_parser("status", help="Report local AW session logging status.")
-    args = parser.parse_args(list(argv))
-    effective_argv: list[str] = []
-    if args.target:
-        effective_argv.extend(["--target", str(args.target)])
-    state = load_state_for_argv(effective_argv, cwd=cwd)
-    output_stdout = stdout or sys.stdout
     output_stderr = stderr or sys.stderr
     try:
-        if args.subcommand == "note":
-            payload = append_note(state=state, text=str(args.text))
-        elif args.subcommand == "new-session":
+        args = _read_log_command_options(argv)
+    except ValueError as exc:
+        print(f"agentic-workspace log: {exc}", file=output_stderr)
+        return 2
+    effective_argv: list[str] = []
+    if args["target"]:
+        effective_argv.extend(["--target", str(args["target"])])
+    state = load_state_for_argv(effective_argv, cwd=cwd)
+    output_stdout = stdout or sys.stdout
+    try:
+        if args["subcommand"] == "note":
+            payload = append_note(state=state, text=str(args["text"]))
+        elif args["subcommand"] == "new-session":
             payload = reset_session(state=state)
         else:
             payload = status_payload(state=state)
     except Exception as exc:  # pragma: no cover - non-fatal command wrapper guard
         print(f"AW session logging warning: {exc}", file=output_stderr)
         return 0
-    if args.format == "json":
+    if args["format"] == "json":
         print(json.dumps(serialise_value(payload), indent=2), file=output_stdout)
     else:
         print(_log_command_text(payload), file=output_stdout)
     return 0
+
+
+def _read_log_command_options(argv: Sequence[str]) -> dict[str, str]:
+    tokens = list(argv)
+    options = {"target": "", "format": "text", "subcommand": "", "text": ""}
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token == "--target":
+            index += 1
+            if index >= len(tokens):
+                raise ValueError("--target requires a value")
+            options["target"] = tokens[index]
+        elif token.startswith("--target="):
+            options["target"] = token.split("=", 1)[1]
+        elif token == "--format":
+            index += 1
+            if index >= len(tokens):
+                raise ValueError("--format requires a value")
+            options["format"] = _validate_log_output_format(tokens[index])
+        elif token.startswith("--format="):
+            options["format"] = _validate_log_output_format(token.split("=", 1)[1])
+        elif token in {"note", "new-session", "status"}:
+            options["subcommand"] = token
+            index += 1
+            break
+        else:
+            raise ValueError(f"unknown option or subcommand: {token}")
+        index += 1
+    if not options["subcommand"]:
+        raise ValueError("expected one of: note, new-session, status")
+    if options["subcommand"] == "note":
+        while index < len(tokens):
+            token = tokens[index]
+            if token == "--text":
+                index += 1
+                if index >= len(tokens):
+                    raise ValueError("--text requires a value")
+                options["text"] = tokens[index]
+            elif token.startswith("--text="):
+                options["text"] = token.split("=", 1)[1]
+            else:
+                raise ValueError(f"unknown note option: {token}")
+            index += 1
+        if not options["text"]:
+            raise ValueError("note requires --text")
+    elif index < len(tokens):
+        raise ValueError(f"{options['subcommand']} does not accept extra arguments")
+    return options
+
+
+def _validate_log_output_format(value: str) -> str:
+    if value not in {"text", "json"}:
+        raise ValueError("--format must be one of: text, json")
+    return value
 
 
 def append_command_entry(*, state: SessionLoggingState, argv: Sequence[str], capture: CommandCapture) -> str | None:
