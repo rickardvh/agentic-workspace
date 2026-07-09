@@ -26725,9 +26725,17 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         changed_path_facts = _as_dict(gate.get("changed_path_facts") or gate.get("changed_path_classification"))
         compact["changed_path_facts"] = {
             key: changed_path_facts.get(key)
-            for key in ("dirty_shape", "surface_root_count", "scope_growth_detected", "scope_growth_reasons")
+            for key in (
+                "dirty_shape",
+                "surface_root_count",
+                "scope_growth_detected",
+                "scope_growth_reasons",
+                "archived_planning_residue",
+            )
             if changed_path_facts.get(key) not in (None, "", [], {})
         }
+        if compact.get("gate_result") == "post-closeout-verification" and "archived_planning_residue" not in compact["changed_path_facts"]:
+            compact["changed_path_facts"]["archived_planning_residue"] = {"status": "completed-closeout-residue"}
     if "work_shape_guidance" in gate and gate.get("workflow_sufficient") is False:
         compact["work_shape_guidance"] = _tiny_work_shape_guidance(gate["work_shape_guidance"])
     if isinstance(task_switch, dict) and task_switch.get("status") in {
@@ -26756,7 +26764,15 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         if route_acknowledgement:
             compact_switch["route_acknowledgement"] = {
                 key: route_acknowledgement.get(key)
-                for key in ("status", "route", "changed_path_count", "claim_boundary", "proof_rule")
+                for key in (
+                    "status",
+                    "route",
+                    "changed_path_count",
+                    "claim_boundary",
+                    "proof_rule",
+                    "return_to_active_plan",
+                    "stale_thread_cleanup",
+                )
                 if route_acknowledgement.get(key) not in (None, "", [], {})
             }
         if active_plan_protection.get("claim_boundary"):
@@ -26891,6 +26907,8 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         }
     if compact.get("status") in {"clear", "satisfied", "attention"}:
         for noisy_key in ("authority_boundary", "candidate_pressure", "decomposition", "changed_path_facts", "planning_revision"):
+            if noisy_key == "changed_path_facts" and compact.get("gate_result") == "post-closeout-verification":
+                continue
             compact.pop(noisy_key, None)
     compact["detail_selector"] = "planning_safety_gate"
     return {key: value for key, value in compact.items() if value is not None}
@@ -31858,6 +31876,25 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
             or "branch-missing" in thread["stale_reasons"]
         )
     ]
+    prune_candidates.extend(
+        {
+            "id": thread["id"],
+            "path": thread["path"],
+            "stale_reasons": thread["stale_reasons"],
+            "safe_to_forget": True,
+            "source": "local_chat_checkpoint",
+            "rule": "Forgetting removes only ignored local checkpoint fallback state and never proves completion.",
+        }
+        for thread in stale_threads
+        if thread["source"] == "local_chat_checkpoint"
+        and thread["id"] == "checkpoint-default"
+        and thread["path"] == LOCAL_CHAT_CHECKPOINT_PATH.as_posix()
+        and (
+            "old-unused-thread" in thread["stale_reasons"]
+            or "external-owner-closed" in thread["stale_reasons"]
+            or "branch-missing" in thread["stale_reasons"]
+        )
+    )
     if unreadable:
         status = "unreadable"
     elif selected_id and not selected_matches:
@@ -32147,6 +32184,14 @@ def _resolve_local_work_thread_prune_path(*, target_root: Path, candidate: dict[
     relative = Path(relative_text)
     if relative.is_absolute() or relative.name == "index.json" or relative.suffix != ".json":
         return None
+    if (
+        str(candidate.get("id") or "") == "checkpoint-default"
+        and str(candidate.get("source") or "") == "local_chat_checkpoint"
+        and relative.as_posix() == LOCAL_CHAT_CHECKPOINT_PATH.as_posix()
+    ):
+        target = (target_root / relative).resolve()
+        expected = (target_root / LOCAL_CHAT_CHECKPOINT_PATH).resolve()
+        return target if target == expected else None
     expected_root = _local_work_thread_root(target_root).resolve()
     target = (target_root / relative).resolve()
     try:

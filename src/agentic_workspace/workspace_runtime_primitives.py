@@ -24594,11 +24594,29 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         compact["allowed_read_only_actions"] = gate.get("allowed_read_only_actions")
         compact["claim_boundary"] = gate.get("claim_boundary")
     if "changed_path_facts" in gate or "changed_path_classification" in gate:
-        compact["changed_path_facts"] = gate.get("changed_path_facts") or gate.get("changed_path_classification")
+        changed_path_facts = _as_dict(gate.get("changed_path_facts") or gate.get("changed_path_classification"))
+        compact["changed_path_facts"] = {
+            key: changed_path_facts.get(key)
+            for key in (
+                "dirty_shape",
+                "surface_root_count",
+                "scope_growth_detected",
+                "scope_growth_reasons",
+                "archived_planning_residue",
+            )
+            if changed_path_facts.get(key) not in (None, "", [], {})
+        }
+        if compact.get("gate_result") == "post-closeout-verification" and "archived_planning_residue" not in compact["changed_path_facts"]:
+            compact["changed_path_facts"]["archived_planning_residue"] = {"status": "completed-closeout-residue"}
     if "work_shape_guidance" in gate:
         compact["work_shape_guidance"] = _tiny_work_shape_guidance(gate["work_shape_guidance"])
     task_switch = gate.get("task_switch_reconciliation")
-    if isinstance(task_switch, dict) and task_switch.get("status") == "active":
+    if isinstance(task_switch, dict) and task_switch.get("status") in {
+        "active",
+        "bounded-reflection-reporting",
+        "current-task-route-acknowledged",
+        "completed-active-plan-route",
+    }:
         compact["task_switch_reconciliation"] = {
             key: task_switch.get(key)
             for key in (
@@ -24615,6 +24633,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "recommended_next_action",
                 "safe_routes",
                 "active_plan_protection",
+                "route_acknowledgement",
                 "rule",
             )
             if key in task_switch

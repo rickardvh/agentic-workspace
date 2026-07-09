@@ -1734,6 +1734,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     "surface_root_count",
                     "scope_growth_detected",
                     "scope_growth_reasons",
+                    "archived_planning_residue",
                 )
                 if key in changed_path_facts
             }

@@ -3797,8 +3797,9 @@ def test_implement_allows_completed_archived_plan_residue_with_continuation_evid
 
         payload = json.loads(capsys.readouterr().out)
         gate = payload["planning_safety_gate"]
-        assert gate["status"] == "clear", label
-        assert gate["gate_result"] == "direct-work-allowed", label
+        assert gate["status"] == "satisfied", label
+        assert gate["gate_result"] == "post-closeout-verification", label
+        assert gate["required_next_action"] == "run-post-closeout-verification", label
         assert gate["implementation_allowed"] is True, label
         facts = gate["changed_path_facts"]
         assert facts["dirty_shape"] == "implementation-with-archived-planning-residue", label
@@ -4048,8 +4049,9 @@ def test_implement_allows_closeout_evidence_and_state_cleanup_publication_residu
 
     payload = json.loads(capsys.readouterr().out)
     gate = payload["planning_safety_gate"]
-    assert gate["status"] == "clear"
-    assert gate["gate_result"] == "direct-work-allowed"
+    assert gate["status"] == "satisfied"
+    assert gate["gate_result"] == "post-closeout-verification"
+    assert gate["required_next_action"] == "run-post-closeout-verification"
     facts = gate["changed_path_facts"]
     assert facts["planning_paths"] == []
     assert facts["archived_planning_residue"]["status"] == "completed-closeout-residue"
@@ -4137,7 +4139,9 @@ candidates = []
 
     payload = json.loads(capsys.readouterr().out)
     gate = payload["planning_safety_gate"]
-    assert gate["status"] in {"clear", "attention"}
+    assert gate["status"] == "satisfied"
+    assert gate["gate_result"] == "post-closeout-verification"
+    assert gate["required_next_action"] == "run-post-closeout-verification"
     assert gate["gate_result"] != "candidate-lane-promotion-required"
     assert gate["implementation_allowed"] is True
     assert gate["changed_path_facts"]["archived_planning_residue"]["status"] == "completed-closeout-residue"

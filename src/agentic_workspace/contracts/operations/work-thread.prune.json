@@ -66,6 +66,11 @@
       "surface": ".agentic-workspace/local/work-threads/*.json",
       "required": false,
       "when": "remove selected safe local work-thread prune candidates"
+    },
+    {
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "required": false,
+      "when": "remove the selected stale checkpoint fallback candidate"
     }
   ],
   "steps": [
@@ -87,7 +92,7 @@
   ],
   "guards": [
     "Prune only records already present in work_threads.cleanup.prune_candidates.",
-    "Delete only .agentic-workspace/local/work-threads/*.json files, never index.json, chat-checkpoint.json, Planning, Memory, Verification, docs, issues, PRs, or proof receipts.",
+    "Delete only current cleanup candidates under .agentic-workspace/local/work-threads/*.json or the stale checkpoint fallback at .agentic-workspace/local/chat-checkpoint.json; never delete index.json, Planning, Memory, Verification, docs, issues, PRs, or proof receipts.",
     "Do not infer task completion from stale or pruned local state."
   ],
   "proof": [
