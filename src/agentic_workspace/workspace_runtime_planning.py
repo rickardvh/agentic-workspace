@@ -760,6 +760,17 @@ def _acknowledged_current_task_switch_payload(
         "changed_path_count": len(changed_paths),
         "claim_boundary": "Current task is intentionally separate; do not claim active-plan progress, completion, or abandonment.",
         "proof_rule": "Use current-task proof only.",
+        "return_to_active_plan": {
+            "status": "available",
+            "command": "agentic-workspace summary --target . --format json",
+            "rule": "Return by rereading checked-in Planning; route acknowledgement is not an active-plan mutation.",
+        },
+        "stale_thread_cleanup": {
+            "status": "available",
+            "inspect_command": "agentic-workspace start --target . --select work_threads --format json",
+            "prune_command": "agentic-workspace work-thread prune --target . --all-candidates --dry-run --format json",
+            "rule": "Prune only local advisory candidates; never use pruning as completion proof.",
+        },
     }
     acknowledged["rule"] = (
         "Changed-path implementation context can acknowledge the current-task route when planning-owned surfaces are not being "
@@ -1204,6 +1215,18 @@ def _planning_safety_gate_payload(
             "planning-owner warnings stay visible while only a PR-feedback-addressed claim is in scope."
         )
         required_next_action = "prove-pr-feedback-addressed"
+        workflow_sufficient = True
+    elif path_classification["dirty_shape"] in {
+        "implementation-with-archived-planning-residue",
+        "archived-planning-residue-only",
+    }:
+        status = "satisfied"
+        decision = "post-closeout-verification"
+        reason = (
+            "Changed Planning paths are completed archived closeout residue, so this is a post-closeout verification route "
+            "rather than missing active implementation ownership."
+        )
+        required_next_action = "run-post-closeout-verification"
         workflow_sufficient = True
     elif path_classification["dirty_shape"] == "planning-plus-implementation":
         status = "violation"

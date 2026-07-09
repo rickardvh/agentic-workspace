@@ -3055,6 +3055,66 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
     assert "planning_safety_gate" not in after["context"]["planning"]
 
 
+def test_implement_routes_post_closeout_archive_residue_as_verification(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=True, active_milestone_status="completed")
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "archive-plan",
+                "--plan",
+                "issue-1981",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--retain-archive",
+                "--apply-cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    changed = [
+        "src/agentic_workspace/workspace_runtime_core.py",
+        ".agentic-workspace/planning/state.toml",
+        ".agentic-workspace/planning/execplans/archive/issue-1981.plan.json",
+    ]
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *changed,
+                "--task",
+                "Final post-closeout verification for #1981",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning_safety_gate"]
+
+    assert gate["gate_result"] == "post-closeout-verification"
+    assert gate["workflow_sufficient"] is True
+    assert gate["required_next_action"] == "run-post-closeout-verification"
+    assert gate["changed_path_facts"]["dirty_shape"] == "implementation-with-archived-planning-residue"
+    assert gate["changed_path_facts"]["archived_planning_residue"]["status"] == "completed-closeout-residue"
+    assert payload["action_signals"]["implementation_allowed"] is True
+    assert "implementation-owner-missing" not in payload["action_signals"]["hard_blockers"]
+
+
 def test_start_keeps_incomplete_active_plan_on_task_switch_route(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -3081,6 +3141,62 @@ def test_start_keeps_incomplete_active_plan_on_task_switch_route(tmp_path: Path,
     assert payload["next_safe_action"]["next_safe_action"] == "choose-task-switch-route"
     assert gate["gate_result"] == "active-plan-task-switch"
     assert gate["task_switch_reconciliation"]["status"] == "active"
+
+
+def test_implement_acknowledges_current_task_switch_with_return_and_cleanup_routes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Unrelated active plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write_json(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        {"kind": "planning-execplan/v1", "id": "active-plan", "title": "Unrelated active plan"},
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Implement unrelated parser cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    switch = payload["context"]["planning_safety_gate"]["task_switch_reconciliation"]
+    acknowledgement = switch["route_acknowledgement"]
+
+    assert switch["status"] == "current-task-route-acknowledged"
+    assert acknowledgement["status"] == "acknowledged"
+    assert acknowledgement["return_to_active_plan"]["command"] == "agentic-workspace summary --target . --format json"
+    assert acknowledgement["stale_thread_cleanup"]["inspect_command"] == (
+        "agentic-workspace start --target . --select work_threads --format json"
+    )
+    assert "claim-active-plan-progress" in switch["blocked_claims"]
 
 
 def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Path, capsys) -> None:
@@ -4489,6 +4605,88 @@ def test_local_work_threads_prune_removes_only_safe_local_candidates(tmp_path: P
     after = json.loads(capsys.readouterr().out)["values"]["work_threads"]
     assert after["thread_count"] == 0
     assert after["cleanup"]["prune_candidates"] == []
+
+
+def test_local_work_threads_prune_can_remove_stale_checkpoint_fallback(tmp_path: Path, capsys) -> None:
+    _init_real_git_repo_with_commit(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    old_head = _git_value(tmp_path, "rev-parse", "HEAD")
+    assert (
+        cli.main(
+            [
+                "checkpoint",
+                "write",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #1992 old branch",
+                "--issue",
+                "#1992",
+                "--durable-source",
+                "https://github.com/rickardvh/agentic-workspace/issues/1992",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    checkpoint_path = tmp_path / ".agentic-workspace" / "local" / "chat-checkpoint.json"
+    checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    checkpoint["volatile_observations"]["branch"]["value"] = "deleted-branch"
+    checkpoint["volatile_observations"]["head_commit"]["value"] = old_head
+    checkpoint_path.write_text(json.dumps(checkpoint, indent=2) + "\n", encoding="utf-8")
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "work_threads", "--format", "json"]) == 0
+    projected = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+    candidate = projected["cleanup"]["prune_candidates"][0]
+    assert candidate["id"] == "checkpoint-default"
+    assert candidate["source"] == "local_chat_checkpoint"
+    assert candidate["path"] == ".agentic-workspace/local/chat-checkpoint.json"
+    assert "branch-missing" in candidate["stale_reasons"]
+
+    assert (
+        cli.main(
+            [
+                "work-thread",
+                "prune",
+                "--target",
+                str(tmp_path),
+                "--thread-id",
+                "checkpoint-default",
+                "--dry-run",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    dry_run = json.loads(capsys.readouterr().out)
+    assert dry_run["status"] == "dry-run"
+    assert dry_run["pruned_paths"] == [".agentic-workspace/local/chat-checkpoint.json"]
+    assert checkpoint_path.exists()
+
+    assert (
+        cli.main(
+            [
+                "work-thread",
+                "prune",
+                "--target",
+                str(tmp_path),
+                "--thread-id",
+                "checkpoint-default",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "pruned"
+    assert payload["pruned_thread_ids"] == ["checkpoint-default"]
+    assert payload["pruned_paths"] == [".agentic-workspace/local/chat-checkpoint.json"]
+    assert not checkpoint_path.exists()
 
 
 def test_local_work_threads_prune_skips_current_non_candidate(tmp_path: Path, capsys) -> None:
