@@ -529,6 +529,70 @@ candidates = []
     assert not record_path.exists()
 
 
+def test_archive_plan_prepare_closeout_updates_already_archived_record(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    _write_execplan_record(archived_record_path, status="completed")
+    record = json.loads(archived_record_path.read_text(encoding="utf-8"))
+    record.pop("intent_satisfaction")
+    record.pop("closure_check")
+    record.pop("closeout_distillation", None)
+    installer_mod._write_execplan_record(record_path=archived_record_path, record=record)
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived = json.loads(archived_record_path.read_text(encoding="utf-8"))
+
+    assert payload["warnings"] == []
+    assert any(action["kind"] == "updated-archived-closeout" for action in payload["actions"])
+    assert not any(action["kind"] == "manual review" and "already archived" in action["detail"] for action in payload["actions"])
+    assert archived["closure_check"]["closure decision"] == "archive-and-close"
+    assert archived["intent_satisfaction"]["was original intent fully satisfied?"] == "yes"
+
+
+def test_archive_plan_prepare_closeout_reports_already_current_archived_record(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    _write_execplan_record(archived_record_path, status="completed")
+
+    assert planning_cli.main(["archive-plan", "plan-alpha", "--target", str(tmp_path), "--prepare-closeout", "--format", "json"]) == 0
+    first_payload = json.loads(capsys.readouterr().out)
+    assert any(action["kind"] == "updated-archived-closeout" for action in first_payload["actions"])
+
+    assert planning_cli.main(["archive-plan", "plan-alpha", "--target", str(tmp_path), "--prepare-closeout", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["warnings"] == []
+    assert any(action["kind"] == "already-current" for action in payload["actions"])
+    assert not any(action["kind"] == "manual review" and "already archived" in action["detail"] for action in payload["actions"])
+
+
+def test_archive_plan_prepare_closeout_blocks_invalid_archived_record(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    archived_record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "archive" / "plan-alpha.plan.json"
+    _write_execplan_record(archived_record_path, status="in-progress")
+
+    assert planning_cli.main(["archive-plan", "plan-alpha", "--target", str(tmp_path), "--prepare-closeout", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    blocker = next(action for action in payload["actions"] if action["kind"] == "blocked-with-reason")
+    assert "active_milestone.status" in blocker["detail"]
+    assert not any(action["kind"] == "manual review" and "already archived" in action["detail"] for action in payload["actions"])
+
+
 def test_archive_plan_prepare_closeout_normalizes_scaffold_residue_in_retained_archive(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",
