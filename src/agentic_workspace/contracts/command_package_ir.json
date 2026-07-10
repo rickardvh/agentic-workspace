@@ -1143,6 +1143,11 @@
                 "attr": "changed"
               },
               {
+                "name": "task_text",
+                "kind": "attr",
+                "attr": "task"
+              },
+              {
                 "name": "profile",
                 "kind": "diagnostic_profile",
                 "default": "tiny"
@@ -4508,6 +4513,13 @@
                 "help": "Optional repository path used to inspect installed modules and proof state."
               },
               {
+                "name": "task",
+                "flags": [
+                  "--task"
+                ],
+                "help": "Optional task description used to keep changed-path proof selection aligned with the active task context."
+              },
+              {
                 "name": "route",
                 "flags": [
                   "--route"
@@ -6677,6 +6689,21 @@
                 "type": "integer",
                 "default": 900,
                 "help": "Maximum token age when --strict-preflight is enabled (default: 900)."
+              },
+              {
+                "name": "verbose",
+                "flags": [
+                  "--verbose"
+                ],
+                "action": "store_true",
+                "help": "Emit full lifecycle and per-file detail. The default upgrade output is compact and decision-first."
+              },
+              {
+                "name": "select",
+                "flags": [
+                  "--select"
+                ],
+                "help": "Return selected fields from the full upgrade payload."
               },
               {
                 "name": "dry_run",

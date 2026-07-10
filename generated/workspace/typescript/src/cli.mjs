@@ -2706,6 +2706,13 @@ const commandDefinitions = [
         },
         {
           "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used to keep changed-path proof selection aligned with the active task context.",
+          "name": "task"
+        },
+        {
+          "flags": [
             "--route"
           ],
           "help": "Return one proof route by id instead of the full proof surface.",
@@ -4038,6 +4045,21 @@ const commandDefinitions = [
           "help": "Maximum token age when --strict-preflight is enabled (default: 900).",
           "name": "preflight_max_age_seconds",
           "type": "integer"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--verbose"
+          ],
+          "help": "Emit full lifecycle and per-file detail. The default upgrade output is compact and decision-first.",
+          "name": "verbose"
+        },
+        {
+          "flags": [
+            "--select"
+          ],
+          "help": "Return selected fields from the full upgrade payload.",
+          "name": "select"
         },
         {
           "action": "store_true",

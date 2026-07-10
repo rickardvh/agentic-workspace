@@ -39123,6 +39123,7 @@ def _emit_proof(
     route: str | None = None,
     current_only: bool = False,
     changed_paths: list[str] | None = None,
+    task_text: str | None = None,
     profile: str = "full",
     select: str | None = None,
     record_receipt: bool = False,
@@ -39155,7 +39156,12 @@ def _emit_proof(
             _emit_compact_answer_text(payload)
         return
     if profile == "tiny" and normalized_paths:
-        answer = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False)
+        answer = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths,
+            target_root=target_root,
+            include_durable_intent=False,
+            task_text=task_text,
+        )
         full_payload = {
             "profile": "compact-contract-answer/v1",
             "surface": "proof",
@@ -39168,6 +39174,8 @@ def _emit_proof(
             full_payload,
             cli_invoke=config.cli_invoke,
         )
+        if task_text:
+            payload["task_context"] = {"status": "applied", "task": task_text}
         if select:
             full_payload.setdefault("sufficiency", payload.get("sufficiency", answer.get("sufficiency")))
             full_payload.setdefault("next", payload.get("next"))
@@ -39179,6 +39187,8 @@ def _emit_proof(
         return
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
     payload = _select_proof_payload(payload, target_root=target_root, route=route, current_only=current_only, changed_paths=changed_paths)
+    if task_text and changed_paths:
+        payload["task_context"] = {"status": "applied", "task": task_text}
     if profile == "tiny":
         payload = _tiny_proof_payload(payload, cli_invoke=config.cli_invoke)
     if select:
@@ -39771,6 +39781,44 @@ def _run_planning_closeout_adapter(args: argparse.Namespace) -> int:
             ("agentic-memory ", "agentic-workspace memory "),
         ):
             output = output.replace(old, new)
+        if getattr(args, "format", "text") == "json" and output.strip():
+            try:
+                closeout_payload = json.loads(output)
+            except json.JSONDecodeError:
+                closeout_payload = None
+            if (
+                isinstance(closeout_payload, dict)
+                and int(result or 0) != 0
+                or (isinstance(closeout_payload, dict) and closeout_payload.get("warnings"))
+            ):
+                warnings = _list_payload(closeout_payload.get("warnings")) if isinstance(closeout_payload, dict) else []
+                warning = next((item for item in reversed(warnings) if isinstance(item, dict) and item.get("warning_class")), {})
+                suggested = str(warning.get("suggested_fix") or "").strip()
+                warning_class = str(warning.get("warning_class") or "planning-closeout-precondition")
+                plan_token = f" {plan}" if plan not in (None, "", []) else ""
+                if warning_class in {"closeout_missing_proof", "closeout_receipt_unusable"}:
+                    next_safe_command = (
+                        f"agentic-workspace planning closeout{plan_token} --target . "
+                        '--proof-from "<proof command or evidence>" --format json'
+                    )
+                elif warning_class == "closeout_missing_finish_run_evidence":
+                    next_safe_command = (
+                        f"agentic-workspace planning closeout{plan_token} --target . --proof-from last "
+                        '--what-happened "<summary>" --scope-touched "<scope>" '
+                        '--changed-surfaces "<paths>" --review-summary "<review>" '
+                        '--outcome-summary "<outcome>" --format json'
+                    )
+                else:
+                    next_safe_command = f"agentic-workspace planning closeout{plan_token} --target . --proof-from last --format json"
+                closeout_payload["recovery"] = {
+                    "status": "blocked",
+                    "blocking_rule": warning_class,
+                    "blocking_field": str(warning.get("path") or "planning closeout evidence"),
+                    "next_safe_command": next_safe_command,
+                    "guidance": suggested,
+                    "stop_condition": "Do not retry archive mechanics until this closeout precondition is satisfied.",
+                }
+                output = json.dumps(closeout_payload, indent=2) + "\n"
         print(output, end="")
         return int(result or 0)
     except ImportError as exc:
@@ -39892,6 +39940,64 @@ def _run_init_lifecycle_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _lifecycle_count(value: Any) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value)
+    return 0
+
+
+def _emit_lifecycle_mutation_result(
+    *, args: argparse.Namespace, payload: dict[str, Any], target_root: Path, config: WorkspaceConfig
+) -> None:
+    command_name = str(args.command)
+    select = getattr(args, "select", None)
+    if select:
+        _emit_payload(payload=_select_payload_fields(payload, select=select, source_command=command_name), format_name=args.format)
+        return
+    compact_payload_route = command_name == "upgrade" and bool(getattr(args, "to_payload_target", False))
+    if not compact_payload_route or bool(getattr(args, "verbose", False)):
+        _emit_payload(payload=payload, format_name=args.format)
+        return
+    changed_count = sum(_lifecycle_count(payload.get(key)) for key in ("created", "updated_managed", "removed"))
+    manual_attention_count = sum(_lifecycle_count(payload.get(key)) for key in ("needs_review", "warnings"))
+    compatibility = _as_dict(payload.get("installed_state_compatibility"))
+    action_state = _as_dict(compatibility.get("action_state"))
+    apply_command = str(action_state.get("apply_command") or "").strip()
+    next_command = (
+        apply_command
+        if bool(getattr(args, "dry_run", False)) and apply_command
+        else _command_with_cli_invoke(
+            command=f"agentic-workspace doctor --target {target_root.as_posix()} --format json", cli_invoke=config.cli_invoke
+        )
+    )
+    compact = {
+        "kind": "agentic-workspace/lifecycle-mutation-summary/v1",
+        "command": command_name,
+        "status": compatibility.get("status") or payload.get("health") or ("attention-needed" if manual_attention_count else "ready"),
+        "dry_run": bool(getattr(args, "dry_run", False)),
+        "changed_count": changed_count,
+        "manual_attention_count": manual_attention_count,
+        "safe_explicit_apply": bool(getattr(args, "dry_run", False)) and manual_attention_count == 0,
+        "next_action": {"command": next_command},
+        "detail_commands": {
+            "verbose": _command_with_cli_invoke(
+                command=f"agentic-workspace upgrade --target {target_root.as_posix()} --verbose --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+            "select": _command_with_cli_invoke(
+                command=f"agentic-workspace upgrade --target {target_root.as_posix()} --select <field[,field...]> --format json",
+                cli_invoke=config.cli_invoke,
+            ),
+        },
+        "rule": "Default lifecycle output answers the decision question; request verbose or selected fields for per-file detail.",
+    }
+    _emit_payload(payload=compact, format_name=args.format)
+
+
 def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
     command_name = str(args.command)
     target_root, local_only_repo_root, selected_modules, resolved_preset, descriptors, config = _load_lifecycle_mutation_context(
@@ -39910,7 +40016,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_payload(payload=payload, format_name=args.format)
+        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
     if command_name == "upgrade" and bool(getattr(args, "repair_managed_local_instructions", False)):
         payload = _run_managed_local_instructions_repair(
@@ -39921,7 +40027,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_payload(payload=payload, format_name=args.format)
+        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
     if command_name == "upgrade" and bool(getattr(args, "repair_root_startup_pointer", False)):
         payload = _run_root_startup_pointer_repair(
@@ -39932,7 +40038,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_payload(payload=payload, format_name=args.format)
+        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
     if command_name == "upgrade" and bool(getattr(args, "adopt_local_only", False)):
         adoption_modules = [entry.name for entry in _module_registry(descriptors=descriptors, target_root=target_root) if entry.installed]
@@ -39944,7 +40050,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             resolved_preset=resolved_preset,
             non_interactive=args.non_interactive,
         )
-        _emit_payload(payload=payload, format_name=args.format)
+        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
     if command_name == "upgrade" and bool(getattr(args, "to_necessary_surfaces", False)):
         migration = _workspace_runtime_core._necessary_surfaces_migration_payload(
@@ -39969,7 +40075,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
             "reports": [report],
             **summary,
         }
-        _emit_payload(payload=payload, format_name=args.format)
+        _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
         return 0
     payload = _run_lifecycle_command(
         command_name=command_name,
@@ -39986,7 +40092,7 @@ def _run_lifecycle_mutation_adapter(args: argparse.Namespace) -> int:
         footprint_profile=getattr(args, "footprint_profile", None),
         mirror_payload=bool(getattr(args, "mirror_payload", False)),
     )
-    _emit_payload(payload=payload, format_name=args.format)
+    _emit_lifecycle_mutation_result(args=args, payload=payload, target_root=target_root, config=config)
     return 0
 
 

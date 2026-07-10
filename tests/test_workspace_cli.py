@@ -2040,6 +2040,13 @@ def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: P
     provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
     assert cli.main(["upgrade", "--target", str(tmp_path), "--to-payload-target", "--dry-run", "--format", "json"]) == 0
+    compact_payload = json.loads(capsys.readouterr().out)
+    assert compact_payload["kind"] == "agentic-workspace/lifecycle-mutation-summary/v1"
+    assert set(("status", "changed_count", "manual_attention_count", "safe_explicit_apply", "next_action")) <= compact_payload.keys()
+    assert len(json.dumps(compact_payload)) < 4_000
+    assert "--verbose" in compact_payload["detail_commands"]["verbose"]
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-payload-target", "--dry-run", "--verbose", "--format", "json"]) == 0
     dry_run_payload = json.loads(capsys.readouterr().out)
     dry_run_plan = dry_run_payload["installed_state_compatibility"]["payload_upgrade_attention_plan"]
     assert dry_run_plan["strategy"] == "converge-to-current-contract"
@@ -2075,7 +2082,7 @@ def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: P
     assert compatibility["status"] == "compatible"
     assert compatibility["payload"]["target"]["status"] == "satisfied"
 
-    assert cli.main(["upgrade", "--target", str(tmp_path), "--dry-run", "--format", "json"]) == 0
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--dry-run", "--verbose", "--format", "json"]) == 0
     ordinary_dry_run_payload = json.loads(capsys.readouterr().out)
     ordinary_workspace_report = next(report for report in ordinary_dry_run_payload["reports"] if report["module"] == "workspace")
     ordinary_action = next(
@@ -6663,8 +6670,12 @@ impact = "claim-limiting"
     )
     _write(tmp_path / "tools" / "run.py", "print('ok')\n")
 
-    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "tools/run.py", "--format", "json"]) == 0
+    assert (
+        cli.main(["proof", "--target", str(tmp_path), "--changed", "tools/run.py", "--task", "Validate the local tool", "--format", "json"])
+        == 0
+    )
     payload = json.loads(capsys.readouterr().out)
+    assert payload["task_context"] == {"status": "applied", "task": "Validate the local tool"}
     assert payload["local_overlay"]["status"] == "active"
     assert payload["local_overlay"]["ordinary_guidance_count"] == 1
     assert payload.get("high_risk_overlay") is None

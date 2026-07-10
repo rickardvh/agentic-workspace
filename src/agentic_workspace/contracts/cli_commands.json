@@ -2166,6 +2166,13 @@
           "help": "Optional repository path used to inspect installed modules and proof state."
         },
         {
+          "name": "task",
+          "flags": [
+            "--task"
+          ],
+          "help": "Optional task description used to keep changed-path proof selection aligned with the active task context."
+        },
+        {
           "name": "route",
           "flags": [
             "--route"
@@ -2845,6 +2852,21 @@
         "preflight_gate"
       ],
       "options": [
+        {
+          "name": "verbose",
+          "flags": [
+            "--verbose"
+          ],
+          "action": "store_true",
+          "help": "Emit full lifecycle and per-file detail. The default upgrade output is compact and decision-first."
+        },
+        {
+          "name": "select",
+          "flags": [
+            "--select"
+          ],
+          "help": "Return selected fields from the full upgrade payload."
+        },
         {
           "name": "dry_run",
           "flags": [

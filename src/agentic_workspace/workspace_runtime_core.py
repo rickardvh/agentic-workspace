@@ -42334,6 +42334,7 @@ def _emit_proof(
     route: str | None = None,
     current_only: bool = False,
     changed_paths: list[str] | None = None,
+    task_text: str | None = None,
     profile: str = "full",
     select: str | None = None,
     record_receipt: bool = False,
@@ -42366,7 +42367,12 @@ def _emit_proof(
             _emit_compact_answer_text(payload)
         return
     if profile == "tiny" and normalized_paths:
-        answer = _proof_selection_for_changed_paths(changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False)
+        answer = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths,
+            target_root=target_root,
+            include_durable_intent=False,
+            task_text=task_text,
+        )
         full_payload = {
             "profile": "compact-contract-answer/v1",
             "surface": "proof",
@@ -42379,6 +42385,8 @@ def _emit_proof(
             full_payload,
             cli_invoke=config.cli_invoke,
         )
+        if task_text:
+            payload["task_context"] = {"status": "applied", "task": task_text}
         if select:
             full_payload.setdefault("sufficiency", payload.get("sufficiency", answer.get("sufficiency")))
             full_payload.setdefault("next", payload.get("next"))
@@ -42390,6 +42398,8 @@ def _emit_proof(
         return
     payload = _proof_payload(target_root=target_root, descriptors=descriptors)
     payload = _select_proof_payload(payload, target_root=target_root, route=route, current_only=current_only, changed_paths=changed_paths)
+    if task_text and changed_paths:
+        payload["task_context"] = {"status": "applied", "task": task_text}
     if profile == "tiny":
         payload = _tiny_proof_payload(payload, cli_invoke=config.cli_invoke)
     if select:
