@@ -7,9 +7,10 @@ import json
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
-from repo_planning_bootstrap.installer import planning_record_schema_findings
+from repo_planning_bootstrap.installer import planning_record_schema_findings, planning_revision
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_generated_command_package_proof.py"
@@ -89,6 +90,94 @@ def test_generated_typescript_planning_new_plan_reports_real_apply(tmp_path: Pat
     assert payload["reason_code"] == "mutation-applied"
     assert record_path.is_file()
     assert planning_record_schema_findings(record_path) == []
+
+
+def test_generated_typescript_planning_new_plan_applies_activation_source_and_prep_only(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/planning/typescript/src/cli.mjs"
+    completed = subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "new-plan",
+            "--id",
+            "active-plan",
+            "--title",
+            "Active Plan",
+            "--source",
+            "#2168",
+            "--activate",
+            "--prep-only",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout)["outcome"] == "applied"
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    assert state["todo"]["active_items"][0]["id"] == "active-plan"
+    assert state["todo"]["active_items"][0]["refs"] == ["#2168"]
+    assert record["active_milestone"]["status"] == "active"
+    assert record["machine_readable_contract"]["planning_mode"]["prep_only"] is True
+    assert planning_record_schema_findings(record_path) == []
+
+
+def test_generated_typescript_planning_new_plan_enforces_revision_guard(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/planning/typescript/src/cli.mjs"
+    subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "new-plan",
+            "--id",
+            "first",
+            "--title",
+            "First",
+            "--activate",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    current_revision = planning_revision(tmp_path)["revision_id"]
+    completed = subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "new-plan",
+            "--id",
+            "second",
+            "--title",
+            "Second",
+            "--queue",
+            "--expect-planning-revision",
+            "stale",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    payload = json.loads(completed.stdout)
+    assert payload["outcome"] == "blocked"
+    assert payload["reason_code"] == "planning-revision-mismatch"
+    assert payload["current_planning_revision"] == current_revision
+    assert not (tmp_path / ".agentic-workspace/planning/execplans/second.plan.json").exists()
 
 
 def test_generated_typescript_unimplemented_mutation_blocks_instead_of_claiming_noop(tmp_path: Path) -> None:
