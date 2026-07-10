@@ -14,7 +14,7 @@ import tomllib
 import uuid
 import zipfile
 from collections import Counter
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -163,7 +163,7 @@ def run_with_session_logging(
 
 
 @contextlib.contextmanager
-def _session_parent_environment(argv: Sequence[str]) -> Iterable[None]:
+def _session_parent_environment(argv: Sequence[str]) -> Iterator[None]:
     updates = {
         "AW_SESSION_LOG_PARENT_COMMAND": "agentic-workspace " + shlex.join(list(argv)),
         "AW_SESSION_LOG_PARENT_CONTEXT": os.environ.get("PYTEST_CURRENT_TEST", "") or "aw-command",
