@@ -873,6 +873,11 @@ def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, cap
     )
     payload = json.loads(capsys.readouterr().out)
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"
+    assert payload["outcome"] == "applied"
+    assert payload["mutation_applied"] is True
+    assert payload["reason_code"] == "mutation-applied"
+    assert payload["conflict_owner"] is None
+    assert payload["recovery_command"] is None
     assert any(action["kind"] == "created" and action["path"].endswith("plan-alpha.plan.json") for action in payload["actions"])
     assert any(
         action["kind"] == "next" and "tighten scaffold fields" in action["detail"] and "adaptive_assurance" in action["detail"]
@@ -1211,6 +1216,10 @@ def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: P
 
 def test_planning_cli_new_plan_refuses_duplicate_without_overwrite(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.local.toml",
+        '[workspace]\ncli_invoke = "uv run python scripts/run_agentic_workspace.py"\n',
+    )
     args = [
         "new-plan",
         "--id",
@@ -1229,6 +1238,15 @@ def test_planning_cli_new_plan_refuses_duplicate_without_overwrite(tmp_path: Pat
     payload = json.loads(capsys.readouterr().out)
 
     assert any(action["kind"] == "manual review" and "already exists" in action["detail"] for action in payload["actions"])
+    assert payload["outcome"] == "blocked"
+    assert payload["mutation_applied"] is False
+    assert payload["reason_code"] == "target-already-exists"
+    assert payload["conflict_owner"] == ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    assert payload["recovery_command"].startswith("uv run python scripts/run_agentic_workspace.py planning new-plan ")
+    assert '--id "plan-alpha"' in payload["recovery_command"]
+    assert '--title "Plan Alpha"' in payload["recovery_command"]
+    assert "--target . --overwrite --format json" in payload["recovery_command"]
+    assert str(tmp_path) not in payload["recovery_command"]
 
 
 def test_planning_summary_exposes_ordered_roadmap_batch_guidance(tmp_path: Path) -> None:

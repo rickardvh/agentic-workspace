@@ -345,6 +345,10 @@ class InstallResult:
     actions: list[Action] = field(default_factory=list)
     warnings: list[dict[str, str]] = field(default_factory=list)
     completion_options: list[dict[str, Any]] = field(default_factory=list)
+    mutation_expected: bool = True
+    reason_code: str = ""
+    conflict_owner: str = ""
+    recovery_command: str = ""
 
     def add(self, kind: str, path: Path, detail: str) -> None:
         self.actions.append(Action(kind=kind, path=path, detail=detail))
@@ -360,6 +364,20 @@ def _short_file_hash(path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
     except OSError:
         return "unreadable"
+
+
+def _workspace_cli_invoke(target_root: Path) -> str:
+    for relative in (Path(".agentic-workspace/config.local.toml"), Path(".agentic-workspace/config.toml")):
+        path = target_root / relative
+        if not path.is_file():
+            continue
+        try:
+            workspace = tomllib.loads(path.read_text(encoding="utf-8-sig")).get("workspace", {})
+        except (OSError, tomllib.TOMLDecodeError):
+            continue
+        if isinstance(workspace, dict) and str(workspace.get("cli_invoke", "")).strip():
+            return str(workspace["cli_invoke"]).strip()
+    return "agentic-workspace"
 
 
 def planning_revision(target: str | Path | None = None) -> dict[str, Any]:
@@ -1561,7 +1579,7 @@ def uninstall_bootstrap(*, target: str | Path | None = None, dry_run: bool = Fal
 def collect_status(*, target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
     mode = _detect_adoption_mode(target_root)
-    result = InstallResult(target_root=target_root, message=f"Status report ({mode} mode)", dry_run=False)
+    result = InstallResult(target_root=target_root, message=f"Status report ({mode} mode)", dry_run=False, mutation_expected=False)
     _add_workspace_orchestrator_notice(result)
     result.add("mode", target_root, f"detected adoption mode: {mode}")
     for relative in _installed_surface_files():
@@ -1578,7 +1596,7 @@ def collect_status(*, target: str | Path | None = None) -> InstallResult:
 
 def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
     target_root = resolve_target_root(target)
-    result = InstallResult(target_root=target_root, message="Doctor report", dry_run=True)
+    result = InstallResult(target_root=target_root, message="Doctor report", dry_run=True, mutation_expected=False)
     _add_workspace_orchestrator_notice(result)
     result.add("mode", target_root, f"detected adoption mode: {_detect_adoption_mode(target_root)}")
     upgrade_source = resolve_upgrade_source(target_root)
@@ -1641,7 +1659,7 @@ def doctor_bootstrap(*, target: str | Path | None = None) -> InstallResult:
 
 def verify_payload() -> InstallResult:
     root = payload_root()
-    result = InstallResult(target_root=root, message="Payload verification", dry_run=False)
+    result = InstallResult(target_root=root, message="Payload verification", dry_run=False, mutation_expected=False)
     payload_files = {Path(item) for item in list_payload_files()}
     for relative in PACKAGE_PAYLOAD_FILES:
         target_relative = relative
@@ -10972,6 +10990,13 @@ def create_execplan_scaffold(
     record_relative = record_path.relative_to(target_root).as_posix()
     if record_path.exists() and not overwrite:
         result.add("manual review", record_path, "target canonical execplan record already exists; pass --overwrite to replace it")
+        result.reason_code = "target-already-exists"
+        result.conflict_owner = record_relative
+        result.recovery_command = (
+            f"{_workspace_cli_invoke(target_root)} planning new-plan "
+            f"--id {json.dumps(slug)} --title {json.dumps(plan_title)} "
+            "--target . --overwrite --format json"
+        )
         return result
 
     source_text = source.strip()
@@ -15098,6 +15123,55 @@ def format_actions(actions: list[Action], target_root: Path) -> list[str]:
 
 _CLOSE_ITEM_NON_BLOCKING_WARNING_CLASSES = {"archive_retention_skipped_by_size_guardrail"}
 _CLOSE_ITEM_MUTATION_ACTIONS = {"updated", "archived", "closed"}
+_MUTATION_APPLIED_ACTIONS = {
+    "adopted",
+    "archived",
+    "closed",
+    "copied",
+    "created",
+    "deleted",
+    "installed",
+    "moved",
+    "overwritten",
+    "removed",
+    "replaced",
+    "updated",
+    "upgraded",
+}
+_MUTATION_FAILED_ACTIONS = {"error", "failed"}
+_MUTATION_BLOCKED_ACTIONS = {"blocked", "blocked-with-reason", "manual review", "refused"}
+
+
+def _mutation_outcome_fields(result: InstallResult) -> dict[str, Any]:
+    """Project one truthful mutation result shape across Planning write surfaces."""
+    if not result.mutation_expected:
+        return {}
+    action_kinds = {action.kind.lower().strip() for action in result.actions}
+    failed = bool(action_kinds & _MUTATION_FAILED_ACTIONS)
+    blocking_warnings = [
+        warning for warning in result.warnings if str(warning.get("warning_class", "")) not in _CLOSE_ITEM_NON_BLOCKING_WARNING_CLASSES
+    ]
+    blocked = bool(blocking_warnings or action_kinds & _MUTATION_BLOCKED_ACTIONS)
+    mutation_applied = bool(action_kinds & _MUTATION_APPLIED_ACTIONS) and not result.dry_run
+    if failed:
+        outcome = "failed"
+        reason_code = result.reason_code or "mutation-failed"
+    elif blocked:
+        outcome = "blocked"
+        reason_code = result.reason_code or "manual-review-required"
+    elif mutation_applied:
+        outcome = "applied"
+        reason_code = result.reason_code or "mutation-applied"
+    else:
+        outcome = "noop"
+        reason_code = result.reason_code or ("dry-run" if result.dry_run else "already-satisfied")
+    return {
+        "outcome": outcome,
+        "mutation_applied": mutation_applied,
+        "reason_code": reason_code,
+        "conflict_owner": result.conflict_owner or None,
+        "recovery_command": result.recovery_command or None,
+    }
 
 
 def _close_item_result_fields(result: InstallResult) -> dict[str, Any]:
@@ -15169,6 +15243,7 @@ def format_result_json(result: InstallResult) -> str:
         "actions": [{"kind": action.kind, "path": str(action.path), "detail": action.detail} for action in result.actions],
         "warnings": result.warnings,
     }
+    payload.update(_mutation_outcome_fields(result))
     payload.update(_close_item_result_fields(result))
     if result.completion_options:
         payload["completion_options"] = result.completion_options

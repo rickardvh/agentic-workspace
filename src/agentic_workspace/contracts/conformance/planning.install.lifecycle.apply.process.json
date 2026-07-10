@@ -1,0 +1,36 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "planning.install.lifecycle.apply.process",
+  "operation_id": "planning.install.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": ["{agentic_planning_cli}", "install", "--target", ".", "--format", "json"],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "install-apply",
+      "files": {".git/.keep": ""}
+    }
+  ],
+  "expectations": {
+    "exit": {"code": 0},
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {"path": ["dry_run"], "equals": false},
+        {"path": ["outcome"], "equals": "applied"},
+        {"path": ["mutation_applied"], "equals": true},
+        {"path": ["reason_code"], "equals": "mutation-applied"}
+      ]
+    },
+    "stderr": {"allow_non_empty": false},
+    "filesystem": {
+      "allowed_write_paths": [".agentic-workspace", "AGENTS.md"],
+      "required_paths": [".git/.keep", ".agentic-workspace/planning/agent-manifest.json"],
+      "forbidden_paths": []
+    },
+    "idempotency": {"run_twice": false},
+    "safety": {"no_writes_outside_repo_root": true}
+  }
+}

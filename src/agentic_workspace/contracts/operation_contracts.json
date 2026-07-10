@@ -3,6 +3,23 @@
   "summary": "Registry for procedural operation contracts that describe local behavior without embedding implementation code.",
   "primitive_registry": "operation_primitives.json",
   "schema": "schemas/operation.schema.json",
+  "mutation_outcome_contract": {
+    "schema_version": "agentic-workspace/mutation-outcome/v1",
+    "applicability": "Every registered operation with effects.writes_repo_state=true must emit this result contract unless listed in explicit_exceptions.",
+    "outcomes": ["applied", "noop", "blocked", "failed"],
+    "fields": ["outcome", "mutation_applied", "reason_code", "conflict_owner", "recovery_command"],
+    "runtime_bindings": {
+      "python": "agentic_workspace.result_adapter.mutation_outcome_from_actions",
+      "typescript": "typescript_primitive_support.mjs#finalizeMutationOutcome",
+      "typescript_unimplemented_apply": "blocked:native-apply-unavailable"
+    },
+    "explicit_exceptions": [],
+    "proof_requirements": [
+      "Every ordinary package-owned mutating operation is inventoried from registered operation IR effects.writes_repo_state.",
+      "Representative applied, noop, blocked, and failed behavior must pass for Python and TypeScript generated targets.",
+      "Recovery commands must use configured CLI invocation authority and repository-relative targets."
+    ]
+  },
   "operations": [
     {
       "id": "checkpoint.write",

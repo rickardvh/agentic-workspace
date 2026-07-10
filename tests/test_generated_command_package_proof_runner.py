@@ -7,13 +7,307 @@ import json
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
+
+from repo_planning_bootstrap.installer import planning_record_schema_findings, planning_revision
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_generated_command_package_proof.py"
 CHECK_SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
 TEST_IR_RUNNER_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_operation_conformance_tests.py"
 _CHECKER_CASE_PREFIX = "__checker_case_result__="
+
+
+def test_generated_typescript_mutation_outcome_classifier_covers_contract_enum() -> None:
+    support = (REPO_ROOT / "generated/planning/typescript/src/hostPrimitiveSupport.mjs").as_uri()
+    script = f"""
+import {{ finalizeMutationOutcome }} from {json.dumps(support)};
+const cases = [
+  [{{dry_run: false, actions: [{{kind: 'created'}}]}}, ['applied', true, 'mutation-applied']],
+  [{{dry_run: false, actions: [{{kind: 'current'}}]}}, ['noop', false, 'already-satisfied']],
+  [{{dry_run: false, actions: [{{kind: 'manual review'}}]}}, ['blocked', false, 'manual-review-required']],
+  [{{dry_run: false, actions: [{{kind: 'failed'}}]}}, ['failed', false, 'mutation-failed']],
+];
+for (const [input, expected] of cases) {{
+  const result = finalizeMutationOutcome(input);
+  const actual = [result.outcome, result.mutation_applied, result.reason_code];
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(JSON.stringify({{actual, expected}}));
+}}
+"""
+
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], capture_output=True, text=True, check=False)
+
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_generated_typescript_planning_install_reports_real_apply(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir()
+    cli_path = REPO_ROOT / "generated/planning/typescript/src/cli.mjs"
+
+    completed = subprocess.run(
+        ["node", str(cli_path), "install", "--target", str(tmp_path), "--format", "json"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["outcome"] == "applied"
+    assert payload["mutation_applied"] is True
+    assert payload["reason_code"] == "mutation-applied"
+    assert (tmp_path / ".agentic-workspace/planning/agent-manifest.json").is_file()
+
+
+def test_generated_typescript_planning_new_plan_reports_real_apply(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/planning/typescript/src/cli.mjs"
+
+    completed = subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "new-plan",
+            "--id",
+            "typescript-plan",
+            "--title",
+            "TypeScript Plan",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/typescript-plan.plan.json"
+    assert payload["outcome"] == "applied"
+    assert payload["mutation_applied"] is True
+    assert payload["reason_code"] == "mutation-applied"
+    assert record_path.is_file()
+    assert planning_record_schema_findings(record_path) == []
+
+
+def test_generated_typescript_planning_new_plan_applies_activation_source_and_prep_only(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/planning/typescript/src/cli.mjs"
+    completed = subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "new-plan",
+            "--id",
+            "active-plan",
+            "--title",
+            "Active Plan",
+            "--source",
+            "#2168",
+            "--activate",
+            "--prep-only",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert json.loads(completed.stdout)["outcome"] == "applied"
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/active-plan.plan.json"
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    assert state["todo"]["active_items"][0]["id"] == "active-plan"
+    assert state["todo"]["active_items"][0]["refs"] == ["#2168"]
+    assert record["active_milestone"]["status"] == "active"
+    assert record["machine_readable_contract"]["planning_mode"]["prep_only"] is True
+    assert planning_record_schema_findings(record_path) == []
+
+
+def test_generated_typescript_planning_new_plan_enforces_revision_guard(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/planning/typescript/src/cli.mjs"
+    subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "new-plan",
+            "--id",
+            "first",
+            "--title",
+            "First",
+            "--activate",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    current_revision = planning_revision(tmp_path)["revision_id"]
+    completed = subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "new-plan",
+            "--id",
+            "second",
+            "--title",
+            "Second",
+            "--queue",
+            "--expect-planning-revision",
+            "stale",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    payload = json.loads(completed.stdout)
+    assert payload["outcome"] == "blocked"
+    assert payload["reason_code"] == "planning-revision-mismatch"
+    assert payload["current_planning_revision"] == current_revision
+    assert not (tmp_path / ".agentic-workspace/planning/execplans/second.plan.json").exists()
+
+
+def test_generated_typescript_workspace_new_plan_attaches_active_lane_and_blocks_invalid_owner(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/workspace/typescript/src/cli.mjs"
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    state_path.parent.mkdir(parents=True)
+    state_path.write_text(
+        'kind = "agentic-planning-state"\nschema_version = "planning-state/v1"\nwork_items = []\n\n[active]\nexecplans = []\n\n[todo]\nactive_items = []\nqueued_items = []\n\n[roadmap]\nlanes = [{ id = "lane-one", title = "Lane One", status = "active" }]\ncandidates = []\n',
+        encoding="utf-8",
+    )
+    applied = subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "planning",
+            "new-plan",
+            "--id",
+            "lane-plan",
+            "--title",
+            "Lane Plan",
+            "--activate",
+            "--lane",
+            "lane-one",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert applied.returncode == 0, applied.stderr
+    assert json.loads(applied.stdout)["outcome"] == "applied"
+    state = tomllib.loads(state_path.read_text(encoding="utf-8"))
+    assert state["roadmap"]["lanes"][0]["execplan"] == ".agentic-workspace/planning/execplans/lane-plan.plan.json"
+
+    blocked = subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "planning",
+            "new-plan",
+            "--id",
+            "missing-lane-plan",
+            "--title",
+            "Missing Lane",
+            "--activate",
+            "--switch-active",
+            "--lane",
+            "missing",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    payload = json.loads(blocked.stdout)
+    assert payload["outcome"] == "blocked"
+    assert payload["reason_code"] == "lane-owner-conflict"
+    assert not (tmp_path / ".agentic-workspace/planning/execplans/missing-lane-plan.plan.json").exists()
+
+
+def test_generated_typescript_unimplemented_mutation_blocks_instead_of_claiming_noop(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/planning/typescript/src/cli.mjs"
+
+    completed = subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "lane-create",
+            "--id",
+            "lane-one",
+            "--title",
+            "Lane One",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["outcome"] == "blocked"
+    assert payload["mutation_applied"] is False
+    assert payload["reason_code"] == "native-apply-unavailable"
+
+
+def test_generated_typescript_root_lifecycle_blocks_unimplemented_apply_truthfully(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir()
+    cli_path = REPO_ROOT / "generated/workspace/typescript/src/cli.mjs"
+
+    completed = subprocess.run(
+        ["node", str(cli_path), "install", "--target", str(tmp_path), "--format", "json"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["outcome"] == "blocked"
+    assert payload["mutation_applied"] is False
+    assert payload["reason_code"] == "native-apply-unavailable"
+
+
+def test_generated_typescript_system_intent_sync_blocks_unimplemented_apply_truthfully(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/workspace/typescript/src/cli.mjs"
+
+    completed = subprocess.run(
+        ["node", str(cli_path), "system-intent", "--target", str(tmp_path), "--sync", "--format", "json"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["kind"] == "workspace-system-intent/v1"
+    assert payload["outcome"] == "blocked"
+    assert payload["mutation_applied"] is False
+    assert payload["reason_code"] == "native-apply-unavailable"
 
 
 def _load_runner():

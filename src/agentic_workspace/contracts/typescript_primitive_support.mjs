@@ -13,6 +13,7 @@ import {
   writeFileSync,
   writeSync,
 } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -316,6 +317,12 @@ function emitInstallResultText(result) {
     String(result.message ?? ''),
     `Detected version: ${result.detected_version ?? 'none'} (payload version ${result.bootstrap_version})`,
   ];
+  if (result.outcome) {
+    lines.push(`Outcome: ${result.outcome} (${result.reason_code ?? ''})`);
+    lines.push(`Mutation applied: ${result.mutation_applied ? 'yes' : 'no'}`);
+    if (result.conflict_owner) lines.push(`Conflict owner: ${result.conflict_owner}`);
+    if (result.recovery_command) lines.push(`Recovery: ${result.recovery_command}`);
+  }
   for (const action of listObjects(result.actions ?? [], 'result.actions')) {
     const details = [];
     for (const key of ['detail', 'role', 'safety', 'category', 'remediation_kind', 'remediation_target', 'remediation_confidence', 'memory_action', 'match_source']) {
@@ -582,7 +589,372 @@ function reportPlanning(values, operationId) {
 
 function lifecycleResult(values, message) {
   const targetRoot = resolve(String(values.target ?? values.target_root ?? '.'));
-  return { target_root: targetRoot, dry_run: values.dry_run !== false, message, actions: [], detected_version: null, bootstrap_version: null };
+  const dryRun = values.dry_run !== false;
+  return {
+    target_root: targetRoot,
+    dry_run: dryRun,
+    message,
+    actions: [],
+    detected_version: null,
+    bootstrap_version: null,
+    outcome: 'noop',
+    mutation_applied: false,
+    reason_code: dryRun ? 'dry-run' : 'already-satisfied',
+    conflict_owner: null,
+    recovery_command: null,
+  };
+}
+
+export function finalizeMutationOutcome(result) {
+  const kinds = new Set((result.actions ?? []).map((action) => String(action.kind ?? '').trim().toLowerCase()));
+  const failed = kinds.has('failed') || kinds.has('error');
+  const blocked = ['blocked', 'blocked-with-reason', 'manual review', 'refused'].some((kind) => kinds.has(kind));
+  const applied = !result.dry_run && ['adopted', 'archived', 'closed', 'copied', 'copy', 'created', 'deleted', 'installed', 'moved', 'overwritten', 'removed', 'replaced', 'updated', 'upgraded'].some((kind) => kinds.has(kind));
+  result.outcome = failed ? 'failed' : blocked ? 'blocked' : applied ? 'applied' : 'noop';
+  result.mutation_applied = applied;
+  if (!result.reason_code || ['dry-run', 'already-satisfied'].includes(result.reason_code)) {
+    result.reason_code = failed ? 'mutation-failed' : blocked ? 'manual-review-required' : applied ? 'mutation-applied' : result.dry_run ? 'dry-run' : 'already-satisfied';
+  }
+  return result;
+}
+
+function planningNewPlanResult(values, operationId) {
+  const result = lifecycleResult(values, operationId);
+  const slug = String(values.id ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const owner = `.agentic-workspace/planning/execplans/${slug}.plan.json`;
+  const stateOwner = '.agentic-workspace/planning/state.toml';
+  const statePath = join(result.target_root, stateOwner);
+  const state = existsSync(statePath) ? parsePlanningState(readText(statePath)) : {
+    kind: 'agentic-planning-state',
+    schema_version: 'planning-state/v1',
+    work_items: [],
+    active: { execplans: [] },
+    todo: { active_items: [], queued_items: [] },
+    roadmap: { lanes: [], candidates: [] },
+  };
+  state.todo = isObject(state.todo) ? state.todo : {};
+  state.todo.active_items = Array.isArray(state.todo.active_items) ? state.todo.active_items : [];
+  state.todo.queued_items = Array.isArray(state.todo.queued_items) ? state.todo.queued_items : [];
+  state.roadmap = isObject(state.roadmap) ? state.roadmap : {};
+  state.roadmap.lanes = Array.isArray(state.roadmap.lanes) ? state.roadmap.lanes : [];
+  state.roadmap.candidates = Array.isArray(state.roadmap.candidates) ? state.roadmap.candidates : [];
+  const activate = values.activate === true;
+  const queue = values.queue === true;
+  const switchActive = values.switch_active === true;
+  const prepOnly = values.prep_only === true;
+  const lane = String(values.owner_lane ?? values.lane ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const expectedRevision = String(values.expect_planning_revision ?? '').trim();
+  const cliInvoke = String(workspaceConfig({ target: result.target_root }).workspace?.cli_invoke ?? 'agentic-workspace');
+  if (expectedRevision) {
+    const currentRevision = planningRevision(result.target_root, state);
+    if (expectedRevision !== currentRevision.revision_id) {
+      result.actions = [{ kind: 'manual review', path: stateOwner, detail: 'planning revision changed before mutation; refresh planning context' }];
+      result.reason_code = 'planning-revision-mismatch';
+      result.conflict_owner = stateOwner;
+      result.recovery_command = `${cliInvoke} summary --target . --format json`;
+      result.expected_planning_revision = expectedRevision;
+      result.current_planning_revision = currentRevision.revision_id;
+      return finalizeMutationOutcome(result);
+    }
+  }
+  if (!slug) {
+    result.actions = [{ kind: 'manual review', path: stateOwner, detail: '--id must contain at least one alphanumeric character' }];
+    result.reason_code = 'invalid-request';
+    return finalizeMutationOutcome(result);
+  }
+  if (activate && queue) {
+    result.actions = [{ kind: 'manual review', path: stateOwner, detail: 'choose only one of --activate or --queue' }];
+    result.reason_code = 'selector-conflict';
+    return finalizeMutationOutcome(result);
+  }
+  if (switchActive && !activate) {
+    result.actions = [{ kind: 'manual review', path: stateOwner, detail: '--switch-active requires --activate' }];
+    result.reason_code = 'invalid-request';
+    return finalizeMutationOutcome(result);
+  }
+  if (lane && !activate) {
+    result.actions = [{ kind: 'manual review', path: stateOwner, detail: '--lane requires --activate' }];
+    result.reason_code = 'invalid-request';
+    return finalizeMutationOutcome(result);
+  }
+  const title = String(values.title ?? '').trim() || slug;
+  const source = String(values.source ?? '').trim();
+  const recordPath = join(result.target_root, owner);
+  const recordExisted = existsSync(recordPath);
+  if (recordExisted && values.overwrite !== true) {
+    result.reason_code = 'target-already-exists';
+    result.conflict_owner = owner;
+    result.recovery_command = `${cliInvoke} planning new-plan --id ${JSON.stringify(slug)} --title ${JSON.stringify(title)} --target . --overwrite --format json`;
+    result.actions = [{ kind: 'manual review', path: owner, detail: 'target canonical execplan record already exists; pass --overwrite to replace it' }];
+    return finalizeMutationOutcome(result);
+  }
+  const allItems = [...state.todo.active_items, ...state.todo.queued_items];
+  if ((activate || queue) && allItems.some((item) => isObject(item) && String(item.id ?? '') === slug)) {
+    result.actions = [{ kind: 'manual review', path: stateOwner, detail: `planning item '${slug}' already exists in state.toml` }];
+    result.reason_code = 'planning-item-already-exists';
+    result.conflict_owner = stateOwner;
+    return finalizeMutationOutcome(result);
+  }
+  if (activate && state.todo.active_items.length && !switchActive) {
+    result.actions = [{ kind: 'manual review', path: stateOwner, detail: 'active planning item already exists; rerun with --switch-active to demote existing active items into todo.queued_items' }];
+    result.reason_code = 'active-owner-conflict';
+    result.conflict_owner = stateOwner;
+    return finalizeMutationOutcome(result);
+  }
+  let laneItem = null;
+  if (lane) {
+    laneItem = state.roadmap.lanes.find((item) => isObject(item) && String(item.id ?? '') === lane) ?? null;
+    if (!laneItem || String(laneItem.status ?? '') !== 'active' || (laneItem.execplan && String(laneItem.execplan) !== owner)) {
+      result.actions = [{ kind: 'manual review', path: stateOwner, detail: `lane '${lane}' is not active or already belongs to a different execplan; no plan was created` }];
+      result.reason_code = 'lane-owner-conflict';
+      result.conflict_owner = stateOwner;
+      return finalizeMutationOutcome(result);
+    }
+  }
+  if (result.dry_run) {
+    result.actions = [{ kind: existsSync(recordPath) ? 'would update' : 'would create', path: owner, detail: prepOnly ? 'schema-valid prep-only execplan scaffold' : 'schema-valid execplan scaffold' }];
+    if (activate || queue) result.actions.push({ kind: 'would update', path: stateOwner, detail: `register '${slug}' in todo.${activate ? 'active_items' : 'queued_items'}` });
+    if (activate && switchActive && state.todo.active_items.length) result.actions.push({ kind: 'would update', path: stateOwner, detail: `demote ${state.todo.active_items.length} active planning item(s) into todo.queued_items` });
+    if (lane) result.actions.push({ kind: 'would update', path: stateOwner, detail: `attach execplan '${slug}' to active lane '${lane}'` });
+    return finalizeMutationOutcome(result);
+  }
+  const templatePath = join(resourceRoot('_payload'), '.agentic-workspace/planning/execplans/TEMPLATE.plan.json');
+  const plan = existsSync(templatePath) ? readJson(templatePath) : {
+    kind: 'planning-execplan/v1',
+    title: '',
+    canonical_core: { requested_outcome: '', hard_constraints: '', agent_may_decide: '', escalate_when: '', next_action: '', proof_expectations: [], touched_scope: [], completion_criteria: [], continuation_owner: '', closeout_decision: '' },
+    goal: [''],
+    non_goals: [''],
+    active_milestone: { id: '', status: '', scope: '' },
+    validation_commands: [''],
+    completion_criteria: [''],
+    machine_readable_contract: {},
+    execution_run: {},
+  };
+  plan.title = title;
+  plan.canonical_core.requested_outcome = source || `Create a bounded plan for ${title}.`;
+  plan.canonical_core.next_action = 'Fill in execution bounds, touched paths, and validation before implementation starts.';
+  plan.canonical_core.completion_criteria = [`${title} is implemented, validated, and closed out honestly.`];
+  plan.goal = [plan.canonical_core.requested_outcome];
+  plan.active_milestone = { id: 'M1', status: activate ? 'active' : 'planned', scope: plan.canonical_core.next_action };
+  plan.completion_criteria = [...plan.canonical_core.completion_criteria];
+  plan.execution_run = isObject(plan.execution_run) ? plan.execution_run : {};
+  plan.execution_run['handoff source'] = 'agentic-workspace planning new-plan';
+  if (source) plan.references = [{ kind: 'source', target: source, label: source, role: 'intake', locator: '' }];
+  if (prepOnly) {
+    const nextAction = 'Run agentic-workspace summary --target . --verbose --format json, confirm the planning state is clean, then stop without product scaffolding.';
+    const doneWhen = 'Canonical Planning state exists, summary verifies it, and no product source, package, dependency, README, handoff, or app scaffold files were created.';
+    plan.goal = ['Prepare durable checked-in Planning state for later continuation without implementing or scaffolding the product.'];
+    plan.non_goals = ['Do not create product or handoff files outside canonical Planning surfaces.', 'Do not start implementation; stop after summary verification.'];
+    plan.immediate_next_action = [nextAction];
+    plan.completion_criteria = [doneWhen];
+    plan.validation_commands = ['agentic-workspace summary --target . --verbose --format json'];
+    plan.touched_paths = ['.agentic-workspace/planning/state.toml', '.agentic-workspace/planning/execplans/', '.agentic-workspace/planning/decompositions/'];
+    plan.canonical_core.next_action = nextAction;
+    plan.canonical_core.proof_expectations = [...plan.validation_commands];
+    plan.canonical_core.touched_scope = [...plan.touched_paths];
+    plan.canonical_core.completion_criteria = [...plan.completion_criteria];
+    plan.machine_readable_contract = isObject(plan.machine_readable_contract) ? plan.machine_readable_contract : {};
+    plan.machine_readable_contract.planning_mode = { prep_only: true, halt_after_summary: true, halt_instruction: 'HALT: prep-only mode active. Run summary, then stop without product scaffolding.' };
+    plan.execution_run['what happened'] = 'prep-only scaffold created; implementation has not started';
+  }
+  const displaced = activate && switchActive ? [...state.todo.active_items] : [];
+  if (displaced.length) {
+    for (const item of displaced) {
+      if (!isObject(item)) continue;
+      item.maturity = 'ready';
+      item.status = 'next';
+      item.switched_from_active_by = slug;
+      item.switch_reason = source || `Switched active lane to ${title}.`;
+      const displacedSurface = String(item.surface ?? '');
+      const displacedPath = displacedSurface ? join(result.target_root, displacedSurface) : '';
+      if (displacedPath && existsSync(displacedPath)) {
+        const displacedPlan = readJson(displacedPath);
+        if (isObject(displacedPlan.active_milestone)) displacedPlan.active_milestone.status = 'planned';
+        writeFileSync(displacedPath, `${JSON.stringify(displacedPlan, null, 2)}\n`, 'utf8');
+      }
+    }
+    state.todo.queued_items = [...displaced, ...state.todo.queued_items];
+    state.todo.active_items = [];
+  }
+  if (activate || queue) {
+    const stateItem = {
+      id: slug,
+      title,
+      maturity: activate ? 'active' : 'ready',
+      status: activate ? 'active' : 'next',
+      surface: owner,
+      why_now: source || 'Created by new-plan scaffold.',
+      owner_role: 'implementation',
+      review_role: 'validation',
+      handoff_ready: true,
+      next_action: 'Tighten scaffold fields, touched paths, and validation before implementation starts.',
+      done_when: `${title} is implemented, validated, and closed out honestly.`,
+      proof: 'Run the proof selected by implement --changed before claiming completion.',
+      ...(source ? { refs: [source] } : {}),
+    };
+    if (activate) state.todo.active_items.push(stateItem);
+    else state.todo.queued_items.push(stateItem);
+  }
+  if (laneItem) laneItem.execplan = owner;
+  mkdirSync(dirname(recordPath), { recursive: true });
+  writeFileSync(recordPath, `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
+  result.actions = [{ kind: recordExisted ? 'updated' : 'created', path: owner, detail: prepOnly ? 'schema-valid prep-only execplan scaffold' : 'schema-valid execplan scaffold' }];
+  if (activate || queue || laneItem) {
+    mkdirSync(dirname(statePath), { recursive: true });
+    writeFileSync(statePath, renderPlanningState(state), 'utf8');
+    result.actions.push({ kind: 'updated', path: stateOwner, detail: `registered '${slug}' in todo.${activate ? 'active_items' : 'queued_items'}` });
+  }
+  return finalizeMutationOutcome(result);
+}
+
+function readOnlyLifecycleResult(values, message) {
+  const result = lifecycleResult(values, message);
+  for (const key of ['outcome', 'mutation_applied', 'reason_code', 'conflict_owner', 'recovery_command']) delete result[key];
+  return result;
+}
+
+function splitTopLevel(text, delimiter = ',') {
+  const parts = [];
+  let start = 0;
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === '"') quoted = false;
+      continue;
+    }
+    if (char === '"') quoted = true;
+    else if (char === '[' || char === '{') depth += 1;
+    else if (char === ']' || char === '}') depth -= 1;
+    else if (char === delimiter && depth === 0) {
+      parts.push(text.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts.push(text.slice(start).trim());
+  return parts.filter(Boolean);
+}
+
+function parsePlanningTomlValue(raw) {
+  const text = raw.trim();
+  if (text.startsWith('{') && text.endsWith('}')) {
+    const result = {};
+    for (const field of splitTopLevel(text.slice(1, -1))) {
+      const equals = field.indexOf('=');
+      if (equals > 0) result[field.slice(0, equals).trim()] = parsePlanningTomlValue(field.slice(equals + 1));
+    }
+    return result;
+  }
+  if (text.startsWith('[') && text.endsWith(']')) {
+    return splitTopLevel(text.slice(1, -1)).map(parsePlanningTomlValue);
+  }
+  if (text === 'true') return true;
+  if (text === 'false') return false;
+  if (/^-?\d+$/.test(text)) return Number(text);
+  if (text.startsWith('"') && text.endsWith('"')) {
+    try { return JSON.parse(text); } catch { return text.slice(1, -1); }
+  }
+  return text;
+}
+
+function parsePlanningState(text) {
+  const state = {};
+  let table = state;
+  const lines = text.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line || line.startsWith('#')) continue;
+    const header = line.match(/^\[([^\]]+)\]$/);
+    if (header) {
+      table = state;
+      for (const part of header[1].split('.')) {
+        if (!isObject(table[part])) table[part] = {};
+        table = table[part];
+      }
+      continue;
+    }
+    const equals = line.indexOf('=');
+    if (equals < 1) continue;
+    const key = line.slice(0, equals).trim();
+    let raw = line.slice(equals + 1).trim();
+    if (raw === '[') {
+      const fragments = [];
+      while (++index < lines.length && lines[index].trim() !== ']') fragments.push(lines[index].trim().replace(/,$/, ''));
+      raw = `[${fragments.join(',')}]`;
+    }
+    table[key] = parsePlanningTomlValue(raw);
+  }
+  return state;
+}
+
+function renderPlanningTomlValue(value) {
+  if (Array.isArray(value)) return `[${value.map(renderPlanningTomlValue).join(', ')}]`;
+  if (isObject(value)) return `{ ${Object.entries(value).map(([key, nested]) => `${key} = ${renderPlanningTomlValue(nested)}`).join(', ')} }`;
+  return JSON.stringify(value);
+}
+
+function renderPlanningState(state) {
+  const lines = ['# Agentic Workspace managed state.', '# Do not edit by hand when the CLI is available.', ''];
+  for (const key of ['kind', 'schema_version']) if (state[key] !== undefined) lines.push(`${key} = ${renderPlanningTomlValue(state[key])}`);
+  lines.push('', `work_items = ${renderPlanningTomlValue(state.work_items ?? [])}`, '');
+  for (const [tableName, keys] of [['active', ['execplans']], ['todo', ['active_items', 'queued_items']], ['roadmap', ['lanes', 'candidates']]]) {
+    const table = isObject(state[tableName]) ? state[tableName] : {};
+    lines.push(`[${tableName}]`);
+    for (const key of keys) {
+      const items = Array.isArray(table[key]) ? table[key] : [];
+      if (!items.length) lines.push(`${key} = []`);
+      else {
+        lines.push(`${key} = [`);
+        for (const item of items) lines.push(`  ${renderPlanningTomlValue(item)},`);
+        lines.push(']');
+      }
+    }
+    lines.push('');
+  }
+  return `${lines.join('\n').trimEnd()}\n`;
+}
+
+function shortFileHash(path) {
+  if (!existsSync(path)) return 'missing';
+  try { return createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16); } catch { return 'unreadable'; }
+}
+
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (isObject(value)) return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+  return JSON.stringify(value);
+}
+
+function planningRevision(targetRoot, state) {
+  const statePath = join(targetRoot, '.agentic-workspace/planning/state.toml');
+  const activeItems = Array.isArray(state?.todo?.active_items) ? state.todo.active_items : [];
+  const activeItem = isObject(activeItems[0]) ? activeItems[0] : {};
+  const surface = String(activeItem.surface ?? activeItem.path ?? activeItem.execplan ?? '');
+  const activePath = surface ? join(targetRoot, surface) : '';
+  const components = {
+    kind: 'planning-revision/v1',
+    state_path: '.agentic-workspace/planning/state.toml',
+    state_hash: shortFileHash(statePath),
+    active_execplan: surface,
+    active_execplan_hash: activePath ? shortFileHash(activePath) : 'missing',
+    active_item_id: String(activeItem.id ?? ''),
+    active_item_surface: surface,
+  };
+  return { ...components, revision_id: createHash('sha256').update(stableJson(components)).digest('hex').slice(0, 16) };
+}
+
+function unsupportedMutationResult(values, message) {
+  const result = lifecycleResult(values, message);
+  if (!result.dry_run) {
+    result.actions = [{ kind: 'blocked', path: '.', detail: 'native TypeScript apply adapter is not implemented for this mutation' }];
+    result.reason_code = 'native-apply-unavailable';
+  }
+  return finalizeMutationOutcome(result);
 }
 
 function workspaceLifecycle(values, command) {
@@ -590,9 +962,11 @@ function workspaceLifecycle(values, command) {
     ? [String(values.module)]
     : (Array.isArray(values.modules) ? values.modules : String(values.modules ?? '').split(',').map((item) => item.trim()).filter(Boolean));
   const dryRun = values.dry_run !== false;
-  return {
+  const result = {
     command,
     dry_run: dryRun,
+    target_root: resolve(String(values.target ?? values.target_root ?? '.')),
+    actions: [],
     modules,
     lifecycle_plan: {
       kind: 'workspace-lifecycle-plan/v1',
@@ -617,6 +991,19 @@ function workspaceLifecycle(values, command) {
       surface_classifications: { summary_by_class: { 'ambiguous ownership manual-review': command === 'uninstall' ? 1 : 0 } },
     },
   };
+  if (!dryRun) {
+    result.actions = [{ kind: 'blocked', path: '.', detail: 'native TypeScript root lifecycle apply adapter is not implemented' }];
+    result.reason_code = 'native-apply-unavailable';
+  }
+  return finalizeMutationOutcome(result);
+}
+
+function systemIntentMutationResult(values) {
+  return {
+    ...unsupportedMutationResult({ ...values, dry_run: false }, 'System intent sync'),
+    kind: 'workspace-system-intent/v1',
+    command: 'system-intent',
+  };
 }
 
 function applyPayloadCopy(values) {
@@ -640,53 +1027,54 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'python.function.call') {
     const moduleName = String(args.import_module ?? '');
     const functionName = String(args.function ?? '');
-    if (functionName === 'close_planning_item') return { ...lifecycleResult(values, `Close planning item ${values.item ?? ''}`.trim()), dry_run: Boolean(values.dry_run) };
-    if (functionName === 'doctor_bootstrap') return { ...lifecycleResult(values, 'Doctor report'), dry_run: false };
-    if (functionName === 'collect_status') return { ...lifecycleResult(values, 'Status report'), dry_run: false };
+    if (functionName === 'close_planning_item') return unsupportedMutationResult(values, `Close planning item ${values.item ?? ''}`.trim());
+    if (functionName === 'doctor_bootstrap') return { ...readOnlyLifecycleResult(values, 'Doctor report'), dry_run: false };
+    if (functionName === 'collect_status') return { ...readOnlyLifecycleResult(values, 'Status report'), dry_run: false };
     if (functionName === 'planning_handoff') return { kind: 'planning-handoff/v1', target_root: resolve(String(values.target ?? '.')), message: 'Planning handoff' };
-    if (functionName === 'verify_payload') return { ...lifecycleResult(values, 'Payload verification'), dry_run: false };
-    if (functionName === 'create_review_record') return { ...lifecycleResult(values, `Create review '${values.slug ?? ''}'`), dry_run: Boolean(values.dry_run) };
+    if (functionName === 'verify_payload') return { ...readOnlyLifecycleResult(values, 'Payload verification'), dry_run: false };
+    if (functionName === 'create_review_record') return unsupportedMutationResult(values, `Create review '${values.slug ?? ''}'`);
     if (functionName.includes('install') || functionName.includes('adopt') || functionName.includes('upgrade')) {
       const result = lifecycleResult(values, `${functionName.replace(/_/g, ' ')}`);
       result.actions = applyPayloadCopy(values);
-      return result;
+      return finalizeMutationOutcome(result);
     }
     if (functionName === 'cleanup_bootstrap_workspace') return { ...lifecycleResult(values, 'Bootstrap workspace cleanup'), dry_run: true };
-    if (functionName === 'create_memory_note') return { ...lifecycleResult(values, `Create memory note '${values.slug ?? ''}'`), dry_run: Boolean(values.dry_run) };
+    if (functionName === 'create_memory_note') return unsupportedMutationResult(values, `Create memory note '${values.slug ?? ''}'`);
     if (functionName === 'suggest_memory_note_capture') return { kind: 'agentic-memory/capture-recommendation/v1', status: 'unavailable', dry_run: true, target_root: resolve(String(values.target ?? '.')) };
-    if (functionName.includes('uninstall') || functionName.includes('migrate')) return lifecycleResult(values, `${functionName.replace(/_/g, ' ')}`);
+    if (functionName.includes('uninstall') || functionName.includes('migrate')) return unsupportedMutationResult(values, `${functionName.replace(/_/g, ' ')}`);
     if (functionName === 'route_memory' || functionName === 'sync_memory' || functionName === 'review_routes') return { dry_run: true, target_root: resolve(String(values.target ?? '.')), message: functionName.replace(/_/g, ' '), actions: [] };
     if (moduleName.includes('runtime_search')) return { dry_run: true, query: values.query ?? '', target_root: resolve(String(values.target ?? '.')), matches: [], message: 'Memory search completed with native TypeScript runtime.' };
     if (moduleName.includes('verification')) return { kind: 'verification-report/v1', target_root: values.target_root ?? resolve(String(values.target ?? '.')), changed_paths: values.changed_paths ?? [], task_text: values.task_text ?? '', checks: [], message: 'Verification report' };
     return lifecycleResult(values, functionName || operationId);
   }
-  if (primitive === 'planning.close-item.apply') return { ...lifecycleResult(values, `Close planning item ${values.item ?? ''}`.trim()), dry_run: Boolean(values.dry_run) };
-  if (primitive === 'planning.closeout.apply') return { ...lifecycleResult(values, `Close out execplan '${values.plan ?? ''}'`), dry_run: Boolean(values.dry_run) };
-  if (primitive === 'planning.create-review.apply') return { ...lifecycleResult(values, `Create review '${values.slug ?? ''}'`), dry_run: Boolean(values.dry_run) };
-  if (primitive === 'planning.bootstrap.doctor.load') return { ...lifecycleResult(values, 'Doctor report'), dry_run: false };
-  if (primitive === 'planning.bootstrap.status.load') return { ...lifecycleResult(values, 'Status report'), dry_run: false };
+  if (primitive === 'planning.close-item.apply') return unsupportedMutationResult(values, `Close planning item ${values.item ?? ''}`.trim());
+  if (primitive === 'planning.closeout.apply') return unsupportedMutationResult(values, `Close out execplan '${values.plan ?? ''}'`);
+  if (primitive === 'planning.create-review.apply') return unsupportedMutationResult(values, `Create review '${values.slug ?? ''}'`);
+  if (primitive === 'planning.bootstrap.doctor.load') return { ...readOnlyLifecycleResult(values, 'Doctor report'), dry_run: false };
+  if (primitive === 'planning.bootstrap.status.load') return { ...readOnlyLifecycleResult(values, 'Status report'), dry_run: false };
   if (primitive === 'planning.handoff.load') return { kind: 'planning-handoff/v1', target_root: resolve(String(values.target ?? '.')), message: 'Planning handoff' };
-  if (primitive === 'planning.verify-payload.load') return { ...lifecycleResult(values, 'Payload verification'), dry_run: false };
+  if (primitive === 'planning.verify-payload.load') return { ...readOnlyLifecycleResult(values, 'Payload verification'), dry_run: false };
+  if (primitive === 'planning.new-plan.apply') return planningNewPlanResult(values, operationId);
   if (['planning.install.apply', 'planning.init.apply', 'planning.adopt.apply', 'planning.upgrade.apply'].includes(primitive)) {
     const result = lifecycleResult(values, operationId);
     result.actions = applyPayloadCopy(values);
-    return result;
+    return finalizeMutationOutcome(result);
   }
-  if (primitive.startsWith('planning.') && primitive.endsWith('.apply')) return lifecycleResult(values, operationId);
+  if (primitive.startsWith('planning.') && primitive.endsWith('.apply')) return unsupportedMutationResult(values, operationId);
   if (primitive === 'planning.reconcile.load') return { kind: 'planning-reconcile/v1', status: 'clean', target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'planning.summary.load') return { ...reportPlanning(values, operationId), kind: 'planning-summary/v1' };
   if (primitive === 'planning.report.load') return reportPlanning(values, operationId);
   if (['memory.install.apply', 'memory.init.apply', 'memory.adopt.apply', 'memory.upgrade.apply'].includes(primitive)) {
     const result = lifecycleResult(values, operationId);
     result.actions = applyPayloadCopy(values);
-    return result;
+    return finalizeMutationOutcome(result);
   }
-  if (primitive === 'memory.bootstrap.cleanup') return { ...lifecycleResult(values, 'Bootstrap workspace cleanup'), dry_run: true };
-  if (primitive === 'memory.note.create') return { ...lifecycleResult(values, `Create memory note '${values.slug ?? ''}'`), dry_run: Boolean(values.dry_run) };
+  if (primitive === 'memory.bootstrap.cleanup') return unsupportedMutationResult({ ...values, dry_run: true }, 'Bootstrap workspace cleanup');
+  if (primitive === 'memory.note.create') return unsupportedMutationResult(values, `Create memory note '${values.slug ?? ''}'`);
   if (primitive === 'memory.capture_note.load') return { kind: 'agentic-memory/capture-recommendation/v1', status: 'unavailable', dry_run: true, target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'memory.route.load' || primitive === 'memory.sync_memory.load' || primitive === 'memory.route_review.load') return { dry_run: true, target_root: resolve(String(values.target ?? '.')), message: primitive.replace(/^memory\./, '').replace(/\.load$/, '').replace(/_/g, ' '), actions: [] };
   if (primitive === 'memory.search.load') return { dry_run: true, query: values.query ?? '', target_root: resolve(String(values.target ?? '.')), matches: [], message: 'Memory search completed with native TypeScript runtime.' };
-  if (primitive.startsWith('memory.') && primitive.endsWith('.apply')) return lifecycleResult(values, operationId);
+  if (primitive.startsWith('memory.') && primitive.endsWith('.apply')) return unsupportedMutationResult(values, operationId);
   if (primitive === 'memory.report.load') return { ...reportMemory(values), profile: values.verbose ? 'verbose' : 'tiny' };
   if (primitive === 'memory.route_report.load') return { message: 'Routing report', route_report_summary: { feedback: { status: 'not-evaluated', path: '.agentic-workspace/memory/repo/route-feedback.md' }, fixtures: { status: 'not-evaluated', fixture_count: 0 } }, detail_command: 'agentic-memory route-report --target . --verbose --format json' };
   if (primitive === 'memory.bootstrap.doctor.load') return values.result ?? payloadStatus(values, { policy_root: 'memory.contracts', policy_path: 'payload_verification.memory.json', target_root_value: 'target_root', message: 'Doctor report' });
@@ -713,7 +1101,13 @@ function domainPrimitive(primitive, values, args, operationId) {
       escalation_required: Boolean(values.escalation_required ?? false),
     },
   };
-  if (primitive.startsWith('system_intent.')) return { kind: 'workspace-system-intent/v1', command: 'system-intent', target_root: resolve(String(values.target ?? '.')), dry_run: values.dry_run !== false, message: 'System intent sync', actions: [] };
+  if (primitive === 'system_intent.config.resolve') return { target_root: resolve(String(values.target ?? '.')) };
+  if (primitive === 'system_intent.source_metadata.refresh' || primitive === 'system_intent.mirror.read_or_create') {
+    return systemIntentMutationResult(values);
+  }
+  if (primitive === 'system_intent.result.emit') {
+    return emitOutput({ ...values, result: values.result ?? systemIntentMutationResult(values) }, args);
+  }
   if (primitive === 'workspace.selection.resolve') return { selected_modules: values.modules ?? values.module ?? [], target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'toml.table.counts') return tomlTableCounts(values, args);
   throw new RuntimeError(`unsupported native TypeScript primitive: ${primitive}`);
@@ -751,7 +1145,10 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
 
 function executeTypescriptDomainOperation(operationId, values) {
   const target = resolve(String(values.target ?? '.'));
-  if (operationId === 'planning.front-door') return { kind: 'agentic-workspace/planning-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
+  if (operationId === 'planning.front-door') {
+    if (values.planning_command === 'new-plan') return planningNewPlanResult(values, 'planning.new-plan.lifecycle');
+    return { kind: 'agentic-workspace/planning-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
+  }
   if (operationId === 'memory.front-door') return { kind: 'agentic-workspace/memory-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
   if (operationId === 'modules.report') {
     const availableSections = ['advanced_features', 'component_model', 'modules', 'package_footprint', 'participation_model', 'terminology', 'workspace_components'];

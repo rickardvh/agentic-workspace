@@ -15,4 +15,15 @@ Registry of operation contracts exposed by workspace commands or adapters.
 | `summary` | string | yes |  | Short human-readable summary for this entry. |  |  |
 | `primitive_registry` | const `"operation_primitives.json"` | yes |  | Fixed primitive registry value required by this contract. |  |  |
 | `schema` | const `"schemas/operation.schema.json"` | yes |  | Schema reference or schema metadata for this payload. |  |  |
+| `mutation_outcome_contract` | object | yes |  | Authoritative shared result invariant and inventory rule for mutating operation IR. |  |  |
+| `mutation_outcome_contract.schema_version` | const `"agentic-workspace/mutation-outcome/v1"` | yes |  | Version of the shared mutation outcome result contract. |  |  |
+| `mutation_outcome_contract.applicability` | const `"Every registered operation with effects.writes_repo_state=true must emit this result contract unless listed in explicit_exceptions."` | yes |  | IR-owned rule selecting the operations that must emit mutation outcome fields. |  |  |
+| `mutation_outcome_contract.outcomes` | array | yes |  | Closed vocabulary for truthful mutation results. |  |  |
+| `mutation_outcome_contract.fields` | array | yes |  | Required fields carried by every applicable mutation result. |  |  |
+| `mutation_outcome_contract.runtime_bindings` | object | yes |  | Runtime bindings enforced by contract tooling for the effects-derived mutation inventory. |  |  |
+| `mutation_outcome_contract.runtime_bindings.python` | const `"agentic_workspace.result_adapter.mutation_outcome_from_actions"` | yes |  | Shared Python front-door classifier binding. |  |  |
+| `mutation_outcome_contract.runtime_bindings.typescript` | const `"typescript_primitive_support.mjs#finalizeMutationOutcome"` | yes |  | Shared generated TypeScript classifier binding. |  |  |
+| `mutation_outcome_contract.runtime_bindings.typescript_unimplemented_apply` | const `"blocked:native-apply-unavailable"` | yes |  | Required truthful result for generated TypeScript apply primitives without a native implementation. |  |  |
+| `mutation_outcome_contract.explicit_exceptions` | array of object | yes |  | Narrow, tested exclusions from the effects-derived mutation inventory. |  |  |
+| `mutation_outcome_contract.proof_requirements` | array | yes |  | Minimum cross-runtime evidence required before claiming the invariant. |  |  |
 | `operations` | array of object | yes |  | Ordered operations entries used by this contract. |  |  |

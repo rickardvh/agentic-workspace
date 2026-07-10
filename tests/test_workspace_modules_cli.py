@@ -336,6 +336,21 @@ def test_adapt_module_result_handles_optional_warnings(tmp_path: Path) -> None:
     assert report.to_dict()["warnings"] == []
 
 
+@pytest.mark.parametrize(
+    ("actions", "warnings", "dry_run", "expected"),
+    [
+        ([{"kind": "created"}], [], False, ("applied", True, "mutation-applied")),
+        ([{"kind": "current"}], [], False, ("noop", False, "already-satisfied")),
+        ([{"kind": "manual review"}], [], False, ("blocked", False, "manual-review-required")),
+        ([{"kind": "failed"}], [], False, ("failed", False, "mutation-failed")),
+    ],
+)
+def test_mutation_outcome_contract_covers_all_outcomes(actions, warnings, dry_run, expected) -> None:
+    payload = mutation_outcome_from_actions(actions=actions, warnings=warnings, dry_run=dry_run)
+
+    assert (payload["outcome"], payload["mutation_applied"], payload["reason_code"]) == expected
+
+
 def test_invoke_module_command_uses_descriptor_command_args(tmp_path: Path) -> None:
     captured: dict[str, object] = {}
 

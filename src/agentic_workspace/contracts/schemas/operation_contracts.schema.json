@@ -9,6 +9,7 @@
     "summary",
     "primitive_registry",
     "schema",
+    "mutation_outcome_contract",
     "operations"
   ],
   "properties": {
@@ -28,6 +29,69 @@
     "schema": {
       "const": "schemas/operation.schema.json",
       "description": "Schema reference or schema metadata for this payload."
+    },
+    "mutation_outcome_contract": {
+      "type": "object",
+      "required": ["schema_version", "applicability", "outcomes", "fields", "runtime_bindings", "explicit_exceptions", "proof_requirements"],
+      "properties": {
+        "schema_version": {"const": "agentic-workspace/mutation-outcome/v1", "description": "Version of the shared mutation outcome result contract."},
+        "applicability": {"const": "Every registered operation with effects.writes_repo_state=true must emit this result contract unless listed in explicit_exceptions.", "description": "IR-owned rule selecting the operations that must emit mutation outcome fields."},
+        "outcomes": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "applied"},
+            {"const": "noop"},
+            {"const": "blocked"},
+            {"const": "failed"}
+          ],
+          "items": false,
+          "description": "Closed vocabulary for truthful mutation results."
+        },
+        "fields": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "outcome"},
+            {"const": "mutation_applied"},
+            {"const": "reason_code"},
+            {"const": "conflict_owner"},
+            {"const": "recovery_command"}
+          ],
+          "items": false,
+          "description": "Required fields carried by every applicable mutation result."
+        },
+        "runtime_bindings": {
+          "type": "object",
+          "required": ["python", "typescript", "typescript_unimplemented_apply"],
+          "properties": {
+            "python": {"const": "agentic_workspace.result_adapter.mutation_outcome_from_actions", "description": "Shared Python front-door classifier binding."},
+            "typescript": {"const": "typescript_primitive_support.mjs#finalizeMutationOutcome", "description": "Shared generated TypeScript classifier binding."},
+            "typescript_unimplemented_apply": {"const": "blocked:native-apply-unavailable", "description": "Required truthful result for generated TypeScript apply primitives without a native implementation."}
+          },
+          "additionalProperties": false,
+          "description": "Runtime bindings enforced by contract tooling for the effects-derived mutation inventory."
+        },
+        "explicit_exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["operation_id", "reason", "proof"],
+            "properties": {
+              "operation_id": {"type": "string", "minLength": 1, "description": "Registered mutating operation granted the exception."},
+              "reason": {"type": "string", "minLength": 1, "description": "Narrow reason the shared result contract cannot apply."},
+              "proof": {"type": "string", "minLength": 1, "description": "Validation that bounds and enforces the exception."}
+            },
+            "additionalProperties": false
+          },
+          "description": "Narrow, tested exclusions from the effects-derived mutation inventory."
+        },
+        "proof_requirements": {
+          "type": "array",
+          "contains": {"const": "Representative applied, noop, blocked, and failed behavior must pass for Python and TypeScript generated targets."},
+          "description": "Minimum cross-runtime evidence required before claiming the invariant."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Authoritative shared result invariant and inventory rule for mutating operation IR."
     },
     "operations": {
       "type": "array",

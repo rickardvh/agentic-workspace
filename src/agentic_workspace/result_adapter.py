@@ -17,6 +17,11 @@ class WorkspaceModuleReport:
     dry_run: bool
     actions: list[dict[str, Any]]
     warnings: list[dict[str, Any]]
+    outcome: str
+    mutation_applied: bool
+    reason_code: str
+    conflict_owner: str | None = None
+    recovery_command: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -26,6 +31,11 @@ class WorkspaceModuleReport:
             "dry_run": self.dry_run,
             "actions": [serialise_value(action) for action in self.actions],
             "warnings": [serialise_value(warning) for warning in self.warnings],
+            "outcome": self.outcome,
+            "mutation_applied": self.mutation_applied,
+            "reason_code": self.reason_code,
+            "conflict_owner": self.conflict_owner,
+            "recovery_command": self.recovery_command,
         }
 
 
@@ -33,6 +43,7 @@ def adapt_module_result(*, module: str, result: Any) -> WorkspaceModuleReport:
     target_root = Path(result.target_root)
     actions = [adapt_action(action=action, target_root=target_root) for action in getattr(result, "actions", [])]
     warnings = [serialise_value(warning) for warning in getattr(result, "warnings", [])]
+    outcome = mutation_outcome_from_actions(actions=actions, warnings=warnings, dry_run=bool(result.dry_run))
     return WorkspaceModuleReport(
         module=module,
         message=result.message,
@@ -40,7 +51,49 @@ def adapt_module_result(*, module: str, result: Any) -> WorkspaceModuleReport:
         dry_run=bool(result.dry_run),
         actions=actions,
         warnings=warnings,
+        **outcome,
     )
+
+
+def mutation_outcome_from_actions(*, actions: list[dict[str, Any]], warnings: list[dict[str, Any]], dry_run: bool) -> dict[str, Any]:
+    kinds = {str(action.get("kind", "")).strip().lower() for action in actions}
+    failed = bool(kinds & {"error", "failed"})
+    blocked = bool(warnings or kinds & {"blocked", "blocked-with-reason", "manual review", "refused"})
+    applied = not dry_run and bool(
+        kinds
+        & {
+            "adopted",
+            "archived",
+            "closed",
+            "copied",
+            "copy",
+            "created",
+            "deleted",
+            "installed",
+            "moved",
+            "overwritten",
+            "removed",
+            "replaced",
+            "updated",
+            "upgraded",
+        }
+    )
+    outcome = "failed" if failed else "blocked" if blocked else "applied" if applied else "noop"
+    return {
+        "outcome": outcome,
+        "mutation_applied": applied,
+        "reason_code": (
+            "mutation-failed"
+            if failed
+            else "manual-review-required"
+            if blocked
+            else "mutation-applied"
+            if applied
+            else "dry-run"
+            if dry_run
+            else "already-satisfied"
+        ),
+    }
 
 
 def adapt_action(*, action: Any, target_root: Path) -> dict[str, Any]:

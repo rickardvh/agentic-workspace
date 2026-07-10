@@ -39,6 +39,24 @@
             "dry_run"
           ],
           "equals": true
+        },
+        {
+          "path": [
+            "outcome"
+          ],
+          "equals": "noop"
+        },
+        {
+          "path": [
+            "mutation_applied"
+          ],
+          "equals": false
+        },
+        {
+          "path": [
+            "reason_code"
+          ],
+          "equals": "dry-run"
         }
       ]
     },

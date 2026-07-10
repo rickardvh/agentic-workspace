@@ -322,6 +322,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.install.lifecycle.apply.process",
+      "operation_id": "planning.install.lifecycle",
+      "path": "conformance/planning.install.lifecycle.apply.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.install.lifecycle.dry-run.process",
       "operation_id": "planning.install.lifecycle",
       "path": "conformance/planning.install.lifecycle.dry-run.process.json",
