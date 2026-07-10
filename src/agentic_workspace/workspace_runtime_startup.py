@@ -917,7 +917,10 @@ def _start_payload(
             if isinstance(repair_route, dict) and repair_route.get("status") == "available"
             else ""
         )
-        next_command = repair_command or planning_safety_gate["promotion_command"]
+        study = planning_safety_gate.get("work_shape_study", {})
+        study_probes = study.get("safe_probes", []) if isinstance(study, dict) else []
+        study_command = str(study_probes[0].get("command") or "") if study_probes and isinstance(study_probes[0], dict) else ""
+        next_command = repair_command or study_command or planning_safety_gate["promotion_command"]
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision=planning_safety_gate["decision"],
@@ -1116,7 +1119,10 @@ def _start_payload(
             if isinstance(repair_route, dict) and repair_route.get("status") == "available"
             else ""
         )
-        next_command = repair_command or planning_safety_gate["promotion_command"]
+        study = planning_safety_gate.get("work_shape_study", {})
+        study_probes = study.get("safe_probes", []) if isinstance(study, dict) else []
+        study_command = str(study_probes[0].get("command") or "") if study_probes and isinstance(study_probes[0], dict) else ""
+        next_command = repair_command or study_command or planning_safety_gate["promotion_command"]
         payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
             surface="start",
             decision=planning_safety_gate["decision"],
@@ -1342,6 +1348,7 @@ def _hydrate_selected_start_advisory_payloads(
                 message_economy=payload["message_economy"],
                 preserved_intent=str(continuation_answers.get("preserved_intent", "")) if isinstance(continuation_answers, dict) else "",
                 state_delta_core=state_delta_core,
+                work_shape_study=(payload.get("planning_safety_gate", {}) or {}).get("work_shape_study", {}),
             )
     vague_orientation: dict[str, Any] | None = None
     if _selector_requests(select, "vague_outcome_orientation"):
@@ -2163,6 +2170,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 message_economy=selected["message_economy"],
                 preserved_intent=str(continuation_answers.get("preserved_intent", "")) if isinstance(continuation_answers, dict) else "",
                 state_delta_core=state_delta_core,
+                work_shape_study=(payload.get("planning_safety_gate", {}) or {}).get("work_shape_study", {}),
             )
         selected["evidence_bundle"] = evidence_bundle_payload(
             surface="startup", current_decision=selected["current_decision"], state_delta_core=state_delta_core

@@ -77,6 +77,7 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
         state_delta_core_payload,
         state_delta_replay_evidence_payload,
         visible_state_delta_response_payload,
+        work_shape_study_comparison_evidence_payload,
     )
 
     decision_packet = {
@@ -107,6 +108,17 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
         message_economy=economy,
         preserved_intent="keep state compact",
         state_delta_core=core,
+        work_shape_study={
+            "status": "sufficient",
+            "evidence": {"observed": ["#2162:kind=parent-lane"], "inferred": [], "missing": []},
+            "decision": {
+                "work_shape": "lane",
+                "planning_artifact_route": "lane-planning",
+                "next_safe_action": "create-or-promote-lane-owner",
+            },
+            "freshness": {"task_binding": ["#2162"], "intent_revision": "r1"},
+            "consumption": {"state": "pending", "retain_after_consumption": False},
+        },
     )
     bundle = evidence_bundle_payload(surface="startup", current_decision=current, state_delta_core=core)
     visible = visible_state_delta_response_payload(
@@ -116,6 +128,7 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
         evidence_bundle=bundle,
     )
     replay = state_delta_replay_evidence_payload()
+    study_comparison = work_shape_study_comparison_evidence_payload()
 
     assert core["kind"] == "agentic-workspace/state-delta-core/v1"
     assert current["proof_boundary"] == core["boundary"]["proof"]
@@ -130,6 +143,10 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
     assert economy["expand_when"] == core["output_policy"]["expand_when"]
     assert current["avoid_repeat"] == core["output_policy"]["avoid"]
     assert capsule["do_not_repeat"] == core["output_policy"]["avoid"]
+    assert capsule["work_shape_seed"]["selected_shape"] == "lane"
+    assert capsule["work_shape_seed"]["observed"] == ["#2162:kind=parent-lane"]
+    assert capsule["work_shape_seed"]["consumption"]["retain_after_consumption"] is False
+    assert capsule["work_shape_seed"]["authority"].startswith("disposable seed")
     assert visible["kind"] == "agentic-workspace/visible-state-delta-response/v1"
     assert visible["parts"] == {
         "decision_or_finding": "What changed?",
@@ -139,6 +156,15 @@ def test_state_delta_packet_views_derive_from_shared_core() -> None:
     }
     assert visible["ownership_boundary"].endswith("not a new truth source.")
     assert replay["workflow_class_count"] >= 2
+    assert [item["task_class"] for item in study_comparison["scenarios"]] == [
+        "clear",
+        "shape-uncertain",
+        "apparent-uncertainty",
+    ]
+    assert study_comparison["scenarios"][0]["study_route"] == "skipped"
+    assert study_comparison["scenarios"][1]["shape_after"] == "lane"
+    assert study_comparison["scenarios"][2]["shape_after"] == "bounded"
+    assert all("study_cost" in item and "downstream_savings" in item for item in study_comparison["scenarios"])
     assert {"review", "handoff", "closeout"} == {item["workflow_class"] for item in replay["examples"]}
     assert all("next_safe_action" in item["visible_parts"] for item in replay["examples"])
 

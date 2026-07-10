@@ -4610,7 +4610,42 @@ candidates = [
     assert "candidate_pressure" not in gate
 
 
-def test_start_surfaces_custody_only_planning_for_parent_lane_without_blocking_direct_work(tmp_path: Path, capsys) -> None:
+def test_start_runs_bounded_shape_study_before_high_assurance_plan_mutation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement all issues under #2200 with high assurance",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning"]["planning_safety_gate"]
+    study = gate["work_shape_study"]
+    assert gate["gate_result"] == "information-gathering-required"
+    assert gate["implementation_allowed"] is False
+    assert study["planning_custody_required"] is True
+    assert study["work_shape_evidence_status"] == "insufficient"
+    assert study["decision"]["work_shape"] == "unknown"
+    assert study["decision"]["planning_artifact_route"] == ""
+    assert study["safe_probes"][0]["read_only"] is True
+    assert "external-intent refresh-github" in study["safe_probes"][0]["command"]
+    assert payload["next_safe_action"]["next_safe_action"] == "run-bounded-work-shape-study"
+    assert "begin implementation" in payload["next_safe_action"]["forbidden_actions"]
+
+
+def test_start_routes_parent_lane_evidence_before_shape_specific_plan_creation(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     _write(
@@ -4651,19 +4686,91 @@ def test_start_surfaces_custody_only_planning_for_parent_lane_without_blocking_d
 
     payload = json.loads(capsys.readouterr().out)
     gate = payload["values"]["planning_safety_gate"]
-    custody = gate["custody_planning"]
-    assert gate["implementation_allowed"] is True
-    assert custody["status"] == "recommended"
-    assert custody["planning_roles"]["implementation_gate"] == "not-required"
-    assert custody["planning_roles"]["sequencing_aid"] == "not-required-for-current-slice"
-    assert custody["planning_roles"]["intent_custody"] == "recommended"
-    assert "parent-lane" in custody["reason_codes"]
-    assert "shared lane intent" in custody["purpose"]
-    assert custody["slice_boundary"]["full_parent_satisfaction"] == "requires-custody-or-equivalent-reconciliation"
-    assert custody["follow_up_route"]["refs"] == ["#1706"]
+    study = gate["work_shape_study"]
+    assert gate["implementation_allowed"] is False
+    assert gate["gate_result"] == "planning-shape-owner-required"
+    assert gate["required_next_action"] == "create-or-promote-lane-owner"
+    assert study["status"] == "sufficient"
+    assert study["planning_custody_required"] is True
+    assert study["decision"]["work_shape"] == "lane"
+    assert study["decision"]["planning_artifact_route"] == "lane-planning"
+    assert study["evidence"]["observed"] == ["#2200:kind=parent-lane"]
+    assert study["consumption"]["retain_after_consumption"] is False
 
 
-def test_start_default_output_surfaces_custody_only_planning_for_parent_lane(tmp_path: Path, capsys) -> None:
+def test_start_replays_2143_unknown_to_lane_before_plan_creation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    task = "Implement all child issues under #2143 with high assurance"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
+    before = json.loads(capsys.readouterr().out)["context"]["planning"]["planning_safety_gate"]["work_shape_study"]
+    assert before["decision"]["work_shape"] == "unknown"
+    assert before["decision"]["planning_artifact_route"] == ""
+
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "id": "#2143",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "parent-lane",
+                        "title": "Package output friction parent lane",
+                    }
+                ],
+            }
+        ),
+    )
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
+    after_payload = json.loads(capsys.readouterr().out)
+    after = after_payload["context"]["planning"]["planning_safety_gate"]["work_shape_study"]
+    assert after["decision_delta"]["evidence_arrived"] is True
+    assert after["decision"]["work_shape"] == "lane"
+    assert after["decision"]["planning_artifact_route"] == "lane-planning"
+    assert after["decision_delta"]["newly_safe_action"] == "create-or-promote-lane-owner"
+    assert after_payload["next_safe_action"]["next_safe_action"] == "create-or-promote-lane-owner"
+
+
+def test_start_asks_for_shape_decision_when_bounded_evidence_stays_ambiguous(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "id": "#2202",
+                        "system": "document-adapter",
+                        "status": "open",
+                        "kind": "ambiguous",
+                        "title": "Choose between a bounded slice and a parent lane",
+                    }
+                ],
+            }
+        ),
+    )
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Implement issue #2202", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    gate = payload["context"]["planning"]["planning_safety_gate"]
+    study = gate["work_shape_study"]
+    assert gate["gate_result"] == "planning-shape-human-decision-required"
+    assert study["status"] == "ambiguous"
+    assert study["decision"]["status"] == "needs-human-decision"
+    assert study["decision"]["planning_artifact_route"] == ""
+    assert payload["next_safe_action"]["next_safe_action"] == "ask-work-shape-clarification"
+    assert "begin implementation" in payload["next_safe_action"]["forbidden_actions"]
+
+
+def test_start_default_output_surfaces_parent_lane_shape_study(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     _write(
@@ -4702,11 +4809,10 @@ def test_start_default_output_surfaces_custody_only_planning_for_parent_lane(tmp
 
     payload = json.loads(capsys.readouterr().out)
     gate = payload["context"]["planning"]["planning_safety_gate"]
-    custody = gate["custody_planning"]
-    assert gate["implementation_allowed"] is True
-    assert custody["status"] == "recommended"
-    assert custody["planning_roles"]["intent_custody"] == "recommended"
-    assert "parent-lane" in custody["reason_codes"]
+    study = gate["work_shape_study"]
+    assert gate["implementation_allowed"] is False
+    assert study["decision"]["planning_artifact_route"] == "lane-planning"
+    assert payload["next_safe_action"]["next_safe_action"] == "create-or-promote-lane-owner"
 
 
 def test_implement_custody_only_planning_blocks_parent_closure_claims_not_edits(tmp_path: Path, capsys) -> None:
