@@ -6,6 +6,7 @@
   "scope": "repo-shared",
   "portability": "platform-specific",
   "portability_justification": "This adapter intentionally bridges the Codex host's CODEX_THREAD_ID into AW's host-neutral logical-session identity contract.",
+  "checked_in_scope_justification": "The wrapper must be discoverable and reusable by every Codex session in this repository until the host integration provides the identity mapping directly.",
   "proof_role": "advisory-helper",
   "owner": "workspace",
   "created_because": "Codex exposes a stable thread id, but the configured AW invocation did not map it into AW_SESSION_LOGICAL_IDENTITY, so unrelated Codex threads shared the legacy default session-log bucket.",
@@ -31,15 +32,15 @@
     ]
   },
   "authority_boundary": {
-    "runtime_authority": "invocation-environment-adapter-only",
-    "fact_owner": "Codex host session context and Agentic Workspace session-logging contract",
+    "runtime_authority": "advisory-only",
+    "fact_owner": "host-config",
     "promote_behavior_relevant_facts_to": "a canonical Codex adapter or invocation integration",
     "agent_decision": "The agent chooses the AW command; the aid only maps an existing opaque host identity and preserves the configured AW invocation."
   },
   "promotion": {
-    "target_kind": "adapter",
+    "target_kind": "command",
     "target": "Codex Agentic Workspace invocation adapter",
-    "discovery_route": "host-integration",
+    "discovery_route": "repo-command",
     "trigger": "promote when the Codex invocation surface can set AW_SESSION_LOGICAL_IDENTITY automatically",
     "retention_after_promotion": "delete"
   },

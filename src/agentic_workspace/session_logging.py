@@ -375,7 +375,7 @@ def ensure_session(*, state: SessionLoggingState, force_new: bool = False, logic
 def _create_session(*, state: SessionLoggingState) -> dict[str, str]:
     created_at = datetime.now(UTC)
     session_id = f"{created_at.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
-    log_path = SESSION_LOG_ROOT / f"aw-session-{session_id}.md"
+    log_path = SESSION_LOG_ROOT / f"aw-session-{session_id}" / "session.md"
     session = {
         "kind": SESSION_POINTER_KIND,
         "session_id": session_id,
@@ -510,9 +510,12 @@ def _valid_session_log_path(value: str) -> str:
         return ""
     normalized = Path(*path.parts).as_posix()
     log_root = SESSION_LOG_ROOT.as_posix()
-    if normalized == log_root or normalized.startswith(f"{log_root}/"):
-        return normalized
-    return ""
+    if not normalized.startswith(f"{log_root}/"):
+        return ""
+    relative = Path(normalized).relative_to(SESSION_LOG_ROOT)
+    if len(relative.parts) != 2 or relative.name != "session.md" or not relative.parent.name.startswith("aw-session-"):
+        return ""
+    return normalized
 
 
 def _session_prelude(*, state: SessionLoggingState, session: dict[str, str]) -> str:
@@ -813,7 +816,7 @@ def _write_output_artifact(
             "duplicate_of": str(existing.get("entry_id", "")),
             "storage_mode": "reused-duplicate",
         }
-    artifact_path = SESSION_LOG_ROOT / "artifacts" / session["session_id"] / f"{entry_id}-output.json"
+    artifact_path = _artifact_root_for_session(session) / f"{entry_id}-output.json"
     payload = {
         "kind": "agentic-workspace/session-log-output-artifact/v1",
         "entry_id": entry_id,
@@ -850,7 +853,11 @@ def _logging_config_source(state: SessionLoggingState) -> str:
 
 
 def _index_path_for_session(session: dict[str, str]) -> Path:
-    return SESSION_LOG_ROOT / "indexes" / f"{session['session_id']}.json"
+    return Path(session["log_path"]).parent / "index.json"
+
+
+def _artifact_root_for_session(session: dict[str, str]) -> Path:
+    return Path(session["log_path"]).parent / "artifacts"
 
 
 def _write_index(
@@ -1151,7 +1158,7 @@ def _output_summary_lines(summary: OutputSummary) -> list[str]:
 
 
 def _artifact_for_entry(*, state: SessionLoggingState, session: dict[str, str], entry_id: str) -> dict[str, Any] | None:
-    artifact_path = SESSION_LOG_ROOT / "artifacts" / session["session_id"] / f"{entry_id}-output.json"
+    artifact_path = _artifact_root_for_session(session) / f"{entry_id}-output.json"
     absolute_path = state.target_root / artifact_path
     if not absolute_path.exists():
         return None
@@ -1208,13 +1215,8 @@ def _analysis_log_path(*, state: SessionLoggingState, path: str, session_id: str
         return candidate if candidate.exists() else None
     if session_id:
         cleaned = session_id.strip()
-        if cleaned.startswith("aw-session-") and cleaned.endswith(".md"):
-            candidate_name = cleaned
-        elif cleaned.startswith("aw-session-"):
-            candidate_name = f"{cleaned}.md"
-        else:
-            candidate_name = f"aw-session-{cleaned}.md"
-        candidate = state.target_root / SESSION_LOG_ROOT / candidate_name
+        session_name = cleaned if cleaned.startswith("aw-session-") else f"aw-session-{cleaned}"
+        candidate = state.target_root / SESSION_LOG_ROOT / session_name / "session.md"
         return candidate if candidate.exists() else None
     if not session:
         return None
@@ -1227,10 +1229,10 @@ def _read_index_for_log(*, state: SessionLoggingState, log_path: Path, session: 
         index = _read_index(state=state, session=session)
         if index is not None:
             return index
-    match = re.match(r"aw-session-(?P<session_id>.+)\.md$", log_path.name)
-    if not match:
+    session_id = _session_id_from_log_path(log_path)
+    if not session_id:
         return None
-    pseudo_session = {"session_id": match.group("session_id"), "log_path": log_path.relative_to(state.target_root).as_posix()}
+    pseudo_session = {"session_id": session_id, "log_path": log_path.relative_to(state.target_root).as_posix()}
     return _read_index(state=state, session=pseudo_session)
 
 
@@ -1404,13 +1406,18 @@ def _friction_candidates(
 def _session_for_log(*, state: SessionLoggingState, log_path: Path, session: dict[str, str] | None) -> dict[str, str]:
     if session and (state.target_root / session.get("log_path", "")) == log_path:
         return session
-    match = re.match(r"aw-session-(?P<session_id>.+)\.md$", log_path.name)
+    session_id = _session_id_from_log_path(log_path)
     return {
         "kind": SESSION_POINTER_KIND,
-        "session_id": match.group("session_id") if match else hashlib.sha256(log_path.as_posix().encode()).hexdigest()[:12],
+        "session_id": session_id or hashlib.sha256(log_path.as_posix().encode()).hexdigest()[:12],
         "created_at": "",
         "log_path": log_path.relative_to(state.target_root).as_posix(),
     }
+
+
+def _session_id_from_log_path(log_path: Path) -> str:
+    match = re.match(r"aw-session-(?P<session_id>.+)$", log_path.parent.name) if log_path.name == "session.md" else None
+    return match.group("session_id") if match else ""
 
 
 def _coverage_payload(*, markdown_entries: list[dict[str, Any]], index: dict[str, Any] | None) -> dict[str, Any]:
@@ -1534,7 +1541,7 @@ def export_session_log(
             for entry in entries
             if isinstance(entry.get("artifact"), dict) and entry.get("artifact", {}).get("path")
         }
-        artifact_root = (state.target_root / SESSION_LOG_ROOT / "artifacts").resolve()
+        artifact_root = (state.target_root / _artifact_root_for_session(effective_session)).resolve()
         for artifact_path in sorted(artifact_paths):
             candidate = (state.target_root / artifact_path).resolve()
             try:
