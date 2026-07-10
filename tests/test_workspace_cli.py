@@ -5,6 +5,7 @@ import copy
 import hashlib
 import re
 import shutil
+import tomllib
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
@@ -1375,6 +1376,58 @@ def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tm
 
     assert cli.main(["planning", "lane-archive", "lane-alpha", "--format", "json"]) == 0
     assert json.loads(capsys.readouterr().out)["argv"] == ["lane-archive", "lane-alpha", "--format", "json"]
+
+
+def test_planning_front_door_new_plan_binds_explicit_active_lane(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "lane-create",
+                "--id",
+                "lane-alpha",
+                "--title",
+                "Lane Alpha",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    assert cli.main(["planning", "lane-activate", "lane-alpha", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "slice-one",
+                "--title",
+                "Slice One",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--lane",
+                "lane-alpha",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+
+    assert any("attached execplan 'slice-one' to active lane 'lane-alpha'" in action["detail"] for action in payload["actions"])
+    assert state["roadmap"]["lanes"][0]["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
 
 
 def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys) -> None:

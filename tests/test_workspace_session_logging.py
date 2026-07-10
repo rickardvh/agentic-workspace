@@ -319,6 +319,11 @@ def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packe
     by_id = json.loads(capsys.readouterr().out)
     assert by_id["path"] == payload["path"]
 
+    directory_id = f"aw-session-{pointer['session_id']}"
+    assert source_cli.main(["session-log", "--target", str(target), "analyze", "--id", directory_id, "--format", "json"]) == 0
+    by_directory_id = json.loads(capsys.readouterr().out)
+    assert by_directory_id["path"] == payload["path"]
+
 
 def test_session_log_analyze_markdown_fallback_extracts_inline_output_without_index(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)

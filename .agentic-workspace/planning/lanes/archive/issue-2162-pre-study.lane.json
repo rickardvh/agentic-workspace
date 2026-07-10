@@ -58,7 +58,8 @@
     "status": "satisfied",
     "evidence": [
       "make test-workspace; make lint-workspace; make typecheck; 330 focused CLI tests; 179 workspace CLI tests; #2143 unknown-to-lane replay; comparative cost report; planning/runtime mirror checks",
-      "#2165 follow-up: explicit --lane ownership binding for active new-plan attachment, unrelated-plan negative regression, Planning package test/lint/typecheck, generated command package freshness, planning summary, and planning doctor."
+      "#2165 follow-up: explicit --lane ownership binding for active new-plan attachment, unrelated-plan negative regression, Planning package test/lint/typecheck, generated command package freshness, planning summary, and planning doctor.",
+      "PR review front-door reconciliation: workspace planning new-plan exposes and forwards --lane end to end; session-log --id documents and accepts aw-session-<id> directory names; contract tooling, structured inventory, generated package proof, all-target operation conformance, full workspace tests/lint, and 180 workspace CLI tests passed."
     ],
     "known_gaps": []
   },

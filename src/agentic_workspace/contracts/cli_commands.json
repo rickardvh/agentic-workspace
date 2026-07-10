@@ -164,6 +164,14 @@
               "help": "When used with --activate, demote existing active items into the queue before registering the new active plan."
             },
             {
+              "name": "owner_lane",
+              "flags": [
+                "--lane"
+              ],
+              "default": "",
+              "help": "Explicit active lane that owns this plan; requires --activate."
+            },
+            {
               "name": "prep_only",
               "flags": [
                 "--prep-only"
@@ -1922,7 +1930,7 @@
               "flags": [
                 "--id"
               ],
-              "help": "Optional session id or aw-session-<id>.md filename to analyze."
+              "help": "Optional session id or aw-session-<id> directory name to analyze."
             },
             {
               "name": "segment",
@@ -1957,7 +1965,7 @@
             {
               "name": "id",
               "flags": ["--id"],
-              "help": "Optional session id or aw-session-<id>.md filename to repair."
+              "help": "Optional session id or aw-session-<id> directory name to repair."
             }
           ],
           "role": "reusable_host_repo_diagnostics",
@@ -1985,7 +1993,7 @@
             {
               "name": "id",
               "flags": ["--id"],
-              "help": "Optional session id or aw-session-<id>.md filename to export."
+              "help": "Optional session id or aw-session-<id> directory name to export."
             },
             {
               "name": "no_artifacts",
