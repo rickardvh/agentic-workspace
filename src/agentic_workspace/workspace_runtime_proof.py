@@ -4902,7 +4902,6 @@ def _proof_closeout_summary_payload(
         manual_verification=manual_verification,
         unavailable_commands=unavailable_commands,
         host_policy_blocked_commands=host_policy_blocked_commands,
-        maturity_gaps=maturity_gaps,
     )
     risk_lanes = _dedupe([str(lane.get("id", "")).strip() for lane in selected_lanes if str(lane.get("id", "")).strip()])
     status = (
@@ -4940,6 +4939,7 @@ def _proof_closeout_summary_payload(
         },
         "remaining_gaps": remaining_gaps,
         "remaining_gap_statement": _join_or_none(remaining_gaps),
+        "route_maturity_advisories": maturity_gaps,
         "route_maturity_gaps": maturity_gaps,
         "sufficiency": {"status": status, "why": sufficiency},
         "pr_validation_lines": lines,
@@ -5056,7 +5056,6 @@ def _proof_closeout_remaining_gaps(
     manual_verification: dict[str, Any] | None,
     unavailable_commands: list[dict[str, Any]],
     host_policy_blocked_commands: list[dict[str, str]],
-    maturity_gaps: list[str],
 ) -> list[str]:
     gaps: list[str] = []
     for item in proof_results:
@@ -5066,7 +5065,6 @@ def _proof_closeout_remaining_gaps(
         gaps.append(str(manual_verification.get("summary") or manual_verification.get("reason") or "manual verification required"))
     gaps.extend(f"{item.get('command')}: {item.get('reason')}" for item in unavailable_commands if isinstance(item, dict))
     gaps.extend(f"{item.get('command')}: host policy blocked selected proof" for item in host_policy_blocked_commands)
-    gaps.extend(maturity_gaps)
     return _dedupe([gap for gap in gaps if gap.strip()])
 
 

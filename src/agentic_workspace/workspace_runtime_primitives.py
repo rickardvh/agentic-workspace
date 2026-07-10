@@ -19261,9 +19261,12 @@ def _report_closeout_trust_payload(
         }
 
     def archived_slice_closeout_evidence() -> dict[str, Any]:
-        archived_record = _closeout_planning_record_for_report(active_planning_record={}, target_root=target_root)
+        archived_record = _closeout_planning_record_for_report(active_planning_record={}, target_root=target_root, task_text=task_text)
         if not archived_record:
             return {"status": "absent", "trust": "not-applicable"}
+        resolution = _as_dict(archived_record.get("_closeout_evidence_resolution"))
+        if resolution:
+            return resolution
         evidence_source = _as_dict(archived_record.get("_closeout_evidence_source"))
         proof_report = _as_dict(archived_record.get("proof_report"))
         closure_check = _as_dict(archived_record.get("closure_check"))
@@ -19625,12 +19628,34 @@ def _report_closeout_trust_payload(
         package_absence_signals.append(
             f"Active planning record is present, but package workflow evidence is incomplete or absent: missing {missing}."
         )
-    effective_lower_trust_count = lower_trust_closeout_count + len(package_absence_signals)
-    if acceptance_reconciliation.get("trust") == "lower-trust":
+    retained_resolution_status = str(slice_closeout_evidence.get("status") or "")
+    planning_status = _as_dict(planning_report.get("status"))
+    live_planning_continuation = (
+        _as_int(planning_status.get("roadmap_lane_count")) + _as_int(planning_status.get("roadmap_candidate_count")) > 0
+    )
+    retained_evidence_controls = (
+        not raw_active_planning_record
+        and not live_planning_continuation
+        and retained_resolution_status
+        in {
+            "present",
+            "ambiguous",
+            "no-relevant-evidence",
+        }
+    )
+    effective_lower_trust_count = (
+        1
+        if retained_evidence_controls and slice_closeout_evidence.get("trust") == "lower-trust"
+        else 0
+        if retained_evidence_controls
+        else lower_trust_closeout_count + len(package_absence_signals)
+    )
+    if not retained_evidence_controls and acceptance_reconciliation.get("trust") == "lower-trust":
         effective_lower_trust_count += 1
     intent_satisfaction_trust = str(intent_satisfaction_check.get("trust", ""))
     intent_satisfaction_lower_trust_count = 1 if intent_satisfaction_trust in {"follow-up-required", "needs-review"} else 0
-    effective_lower_trust_count += intent_satisfaction_lower_trust_count
+    if not retained_evidence_controls:
+        effective_lower_trust_count += intent_satisfaction_lower_trust_count
     intent_satisfaction_signals: list[str] = []
     if intent_satisfaction_lower_trust_count:
         continuation_surface = str(intent_satisfaction_check.get("continuation_surface", "")).strip()
@@ -19648,6 +19673,13 @@ def _report_closeout_trust_payload(
     else:
         summary = "No lower-trust closeout signals are currently detected from planning evidence."
         recommended_next_action = "No extra closeout trust review is needed beyond normal report inspection."
+    if retained_evidence_controls:
+        if retained_resolution_status == "present" and slice_closeout_evidence.get("trust") == "normal":
+            recommended_next_action = "Use the selected command-owned evidence for the completed slice; reconcile parent intent only when claiming parent closure."
+        elif retained_resolution_status in {"ambiguous", "no-relevant-evidence"}:
+            recommended_next_action = str(
+                slice_closeout_evidence.get("recovery_command") or "Select relevant closeout evidence explicitly."
+            )
     gate = strict_gate(
         trust=trust,
         reason="active planning record present" if active_planning_record else "no active planning record",
@@ -19663,6 +19695,16 @@ def _report_closeout_trust_payload(
         applicable_intent_status=applicable_intent_status,
         durable_residue_action=residue_action,
     )
+    if retained_evidence_controls and retained_resolution_status in {"ambiguous", "no-relevant-evidence"}:
+        completion_gate = copy.deepcopy(completion_gate)
+        completion_gate.update(
+            {
+                "status": retained_resolution_status,
+                "required_next_action": recommended_next_action,
+                "residual_intent": "unknown-without-relevant-evidence",
+                "continuation": {"created_or_required": False, "reason": "unrelated historical evidence cannot create continuation"},
+            }
+        )
     task_posture_followthrough = _as_dict(completion_gate.get("task_posture_followthrough"))
     proof_confidence = _proof_confidence_payload(intent_proof=intent_proof_check)
     completion_options = _closeout_completion_options(
@@ -20875,7 +20917,32 @@ def _recent_retained_closeout_evidence_for_report(*, target_root: Path | None) -
     return payload
 
 
-def _closeout_planning_record_for_report(*, active_planning_record: dict[str, Any], target_root: Path | None) -> dict[str, Any]:
+def _closeout_candidate_identity(payload: dict[str, Any]) -> str:
+    return " ".join(
+        str(value)
+        for value in (
+            payload.get("plan_id"),
+            payload.get("title"),
+            payload.get("source_plan"),
+            payload.get("intended_archive"),
+            _as_dict(payload.get("lineage")).get("lineage_id"),
+        )
+        if value
+    ).lower()
+
+
+def _explicit_closeout_candidate_match(*, payload: dict[str, Any], task_text: str) -> bool:
+    identity = _closeout_candidate_identity(payload)
+    issue_refs = {match.lstrip("#") for match in re.findall(r"#\d+", task_text)}
+    if issue_refs and any(re.search(rf"(?:^|[^0-9]){re.escape(ref)}(?:[^0-9]|$)", identity) for ref in issue_refs):
+        return True
+    normalized = re.sub(r"[^a-z0-9]+", "-", task_text.lower()).strip("-")
+    return bool(normalized and (normalized in identity.replace("_", "-") or identity.replace("_", "-") in normalized))
+
+
+def _closeout_planning_record_for_report(
+    *, active_planning_record: dict[str, Any], target_root: Path | None, task_text: str | None = None
+) -> dict[str, Any]:
     active_planning_record = active_planning_record if isinstance(active_planning_record, dict) else {}
     if active_planning_record:
         record = copy.deepcopy(active_planning_record)
@@ -20888,13 +20955,100 @@ def _closeout_planning_record_for_report(*, active_planning_record: dict[str, An
             },
         )
         return record
-    retained = _recent_retained_closeout_evidence_for_report(target_root=target_root)
-    if retained:
-        return retained
-    archived = _recent_archived_planning_record_for_closeout(target_root=target_root)
-    if archived:
-        return archived
-    return {}
+    if target_root is None:
+        return {}
+    target_resolved = target_root.resolve()
+    context_path = target_root / ".agentic-workspace" / "local" / "planning-last-closeout.json"
+    if context_path.is_file():
+        try:
+            context = json.loads(context_path.read_text(encoding="utf-8-sig"))
+            selected = (target_root / str(context.get("evidence_path") or "")).resolve()
+            selected.relative_to(target_resolved)
+            payload = json.loads(selected.read_text(encoding="utf-8-sig"))
+            if isinstance(payload, dict):
+                payload = copy.deepcopy(payload)
+                payload["_closeout_evidence_source"] = {
+                    "authority": "retained-closeout-evidence"
+                    if payload.get("kind") == "planning-closeout-evidence/v1"
+                    else "archived-planning-evidence",
+                    "evidence_source_class": "command-owned-last-closeout",
+                    "path": selected.relative_to(target_resolved).as_posix(),
+                    "source_plan": str(payload.get("source_plan") or context.get("source_plan") or ""),
+                    "intended_archive": str(payload.get("intended_archive") or ""),
+                    "relationship": "current-slice",
+                    "relevance": {"status": "relevant", "relationship": "current-slice", "plan_id": context.get("plan_id", "")},
+                    "selection": {
+                        "basis": "planning-terminal-command-context",
+                        "selected_plan_id": context.get("plan_id", ""),
+                        "context_path": context_path.relative_to(target_resolved).as_posix(),
+                    },
+                    "rule": "The terminal Planning command retained the identity of the evidence it just produced.",
+                }
+                return payload
+        except (OSError, ValueError, json.JSONDecodeError):
+            pass
+
+    if str(task_text or "").strip():
+        matches: list[tuple[Path, dict[str, Any]]] = []
+        roots = [
+            target_root / ".agentic-workspace" / "planning" / "closeout-evidence",
+            target_root / ".agentic-workspace" / "planning" / "execplans" / "archive",
+        ]
+        for root in roots:
+            if not root.is_dir():
+                continue
+            for path in [*root.glob("*.closeout.json"), *root.glob("*.plan.json")]:
+                try:
+                    payload = json.loads(path.read_text(encoding="utf-8-sig"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                if isinstance(payload, dict) and _explicit_closeout_candidate_match(payload=payload, task_text=str(task_text)):
+                    matches.append((path, payload))
+        if len(matches) == 1:
+            path, payload = matches[0]
+            payload = copy.deepcopy(payload)
+            relationship = str(_closeout_evidence_lineage(payload).get("relationship") or "same-lineage")
+            payload["_closeout_evidence_source"] = {
+                "authority": "retained-closeout-evidence"
+                if payload.get("kind") == "planning-closeout-evidence/v1"
+                else "archived-planning-evidence",
+                "evidence_source_class": "explicit-task-selection",
+                "path": path.relative_to(target_resolved).as_posix(),
+                "source_plan": str(payload.get("source_plan") or ""),
+                "intended_archive": str(payload.get("intended_archive") or ""),
+                "retention_state": str(_as_dict(payload.get("retention")).get("state") or ""),
+                "relationship": relationship,
+                "relevance": {"status": "relevant", "relationship": relationship, "plan_id": payload.get("plan_id", "")},
+                "selection": {"basis": "explicit-task-provenance", "task": str(task_text)},
+                "sort_mtime": path.stat().st_mtime,
+                "last_modified": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat(),
+            }
+            return payload
+        if len(matches) > 1:
+            return {
+                "_closeout_evidence_resolution": {
+                    "status": "ambiguous",
+                    "trust": "not-applicable",
+                    "candidates": [path.relative_to(target_resolved).as_posix() for path, _ in matches[:5]],
+                    "recovery_command": _command_with_cli_invoke(
+                        command='agentic-workspace report --target ./repo --section closeout_trust --task "<exact plan id>" --format json',
+                        cli_invoke=DEFAULT_CLI_INVOKE,
+                    ),
+                    "rule": "Multiple retained records match the requested task; none may control closeout trust until selection is exact.",
+                }
+            }
+    return {
+        "_closeout_evidence_resolution": {
+            "status": "no-relevant-evidence",
+            "trust": "not-applicable",
+            "candidates": [],
+            "recovery_command": _command_with_cli_invoke(
+                command='agentic-workspace report --target ./repo --section closeout_trust --task "<task, plan, or lane id>" --format json',
+                cli_invoke=DEFAULT_CLI_INVOKE,
+            ),
+            "rule": "No command-owned current-task identity or uniquely matching retained evidence was available; unrelated history cannot control the claim.",
+        }
+    }
 
 
 def _intent_proof_check_payload(*, planning_report: dict[str, Any], target_root: Path | None = None) -> dict[str, Any]:

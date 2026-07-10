@@ -2123,6 +2123,10 @@ execplans = [
     assert closeout_evidence["kind"] == "planning-closeout-evidence/v1"
     assert closeout_evidence["source_plan"] == ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
     assert closeout_evidence["retention"]["state"] == "cleanup-distilled-without-full-archive"
+    last_closeout = json.loads((tmp_path / ".agentic-workspace/local/planning-last-closeout.json").read_text(encoding="utf-8"))
+    assert last_closeout["authority"] == "planning-terminal-command"
+    assert last_closeout["plan_id"] == "plan-alpha"
+    assert last_closeout["evidence_path"] == ".agentic-workspace/planning/closeout-evidence/plan-alpha.closeout.json"
     assert "execplans = []" in state_text
     assert 'maturity = "closed"' not in state_text
     assert "durable_residue" not in state_text

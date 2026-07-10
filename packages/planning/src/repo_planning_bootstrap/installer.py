@@ -14791,12 +14791,24 @@ def archive_execplan(
         legacy_roadmap_path.write_text(cleanup_legacy_roadmap["text"], encoding="utf-8")
     if retain_archive:
         result.add("archived", destination_record, f"canonical record for {plan_path.relative_to(target_root).as_posix()}")
+        _write_last_closeout_context(
+            target_root=target_root,
+            plan_path=plan_path,
+            evidence_path=destination_record,
+            plan_id=plan_path.name[: -len(".plan.json")] if plan_path.name.endswith(".plan.json") else plan_path.stem,
+        )
     else:
         if archive_retention_skipped or apply_cleanup:
             if closeout_evidence_retention_skipped:
                 result.add("retained closeout evidence skipped", closeout_evidence_path, "closeout evidence exceeded size guardrail")
             else:
                 result.add("retained closeout evidence", closeout_evidence_path, "compact closeout evidence for report surfaces")
+                _write_last_closeout_context(
+                    target_root=target_root,
+                    plan_path=plan_path,
+                    evidence_path=closeout_evidence_path,
+                    plan_id=plan_path.name[: -len(".plan.json")] if plan_path.name.endswith(".plan.json") else plan_path.stem,
+                )
         result.add("closed", plan_path, "completed execplan removed from Planning after closeout distillation")
     return result
 
@@ -14889,6 +14901,31 @@ def _closeout_evidence_record(
 
 def _write_closeout_evidence_record(*, record_path: Path, record: dict[str, Any]) -> None:
     _write_schema_backed_planning_record(record_path=record_path, record=record, schema_path=CLOSEOUT_EVIDENCE_SCHEMA_PATH)
+
+
+def _write_last_closeout_context(*, target_root: Path, plan_path: Path, evidence_path: Path, plan_id: str) -> None:
+    """Retain command-owned identity across terminal Planning mutations.
+
+    This cursor is deliberately local operational context, not durable planning
+    evidence.  The evidence path it names remains the canonical auditable record.
+    """
+    context_path = target_root / ".agentic-workspace" / "local" / "planning-last-closeout.json"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        json.dumps(
+            {
+                "kind": "planning-last-closeout-context/v1",
+                "plan_id": plan_id,
+                "source_plan": plan_path.relative_to(target_root).as_posix(),
+                "evidence_path": evidence_path.relative_to(target_root).as_posix(),
+                "recorded_at": datetime.now(timezone.utc).isoformat(),
+                "authority": "planning-terminal-command",
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
 
 def _compact_closeout_archive_record(record: dict[str, Any]) -> dict[str, Any]:

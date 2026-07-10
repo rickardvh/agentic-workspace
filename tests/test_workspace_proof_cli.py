@@ -1310,6 +1310,40 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
     assert any(line == "Remaining gaps: none known." for line in summary["pr_validation_lines"])
 
 
+def test_proof_closeout_treats_conservative_route_maturity_as_advisory_after_accepted_receipt() -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_closeout_summary_payload
+
+    command = "make test-workspace"
+    summary = _proof_closeout_summary_payload(
+        changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+        selected_lanes=[{"id": "workspace_cli"}],
+        proof_route_decision={
+            "selected_command": {
+                "command": command,
+                "route_source": "live-confirmed-proof-rule",
+                "route_authority": "package-seed-or-default-route",
+                "fallback_status": "seed-fallback",
+                "authority_surface": "package proof defaults",
+            }
+        },
+        proof_command_explanations={"required": [{"command": command, "reason_classes": ["conservative-fallback"]}]},
+        proof_execution_evidence={"commands": []},
+        proof_receipt_reconciliation={"commands": [{"command": command, "evidence_state": "accepted"}]},
+        proof_receipt_bridge={"status": "clear", "missing_receipt_count": 0},
+        learned_route_reliance={"items": []},
+        manual_verification=None,
+        unavailable_commands=[],
+        host_policy_blocked_commands=[],
+    )
+
+    assert summary["status"] == "sufficient-recorded"
+    assert summary["remaining_gaps"] == []
+    assert summary["route"]["maturity"] == "conservative-fallback"
+    assert summary["route_maturity_advisories"] == [
+        f"{command}: conservative fallback; narrower learned route evidence is missing or immature"
+    ]
+
+
 def test_proof_changed_exposes_receipt_bridge_for_unrecorded_commands(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 
@@ -1551,7 +1585,7 @@ def test_proof_tiny_includes_closeout_summary_for_pr_validation(tmp_path: Path, 
     summary = payload["proof_closeout_summary"]
     assert summary["changed_paths"] == ["llms.txt"]
     assert summary["route"]["maturity"] == "conservative-fallback"
-    assert summary["remaining_gap_count"] == 4
+    assert summary["remaining_gap_count"] == 2
     assert "conservative-fallback" in summary["human_summary"]
 
 
