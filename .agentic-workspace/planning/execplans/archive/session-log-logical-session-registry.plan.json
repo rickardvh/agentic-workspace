@@ -211,7 +211,7 @@
     "decomposition adjustment": "none; the refined #2157 intent is fully satisfied"
   },
   "proof_report": {
-    "validation proof": "26 focused session-log tests; make test-workspace; make lint-workspace; make typecheck-workspace; planning summary and scoped planning doctor; real-checkout A/B/A dogfood reused A, isolated B, and found zero raw identity leaks",
+    "validation proof": "27 focused session-log tests; make test-workspace; make lint-workspace; make typecheck-workspace; planning summary and scoped planning doctor; real-checkout A/B/A dogfood reused A, isolated B, and found zero raw identity leaks",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
     "evidence for \"proof achieved\" state": "See proof_report.validation proof."
   },
@@ -397,6 +397,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Give each opaque logical-session identity one stable isolated local log namespace.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: 26 focused session-log tests; make test-workspace; make lint-workspace; make typecheck-workspace; planning summary and scoped planning doctor; real-checkout A/B/A dogfood reused A, isolated B, and found zero raw identity leaks\nChanged surfaces: src/agentic_workspace/session_logging.py; tests/test_workspace_session_logging.py; archived execplan\nDurable residue: contract (runtime code and focused tests)\nMemory learning: promote_to_docs_contracts_checks_code\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Give each opaque logical-session identity one stable isolated local log namespace.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: 27 focused session-log tests; make test-workspace; make lint-workspace; make typecheck-workspace; planning summary and scoped planning doctor; real-checkout A/B/A dogfood reused A, isolated B, and found zero raw identity leaks\nChanged surfaces: src/agentic_workspace/session_logging.py; tests/test_workspace_session_logging.py; archived execplan\nDurable residue: contract (runtime code and focused tests)\nMemory learning: promote_to_docs_contracts_checks_code\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
   }
 }
