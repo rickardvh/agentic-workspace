@@ -28,8 +28,7 @@ def _current_log(target: Path) -> Path:
 
 def _current_index(target: Path) -> Path:
     pointer = json.loads((target / ".agentic-workspace/local/session-logging/current.json").read_text(encoding="utf-8"))
-    session_id = pointer["session_id"]
-    return target / ".agentic-workspace/local/logs/indexes" / f"{session_id}.json"
+    return target / Path(pointer["log_path"]).parent / "index.json"
 
 
 def test_session_logging_disabled_does_not_create_log(tmp_path: Path, capsys) -> None:
@@ -99,7 +98,7 @@ def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelu
     assert index["kind"] == "agentic-workspace/session-log-index/v1"
     assert len(index["entries"]) == 2
     assert index["entries"][0]["stdout"]["kind"] == "json"
-    assert index["entries"][0]["artifact"]["path"].startswith(".agentic-workspace/local/logs/artifacts/")
+    assert index["entries"][0]["artifact"]["path"].startswith(str(first_log.parent.relative_to(target)).replace("\\", "/") + "/artifacts/")
 
 
 def test_session_logging_reuses_identity_across_interleaved_sessions(tmp_path: Path, monkeypatch) -> None:
@@ -127,10 +126,9 @@ def test_session_logging_reuses_identity_across_interleaved_sessions(tmp_path: P
     assert (target / session_a["log_path"]).read_text(encoding="utf-8").count("## Command - ") == 2
     assert (target / session_b["log_path"]).read_text(encoding="utf-8").count("## Command - ") == 1
     for session in (session_a, session_b):
-        index = json.loads(
-            (target / session_logging.SESSION_LOG_ROOT / "indexes" / f"{session['session_id']}.json").read_text(encoding="utf-8")
-        )
-        assert all(f"/artifacts/{session['session_id']}/" in f"/{entry['artifact']['path']}" for entry in index["entries"])
+        session_dir = (target / session["log_path"]).parent
+        index = json.loads((session_dir / "index.json").read_text(encoding="utf-8"))
+        assert all(f"/{session_dir.name}/artifacts/" in f"/{entry['artifact']['path']}" for entry in index["entries"])
     registry = json.loads((target / session_logging.SESSION_REGISTRY_PATH).read_text(encoding="utf-8"))
     assert len(registry["sessions"]) == 2
     assert "host-session-a" not in json.dumps(registry)
@@ -146,7 +144,7 @@ def test_session_logging_concurrent_identity_resolution_converges(tmp_path: Path
         sessions = list(executor.map(lambda _index: session_logging.ensure_session(state=state, logical_identity="shared"), range(16)))
 
     assert len({session["session_id"] for session in sessions}) == 1
-    assert len(list((target / session_logging.SESSION_LOG_ROOT).glob("aw-session-*.md"))) == 1
+    assert len(list((target / session_logging.SESSION_LOG_ROOT).glob("aw-session-*/session.md"))) == 1
     assert not (target / session_logging.SESSION_REGISTRY_LOCK_PATH).exists()
 
 
@@ -272,7 +270,7 @@ def test_session_logging_large_output_uses_recoverable_artifact(tmp_path: Path, 
 
     log_text = _current_log(target).read_text(encoding="utf-8")
     assert "Output stored as local artifact:" in log_text
-    artifact_line = next(line for line in log_text.splitlines() if line.startswith("- path: `.agentic-workspace/local/logs/artifacts/"))
+    artifact_line = next(line for line in log_text.splitlines() if "/artifacts/" in line and line.startswith("- path: `"))
     artifact_path = target / artifact_line.split("`", 2)[1]
     artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
     assert artifact["stdout"] == "x" * 80 + "\n"
@@ -321,11 +319,16 @@ def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packe
     by_id = json.loads(capsys.readouterr().out)
     assert by_id["path"] == payload["path"]
 
+    directory_id = f"aw-session-{pointer['session_id']}"
+    assert source_cli.main(["session-log", "--target", str(target), "analyze", "--id", directory_id, "--format", "json"]) == 0
+    by_directory_id = json.loads(capsys.readouterr().out)
+    assert by_directory_id["path"] == payload["path"]
 
-def test_session_log_analyze_markdown_fallback_extracts_legacy_inline_output(tmp_path: Path, capsys, monkeypatch) -> None:
+
+def test_session_log_analyze_markdown_fallback_extracts_inline_output_without_index(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 12)
-    log_path = target / ".agentic-workspace/local/logs/aw-session-legacy-upload.md"
+    log_path = target / ".agentic-workspace/local/logs/aw-session-upload/session.md"
     modules_payload = json.dumps({"kind": "agentic-workspace/modules-report/v1", "items": ["x" * 40]})
     _write(
         log_path,
@@ -456,7 +459,7 @@ def test_session_logging_reuses_duplicate_large_output_artifacts(tmp_path: Path,
     artifacts = [entry["artifact"] for entry in index["entries"]]
     assert artifacts[0]["path"] == artifacts[1]["path"]
     assert artifacts[1]["duplicate_of"] == index["entries"][0]["id"]
-    artifact_files = list((target / ".agentic-workspace/local/logs/artifacts").rglob("*-output.json"))
+    artifact_files = list(_current_log(target).parent.joinpath("artifacts").glob("*-output.json"))
     assert len(artifact_files) == 1
 
 

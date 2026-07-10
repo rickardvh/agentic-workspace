@@ -85,6 +85,19 @@ Omit a field only when it is genuinely irrelevant. Do not omit proof, residue, u
 
 When the router or task shape supports an answer-directly/no-artifact outcome, do not create planning, Memory, review, or docs artifacts just to show work. State the answer and the proof or limitation.
 
+## Optional Work-Shape Pre-Study
+
+Use `work_shape_study` only when a concrete missing evidence class can change the Planning form. Planning custody and known artefact shape are separate decisions: custody may be required while shape-specific creation and product edits remain blocked.
+
+1. Skip study when available evidence already supports one shape without material ambiguity.
+2. When referenced intent, parent/child relationships, lane membership, or conflicting Planning is unresolved, run only the named safe probes.
+3. Keep the budget to direct references and one-hop shape evidence. Stop when one shape is sufficiently supported.
+4. If materially different shapes remain plausible after cheap evidence is exhausted, route `needs-human-decision`; never default to a regular execplan.
+5. Preserve observed evidence, inference, missing/unavailable evidence, freshness bindings, selected shape, artefact route, and next action in the compact packet.
+6. Compile useful state into the selected Planning owner or `continuation_capsule.work_shape_seed`, then retire the study packet. It is disposable seed state, not proof or parallel authority.
+
+Evaluate activation by total successful-completion cost. Compare clear skip, shape-changing study, and apparent uncertainty that resolves without broadening. Report study cost separately from downstream savings, including rereads, refreshes, artefact conversion/cleanup, proof reruns, clarification loops, AW invocations, and unavailable elapsed evidence. Do not activate from task length, title keywords, branch name, file count, or opaque complexity scores.
+
 ## Guardrails
 
 - Do not replace structured packets with prompt-prose keyword matching.

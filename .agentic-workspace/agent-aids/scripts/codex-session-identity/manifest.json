@@ -1,0 +1,51 @@
+{
+  "kind": "agentic-workspace/agent-aid/v1",
+  "id": "codex-session-identity",
+  "type": "script",
+  "status": "candidate",
+  "scope": "repo-shared",
+  "portability": "platform-specific",
+  "portability_justification": "This adapter intentionally bridges the Codex host's CODEX_THREAD_ID into AW's host-neutral logical-session identity contract.",
+  "checked_in_scope_justification": "The wrapper must be discoverable and reusable by every Codex session in this repository until the host integration provides the identity mapping directly.",
+  "proof_role": "advisory-helper",
+  "owner": "workspace",
+  "created_because": "Codex exposes a stable thread id, but the configured AW invocation did not map it into AW_SESSION_LOGICAL_IDENTITY, so unrelated Codex threads shared the legacy default session-log bucket.",
+  "use_when": [
+    "running Agentic Workspace commands from a Codex session with session logging enabled",
+    "the Codex host exposes CODEX_THREAD_ID but AW_SESSION_LOGICAL_IDENTITY is unset",
+    "use the aid as an invocation wrapper; pass ordinary AW arguments after --"
+  ],
+  "entrypoint": ".agentic-workspace/agent-aids/scripts/codex-session-identity/codex_session_identity.py",
+  "safety": {
+    "read_only": false,
+    "writes_repo": true,
+    "destructive": false,
+    "network": true,
+    "hidden_required_workflow": false,
+    "requires_review": true
+  },
+  "validation": {
+    "commands": [
+      "uv run python .agentic-workspace/agent-aids/scripts/codex-session-identity/codex_session_identity.py --dry-run -- session-log --target . --format json",
+      "uv run pytest tests/test_codex_session_identity_agent_aid.py -q",
+      "uv run python scripts/check/check_agent_aids.py"
+    ]
+  },
+  "authority_boundary": {
+    "runtime_authority": "advisory-only",
+    "fact_owner": "host-config",
+    "promote_behavior_relevant_facts_to": "a canonical Codex adapter or invocation integration",
+    "agent_decision": "The agent chooses the AW command; the aid only maps an existing opaque host identity and preserves the configured AW invocation."
+  },
+  "promotion": {
+    "target_kind": "command",
+    "target": "Codex Agentic Workspace invocation adapter",
+    "discovery_route": "repo-command",
+    "trigger": "promote when the Codex invocation surface can set AW_SESSION_LOGICAL_IDENTITY automatically",
+    "retention_after_promotion": "delete"
+  },
+  "retirement": {
+    "trigger": "retire when the Codex host or canonical invocation adapter performs this identity mapping automatically",
+    "retention_after_retirement": "delete"
+  }
+}

@@ -28,6 +28,7 @@ from agentic_workspace.workspace_runtime_core import (
     _candidate_route_label,
     _candidate_with_canonical_route,
     _capability_structural_hints,
+    _checkpoint_git_value,
     _command_with_expected_planning_revision,
     _decision_maturity_payload,
     _emit_payload,
@@ -429,6 +430,150 @@ def _custody_only_planning_payload(
             "planning_revision": planning_revision,
         },
         "rule": "Custody-only Planning is shared intent custody, not an implementation gate, unless parent closeout or PR closing claims are being made.",
+    }
+
+
+def _work_shape_study_payload(
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    issue_refs: list[str],
+    issue_scope_evidence: dict[str, Any],
+    active_planning_present: bool,
+    planning_revision: dict[str, Any],
+    work_shape: str | None,
+    proof_burden: str | None,
+) -> dict[str, Any]:
+    """Compile only the evidence needed to choose a Planning shape."""
+    custody_required = active_planning_present or work_shape in {"lane", "epic"} or proof_burden == "high"
+    if not issue_refs:
+        return {
+            "kind": "agentic-workspace/work-shape-study/v1",
+            "status": "not-applicable",
+            "planning_custody_required": custody_required,
+            "work_shape_evidence_status": "sufficient" if work_shape in {"direct", "bounded", "lane", "epic"} else "unknown",
+            "rule": "Pre-study stays absent unless concrete missing evidence could change the Planning shape.",
+        }
+
+    evidence_status = str(issue_scope_evidence.get("status") or "unknown")
+    raw_evidence = [item for item in issue_scope_evidence.get("evidence", []) if isinstance(item, dict)]
+    observed: list[str] = []
+    inferred: list[str] = []
+    unavailable = [str(item) for item in issue_scope_evidence.get("missing_issue_refs", []) if str(item).strip()]
+    selected_shape = ""
+    artifact_route = ""
+    ambiguous_evidence = False
+    broad_kinds = {"parent-lane", "lane", "epic", "roadmap", "capability-lane", "issue-batch"}
+    for item in raw_evidence:
+        item_id = str(item.get("id") or "").strip()
+        kind = str(item.get("kind") or "").strip().lower()
+        parent_id = str(item.get("parent_id") or "").strip()
+        if kind:
+            observed.append(f"{item_id}:kind={kind}")
+        if parent_id:
+            observed.append(f"{item_id}:parent_id={parent_id}")
+        if kind in {"ambiguous", "unknown-shape"}:
+            ambiguous_evidence = True
+        elif kind in broad_kinds:
+            selected_shape = "epic" if kind == "epic" else "lane"
+            artifact_route = "decomposition-planning" if selected_shape == "epic" else "lane-planning"
+        elif parent_id and selected_shape not in {"lane", "epic"}:
+            selected_shape = "slice"
+            artifact_route = "lane-slice-planning"
+    if not selected_shape and evidence_status == "available" and not ambiguous_evidence:
+        selected_shape = work_shape if work_shape in {"lane", "epic"} else "direct" if work_shape == "direct" else "bounded"
+        artifact_route = {
+            "lane": "lane-planning",
+            "epic": "decomposition-planning",
+            "direct": "direct-no-artifact",
+            "bounded": "bounded-execplan",
+        }[selected_shape]
+        inferred.append(f"available referenced intent supports {selected_shape} work")
+
+    missing_can_change_shape = evidence_status in {"unknown", "partial"}
+    custody_required = custody_required or selected_shape in {"lane", "epic", "slice"} or ambiguous_evidence
+    if missing_can_change_shape:
+        result_status, decision_status = "information-gathering-required", "study-required"
+        selected_shape, artifact_route, next_action = "unknown", "", "refresh-referenced-external-intent"
+    elif ambiguous_evidence:
+        result_status, decision_status = "ambiguous", "needs-human-decision"
+        selected_shape, artifact_route, next_action = "unknown", "", "ask-work-shape-clarification"
+    elif active_planning_present:
+        result_status, decision_status, next_action = "consumed", "consumed-by-planning", "continue-from-active-plan"
+    else:
+        result_status = "skipped" if selected_shape in {"direct", "bounded"} else "sufficient"
+        decision_status = "shape-selected"
+        next_action = {
+            "lane": "create-or-promote-lane-owner",
+            "epic": "create-or-promote-decomposition-owner",
+            "slice": "create-or-promote-parent-lane-owner",
+            "direct": "continue-direct",
+            "bounded": "create-bounded-execplan" if custody_required else "continue-direct",
+        }.get(selected_shape, "needs-human-decision")
+
+    refresh_command = str(issue_scope_evidence.get("refresh_command") or "")
+    source_path = str(issue_scope_evidence.get("source_path") or "")
+    source_mtime = ""
+    if source_path:
+        try:
+            source_mtime = str((target_root / source_path).stat().st_mtime_ns)
+        except OSError:
+            source_mtime = "unavailable"
+    return {
+        "kind": "agentic-workspace/work-shape-study/v1",
+        "status": result_status,
+        "planning_custody_required": custody_required,
+        "work_shape_evidence_status": "insufficient" if missing_can_change_shape else "sufficient",
+        "decision": {
+            "status": decision_status,
+            "work_shape": selected_shape,
+            "planning_artifact_route": artifact_route,
+            "next_safe_action": next_action,
+        },
+        "evidence": {
+            "observed": observed,
+            "inferred": inferred,
+            "missing": [f"referenced intent for {item}" for item in unavailable],
+            "unavailable": unavailable,
+        },
+        "safe_probes": (
+            [{"command": refresh_command, "why": "May distinguish direct or bounded work from a lane, slice, or epic.", "read_only": True}]
+            if refresh_command and missing_can_change_shape
+            else []
+        ),
+        "blocked_mutations": (["planning shape-specific creation", "product implementation"] if missing_can_change_shape else []),
+        "budget": {
+            "scope": "direct references and one-hop parent/child shape evidence",
+            "stop_when": "one Planning shape is sufficiently supported",
+            "escalate_when": "materially different shapes remain plausible after safe probes",
+        },
+        "freshness": {
+            "task_binding": issue_refs,
+            "intent_revision": source_mtime,
+            "source_head": _checkpoint_git_value(target_root=target_root, args=["rev-parse", "HEAD"]) or "unavailable",
+            "planning_revision": planning_revision.get("revision_id", ""),
+            "config_identity": config.cli_invoke,
+            "stale_when": [
+                "referenced intent changes",
+                "parent/child relationships change",
+                "source HEAD changes",
+                "active Planning changes",
+                "relevant config changes",
+                "user corrects intent",
+            ],
+        },
+        "consumption": {
+            "next_owner": "Planning canonical core" if active_planning_present else artifact_route or "agent decision",
+            "state": "consumed" if active_planning_present else "pending" if custody_required else "not-needed",
+            "retain_after_consumption": False,
+        },
+        "decision_delta": {
+            "before": "unknown" if missing_can_change_shape else selected_shape,
+            "after": selected_shape if not missing_can_change_shape else "unknown",
+            "evidence_arrived": not missing_can_change_shape,
+            "newly_safe_action": next_action,
+        },
+        "rule": "This disposable packet selects Planning shape; Planning becomes authoritative after consumption.",
     }
 
 
@@ -1095,6 +1240,16 @@ def _planning_safety_gate_payload(
         decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
         planning_revision=planning_revision,
     )
+    work_shape_study = _work_shape_study_payload(
+        target_root=target_root,
+        config=config,
+        issue_refs=issue_refs,
+        issue_scope_evidence=issue_scope_evidence,
+        active_planning_present=active_planning_present,
+        planning_revision=planning_revision,
+        work_shape=work_shape,
+        proof_burden=proof_burden,
+    )
     promotion_command = _planning_safety_promotion_command(
         config=config,
         decomposition_delegation=decomposition_delegation if isinstance(decomposition_delegation, dict) else {},
@@ -1234,6 +1389,34 @@ def _planning_safety_gate_payload(
         reason = "Implementation paths are mixed with planning recovery paths without active planning ownership."
         required_next_action = "checkpoint-planning-before-implementation"
         workflow_sufficient = False
+    elif (
+        (not active_planning_present)
+        and (not changed_paths)
+        and work_shape_study.get("status") == "information-gathering-required"
+        and work_shape_study.get("planning_custody_required") is True
+    ):
+        status = "blocked"
+        decision = "information-gathering-required"
+        reason = "Referenced intent evidence is missing and could change the required Planning shape."
+        required_next_action = "run-bounded-work-shape-study"
+        workflow_sufficient = False
+    elif (
+        (not active_planning_present)
+        and (not changed_paths)
+        and _as_dict(work_shape_study.get("decision")).get("work_shape") in {"lane", "epic", "slice"}
+    ):
+        selected_study_shape = str(_as_dict(work_shape_study.get("decision")).get("work_shape") or "")
+        status = "blocked"
+        decision = "planning-shape-owner-required"
+        reason = f"Referenced intent evidence selects {selected_study_shape} Planning before product implementation."
+        required_next_action = str(_as_dict(work_shape_study.get("decision")).get("next_safe_action") or "create-or-promote-planning-owner")
+        workflow_sufficient = False
+    elif (not active_planning_present) and (not changed_paths) and work_shape_study.get("status") == "ambiguous":
+        status = "blocked"
+        decision = "planning-shape-human-decision-required"
+        reason = "Cheap referenced-intent evidence was exhausted, but materially different Planning shapes remain plausible."
+        required_next_action = "ask-work-shape-clarification"
+        workflow_sufficient = False
     elif (not active_planning_present) and candidate_pressure.get("status") == "promotion-required" and not closeout_publication_residue:
         status = "blocked"
         decision = "candidate-lane-promotion-required"
@@ -1279,6 +1462,9 @@ def _planning_safety_gate_payload(
         "implementation-owner-missing",
         "candidate-lane-promotion-required",
         "planning-escalation-required",
+        "information-gathering-required",
+        "planning-shape-owner-required",
+        "planning-shape-human-decision-required",
     }
     candidates = (
         [
@@ -1382,6 +1568,7 @@ def _planning_safety_gate_payload(
         "pr_comment_repair_context": pr_comment_repair_context,
         "issue_scope_evidence": issue_scope_evidence,
         "candidate_pressure": candidate_pressure,
+        "work_shape_study": work_shape_study,
         "custody_planning": custody_planning,
         "hierarchy_owner_requirement": hierarchy_owner_requirement,
         "repair_route": {

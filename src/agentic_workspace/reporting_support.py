@@ -329,6 +329,7 @@ def continuation_capsule_payload(
     preserved_intent: str | None = None,
     stale_context: list[str] | None = None,
     state_delta_core: dict[str, Any] | None = None,
+    work_shape_study: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     core = state_delta_core if isinstance(state_delta_core, dict) else {}
     decision = core.get("decision", {}) if isinstance(core.get("decision"), dict) else {}
@@ -340,7 +341,7 @@ def continuation_capsule_payload(
     residue_owner = boundary.get("residue_owner", current_decision.get("residue_owner", "none"))
     known_evidence = list(evidence.get("known", current_decision.get("known_evidence", [])))[:2]
     next_action = decision.get("next_action", current_decision.get("next_action", ""))
-    return {
+    payload = {
         "kind": "agentic-workspace/continuation-capsule/v1",
         "surface": surface,
         "status": "available",
@@ -357,6 +358,103 @@ def continuation_capsule_payload(
         "do_not_repeat": stale_context or list(policy.get("avoid", [])),
         "expansion_triggers": list(policy.get("expand_when", economy.get("expand_when", [])))[:3],
         "state_backed": True,
+    }
+    study = work_shape_study if isinstance(work_shape_study, dict) else {}
+    if study.get("status") not in (None, "", "not-applicable"):
+        study_decision = study.get("decision", {}) if isinstance(study.get("decision"), dict) else {}
+        payload["work_shape_seed"] = {
+            "status": study.get("status"),
+            "observed": list((study.get("evidence") or {}).get("observed", []))[:4] if isinstance(study.get("evidence"), dict) else [],
+            "inferred": list((study.get("evidence") or {}).get("inferred", []))[:3] if isinstance(study.get("evidence"), dict) else [],
+            "unknowns": list((study.get("evidence") or {}).get("missing", []))[:3] if isinstance(study.get("evidence"), dict) else [],
+            "selected_shape": study_decision.get("work_shape", "unknown"),
+            "planning_artifact_route": study_decision.get("planning_artifact_route", ""),
+            "next_action": study_decision.get("next_safe_action", ""),
+            "freshness": study.get("freshness", {}),
+            "consumption": study.get("consumption", {}),
+            "authority": "disposable seed only; Planning is authoritative after consumption",
+        }
+    return payload
+
+
+def work_shape_study_comparison_evidence_payload() -> dict[str, Any]:
+    """Checked-in three-class dogfooding fixture for optional study activation."""
+    measurements = [
+        "repeated_reads",
+        "external_intent_refreshes",
+        "artifact_conversions_or_cleanup",
+        "proof_reruns",
+        "clarification_loops",
+        "aw_invocations",
+        "elapsed_cost",
+        "downstream_commands_avoided",
+    ]
+    scenarios = [
+        {
+            "id": "clear-bounded-skip",
+            "task_class": "clear",
+            "study_route": "skipped",
+            "shape_before": "bounded",
+            "shape_after": "bounded",
+            "study_cost": {name: 0 for name in measurements[:-2]} | {"elapsed_cost": "not-measured", "downstream_commands_avoided": 0},
+            "downstream_savings": {"artifact_conversions_or_cleanup": 0, "clarification_loops": 0, "commands_avoided": 0},
+            "evidence_limit": "The fixture proves routing cost, not wall-clock causality.",
+        },
+        {
+            "id": "2143-unknown-to-lane",
+            "task_class": "shape-uncertain",
+            "study_route": "refresh direct issue and one-hop relationships",
+            "shape_before": "unknown",
+            "shape_after": "lane",
+            "study_cost": {
+                "repeated_reads": 0,
+                "external_intent_refreshes": 1,
+                "artifact_conversions_or_cleanup": 0,
+                "proof_reruns": 0,
+                "clarification_loops": 0,
+                "aw_invocations": 2,
+                "elapsed_cost": "session-dependent",
+                "downstream_commands_avoided": 2,
+            },
+            "downstream_savings": {"artifact_conversions_or_cleanup": 1, "clarification_loops": 0, "commands_avoided": 2},
+            "evidence_limit": "Avoided commands are the premature new-plan and later conversion/cleanup route from the replay, not a universal estimate.",
+        },
+        {
+            "id": "apparent-uncertainty-no-broadening",
+            "task_class": "apparent-uncertainty",
+            "study_route": "refresh direct referenced intent",
+            "shape_before": "unknown",
+            "shape_after": "bounded",
+            "study_cost": {
+                "repeated_reads": 0,
+                "external_intent_refreshes": 1,
+                "artifact_conversions_or_cleanup": 0,
+                "proof_reruns": 0,
+                "clarification_loops": 0,
+                "aw_invocations": 2,
+                "elapsed_cost": "session-dependent",
+                "downstream_commands_avoided": 0,
+            },
+            "downstream_savings": {"artifact_conversions_or_cleanup": 0, "clarification_loops": 1, "commands_avoided": 0},
+            "evidence_limit": "The study resolves uncertainty but does not claim net command savings.",
+        },
+    ]
+    return {
+        "kind": "agentic-workspace/work-shape-study-comparison/v1",
+        "status": "comparative-fixture",
+        "measurements": measurements,
+        "scenarios": scenarios,
+        "activation_signals": [
+            "unloaded referenced intent can change shape",
+            "parent/child or declared lane membership is unresolved",
+            "existing Planning conflicts with newly available shape evidence",
+            "materially different Planning forms remain plausible",
+        ],
+        "skip_when": "Available evidence already supports one Planning shape without material ambiguity.",
+        "stop_when": "One Planning shape is sufficiently supported or cheap directly relevant evidence is exhausted.",
+        "automatic_policy_threshold": "Require repeated session-log samples showing downstream correction cost exceeds study cost before automatic activation expands.",
+        "confounders": ["provider latency", "cache warmth", "agent familiarity", "repository size", "proof profile differences"],
+        "rule": "Study cost and downstream savings are separate; task keywords, branch names, file counts, and opaque complexity scores are not activation evidence.",
     }
 
 

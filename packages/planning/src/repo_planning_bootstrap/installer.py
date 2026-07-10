@@ -10941,6 +10941,7 @@ def create_execplan_scaffold(
     activate: bool = False,
     queue: bool = False,
     switch_active: bool = False,
+    lane: str = "",
     prep_only: bool = False,
     overwrite: bool = False,
     expected_planning_revision: str = "",
@@ -10959,6 +10960,10 @@ def create_execplan_scaffold(
         return result
     if switch_active and not activate:
         result.add("manual review", target_root / PLANNING_STATE_PATH, "--switch-active requires --activate")
+        return result
+    lane_id = _slugify(lane) if lane.strip() else ""
+    if lane_id and not activate:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, "--lane requires --activate")
         return result
 
     plan_title = title.strip() or _title_from_slug(slug)
@@ -11004,6 +11009,7 @@ def create_execplan_scaffold(
         "roadmap": {"lanes": [], "candidates": []},
     }
     updated_state = copy.deepcopy(state)
+    attached_active_lane_id = ""
     if activate or queue:
         if _compact_todo_item_from_state(updated_state, slug) is not None:
             result.add("manual review", state_path, f"planning item '{slug}' already exists in state.toml")
@@ -11069,6 +11075,19 @@ def create_execplan_scaffold(
         todo.setdefault("active_items", [])
         todo.setdefault("queued_items", [])
         updated_state["todo"] = todo
+        if activate and lane_id:
+            attached_active_lane_id = _attach_execplan_to_active_lane(
+                updated_state,
+                lane_id=lane_id,
+                execplan_ref=record_relative,
+            )
+            if not attached_active_lane_id:
+                result.add(
+                    "manual review",
+                    state_path,
+                    f"lane '{lane_id}' is not active or already belongs to a different execplan; no plan was created",
+                )
+                return result
 
     for demoted_path, demoted_record in demoted_record_updates:
         try:
@@ -11096,6 +11115,8 @@ def create_execplan_scaffold(
             result.add("would update", demoted_path, "demote displaced active execplan milestone to planned")
         if activate or queue:
             result.add("would update", state_path, f"register '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
+        if attached_active_lane_id:
+            result.add("would update", state_path, f"attach execplan '{slug}' to active lane '{attached_active_lane_id}'")
         result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --verbose --format json`")
         result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
         return result
@@ -11110,6 +11131,16 @@ def create_execplan_scaffold(
     if activate or queue:
         _write_state_to_toml(target_root, updated_state)
         result.add("updated", state_path, f"registered '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
+    if attached_active_lane_id:
+        result.add("updated", state_path, f"attached execplan '{slug}' to active lane '{attached_active_lane_id}'")
+    elif activate:
+        active_lane_ids = _active_roadmap_lane_ids(updated_state)
+        if len(active_lane_ids) == 1:
+            result.add(
+                "next",
+                state_path,
+                f"link only with relationship evidence: `agentic-planning lane-activate {active_lane_ids[0]} --current-slice {slug}`",
+            )
     result.add("next", state_path, "run `agentic-workspace summary --target . --verbose --format json`")
     result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
     if prep_only:
@@ -11119,6 +11150,45 @@ def create_execplan_scaffold(
             "after summary verification, stop; do not create README, package, source, public, schema, database, or app scaffold files",
         )
     return result
+
+
+def _active_roadmap_lane_ids(state: dict[str, Any]) -> list[str]:
+    roadmap = state.get("roadmap")
+    if not isinstance(roadmap, dict):
+        return []
+    lanes = roadmap.get("lanes")
+    if not isinstance(lanes, list):
+        return []
+    return [
+        str(item.get("id") or "").strip()
+        for item in lanes
+        if isinstance(item, dict) and str(item.get("status") or "").strip() == "active" and str(item.get("id") or "").strip()
+    ]
+
+
+def _attach_execplan_to_active_lane(state: dict[str, Any], *, lane_id: str, execplan_ref: str) -> str:
+    """Attach an execplan only to the explicitly named active lane."""
+    roadmap = state.get("roadmap")
+    if not isinstance(roadmap, dict):
+        return ""
+    lanes = roadmap.get("lanes")
+    if not isinstance(lanes, list):
+        return ""
+    for index, item in enumerate(lanes):
+        if not isinstance(item, dict) or str(item.get("id") or "").strip() != lane_id:
+            continue
+        lane_item: dict[str, Any] = {str(key): value for key, value in item.items()}
+        if str(lane_item.get("status") or "").strip() != "active":
+            return ""
+        existing_execplan = str(lane_item.get("execplan") or "").strip()
+        if existing_execplan and existing_execplan != execplan_ref:
+            return ""
+        lane_item["execplan"] = execplan_ref
+        lanes[index] = lane_item
+        roadmap["lanes"] = lanes
+        state["roadmap"] = roadmap
+        return lane_id
+    return ""
 
 
 def _switched_active_execplan_record_updates(

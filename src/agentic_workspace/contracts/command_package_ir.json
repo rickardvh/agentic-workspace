@@ -816,6 +816,10 @@
             ],
             "option_specs": [
               {
+                "option": "--lane",
+                "attr": "owner_lane"
+              },
+              {
                 "option": "--id",
                 "attr": "id"
               },
@@ -1677,6 +1681,14 @@
                     ],
                     "action": "store_true",
                     "help": "When used with --activate, demote existing active items into the queue before registering the new active plan."
+                  },
+                  {
+                    "name": "owner_lane",
+                    "flags": [
+                      "--lane"
+                    ],
+                    "default": "",
+                    "help": "Explicit active lane that owns this plan; requires --activate."
                   },
                   {
                     "name": "prep_only",
@@ -4052,7 +4064,7 @@
                     "flags": [
                       "--id"
                     ],
-                    "help": "Optional session id or aw-session-<id>.md filename to analyze."
+                    "help": "Optional session id or aw-session-<id> directory name to analyze."
                   },
                   {
                     "name": "segment",
@@ -4085,7 +4097,7 @@
                 "options": [
                   {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
                   {"name": "path", "flags": ["--path"], "help": "Optional repo-relative session log path; defaults to the current session pointer."},
-                  {"name": "id", "flags": ["--id"], "help": "Optional session id or aw-session-<id>.md filename to repair."},
+                  {"name": "id", "flags": ["--id"], "help": "Optional session id or aw-session-<id> directory name to repair."},
                   {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
                 ]
               },
@@ -4099,7 +4111,7 @@
                 "options": [
                   {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
                   {"name": "path", "flags": ["--path"], "help": "Optional repo-relative session log path; defaults to the current session pointer."},
-                  {"name": "id", "flags": ["--id"], "help": "Optional session id or aw-session-<id>.md filename to export."},
+                  {"name": "id", "flags": ["--id"], "help": "Optional session id or aw-session-<id> directory name to export."},
                   {"name": "no_artifacts", "flags": ["--no-artifacts"], "action": "store_true", "help": "Exclude raw-output artifacts from the exported bundle."},
                   {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
                 ]
@@ -9787,6 +9799,14 @@
                 ],
                 "action": "store_true",
                 "help": "When used with --activate, demote existing active items into the queue before registering the new active plan."
+              },
+              {
+                "name": "lane",
+                "flags": [
+                  "--lane"
+                ],
+                "default": "",
+                "help": "Explicit active lane that owns this plan; requires --activate."
               },
               {
                 "name": "prep_only",

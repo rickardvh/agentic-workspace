@@ -129,6 +129,7 @@ from agentic_workspace.reporting_support import (
     select_report_payload,
     setup_discovery_payload,
     standing_intent_payload,
+    work_shape_study_comparison_evidence_payload,
 )
 from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
@@ -16190,6 +16191,7 @@ def _successful_completion_cost_payload(*, target_root: Path, cli_invoke: str) -
             "proof_and_rework_cost": outcome_totals,
         },
         "recent_runs": [_successful_completion_cost_compact_run(summary) for summary in summaries[:3]],
+        "work_shape_study_comparison": work_shape_study_comparison_evidence_payload(),
         "signals": signals,
         "decision_questions": [
             "Did the package reduce total successful-completion work, including retries and proof?",
@@ -24931,7 +24933,7 @@ def _next_safe_action_packet(
     decision = str((workflow_sufficiency or {}).get("sufficiency_result") or (workflow_sufficiency or {}).get("decision") or "")
     preferred_routes = (skill_routing or {}).get("preferred_routes", [])
     skill = ""
-    if action == "ask-intent-discovery-question":
+    if action in {"ask-intent-discovery-question", "ask-work-shape-clarification"}:
         skill = "workspace-intent-discovery"
     elif action == "present-lane-shaping-prompt":
         skill = "planning-decompose"
@@ -24961,13 +24963,20 @@ def _next_safe_action_packet(
         forbidden_actions.extend(["edit product source", "claim implementation complete"])
     if action in {"continue-active-planning-record", "run summary"}:
         forbidden_actions.extend(["open raw planning files before compact summary", "claim completion"])
-    if action == "ask-intent-discovery-question":
+    if action in {"ask-intent-discovery-question", "ask-work-shape-clarification"}:
         forbidden_actions.extend(["begin implementation", "create planning artifact before clarified intent is captured"])
     if action == "present-lane-shaping-prompt":
         forbidden_actions.extend(
             [
                 "begin implementation",
                 "promote or create a slice before lane shaping is recorded",
+            ]
+        )
+    if action == "run-bounded-work-shape-study":
+        forbidden_actions.extend(
+            [
+                "begin implementation",
+                "create shape-specific planning artifact before study evidence is sufficient",
             ]
         )
     if action == "run-installed-payload-target-upgrade":
@@ -24989,6 +24998,9 @@ def _next_safe_action_packet(
         "parent-decomposition-decision-required",
         "planning-escalation-required",
         "implementation-owner-missing",
+        "information-gathering-required",
+        "planning-shape-owner-required",
+        "planning-shape-human-decision-required",
     }:
         forbidden_actions.append("continue implementation without active planning ownership")
     memory_status = str((memory_consult or {}).get("status", "unknown"))
@@ -26899,6 +26911,9 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             )
             if key in custody_planning
         }
+    work_shape_study = gate.get("work_shape_study")
+    if isinstance(work_shape_study, dict) and work_shape_study.get("status") not in (None, "", "not-applicable"):
+        compact["work_shape_study"] = work_shape_study
     active_delegation_requirement = gate.get("active_delegation_requirement")
     if isinstance(active_delegation_requirement, dict) and active_delegation_requirement.get("required"):
         compact["active_delegation_requirement"] = active_delegation_requirement

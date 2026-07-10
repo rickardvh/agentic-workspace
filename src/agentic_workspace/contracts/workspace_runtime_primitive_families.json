@@ -481,6 +481,7 @@
           "_architecture_principles_payload",
           "_architecture_principles_forecast_payload",
           "_closeout_intent_evidence_payload",
+          "_checkpoint_git_value",
           "_compact_continuation_state_contract",
           "_decision_maturity_payload",
           "_compact_intent_evidence",

@@ -1301,6 +1301,14 @@ const commandDefinitions = [
           "name": "switch_active"
         },
         {
+          "default": "",
+          "flags": [
+            "--lane"
+          ],
+          "help": "Explicit active lane that owns this plan; requires --activate.",
+          "name": "lane"
+        },
+        {
           "action": "store_true",
           "flags": [
             "--prep-only"

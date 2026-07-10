@@ -10,6 +10,7 @@ from repo_planning_bootstrap.installer import (
     activate_lane_record,
     archive_lane_record,
     close_lane_record,
+    create_execplan_scaffold,
     create_lane_record,
     doctor_bootstrap,
     install_bootstrap,
@@ -190,6 +191,55 @@ def test_lane_activate_infers_current_slice_execplan_when_slice_sequence_is_mini
     assert not [warning for warning in warnings if warning["warning_class"] == "execplan_unregistered"]
     doctor = doctor_bootstrap(target=tmp_path)
     assert doctor.warnings == []
+
+
+def test_new_plan_attaches_first_execplan_to_already_active_lane(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
+    activate_lane_record("activation-lane", target=tmp_path)
+
+    result = create_execplan_scaffold(
+        plan_id="slice-one",
+        title="Slice One",
+        target=tmp_path,
+        activate=True,
+        lane="activation-lane",
+    )
+
+    assert [action.kind for action in result.actions] == ["created", "updated", "updated", "next", "next"]
+    assert "attached execplan 'slice-one' to active lane 'activation-lane'" in result.actions[2].detail
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    active_lane = state["roadmap"]["lanes"][0]
+    assert active_lane["owner_surface"] == ".agentic-workspace/planning/lanes/activation-lane.lane.json"
+    assert active_lane["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    assert summary["planning_surface_health"]["warnings"] == []
+
+
+def test_new_plan_does_not_attach_unrelated_plan_to_single_active_lane(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
+    activate_lane_record("activation-lane", target=tmp_path)
+
+    result = create_execplan_scaffold(plan_id="unrelated", title="Unrelated", target=tmp_path, activate=True)
+
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    active_lane = state["roadmap"]["lanes"][0]
+    assert "execplan" not in active_lane
+    assert any("link only with relationship evidence" in action.detail for action in result.actions)
+
+
+def test_new_plan_does_not_guess_when_multiple_lanes_are_active(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    for lane_id in ("lane-one", "lane-two"):
+        create_lane_record(lane_id=lane_id, title=lane_id, target=tmp_path)
+        activate_lane_record(lane_id, target=tmp_path)
+
+    create_execplan_scaffold(plan_id="slice-one", title="Slice One", target=tmp_path, activate=True)
+
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+    assert all("execplan" not in lane for lane in state["roadmap"]["lanes"])
 
 
 def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> None:

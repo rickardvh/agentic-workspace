@@ -209,6 +209,14 @@ const commandDefinitions = [
               "name": "switch_active"
             },
             {
+              "default": "",
+              "flags": [
+                "--lane"
+              ],
+              "help": "Explicit active lane that owns this plan; requires --activate.",
+              "name": "owner_lane"
+            },
+            {
               "action": "store_true",
               "flags": [
                 "--prep-only"
@@ -2383,7 +2391,7 @@ const commandDefinitions = [
               "flags": [
                 "--id"
               ],
-              "help": "Optional session id or aw-session-<id>.md filename to analyze.",
+              "help": "Optional session id or aw-session-<id> directory name to analyze.",
               "name": "id"
             },
             {
@@ -2433,7 +2441,7 @@ const commandDefinitions = [
               "flags": [
                 "--id"
               ],
-              "help": "Optional session id or aw-session-<id>.md filename to repair.",
+              "help": "Optional session id or aw-session-<id> directory name to repair.",
               "name": "id"
             },
             {
@@ -2476,7 +2484,7 @@ const commandDefinitions = [
               "flags": [
                 "--id"
               ],
-              "help": "Optional session id or aw-session-<id>.md filename to export.",
+              "help": "Optional session id or aw-session-<id> directory name to export.",
               "name": "id"
             },
             {
