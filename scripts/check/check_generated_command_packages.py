@@ -288,6 +288,9 @@ PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS = (
     "generated/planning/python/primitives/planning_runtime.py",
     "generated/memory/python/primitives/memory_runtime.py",
 )
+PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_HANDLER_COMMAND_PATHS = (
+    "generated/workspace/python/commands/session_log_manage.py",
+)
 PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS = "accepted-permanent-package-domain-boundary"
 GENERATED_CLI_COMPATIBILITY_VOCABULARY = (
     "generated_cli_package",
@@ -1920,6 +1923,7 @@ def _validate_python_completion_accepted_runtime_boundaries(*, require_exact: bo
         "agentic_workspace.workspace_runtime_implement": "src/agentic_workspace/workspace_runtime_implement.py",
         "agentic_workspace.workspace_runtime_startup": "src/agentic_workspace/workspace_runtime_startup.py",
         "agentic_workspace.doctor": "src/agentic_workspace/doctor.py",
+        "agentic_workspace.session_logging": "src/agentic_workspace/session_logging.py",
         "repo_planning_bootstrap.installer": "packages/planning/src/repo_planning_bootstrap/installer.py",
         "repo_planning_bootstrap.runtime_projection": "packages/planning/src/repo_planning_bootstrap/runtime_projection.py",
         "repo_memory_bootstrap.installer": "packages/memory/src/repo_memory_bootstrap/installer.py",
@@ -3170,6 +3174,7 @@ def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]
         "agentic_workspace.workspace_runtime_implement",
         "agentic_workspace.workspace_runtime_startup",
         "agentic_workspace.doctor",
+        "agentic_workspace.session_logging",
         "repo_planning_bootstrap.installer",
         "repo_planning_bootstrap.runtime_projection",
         "repo_memory_bootstrap.installer",
@@ -3179,7 +3184,11 @@ def _generated_runtime_facade_package_runtime_bindings() -> list[dict[str, str]]
     }
     metadata = _python_runtime_boundary_metadata()
     bindings: list[dict[str, str]] = []
-    for relative_path in PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS:
+    accepted_caller_paths = (
+        *PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS,
+        *PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_HANDLER_COMMAND_PATHS,
+    )
+    for relative_path in accepted_caller_paths:
         path = REPO_ROOT / relative_path
         if not path.is_file():
             continue
