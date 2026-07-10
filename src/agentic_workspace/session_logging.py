@@ -354,7 +354,7 @@ def ensure_session(*, state: SessionLoggingState, force_new: bool = False, logic
         current = None
         if not force_new:
             current = _registered_session(registry=registry, registry_key=registry_key, target_root=state.target_root)
-            if current is None and not identity:
+            if current is None and not identity and not registry_existed:
                 current = read_session_pointer(target_root=state.target_root)
         if current:
             if isinstance(sessions, dict) and sessions.get(registry_key) != current:
@@ -435,10 +435,11 @@ def _registered_session(*, registry: dict[str, Any], registry_key: str, target_r
 
 
 def _session_for_caller(*, target_root: Path, logical_identity: str) -> dict[str, str] | None:
+    registry_existed = (target_root / SESSION_REGISTRY_PATH).is_file()
     registry = _read_session_registry(target_root=target_root)
     registry_key = _logical_identity_fingerprint(identity=logical_identity, registry=registry) if logical_identity else "default"
     registered = _registered_session(registry=registry, registry_key=registry_key, target_root=target_root)
-    if registered is not None or logical_identity:
+    if registered is not None or logical_identity or registry_existed:
         return registered
     return read_session_pointer(target_root=target_root)
 

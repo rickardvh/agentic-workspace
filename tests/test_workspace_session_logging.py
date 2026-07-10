@@ -166,6 +166,23 @@ def test_session_logging_preserves_legacy_default_bucket_when_identity_registry_
     assert registry["sessions"]["default"] == legacy
 
 
+def test_session_logging_identityless_default_never_adopts_identified_pointer(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    session_a = session_logging.ensure_session(state=state, logical_identity="a")
+    session_b = session_logging.ensure_session(state=state, logical_identity="b")
+
+    assert session_logging.status_payload(state=state)["session_id"] == ""
+    default_session = session_logging.ensure_session(state=state, logical_identity="")
+    default_again = session_logging.ensure_session(state=state, logical_identity="")
+
+    assert default_again == default_session
+    assert default_session["session_id"] not in {session_a["session_id"], session_b["session_id"]}
+    registry = json.loads((target / session_logging.SESSION_REGISTRY_PATH).read_text(encoding="utf-8"))
+    assert registry["sessions"]["default"] == default_session
+
+
 def test_session_logging_identity_is_private_and_caller_drilldowns_resolve_it(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")

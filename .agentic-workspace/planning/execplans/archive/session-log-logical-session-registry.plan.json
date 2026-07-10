@@ -67,7 +67,7 @@
     "execution": {
       "milestone": "session-log-logical-session-registry",
       "status": "completed",
-      "next_step": "Continue via tests/test_workspace_session_logging.py.",
+      "next_step": "No required continuation remains; merge PR #2158 to close #2157.",
       "proof": "See proof_report.validation proof."
     },
     "scope": {
@@ -83,9 +83,9 @@
     }
   },
   "intent_continuity": {
-    "larger intended outcome": "Create a bounded plan for Scope session logs to portable logical sessions.",
-    "this slice completes the larger intended outcome": "no",
-    "continuation surface": "tests/test_workspace_session_logging.py"
+    "larger intended outcome": "Scope session-log files to portable logical sessions as refined in #2157.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
   },
   "required_continuation": {
     "required follow-on for the larger intended outcome": "no",
@@ -93,19 +93,19 @@
     "activation trigger": "none"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "none yet",
+    "what this slice enabled": "Stable isolated log namespaces for opaque identity-aware callers with deterministic identity-less compatibility.",
     "intentionally deferred": "none",
-    "discovered implications": "none yet",
+    "discovered implications": "A missing default mapping must never adopt the last identified compatibility pointer once the registry exists.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
     "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
-    "next likely slice": "Continue via tests/test_workspace_session_logging.py."
+    "next likely slice": "No required continuation remains for this archived slice."
   },
   "intent_interpretation": {
     "literal request": "Scope session logs to portable logical sessions",
-    "inferred intended outcome": "Create a bounded plan for Scope session logs to portable logical sessions.",
+    "inferred intended outcome": "Give every supplied opaque logical-session identity one stable isolated namespace without merging identity-less work.",
     "chosen concrete what": "One local Markdown/index/artifact namespace now maps stably to one opaque logical session, including interleaved and concurrent use, while identity-less and legacy callers retain a deterministic default bucket.",
     "interpretation distance": "low",
-    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+    "review guidance": "Reopen only if identity isolation, default-bucket separation, privacy, concurrency, or legacy migration regresses."
   },
   "execution_bounds": {
     "allowed paths": "session_logging.py, its focused tests, and this plan/state closeout only.",
@@ -130,21 +130,21 @@
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
-    "requested outcome": "Create a bounded plan for Scope session logs to portable logical sessions.",
-    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
-    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
-    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    "requested outcome": "Implement the refined #2157 portable logical-session registry contract.",
+    "hard constraints": "Keep identity host-neutral, private, local-only, non-authoritative, concurrency-safe, and compatible with identity-less and legacy callers.",
+    "agent may decide locally": "Registry schema, salted fingerprinting, local lock mechanics, pointer projection, and focused proof.",
+    "escalate when": "A fix requires vendor coupling, remote state, heuristic identity inference, or new workflow ownership."
   },
   "post_decomposition_delegation": {
-    "status": "closed-with-continuation-routed",
+    "status": "skipped-local-bounded-slice",
     "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
     "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
   },
   "system_intent_alignment": {
-    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
-    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
-    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "relevant system intent": "Keep local dogfooding evidence trustworthy, privacy-safe, and cheap for agents to interpret.",
+    "slice shaping bias": "Prefer one host-neutral ignored registry over vendor-specific or heuristic session concepts.",
+    "broader-lane validation question": "Does each physical namespace now correspond to one portable logical session without merging the default bucket?",
     "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
   },
   "references": [],
@@ -190,7 +190,7 @@
     "changed surfaces": "src/agentic_workspace/session_logging.py; tests/test_workspace_session_logging.py; active execplan/state",
     "validations run": "See proof_report.validation proof.",
     "result for continuation": "none; #2157 is fully implemented and remains open only until PR merge",
-    "next step": "merge PR #2154 to close #2157"
+    "next step": "merge PR #2158 to close #2157"
   },
   "finished_run_review": {
     "review status": "complete",
@@ -208,7 +208,7 @@
     "actual friction": "none recorded",
     "proof result": "yes; planning closeout recorded explicit proof input.",
     "quality concern": "none recorded",
-    "decomposition adjustment": "larger intent remains routed through the continuation owner"
+    "decomposition adjustment": "none; the refined #2157 intent is fully satisfied"
   },
   "proof_report": {
     "validation proof": "26 focused session-log tests; make test-workspace; make lint-workspace; make typecheck-workspace; planning summary and scoped planning doctor; real-checkout A/B/A dogfood reused A, isolated B, and found zero raw identity leaks",
@@ -241,11 +241,11 @@
     "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
     "evidence source": "archive-plan --prepare-closeout",
-    "target scope": "tests/test_workspace_session_logging.py",
-    "proposed durable intent": "Future agents should continue from tests/test_workspace_session_logging.py rather than rediscover this closeout residue.",
+    "target scope": "",
+    "proposed durable intent": "",
     "confidence": "low",
     "needs review": true,
-    "owner surface": "tests/test_workspace_session_logging.py"
+    "owner surface": "none"
   },
   "closure_check": {
     "closeout scope": "slice",
