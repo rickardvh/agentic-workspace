@@ -7,7 +7,9 @@
       "status",
       "new-session",
       "note",
-      "analyze"
+      "analyze",
+      "repair",
+      "export"
     ]
   },
   "effects": {
@@ -21,7 +23,9 @@
     "Write only under .agentic-workspace/local/session-logging/ and .agentic-workspace/local/logs/.",
     "Do not capture non-AW shell output.",
     "Do not treat local session logs as proof, Planning state, Memory, or closeout authority.",
-    "Session-log analysis is local dogfooding evidence until promoted intentionally."
+    "Session-log analysis is local dogfooding evidence until promoted intentionally.",
+    "Repair preserves existing indexed entries and artifacts; export never mutates originals.",
+    "Share-safe export redacts known local paths but does not claim arbitrary secret detection."
   ],
   "id": "session-log.manage",
   "inputs": [
@@ -55,6 +59,20 @@
       "command_visibility": "runtime-only",
       "description": "Optional session id or aw-session filename populated by the analyze subcommand.",
       "name": "id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Optional segment id populated by the analyze subcommand.",
+      "name": "segment",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "command_visibility": "runtime-only",
+      "description": "Optional export flag that excludes raw-output artifacts.",
+      "name": "no_artifacts",
       "required": false,
       "source": "cli-option"
     },
@@ -124,7 +142,7 @@
       "uses": "workspace.target-root.resolve"
     },
     {
-      "description": "Read status, create a new session, append a local-only note, or analyze a local session log.",
+      "description": "Read status, create a new session, append a note, analyze or repair an index, or export a share-safe bundle.",
       "id": "manage_session_log",
       "uses": "workspace.session-log.manage"
     },
@@ -145,6 +163,16 @@
       "required": false,
       "surface": ".agentic-workspace/local/logs/",
       "when": "create a local session log or append an optional note"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/logs/indexes/",
+      "when": "repair or backfill a local session-log index"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/logs/exports/",
+      "when": "create an explicit share-safe export bundle"
     }
   ]
 }

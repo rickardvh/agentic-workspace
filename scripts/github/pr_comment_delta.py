@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -192,6 +193,29 @@ def _baseline_seen_urls(path: Path | None) -> set[str]:
     return {_text(item) for item in urls if _text(item)}
 
 
+def _requests_source_change(body: str) -> bool:
+    lower = body.lower()
+    source_evidence = (
+        re.search(r"(?:^|[\s`])(?:[\w.-]+/)+[\w.-]+\.(?:py|pyi|js|mjs|ts|tsx|json|toml|ya?ml|md)(?:[\s`]|$)", body)
+        or re.search(r"`?[A-Za-z_][A-Za-z0-9_.]*\(\)`?", body)
+        or any(token in lower for token in ("source code", "code change", "implementation", "focused test", "regression test"))
+    )
+    requested_change = any(
+        token in lower
+        for token in ("fix", "change", "update", "add ", "remove", "replace", "quarantine", "correct", "must ", "should ")
+    )
+    return bool(source_evidence and requested_change)
+
+
+def _is_positive_review_summary(body: str) -> bool:
+    lower = body.lower()
+    ready_signal = any(token in lower for token in ("recheck result: ready", "review result: ready", "no remaining review blocker"))
+    unresolved_signal = any(token in lower for token in ("changes needed", "blocking issue")) or (
+        "remaining blocker" in lower and "no remaining review blocker" not in lower
+    )
+    return ready_signal and not unresolved_signal
+
+
 def _classify(item: dict[str, Any]) -> tuple[str, str, str]:
     body = _text(item.get("body"))
     lower = body.lower()
@@ -207,6 +231,18 @@ def _classify(item: dict[str, Any]) -> tuple[str, str, str]:
             "actionable_code_doc_body_change",
             "inline review comment anchors to a changed file",
             f"Inspect {path}; run focused tests or `agentic-workspace proof --changed {path} --format json`.",
+        )
+    if _is_positive_review_summary(body):
+        return (
+            "informational_no_local_change",
+            "review summary explicitly reports readiness with no remaining blocker",
+            "No local proof required unless a later review reopens a blocker.",
+        )
+    if _requests_source_change(body):
+        return (
+            "actionable_code_doc_body_change",
+            "comment explicitly requests source or test changes",
+            "Inspect the referenced source and test surfaces; run focused proof for the changed behavior.",
         )
     if any(token in lower for token in ("pr body", "pull request body", "description", "title", "close #", "closes #", "closing #")):
         return (
@@ -362,7 +398,7 @@ def _smallest_next_action(counts: dict[str, int], *, pagination: dict[str, Any] 
     if counts["ambiguous_needs_human"]:
         return "Clarify ambiguous comments before editing or fetching broad patch context."
     if counts["actionable_code_doc_body_change"]:
-        return "Inspect only anchored files and run focused proof for those paths."
+        return "Inspect the referenced files and implement focused fixes with matching proof."
     if counts["pr_metadata_body_only_change"]:
         return "Update PR metadata/body; avoid source edits unless generated metadata is checked in."
     if counts["ci_label_only_issue"]:

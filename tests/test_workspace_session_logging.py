@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
+import zipfile
 from pathlib import Path
 
 from agentic_workspace import cli as source_cli
@@ -162,9 +163,10 @@ def test_session_logging_large_output_uses_recoverable_artifact(tmp_path: Path, 
     assert artifact["stderr"] == ""
 
 
-def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packets(tmp_path: Path, capsys) -> None:
+def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packets(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
 
     def runner(_argv: list[str]) -> int:
         print(json.dumps({"kind": "agentic-workspace/example-packet/v1", "value": 1}))
@@ -179,7 +181,9 @@ def test_session_log_analyze_reports_counts_repeats_failures_artifacts_and_packe
     payload = json.loads(capsys.readouterr().out)
     assert payload["kind"] == "agentic-workspace/session-log-analysis/v1"
     assert payload["status"] == "analyzed"
-    assert payload["index_status"] == "present"
+    assert payload["index_status"] == "complete"
+    assert payload["coverage"]["markdown_command_count"] == 2
+    assert payload["summary"]["live_agent_failure_count"] == 2
     assert payload["summary"]["command_count"] == 2
     assert payload["summary"]["failure_count"] == 2
     assert payload["summary"]["failed_count"] == 2
@@ -299,7 +303,8 @@ stderr:
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["index_status"] == "markdown-fallback"
+    assert payload["index_status"] == "missing"
+    assert payload["index_presence"] == "markdown-fallback"
     assert payload["summary"]["command_count"] == 4
     assert payload["summary"]["failure_count"] == 2
     assert payload["summary"]["usage_mistake_count"] == 2
@@ -311,7 +316,6 @@ stderr:
     assert any(entry["command"] == "agentic-workspace modules --verbose --format json" for entry in payload["largest_outputs"])
     assert {candidate["id"] for candidate in payload["friction_candidates"]} >= {
         "missing-index",
-        "failed-command",
         "repeated-command",
         "duplicate-output",
         "large-output",
@@ -446,3 +450,211 @@ def test_config_accepts_local_session_logging_without_unknown_field_warning(tmp_
     assert source_cli.main(["config", "--target", str(target), "--format", "json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert not any("session_logging" in warning for warning in payload["warnings"])
+
+
+def test_session_log_origins_expected_failures_and_nested_commands_are_separate(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+
+    def fail(_argv: list[str]) -> int:
+        print("expected fixture error", file=sys.stderr)
+        return 2
+
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], fail) == 2
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "validation")
+    monkeypatch.setenv("AW_SESSION_LOG_EXPECTED_FAILURE", "1")
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], fail) == 2
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], fail) == 2
+    monkeypatch.delenv("AW_SESSION_LOG_ORIGIN")
+    monkeypatch.delenv("AW_SESSION_LOG_EXPECTED_FAILURE")
+    monkeypatch.delenv("PYTEST_CURRENT_TEST")
+
+    def outer(_argv: list[str]) -> int:
+        return session_logging.run_with_session_logging(["summary", "--target", str(target)], lambda _inner: 0)
+
+    assert session_logging.run_with_session_logging(["start", "--target", str(target)], outer) == 0
+    capsys.readouterr()
+    payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]))
+    assert payload["failures_by_origin"] == {"agent": 1, "validation": 2}
+    assert payload["summary"]["failure_count"] == 3
+    assert payload["summary"]["live_agent_failure_count"] == 1
+    assert payload["summary"]["expected_failure_count"] == 2
+    assert payload["repeated_failures_by_origin"]["validation"][0]["count"] == 2
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    assert any(entry["origin"]["classification"] == "nested-aw" for entry in index["entries"])
+
+
+def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+
+    def runner(argv: list[str]) -> int:
+        print(json.dumps({"kind": "agentic-workspace/example/v1", "argv": argv}))
+        return 0
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "one"], runner) == 0
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "two"], runner) == 0
+    capsys.readouterr()
+    index_path = _current_index(target)
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    preserved = index["entries"][0]
+    index["entries"] = [preserved]
+    index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
+
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    partial = session_logging.analyze_session_log(state=state)
+    assert partial["index_status"] == "partial"
+    assert partial["coverage"]["markdown_command_count"] == 2
+    assert partial["coverage"]["indexed_command_count"] == 1
+    stale_index = json.loads(index_path.read_text(encoding="utf-8"))
+    ghost = {**preserved, "id": "cmd-not-in-markdown"}
+    stale_index["entries"].append(ghost)
+    stale_index["repair"] = {"status": "repaired"}
+    index_path.write_text(json.dumps(stale_index, indent=2), encoding="utf-8")
+    assert session_logging.analyze_session_log(state=state)["index_status"] == "stale"
+    assert source_cli.main(["session-log", "--target", str(target), "repair", "--format", "json"]) == 0
+    repaired = json.loads(capsys.readouterr().out)
+    assert repaired["status"] == "repaired"
+    assert repaired["added_entry_count"] == 1
+    assert repaired["quarantined_entry_count"] == 1
+    after = session_logging.analyze_session_log(state=state)
+    assert after["index_status"] == "repaired"
+    repaired_index = json.loads(index_path.read_text(encoding="utf-8"))
+    assert repaired_index["entries"][0] == preserved
+    assert repaired_index["entries"][0]["artifact"] == preserved["artifact"]
+    assert not any(entry["id"] == "cmd-not-in-markdown" for entry in repaired_index["entries"])
+    assert repaired_index["repair"]["quarantined_entry_ids"] == ["cmd-not-in-markdown"]
+    assert repaired_index["repair"]["quarantined_entries"] == [ghost]
+    assert session_logging.repair_session_log_index(state=state)["status"] == "already-covered"
+
+
+def test_session_log_segments_can_be_summarized_and_selected(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+
+    assert (
+        session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "Implement issue #2144"], lambda _argv: 0)
+        == 0
+    )
+    assert (
+        session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "Implement issue #2145"], lambda _argv: 0)
+        == 0
+    )
+    assert (
+        session_logging.run_with_session_logging(
+            ["planning", "archive-plan", "--target", str(target), "example.plan.json"], lambda _argv: 0
+        )
+        == 0
+    )
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    payload = session_logging.analyze_session_log(state=state)
+    assert len(payload["segments"]) == 3
+    assert {segment["task"] for segment in payload["segments"]} == {"Implement issue #2144", "Implement issue #2145"}
+    assert any(segment["closeout_status"] == "closed" for segment in payload["segments"])
+    selected_id = payload["segments"][0]["id"]
+    selected = session_logging.analyze_session_log(state=state, segment_id=selected_id)
+    assert selected["selected_segment"] == selected_id
+    assert selected["summary"]["command_count"] == 1
+
+
+def test_session_log_segments_ignore_closeout_text_without_a_closeout_transition(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+
+    commands = [
+        ["report", "--target", str(target), "--section", "closeout_report"],
+        ["skills", "--target", str(target), "--task", "closeout review"],
+        ["planning", "closeout", "--target", str(target), "--dry-run"],
+    ]
+    for command in commands:
+        assert session_logging.run_with_session_logging(command, lambda _argv: 0) == 0
+
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    assert [entry["segment"]["closeout_status"] for entry in index["entries"]] == ["open", "open", "open"]
+
+
+def test_session_log_provenance_and_kind_classes_are_recorded(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+
+    def runner(_argv: list[str]) -> int:
+        print(
+            json.dumps(
+                {
+                    "kind": "agentic-workspace/top/v1",
+                    "actions": [{"kind": "created"}],
+                    "packet": {"kind": "agentic-workspace/nested/v2"},
+                }
+            )
+        )
+        return 0
+
+    assert session_logging.run_with_session_logging(["summary", "--target", str(target)], runner) == 0
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    entry = index["entries"][0]
+    assert entry["provenance"]["aw_version"]
+    assert isinstance(entry["provenance"]["dirty"], bool)
+    assert entry["duration_ms"] >= 0
+    assert entry["top_level_kinds"] == ["agentic-workspace/top/v1"]
+    assert entry["packet_kinds"] == ["agentic-workspace/nested/v2", "agentic-workspace/top/v1"]
+    assert entry["domain_kinds"] == ["created"]
+    payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]))
+    assert payload["top_level_kinds"] == {"agentic-workspace/top/v1": 1}
+    assert payload["domain_kinds"] == {"created": 1}
+    assert "created" not in payload["packet_kinds"]
+
+
+def test_session_log_share_safe_export_redacts_all_surfaces_and_preserves_originals(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+
+    def runner(_argv: list[str]) -> int:
+        print(json.dumps({"kind": "agentic-workspace/path/v1", "target": str(target), "home": str(Path.home()), "python": sys.executable}))
+        return 0
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
+    capsys.readouterr()
+    log_path = _current_log(target)
+    index_path = _current_index(target)
+    original_log = log_path.read_bytes()
+    original_index = index_path.read_bytes()
+    assert source_cli.main(["session-log", "--target", str(target), "export", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "exported"
+    export_path = target / payload["path"]
+    with zipfile.ZipFile(export_path) as archive:
+        names = set(archive.namelist())
+        assert {"session.md", "index.json", "manifest.json"}.issubset(names)
+        assert any(name.startswith("artifacts/") for name in names)
+        combined = b"\n".join(archive.read(name) for name in names).decode("utf-8")
+        assert str(target) not in combined
+        assert target.as_posix() not in combined
+        assert str(Path.home()) not in combined
+        assert sys.executable not in combined
+        assert "<target>" in combined
+        manifest = json.loads(archive.read("manifest.json"))
+        assert manifest["originals_mutated"] is False
+        assert "arbitrary secrets" in manifest["limitations"]
+    assert log_path.read_bytes() == original_log
+    assert index_path.read_bytes() == original_index
+
+    pointer = json.loads((target / ".agentic-workspace/local/session-logging/current.json").read_text(encoding="utf-8"))
+    assert (
+        source_cli.main(
+            ["session-log", "--target", str(target), "export", "--id", pointer["session_id"], "--no-artifacts", "--format", "json"]
+        )
+        == 0
+    )
+    by_id = json.loads(capsys.readouterr().out)
+    assert by_id["artifact_count"] == 0
+    assert source_cli.main(["session-log", "--target", str(target), "export", "--path", pointer["log_path"], "--format", "json"]) == 0
+    by_path = json.loads(capsys.readouterr().out)
+    assert by_path["source_log_path"] == pointer["log_path"]
+    assert log_path.read_bytes() == original_log
+    assert index_path.read_bytes() == original_index

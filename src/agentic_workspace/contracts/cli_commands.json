@@ -1923,12 +1923,81 @@
                 "--id"
               ],
               "help": "Optional session id or aw-session-<id>.md filename to analyze."
+            },
+            {
+              "name": "segment",
+              "flags": [
+                "--segment"
+              ],
+              "help": "Optional segment id to analyze; the response still lists all discovered segments."
             }
           ],
           "role": "reusable_host_repo_diagnostics",
           "audience": "local_only",
           "classification_note": "local-only session log analysis; not durable proof",
           "mutates_state": false
+        },
+        {
+          "name": "repair",
+          "help": "Repair or backfill a partial local session-log index from its Markdown entries.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": ["--target"],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "path",
+              "flags": ["--path"],
+              "help": "Optional repo-relative session log path; defaults to the current session pointer."
+            },
+            {
+              "name": "id",
+              "flags": ["--id"],
+              "help": "Optional session id or aw-session-<id>.md filename to repair."
+            }
+          ],
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "local_only",
+          "classification_note": "local-only idempotent session-log index repair; not durable proof",
+          "mutates_state": true
+        },
+        {
+          "name": "export",
+          "help": "Export an existing local session log as a share-safe redacted bundle.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": ["--target"],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "path",
+              "flags": ["--path"],
+              "help": "Optional repo-relative session log path; defaults to the current session pointer."
+            },
+            {
+              "name": "id",
+              "flags": ["--id"],
+              "help": "Optional session id or aw-session-<id>.md filename to export."
+            },
+            {
+              "name": "no_artifacts",
+              "flags": ["--no-artifacts"],
+              "action": "store_true",
+              "help": "Exclude raw-output artifacts from the exported bundle."
+            }
+          ],
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "local_only",
+          "classification_note": "explicit local share-safe export; not durable proof",
+          "mutates_state": true
         }
       ],
       "role": "reusable_host_repo_diagnostics",

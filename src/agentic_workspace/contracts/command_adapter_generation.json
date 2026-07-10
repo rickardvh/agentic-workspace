@@ -5666,7 +5666,9 @@
           "status",
           "new-session",
           "note",
-          "analyze"
+          "analyze",
+          "repair",
+          "export"
         ]
       },
       "operation_ref": {
