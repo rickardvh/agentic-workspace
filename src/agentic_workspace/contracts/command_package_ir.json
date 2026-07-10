@@ -4074,6 +4074,21 @@
                     "help": "Optional segment id to analyze; the response still lists all discovered segments."
                   },
                   {
+                    "name": "origin",
+                    "flags": [
+                      "--origin"
+                    ],
+                    "choices": [
+                      "agent",
+                      "all",
+                      "test",
+                      "synthetic",
+                      "unknown"
+                    ],
+                    "default": "agent",
+                    "help": "Origin scope for operational conclusions; defaults to live agent traffic."
+                  },
+                  {
                     "name": "format",
                     "flags": [
                       "--format"
