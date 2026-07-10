@@ -372,6 +372,10 @@ def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
         errors.append("mutation outcome TypeScript runtime binding is missing")
     if "unsupportedMutationResult" not in typescript_binding or "native-apply-unavailable" not in typescript_binding:
         errors.append("mutation outcome TypeScript unimplemented apply binding must block explicitly")
+    if "native TypeScript root lifecycle apply adapter is not implemented" not in typescript_binding:
+        errors.append("mutation outcome TypeScript root lifecycle binding must apply or block explicitly")
+    if "function systemIntentMutationResult(" not in typescript_binding:
+        errors.append("mutation outcome TypeScript system-intent binding must apply or block explicitly")
     exceptions = outcome_contract.get("explicit_exceptions", [])
     exception_ids = {
         str(item.get("operation_id", ""))

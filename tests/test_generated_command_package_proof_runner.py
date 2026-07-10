@@ -120,6 +120,42 @@ def test_generated_typescript_unimplemented_mutation_blocks_instead_of_claiming_
     assert payload["reason_code"] == "native-apply-unavailable"
 
 
+def test_generated_typescript_root_lifecycle_blocks_unimplemented_apply_truthfully(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir()
+    cli_path = REPO_ROOT / "generated/workspace/typescript/src/cli.mjs"
+
+    completed = subprocess.run(
+        ["node", str(cli_path), "install", "--target", str(tmp_path), "--format", "json"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["outcome"] == "blocked"
+    assert payload["mutation_applied"] is False
+    assert payload["reason_code"] == "native-apply-unavailable"
+
+
+def test_generated_typescript_system_intent_sync_blocks_unimplemented_apply_truthfully(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/workspace/typescript/src/cli.mjs"
+
+    completed = subprocess.run(
+        ["node", str(cli_path), "system-intent", "--target", str(tmp_path), "--sync", "--format", "json"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["kind"] == "workspace-system-intent/v1"
+    assert payload["outcome"] == "blocked"
+    assert payload["mutation_applied"] is False
+    assert payload["reason_code"] == "native-apply-unavailable"
+
+
 def _load_runner():
     spec = importlib.util.spec_from_file_location("run_generated_command_package_proof", SCRIPT_PATH)
     assert spec is not None

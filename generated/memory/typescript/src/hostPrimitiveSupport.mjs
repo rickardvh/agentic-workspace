@@ -689,9 +689,11 @@ function workspaceLifecycle(values, command) {
     ? [String(values.module)]
     : (Array.isArray(values.modules) ? values.modules : String(values.modules ?? '').split(',').map((item) => item.trim()).filter(Boolean));
   const dryRun = values.dry_run !== false;
-  return {
+  const result = {
     command,
     dry_run: dryRun,
+    target_root: resolve(String(values.target ?? values.target_root ?? '.')),
+    actions: [],
     modules,
     lifecycle_plan: {
       kind: 'workspace-lifecycle-plan/v1',
@@ -715,6 +717,19 @@ function workspaceLifecycle(values, command) {
       root_upgrade_front_door: { dry_run_first: true, review_required_before_apply: true },
       surface_classifications: { summary_by_class: { 'ambiguous ownership manual-review': command === 'uninstall' ? 1 : 0 } },
     },
+  };
+  if (!dryRun) {
+    result.actions = [{ kind: 'blocked', path: '.', detail: 'native TypeScript root lifecycle apply adapter is not implemented' }];
+    result.reason_code = 'native-apply-unavailable';
+  }
+  return finalizeMutationOutcome(result);
+}
+
+function systemIntentMutationResult(values) {
+  return {
+    ...unsupportedMutationResult({ ...values, dry_run: false }, 'System intent sync'),
+    kind: 'workspace-system-intent/v1',
+    command: 'system-intent',
   };
 }
 
@@ -813,7 +828,13 @@ function domainPrimitive(primitive, values, args, operationId) {
       escalation_required: Boolean(values.escalation_required ?? false),
     },
   };
-  if (primitive.startsWith('system_intent.')) return { kind: 'workspace-system-intent/v1', command: 'system-intent', target_root: resolve(String(values.target ?? '.')), dry_run: values.dry_run !== false, message: 'System intent sync', actions: [] };
+  if (primitive === 'system_intent.config.resolve') return { target_root: resolve(String(values.target ?? '.')) };
+  if (primitive === 'system_intent.source_metadata.refresh' || primitive === 'system_intent.mirror.read_or_create') {
+    return systemIntentMutationResult(values);
+  }
+  if (primitive === 'system_intent.result.emit') {
+    return emitOutput({ ...values, result: values.result ?? systemIntentMutationResult(values) }, args);
+  }
   if (primitive === 'workspace.selection.resolve') return { selected_modules: values.modules ?? values.module ?? [], target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'toml.table.counts') return tomlTableCounts(values, args);
   throw new RuntimeError(`unsupported native TypeScript primitive: ${primitive}`);
