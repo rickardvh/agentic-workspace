@@ -543,6 +543,11 @@ def _active_plan_id(target_root: Path) -> str:
     return str(items[0].get("id", ""))
 
 
+def _is_closeout_transition(argv: Sequence[str]) -> bool:
+    tokens = list(argv)
+    return len(tokens) >= 2 and tokens[:2] in (["planning", "archive-plan"], ["planning", "closeout"]) and "--dry-run" not in tokens
+
+
 def _segment_metadata(
     *,
     state: SessionLoggingState,
@@ -568,8 +573,7 @@ def _segment_metadata(
     issue_refs = [ref for ref in refs if ref != pr_ref]
     if not issue_refs and isinstance(prior_segment.get("issue_refs"), list):
         issue_refs = [str(ref) for ref in prior_segment["issue_refs"]]
-    command_lower = command_text.lower()
-    if "archive-plan" in command_lower or "closeout" in command_lower:
+    if _is_closeout_transition(argv):
         closeout_status = "closed" if capture.exit_code == 0 else "attempted"
     else:
         closeout_status = str(prior_segment.get("closeout_status", "open") or "open")
@@ -1287,7 +1291,7 @@ def _coverage_payload(*, markdown_entries: list[dict[str, Any]], index: dict[str
     indexed_set = set(indexed_ids)
     if index is None:
         status = "missing"
-    elif isinstance(index.get("repair"), dict) and markdown_set.issubset(indexed_set):
+    elif isinstance(index.get("repair"), dict) and markdown_ids == indexed_ids:
         status = "repaired"
     elif markdown_ids == indexed_ids:
         status = "complete"
@@ -1314,10 +1318,12 @@ def repair_session_log_index(*, state: SessionLoggingState, path: str = "", sess
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
     existing = _entries_from_index(index or {})
     markdown_entries = _entries_from_markdown(log_path)
-    existing_ids = {str(entry.get("id", "")) for entry in existing}
-    missing = [entry for entry in markdown_entries if str(entry.get("id", "")) not in existing_ids]
+    existing_by_id = {str(entry.get("id", "")): entry for entry in existing}
+    markdown_ids = {str(entry.get("id", "")) for entry in markdown_entries}
+    missing = [entry for entry in markdown_entries if str(entry.get("id", "")) not in existing_by_id]
+    quarantined = [entry for entry in existing if str(entry.get("id", "")) not in markdown_ids]
     notes = index.get("notes", []) if isinstance(index, dict) and isinstance(index.get("notes"), list) else []
-    merged = [*existing, *missing]
+    merged = [existing_by_id.get(str(entry.get("id", "")), entry) for entry in markdown_entries]
     _write_index(state=state, session=effective_session, entries=merged, notes=notes)
     index_path = state.target_root / _index_path_for_session(effective_session)
     repaired_index = json.loads(index_path.read_text(encoding="utf-8"))
@@ -1325,17 +1331,21 @@ def repair_session_log_index(*, state: SessionLoggingState, path: str = "", sess
         "status": "repaired",
         "repaired_at": datetime.now(UTC).isoformat(),
         "added_entry_count": len(missing),
-        "preserved_entry_count": len(existing),
+        "preserved_entry_count": len(merged) - len(missing),
+        "quarantined_entry_count": len(quarantined),
+        "quarantined_entry_ids": [str(entry.get("id", "")) for entry in quarantined],
+        "quarantined_entries": quarantined,
         "source": effective_session["log_path"],
     }
     _write_json_atomic(index_path, repaired_index)
     coverage = _coverage_payload(markdown_entries=markdown_entries, index=repaired_index)
     return {
         "kind": "agentic-workspace/session-log-index-repair/v1",
-        "status": "repaired" if missing else "already-covered",
+        "status": "repaired" if missing or quarantined else "already-covered",
         "path": effective_session["log_path"],
         "index_path": _index_path_for_session(effective_session).as_posix(),
         "added_entry_count": len(missing),
+        "quarantined_entry_count": len(quarantined),
         "coverage": coverage,
         "local_only": True,
         "authoritative": False,

@@ -511,18 +511,22 @@ def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tm
     stale_index = json.loads(index_path.read_text(encoding="utf-8"))
     ghost = {**preserved, "id": "cmd-not-in-markdown"}
     stale_index["entries"].append(ghost)
+    stale_index["repair"] = {"status": "repaired"}
     index_path.write_text(json.dumps(stale_index, indent=2), encoding="utf-8")
     assert session_logging.analyze_session_log(state=state)["index_status"] == "stale"
     assert source_cli.main(["session-log", "--target", str(target), "repair", "--format", "json"]) == 0
     repaired = json.loads(capsys.readouterr().out)
     assert repaired["status"] == "repaired"
     assert repaired["added_entry_count"] == 1
+    assert repaired["quarantined_entry_count"] == 1
     after = session_logging.analyze_session_log(state=state)
     assert after["index_status"] == "repaired"
     repaired_index = json.loads(index_path.read_text(encoding="utf-8"))
     assert repaired_index["entries"][0] == preserved
     assert repaired_index["entries"][0]["artifact"] == preserved["artifact"]
-    assert any(entry["id"] == "cmd-not-in-markdown" for entry in repaired_index["entries"])
+    assert not any(entry["id"] == "cmd-not-in-markdown" for entry in repaired_index["entries"])
+    assert repaired_index["repair"]["quarantined_entry_ids"] == ["cmd-not-in-markdown"]
+    assert repaired_index["repair"]["quarantined_entries"] == [ghost]
     assert session_logging.repair_session_log_index(state=state)["status"] == "already-covered"
 
 
@@ -554,6 +558,23 @@ def test_session_log_segments_can_be_summarized_and_selected(tmp_path: Path, mon
     selected = session_logging.analyze_session_log(state=state, segment_id=selected_id)
     assert selected["selected_segment"] == selected_id
     assert selected["summary"]["command_count"] == 1
+
+
+def test_session_log_segments_ignore_closeout_text_without_a_closeout_transition(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+
+    commands = [
+        ["report", "--target", str(target), "--section", "closeout_report"],
+        ["skills", "--target", str(target), "--task", "closeout review"],
+        ["planning", "closeout", "--target", str(target), "--dry-run"],
+    ]
+    for command in commands:
+        assert session_logging.run_with_session_logging(command, lambda _argv: 0) == 0
+
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    assert [entry["segment"]["closeout_status"] for entry in index["entries"]] == ["open", "open", "open"]
 
 
 def test_session_log_provenance_and_kind_classes_are_recorded(tmp_path: Path, monkeypatch) -> None:
