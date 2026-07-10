@@ -114,6 +114,51 @@ def test_pr_comment_delta_classifies_new_review_response_scope() -> None:
     assert resolved["addressing_status"] == "already_addressed"
 
 
+def test_pr_comment_delta_prioritizes_source_change_evidence_over_closure_metadata() -> None:
+    module = _load_module()
+    payload = _fixture()
+    payload["comments"] = [
+        {
+            "kind": "issue_comment",
+            "database_id": 7,
+            "url": "https://example.test/pr#mixed-review",
+            "body": (
+                "Changes needed before this PR should close the lane. "
+                "`repair_session_log_index()` preserves stale entries and `_segment_metadata()` uses an over-broad test. "
+                "Remove or quarantine the extras and add focused negative tests. Closes #2142 only after both fixes."
+            ),
+            "created_at": "2026-06-23T10:05:00Z",
+            "author": {"login": "maintainer"},
+        }
+    ]
+
+    packet = module.build_packet(payload)
+
+    item = packet["items"][0]
+    assert item["category"] == "actionable_code_doc_body_change"
+    assert item["addressing_status"] == "unresolved_action"
+    assert "source and test surfaces" in item["proof_hint"]
+    assert packet["smallest_next_action"] == "Inspect the referenced files and implement focused fixes with matching proof."
+
+
+def test_pr_comment_delta_keeps_ready_recheck_summaries_informational() -> None:
+    module = _load_module()
+
+    category, reason, proof_hint = module._classify(
+        {
+            "kind": "review",
+            "body": (
+                "Recheck result: ready. Previous blockers resolved: stale entries were removed and focused tests now pass. "
+                "No remaining review blocker found."
+            ),
+        }
+    )
+
+    assert category == "informational_no_local_change"
+    assert "readiness" in reason
+    assert proof_hint.startswith("No local proof required")
+
+
 def test_pr_comment_delta_filters_seen_comment_urls(tmp_path: Path) -> None:
     module = _load_module()
     baseline = tmp_path / "baseline.json"
