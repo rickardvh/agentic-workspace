@@ -364,6 +364,14 @@ def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
         return errors
     if outcome_contract.get("schema_version") != "agentic-workspace/mutation-outcome/v1":
         errors.append("operation_contracts.json mutation_outcome_contract has unexpected schema_version")
+    python_binding = (REPO_ROOT / "src/agentic_workspace/result_adapter.py").read_text(encoding="utf-8")
+    typescript_binding = (REPO_ROOT / "src/agentic_workspace/contracts/typescript_primitive_support.mjs").read_text(encoding="utf-8")
+    if "def mutation_outcome_from_actions(" not in python_binding:
+        errors.append("mutation outcome Python runtime binding is missing")
+    if "export function finalizeMutationOutcome(" not in typescript_binding:
+        errors.append("mutation outcome TypeScript runtime binding is missing")
+    if "unsupportedMutationResult" not in typescript_binding or "native-apply-unavailable" not in typescript_binding:
+        errors.append("mutation outcome TypeScript unimplemented apply binding must block explicitly")
     exceptions = outcome_contract.get("explicit_exceptions", [])
     exception_ids = {
         str(item.get("operation_id", ""))

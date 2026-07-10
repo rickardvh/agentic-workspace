@@ -9,6 +9,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from repo_planning_bootstrap.installer import planning_record_schema_findings
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_generated_command_package_proof.py"
 CHECK_SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "check_generated_command_packages.py"
@@ -55,6 +57,67 @@ def test_generated_typescript_planning_install_reports_real_apply(tmp_path: Path
     assert payload["mutation_applied"] is True
     assert payload["reason_code"] == "mutation-applied"
     assert (tmp_path / ".agentic-workspace/planning/agent-manifest.json").is_file()
+
+
+def test_generated_typescript_planning_new_plan_reports_real_apply(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/planning/typescript/src/cli.mjs"
+
+    completed = subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "new-plan",
+            "--id",
+            "typescript-plan",
+            "--title",
+            "TypeScript Plan",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/typescript-plan.plan.json"
+    assert payload["outcome"] == "applied"
+    assert payload["mutation_applied"] is True
+    assert payload["reason_code"] == "mutation-applied"
+    assert record_path.is_file()
+    assert planning_record_schema_findings(record_path) == []
+
+
+def test_generated_typescript_unimplemented_mutation_blocks_instead_of_claiming_noop(tmp_path: Path) -> None:
+    cli_path = REPO_ROOT / "generated/planning/typescript/src/cli.mjs"
+
+    completed = subprocess.run(
+        [
+            "node",
+            str(cli_path),
+            "lane-create",
+            "--id",
+            "lane-one",
+            "--title",
+            "Lane One",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["outcome"] == "blocked"
+    assert payload["mutation_applied"] is False
+    assert payload["reason_code"] == "native-apply-unavailable"
 
 
 def _load_runner():
