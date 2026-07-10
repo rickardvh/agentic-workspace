@@ -322,6 +322,12 @@ function emitInstallResultText(result) {
     String(result.message ?? ''),
     `Detected version: ${result.detected_version ?? 'none'} (payload version ${result.bootstrap_version})`,
   ];
+  if (result.outcome) {
+    lines.push(`Outcome: ${result.outcome} (${result.reason_code ?? ''})`);
+    lines.push(`Mutation applied: ${result.mutation_applied ? 'yes' : 'no'}`);
+    if (result.conflict_owner) lines.push(`Conflict owner: ${result.conflict_owner}`);
+    if (result.recovery_command) lines.push(`Recovery: ${result.recovery_command}`);
+  }
   for (const action of listObjects(result.actions ?? [], 'result.actions')) {
     const details = [];
     for (const key of ['detail', 'role', 'safety', 'category', 'remediation_kind', 'remediation_target', 'remediation_confidence', 'memory_action', 'match_source']) {
@@ -588,7 +594,41 @@ function reportPlanning(values, operationId) {
 
 function lifecycleResult(values, message) {
   const targetRoot = resolve(String(values.target ?? values.target_root ?? '.'));
-  return { target_root: targetRoot, dry_run: values.dry_run !== false, message, actions: [], detected_version: null, bootstrap_version: null };
+  const dryRun = values.dry_run !== false;
+  return {
+    target_root: targetRoot,
+    dry_run: dryRun,
+    message,
+    actions: [],
+    detected_version: null,
+    bootstrap_version: null,
+    outcome: 'noop',
+    mutation_applied: false,
+    reason_code: dryRun ? 'dry-run' : 'already-satisfied',
+    conflict_owner: null,
+    recovery_command: null,
+  };
+}
+
+function planningNewPlanResult(values, operationId) {
+  const result = lifecycleResult(values, operationId);
+  const slug = String(values.id ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const owner = `.agentic-workspace/planning/execplans/${slug}.plan.json`;
+  if (slug && existsSync(join(result.target_root, owner)) && values.overwrite !== true) {
+    const title = String(values.title ?? '').trim() || slug;
+    result.outcome = 'blocked';
+    result.reason_code = 'target-already-exists';
+    result.conflict_owner = owner;
+    result.recovery_command = `agentic-workspace planning new-plan --id ${JSON.stringify(slug)} --title ${JSON.stringify(title)} --target ${JSON.stringify(result.target_root.replace(/\\/g, '/'))} --overwrite --format json`;
+    result.actions = [{ kind: 'manual review', path: owner, detail: 'target canonical execplan record already exists; pass --overwrite to replace it' }];
+  }
+  return result;
+}
+
+function readOnlyLifecycleResult(values, message) {
+  const result = lifecycleResult(values, message);
+  for (const key of ['outcome', 'mutation_applied', 'reason_code', 'conflict_owner', 'recovery_command']) delete result[key];
+  return result;
 }
 
 function workspaceLifecycle(values, command) {
@@ -647,10 +687,10 @@ function domainPrimitive(primitive, values, args, operationId) {
     const moduleName = String(args.import_module ?? '');
     const functionName = String(args.function ?? '');
     if (functionName === 'close_planning_item') return { ...lifecycleResult(values, `Close planning item ${values.item ?? ''}`.trim()), dry_run: Boolean(values.dry_run) };
-    if (functionName === 'doctor_bootstrap') return { ...lifecycleResult(values, 'Doctor report'), dry_run: false };
-    if (functionName === 'collect_status') return { ...lifecycleResult(values, 'Status report'), dry_run: false };
+    if (functionName === 'doctor_bootstrap') return { ...readOnlyLifecycleResult(values, 'Doctor report'), dry_run: false };
+    if (functionName === 'collect_status') return { ...readOnlyLifecycleResult(values, 'Status report'), dry_run: false };
     if (functionName === 'planning_handoff') return { kind: 'planning-handoff/v1', target_root: resolve(String(values.target ?? '.')), message: 'Planning handoff' };
-    if (functionName === 'verify_payload') return { ...lifecycleResult(values, 'Payload verification'), dry_run: false };
+    if (functionName === 'verify_payload') return { ...readOnlyLifecycleResult(values, 'Payload verification'), dry_run: false };
     if (functionName === 'create_review_record') return { ...lifecycleResult(values, `Create review '${values.slug ?? ''}'`), dry_run: Boolean(values.dry_run) };
     if (functionName.includes('install') || functionName.includes('adopt') || functionName.includes('upgrade')) {
       const result = lifecycleResult(values, `${functionName.replace(/_/g, ' ')}`);
@@ -669,10 +709,11 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'planning.close-item.apply') return { ...lifecycleResult(values, `Close planning item ${values.item ?? ''}`.trim()), dry_run: Boolean(values.dry_run) };
   if (primitive === 'planning.closeout.apply') return { ...lifecycleResult(values, `Close out execplan '${values.plan ?? ''}'`), dry_run: Boolean(values.dry_run) };
   if (primitive === 'planning.create-review.apply') return { ...lifecycleResult(values, `Create review '${values.slug ?? ''}'`), dry_run: Boolean(values.dry_run) };
-  if (primitive === 'planning.bootstrap.doctor.load') return { ...lifecycleResult(values, 'Doctor report'), dry_run: false };
-  if (primitive === 'planning.bootstrap.status.load') return { ...lifecycleResult(values, 'Status report'), dry_run: false };
+  if (primitive === 'planning.bootstrap.doctor.load') return { ...readOnlyLifecycleResult(values, 'Doctor report'), dry_run: false };
+  if (primitive === 'planning.bootstrap.status.load') return { ...readOnlyLifecycleResult(values, 'Status report'), dry_run: false };
   if (primitive === 'planning.handoff.load') return { kind: 'planning-handoff/v1', target_root: resolve(String(values.target ?? '.')), message: 'Planning handoff' };
-  if (primitive === 'planning.verify-payload.load') return { ...lifecycleResult(values, 'Payload verification'), dry_run: false };
+  if (primitive === 'planning.verify-payload.load') return { ...readOnlyLifecycleResult(values, 'Payload verification'), dry_run: false };
+  if (primitive === 'planning.new-plan.apply') return planningNewPlanResult(values, operationId);
   if (['planning.install.apply', 'planning.init.apply', 'planning.adopt.apply', 'planning.upgrade.apply'].includes(primitive)) {
     const result = lifecycleResult(values, operationId);
     result.actions = applyPayloadCopy(values);

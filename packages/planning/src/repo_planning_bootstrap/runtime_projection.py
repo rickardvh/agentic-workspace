@@ -371,6 +371,14 @@ def _emit(result, output_format: str) -> int:
         return 0
     print(f"Target: {result.target_root}")
     print(result.message)
+    mutation_outcome = result.to_dict() if result.mutation_expected else {}
+    if mutation_outcome:
+        print(f"Outcome: {mutation_outcome['outcome']} ({mutation_outcome['reason_code']})")
+        print(f"Mutation applied: {'yes' if mutation_outcome['mutation_applied'] else 'no'}")
+        if mutation_outcome.get("conflict_owner"):
+            print(f"Conflict owner: {mutation_outcome['conflict_owner']}")
+        if mutation_outcome.get("recovery_command"):
+            print(f"Recovery: {mutation_outcome['recovery_command']}")
     for line in format_actions(result.actions, result.target_root):
         print(f"- {line}")
     if result.warnings:
