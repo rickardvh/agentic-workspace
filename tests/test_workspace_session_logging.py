@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from agentic_workspace import cli as source_cli
@@ -101,6 +102,121 @@ def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelu
     assert index["entries"][0]["artifact"]["path"].startswith(".agentic-workspace/local/logs/artifacts/")
 
 
+def test_session_logging_reuses_identity_across_interleaved_sessions(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setattr(session_logging, "DEFAULT_MAX_INLINE_OUTPUT_BYTES", 1)
+
+    def run(identity: str) -> dict[str, str]:
+        monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, identity)
+
+        def runner(_argv: list[str]) -> int:
+            print("session output")
+            return 0
+
+        assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 0
+        pointer = json.loads((target / session_logging.SESSION_POINTER_PATH).read_text(encoding="utf-8"))
+        return {"session_id": pointer["session_id"], "log_path": pointer["log_path"]}
+
+    session_a = run("host-session-a")
+    session_b = run("host-session-b")
+    session_a_again = run("host-session-a")
+
+    assert session_a_again == session_a
+    assert session_b["session_id"] != session_a["session_id"]
+    assert (target / session_a["log_path"]).read_text(encoding="utf-8").count("## Command - ") == 2
+    assert (target / session_b["log_path"]).read_text(encoding="utf-8").count("## Command - ") == 1
+    for session in (session_a, session_b):
+        index = json.loads(
+            (target / session_logging.SESSION_LOG_ROOT / "indexes" / f"{session['session_id']}.json").read_text(encoding="utf-8")
+        )
+        assert all(f"/artifacts/{session['session_id']}/" in f"/{entry['artifact']['path']}" for entry in index["entries"])
+    registry = json.loads((target / session_logging.SESSION_REGISTRY_PATH).read_text(encoding="utf-8"))
+    assert len(registry["sessions"]) == 2
+    assert "host-session-a" not in json.dumps(registry)
+    assert "host-session-b" not in json.dumps(registry)
+
+
+def test_session_logging_concurrent_identity_resolution_converges(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        sessions = list(executor.map(lambda _index: session_logging.ensure_session(state=state, logical_identity="shared"), range(16)))
+
+    assert len({session["session_id"] for session in sessions}) == 1
+    assert len(list((target / session_logging.SESSION_LOG_ROOT).glob("aw-session-*.md"))) == 1
+    assert not (target / session_logging.SESSION_REGISTRY_LOCK_PATH).exists()
+
+
+def test_session_logging_preserves_legacy_default_bucket_when_identity_registry_starts(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    legacy = session_logging.ensure_session(state=state)
+    (target / session_logging.SESSION_REGISTRY_PATH).unlink()
+
+    identified = session_logging.ensure_session(state=state, logical_identity="new-host-session")
+    default_again = session_logging.ensure_session(state=state, logical_identity="")
+
+    assert identified["session_id"] != legacy["session_id"]
+    assert default_again == legacy
+    registry = json.loads((target / session_logging.SESSION_REGISTRY_PATH).read_text(encoding="utf-8"))
+    assert registry["sessions"]["default"] == legacy
+
+
+def test_session_logging_identityless_default_never_adopts_identified_pointer(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    session_a = session_logging.ensure_session(state=state, logical_identity="a")
+    session_b = session_logging.ensure_session(state=state, logical_identity="b")
+
+    assert session_logging.status_payload(state=state)["session_id"] == ""
+    default_session = session_logging.ensure_session(state=state, logical_identity="")
+    default_again = session_logging.ensure_session(state=state, logical_identity="")
+
+    assert default_again == default_session
+    assert default_session["session_id"] not in {session_a["session_id"], session_b["session_id"]}
+    registry = json.loads((target / session_logging.SESSION_REGISTRY_PATH).read_text(encoding="utf-8"))
+    assert registry["sessions"]["default"] == default_session
+
+
+def test_session_logging_identity_is_private_and_caller_drilldowns_resolve_it(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    raw_identity = "vendor-thread-secret-123"
+    monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, raw_identity)
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: 0) == 0
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    status = session_logging.status_payload(state=state)
+    analysis = session_logging.analyze_session_log(state=state)
+    exported = session_logging.export_session_log(state=state, include_artifacts=False)
+
+    assert status["logical_session_resolution"] == "identity-registry"
+    assert analysis["path"] == status["path"]
+    assert exported["session_id"] == status["session_id"]
+    for path in (target / ".agentic-workspace/local").rglob("*"):
+        if path.is_file():
+            assert raw_identity.encode() not in path.read_bytes()
+
+
+def test_session_logging_new_session_replaces_only_callers_identity_mapping(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    session_a = session_logging.ensure_session(state=state, logical_identity="a")
+    session_b = session_logging.ensure_session(state=state, logical_identity="b")
+    monkeypatch.setenv(session_logging.LOGICAL_SESSION_IDENTITY_ENV, "a")
+
+    replacement_a = session_logging.reset_session(state=state)
+
+    assert replacement_a["session_id"] != session_a["session_id"]
+    assert session_logging.ensure_session(state=state, logical_identity="a")["session_id"] == replacement_a["session_id"]
+    assert session_logging.ensure_session(state=state, logical_identity="b") == session_b
+
+
 def test_session_logging_note_command_appends_optional_note(tmp_path: Path, capsys) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace" / "config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
@@ -137,7 +253,7 @@ def test_session_logging_invalid_pointer_path_is_ignored(tmp_path: Path, capsys)
     capsys.readouterr()
 
     second_log = _current_log(target)
-    assert second_log != first_log
+    assert second_log == first_log
     assert not (target.parent / "outside-session-log.md").exists()
     assert ".agentic-workspace/local/logs/" in second_log.as_posix()
 

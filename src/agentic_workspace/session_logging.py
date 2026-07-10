@@ -27,6 +27,10 @@ from agentic_workspace.result_adapter import serialise_value
 SESSION_LOG_ROOT = Path(".agentic-workspace") / "local" / "logs"
 SESSION_POINTER_PATH = Path(".agentic-workspace") / "local" / "session-logging" / "current.json"
 SESSION_POINTER_KIND = "agentic-workspace/session-logging-current/v1"
+SESSION_REGISTRY_PATH = Path(".agentic-workspace") / "local" / "session-logging" / "sessions.json"
+SESSION_REGISTRY_LOCK_PATH = Path(".agentic-workspace") / "local" / "session-logging" / ".sessions.lock"
+SESSION_REGISTRY_KIND = "agentic-workspace/session-logging-registry/v1"
+LOGICAL_SESSION_IDENTITY_ENV = "AW_SESSION_LOGICAL_IDENTITY"
 SESSION_LOG_KIND = "agentic-workspace/session-log/v1"
 SESSION_LOG_INDEX_KIND = "agentic-workspace/session-log-index/v1"
 DEFAULT_MAX_INLINE_OUTPUT_BYTES = 64 * 1024
@@ -316,7 +320,8 @@ def reset_session(*, state: SessionLoggingState) -> dict[str, Any]:
 
 
 def status_payload(*, state: SessionLoggingState) -> dict[str, Any]:
-    session = read_session_pointer(target_root=state.target_root)
+    logical_identity = _logical_session_identity()
+    session = _session_for_caller(target_root=state.target_root, logical_identity=logical_identity)
     return {
         "kind": "agentic-workspace/session-logging-status/v1",
         "enabled": state.enabled,
@@ -325,6 +330,9 @@ def status_payload(*, state: SessionLoggingState) -> dict[str, Any]:
         "path": session.get("log_path", "") if session else "",
         "index_path": _index_path_for_session(session).as_posix() if session else "",
         "session_id": session.get("session_id", "") if session else "",
+        "logical_session_resolution": "identity-registry" if logical_identity else "legacy-default-bucket",
+        "logical_session_identity_source": LOGICAL_SESSION_IDENTITY_ENV if logical_identity else "",
+        "raw_logical_session_identity_stored": False,
         "path_redaction": _path_redaction_payload(state),
         "local_only": True,
         "authoritative": False,
@@ -332,12 +340,39 @@ def status_payload(*, state: SessionLoggingState) -> dict[str, Any]:
     }
 
 
-def ensure_session(*, state: SessionLoggingState, force_new: bool = False) -> dict[str, str]:
-    current = None if force_new else read_session_pointer(target_root=state.target_root)
-    if current:
-        log_path = state.target_root / current["log_path"]
-        if log_path.exists():
+def ensure_session(*, state: SessionLoggingState, force_new: bool = False, logical_identity: str | None = None) -> dict[str, str]:
+    identity = _logical_session_identity() if logical_identity is None else logical_identity.strip()
+    with _session_registry_lock(target_root=state.target_root):
+        registry_existed = (state.target_root / SESSION_REGISTRY_PATH).is_file()
+        registry = _read_session_registry(target_root=state.target_root)
+        sessions = registry.setdefault("sessions", {})
+        legacy_pointer = read_session_pointer(target_root=state.target_root)
+        if not registry_existed and isinstance(sessions, dict) and "default" not in sessions and legacy_pointer is not None:
+            sessions["default"] = legacy_pointer
+            registry["updated_at"] = datetime.now(UTC).isoformat()
+        registry_key = _logical_identity_fingerprint(identity=identity, registry=registry) if identity else "default"
+        current = None
+        if not force_new:
+            current = _registered_session(registry=registry, registry_key=registry_key, target_root=state.target_root)
+            if current is None and not identity and not registry_existed:
+                current = read_session_pointer(target_root=state.target_root)
+        if current:
+            if isinstance(sessions, dict) and sessions.get(registry_key) != current:
+                sessions[registry_key] = current
+                registry["updated_at"] = datetime.now(UTC).isoformat()
+                _write_json_atomic(state.target_root / SESSION_REGISTRY_PATH, registry)
+            _write_session_pointer(target_root=state.target_root, session=current)
             return current
+        session = _create_session(state=state)
+        if isinstance(sessions, dict):
+            sessions[registry_key] = session
+        registry["updated_at"] = datetime.now(UTC).isoformat()
+        _write_json_atomic(state.target_root / SESSION_REGISTRY_PATH, registry)
+        _write_session_pointer(target_root=state.target_root, session=session)
+        return session
+
+
+def _create_session(*, state: SessionLoggingState) -> dict[str, str]:
     created_at = datetime.now(UTC)
     session_id = f"{created_at.strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
     log_path = SESSION_LOG_ROOT / f"aw-session-{session_id}.md"
@@ -350,11 +385,95 @@ def ensure_session(*, state: SessionLoggingState, force_new: bool = False) -> di
     absolute_log_path = state.target_root / log_path
     absolute_log_path.parent.mkdir(parents=True, exist_ok=True)
     absolute_log_path.write_text(_session_prelude(state=state, session=session), encoding="utf-8")
-    pointer_path = state.target_root / SESSION_POINTER_PATH
-    pointer_path.parent.mkdir(parents=True, exist_ok=True)
-    pointer_path.write_text(json.dumps(session, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     _write_index(state=state, session=session, entries=(), notes=())
     return session
+
+
+def _logical_session_identity() -> str:
+    return os.environ.get(LOGICAL_SESSION_IDENTITY_ENV, "").strip()
+
+
+def _new_session_registry() -> dict[str, Any]:
+    return {
+        "kind": SESSION_REGISTRY_KIND,
+        "salt": uuid.uuid4().hex,
+        "sessions": {},
+        "updated_at": datetime.now(UTC).isoformat(),
+        "local_only": True,
+        "authoritative": False,
+    }
+
+
+def _read_session_registry(*, target_root: Path) -> dict[str, Any]:
+    path = target_root / SESSION_REGISTRY_PATH
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return _new_session_registry()
+    if (
+        not isinstance(payload, dict)
+        or payload.get("kind") != SESSION_REGISTRY_KIND
+        or not isinstance(payload.get("salt"), str)
+        or not isinstance(payload.get("sessions"), dict)
+    ):
+        return _new_session_registry()
+    return payload
+
+
+def _logical_identity_fingerprint(*, identity: str, registry: dict[str, Any]) -> str:
+    salt = str(registry.get("salt", ""))
+    return hashlib.sha256(f"{salt}\0{identity}".encode()).hexdigest()
+
+
+def _registered_session(*, registry: dict[str, Any], registry_key: str, target_root: Path) -> dict[str, str] | None:
+    sessions = registry.get("sessions", {})
+    candidate = sessions.get(registry_key) if isinstance(sessions, dict) else None
+    session = _validated_session(candidate)
+    if session and (target_root / session["log_path"]).is_file():
+        return session
+    return None
+
+
+def _session_for_caller(*, target_root: Path, logical_identity: str) -> dict[str, str] | None:
+    registry_existed = (target_root / SESSION_REGISTRY_PATH).is_file()
+    registry = _read_session_registry(target_root=target_root)
+    registry_key = _logical_identity_fingerprint(identity=logical_identity, registry=registry) if logical_identity else "default"
+    registered = _registered_session(registry=registry, registry_key=registry_key, target_root=target_root)
+    if registered is not None or logical_identity or registry_existed:
+        return registered
+    return read_session_pointer(target_root=target_root)
+
+
+def _write_session_pointer(*, target_root: Path, session: dict[str, str]) -> None:
+    _write_json_atomic(target_root / SESSION_POINTER_PATH, session)
+
+
+@contextlib.contextmanager
+def _session_registry_lock(*, target_root: Path) -> Iterator[None]:
+    lock_path = target_root / SESSION_REGISTRY_LOCK_PATH
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + 5
+    while True:
+        try:
+            lock_path.mkdir()
+            break
+        except FileExistsError:
+            try:
+                stale = time.time() - lock_path.stat().st_mtime > 30
+            except OSError:
+                stale = False
+            if stale:
+                with contextlib.suppress(OSError):
+                    lock_path.rmdir()
+                continue
+            if time.monotonic() >= deadline:
+                raise TimeoutError(f"timed out waiting for session registry lock: {lock_path}")
+            time.sleep(0.01)
+    try:
+        yield
+    finally:
+        with contextlib.suppress(OSError):
+            lock_path.rmdir()
 
 
 def read_session_pointer(*, target_root: Path) -> dict[str, str] | None:
@@ -365,6 +484,10 @@ def read_session_pointer(*, target_root: Path) -> dict[str, str] | None:
         payload = json.loads(pointer_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError):
         return None
+    return _validated_session(payload)
+
+
+def _validated_session(payload: Any) -> dict[str, str] | None:
     if not isinstance(payload, dict) or payload.get("kind") != SESSION_POINTER_KIND:
         return None
     session_id = str(payload.get("session_id", "")).strip()
@@ -409,6 +532,11 @@ def _session_prelude(*, state: SessionLoggingState, session: dict[str, str]) -> 
             "redaction": _path_redaction_payload(state),
             "failure_behavior": "Logging failures are warning-only and must not block ordinary AW operation, proof, or closeout claims.",
             "promotion_boundary": "Logs are dogfooding evidence only until explicitly promoted into checked-in Planning, Memory, docs, or proof receipts.",
+            "logical_session": {
+                "resolution": "identity-registry" if _logical_session_identity() else "legacy-default-bucket",
+                "identity_source": LOGICAL_SESSION_IDENTITY_ENV if _logical_session_identity() else "",
+                "raw_identity_stored": False,
+            },
         },
     }
     return "# Agentic Workspace Session Log\n\n```json\n" + json.dumps(serialise_value(snapshot), indent=2) + "\n```\n"
@@ -1310,7 +1438,7 @@ def _coverage_payload(*, markdown_entries: list[dict[str, Any]], index: dict[str
 
 
 def repair_session_log_index(*, state: SessionLoggingState, path: str = "", session_id: str = "") -> dict[str, Any]:
-    session = read_session_pointer(target_root=state.target_root)
+    session = _session_for_caller(target_root=state.target_root, logical_identity=_logical_session_identity())
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
     if log_path is None:
         return {"kind": "agentic-workspace/session-log-index-repair/v1", "status": "missing-log", "path": ""}
@@ -1386,7 +1514,7 @@ def _share_safe_value(*, state: SessionLoggingState, value: Any) -> Any:
 def export_session_log(
     *, state: SessionLoggingState, path: str = "", session_id: str = "", include_artifacts: bool = True
 ) -> dict[str, Any]:
-    session = read_session_pointer(target_root=state.target_root)
+    session = _session_for_caller(target_root=state.target_root, logical_identity=_logical_session_identity())
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
     if log_path is None:
         return {"kind": "agentic-workspace/session-log-export/v1", "status": "missing-log", "path": ""}
@@ -1496,7 +1624,7 @@ def _segment_summaries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def analyze_session_log(*, state: SessionLoggingState, path: str = "", session_id: str = "", segment_id: str = "") -> dict[str, Any]:
-    session = read_session_pointer(target_root=state.target_root)
+    session = _session_for_caller(target_root=state.target_root, logical_identity=_logical_session_identity())
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
     if log_path is None:
         return {
