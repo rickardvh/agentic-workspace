@@ -1,0 +1,402 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Scope session logs to portable logical sessions",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement #2157 so opaque logical-session identities resolve stable isolated log namespaces across A/B/A interleaving.",
+    "hard_constraints": "Keep identity host-neutral and local-only; never infer it from task, branch, PID, time, or vendor-specific fields; preserve identity-less and legacy-pointer compatibility plus explicit id/path selection.",
+    "agent_may_decide": "Choose the ignored registry schema, privacy-safe fingerprinting, atomic local locking, compatibility projection, and focused test fixtures within the session-logging owner.",
+    "escalate_when": "The implementation requires a new visible command, remote service, checked-in state, vendor-specific identity, or ownership outside session logging.",
+    "next_action": "Implement the ignored identity registry and resolution boundary in session_logging.py, then prove same identity, A/B/A isolation, concurrency, fallback, and legacy behavior.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_session_logging.py -q",
+      "make test-workspace",
+      "make lint-workspace"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/session_logging.py",
+      "tests/test_workspace_session_logging.py",
+      ".agentic-workspace/planning/execplans/session-log-logical-session-registry.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "completion_criteria": [
+      "Scope session logs to portable logical sessions is implemented, validated, and closed out honestly."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Give each optional opaque logical-session identity one stable local Markdown/index/artifact namespace, including A/B/A interleaving and concurrent resolution."
+  ],
+  "non_goals": [
+    "Do not infer identity from task, plan, branch, PID, terminal, timeout, or vendor-specific session concepts.",
+    "Do not add a remote service, authoritative workflow state, or replace segment metadata.",
+    "Do not change generated command surfaces; identity enters through a host-neutral optional environment boundary."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Stable isolated local log namespaces per opaque logical-session identity.",
+      "constraints": "Host-neutral, privacy-safe, ignored-local, atomic, backwards-compatible, and non-authoritative.",
+      "latitude": "Registry schema, salted fingerprint representation, lock implementation, status metadata, and focused tests.",
+      "escalation": "Escalate for new visible commands, remote state, vendor coupling, or cross-module ownership.",
+      "proof": "See proof_report.validation proof."
+    },
+    "execution": {
+      "milestone": "session-log-logical-session-registry",
+      "status": "completed",
+      "next_step": "Continue via tests/test_workspace_session_logging.py.",
+      "proof": "See proof_report.validation proof."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/session_logging.py",
+        "tests/test_workspace_session_logging.py",
+        ".agentic-workspace/planning/execplans/session-log-logical-session-registry.plan.json",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Create a bounded plan for Scope session logs to portable logical sessions.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "tests/test_workspace_session_logging.py"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "Continue via tests/test_workspace_session_logging.py."
+  },
+  "intent_interpretation": {
+    "literal request": "Scope session logs to portable logical sessions",
+    "inferred intended outcome": "Create a bounded plan for Scope session logs to portable logical sessions.",
+    "chosen concrete what": "One local Markdown/index/artifact namespace now maps stably to one opaque logical session, including interleaved and concurrent use, while identity-less and legacy callers retain a deterministic default bucket.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "session_logging.py, its focused tests, and this plan/state closeout only.",
+    "max changed files": "4",
+    "required validation commands": "uv run pytest tests/test_workspace_session_logging.py -q; make test-workspace; make lint-workspace",
+    "ask-before-refactor threshold": "Ask before changing CLI/contracts, config schema, other modules, or adding a visible workflow surface.",
+    "stop before touching": "Generated packages, remote integrations, vendor-specific adapters, or checked-in identity state."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Archived slice is complete; reopen only if closeout evidence is invalidated.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Scope session logs to portable logical sessions.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "closed-with-continuation-routed",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "session-log-logical-session-registry",
+    "status": "completed",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "No required continuation remains for this archived slice."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "closeout scope recorded in closure_check and generated_closeout."
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "See proof_report.validation proof."
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "A/B/A identity interleaving reuses A without cross-appends or extra files.",
+    "Concurrent first resolution of one identity converges on one session namespace.",
+    "Identity-less and legacy pointers retain deterministic documented behavior and manual rotation.",
+    "Raw logical identities never appear in pointer, registry mappings, Markdown, index, artifacts, status, analysis, or export.",
+    "Focused and full workspace proof pass and #2157 is linked for closure."
+  ],
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented a salted ignored-local identity registry with stable A/B/A mapping, atomic lock/pointer updates, default-bucket legacy migration, privacy-safe status metadata, and caller-scoped analyze/repair/export resolution.",
+    "scope touched": "Session logging runtime, focused session tests, and bounded Planning state.",
+    "changed surfaces": "src/agentic_workspace/session_logging.py; tests/test_workspace_session_logging.py; active execplan/state",
+    "validations run": "See proof_report.validation proof.",
+    "result for continuation": "none; #2157 is fully implemented and remains open only until PR merge",
+    "next step": "merge PR #2154 to close #2157"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope respected. Host-neutral environment input only; no vendor coupling, generated commands, remote state, or heuristic identity inference. Automated and real-checkout proof satisfy #2157.",
+    "proof status": "passed",
+    "intent served": "yes; the refined #2157 end state is satisfied",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "larger intent remains routed through the continuation owner"
+  },
+  "proof_report": {
+    "validation proof": "26 focused session-log tests; make test-workspace; make lint-workspace; make typecheck-workspace; planning summary and scoped planning doctor; real-checkout A/B/A dogfood reused A, isolated B, and found zero raw identity leaks",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+  },
+  "intent_satisfaction": {
+    "original intent": "Give each optional opaque logical-session identity one stable isolated local log namespace across interleaved and concurrent use.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "See proof_report.validation proof.",
+    "unsolved intent passed to": "none"
+  },
+  "execution_summary": {
+    "outcome delivered": "One local Markdown/index/artifact namespace now maps stably to one opaque logical session, including interleaved and concurrent use, while identity-less and legacy callers retain a deterministic default bucket.",
+    "validation confirmed": "See proof_report.validation proof.",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "none",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "durable_residue": {
+    "status": "contract",
+    "learned constraint": "Logical-session identity must stay opaque, salted, ignored-local, host-neutral, and stable across A/B/A interleaving.",
+    "motivation worth preserving": "Runtime code and focused tests now enforce the portable identity registry and privacy boundary.",
+    "canonical owner now": "src/agentic_workspace/session_logging.py and tests/test_workspace_session_logging.py",
+    "promotion trigger": "none; promoted during this slice",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "tests/test_workspace_session_logging.py",
+    "proposed durable intent": "Future agents should continue from tests/test_workspace_session_logging.py rather than rediscover this closeout residue.",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": "tests/test_workspace_session_logging.py"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "Focused, full-suite, concurrency, privacy, compatibility, and real-checkout A/B/A evidence satisfy the refined #2157 contract.",
+    "evidence carried forward": "See proof_report.validation proof.",
+    "reopen trigger": "Reopen if distinct supplied identities share a namespace, A/B/A creates a third file, raw identity leaks, or legacy/default resolution regresses."
+  },
+  "improvement_signal_review": {
+    "status": "signals_fixed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "One repository-wide pointer merged 210 commands, 20 segments, and 9 task values into one physical session file."
+    ],
+    "signals fixed": [
+      "#2157: stable identity registry, concurrency lock, default-bucket migration, and privacy-safe resolution"
+    ],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [],
+      "memory": [],
+      "config_check": [
+        {
+          "summary": "Opaque identity, A/B/A reuse, concurrency, privacy, default migration, and manual rotation are enforced in runtime code and focused tests.",
+          "owner": "src/agentic_workspace/session_logging.py and tests/test_workspace_session_logging.py",
+          "source": "durable_residue"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "cost_assessment": {
+    "workflow_cost_found": "Agents previously had to remember manual new-session rotation or analyze many logical sessions after they were merged into one file.",
+    "architecture_cost_found": "One repository-wide compatibility pointer was serving as both last-resolved projection and canonical session owner.",
+    "needless_complexity_found": "The fix keeps one existing environment boundary and local pointer while adding only an ignored registry and lock; no new command or task concept was added.",
+    "correct_by_design_assessment": "Supplying an opaque identity now constructs the correct namespace before logging; tests and dogfooding confirm rather than teach manual repair.",
+    "surfaces_added": "One optional host-neutral environment input and ignored local registry; status adds compact resolution metadata.",
+    "surfaces_removed_merged_or_demoted": "The global pointer is demoted from canonical owner to last-resolved compatibility projection.",
+    "artifact_footprint_changed": "Separate Markdown/index/artifact namespaces are created only for distinct supplied identities; one compact archived execplan records proof.",
+    "shipped_default_footprint_changed": "Identity-less callers retain the deterministic default bucket; no new command or remote surface is shipped.",
+    "signals_consumed": [
+      "#2157",
+      "observed 210-command mixed session file"
+    ],
+    "signals_still_accumulating": [],
+    "durable_residue_consumed_or_routed": "The host-neutral identity and privacy boundary is enforced by session_logging.py and focused tests.",
+    "human_steering_avoided_next_time": "Agents no longer need a human reminder to rotate files between integrations that supply stable logical identities.",
+    "validation_role": "Focused tests caught compatibility details; final full-suite and real-checkout dogfooding confirmed the constructed path.",
+    "follow_up_routed": "none",
+    "net_cost_direction": "lower"
+  },
+  "drift_log": [
+    "2026-07-10: Scaffolded by agentic-planning new-plan."
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "promote_to_docs_contracts_checks_code",
+    "target": "src/agentic_workspace/session_logging.py and tests/test_workspace_session_logging.py",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "The refined #2157 acceptance criteria are covered by focused, full-suite, and real-checkout proof."
+    },
+    "continuation": {
+      "owner_surface": "none",
+      "created_or_required": false,
+      "reason": "none"
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Give each opaque logical-session identity one stable isolated local log namespace.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: 26 focused session-log tests; make test-workspace; make lint-workspace; make typecheck-workspace; planning summary and scoped planning doctor; real-checkout A/B/A dogfood reused A, isolated B, and found zero raw identity leaks\nChanged surfaces: src/agentic_workspace/session_logging.py; tests/test_workspace_session_logging.py; archived execplan\nDurable residue: contract (runtime code and focused tests)\nMemory learning: promote_to_docs_contracts_checks_code\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
+}
