@@ -648,7 +648,7 @@ function planningNewPlanResult(values, operationId) {
   const queue = values.queue === true;
   const switchActive = values.switch_active === true;
   const prepOnly = values.prep_only === true;
-  const lane = String(values.lane ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const lane = String(values.owner_lane ?? values.lane ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const expectedRevision = String(values.expect_planning_revision ?? '').trim();
   const cliInvoke = String(workspaceConfig({ target: result.target_root }).workspace?.cli_invoke ?? 'agentic-workspace');
   if (expectedRevision) {
@@ -725,12 +725,18 @@ function planningNewPlanResult(values, operationId) {
     return finalizeMutationOutcome(result);
   }
   const templatePath = join(resourceRoot('_payload'), '.agentic-workspace/planning/execplans/TEMPLATE.plan.json');
-  if (!existsSync(templatePath)) {
-    result.actions = [{ kind: 'failed', path: owner, detail: 'packaged execplan template is unavailable' }];
-    result.reason_code = 'template-unavailable';
-    return finalizeMutationOutcome(result);
-  }
-  const plan = readJson(templatePath);
+  const plan = existsSync(templatePath) ? readJson(templatePath) : {
+    kind: 'planning-execplan/v1',
+    title: '',
+    canonical_core: { requested_outcome: '', hard_constraints: '', agent_may_decide: '', escalate_when: '', next_action: '', proof_expectations: [], touched_scope: [], completion_criteria: [], continuation_owner: '', closeout_decision: '' },
+    goal: [''],
+    non_goals: [''],
+    active_milestone: { id: '', status: '', scope: '' },
+    validation_commands: [''],
+    completion_criteria: [''],
+    machine_readable_contract: {},
+    execution_run: {},
+  };
   plan.title = title;
   plan.canonical_core.requested_outcome = source || `Create a bounded plan for ${title}.`;
   plan.canonical_core.next_action = 'Fill in execution bounds, touched paths, and validation before implementation starts.';
@@ -1145,7 +1151,10 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
 
 function executeTypescriptDomainOperation(operationId, values) {
   const target = resolve(String(values.target ?? '.'));
-  if (operationId === 'planning.front-door') return { kind: 'agentic-workspace/planning-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
+  if (operationId === 'planning.front-door') {
+    if (values.planning_command === 'new-plan') return planningNewPlanResult(values, 'planning.new-plan.lifecycle');
+    return { kind: 'agentic-workspace/planning-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
+  }
   if (operationId === 'memory.front-door') return { kind: 'agentic-workspace/memory-help/v1', command: values._command_path?.join(' ') ?? operationId, target };
   if (operationId === 'modules.report') {
     const availableSections = ['advanced_features', 'component_model', 'modules', 'package_footprint', 'participation_model', 'terminology', 'workspace_components'];
