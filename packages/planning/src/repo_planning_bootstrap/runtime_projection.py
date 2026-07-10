@@ -115,6 +115,7 @@ def apply_planning_new_plan_operation(values: dict, _arguments: dict, _context):
             ("activate", "activate", "bool", None),
             ("queue", "queue", "bool", None),
             ("switch_active", "switch_active", "bool", None),
+            ("lane", "lane", "str", ""),
             ("prep_only", "prep_only", "bool", None),
             ("overwrite", "overwrite", "bool", None),
             ("expected_planning_revision", "expect_planning_revision", "str", ""),

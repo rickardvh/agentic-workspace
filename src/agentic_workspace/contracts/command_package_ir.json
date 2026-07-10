@@ -9789,6 +9789,14 @@
                 "help": "When used with --activate, demote existing active items into the queue before registering the new active plan."
               },
               {
+                "name": "lane",
+                "flags": [
+                  "--lane"
+                ],
+                "default": "",
+                "help": "Explicit active lane that owns this plan; requires --activate."
+              },
+              {
                 "name": "prep_only",
                 "flags": [
                   "--prep-only"

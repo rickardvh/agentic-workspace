@@ -25,7 +25,7 @@
     {
       "id": "issue-2162-pre-study-runtime",
       "title": "#2162 bounded pre-study runtime and planning-shape route",
-      "status": "active",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2162-pre-study-implementation.plan.json",
       "depends_on": [],
       "purpose_for_lane": "Separate custody from shape, add bounded study/skip/ambiguity states, and route lane evidence before shape-specific mutation."
@@ -33,7 +33,7 @@
     {
       "id": "issue-2163-study-cost-evidence",
       "title": "#2163 comparative activation and completion-cost evidence",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2162-pre-study-implementation.plan.json",
       "depends_on": [
         "issue-2162-pre-study-runtime"
@@ -43,7 +43,7 @@
     {
       "id": "issue-2164-study-continuation",
       "title": "#2164 disposable study continuation and Planning seed state",
-      "status": "planned",
+      "status": "completed",
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2162-pre-study-implementation.plan.json",
       "depends_on": [
         "issue-2162-pre-study-runtime"
@@ -55,22 +55,21 @@
   "acceptance_boundary": "The lane is complete only when #2162, #2163, and #2164 acceptance criteria are implemented and demonstrated, including zero-study, unknown-to-lane, ambiguous/escalation, stale binding, Planning consumption, mixed-agent continuation, and comparative cost evidence.",
   "proof_strategy": "Use changed-path proof selection, focused startup/next-safe-action/external-intent/Planning/continuation tests, #2143 unknown-to-lane replay, three-class comparative dogfooding evidence, compact-output checks, full workspace test and lint lanes, and closeout intent/dogfooding review.",
   "proof_aggregation": {
-    "status": "partial",
+    "status": "satisfied",
     "evidence": [
-      "make test-workspace; make lint-workspace; make typecheck; 330 focused CLI tests; 179 workspace CLI tests; #2143 unknown-to-lane replay; comparative cost report; planning/runtime mirror checks"
+      "make test-workspace; make lint-workspace; make typecheck; 330 focused CLI tests; 179 workspace CLI tests; #2143 unknown-to-lane replay; comparative cost report; planning/runtime mirror checks",
+      "#2165 follow-up: explicit --lane ownership binding for active new-plan attachment, unrelated-plan negative regression, Planning package test/lint/typecheck, generated command package freshness, planning summary, and planning doctor."
     ],
-    "known_gaps": [
-      "Command-owned lane activation should attach the active execplan automatically; tracked in #2165."
-    ]
+    "known_gaps": []
   },
-  "residual_lane_work": "Command-owned lane activation should attach the active execplan automatically; tracked in #2165.",
+  "residual_lane_work": "none",
   "lane_to_epic_contribution": "Completes #2162 and child slices #2163/#2164 with runtime, continuation, cost-evidence, guidance, and proof coverage.",
   "parent_close_permission": "may-close-parent",
   "closeout_state": {
-    "status": "blocked",
+    "status": "closed",
     "summary": "Completes #2162 and child slices #2163/#2164 with runtime, continuation, cost-evidence, guidance, and proof coverage.",
-    "residual_work": "Command-owned lane activation should attach the active execplan automatically; tracked in #2165.",
-    "next_owner": "GitHub #2165 for isolated lifecycle friction"
+    "residual_work": "none",
+    "next_owner": "none"
   },
   "references": [
     {
@@ -96,53 +95,64 @@
       "target": "#2143",
       "label": "Unknown-to-lane dogfooding replay",
       "role": "proof"
+    },
+    {
+      "kind": "github-issue",
+      "target": "#2165",
+      "label": "Relationship-safe lane and execplan linkage",
+      "role": "follow-up"
     }
   ],
   "notes": "The child issues explicitly name both #2162 and #1969; this lane owns their pre-study outcome while reusing existing state-delta and continuation concepts from #1969 rather than duplicating them.",
   "completion_gate": {
     "kind": "agentic-workspace/completion-gate/v1",
-    "status": "continue-required",
-    "active_intent_satisfied": false,
+    "status": "allowed",
+    "active_intent_satisfied": true,
     "human_accepted_partial": false,
     "claim_level_requested": "lane-complete",
-    "claim_level_allowed": "partial-progress",
-    "required_next_action": "create-follow-on-plan",
+    "claim_level_allowed": "lane-complete",
+    "required_next_action": "none",
     "claim_authorization": {
       "kind": "agentic-workspace/claim-authorization/v1",
       "allowed_claim_classes": [
         "partial_progress",
-        "slice_complete"
-      ],
-      "blocked_claim_classes": [
+        "slice_complete",
         "lane_complete",
         "parent_complete",
         "full_intent_complete",
         "issue_closure"
       ],
+      "blocked_claim_classes": [],
       "closure_actions": [
         {
           "kind": "issue_closure",
           "target": "#2143",
           "authorized": false,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+          "reason": "#2143 is proof context, not an issue owned by this lane"
         },
         {
           "kind": "issue_closure",
           "target": "#2162",
-          "authorized": false,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+          "authorized": true,
+          "reason": "#2162 lane and all child/follow-up acceptance are satisfied with recorded proof"
         },
         {
           "kind": "issue_closure",
           "target": "#2163",
-          "authorized": false,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+          "authorized": true,
+          "reason": "#2163 comparative activation-cost evidence is satisfied"
         },
         {
           "kind": "issue_closure",
           "target": "#2164",
-          "authorized": false,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+          "authorized": true,
+          "reason": "#2164 continuation and Planning seed behavior is satisfied"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2165",
+          "authorized": true,
+          "reason": "new-plan attachment now requires explicit lane ownership and unrelated plans remain unattached"
         }
       ],
       "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
@@ -153,25 +163,21 @@
           "complete",
           "finished",
           "all",
-          "full intent complete",
-          "Closes #2143",
-          "Closes #2162",
-          "Closes #2163",
-          "Closes #2164"
+          "full intent complete"
         ],
         "diagnostic_only": true
       }
     },
-    "residual_intent": "GitHub #2165 for isolated lifecycle friction",
+    "residual_intent": "none",
     "self_review": {
       "question": "Does the delivered work satisfy the active human intent?",
-      "answer": "no",
-      "reason": "GitHub #2165 for isolated lifecycle friction"
+      "answer": "yes",
+      "reason": "The pre-study lane and relationship-safe Planning lifecycle follow-up are implemented and proven."
     },
     "continuation": {
-      "owner_surface": "GitHub #2165 for isolated lifecycle friction",
-      "created_or_required": true,
-      "reason": "GitHub #2165 for isolated lifecycle friction"
+      "owner_surface": "none",
+      "created_or_required": false,
+      "reason": "No residual lane intent remains."
     },
     "authority_boundary": {
       "aw_owns": [

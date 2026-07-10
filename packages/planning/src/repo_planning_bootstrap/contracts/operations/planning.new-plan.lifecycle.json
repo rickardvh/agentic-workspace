@@ -45,6 +45,11 @@
       "required": false
     },
     {
+      "name": "lane",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "prep_only",
       "source": "cli-option",
       "required": false

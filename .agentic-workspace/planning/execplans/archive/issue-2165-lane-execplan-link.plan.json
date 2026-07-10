@@ -27,10 +27,10 @@
   },
   "canonical_core": {
     "requested_outcome": "Follow-up #2165 in PR #2166",
-    "hard_constraints": "Attach only when exactly one roadmap lane is active; never guess across ambiguous lanes or replace a different existing execplan link.",
+    "hard_constraints": "Attach only when --lane explicitly identifies the owning active roadmap lane; never infer ownership from lane count or replace a different existing execplan link.",
     "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Validate new-plan attachment for an already-active lane and ambiguous multi-lane safety.",
+    "next_action": "Validate explicit new-plan lane binding and unrelated-plan non-attachment.",
     "proof_expectations": [
       "make test-planning and make lint-planning",
       "focused packages/planning/tests/test_lanes.py regression"
@@ -50,7 +50,7 @@
   ],
   "non_goals": [
     "Do not collapse lane ownership into execplans or require ready lanes to have an execplan.",
-    "Do not infer a lane when zero or multiple active lanes exist."
+    "Do not infer a lane from the number of active lanes."
   ],
   "machine_readable_contract": {
     "intent": {
@@ -181,18 +181,18 @@
     "None."
   ],
   "completion_criteria": [
-    "Creating an active execplan after lane activation attaches it to the single active lane.",
-    "Multiple active lanes are left untouched rather than guessed.",
+    "Creating an active execplan with --lane attaches it only to that explicitly named active lane.",
+    "An unrelated plan remains unattached even when exactly one lane is active.",
     "Planning summary remains clean and routed proof passes."
   ],
   "execution_run": {
     "run status": "completed",
     "executor": "agentic-planning closeout",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "Made active new-plan creation attach its execplan to the single already-active roadmap lane and refuse to guess when multiple lanes are active.",
-    "scope touched": "Planning execplan creation lifecycle and package-local lane tests; required payload target sync.",
-    "changed surfaces": "planning installer, planning lane tests, payload provenance and managed payload newline normalization",
-    "validations run": "make test-planning; make lint-planning; make test-workspace; make lint-workspace; make typecheck-planning; focused test_lanes 11 passed",
+    "what happened": "Made active new-plan creation require an explicit --lane ownership binding; unrelated plans remain unattached even when one lane is active, with an exact relationship-gated link command returned.",
+    "scope touched": "Planning execplan creation lifecycle, operation/command contracts and generated adapters, package-local lane tests, and retained lane closeout evidence.",
+    "changed surfaces": "planning installer and runtime projection, planning operation contract, command package IR and generated targets, planning lane tests, and archived lane/execplan evidence",
+    "validations run": "make test-planning; make lint-planning; make typecheck-planning; generated command package freshness/static proof; focused test_lanes 12 passed; planning summary clean; planning doctor selected-module healthy",
     "result for continuation": "bounded closeout complete",
     "next step": "archive this execplan"
   },
@@ -297,7 +297,8 @@
     }
   },
   "drift_log": [
-    "2026-07-10: Scaffolded by agentic-planning new-plan."
+    "2026-07-10: Scaffolded by agentic-planning new-plan.",
+    "2026-07-10: PR review correction replaced single-active-lane inference with explicit --lane ownership binding and added the unrelated-plan regression."
   ],
   "memory_learning_capture": {
     "status": "reviewed",
