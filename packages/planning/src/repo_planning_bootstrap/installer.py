@@ -14801,6 +14801,13 @@ def archive_execplan(
         if archive_retention_skipped or apply_cleanup:
             if closeout_evidence_retention_skipped:
                 result.add("retained closeout evidence skipped", closeout_evidence_path, "closeout evidence exceeded size guardrail")
+                _write_last_closeout_context(
+                    target_root=target_root,
+                    plan_path=plan_path,
+                    evidence_path=None,
+                    plan_id=plan_path.name[: -len(".plan.json")] if plan_path.name.endswith(".plan.json") else plan_path.stem,
+                    status="no-retained-evidence",
+                )
             else:
                 result.add("retained closeout evidence", closeout_evidence_path, "compact closeout evidence for report surfaces")
                 _write_last_closeout_context(
@@ -14903,7 +14910,9 @@ def _write_closeout_evidence_record(*, record_path: Path, record: dict[str, Any]
     _write_schema_backed_planning_record(record_path=record_path, record=record, schema_path=CLOSEOUT_EVIDENCE_SCHEMA_PATH)
 
 
-def _write_last_closeout_context(*, target_root: Path, plan_path: Path, evidence_path: Path, plan_id: str) -> None:
+def _write_last_closeout_context(
+    *, target_root: Path, plan_path: Path, evidence_path: Path | None, plan_id: str, status: str = "evidence-retained"
+) -> None:
     """Retain command-owned identity across terminal Planning mutations.
 
     This cursor is deliberately local operational context, not durable planning
@@ -14915,9 +14924,10 @@ def _write_last_closeout_context(*, target_root: Path, plan_path: Path, evidence
         json.dumps(
             {
                 "kind": "planning-last-closeout-context/v1",
+                "status": status,
                 "plan_id": plan_id,
                 "source_plan": plan_path.relative_to(target_root).as_posix(),
-                "evidence_path": evidence_path.relative_to(target_root).as_posix(),
+                "evidence_path": evidence_path.relative_to(target_root).as_posix() if evidence_path is not None else "",
                 "recorded_at": datetime.now(timezone.utc).isoformat(),
                 "authority": "planning-terminal-command",
             },

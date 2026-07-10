@@ -719,6 +719,19 @@ def test_closeout_trust_prefers_relevant_closeout_evidence_over_newer_unrelated_
     )
     os.utime(relevant_path, (1000, 1000))
     os.utime(unrelated_path, (2000, 2000))
+    _write(
+        target / ".agentic-workspace/local/planning-last-closeout.json",
+        json.dumps(
+            {
+                "kind": "planning-last-closeout-context/v1",
+                "status": "evidence-retained",
+                "plan_id": "unrelated",
+                "evidence_path": ".agentic-workspace/planning/closeout-evidence/unrelated.closeout.json",
+                "authority": "planning-terminal-command",
+            }
+        ),
+        encoding="utf-8",
+    )
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--task", "#1891", "--format", "json"]) == 0
 
@@ -849,6 +862,68 @@ def test_closeout_trust_uses_terminal_command_context_after_active_state_is_remo
     assert answer["terminal_action"]["blocking"] is False
 
 
+@pytest.mark.parametrize("independent_gate", ["acceptance", "intent"])
+def test_closeout_trust_preserves_independent_lower_trust_gates_with_relevant_retained_evidence(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch, independent_gate: str
+) -> None:
+    from agentic_workspace import workspace_runtime_core as runtime_module
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    plan_id = "current-plan"
+    evidence_path = f".agentic-workspace/planning/closeout-evidence/{plan_id}.closeout.json"
+    _write(
+        target / evidence_path,
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "plan_id": plan_id,
+                "proof_report": {"validation proof": "passed", "proof achieved now": "yes"},
+                "closure_check": {
+                    "slice status": "completed",
+                    "larger-intent status": "closed",
+                    "closure decision": "archive-and-close",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write(
+        target / ".agentic-workspace/local/planning-last-closeout.json",
+        json.dumps(
+            {
+                "kind": "planning-last-closeout-context/v1",
+                "status": "evidence-retained",
+                "plan_id": plan_id,
+                "evidence_path": evidence_path,
+                "authority": "planning-terminal-command",
+            }
+        ),
+        encoding="utf-8",
+    )
+    if independent_gate == "acceptance":
+        monkeypatch.setattr(
+            runtime_module,
+            "_acceptance_criteria_reconciliation_payload",
+            lambda **_: {"status": "needs-review", "trust": "lower-trust"},
+        )
+    else:
+        monkeypatch.setattr(
+            runtime_module,
+            "_intent_satisfaction_check_payload",
+            lambda **_: {"status": "follow-up-required", "trust": "follow-up-required"},
+        )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    assert answer["archived_slice_closeout_evidence"]["trust"] == "normal"
+    assert answer["trust"] == "lower-trust"
+    assert answer["terminal_action"]["blocking"] is True
+
+
 def test_closeout_trust_reports_bounded_ambiguity_for_multiple_task_matches(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -887,6 +962,19 @@ def test_closeout_trust_does_not_turn_unrelated_history_into_a_blocker(tmp_path:
         json.dumps({"kind": "planning-closeout-evidence/v1", "plan_id": "unrelated", "proof_report": {}}),
         encoding="utf-8",
     )
+    _write(
+        target / ".agentic-workspace/local/planning-last-closeout.json",
+        json.dumps(
+            {
+                "kind": "planning-last-closeout-context/v1",
+                "status": "no-retained-evidence",
+                "plan_id": "current-without-evidence",
+                "evidence_path": "",
+                "authority": "planning-terminal-command",
+            }
+        ),
+        encoding="utf-8",
+    )
 
     assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
     answer = json.loads(capsys.readouterr().out)["answer"]
@@ -894,6 +982,7 @@ def test_closeout_trust_does_not_turn_unrelated_history_into_a_blocker(tmp_path:
     assert resolution["status"] == "no-relevant-evidence"
     assert resolution["trust"] == "not-applicable"
     assert resolution["candidates"] == []
+    assert resolution["selected_plan_id"] == "current-without-evidence"
     assert answer["trust"] == "normal"
     assert answer["terminal_action"]["blocking"] is False
     assert answer["completion_gate"]["continuation"]["created_or_required"] is False

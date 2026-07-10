@@ -21273,12 +21273,11 @@ def _report_closeout_trust_payload(
         if retained_evidence_controls
         else lower_trust_closeout_count + len(package_absence_signals)
     )
-    if not retained_evidence_controls and acceptance_reconciliation.get("trust") == "lower-trust":
+    if acceptance_reconciliation.get("trust") == "lower-trust":
         effective_lower_trust_count += 1
     intent_satisfaction_trust = str(intent_satisfaction_check.get("trust", ""))
     intent_satisfaction_lower_trust_count = 1 if intent_satisfaction_trust in {"follow-up-required", "needs-review"} else 0
-    if not retained_evidence_controls:
-        effective_lower_trust_count += intent_satisfaction_lower_trust_count
+    effective_lower_trust_count += intent_satisfaction_lower_trust_count
     intent_satisfaction_signals: list[str] = []
     if intent_satisfaction_lower_trust_count:
         continuation_surface = str(intent_satisfaction_check.get("continuation_surface", "")).strip()
@@ -22620,9 +22619,20 @@ def _closeout_planning_record_for_report(
         return {}
     target_resolved = target_root.resolve()
     context_path = target_root / ".agentic-workspace" / "local" / "planning-last-closeout.json"
-    if context_path.is_file():
+    if context_path.is_file() and not str(task_text or "").strip():
         try:
             context = json.loads(context_path.read_text(encoding="utf-8-sig"))
+            if context.get("status") == "no-retained-evidence":
+                return {
+                    "_closeout_evidence_resolution": {
+                        "status": "no-relevant-evidence",
+                        "trust": "not-applicable",
+                        "selected_plan_id": str(context.get("plan_id") or ""),
+                        "candidates": [],
+                        "recovery_command": 'agentic-workspace report --target ./repo --section closeout_trust --task "<task, plan, or lane id>" --format json',
+                        "rule": "The latest terminal Planning command produced no retained evidence; an older cursor cannot control closeout trust.",
+                    }
+                }
             selected = (target_root / str(context.get("evidence_path") or "")).resolve()
             selected.relative_to(target_resolved)
             payload = json.loads(selected.read_text(encoding="utf-8-sig"))

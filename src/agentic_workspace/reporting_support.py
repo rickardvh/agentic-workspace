@@ -1635,6 +1635,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "closure_decision",
                     "parent_intent_status",
                     "parent_closure_blocked",
+                    "selected_plan_id",
                     "candidates",
                     "recovery_command",
                     "rule",
