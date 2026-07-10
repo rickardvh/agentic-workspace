@@ -649,7 +649,7 @@ def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_p
                 "id": f"pytest-{position}",
                 "command": "summry --target ." if position < 15 else "modules --verbose --target .",
                 "origin": {"classification": "pytest", "source": "PYTEST_CURRENT_TEST", "detail": ""},
-                "parent": {"entry_id": "fixture-owner", "command": "pytest", "context": "test_session_fixture"},
+                "parent_context": {"entry_id": "fixture-owner", "command": "pytest", "context": "test_session_fixture"},
                 "exit_status": 2 if position < 15 else 0,
                 "output_bytes": 200,
                 "output_digest": f"pytest-digest-{position}",
@@ -674,9 +674,32 @@ def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_p
     test_scope = session_logging.analyze_session_log(state=state, origin_scope="test")
     assert test_scope["summary"]["command_count"] == 35
     assert test_scope["summary"]["failure_count"] == 15
+    assert any("summry" in item["summary"] for item in test_scope["friction_candidates"])
     all_scope = session_logging.analyze_session_log(state=state, origin_scope="all")
     assert all_scope["summary"]["command_count"] == 103
     assert all_scope["summary"]["failure_count"] == 15
+    assert any("summry" in item["summary"] for item in all_scope["friction_candidates"])
+    assert not any("summry" in item["summary"] for item in default["friction_candidates"])
+
+
+def test_session_log_projects_parent_context_written_by_logger(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_PARENT_ENTRY_ID", "parent-entry")
+    monkeypatch.setenv("AW_SESSION_LOG_PARENT_COMMAND", "pytest parent_test.py")
+    monkeypatch.setenv("AW_SESSION_LOG_PARENT_CONTEXT", "fixture-parent")
+    assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+    capsys.readouterr()
+
+    payload = session_logging.analyze_session_log(
+        state=session_logging.load_state_for_argv(["--target", str(target)]), origin_scope="synthetic"
+    )
+
+    assert payload["origin_partitions"]["synthetic"]["entries"][0]["parent"] == {
+        "entry_id": "parent-entry",
+        "command": "pytest parent_test.py",
+        "context": "fixture-parent",
+    }
 
 
 def test_session_log_origin_scopes_keep_synthetic_and_unknown_queryable(tmp_path: Path, capsys, monkeypatch) -> None:

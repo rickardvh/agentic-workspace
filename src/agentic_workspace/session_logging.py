@@ -1325,6 +1325,7 @@ def _json_markdown_metadata(text: str, label: str) -> dict[str, Any]:
 
 def _entry_brief(entry: dict[str, Any]) -> dict[str, Any]:
     artifact = entry.get("artifact") if isinstance(entry.get("artifact"), dict) else {}
+    parent = entry.get("parent_context") if isinstance(entry.get("parent_context"), dict) else entry.get("parent", {})
     return {
         "id": entry.get("id", ""),
         "timestamp": entry.get("timestamp", ""),
@@ -1334,7 +1335,7 @@ def _entry_brief(entry: dict[str, Any]) -> dict[str, Any]:
         "failure_class": entry.get("failure_class", ""),
         "expected_failure": bool(entry.get("expected_failure", False)),
         "origin": entry.get("origin", {}),
-        "parent": entry.get("parent", {}),
+        "parent": parent,
         "segment_id": entry.get("segment", {}).get("id", "") if isinstance(entry.get("segment"), dict) else "",
         "output_bytes": entry.get("output_bytes", 0),
         "artifact_path": artifact.get("path", "") if isinstance(artifact, dict) else "",
@@ -1736,7 +1737,7 @@ def analyze_session_log(
     product_digests = Counter(str(entry.get("output_digest", "")) for entry in product_entries if entry.get("output_digest"))
     friction_candidates = _friction_candidates(
         entries=product_entries,
-        failures=[entry for entry in live_failures if not _is_session_log_analyzer_entry(entry)],
+        failures=[entry for entry in (live_failures if origin_scope == "agent" else failures) if not _is_session_log_analyzer_entry(entry)],
         repeated=[{"command": command, "count": count} for command, count in product_commands.most_common() if count > 1],
         duplicates=[{"sha256": digest, "count": count} for digest, count in product_digests.most_common() if count > 1],
         index_present=index is not None,
