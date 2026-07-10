@@ -1506,6 +1506,87 @@ def test_planning_closeout_consumes_last_proof_receipt(tmp_path: Path, capsys) -
     assert receipt["changed_paths"] == ["packages/planning/tests/test_archive.py"]
 
 
+def test_planning_closeout_consumes_receipt_scoped_to_canonical_plan_path(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    plan_relative_path = ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    receipt_path = tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
+    _write(
+        receipt_path,
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "command": "uv run pytest packages/planning/tests/test_archive.py::test_receipt -q",
+                "result": "passed",
+                "recorded_at": "2026-07-10T10:00:00+00:00",
+                "changed_paths": [plan_relative_path],
+            },
+            indent=2,
+        )
+        + "\n",
+    )
+    record_path = tmp_path / plan_relative_path
+    _write_execplan_record(record_path, status="active")
+
+    assert (
+        planning_cli.main(
+            [
+                "closeout",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--what-happened",
+                "validated and closed the plan record itself.",
+                "--scope-touched",
+                "packages/planning/tests/test_archive.py",
+                "--changed-surfaces",
+                "packages/planning/tests/test_archive.py",
+                "--review-summary",
+                "yes; the receipt is bound to the canonical active plan path.",
+                "--outcome-summary",
+                "plan-path-scoped proof receipts support closeout.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    archived = json.loads((tmp_path / ".agentic-workspace/planning/execplans/archive/plan-alpha.plan.json").read_text(encoding="utf-8"))
+
+    assert payload["warnings"] == []
+    assert archived["execution_run"]["validations run"].endswith("::test_receipt -q")
+    assert json.loads(archived["proof_report"]["proof receipt"])["changed_paths"] == [plan_relative_path]
+
+
+def test_planning_closeout_names_receipt_scope_keys_when_paths_do_not_overlap(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    receipt_path = tmp_path / ".agentic-workspace/local/proof-receipts/last.json"
+    _write(
+        receipt_path,
+        json.dumps(
+            {
+                "command": "uv run pytest tests/test_unrelated.py -q",
+                "result": "passed",
+                "changed_paths": ["tests/test_unrelated.py"],
+            }
+        ),
+    )
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    record["execution_run"]["changed surfaces"] = "packages/planning/tests/test_archive.py"
+    installer_mod._write_execplan_record(record_path=record_path, record=record)
+
+    assert planning_cli.main(["closeout", "plan-alpha", "--target", str(tmp_path), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    warning = next(item for item in payload["warnings"] if item["warning_class"] == "closeout_receipt_unusable")
+
+    assert "plan_id 'plan-alpha'" in warning["message"]
+    assert ".agentic-workspace/planning/execplans/plan-alpha.plan.json" in warning["message"]
+    assert "overlap the closeout plan scope" in warning["message"]
+    assert record_path.exists()
+
+
 def test_planning_closeout_preserves_existing_last_proof(tmp_path: Path, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "plan-alpha.plan.json"

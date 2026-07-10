@@ -13186,7 +13186,9 @@ def _record_scope_paths(record: dict[str, Any]) -> set[str]:
     return paths
 
 
-def _load_last_proof_receipt(*, target_root: Path, record: dict[str, Any], plan: str) -> tuple[dict[str, Any] | None, str]:
+def _load_last_proof_receipt(
+    *, target_root: Path, record: dict[str, Any], plan: str, record_path: Path
+) -> tuple[dict[str, Any] | None, str]:
     receipt_path = target_root / PLANNING_PROOF_RECEIPT_PATH
     if not receipt_path.is_file():
         return None, "receipt file is absent"
@@ -13208,9 +13210,15 @@ def _load_last_proof_receipt(*, target_root: Path, record: dict[str, Any], plan:
     raw_receipt_paths = receipt.get("changed_paths", [])
     receipt_path_values = raw_receipt_paths if isinstance(raw_receipt_paths, list) else [raw_receipt_paths]
     receipt_paths = {_normalize_receipt_path(path) for path in receipt_path_values if _normalize_receipt_path(path)}
+    plan_record_path = record_path.relative_to(target_root).as_posix()
+    if _normalize_receipt_path(plan_record_path) in receipt_paths:
+        return receipt, ""
     record_paths = _record_scope_paths(record)
     if receipt_paths and record_paths and receipt_paths.isdisjoint(record_paths):
-        return None, "receipt changed paths do not overlap the closeout plan scope"
+        return None, (
+            "receipt changed paths must include "
+            f"plan_id {plan!r}, canonical plan path {plan_record_path!r}, or overlap the closeout plan scope"
+        )
     if receipt_paths or record_paths:
         return receipt, ""
     return None, "receipt has neither matching plan_id nor changed-path scope"
@@ -13425,7 +13433,7 @@ def closeout_execplan(
         proof = existing_proof
         proof_source = "existing"
     else:
-        receipt, receipt_reason = _load_last_proof_receipt(target_root=target_root, record=record, plan=plan)
+        receipt, receipt_reason = _load_last_proof_receipt(target_root=target_root, record=record, plan=plan, record_path=record_path)
         if receipt is not None:
             proof = str(receipt.get("command", receipt.get("validation_command", ""))).strip()
             proof_source = "receipt"
