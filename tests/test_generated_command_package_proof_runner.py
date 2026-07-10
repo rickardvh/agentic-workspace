@@ -362,6 +362,25 @@ def test_full_python_completion_rejects_wrong_operation_function_call_metadata()
     assert any("must declare operation_ids" in error for error in errors)
 
 
+def test_full_python_completion_proves_generated_runtime_handler_command_boundary() -> None:
+    checker = _load_checker()
+
+    bindings = checker._generated_runtime_facade_package_runtime_bindings()
+    session_log_binding = next(
+        binding for binding in bindings if binding["facade_path"] == "generated/workspace/python/commands/session_log_manage.py"
+    )
+
+    assert session_log_binding == {
+        "facade_path": "generated/workspace/python/commands/session_log_manage.py",
+        "facade_symbol": "run",
+        "source_module": "agentic_workspace.session_logging",
+        "source_symbol": "_run_session_log_adapter",
+        "operation_ids": ["session-log.manage"],
+        "primitive_refs": ["runtime_module_handler:session-log.manage"],
+    }
+    assert checker._validate_python_completion_accepted_runtime_boundaries()[0] == []
+
+
 def test_full_python_completion_rejects_weak_runtime_boundary_minimization_metadata() -> None:
     errors = _checker_case_errors(
         """
