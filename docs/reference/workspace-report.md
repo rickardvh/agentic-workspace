@@ -77,6 +77,29 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `installed_state_compatibility.action_state.rule` | string | no |  | Policy rule for applying this action state. |  |  |
 | `installed_state_compatibility.payload_surface_manifest` | object | no |  | Current payload surface contract used to classify installed-state upgrade work. |  |  |
 | `installed_state_compatibility.payload_upgrade_attention_plan` | object | no |  | Structured current-state convergence plan for payload upgrade attention items. |  |  |
+| `installed_state_compatibility.payload_repair_subflow` | ref `#/$defs/payload_repair_subflow` | yes |  | Explicit dry-run, apply, and recheck route for installed payload repair. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.kind` | const `"agentic-workspace/payload-repair-subflow/v1"` | yes |  | Discriminator identifying the payload-repair subflow. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.status` | enum `"not-required"`, `"safe-explicit-apply"`, `"manual-review"`, `"blocked"`, `"review"` | yes |  | Current payload-repair route classification. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.source_status` | enum `"compatible"`, `"upgrade-recommended"`, `"payload-upgrade-required"`, `"blocking-drift"` | yes |  | Installed-state compatibility status that produced this subflow. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.repair_mechanism` | string | yes |  | Package-owned repair mechanism selected for the current state. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.safe_explicit_apply` | boolean | yes |  | Whether an explicit reviewed apply step is safe. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.manual_review_required` | boolean | yes |  | Whether payload attention items require manual review. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.start_mutates` | const `false` | yes |  | Startup and report surfaces never apply payload repair implicitly. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.next_action` | string | yes |  | Decision-first next action for the repair subflow. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.steps` | array of object | yes |  | Ordered dry-run, apply, and recheck steps. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.reportable_commands` | ref `#/$defs/payload_repair_commands` | yes |  | Repo-relative commands exposed in human-facing reports. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.reportable_commands.dry_run` | string | yes |  | Payload repair preview command. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.reportable_commands.apply` | string | yes |  | Explicit payload repair apply command. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.reportable_commands.recheck` | string | yes |  | Post-repair compatibility recheck command. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.machine_commands` | ref `#/$defs/payload_repair_commands` | yes |  | Configured commands used by machine execution. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.machine_commands.dry_run` | string | yes |  | Payload repair preview command. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.machine_commands.apply` | string | yes |  | Explicit payload repair apply command. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.machine_commands.recheck` | string | yes |  | Post-repair compatibility recheck command. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.attention_item_count` | integer | yes |  | Number of payload attention items in the current plan. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.category_counts` | object | yes |  | Payload attention item counts by category. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.category_counts.<name>` | integer | no |  | Count for one payload attention category. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.detail_selector` | const `"installed_state_compatibility.payload_repair_subflow"` | yes |  | Selector for the full payload-repair subflow. |  |  |
+| `installed_state_compatibility.payload_repair_subflow.rule` | string | yes |  | Safety and command-rendering boundary for payload repair. |  |  |
 | `installed_state_compatibility.executable` | object | yes |  | Executable identity and compatibility classification. |  |  |
 | `installed_state_compatibility.payload` | object | yes |  | Installed repo payload compatibility and sync guidance. |  |  |
 | `installed_state_compatibility.generated_artifacts` | object | yes |  | Generated artifact freshness classification. |  |  |

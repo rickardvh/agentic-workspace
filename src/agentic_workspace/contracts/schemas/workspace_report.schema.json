@@ -1345,7 +1345,8 @@
         "authority",
         "executable",
         "payload",
-        "generated_artifacts"
+        "generated_artifacts",
+        "payload_repair_subflow"
       ],
       "properties": {
         "kind": {
@@ -1492,6 +1493,10 @@
           "additionalProperties": true,
           "description": "Structured current-state convergence plan for payload upgrade attention items."
         },
+        "payload_repair_subflow": {
+          "$ref": "#/$defs/payload_repair_subflow",
+          "description": "Explicit dry-run, apply, and recheck route for installed payload repair."
+        },
         "executable": {
           "type": "object",
           "description": "Executable identity and compatibility classification.",
@@ -1571,6 +1576,168 @@
       },
       "additionalProperties": false,
       "description": "Installed-state compatibility details used by startup and report surfaces."
+    },
+    "payload_repair_subflow": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "source_status",
+        "repair_mechanism",
+        "safe_explicit_apply",
+        "manual_review_required",
+        "start_mutates",
+        "next_action",
+        "steps",
+        "reportable_commands",
+        "machine_commands",
+        "attention_item_count",
+        "category_counts",
+        "detail_selector",
+        "rule"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/payload-repair-subflow/v1",
+          "description": "Discriminator identifying the payload-repair subflow."
+        },
+        "status": {
+          "enum": [
+            "not-required",
+            "safe-explicit-apply",
+            "manual-review",
+            "blocked",
+            "review"
+          ],
+          "description": "Current payload-repair route classification."
+        },
+        "source_status": {
+          "enum": [
+            "compatible",
+            "upgrade-recommended",
+            "payload-upgrade-required",
+            "blocking-drift"
+          ],
+          "description": "Installed-state compatibility status that produced this subflow."
+        },
+        "repair_mechanism": {
+          "type": "string",
+          "description": "Package-owned repair mechanism selected for the current state."
+        },
+        "safe_explicit_apply": {
+          "type": "boolean",
+          "description": "Whether an explicit reviewed apply step is safe."
+        },
+        "manual_review_required": {
+          "type": "boolean",
+          "description": "Whether payload attention items require manual review."
+        },
+        "start_mutates": {
+          "const": false,
+          "description": "Startup and report surfaces never apply payload repair implicitly."
+        },
+        "next_action": {
+          "type": "string",
+          "description": "Decision-first next action for the repair subflow."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "reportable_command",
+              "machine_command",
+              "mutates",
+              "purpose"
+            ],
+            "properties": {
+              "id": {
+                "enum": [
+                  "dry_run",
+                  "apply",
+                  "recheck"
+                ],
+                "description": "Stable payload-repair step identifier."
+              },
+              "reportable_command": {
+                "type": "string",
+                "description": "Repo-relative command safe to show in reports."
+              },
+              "machine_command": {
+                "type": "string",
+                "description": "Configured invocation used for execution."
+              },
+              "mutates": {
+                "type": "boolean",
+                "description": "Whether this step changes installed payload state."
+              },
+              "purpose": {
+                "type": "string",
+                "description": "Purpose of this repair step."
+              }
+            },
+            "additionalProperties": false
+          },
+          "description": "Ordered dry-run, apply, and recheck steps."
+        },
+        "reportable_commands": {
+          "$ref": "#/$defs/payload_repair_commands",
+          "description": "Repo-relative commands exposed in human-facing reports."
+        },
+        "machine_commands": {
+          "$ref": "#/$defs/payload_repair_commands",
+          "description": "Configured commands used by machine execution."
+        },
+        "attention_item_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of payload attention items in the current plan."
+        },
+        "category_counts": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Count for one payload attention category."
+          },
+          "description": "Payload attention item counts by category."
+        },
+        "detail_selector": {
+          "const": "installed_state_compatibility.payload_repair_subflow",
+          "description": "Selector for the full payload-repair subflow."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Safety and command-rendering boundary for payload repair."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Explicit non-mutating preview and reviewed payload-repair workflow."
+    },
+    "payload_repair_commands": {
+      "type": "object",
+      "required": [
+        "dry_run",
+        "apply",
+        "recheck"
+      ],
+      "properties": {
+        "dry_run": {
+          "type": "string",
+          "description": "Payload repair preview command."
+        },
+        "apply": {
+          "type": "string",
+          "description": "Explicit payload repair apply command."
+        },
+        "recheck": {
+          "type": "string",
+          "description": "Post-repair compatibility recheck command."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Commands for one payload-repair subflow."
     },
     "cli_compatibility_check": {
       "type": "object",

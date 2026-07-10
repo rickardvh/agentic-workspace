@@ -629,6 +629,7 @@
           "_pre_test_evidence_guardrail_payload",
           "_proof_adequacy_payload",
           "_proof_command_for_target",
+          "_proof_command_tier",
           "_proof_command_tiers",
           "_proof_completion_options",
           "_proof_confidence_payload",
