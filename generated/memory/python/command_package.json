@@ -331,7 +331,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.install.apply",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {
@@ -488,7 +488,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.init.apply",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {
@@ -645,7 +645,7 @@
           "path.target_root.resolve",
           "memory.payload.lifecycle-plan",
           "memory.adopt.apply",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {
@@ -808,7 +808,7 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "memory.upgrade.apply",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {
@@ -894,7 +894,7 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "memory.migrate_layout.apply",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {
@@ -1041,7 +1041,7 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "memory.uninstall.apply",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {
@@ -1119,7 +1119,7 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "memory.bootstrap.cleanup",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {
@@ -1485,7 +1485,7 @@
         "kind": "operation-primitive-sequence",
         "primitive_refs": [
           "memory.note.create",
-          "output.emit"
+          "workspace.output.emit"
         ]
       },
       "schemas": {

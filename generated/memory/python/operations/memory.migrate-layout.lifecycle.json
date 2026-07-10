@@ -62,7 +62,7 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit"
+        "uses": "workspace.output.emit"
       }
     ],
     "summary": "Memory migrate-layout executes generated operation IR through codegen-owned primitive dataflow while the memory module owns lifecycle policy."
@@ -96,7 +96,7 @@
     {
       "description": "Emit the migrate-layout result in the requested format.",
       "id": "emit_output",
-      "uses": "output.emit"
+      "uses": "workspace.output.emit"
     }
   ],
   "summary": "Move legacy Memory bootstrap layout files into the current layout.",

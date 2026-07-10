@@ -272,6 +272,11 @@ def _payload_lifecycle_plan(*, values: dict[str, Any], arguments: dict[str, Any]
         "detected_version": detected_version,
         "bootstrap_version": bootstrap_version,
         "actions": actions,
+        "outcome": "noop",
+        "mutation_applied": False,
+        "reason_code": "dry-run",
+        "conflict_owner": None,
+        "recovery_command": None,
     }
 
 
@@ -643,6 +648,13 @@ def _emit_install_result_text(result: dict[str, Any]) -> str:
         str(result.get("message", "")),
         f"Detected version: {result.get('detected_version') or 'none'} (payload version {result.get('bootstrap_version')})",
     ]
+    if result.get("outcome"):
+        lines.append(f"Outcome: {result.get('outcome')} ({result.get('reason_code', '')})")
+        lines.append(f"Mutation applied: {'yes' if result.get('mutation_applied') else 'no'}")
+        if result.get("conflict_owner"):
+            lines.append(f"Conflict owner: {result.get('conflict_owner')}")
+        if result.get("recovery_command"):
+            lines.append(f"Recovery: {result.get('recovery_command')}")
     for action in _list_of_objects(result.get("actions", []), source="result.actions"):
         raw_path = str(action.get("path", ""))
         action_path = Path(raw_path)

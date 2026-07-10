@@ -63,7 +63,7 @@
           "type": "object",
           "required": ["python", "typescript", "typescript_unimplemented_apply"],
           "properties": {
-            "python": {"const": "agentic_workspace.result_adapter.mutation_outcome_from_actions", "description": "Shared Python front-door classifier binding."},
+            "python": {"const": "repo_memory_bootstrap._installer_shared.mutation_outcome_from_actions", "description": "Shared Python root and direct-module classifier binding."},
             "typescript": {"const": "typescript_primitive_support.mjs#finalizeMutationOutcome", "description": "Shared generated TypeScript classifier binding."},
             "typescript_unimplemented_apply": {"const": "blocked:native-apply-unavailable", "description": "Required truthful result for generated TypeScript apply primitives without a native implementation."}
           },

@@ -111,7 +111,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "output.emit",
+      "uses": "workspace.output.emit",
       "description": "Emit the upgrade result in the requested format."
     }
   ],
@@ -177,7 +177,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "output.emit",
+        "uses": "workspace.output.emit",
         "description": "Emit the upgrade result in the requested format.",
         "arguments": {},
         "outputs": [

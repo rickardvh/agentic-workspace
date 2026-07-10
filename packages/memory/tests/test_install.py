@@ -11,6 +11,7 @@ from jsonschema import Draft202012Validator
 
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from memory_test_support import *
+from repo_memory_bootstrap._installer_shared import mutation_outcome_from_actions
 
 
 def _today() -> str:
@@ -409,7 +410,39 @@ def test_generated_install_dry_run_uses_declarative_payload_plan(tmp_path: Path,
     payload = json.loads(capsys.readouterr().out)
     assert payload["dry_run"] is True
     assert payload["message"] == "Install plan"
+    assert payload["outcome"] == "noop"
+    assert payload["mutation_applied"] is False
+    assert payload["reason_code"] == "dry-run"
     assert any(action["kind"] == "would copy" and action["path"] == "AGENTS.md" for action in payload["actions"])
+
+
+def test_direct_memory_install_reports_applied_mutation(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True)
+
+    assert cli.main(["install", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["outcome"] == "applied"
+    assert payload["mutation_applied"] is True
+    assert payload["reason_code"] == "mutation-applied"
+    assert payload["conflict_owner"] is None
+    assert payload["recovery_command"] is None
+
+
+@pytest.mark.parametrize(
+    ("actions", "expected"),
+    [
+        ([{"kind": "copied"}], ("applied", True, "mutation-applied")),
+        ([{"kind": "current"}], ("noop", False, "already-satisfied")),
+        ([{"kind": "manual review"}], ("blocked", False, "manual-review-required")),
+        ([{"kind": "failed"}], ("failed", False, "mutation-failed")),
+    ],
+)
+def test_direct_memory_mutation_classifier_covers_contract_outcomes(actions, expected) -> None:
+    payload = mutation_outcome_from_actions(actions=actions, warnings=[], dry_run=False)
+
+    assert (payload["outcome"], payload["mutation_applied"], payload["reason_code"]) == expected
 
 
 def test_generated_init_dry_run_uses_declarative_payload_plan(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys) -> None:

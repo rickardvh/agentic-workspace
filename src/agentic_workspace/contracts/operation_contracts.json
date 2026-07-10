@@ -9,7 +9,7 @@
     "outcomes": ["applied", "noop", "blocked", "failed"],
     "fields": ["outcome", "mutation_applied", "reason_code", "conflict_owner", "recovery_command"],
     "runtime_bindings": {
-      "python": "agentic_workspace.result_adapter.mutation_outcome_from_actions",
+      "python": "repo_memory_bootstrap._installer_shared.mutation_outcome_from_actions",
       "typescript": "typescript_primitive_support.mjs#finalizeMutationOutcome",
       "typescript_unimplemented_apply": "blocked:native-apply-unavailable"
     },

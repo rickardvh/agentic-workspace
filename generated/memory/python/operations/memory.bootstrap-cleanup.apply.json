@@ -54,7 +54,7 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "output.emit"
+        "uses": "workspace.output.emit"
       }
     ],
     "summary": "Memory bootstrap-cleanup executes generated operation IR through codegen-owned primitive dataflow while the memory module owns cleanup safety policy."
@@ -88,7 +88,7 @@
     {
       "description": "Emit the bootstrap-cleanup result in the requested format.",
       "id": "emit_output",
-      "uses": "output.emit"
+      "uses": "workspace.output.emit"
     }
   ],
   "summary": "Remove the temporary Memory bootstrap workspace through the memory module CLI.",

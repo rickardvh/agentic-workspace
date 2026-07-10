@@ -140,7 +140,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "output.emit",
+      "uses": "workspace.output.emit",
       "description": "Emit the create-note result in the requested format."
     }
   ],
@@ -224,7 +224,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "output.emit",
+        "uses": "workspace.output.emit",
         "description": "Emit the create-note result in the requested format.",
         "arguments": {},
         "outputs": [
