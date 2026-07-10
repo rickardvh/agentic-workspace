@@ -16,6 +16,47 @@ TEST_IR_RUNNER_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" 
 _CHECKER_CASE_PREFIX = "__checker_case_result__="
 
 
+def test_generated_typescript_mutation_outcome_classifier_covers_contract_enum() -> None:
+    support = (REPO_ROOT / "generated/planning/typescript/src/hostPrimitiveSupport.mjs").as_uri()
+    script = f"""
+import {{ finalizeMutationOutcome }} from {json.dumps(support)};
+const cases = [
+  [{{dry_run: false, actions: [{{kind: 'created'}}]}}, ['applied', true, 'mutation-applied']],
+  [{{dry_run: false, actions: [{{kind: 'current'}}]}}, ['noop', false, 'already-satisfied']],
+  [{{dry_run: false, actions: [{{kind: 'manual review'}}]}}, ['blocked', false, 'manual-review-required']],
+  [{{dry_run: false, actions: [{{kind: 'failed'}}]}}, ['failed', false, 'mutation-failed']],
+];
+for (const [input, expected] of cases) {{
+  const result = finalizeMutationOutcome(input);
+  const actual = [result.outcome, result.mutation_applied, result.reason_code];
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(JSON.stringify({{actual, expected}}));
+}}
+"""
+
+    completed = subprocess.run(["node", "--input-type=module", "--eval", script], capture_output=True, text=True, check=False)
+
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_generated_typescript_planning_install_reports_real_apply(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir()
+    cli_path = REPO_ROOT / "generated/planning/typescript/src/cli.mjs"
+
+    completed = subprocess.run(
+        ["node", str(cli_path), "install", "--target", str(tmp_path), "--format", "json"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(completed.stdout)
+    assert payload["outcome"] == "applied"
+    assert payload["mutation_applied"] is True
+    assert payload["reason_code"] == "mutation-applied"
+    assert (tmp_path / ".agentic-workspace/planning/agent-manifest.json").is_file()
+
+
 def _load_runner():
     spec = importlib.util.spec_from_file_location("run_generated_command_package_proof", SCRIPT_PATH)
     assert spec is not None

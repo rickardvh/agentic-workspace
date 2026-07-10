@@ -604,6 +604,19 @@ function lifecycleResult(values, message) {
   };
 }
 
+export function finalizeMutationOutcome(result) {
+  const kinds = new Set((result.actions ?? []).map((action) => String(action.kind ?? '').trim().toLowerCase()));
+  const failed = kinds.has('failed') || kinds.has('error');
+  const blocked = ['blocked', 'blocked-with-reason', 'manual review', 'refused'].some((kind) => kinds.has(kind));
+  const applied = !result.dry_run && ['adopted', 'archived', 'closed', 'copied', 'copy', 'created', 'deleted', 'installed', 'moved', 'overwritten', 'removed', 'replaced', 'updated', 'upgraded'].some((kind) => kinds.has(kind));
+  result.outcome = failed ? 'failed' : blocked ? 'blocked' : applied ? 'applied' : 'noop';
+  result.mutation_applied = applied;
+  if (!result.reason_code || ['dry-run', 'already-satisfied'].includes(result.reason_code)) {
+    result.reason_code = failed ? 'mutation-failed' : blocked ? 'manual-review-required' : applied ? 'mutation-applied' : result.dry_run ? 'dry-run' : 'already-satisfied';
+  }
+  return result;
+}
+
 function planningNewPlanResult(values, operationId) {
   const result = lifecycleResult(values, operationId);
   const slug = String(values.id ?? '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -613,7 +626,9 @@ function planningNewPlanResult(values, operationId) {
     result.outcome = 'blocked';
     result.reason_code = 'target-already-exists';
     result.conflict_owner = owner;
-    result.recovery_command = `agentic-workspace planning new-plan --id ${JSON.stringify(slug)} --title ${JSON.stringify(title)} --target ${JSON.stringify(result.target_root.replace(/\\/g, '/'))} --overwrite --format json`;
+    const config = workspaceConfig({ target: result.target_root });
+    const cliInvoke = String(config.workspace?.cli_invoke ?? 'agentic-workspace');
+    result.recovery_command = `${cliInvoke} planning new-plan --id ${JSON.stringify(slug)} --title ${JSON.stringify(title)} --target . --overwrite --format json`;
     result.actions = [{ kind: 'manual review', path: owner, detail: 'target canonical execplan record already exists; pass --overwrite to replace it' }];
   }
   return result;
@@ -689,7 +704,7 @@ function domainPrimitive(primitive, values, args, operationId) {
     if (functionName.includes('install') || functionName.includes('adopt') || functionName.includes('upgrade')) {
       const result = lifecycleResult(values, `${functionName.replace(/_/g, ' ')}`);
       result.actions = applyPayloadCopy(values);
-      return result;
+      return finalizeMutationOutcome(result);
     }
     if (functionName === 'cleanup_bootstrap_workspace') return { ...lifecycleResult(values, 'Bootstrap workspace cleanup'), dry_run: true };
     if (functionName === 'create_memory_note') return { ...lifecycleResult(values, `Create memory note '${values.slug ?? ''}'`), dry_run: Boolean(values.dry_run) };
@@ -711,7 +726,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (['planning.install.apply', 'planning.init.apply', 'planning.adopt.apply', 'planning.upgrade.apply'].includes(primitive)) {
     const result = lifecycleResult(values, operationId);
     result.actions = applyPayloadCopy(values);
-    return result;
+    return finalizeMutationOutcome(result);
   }
   if (primitive.startsWith('planning.') && primitive.endsWith('.apply')) return lifecycleResult(values, operationId);
   if (primitive === 'planning.reconcile.load') return { kind: 'planning-reconcile/v1', status: 'clean', target_root: resolve(String(values.target ?? '.')) };
@@ -720,7 +735,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (['memory.install.apply', 'memory.init.apply', 'memory.adopt.apply', 'memory.upgrade.apply'].includes(primitive)) {
     const result = lifecycleResult(values, operationId);
     result.actions = applyPayloadCopy(values);
-    return result;
+    return finalizeMutationOutcome(result);
   }
   if (primitive === 'memory.bootstrap.cleanup') return { ...lifecycleResult(values, 'Bootstrap workspace cleanup'), dry_run: true };
   if (primitive === 'memory.note.create') return { ...lifecycleResult(values, `Create memory note '${values.slug ?? ''}'`), dry_run: Boolean(values.dry_run) };

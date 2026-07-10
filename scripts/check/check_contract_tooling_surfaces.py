@@ -338,6 +338,7 @@ def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
         errors.append("operation_contracts.json must contain at least one operation")
         return errors
     seen_ids: set[str] = set()
+    mutating_ids: set[str] = set()
     for index, operation_ref in enumerate(operations):
         if not isinstance(operation_ref, dict):
             errors.append(f"operation registry entry {index} must be an object")
@@ -349,6 +350,31 @@ def _validate_operation_registry(payload: dict[str, object]) -> list[str]:
         if operation_id in seen_ids:
             errors.append(f"duplicate operation id {operation_id}")
         seen_ids.add(operation_id)
+        try:
+            operation = operation_manifest(str(operation_ref.get("path", "")))
+        except Exception as exc:
+            errors.append(f"operation {operation_id} failed mutation-outcome inventory load: {exc}")
+            continue
+        effects = operation.get("effects", {})
+        if isinstance(effects, dict) and effects.get("writes_repo_state") is True:
+            mutating_ids.add(operation_id)
+    outcome_contract = payload.get("mutation_outcome_contract")
+    if not isinstance(outcome_contract, dict):
+        errors.append("operation_contracts.json must declare mutation_outcome_contract")
+        return errors
+    if outcome_contract.get("schema_version") != "agentic-workspace/mutation-outcome/v1":
+        errors.append("operation_contracts.json mutation_outcome_contract has unexpected schema_version")
+    exceptions = outcome_contract.get("explicit_exceptions", [])
+    exception_ids = {
+        str(item.get("operation_id", ""))
+        for item in exceptions
+        if isinstance(item, dict) and str(item.get("operation_id", ""))
+    }
+    unknown_exceptions = sorted(exception_ids - mutating_ids)
+    if unknown_exceptions:
+        errors.append("mutation outcome exceptions do not name mutating operation IR: " + ", ".join(unknown_exceptions))
+    if not mutating_ids:
+        errors.append("mutation outcome inventory found no registered effects.writes_repo_state operations")
     return errors
 
 

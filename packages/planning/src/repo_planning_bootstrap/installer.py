@@ -366,6 +366,20 @@ def _short_file_hash(path: Path) -> str:
         return "unreadable"
 
 
+def _workspace_cli_invoke(target_root: Path) -> str:
+    for relative in (Path(".agentic-workspace/config.local.toml"), Path(".agentic-workspace/config.toml")):
+        path = target_root / relative
+        if not path.is_file():
+            continue
+        try:
+            workspace = tomllib.loads(path.read_text(encoding="utf-8-sig")).get("workspace", {})
+        except (OSError, tomllib.TOMLDecodeError):
+            continue
+        if isinstance(workspace, dict) and str(workspace.get("cli_invoke", "")).strip():
+            return str(workspace["cli_invoke"]).strip()
+    return "agentic-workspace"
+
+
 def planning_revision(target: str | Path | None = None) -> dict[str, Any]:
     """Return a cheap optimistic revision for live Planning state.
 
@@ -10979,9 +10993,9 @@ def create_execplan_scaffold(
         result.reason_code = "target-already-exists"
         result.conflict_owner = record_relative
         result.recovery_command = (
-            "agentic-workspace planning new-plan "
+            f"{_workspace_cli_invoke(target_root)} planning new-plan "
             f"--id {json.dumps(slug)} --title {json.dumps(plan_title)} "
-            f"--target {json.dumps(target_root.as_posix())} --overwrite --format json"
+            "--target . --overwrite --format json"
         )
         return result
 

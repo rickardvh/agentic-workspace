@@ -20,7 +20,7 @@ from agentic_workspace import (
     workspace_runtime_startup,
 )
 from agentic_workspace.contract_tooling import authority_markers_manifest, cli_commands_manifest
-from agentic_workspace.result_adapter import adapt_action, adapt_module_result
+from agentic_workspace.result_adapter import adapt_action, adapt_module_result, mutation_outcome_from_actions
 
 _generated_cli = load_generated_command_module_for_entrypoint("agentic-workspace", "cli.py")
 _RUNTIME_HELPER_MODULES = (

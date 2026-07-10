@@ -1216,6 +1216,10 @@ def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: P
 
 def test_planning_cli_new_plan_refuses_duplicate_without_overwrite(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/config.local.toml",
+        '[workspace]\ncli_invoke = "uv run python scripts/run_agentic_workspace.py"\n',
+    )
     args = [
         "new-plan",
         "--id",
@@ -1238,10 +1242,11 @@ def test_planning_cli_new_plan_refuses_duplicate_without_overwrite(tmp_path: Pat
     assert payload["mutation_applied"] is False
     assert payload["reason_code"] == "target-already-exists"
     assert payload["conflict_owner"] == ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
-    assert payload["recovery_command"].startswith("agentic-workspace planning new-plan ")
+    assert payload["recovery_command"].startswith("uv run python scripts/run_agentic_workspace.py planning new-plan ")
     assert '--id "plan-alpha"' in payload["recovery_command"]
     assert '--title "Plan Alpha"' in payload["recovery_command"]
-    assert "--overwrite --format json" in payload["recovery_command"]
+    assert "--target . --overwrite --format json" in payload["recovery_command"]
+    assert str(tmp_path) not in payload["recovery_command"]
 
 
 def test_planning_summary_exposes_ordered_roadmap_batch_guidance(tmp_path: Path) -> None:

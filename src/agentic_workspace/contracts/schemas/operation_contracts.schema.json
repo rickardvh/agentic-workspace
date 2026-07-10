@@ -9,6 +9,7 @@
     "summary",
     "primitive_registry",
     "schema",
+    "mutation_outcome_contract",
     "operations"
   ],
   "properties": {
@@ -28,6 +29,54 @@
     "schema": {
       "const": "schemas/operation.schema.json",
       "description": "Schema reference or schema metadata for this payload."
+    },
+    "mutation_outcome_contract": {
+      "type": "object",
+      "required": ["schema_version", "applicability", "outcomes", "fields", "explicit_exceptions", "proof_requirements"],
+      "properties": {
+        "schema_version": {"const": "agentic-workspace/mutation-outcome/v1"},
+        "applicability": {"const": "Every registered operation with effects.writes_repo_state=true must emit this result contract unless listed in explicit_exceptions."},
+        "outcomes": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "applied"},
+            {"const": "noop"},
+            {"const": "blocked"},
+            {"const": "failed"}
+          ],
+          "items": false
+        },
+        "fields": {
+          "type": "array",
+          "prefixItems": [
+            {"const": "outcome"},
+            {"const": "mutation_applied"},
+            {"const": "reason_code"},
+            {"const": "conflict_owner"},
+            {"const": "recovery_command"}
+          ],
+          "items": false
+        },
+        "explicit_exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["operation_id", "reason", "proof"],
+            "properties": {
+              "operation_id": {"type": "string", "minLength": 1},
+              "reason": {"type": "string", "minLength": 1},
+              "proof": {"type": "string", "minLength": 1}
+            },
+            "additionalProperties": false
+          }
+        },
+        "proof_requirements": {
+          "type": "array",
+          "contains": {"const": "Representative applied, noop, blocked, and failed behavior must pass for Python and TypeScript generated targets."}
+        }
+      },
+      "additionalProperties": false,
+      "description": "Authoritative shared result invariant and inventory rule for mutating operation IR."
     },
     "operations": {
       "type": "array",
