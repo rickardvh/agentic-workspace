@@ -27,6 +27,7 @@ from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
 from agentic_workspace.current_work_context import resolve_current_work_context
+from agentic_workspace.proof_receipt_admission import proof_command_admission, proof_receipt_admission
 from agentic_workspace.runtime_source_review import runtime_source_edit_review_for_changed_paths
 from agentic_workspace.runtime_symbol_working_set import runtime_symbol_working_set_for_changed_paths
 from agentic_workspace.workspace_runtime_core import (
@@ -539,6 +540,8 @@ def _read_proof_receipt_records(target_root: Path) -> tuple[list[dict[str, Any]]
     def add_record(receipt: Any) -> None:
         if not isinstance(receipt, dict):
             return
+        if not proof_receipt_admission(receipt)["admitted"]:
+            return
         identity = _proof_receipt_identity(receipt)
         if identity in seen:
             return
@@ -871,6 +874,7 @@ def _proof_receipt_bridge_payload(
         command = str(item.get("command", "")).strip()
         if not command:
             continue
+        command_admission = proof_command_admission(command)
         placeholders = sorted(set(re.findall(r"<[^>]+>", command)))
         action: dict[str, Any] = {
             "kind": "agentic-workspace/proof-receipt-bridge-action/v1",
@@ -880,11 +884,13 @@ def _proof_receipt_bridge_payload(
             "result_options": ["passed", "failed", "skipped", "waived"],
             "after_running": "Record the actual result only after executing or deliberately classifying this selected proof command.",
         }
-        if placeholders:
+        if not command_admission["admitted"]:
             action.update(
                 {
                     "status": "instantiate-before-recording",
                     "placeholders": placeholders,
+                    "admission_reason": command_admission["reason"],
+                    "safe_recovery": command_admission["safe_recovery"],
                     "next_action": "instantiate placeholders, run the concrete command, then record the actual result",
                     "recording_rule": "Substitute placeholders and run the concrete command before recording a receipt.",
                 }

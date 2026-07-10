@@ -1,0 +1,59 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "2173-trust-continuity-projections",
+  "title": "Harden AW trust continuity and projection boundaries",
+  "status": "ready",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "Make the seven #2173 child invariants true in ordinary product paths, each with issue-specific regression evidence and a separately reviewable PR.",
+  "purpose_for_parent": "Close #2173 only after #2174 through #2180 are closed or deliberately rerouted with residual intent preserved.",
+  "subsystems": [
+    "proof receipt admission and sufficiency",
+    "work-context and intent routing",
+    "actionability and projection reuse",
+    "session invocation semantics",
+    "diagnostic artifact promotion"
+  ],
+  "technical_strategy": "Implement each child as a representative vertical slice backed by one reusable authoritative contract. Keep branches independent from master unless a later child consumes a newly introduced contract; in that case stack only that dependency chain and retarget after the base lands.",
+  "technology_choices": [
+    "Reuse existing contract and packet families before adding visible concepts",
+    "Use stable reason codes, explicit provenance, freshness, scope, and decision maturity",
+    "Preserve raw/local evidence while governing trusted or promoted derivatives"
+  ],
+  "slice_sequence": [
+    "2174-proof-evidence-admission",
+    "2175-current-work-context",
+    "2180-decision-point-intent",
+    "2177-coherent-actionability",
+    "2176-unchanged-projections",
+    "2178-invocation-intent",
+    "2179-safe-diagnostic-promotion"
+  ],
+  "current_slice": "2174-proof-evidence-admission",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "For every child, run routed changed-path proof plus the issue's required regression cases. Aggregate merged PRs, exact validation commands, and any residual owner before closing the lane.",
+  "proof_aggregation": {
+    "status": "not-started",
+    "evidence": [],
+    "known_gaps": []
+  },
+  "residual_lane_work": "Children #2174 through #2180 remain open until their individual acceptance and evidence requirements are satisfied.",
+  "lane_to_epic_contribution": "Provides the trust, continuity, projection, invocation, promotion, and intent-routing invariants named by #2173 without absorbing #2172 mutation-outcome scope.",
+  "parent_close_permission": "not-evaluated",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [
+    "GitHub #2173",
+    "GitHub #2174",
+    "GitHub #2175",
+    "GitHub #2176",
+    "GitHub #2177",
+    "GitHub #2178",
+    "GitHub #2179",
+    "GitHub #2180"
+  ],
+  "notes": "Implementation order follows the lane owner's recommendation. #2175 and #2180 may share scope/provenance concepts but remain separate review units; #2177 precedes #2176 so projection reuse does not cache unstable action semantics."
+}
