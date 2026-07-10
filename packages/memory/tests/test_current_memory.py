@@ -246,8 +246,6 @@ def test_generated_install_text_uses_portable_install_result_output(capsys, tmp_
     output = capsys.readouterr().out
     assert "Target:" in output
     assert "Detected version:" in output
-    assert "Outcome: noop (dry-run)" in output
-    assert "Mutation applied: no" in output
     assert "planned change" in output
     assert ".agentic-workspace" in output
 

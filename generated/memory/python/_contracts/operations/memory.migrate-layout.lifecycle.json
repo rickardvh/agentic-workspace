@@ -61,7 +61,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "workspace.output.emit",
+      "uses": "output.emit",
       "description": "Emit the migrate-layout result in the requested format."
     }
   ],
@@ -97,7 +97,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "workspace.output.emit",
+        "uses": "output.emit",
         "description": "Emit the migrate-layout result in the requested format.",
         "arguments": {},
         "outputs": [

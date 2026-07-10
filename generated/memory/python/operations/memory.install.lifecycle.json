@@ -300,7 +300,7 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "workspace.output.emit"
+        "uses": "output.emit"
       }
     ],
     "summary": "Default dry-run Memory install executes generated operation IR through AW/Memory-owned memory.payload.lifecycle-plan. Mutating and customized install policy paths remain package-domain runtime."
@@ -344,7 +344,7 @@
     {
       "description": "Emit the install result in the requested format.",
       "id": "emit_output",
-      "uses": "workspace.output.emit"
+      "uses": "output.emit"
     }
   ],
   "summary": "Install Memory bootstrap files into a repository.",

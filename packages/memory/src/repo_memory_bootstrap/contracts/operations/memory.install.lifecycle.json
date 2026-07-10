@@ -116,7 +116,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "workspace.output.emit",
+      "uses": "output.emit",
       "description": "Emit the install result in the requested format."
     }
   ],
@@ -343,7 +343,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "workspace.output.emit",
+        "uses": "output.emit",
         "description": "Emit the install result in the requested format.",
         "arguments": {
           "text_style": "install-result"

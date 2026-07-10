@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -387,7 +386,6 @@ class InstallResult:
         return counts
 
     def to_dict(self) -> dict[str, object]:
-        actions = [action.to_dict(self.target_root) for action in self.actions]
         return {
             "target_root": str(self.target_root),
             "dry_run": self.dry_run,
@@ -395,8 +393,7 @@ class InstallResult:
             "message": self.message,
             "detected_version": self.detected_version,
             "bootstrap_version": self.bootstrap_version,
-            "actions": actions,
-            **mutation_outcome_from_actions(actions=actions, warnings=[], dry_run=self.dry_run),
+            "actions": [action.to_dict(self.target_root) for action in self.actions],
             "route_summary": self.route_summary,
             "missing_note_hint": self.missing_note_hint,
             "review_summary": self.review_summary,
@@ -406,53 +403,6 @@ class InstallResult:
             "route_report_feedback_cases": self.route_report_feedback_cases,
             "route_report_fixture_results": self.route_report_fixture_results,
         }
-
-
-def mutation_outcome_from_actions(
-    *, actions: Sequence[Mapping[str, object]], warnings: Sequence[Mapping[str, object]], dry_run: bool
-) -> dict[str, object]:
-    """Return the authoritative package-neutral mutation outcome projection."""
-    kinds = {str(action.get("kind", "")).strip().lower() for action in actions}
-    failed = bool(kinds & {"error", "failed"})
-    blocked = bool(warnings or kinds & {"blocked", "blocked-with-reason", "manual review", "refused"})
-    applied = not dry_run and bool(
-        kinds
-        & {
-            "adopted",
-            "archived",
-            "closed",
-            "copied",
-            "copy",
-            "created",
-            "customised",
-            "deleted",
-            "installed",
-            "moved",
-            "overwritten",
-            "removed",
-            "replaced",
-            "updated",
-            "upgraded",
-        }
-    )
-    outcome = "failed" if failed else "blocked" if blocked else "applied" if applied else "noop"
-    return {
-        "outcome": outcome,
-        "mutation_applied": applied,
-        "reason_code": (
-            "mutation-failed"
-            if failed
-            else "manual-review-required"
-            if blocked
-            else "mutation-applied"
-            if applied
-            else "dry-run"
-            if dry_run
-            else "already-satisfied"
-        ),
-        "conflict_owner": None,
-        "recovery_command": None,
-    }
 
 
 @dataclass(frozen=True, slots=True)

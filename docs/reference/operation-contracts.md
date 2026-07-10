@@ -21,7 +21,7 @@ Registry of operation contracts exposed by workspace commands or adapters.
 | `mutation_outcome_contract.outcomes` | array | yes |  | Closed vocabulary for truthful mutation results. |  |  |
 | `mutation_outcome_contract.fields` | array | yes |  | Required fields carried by every applicable mutation result. |  |  |
 | `mutation_outcome_contract.runtime_bindings` | object | yes |  | Runtime bindings enforced by contract tooling for the effects-derived mutation inventory. |  |  |
-| `mutation_outcome_contract.runtime_bindings.python` | const `"repo_memory_bootstrap._installer_shared.mutation_outcome_from_actions"` | yes |  | Shared Python root and direct-module classifier binding. |  |  |
+| `mutation_outcome_contract.runtime_bindings.python` | const `"agentic_workspace.result_adapter.mutation_outcome_from_actions"` | yes |  | Shared Python front-door classifier binding. |  |  |
 | `mutation_outcome_contract.runtime_bindings.typescript` | const `"typescript_primitive_support.mjs#finalizeMutationOutcome"` | yes |  | Shared generated TypeScript classifier binding. |  |  |
 | `mutation_outcome_contract.runtime_bindings.typescript_unimplemented_apply` | const `"blocked:native-apply-unavailable"` | yes |  | Required truthful result for generated TypeScript apply primitives without a native implementation. |  |  |
 | `mutation_outcome_contract.explicit_exceptions` | array of object | yes |  | Narrow, tested exclusions from the effects-derived mutation inventory. |  |  |

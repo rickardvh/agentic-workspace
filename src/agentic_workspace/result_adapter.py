@@ -4,8 +4,6 @@ from dataclasses import asdict, dataclass, is_dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from repo_memory_bootstrap._installer_shared import mutation_outcome_from_actions
-
 
 class ActionDictLike(Protocol):
     def to_dict(self, target_root: Path) -> dict[str, object]: ...
@@ -55,6 +53,47 @@ def adapt_module_result(*, module: str, result: Any) -> WorkspaceModuleReport:
         warnings=warnings,
         **outcome,
     )
+
+
+def mutation_outcome_from_actions(*, actions: list[dict[str, Any]], warnings: list[dict[str, Any]], dry_run: bool) -> dict[str, Any]:
+    kinds = {str(action.get("kind", "")).strip().lower() for action in actions}
+    failed = bool(kinds & {"error", "failed"})
+    blocked = bool(warnings or kinds & {"blocked", "blocked-with-reason", "manual review", "refused"})
+    applied = not dry_run and bool(
+        kinds
+        & {
+            "adopted",
+            "archived",
+            "closed",
+            "copied",
+            "copy",
+            "created",
+            "deleted",
+            "installed",
+            "moved",
+            "overwritten",
+            "removed",
+            "replaced",
+            "updated",
+            "upgraded",
+        }
+    )
+    outcome = "failed" if failed else "blocked" if blocked else "applied" if applied else "noop"
+    return {
+        "outcome": outcome,
+        "mutation_applied": applied,
+        "reason_code": (
+            "mutation-failed"
+            if failed
+            else "manual-review-required"
+            if blocked
+            else "mutation-applied"
+            if applied
+            else "dry-run"
+            if dry_run
+            else "already-satisfied"
+        ),
+    }
 
 
 def adapt_action(*, action: Any, target_root: Path) -> dict[str, Any]:

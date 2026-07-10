@@ -55,7 +55,7 @@
     },
     {
       "id": "emit_output",
-      "uses": "workspace.output.emit",
+      "uses": "output.emit",
       "description": "Emit the bootstrap-cleanup result in the requested format."
     }
   ],
@@ -88,7 +88,7 @@
       },
       {
         "id": "emit_output",
-        "uses": "workspace.output.emit",
+        "uses": "output.emit",
         "description": "Emit the bootstrap-cleanup result in the requested format.",
         "arguments": {},
         "outputs": [

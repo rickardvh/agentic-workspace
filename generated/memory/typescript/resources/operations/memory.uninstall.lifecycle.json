@@ -123,7 +123,7 @@
         "outputs": [
           "emitted"
         ],
-        "uses": "workspace.output.emit"
+        "uses": "output.emit"
       }
     ],
     "summary": "Memory uninstall executes generated operation IR through codegen-owned primitive dataflow while the memory module owns lifecycle policy."
@@ -157,7 +157,7 @@
     {
       "description": "Emit the uninstall result in the requested format.",
       "id": "emit_output",
-      "uses": "workspace.output.emit"
+      "uses": "output.emit"
     }
   ],
   "summary": "Remove Memory bootstrap-managed files conservatively.",
