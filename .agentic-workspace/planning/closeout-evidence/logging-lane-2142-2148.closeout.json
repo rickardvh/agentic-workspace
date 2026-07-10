@@ -1,0 +1,136 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Implement logging lane #2142-#2148",
+  "plan_id": "logging-lane-2142-2148",
+  "created_at": "2026-07-10T07:29:37.636667+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/logging-lane-2142-2148.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/logging-lane-2142-2148.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive is omitted or skipped."
+  },
+  "active_milestone": {
+    "id": "logging-lane-2142-2148",
+    "status": "completed",
+    "scope": "Integrate #2144-#2148 into the ordinary session-log runtime and analyzer, satisfying parent #2142.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the #2142/#2144-#2148 logging lane in a new PR.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented and published draft PR #2154 for the complete #2142/#2144-#2148 logging lane.",
+    "scope touched": "Session logging runtime/tests, session-log contracts and generated projections, Planning closeout.",
+    "changed surfaces": "Origin/provenance, index coverage repair, segments, share-safe export, packet/domain-kind analysis, generated repair/export CLI.",
+    "validations run": "20 focused tests; make test-workspace; make lint-workspace; generated package/static proof; operation conformance; 178 workspace CLI tests; structured inventory; summary; planning doctor",
+    "result for continuation": "bounded closeout complete",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "Scope respected; #2143 excluded as sibling; task-relevant proof passed; #2140 baseline disclosed; #2153 owns separate checker inconsistency.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "yes; startup, active Planning, proof, closeout, and dogfooding routes were followed",
+    "misinterpretation risk": "Share-safe export redacts known local paths but explicitly does not promise arbitrary secret detection.",
+    "follow-on decision": "none"
+  },
+  "proof_report": {
+    "validation proof": "20 focused tests; make test-workspace; make lint-workspace; generated package/static proof; operation conformance; 178 workspace CLI tests; structured inventory; summary; planning doctor",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "20 focused tests; make test-workspace; make lint-workspace; generated package/static proof; operation conformance; 178 workspace CLI tests; structured inventory; summary; planning doctor"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement the #2142-#2148 logging lane in a new PR, interpreted from issue decomposition as #2142 plus #2144-#2148 and excluding sibling #2143.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "20 focused tests; make test-workspace; make lint-workspace; generated package/static proof; operation conformance; 178 workspace CLI tests; structured inventory; summary; planning doctor",
+    "unsolved intent passed to": "none"
+  },
+  "closure_check": {
+    "closeout scope": "lane",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a lane claim with intent-status satisfied.",
+    "evidence carried forward": "20 focused tests; make test-workspace; make lint-workspace; generated package/static proof; operation conformance; 178 workspace CLI tests; structured inventory; summary; planning doctor",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed issue residue to GitHub #2153.",
+    "motivation worth preserving": "Future agents should continue from GitHub #2153 rather than rediscover this closeout residue.",
+    "canonical owner now": "GitHub #2153",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Draft PR #2154 is the review/resume surface; no product intent from #2142/#2144-#2148 remains.",
+    "validation confirmed": "20 focused tests; make test-workspace; make lint-workspace; generated package/static proof; operation conformance; 178 workspace CLI tests; structured inventory; summary; planning doctor",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "Dogfooding checker inconsistency captured in #2153; no Memory note needed.",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Draft GitHub #2153",
+          "owner": "",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Draft #2153",
+          "owner": "none",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [
+        {
+          "summary": "none",
+          "owner": "config/check",
+          "source": "execution_summary"
+        }
+      ],
+      "docs": [],
+      "issue_follow_up": [
+        {
+          "summary": "#2153 runtime-handler bundle proof consistency",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "#2140 pre-existing contract-tooling health drift",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "Generated runtime-handler operations can pass static package proof while failing command-surface bundle presence checks.",
+          "owner": "GitHub #2153",
+          "source": "improvement_signal_review.signals routed"
+        }
+      ]
+    }
+  }
+}
