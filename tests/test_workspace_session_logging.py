@@ -691,11 +691,9 @@ def test_session_log_projects_parent_context_written_by_logger(tmp_path: Path, c
     assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
     capsys.readouterr()
 
-    payload = session_logging.analyze_session_log(
-        state=session_logging.load_state_for_argv(["--target", str(target)]), origin_scope="synthetic"
-    )
+    payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]), origin_scope="test")
 
-    assert payload["origin_partitions"]["synthetic"]["entries"][0]["parent"] == {
+    assert payload["origin_partitions"]["test"]["entries"][0]["parent"] == {
         "entry_id": "parent-entry",
         "command": "pytest parent_test.py",
         "context": "fixture-parent",
