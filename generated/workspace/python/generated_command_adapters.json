@@ -653,7 +653,9 @@
           "status",
           "new-session",
           "note",
-          "analyze"
+          "analyze",
+          "repair",
+          "export"
         ]
       },
       "conformance_refs": [

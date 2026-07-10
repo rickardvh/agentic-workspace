@@ -2387,6 +2387,107 @@ const commandDefinitions = [
               "name": "id"
             },
             {
+              "flags": [
+                "--segment"
+              ],
+              "help": "Optional segment id to analyze; the response still lists all discovered segments.",
+              "name": "segment"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Repair or backfill a partial local session-log index from its Markdown entries.",
+          "name": "repair",
+          "operation_ref": {
+            "id": "session-log.manage",
+            "path": "operations/session-log.manage.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--path"
+              ],
+              "help": "Optional repo-relative session log path; defaults to the current session pointer.",
+              "name": "path"
+            },
+            {
+              "flags": [
+                "--id"
+              ],
+              "help": "Optional session id or aw-session-<id>.md filename to repair.",
+              "name": "id"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Export an existing local session log as a share-safe redacted bundle.",
+          "name": "export",
+          "operation_ref": {
+            "id": "session-log.manage",
+            "path": "operations/session-log.manage.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--path"
+              ],
+              "help": "Optional repo-relative session log path; defaults to the current session pointer.",
+              "name": "path"
+            },
+            {
+              "flags": [
+                "--id"
+              ],
+              "help": "Optional session id or aw-session-<id>.md filename to export.",
+              "name": "id"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--no-artifacts"
+              ],
+              "help": "Exclude raw-output artifacts from the exported bundle.",
+              "name": "no_artifacts"
+            },
+            {
               "choices": [
                 "text",
                 "json"

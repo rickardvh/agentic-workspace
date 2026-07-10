@@ -1,0 +1,309 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Implement logging lane #2142-#2148",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement the provenance-aware, segmentable session-log lane in #2142 and children #2144-#2148, then publish it as one draft PR.",
+    "hard_constraints": "Keep session logs local-only and non-authoritative; preserve originals during repair/export; exclude sibling package-output lane #2143.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Implement origin/provenance, coverage repair, segmentation, share-safe export, and packet-kind classification with focused fixtures.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_session_logging.py -q",
+      "uv run python scripts/generate/refresh_command_surfaces.py",
+      "uv run python scripts/generate/generate_command_packages.py --check",
+      "Run AW implement/proof selection for the final changed paths."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/session_logging.py",
+      "tests/test_workspace_session_logging.py",
+      "session-log operation and CLI command contracts plus generated command surfaces",
+      ".agentic-workspace/planning state and this execplan"
+    ],
+    "completion_criteria": [
+      "Ordinary indexed and Markdown-fallback analysis separates agent friction from expected test/validation failures and separates packet/domain kinds.",
+      "Coverage is reported conservatively and repair idempotently backfills Markdown entries without losing existing metadata or artifacts.",
+      "Commands carry source provenance and lightweight task/plan/branch/PR segments that can be summarized and selected.",
+      "Share-safe export redacts Markdown, index, and included artifacts without mutating originals.",
+      "Focused, generated-surface, and routed AW proof pass; a draft PR closes #2142 and #2144-#2148 but not #2143."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "archive-and-close"
+  },
+  "goal": [
+    "Make local AW session-log analysis attributable, segmentable, coverage-aware, and safely exportable for the #2141 dogfooding log class."
+  ],
+  "non_goals": [
+    "Do not implement package-output/recovery lane #2143 or children #2149-#2152.",
+    "Do not add remote telemetry, arbitrary shell logging, proof authority, or general secret detection."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement and publish the complete provenance-aware session-log lane from #2142 and #2144-#2148.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "logging-lane-2142-2148",
+      "status": "active",
+      "next_step": "Publish the validated branch as a draft PR and archive this completed plan.",
+      "proof": "Focused session-log tests, workspace tests/lint, generated package/conformance checks, CLI tests, summary, and planning doctor passed; only pre-existing #2140 contract-health drift remains."
+    },
+    "scope": {
+      "touched": [
+        "Session logging runtime and focused root behavior tests",
+        "Session-log operation/CLI contracts and generated Python/TypeScript projections",
+        "Active Planning state and closeout evidence"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make session logs trustworthy attributable local dogfooding evidence across #2142 and #2144-#2148.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "Focused and broad required proof passed except the unrelated master baseline failures owned by #2140.",
+    "validation still needed": "GitHub PR checks after publication.",
+    "next likely slice": "Review the draft PR; #2153 separately owns the runtime-handler bundle-checker inconsistency."
+  },
+  "intent_interpretation": {
+    "literal request": "Implement logging lane #2142-#2148",
+    "inferred intended outcome": "Integrate parent #2142 and children #2144-#2148 in one ordinary-path logging PR while excluding sibling lane #2143.",
+    "chosen concrete what": "Origin/provenance metadata, coverage repair, segment analysis, share-safe export, and packet/domain-kind separation.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "Session logging runtime/tests, session-log command contracts and generated surfaces, and active Planning records.",
+    "max changed files": "Up to 20, including mechanically regenerated command-package artifacts.",
+    "required validation commands": "Focused session logging tests, generated command refresh/check, then AW changed-path proof selection.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Package-output commands from #2143, unrelated modules, remote services, or non-local logging surfaces."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Implementation and local proof are complete; publish the draft PR and archive the plan.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Implement the #2142/#2144-#2148 logging lane in a new PR.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "keep-local",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    {"kind": "github-issue", "target": "https://github.com/rickardvh/agentic-workspace/issues/2142", "label": "#2142 logging parent", "role": "source_intent", "locator": "issue body and decomposition comment"},
+    {"kind": "github-issue", "target": "https://github.com/rickardvh/agentic-workspace/issues/2144", "label": "#2144 origin classification", "role": "source_intent", "locator": "issue body"},
+    {"kind": "github-issue", "target": "https://github.com/rickardvh/agentic-workspace/issues/2145", "label": "#2145 index coverage repair", "role": "source_intent", "locator": "issue body"},
+    {"kind": "github-issue", "target": "https://github.com/rickardvh/agentic-workspace/issues/2146", "label": "#2146 segmentation", "role": "source_intent", "locator": "issue body"},
+    {"kind": "github-issue", "target": "https://github.com/rickardvh/agentic-workspace/issues/2147", "label": "#2147 share-safe export", "role": "source_intent", "locator": "issue body"},
+    {"kind": "github-issue", "target": "https://github.com/rickardvh/agentic-workspace/issues/2148", "label": "#2148 packet-kind classification", "role": "source_intent", "locator": "issue body"},
+    {"kind": "github-issue", "target": "https://github.com/rickardvh/agentic-workspace/issues/2153", "label": "#2153 bundle checker follow-up", "role": "next_lane", "locator": "draft issue body"}
+  ],
+  "active_milestone": {
+    "id": "logging-lane-2142-2148",
+    "status": "active",
+    "scope": "Integrate #2144-#2148 into the ordinary session-log runtime and analyzer, satisfying parent #2142.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Implement the integrated runtime and fixtures, regenerate declared command surfaces, then run routed proof."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/session_logging.py",
+    "tests/test_workspace_session_logging.py",
+    "src/agentic_workspace/contracts/operations/session-log.manage.json",
+    "src/agentic_workspace/contracts/cli_commands.json",
+    "generated session-log command-package surfaces",
+    ".agentic-workspace/planning/state.toml",
+    ".agentic-workspace/planning/execplans/logging-lane-2142-2148.plan.json"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_session_logging.py -q",
+    "uv run python scripts/generate/refresh_command_surfaces.py",
+    "uv run python scripts/generate/generate_command_packages.py --check",
+    "uv run python scripts/run_agentic_workspace.py implement --target . --changed <final paths> --task \"Implement the #2142 - #2148 logging lane in a new PR\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "All acceptance criteria for #2142 and #2144-#2148 are implemented in the ordinary local session-log path, validated, and published in a new draft PR."
+  ],
+  "execution_run": {
+    "run status": "not-run-yet",
+    "executor": "",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Implemented the integrated logging lane, updated generated CLI surfaces, and added behavior fixtures for every child issue.",
+    "scope touched": "Session logging runtime/tests, command contracts/generated projections, and this Planning record.",
+    "changed surfaces": "Origin/provenance entries; segment metadata/filtering; coverage/repair; export bundles; kind classification; generated repair/export CLI.",
+    "validations run": "20 focused tests; make test-workspace; make lint-workspace; generated package/static proof; operation conformance; 178 workspace CLI tests; structured inventory; ruff; summary; planning doctor.",
+    "result for continuation": "Ready to publish as a draft PR.",
+    "next step": "Commit, push, open the draft PR, and archive this plan."
+  },
+  "finished_run_review": {
+    "review status": "self-reviewed and proof-backed",
+    "scope respected": "yes; #2143/#2149-#2152 package-output work was excluded",
+    "proof status": "passed with disclosed unrelated #2140 baseline failure",
+    "intent served": "yes; parent and every logging child acceptance surface is integrated",
+    "config compliance": "yes; startup, active Planning, proof, closeout, and dogfooding routes were followed",
+    "misinterpretation risk": "Share-safe export redacts known local paths but explicitly does not promise arbitrary secret detection.",
+    "follow-on decision": "Route the command-surface bundle checker inconsistency to draft #2153."
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "The user did not request delegation and the repo instructions prohibited implicit subagents.",
+    "expected savings": "none",
+    "actual friction": "No delegation friction; one broad baseline checker failure was already owned by #2140.",
+    "proof result": "task-relevant proof passed",
+    "quality concern": "Runtime-handler bundle proof inconsistency routed to #2153.",
+    "decomposition adjustment": "Confirmed #2143 is a sibling lane, not part of #2142 decomposition."
+  },
+  "proof_report": {
+    "validation proof": "Focused 20-test session-log suite, 178 workspace CLI tests, make test-workspace, make lint-workspace, generated package/static proof, operation conformance, structured inventory, ruff, summary, and healthy planning doctor all passed.",
+    "proof achieved now": "yes; task-relevant behavior, integration, contract, generation, and lint proof passed",
+    "evidence for \"proof achieved\" state": "The only failed required command was check_contract_tooling_surfaces.py, reproducing the exact unrelated master baseline drift already owned by #2140; command-surface bundle inconsistency was separately routed to draft #2153. Manual test-evidence review inspected testing-strategy.md, test-knowledge-inventory.md, and Verification runtime primitives and retained root behavior plus generated-contract owners."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement the #2142-#2148 logging lane in a new PR, interpreted from issue decomposition as #2142 plus #2144-#2148 and excluding sibling #2143.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "All parent/child acceptance surfaces are present in the ordinary local session-log CLI and covered by focused plus broad proof.",
+    "unsolved intent passed to": "#2153 only for a separate checker-contract inconsistency; no product intent from #2142/#2144-#2148 remains."
+  },
+  "execution_summary": {
+    "outcome delivered": "Complete provenance-aware, segmentable, repairable, share-safe session-log lane.",
+    "validation confirmed": "yes, with #2140 baseline disclosure",
+    "follow-on routed to": "Draft #2153",
+    "post-work posterity capture": "Dogfooding checker inconsistency captured in #2153; no Memory note needed.",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Generated runtime-handler operations can pass static package proof while failing command-surface bundle presence checks.",
+    "motivation worth preserving": "Bundle and exact-boundary proof should agree without weakening source-symbol validation.",
+    "canonical owner now": "GitHub #2153",
+    "promotion trigger": "When runtime-handler projection contracts are next changed.",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "completed",
+    "larger-intent status": "completed",
+    "closure decision": "archive-and-close",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The ordinary local session-log path satisfies parent #2142 and every decomposed child #2144-#2148; #2143 was explicitly a sibling package-output lane.",
+    "evidence carried forward": "Focused/broad proof, PR description, #2140 baseline disclosure, and #2153 checker follow-up.",
+    "reopen trigger": "Reopen if PR review or dogfooding shows origin attribution, coverage repair, segmentation, export redaction, or kind classification does not work in the ordinary path."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": ["session-log.manage bundle proof cannot represent its generated runtime-handler boundary consistently"],
+    "signals fixed": [],
+    "signals routed": ["Draft GitHub #2153"],
+    "signals dismissed": [],
+    "next owner": "GitHub #2153"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": ["#2153 runtime-handler bundle proof consistency", "#2140 pre-existing contract-tooling health drift"]
+    }
+  },
+  "drift_log": [
+    "2026-07-10: Scaffolded by agentic-planning new-plan.",
+    "2026-07-10: Issue decomposition confirmed #2142 owns #2144-#2148 while #2143 is a sibling lane.",
+    "2026-07-10: Implementation and task-relevant proof completed; #2140 baseline drift disclosed and #2153 dogfooding follow-up created."
+  ]
+}
