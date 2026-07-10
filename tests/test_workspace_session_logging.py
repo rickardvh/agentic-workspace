@@ -725,6 +725,20 @@ def test_session_log_provenance_and_kind_classes_are_recorded(tmp_path: Path, mo
     assert "created" not in payload["packet_kinds"]
 
 
+def test_session_log_classifies_structured_runtime_exception() -> None:
+    capture = session_logging.CommandCapture(
+        stdout=json.dumps(
+            {
+                "kind": "agentic-workspace/runtime-error/v1",
+                "failure_class": "unexpected-runtime-exception",
+            }
+        ),
+        stderr="",
+        exit_code=1,
+    )
+    assert session_logging._failure_class(command_text="summary --format json", capture=capture) == "unexpected-runtime-exception"
+
+
 def test_session_log_share_safe_export_redacts_all_surfaces_and_preserves_originals(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")

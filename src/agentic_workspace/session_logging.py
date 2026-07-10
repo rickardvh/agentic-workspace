@@ -1186,6 +1186,8 @@ def _failure_class(*, command_text: str, capture: CommandCapture) -> str:
     parsed = _parse_jsonish(capture.stdout.strip()) or _parse_jsonish(capture.stderr.strip())
     if isinstance(parsed, dict) and str(parsed.get("kind", "")).endswith("/retryable-cli-error/v1"):
         return str(parsed.get("failure_class") or "retryable-cli-usage")
+    if isinstance(parsed, dict) and str(parsed.get("kind", "")) == "agentic-workspace/runtime-error/v1":
+        return str(parsed.get("failure_class") or "unexpected-runtime-exception")
     command = command_text.lower()
     stderr = capture.stderr.lower()
     if "--verbose" in command and "--section" in command:

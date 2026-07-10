@@ -4,6 +4,8 @@ import json
 import subprocess
 from pathlib import Path
 
+from agentic_workspace import cli as source_cli
+
 
 def _run_cli(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -56,6 +58,20 @@ def test_blackbox_near_miss_command_guides_to_startup() -> None:
     assert payload["suggested_command"] == "agentic-workspace summary --format json"
     assert "Did you mean: summary?" in payload["message"]
     assert "Startup tip: run 'agentic-workspace start --task \"<task>\" --format json'" in payload["message"]
+
+
+def test_unexpected_json_runtime_exception_has_structured_recovery(monkeypatch, capsys) -> None:
+    def fail(_argv: list[str]) -> int:
+        raise RuntimeError("representative package failure")
+
+    monkeypatch.setattr(source_cli, "_load_main", lambda: fail)
+    assert source_cli.main(["summary", "--format", "json"]) == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/runtime-error/v1"
+    assert payload["exception_class"] == "RuntimeError"
+    assert payload["failure_class"] == "unexpected-runtime-exception"
+    assert payload["safe_to_retry"] is False
+    assert payload["completion_boundary"] == "command-did-not-complete"
 
 
 def test_blackbox_selector_conflict_guides_to_correct_usage() -> None:
