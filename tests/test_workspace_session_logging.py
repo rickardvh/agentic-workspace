@@ -416,7 +416,18 @@ stderr:
 
     assert (
         source_cli.main(
-            ["session-log", "--target", str(target), "analyze", "--path", log_path.relative_to(target).as_posix(), "--format", "json"]
+            [
+                "session-log",
+                "--target",
+                str(target),
+                "analyze",
+                "--path",
+                log_path.relative_to(target).as_posix(),
+                "--origin",
+                "all",
+                "--format",
+                "json",
+            ]
         )
         == 0
     )
@@ -596,12 +607,89 @@ def test_session_log_origins_expected_failures_and_nested_commands_are_separate(
     capsys.readouterr()
     payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]))
     assert payload["failures_by_origin"] == {"agent": 1, "validation": 2}
-    assert payload["summary"]["failure_count"] == 3
+    assert payload["summary"]["failure_count"] == 1
+    assert payload["summary"]["command_count"] == 2
     assert payload["summary"]["live_agent_failure_count"] == 1
-    assert payload["summary"]["expected_failure_count"] == 2
+    assert payload["summary"]["expected_failure_count"] == 0
+    assert payload["origin_partitions"]["synthetic"]["failure_count"] == 2
     assert payload["repeated_failures_by_origin"]["validation"][0]["count"] == 2
     index = json.loads(_current_index(target).read_text(encoding="utf-8"))
     assert any(entry["origin"]["classification"] == "nested-aw" for entry in index["entries"])
+
+
+def test_session_log_analysis_is_live_agent_first_for_mixed_pr_2166_bundle(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+    capsys.readouterr()
+    index_path = _current_index(target)
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    template = index["entries"][0]
+    entries = []
+    for position in range(68):
+        command = "summary --verbose --target ." if position == 0 else f"status --target . --select agent-{position}"
+        if position == 1:
+            command = "session-log analyze --target . --format json"
+        entries.append(
+            {
+                **template,
+                "id": f"agent-{position}",
+                "command": command,
+                "origin": {"classification": "agent", "source": "ordinary-cli", "detail": ""},
+                "exit_status": 0,
+                "output_bytes": 1_233_722 if position == 0 else 100,
+                "output_digest": f"agent-digest-{position}",
+            }
+        )
+    for position in range(35):
+        entries.append(
+            {
+                **template,
+                "id": f"pytest-{position}",
+                "command": "summry --target ." if position < 15 else "modules --verbose --target .",
+                "origin": {"classification": "pytest", "source": "PYTEST_CURRENT_TEST", "detail": ""},
+                "parent": {"entry_id": "fixture-owner", "command": "pytest", "context": "test_session_fixture"},
+                "exit_status": 2 if position < 15 else 0,
+                "output_bytes": 200,
+                "output_digest": f"pytest-digest-{position}",
+            }
+        )
+    index["entries"] = entries
+    index_path.write_text(json.dumps(index, indent=2), encoding="utf-8")
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+
+    default = session_logging.analyze_session_log(state=state)
+    assert default["analysis_scope"]["origin"] == "agent"
+    assert default["summary"]["command_count"] == 68
+    assert default["summary"]["failure_count"] == 0
+    assert default["origin_breakdown"] == {"agent": 68, "pytest": 35}
+    assert default["origin_partitions"]["test"]["command_count"] == 35
+    assert default["origin_partitions"]["test"]["failure_count"] == 15
+    assert default["origin_partitions"]["test"]["entries"][0]["parent"]["entry_id"] == "fixture-owner"
+    assert default["analyzer_overhead"]["command_count"] == 1
+    assert any("1233722 bytes" in item["summary"] for item in default["friction_candidates"])
+    assert not any("summry" in item["summary"] or "session-log analyze" in item["summary"] for item in default["friction_candidates"])
+
+    test_scope = session_logging.analyze_session_log(state=state, origin_scope="test")
+    assert test_scope["summary"]["command_count"] == 35
+    assert test_scope["summary"]["failure_count"] == 15
+    all_scope = session_logging.analyze_session_log(state=state, origin_scope="all")
+    assert all_scope["summary"]["command_count"] == 103
+    assert all_scope["summary"]["failure_count"] == 15
+
+
+def test_session_log_origin_scopes_keep_synthetic_and_unknown_queryable(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    for origin in ("validation", "nested-aw", "unknown"):
+        monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", origin)
+        assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: 0) == 0
+    capsys.readouterr()
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    assert session_logging.analyze_session_log(state=state)["summary"]["command_count"] == 0
+    assert session_logging.analyze_session_log(state=state, origin_scope="synthetic")["summary"]["command_count"] == 2
+    assert session_logging.analyze_session_log(state=state, origin_scope="unknown")["summary"]["command_count"] == 1
 
 
 def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tmp_path: Path, capsys, monkeypatch) -> None:

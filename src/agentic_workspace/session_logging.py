@@ -201,6 +201,7 @@ def _run_session_log_adapter(args: Any) -> int:
                 path=str(getattr(args, "path", "") or ""),
                 session_id=str(getattr(args, "id", "") or ""),
                 segment_id=str(getattr(args, "segment", "") or ""),
+                origin_scope=str(getattr(args, "origin", "agent") or "agent"),
             )
         elif command == "repair":
             payload = repair_session_log_index(
@@ -1333,6 +1334,7 @@ def _entry_brief(entry: dict[str, Any]) -> dict[str, Any]:
         "failure_class": entry.get("failure_class", ""),
         "expected_failure": bool(entry.get("expected_failure", False)),
         "origin": entry.get("origin", {}),
+        "parent": entry.get("parent", {}),
         "segment_id": entry.get("segment", {}).get("id", "") if isinstance(entry.get("segment"), dict) else "",
         "output_bytes": entry.get("output_bytes", 0),
         "artifact_path": artifact.get("path", "") if isinstance(artifact, dict) else "",
@@ -1383,6 +1385,8 @@ def _friction_candidates(
             }
         )
     for entry in entries:
+        if _is_session_log_analyzer_entry(entry):
+            continue
         if int(entry.get("output_bytes", 0) or 0) > DEFAULT_MAX_INLINE_OUTPUT_BYTES:
             command = str(entry.get("command", ""))
             candidates.append(
@@ -1401,6 +1405,18 @@ def _friction_candidates(
                     }
                 )
     return candidates[:20]
+
+
+def _is_session_log_analyzer_entry(entry: dict[str, Any]) -> bool:
+    try:
+        tokens = shlex.split(str(entry.get("command", "")))
+    except ValueError:
+        tokens = str(entry.get("command", "")).split()
+    try:
+        surface_index = tokens.index("session-log")
+    except ValueError:
+        return False
+    return "analyze" in tokens[surface_index + 1 :]
 
 
 def _session_for_log(*, state: SessionLoggingState, log_path: Path, session: dict[str, str] | None) -> dict[str, str]:
@@ -1632,7 +1648,14 @@ def _segment_summaries(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return summaries
 
 
-def analyze_session_log(*, state: SessionLoggingState, path: str = "", session_id: str = "", segment_id: str = "") -> dict[str, Any]:
+def analyze_session_log(
+    *,
+    state: SessionLoggingState,
+    path: str = "",
+    session_id: str = "",
+    segment_id: str = "",
+    origin_scope: str = "agent",
+) -> dict[str, Any]:
     session = _session_for_caller(target_root=state.target_root, logical_identity=_logical_session_identity())
     log_path = _analysis_log_path(state=state, path=path, session_id=session_id, session=session)
     if log_path is None:
@@ -1650,11 +1673,20 @@ def analyze_session_log(*, state: SessionLoggingState, path: str = "", session_i
     coverage = _coverage_payload(markdown_entries=markdown_entries, index=index)
     all_entries = _entries_from_index(index) if index is not None else markdown_entries
     segment_summaries = _segment_summaries(all_entries)
-    entries = [
+    selected_entries = [
         entry
         for entry in all_entries
         if not segment_id or (isinstance(entry.get("segment"), dict) and str(entry["segment"].get("id", "")) == segment_id)
     ]
+    origin_groups = {
+        "agent": {"agent"},
+        "test": {"pytest"},
+        "synthetic": {"validation", "nested-aw"},
+        "unknown": {"unknown"},
+        "all": {"agent", "pytest", "validation", "nested-aw", "unknown"},
+    }
+    origin_scope = origin_scope if origin_scope in origin_groups else "agent"
+    entries = [entry for entry in selected_entries if _origin_name(entry) in origin_groups[origin_scope]]
     notes = index.get("notes", []) if isinstance(index, dict) and isinstance(index.get("notes"), list) else []
     command_counter = Counter(str(entry.get("command", "")) for entry in entries if entry.get("command"))
     digest_counter = Counter(str(entry.get("output_digest", "")) for entry in entries if entry.get("output_digest"))
@@ -1677,18 +1709,36 @@ def analyze_session_log(*, state: SessionLoggingState, path: str = "", session_i
     )
     domain_kinds = Counter(value for entry in entries for value in entry.get("domain_kinds", []) if isinstance(value, str) and value)
     top_level_kinds = Counter(value for entry in entries for value in entry.get("top_level_kinds", []) if isinstance(value, str) and value)
-    failures_by_origin = Counter(_origin_name(entry) for entry in failures)
+    all_failures = [entry for entry in selected_entries if int(entry.get("exit_status", 0) or 0) != 0]
+    failures_by_origin = Counter(_origin_name(entry) for entry in all_failures)
+    origin_breakdown = Counter(_origin_name(entry) for entry in selected_entries)
     repeated_failures_by_origin: dict[str, list[dict[str, Any]]] = {}
-    for origin in sorted({_origin_name(entry) for entry in failures}):
-        counter = Counter(str(entry.get("command", "")) for entry in failures if _origin_name(entry) == origin and entry.get("command"))
+    for origin in sorted({_origin_name(entry) for entry in all_failures}):
+        counter = Counter(str(entry.get("command", "")) for entry in all_failures if _origin_name(entry) == origin and entry.get("command"))
         repeated_failures_by_origin[origin] = [
             {"command": command, "count": count} for command, count in counter.most_common() if count > 1
         ]
+    origin_partitions = {}
+    for partition, origins in origin_groups.items():
+        if partition == "all":
+            continue
+        members = [entry for entry in selected_entries if _origin_name(entry) in origins]
+        partition_failures = [entry for entry in members if int(entry.get("exit_status", 0) or 0) != 0]
+        origin_partitions[partition] = {
+            "origins": sorted(origins),
+            "command_count": len(members),
+            "failure_count": len(partition_failures),
+            "entries": [_entry_brief(entry) for entry in members[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+        }
+    analyzer_overhead = [entry for entry in selected_entries if _is_session_log_analyzer_entry(entry)]
+    product_entries = [entry for entry in entries if not _is_session_log_analyzer_entry(entry)]
+    product_commands = Counter(str(entry.get("command", "")) for entry in product_entries if entry.get("command"))
+    product_digests = Counter(str(entry.get("output_digest", "")) for entry in product_entries if entry.get("output_digest"))
     friction_candidates = _friction_candidates(
-        entries=entries,
-        failures=live_failures,
-        repeated=repeated,
-        duplicates=duplicates,
+        entries=product_entries,
+        failures=[entry for entry in live_failures if not _is_session_log_analyzer_entry(entry)],
+        repeated=[{"command": command, "count": count} for command, count in product_commands.most_common() if count > 1],
+        duplicates=[{"sha256": digest, "count": count} for digest, count in product_digests.most_common() if count > 1],
         index_present=index is not None,
     )
     return {
@@ -1703,8 +1753,8 @@ def analyze_session_log(*, state: SessionLoggingState, path: str = "", session_i
         "summary": {
             "command_count": len(entries),
             "note_count": len(notes),
-            "failure_count": len(failures),
-            "failed_count": len(failures),
+            "failure_count": len(live_failures) if origin_scope == "agent" else len(failures),
+            "failed_count": len(live_failures) if origin_scope == "agent" else len(failures),
             "live_agent_failure_count": len(live_failures),
             "expected_failure_count": sum(1 for entry in failures if bool(entry.get("expected_failure", False))),
             "usage_mistake_count": len(usage_mistakes),
@@ -1713,7 +1763,21 @@ def analyze_session_log(*, state: SessionLoggingState, path: str = "", session_i
             "duplicate_output_count": len(duplicates),
             "artifact_count": sum(1 for entry in entries if entry.get("artifact")),
         },
-        "failed_commands": [_entry_brief(entry) for entry in failures],
+        "analysis_scope": {
+            "origin": origin_scope,
+            "default": "agent",
+            "included_origins": sorted(origin_groups[origin_scope]),
+            "detail_route": "agentic-workspace session-log analyze --origin <agent|all|test|synthetic|unknown> --format json",
+            "rule": "The ordinary packet is live-agent-first; other origins remain available through explicit origin scope.",
+        },
+        "origin_breakdown": dict(sorted(origin_breakdown.items())),
+        "origin_partitions": origin_partitions,
+        "analyzer_overhead": {
+            "command_count": len(analyzer_overhead),
+            "entries": [_entry_brief(entry) for entry in analyzer_overhead[:LARGE_OUTPUT_SUMMARY_LIMIT]],
+            "rule": "session-log analyze traffic is classified separately and cannot become default product-friction evidence.",
+        },
+        "failed_commands": [_entry_brief(entry) for entry in (live_failures if origin_scope == "agent" else failures)],
         "live_failed_commands": [_entry_brief(entry) for entry in live_failures],
         "failures_by_origin": dict(sorted(failures_by_origin.items())),
         "repeated_failures_by_origin": repeated_failures_by_origin,

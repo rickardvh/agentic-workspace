@@ -2403,6 +2403,21 @@ const commandDefinitions = [
             },
             {
               "choices": [
+                "agent",
+                "all",
+                "test",
+                "synthetic",
+                "unknown"
+              ],
+              "default": "agent",
+              "flags": [
+                "--origin"
+              ],
+              "help": "Origin scope for operational conclusions; defaults to live agent traffic.",
+              "name": "origin"
+            },
+            {
+              "choices": [
                 "text",
                 "json"
               ],
