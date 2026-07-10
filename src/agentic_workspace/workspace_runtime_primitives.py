@@ -39981,15 +39981,18 @@ def _emit_lifecycle_mutation_result(
         "dry_run": bool(getattr(args, "dry_run", False)),
         "changed_count": changed_count,
         "manual_attention_count": manual_attention_count,
-        "safe_explicit_apply": bool(getattr(args, "dry_run", False)) and manual_attention_count == 0,
+        "safe_explicit_apply": action_state.get("safe_to_apply") is True,
         "next_action": {"command": next_command},
         "detail_commands": {
             "verbose": _command_with_cli_invoke(
-                command=f"agentic-workspace upgrade --target {target_root.as_posix()} --verbose --format json",
+                command=f"agentic-workspace upgrade --target {target_root.as_posix()} --to-payload-target --verbose --format json",
                 cli_invoke=config.cli_invoke,
             ),
             "select": _command_with_cli_invoke(
-                command=f"agentic-workspace upgrade --target {target_root.as_posix()} --select <field[,field...]> --format json",
+                command=(
+                    f"agentic-workspace upgrade --target {target_root.as_posix()} --to-payload-target "
+                    "--select <field[,field...]> --format json"
+                ),
                 cli_invoke=config.cli_invoke,
             ),
         },

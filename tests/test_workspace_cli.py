@@ -2044,7 +2044,12 @@ def test_upgrade_to_payload_target_forces_provenance_capability_sync(tmp_path: P
     assert compact_payload["kind"] == "agentic-workspace/lifecycle-mutation-summary/v1"
     assert set(("status", "changed_count", "manual_attention_count", "safe_explicit_apply", "next_action")) <= compact_payload.keys()
     assert len(json.dumps(compact_payload)) < 4_000
-    assert "--verbose" in compact_payload["detail_commands"]["verbose"]
+    assert compact_payload["detail_commands"]["verbose"].endswith(
+        f"upgrade --target {tmp_path.as_posix()} --to-payload-target --verbose --format json"
+    )
+    assert compact_payload["detail_commands"]["select"].endswith(
+        f"upgrade --target {tmp_path.as_posix()} --to-payload-target --select <field[,field...]> --format json"
+    )
 
     assert cli.main(["upgrade", "--target", str(tmp_path), "--to-payload-target", "--dry-run", "--verbose", "--format", "json"]) == 0
     dry_run_payload = json.loads(capsys.readouterr().out)
@@ -2511,6 +2516,47 @@ def test_payload_target_blocks_when_invoked_cli_cannot_satisfy_explicit_target(t
     assert compatibility["action_state"]["state"] == "blocking_incompatible"
     assert compatibility["action_state"]["safe_to_apply"] is False
     assert "--to-payload-target" not in compatibility["action_state"]["command"]
+
+    assert cli.main(["upgrade", "--target", str(tmp_path), "--to-payload-target", "--dry-run", "--format", "json"]) == 0
+    compact_upgrade = json.loads(capsys.readouterr().out)
+    assert compact_upgrade["status"] == "blocking-drift"
+    assert compact_upgrade["safe_explicit_apply"] is False
+
+
+def test_compact_payload_upgrade_projects_authoritative_unsafe_action_without_manual_attention(tmp_path: Path, capsys) -> None:
+    from types import SimpleNamespace
+
+    args = SimpleNamespace(
+        command="upgrade",
+        select=None,
+        to_payload_target=True,
+        verbose=False,
+        dry_run=True,
+        format="json",
+    )
+    payload = {
+        "installed_state_compatibility": {
+            "status": "blocking-drift",
+            "action_state": {
+                "state": "blocking_incompatible",
+                "safe_to_apply": False,
+                "apply_command": "",
+            },
+        },
+        "warnings": [],
+        "needs_review": [],
+    }
+
+    cli._emit_lifecycle_mutation_result(
+        args=args,
+        payload=payload,
+        target_root=tmp_path,
+        config=SimpleNamespace(cli_invoke="agentic-workspace"),
+    )
+
+    compact = json.loads(capsys.readouterr().out)
+    assert compact["manual_attention_count"] == 0
+    assert compact["safe_explicit_apply"] is False
 
 
 def test_workspace_config_rejects_invalid_payload_target_policy(tmp_path: Path) -> None:
