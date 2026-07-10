@@ -1367,6 +1367,18 @@ candidates = []
 
 def test_planning_closeout_skips_oversized_retained_evidence(tmp_path: Path, capsys) -> None:
     _write(
+        tmp_path / ".agentic-workspace/local/planning-last-closeout.json",
+        json.dumps(
+            {
+                "kind": "planning-last-closeout-context/v1",
+                "status": "evidence-retained",
+                "plan_id": "older-plan",
+                "evidence_path": ".agentic-workspace/planning/closeout-evidence/older-plan.closeout.json",
+                "authority": "planning-terminal-command",
+            }
+        ),
+    )
+    _write(
         tmp_path / "src/agentic_workspace/contracts/structured_file_inventory.json",
         json.dumps(
             {
@@ -1426,6 +1438,10 @@ def test_planning_closeout_skips_oversized_retained_evidence(tmp_path: Path, cap
     assert any(action["kind"] == "retained closeout evidence skipped" for action in payload["actions"])
     assert not closeout_evidence_path.exists()
     assert not record_path.exists()
+    last_closeout = json.loads((tmp_path / ".agentic-workspace/local/planning-last-closeout.json").read_text(encoding="utf-8"))
+    assert last_closeout["status"] == "no-retained-evidence"
+    assert last_closeout["plan_id"] == "plan-alpha"
+    assert last_closeout["evidence_path"] == ""
     assert options["resolve-closeout-blocker"]["allowed"] is False
     assert options["claim-slice-complete"]["allowed"] is True
     assert not any("rerun planning closeout" in action["detail"] for action in payload["actions"])
@@ -2123,6 +2139,10 @@ execplans = [
     assert closeout_evidence["kind"] == "planning-closeout-evidence/v1"
     assert closeout_evidence["source_plan"] == ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
     assert closeout_evidence["retention"]["state"] == "cleanup-distilled-without-full-archive"
+    last_closeout = json.loads((tmp_path / ".agentic-workspace/local/planning-last-closeout.json").read_text(encoding="utf-8"))
+    assert last_closeout["authority"] == "planning-terminal-command"
+    assert last_closeout["plan_id"] == "plan-alpha"
+    assert last_closeout["evidence_path"] == ".agentic-workspace/planning/closeout-evidence/plan-alpha.closeout.json"
     assert "execplans = []" in state_text
     assert 'maturity = "closed"' not in state_text
     assert "durable_residue" not in state_text

@@ -233,6 +233,7 @@ def _compact_tiny_proof_closeout_summary(value: Any) -> dict[str, Any]:
     route = _as_dict(value.get("route"))
     sufficiency = _as_dict(value.get("sufficiency"))
     receipt_bridge = _as_dict(value.get("receipt_bridge"))
+    route_maturity_detail = _as_dict(value.get("route_maturity"))
     changed_paths = [str(item) for item in _list_payload(value.get("changed_paths"))][:5]
     gap_count = len(_list_payload(value.get("remaining_gaps")))
     proof_count = len(_list_payload(value.get("proof_results")))
@@ -243,6 +244,13 @@ def _compact_tiny_proof_closeout_summary(value: Any) -> dict[str, Any]:
         f"Route {route_name} from {route_source} ({route_maturity}); proof_results={proof_count}; remaining_gaps={gap_count}.",
         limit=180,
     )
+    compact_route_maturity = {"status": route_maturity_detail.get("status", "")}
+    advisory_count = len(_list_payload(route_maturity_detail.get("advisories")))
+    blocker_count = len(_list_payload(route_maturity_detail.get("blockers")))
+    if advisory_count:
+        compact_route_maturity["advisory_count"] = advisory_count
+    if blocker_count:
+        compact_route_maturity["blocker_count"] = blocker_count
     return {
         "kind": value.get("kind", "agentic-workspace/proof-closeout-summary/v1"),
         "status": value.get("status", ""),
@@ -253,6 +261,7 @@ def _compact_tiny_proof_closeout_summary(value: Any) -> dict[str, Any]:
         "receipt_bridge": {
             key: receipt_bridge.get(key) for key in ("status", "missing_receipt_count", "detail_selector") if key in receipt_bridge
         },
+        **({"route_maturity": compact_route_maturity} if compact_route_maturity["status"] not in {"", "not-applicable"} else {}),
         "sufficiency": {key: sufficiency.get(key, "") for key in ("status",) if sufficiency.get(key)},
         "human_summary": human_summary,
         "detail_selector": "proof_closeout_summary",
@@ -4897,12 +4906,17 @@ def _proof_closeout_summary_payload(
         proof_receipt_reconciliation=proof_receipt_reconciliation,
     )
     maturity_gaps = _proof_closeout_maturity_gaps(proof_command_explanations=proof_command_explanations)
+    maturity_disposition = _proof_closeout_maturity_disposition(
+        proof_route_decision=proof_route_decision,
+        proof_results=proof_results,
+        maturity_gaps=maturity_gaps,
+    )
     remaining_gaps = _proof_closeout_remaining_gaps(
         proof_results=proof_results,
         manual_verification=manual_verification,
         unavailable_commands=unavailable_commands,
         host_policy_blocked_commands=host_policy_blocked_commands,
-        maturity_gaps=maturity_gaps,
+        maturity_blockers=maturity_disposition["blockers"],
     )
     risk_lanes = _dedupe([str(lane.get("id", "")).strip() for lane in selected_lanes if str(lane.get("id", "")).strip()])
     status = (
@@ -4940,7 +4954,9 @@ def _proof_closeout_summary_payload(
         },
         "remaining_gaps": remaining_gaps,
         "remaining_gap_statement": _join_or_none(remaining_gaps),
-        "route_maturity_gaps": maturity_gaps,
+        "route_maturity": maturity_disposition,
+        "route_maturity_advisories": maturity_disposition["advisories"],
+        "route_maturity_gaps": maturity_disposition["blockers"],
         "sufficiency": {"status": status, "why": sufficiency},
         "pr_validation_lines": lines,
         "rule": "This is a human-facing projection of proof-selection and receipt evidence; it does not replace the underlying proof records.",
@@ -5050,13 +5066,38 @@ def _proof_closeout_maturity_gaps(*, proof_command_explanations: dict[str, Any])
     return gaps
 
 
+def _proof_closeout_maturity_disposition(
+    *, proof_route_decision: dict[str, Any], proof_results: list[dict[str, str]], maturity_gaps: list[str]
+) -> dict[str, Any]:
+    selected = _as_dict(proof_route_decision.get("selected_command"))
+    authority = str(selected.get("route_authority") or "").strip()
+    authority_surface = str(selected.get("authority_surface") or "").strip()
+    result_by_command = {str(item.get("command") or ""): str(item.get("result") or "") for item in proof_results}
+    maturity_commands = [gap.split(": conservative fallback", 1)[0] for gap in maturity_gaps]
+    uncovered_commands = [command for command in maturity_commands if result_by_command.get(command) not in {"passed", "waived"}]
+    authority_established = bool(authority and authority_surface)
+    coverage_established = bool(maturity_commands) and not uncovered_commands
+    advisory_allowed = authority_established and coverage_established
+    return {
+        "status": "advisory" if advisory_allowed else "blocked" if maturity_gaps else "not-applicable",
+        "authority": authority,
+        "authority_surface": authority_surface,
+        "authority_established": authority_established,
+        "coverage_established": coverage_established,
+        "uncovered_commands": uncovered_commands,
+        "advisories": maturity_gaps if advisory_allowed else [],
+        "blockers": [] if advisory_allowed else maturity_gaps,
+        "rule": "Conservative route maturity is advisory only when selected route authority is explicit and every affected command has accepted covering proof.",
+    }
+
+
 def _proof_closeout_remaining_gaps(
     *,
     proof_results: list[dict[str, str]],
     manual_verification: dict[str, Any] | None,
     unavailable_commands: list[dict[str, Any]],
     host_policy_blocked_commands: list[dict[str, str]],
-    maturity_gaps: list[str],
+    maturity_blockers: list[str],
 ) -> list[str]:
     gaps: list[str] = []
     for item in proof_results:
@@ -5066,7 +5107,7 @@ def _proof_closeout_remaining_gaps(
         gaps.append(str(manual_verification.get("summary") or manual_verification.get("reason") or "manual verification required"))
     gaps.extend(f"{item.get('command')}: {item.get('reason')}" for item in unavailable_commands if isinstance(item, dict))
     gaps.extend(f"{item.get('command')}: host policy blocked selected proof" for item in host_policy_blocked_commands)
-    gaps.extend(maturity_gaps)
+    gaps.extend(maturity_blockers)
     return _dedupe([gap for gap in gaps if gap.strip()])
 
 

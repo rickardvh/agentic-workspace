@@ -1310,6 +1310,97 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
     assert any(line == "Remaining gaps: none known." for line in summary["pr_validation_lines"])
 
 
+def test_proof_closeout_treats_conservative_route_maturity_as_advisory_after_accepted_receipt() -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_closeout_summary_payload
+
+    command = "make test-workspace"
+    summary = _proof_closeout_summary_payload(
+        changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+        selected_lanes=[{"id": "workspace_cli"}],
+        proof_route_decision={
+            "selected_command": {
+                "command": command,
+                "route_source": "live-confirmed-proof-rule",
+                "route_authority": "package-seed-or-default-route",
+                "fallback_status": "seed-fallback",
+                "authority_surface": "package proof defaults",
+            }
+        },
+        proof_command_explanations={"required": [{"command": command, "reason_classes": ["conservative-fallback"]}]},
+        proof_execution_evidence={"commands": []},
+        proof_receipt_reconciliation={"commands": [{"command": command, "evidence_state": "accepted"}]},
+        proof_receipt_bridge={"status": "clear", "missing_receipt_count": 0},
+        learned_route_reliance={"items": []},
+        manual_verification=None,
+        unavailable_commands=[],
+        host_policy_blocked_commands=[],
+    )
+
+    assert summary["status"] == "sufficient-recorded"
+    assert summary["remaining_gaps"] == []
+    assert summary["route"]["maturity"] == "conservative-fallback"
+    assert summary["route_maturity_advisories"] == [
+        f"{command}: conservative fallback; narrower learned route evidence is missing or immature"
+    ]
+    assert summary["route_maturity_gaps"] == []
+    assert summary["route_maturity"]["authority_established"] is True
+    assert summary["route_maturity"]["coverage_established"] is True
+
+
+def test_proof_closeout_keeps_conservative_maturity_blocking_without_route_authority() -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_closeout_summary_payload
+
+    command = "make test-workspace"
+    summary = _proof_closeout_summary_payload(
+        changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+        selected_lanes=[{"id": "workspace_cli"}],
+        proof_route_decision={"selected_command": {"command": command, "route_source": "fallback"}},
+        proof_command_explanations={"required": [{"command": command, "reason_classes": ["conservative-fallback"]}]},
+        proof_execution_evidence={"commands": []},
+        proof_receipt_reconciliation={"commands": [{"command": command, "evidence_state": "accepted"}]},
+        proof_receipt_bridge={"status": "clear", "missing_receipt_count": 0},
+        learned_route_reliance={"items": []},
+        manual_verification=None,
+        unavailable_commands=[],
+        host_policy_blocked_commands=[],
+    )
+
+    assert summary["status"] == "not-yet-sufficient"
+    assert summary["route_maturity"]["status"] == "blocked"
+    assert summary["route_maturity"]["authority_established"] is False
+    assert summary["route_maturity_advisories"] == []
+    assert summary["route_maturity_gaps"] == [f"{command}: conservative fallback; narrower learned route evidence is missing or immature"]
+
+
+def test_proof_cli_accepts_covering_receipts_for_authoritative_conservative_route(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "Makefile", "test:\n\tpytest\n\nlint:\n\truff check .\n")
+    _write(tmp_path / "llms.txt", "proof route fixture\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+    first = json.loads(capsys.readouterr().out)["answer"]
+    commands = first["required_commands"]
+    receipts = [
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "command": command,
+                "result": "passed",
+                "changed_paths": ["llms.txt"],
+                "recorded_at": f"2026-07-10T10:00:0{index}Z",
+            }
+        )
+        for index, command in enumerate(commands)
+    ]
+    _write(tmp_path / ".agentic-workspace/local/proof-receipts/history.jsonl", "\n".join(receipts) + "\n")
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
+    summary = json.loads(capsys.readouterr().out)["proof_closeout_summary"]
+    assert summary["status"] == "sufficient-recorded"
+    assert summary["remaining_gap_count"] == 0
+    assert summary["route_maturity"] == {"status": "advisory", "advisory_count": len(commands)}
+
+
 def test_proof_changed_exposes_receipt_bridge_for_unrecorded_commands(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 
@@ -1552,6 +1643,7 @@ def test_proof_tiny_includes_closeout_summary_for_pr_validation(tmp_path: Path, 
     assert summary["changed_paths"] == ["llms.txt"]
     assert summary["route"]["maturity"] == "conservative-fallback"
     assert summary["remaining_gap_count"] == 4
+    assert summary["route_maturity"] == {"status": "blocked", "blocker_count": 2}
     assert "conservative-fallback" in summary["human_summary"]
 
 
