@@ -11004,6 +11004,7 @@ def create_execplan_scaffold(
         "roadmap": {"lanes": [], "candidates": []},
     }
     updated_state = copy.deepcopy(state)
+    attached_active_lane_id = ""
     if activate or queue:
         if _compact_todo_item_from_state(updated_state, slug) is not None:
             result.add("manual review", state_path, f"planning item '{slug}' already exists in state.toml")
@@ -11069,6 +11070,11 @@ def create_execplan_scaffold(
         todo.setdefault("active_items", [])
         todo.setdefault("queued_items", [])
         updated_state["todo"] = todo
+        if activate:
+            attached_active_lane_id = _attach_execplan_to_single_active_lane(
+                updated_state,
+                execplan_ref=record_relative,
+            )
 
     for demoted_path, demoted_record in demoted_record_updates:
         try:
@@ -11096,6 +11102,8 @@ def create_execplan_scaffold(
             result.add("would update", demoted_path, "demote displaced active execplan milestone to planned")
         if activate or queue:
             result.add("would update", state_path, f"register '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
+        if attached_active_lane_id:
+            result.add("would update", state_path, f"attach execplan '{slug}' to active lane '{attached_active_lane_id}'")
         result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --verbose --format json`")
         result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
         return result
@@ -11110,6 +11118,8 @@ def create_execplan_scaffold(
     if activate or queue:
         _write_state_to_toml(target_root, updated_state)
         result.add("updated", state_path, f"registered '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
+    if attached_active_lane_id:
+        result.add("updated", state_path, f"attached execplan '{slug}' to active lane '{attached_active_lane_id}'")
     result.add("next", state_path, "run `agentic-workspace summary --target . --verbose --format json`")
     result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
     if prep_only:
@@ -11119,6 +11129,36 @@ def create_execplan_scaffold(
             "after summary verification, stop; do not create README, package, source, public, schema, database, or app scaffold files",
         )
     return result
+
+
+def _attach_execplan_to_single_active_lane(state: dict[str, Any], *, execplan_ref: str) -> str:
+    """Attach a newly active execplan only when lane ownership is unambiguous."""
+    roadmap = state.get("roadmap")
+    if not isinstance(roadmap, dict):
+        return ""
+    lanes = roadmap.get("lanes")
+    if not isinstance(lanes, list):
+        return ""
+    active_indexes = [
+        index for index, lane in enumerate(lanes) if isinstance(lane, dict) and str(lane.get("status") or "").strip() == "active"
+    ]
+    if len(active_indexes) != 1:
+        return ""
+    index = active_indexes[0]
+    lane = lanes[index]
+    if not isinstance(lane, dict):
+        return ""
+    existing_execplan = str(lane.get("execplan") or "").strip()
+    if existing_execplan and existing_execplan != execplan_ref:
+        return ""
+    lane_id = str(lane.get("id") or "").strip()
+    if not lane_id:
+        return ""
+    lane["execplan"] = execplan_ref
+    lanes[index] = lane
+    roadmap["lanes"] = lanes
+    state["roadmap"] = roadmap
+    return lane_id
 
 
 def _switched_active_execplan_record_updates(
