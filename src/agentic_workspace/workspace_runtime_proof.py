@@ -27,6 +27,11 @@ from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
 from agentic_workspace.current_work_context import resolve_current_work_context
+from agentic_workspace.proof_receipt_admission import (
+    PROOF_RECEIPT_RESULT_OPTIONS,
+    proof_command_admission,
+    proof_receipt_admission,
+)
 from agentic_workspace.runtime_source_review import runtime_source_edit_review_for_changed_paths
 from agentic_workspace.runtime_symbol_working_set import runtime_symbol_working_set_for_changed_paths
 from agentic_workspace.workspace_runtime_core import (
@@ -495,18 +500,6 @@ def _command_template_payload(*, command: Any, placeholders: dict[str, Any], pur
     }
 
 
-def _proof_receipt_passed(result: Any) -> bool:
-    normalized = re.sub(r"[^a-z0-9]+", "-", str(result or "").strip().lower()).strip("-")
-    return normalized in {"pass", "passed", "success", "succeeded", "ok", "green"}
-
-
-def _proof_receipt_failed(result: Any) -> bool:
-    normalized = re.sub(r"[^a-z0-9]+", "-", str(result or "").strip().lower()).strip("-")
-    if normalized in {"fail", "failed", "failure", "error", "errored", "timeout", "timed-out", "cancelled", "canceled"}:
-        return True
-    return bool(set(normalized.split("-")) & {"fail", "failed", "failure", "error", "errored", "timeout", "cancelled", "canceled"})
-
-
 def _proof_receipt_summary(receipt: dict[str, Any]) -> dict[str, Any]:
     summary = {
         "command": str(receipt.get("command") or "").strip(),
@@ -538,6 +531,8 @@ def _read_proof_receipt_records(target_root: Path) -> tuple[list[dict[str, Any]]
 
     def add_record(receipt: Any) -> None:
         if not isinstance(receipt, dict):
+            return
+        if not proof_receipt_admission(receipt)["admitted"]:
             return
         identity = _proof_receipt_identity(receipt)
         if identity in seen:
@@ -769,7 +764,7 @@ def _proof_receipt_reconciliation_payload(
     aggregate_receipts = [
         receipt
         for receipt in receipt_records
-        if _proof_receipt_passed(str(receipt.get("result") or ""))
+        if proof_receipt_admission(receipt)["proof_sufficient"]
         and _proof_receipt_path_scope_matches(receipt=receipt, changed_paths=changed_paths)
         and _proof_receipt_aggregate_matches(receipt=receipt, required_commands=blocking_commands)[0]
     ]
@@ -785,12 +780,11 @@ def _proof_receipt_reconciliation_payload(
         scoped_receipts = [
             receipt for receipt in command_receipts if _proof_receipt_path_scope_matches(receipt=receipt, changed_paths=changed_paths)
         ]
-        accepted_receipt = next(
-            (receipt for receipt in scoped_receipts if _proof_receipt_passed(str(receipt.get("result") or ""))),
-            None,
-        )
-        failed_receipt = next(
-            (receipt for receipt in scoped_receipts if _proof_receipt_failed(str(receipt.get("result") or ""))),
+        admissions = [(receipt, proof_receipt_admission(receipt)) for receipt in scoped_receipts]
+        accepted_receipt = next((receipt for receipt, admission in admissions if admission["proof_sufficient"]), None)
+        failed_receipt = next((receipt for receipt, admission in admissions if admission["result_class"] == "failed"), None)
+        non_sufficient = next(
+            ((receipt, admission) for receipt, admission in admissions if admission["result_class"] in {"skipped", "waived"}),
             None,
         )
         if accepted_receipt is not None:
@@ -815,6 +809,17 @@ def _proof_receipt_reconciliation_payload(
                 "diagnostic": "run and recorded as failed",
                 "receipt": _proof_receipt_summary(failed_receipt),
             }
+        elif non_sufficient is not None:
+            receipt, admission = non_sufficient
+            result_class = str(admission["result_class"])
+            state = {
+                "command": command,
+                "evidence_state": f"recorded-{result_class}",
+                "diagnostic": f"trusted {result_class} receipt recorded; proof remains unsatisfied",
+                "receipt": _proof_receipt_summary(receipt),
+                "result_class": result_class,
+                "proof_sufficient": False,
+            }
         elif command_receipts and not scoped_receipts:
             state = {
                 "command": command,
@@ -822,11 +827,7 @@ def _proof_receipt_reconciliation_payload(
                 "diagnostic": "record stale or untrusted for this changed-path scope",
             }
         elif command_receipts:
-            state = {
-                "command": command,
-                "evidence_state": "record-stale-untrusted",
-                "diagnostic": "receipt result is not a recognized pass/fail state",
-            }
+            state = {"command": command, "evidence_state": "record-stale-untrusted", "diagnostic": "receipt admission unavailable"}
         else:
             state = {
                 "command": command,
@@ -871,20 +872,28 @@ def _proof_receipt_bridge_payload(
         command = str(item.get("command", "")).strip()
         if not command:
             continue
+        command_admission = proof_command_admission(command)
         placeholders = sorted(set(re.findall(r"<[^>]+>", command)))
         action: dict[str, Any] = {
             "kind": "agentic-workspace/proof-receipt-bridge-action/v1",
             "command": command,
             "receipt_state": evidence_state or "not-recorded",
             "diagnostic": str(item.get("diagnostic", "")),
-            "result_options": ["passed", "failed", "skipped", "waived"],
+            "result_options": list(PROOF_RECEIPT_RESULT_OPTIONS),
+            "result_contract": {
+                "admissible": list(PROOF_RECEIPT_RESULT_OPTIONS),
+                "proof_sufficient": ["passed"],
+                "rule": "Admissibility records what happened; only passed evidence satisfies proof.",
+            },
             "after_running": "Record the actual result only after executing or deliberately classifying this selected proof command.",
         }
-        if placeholders:
+        if not command_admission["admitted"]:
             action.update(
                 {
                     "status": "instantiate-before-recording",
                     "placeholders": placeholders,
+                    "admission_reason": command_admission["reason"],
+                    "safe_recovery": command_admission["safe_recovery"],
                     "next_action": "instantiate placeholders, run the concrete command, then record the actual result",
                     "recording_rule": "Substitute placeholders and run the concrete command before recording a receipt.",
                 }

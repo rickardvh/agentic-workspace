@@ -1442,6 +1442,7 @@ def test_proof_changed_exposes_receipt_bridge_for_unrecorded_commands(tmp_path: 
     assert '--receipt-command "make test-workspace"' in action["record_passed_command"]
     assert "--receipt-result passed" in action["record_passed_command"]
     assert action["result_options"] == ["passed", "failed", "skipped", "waived"]
+    assert action["result_contract"]["proof_sufficient"] == ["passed"]
     summary_bridge = answer["proof_closeout_summary"]["receipt_bridge"]
     assert summary_bridge == {
         "status": "action-required",
@@ -1497,8 +1498,70 @@ def test_proof_receipt_bridge_marks_template_commands_unrecordable() -> None:
     template = next(action for action in bridge["actions"] if action["command"] == "uv run pytest <paths>")
     assert template["status"] == "instantiate-before-recording"
     assert template["placeholders"] == ["<paths>"]
+    assert template["admission_reason"] == "unresolved-command-template"
+    assert "Substitute every placeholder" in template["safe_recovery"]
     assert "recording_command" not in template
     assert template["next_action"] == "instantiate placeholders, run the concrete command, then record the actual result"
+
+
+def test_every_bridge_result_is_admissible_but_only_passed_satisfies_proof() -> None:
+    from agentic_workspace.proof_receipt_admission import proof_receipt_admission
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_bridge_payload
+
+    bridge = _proof_receipt_bridge_payload(
+        changed_paths=["src/example.py"],
+        proof_receipt_reconciliation={"commands": [{"command": "make test", "evidence_state": "missing"}]},
+        cli_invoke=REPO_LOCAL_CLI_INVOKE,
+    )
+    for result in bridge["actions"][0]["result_options"]:
+        admission = proof_receipt_admission(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "command": "make test",
+                "result": result,
+                "recorded_at": "2026-07-11T10:00:00+00:00",
+                "changed_paths": ["src/example.py"],
+            }
+        )
+        assert admission["admitted"] is True
+        assert admission["result_class"] == result
+        assert admission["proof_sufficient"] is (result == "passed")
+
+
+@pytest.mark.parametrize(
+    ("result", "expected_state"),
+    [("passed", "accepted"), ("failed", "recorded-failed"), ("skipped", "recorded-skipped"), ("waived", "recorded-waived")],
+)
+def test_every_bridge_result_reconciles_through_admission_contract(tmp_path: Path, result: str, expected_state: str) -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt_path = tmp_path / ".agentic-workspace/local/proof-receipts/last.json"
+    receipt_path.parent.mkdir(parents=True)
+    receipt_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "command": "make test",
+                "result": result,
+                "recorded_at": "2026-07-11T10:00:00+00:00",
+                "changed_paths": ["src/example.py"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        required_commands=["make test"],
+        changed_paths=["src/example.py"],
+        selected_commands=[{"command": "make test", "lane": "workspace_cli"}],
+    )
+    state = reconciliation["commands"][0]
+    assert state["evidence_state"] == expected_state
+    assert state["evidence_state"] != "record-stale-untrusted"
+    if result in {"skipped", "waived"}:
+        assert state["proof_sufficient"] is False
+        assert state["result_class"] == result
 
 
 def test_proof_changed_projects_learned_route_model_for_two_route_classes(tmp_path: Path, capsys) -> None:
@@ -2849,6 +2912,55 @@ def test_proof_record_receipt_writes_latest_execution_evidence(tmp_path: Path, c
     assert history == [receipt]
     assert "repair_retry_ladder" not in receipt
     assert "repair_retry_ladder" not in payload
+
+
+def test_proof_record_receipt_rejects_unresolved_template_before_persistence(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_proof_receipt_payload
+
+    target = tmp_path / "repo"
+    target.mkdir()
+
+    with pytest.raises(WorkspaceUsageError, match="unresolved-command-template") as error:
+        _record_proof_receipt_payload(
+            target_root=target,
+            command="uv run agentic-workspace implement --changed <paths>",
+            result="passed",
+            changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+        )
+
+    assert "Substitute every placeholder" in str(error.value)
+    assert not (target / ".agentic-workspace" / "local" / "proof-receipts" / "last.json").exists()
+    assert not (target / ".agentic-workspace" / "local" / "proof-receipts" / "history.jsonl").exists()
+
+
+def test_proof_receipt_admission_rejects_missing_scope_and_consumers_ignore_it(tmp_path: Path) -> None:
+    from agentic_workspace.proof_receipt_admission import proof_receipt_admission
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": "make test-workspace",
+        "result": "passed",
+        "recorded_at": "2026-07-11T08:00:00+00:00",
+        "changed_paths": [],
+    }
+    admission = proof_receipt_admission(receipt)
+    assert admission["status"] == "rejected"
+    assert admission["reason"] == "missing-changed-path-scope"
+
+    receipt_path = tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
+    receipt_path.parent.mkdir(parents=True)
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+        required_commands=["make test-workspace"],
+        selected_commands=[],
+    )
+    assert reconciliation["status"] == "not-recorded"
+    assert "receipt" not in reconciliation
+    assert reconciliation["commands"][0]["evidence_state"] == "not-run-or-not-recorded"
 
 
 def test_proof_failed_receipt_includes_repair_retry_ladder(tmp_path: Path, capsys) -> None:

@@ -117,6 +117,7 @@ from agentic_workspace.contract_tooling import (
     workspace_surfaces_manifest,
 )
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
+from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.reporting_support import (
     closeout_claim_boundary_payload,
     communication_contract_payload,
@@ -39287,6 +39288,10 @@ def _record_proof_receipt_payload(
         "plan_id": str(plan_id or "").strip(),
         "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
     }
+    admission = proof_receipt_admission(receipt)
+    if not admission["admitted"]:
+        raise WorkspaceUsageError(f"Proof receipt rejected ({admission['reason']}): {admission['safe_recovery']}")
+    receipt["admission"] = admission
     repair_retry_ladder = _proof_receipt_retry_ladder(command=command, result=result, changed_paths=changed_paths)
     if repair_retry_ladder is not None:
         receipt["repair_retry_ladder"] = repair_retry_ladder

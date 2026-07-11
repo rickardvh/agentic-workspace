@@ -1,0 +1,78 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "2173-trust-continuity-projections",
+  "title": "Harden AW trust continuity and projection boundaries",
+  "status": "active",
+  "parent_decomposition_ref": "",
+  "lane_outcome": "Make the seven #2173 child invariants true in ordinary product paths, each with issue-specific regression evidence and a separately reviewable PR.",
+  "purpose_for_parent": "Close #2173 only after #2174 through #2180 are closed or deliberately rerouted with residual intent preserved.",
+  "subsystems": [
+    "proof receipt admission and sufficiency",
+    "work-context and intent routing",
+    "actionability and projection reuse",
+    "session invocation semantics",
+    "diagnostic artifact promotion"
+  ],
+  "technical_strategy": "Implement each child as a representative vertical slice backed by one reusable authoritative contract. Keep branches independent from master unless a later child consumes a newly introduced contract; in that case stack only that dependency chain and retarget after the base lands.",
+  "technology_choices": [
+    "Reuse existing contract and packet families before adding visible concepts",
+    "Use stable reason codes, explicit provenance, freshness, scope, and decision maturity",
+    "Preserve raw/local evidence while governing trusted or promoted derivatives"
+  ],
+  "slice_sequence": [
+    "2174-proof-evidence-admission",
+    "2175-current-work-context",
+    "2180-decision-point-intent",
+    "2177-coherent-actionability",
+    "2176-unchanged-projections",
+    "2178-invocation-intent",
+    "2179-safe-diagnostic-promotion"
+  ],
+  "current_slice": "review-remaining-three-and-aggregate-proof",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "For every child, run routed changed-path proof plus the issue's required regression cases. Aggregate merged PRs, exact validation commands, and any residual owner before closing the lane.",
+  "proof_aggregation": {
+    "status": "partial",
+    "evidence": [
+      "#2181: focused proof receipt tests, workspace suite, generated package checks, lint, typecheck, and CI",
+      "#2182: 318 session/startup/proof tests including three-context and branch round-trip replay, lint, typecheck, and CI",
+      "#2183: 339 startup/implement tests plus live pre-edit and post-edit intent replay, lint, typecheck, and CI",
+      "#2184: 228 doctor/status tests plus repeated-doctor stable digest replay, lint, typecheck, and CI",
+      "#2185: 230 projection/doctor/report tests plus measured doctor/report work and output reduction, lint, typecheck, and CI",
+      "#2186: 32 session semantic tests after master rebase plus workspace CI",
+      "#2187: 215 session/workspace tests, absolute-path hygiene, lint, typecheck, and CI"
+      ,"#2182, #2184, #2185, and #2186 are merged on master; their child issues are closed and their CI proof is landed."
+    ],
+    "known_gaps": [
+      "Only #2181, #2183, and #2187 remain under review.",
+      "Parent #2173 must remain open until every child is closed or deliberately rerouted."
+    ]
+  },
+  "residual_lane_work": "Review and merge #2181, #2183, and #2187, verify their child issue closure, then aggregate final landed proof before closing #2173.",
+  "lane_to_epic_contribution": "Provides the trust, continuity, projection, invocation, promotion, and intent-routing invariants named by #2173 without absorbing #2172 mutation-outcome scope.",
+  "parent_close_permission": "blocked-until-child-prs-land",
+  "closeout_state": {
+    "status": "open",
+    "summary": "Four child PRs are landed and closed; three remaining child PRs are under review, so lane closure remains merge-dependent.",
+    "residual_work": "Review the remaining three PRs, confirm their child issue closure, and aggregate final landed-state proof.",
+    "next_owner": "maintainer/reviewer"
+  },
+  "references": [
+    "GitHub #2173",
+    "GitHub #2174",
+    "GitHub #2175",
+    "GitHub #2176",
+    "GitHub #2177",
+    "GitHub #2178",
+    "GitHub #2179",
+    "GitHub #2180",
+    "PR #2181",
+    "PR #2182",
+    "PR #2183",
+    "PR #2184",
+    "PR #2185",
+    "PR #2186",
+    "PR #2187"
+  ],
+  "notes": "Implementation order follows the lane owner's recommendation. #2175 and #2180 may share scope/provenance concepts but remain separate review units; #2177 precedes #2176 so projection reuse does not cache unstable action semantics."
+}
