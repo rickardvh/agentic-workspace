@@ -11994,6 +11994,14 @@ def _planning_completion_gate_payload(
     )
     intent_continuity = _record_section_dict(patch, "intent_continuity") or _record_section_dict(record, "intent_continuity") or {}
     parent_acceptance = _record_section_dict(patch, "parent_acceptance") or _record_section_dict(record, "parent_acceptance") or {}
+    intent_confirmation = _record_section_dict(patch, "decision_point_intent_confirmation") or {}
+    confirmation_required = bool(intent_confirmation) or bool(record.get("decision_point_intent_confirmation_required"))
+    intent_confirmation_satisfied = not confirmation_required or (
+        intent_confirmation.get("status") in {"preserved", "corrected"}
+        and bool(intent_confirmation.get("forecast_digest"))
+        and bool(intent_confirmation.get("implementation_confirmation"))
+        and bool(intent_confirmation.get("proof_confirmation"))
+    )
 
     def truthy(value: Any) -> bool:
         return str(value or "").strip().lower() in {"yes", "true", "accepted", "approved", "explicit", "human-accepted"}
@@ -12040,6 +12048,7 @@ def _planning_completion_gate_payload(
         and larger_status in {"", "closed"}
         and required_follow_on in {"", "no", "false", "none"}
         and proof_supports_full
+        and intent_confirmation_satisfied
     )
     continuation_possible = bool(
         continuation_owner
@@ -12051,6 +12060,7 @@ def _planning_completion_gate_payload(
         closure_decision in {"requires-review", "blocked"}
         or required_follow_on in {"unknown", "ambiguous"}
         or (intent_satisfied and not proof_supports_full)
+        or (confirmation_required and not intent_confirmation_satisfied)
     )
     if active_intent_satisfied:
         status = "allowed"
@@ -12093,6 +12103,9 @@ def _planning_completion_gate_payload(
         "Planning closeout evidence supports the requested completion claim."
         if active_intent_satisfied
         else present(
+            "Decision-point intent confirmation is missing or unresolved."
+            if confirmation_required and not intent_confirmation_satisfied
+            else "",
             residual_intent,
             "Planning closeout evidence does not yet support the requested completion claim.",
         )
@@ -12895,6 +12908,45 @@ def _prepare_execplan_closeout(
             }
         )
     patch["closeout_distillation"] = {"buckets": buckets}
+    carry_candidates: list[dict[str, Any]] = []
+    carry_dir = target_root / ".agentic-workspace/local/decision-point-intent"
+    active_milestone = _record_section_dict(record, "active_milestone") or {}
+    plan_ids = {plan_path.stem.removesuffix(".plan"), str(active_milestone.get("id") or "")}
+    for carry_path in sorted(carry_dir.glob("*.json")) if carry_dir.is_dir() else []:
+        try:
+            candidate = json.loads(carry_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        binding = candidate.get("work_binding", {}) if isinstance(candidate, dict) else {}
+        if isinstance(binding, dict) and str(binding.get("plan_id") or "") in plan_ids:
+            carry_candidates.append(candidate)
+    if carry_candidates:
+        carry = carry_candidates[0] if len(carry_candidates) == 1 else {}
+        phases = carry.get("phase_confirmations", {}) if isinstance(carry, dict) else {}
+        implementation = phases.get("implementation", {}) if isinstance(phases, dict) else {}
+        proof = phases.get("proof", {}) if isinstance(phases, dict) else {}
+        forecast_digest = str(carry.get("forecast_digest", "")) if isinstance(carry, dict) else ""
+        same_forecast = bool(
+            forecast_digest
+            and isinstance(implementation, dict)
+            and isinstance(proof, dict)
+            and implementation.get("forecast_digest") == forecast_digest
+            and proof.get("forecast_digest") == forecast_digest
+        )
+        proof_status = str(proof.get("status", "")) if isinstance(proof, dict) else ""
+        patch["decision_point_intent_confirmation"] = {
+            "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
+            "phase": "closeout",
+            "status": proof_status
+            if len(carry_candidates) == 1 and same_forecast and proof_status in {"preserved", "corrected"}
+            else "unresolved",
+            "forecast_digest": forecast_digest,
+            "source_revisions": carry.get("source_revisions", {}) if isinstance(carry, dict) else {},
+            "implementation_confirmation": implementation,
+            "proof_confirmation": proof,
+            "same_forecast_consumed": same_forecast,
+            "carry_selection": "unique-plan-binding" if len(carry_candidates) == 1 else "ambiguous-plan-binding",
+        }
     patch["completion_gate"] = _planning_completion_gate_payload(record=record, patch=patch)
     patch["generated_closeout"] = _generated_closeout_adapter(record=record, patch=patch)
 
@@ -14918,10 +14970,18 @@ def _closeout_evidence_record(
         "durable_residue",
         "execution_summary",
         "closeout_distillation",
+        "completion_gate",
     ):
         value = closeout_record.get(section)
         if isinstance(value, dict) and value:
             record[section] = copy.deepcopy(value)
+    confirmation = closeout_record.get("decision_point_intent_confirmation")
+    if isinstance(confirmation, dict) and confirmation:
+        record["decision_point_intent_confirmation"] = {
+            key: confirmation.get(key)
+            for key in ("kind", "phase", "status", "forecast_digest", "source_revisions", "same_forecast_consumed")
+            if key in confirmation
+        }
     execution_run = record.get("execution_run")
     closure_check = record.get("closure_check")
     if isinstance(execution_run, dict) and isinstance(closure_check, dict):

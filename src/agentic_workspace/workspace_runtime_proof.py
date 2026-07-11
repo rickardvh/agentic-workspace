@@ -62,6 +62,7 @@ from agentic_workspace.workspace_runtime_core import (
     _closeout_report_traceability_rows,
     _completion_gate_payload,
     _confirm_learned_route_hints,
+    _decision_point_source_revision_status,
     _dedupe,
     _defaults_payload,
     _direct_cli_edit_review_for_changed_paths,
@@ -74,6 +75,7 @@ from agentic_workspace.workspace_runtime_core import (
     _lane_execution_metadata,
     _learned_proof_lanes_for_changed_paths,
     _learned_route_reliance_payload,
+    _load_decision_point_forecast,
     _load_proof_route_hints,
     _load_workspace_config,
     _make_targets_without_negative_routes,
@@ -98,6 +100,7 @@ from agentic_workspace.workspace_runtime_core import (
     _proof_route_decision_payload,
     _proof_route_explanation_payload,
     _proof_route_source_for_lane,
+    _record_decision_point_confirmation,
     _requirement_grounding_payload,
     _routine_work_context_payload,
     _run_lifecycle_command,
@@ -4023,6 +4026,52 @@ def _proof_selection_for_changed_paths(
         local_overlay=local_overlay,
         local_high_risk_overlay=local_high_risk_overlay,
     )
+    forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
+    forecast_identity = _as_dict(forecast_carry.get("forecast_identity"))
+    implementation_confirmation = _as_dict(_as_dict(forecast_carry.get("phase_confirmations")).get("implementation"))
+    try:
+        actual_intent = (
+            _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
+            if target_root is not None and isinstance(config, WorkspaceConfig)
+            else {}
+        )
+    except WorkspaceUsageError:
+        actual_intent = {}
+    actual_subsystems = _list_payload(_as_dict(actual_intent.get("subsystem_intent")).get("matches"))[:2]
+    actual_basis = {
+        "actual_paths": changed_paths,
+        "system_principle_ids": [str(item.get("id", "")) for item in _list_payload(architecture_principles.get("matched_principles"))[:2]],
+        "subsystem_intent_ids": [str(item.get("id", "")) for item in actual_subsystems],
+    }
+    actual_intent_digest = hashlib.sha256(json.dumps(actual_basis, sort_keys=True).encode()).hexdigest()[:16]
+    corrected = bool(
+        forecast_identity
+        and (
+            set(forecast_identity.get("planned_paths", [])) != set(changed_paths)
+            or forecast_identity.get("system_principle_ids", []) != actual_basis["system_principle_ids"]
+            or forecast_identity.get("subsystem_intent_ids", []) != actual_basis["subsystem_intent_ids"]
+            or _decision_point_source_revision_status(target_root=target_root, carry=forecast_carry)["status"] == "changed"
+        )
+    )
+    decision_point_confirmation = {
+        "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
+        "phase": "proof",
+        "status": "corrected" if corrected else "preserved" if forecast_identity else "unresolved",
+        "forecast_identity": forecast_identity,
+        "forecast_digest": forecast_identity.get("digest", ""),
+        "actual_scope_digest": actual_intent_digest,
+        "changed_paths": changed_paths,
+        "system_principles": _list_payload(architecture_principles.get("matched_principles"))[:2],
+        "subsystem_intents": actual_subsystems,
+        "implementation_confirmation": implementation_confirmation,
+        "source_revision_confirmation": _decision_point_source_revision_status(target_root=target_root, carry=forecast_carry),
+        "implementation_record_digest": _as_dict(implementation_confirmation.get("carry_forward")).get("record_digest", ""),
+        "claim_boundary": "Closeout must consume this exact confirmation record and account for preserved, corrected, or unresolved intent.",
+        "closeout_required_claim": "preserved|corrected|unresolved",
+    }
+    decision_point_confirmation = _record_decision_point_confirmation(
+        target_root=target_root, phase="proof", confirmation=decision_point_confirmation, task_text=task_text
+    )
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -4089,6 +4138,7 @@ def _proof_selection_for_changed_paths(
         "requirement_grounding": requirement_grounding,
         "test_strategy_check": test_strategy_check,
         "architecture_principles": architecture_principles,
+        "decision_point_intent_confirmation": decision_point_confirmation,
         "proof_route_selection": proof_route_decision,
         "proof_route_decision": proof_route_decision,
         "proof_route_explanation": proof_route_explanation,

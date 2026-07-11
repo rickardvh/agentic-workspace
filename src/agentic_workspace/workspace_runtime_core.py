@@ -18762,7 +18762,185 @@ def _architecture_principles_forecast_payload(
             ],
             rule="AW forecasts only from structured path evidence; agent judgment owns semantic application.",
         )
+    if target_root is not None:
+        config = _load_workspace_config(target_root=target_root)
+        durable_intent = _intent_decision_projection(
+            target_root=target_root,
+            config=config,
+            changed_paths=normalized_paths,
+            compact=True,
+        )
+        subsystem_matches = _list_payload(_as_dict(durable_intent.get("subsystem_intent")).get("matches"))
+        if not subsystem_matches:
+            ownership = _subsystem_matches_for_changed_paths(target_root=target_root, changed_paths=normalized_paths)
+            matched_ids = {
+                str(item.get("id") or "") for item in _list_payload(ownership.get("matched_subsystems")) if isinstance(item, dict)
+            }
+            subsystem_set = _load_subsystem_intent(target_root=target_root)
+            subsystem_matches = [
+                {
+                    "id": item.get("id", ""),
+                    "summary": item.get("summary", ""),
+                    "decision_tests": _list_payload(item.get("decision_tests"))[:1],
+                    "confidence": item.get("confidence", "low"),
+                    "needs_review": item.get("needs_review", True),
+                    "match_source": "ownership-path",
+                }
+                for item in _list_payload(subsystem_set.get("subsystems"))
+                if isinstance(item, dict) and str(item.get("id") or "") in matched_ids
+            ]
+        if subsystem_matches or matched_count:
+            payload["relevant_intent"] = {
+                "kind": "agentic-workspace/decision-point-intent/v1",
+                "status": "provisional",
+                "phase": "pre-implementation",
+                "scope": {"source": scope_source, "paths": normalized_paths},
+                "authoritative_sources": [
+                    ".agentic-workspace/system-intent/intent.toml",
+                    ".agentic-workspace/system-intent/subsystems.toml",
+                    ".agentic-workspace/OWNERSHIP.toml",
+                ],
+                "relevance_basis": ["structured planned paths", "declared ownership path patterns"],
+                "affected_decision": "Choose the ordinary owning subsystem and implementation/proof surface before editing.",
+                "applicability_maturity": "provisional-until-changed-path-confirmation",
+                "system_principles": _list_payload(architecture_principles.get("matched_principles"))[:2],
+                "subsystem_intents": subsystem_matches[:2],
+                "safe_probe": command,
+                "confirmation": {
+                    "required_at": ["implementation", "proof", "closeout"],
+                    "command": command,
+                    "rule": "Confirm or correct this forecast against actual changed paths; do not preserve a provisional match as authority after scope changes.",
+                },
+                "rule": "Surface only intent selected by structured scope at the phase where it changes the next decision.",
+            }
+            identity_basis = {
+                "planned_paths": normalized_paths,
+                "system_principle_ids": [
+                    str(item.get("id", "")) for item in _list_payload(architecture_principles.get("matched_principles"))[:2]
+                ],
+                "subsystem_intent_ids": [str(item.get("id", "")) for item in subsystem_matches[:2]],
+                "authoritative_sources": payload["relevant_intent"]["authoritative_sources"],
+            }
+            payload["forecast_identity"] = {
+                "kind": "agentic-workspace/decision-point-intent-forecast-identity/v1",
+                **identity_basis,
+                "digest": hashlib.sha256(json.dumps(identity_basis, sort_keys=True).encode()).hexdigest()[:16],
+            }
+        if "forecast_identity" not in payload:
+            identity_basis = {
+                "planned_paths": normalized_paths,
+                "system_principle_ids": [],
+                "subsystem_intent_ids": [],
+                "authoritative_sources": [
+                    ".agentic-workspace/system-intent/intent.toml",
+                    ".agentic-workspace/system-intent/subsystems.toml",
+                    ".agentic-workspace/OWNERSHIP.toml",
+                ],
+            }
+            payload["forecast_identity"] = {
+                "kind": "agentic-workspace/decision-point-intent-forecast-identity/v1",
+                **identity_basis,
+                "digest": hashlib.sha256(json.dumps(identity_basis, sort_keys=True).encode()).hexdigest()[:16],
+            }
     return payload
+
+
+_DECISION_POINT_FORECAST_DIR = Path(".agentic-workspace/local/decision-point-intent")
+
+
+def _decision_point_binding(*, target_root: Path, task_text: str | None) -> dict[str, Any]:
+    context = resolve_current_work_context(root=target_root, task=str(task_text or ""))
+    basis = {
+        "branch": context.get("branch", ""),
+        "task": context.get("task", ""),
+        "plan_id": context.get("plan_id", ""),
+        "pr_ref": context.get("pr_ref", ""),
+        "thread_id": context.get("thread_id", ""),
+    }
+    return {
+        **basis,
+        "context_id": context.get("id", ""),
+        "status": context.get("status", "unknown"),
+        "key": hashlib.sha256(json.dumps(basis, sort_keys=True).encode()).hexdigest()[:16],
+    }
+
+
+def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict[str, Any], task_text: str | None = None) -> dict[str, Any]:
+    """Persist exactly the pre-edit forecast emitted to the actor."""
+
+    identity = _as_dict(forecast.get("forecast_identity"))
+    if target_root is None or not identity or not (identity.get("system_principle_ids") or identity.get("subsystem_intent_ids")):
+        return {}
+    binding = _decision_point_binding(target_root=target_root, task_text=task_text)
+    if binding["status"] == "ambiguous":
+        return {}
+    source_revisions: dict[str, str] = {}
+    for relative in _list_payload(identity.get("authoritative_sources")):
+        path = target_root / str(relative)
+        if path.is_file():
+            source_revisions[str(relative)] = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+    record = {
+        "kind": "agentic-workspace/decision-point-intent-carry/v1",
+        "forecast_identity": identity,
+        "forecast_digest": identity.get("digest", ""),
+        "source_revisions": source_revisions,
+        "emitted_forecast": forecast,
+        "phase_confirmations": {},
+        "work_binding": binding,
+    }
+    path = target_root / _DECISION_POINT_FORECAST_DIR / f"{binding['key']}.json"
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    except OSError:
+        return {}
+    return record
+
+
+def _load_decision_point_forecast(*, target_root: Path | None, task_text: str | None = None) -> dict[str, Any]:
+    if target_root is None:
+        return {}
+    binding = _decision_point_binding(target_root=target_root, task_text=task_text)
+    if binding["status"] == "ambiguous":
+        return {}
+    path = target_root / _DECISION_POINT_FORECAST_DIR / f"{binding['key']}.json"
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return loaded if isinstance(loaded, dict) and loaded.get("kind") == "agentic-workspace/decision-point-intent-carry/v1" else {}
+
+
+def _decision_point_source_revision_status(*, target_root: Path | None, carry: dict[str, Any]) -> dict[str, Any]:
+    expected = _as_dict(carry.get("source_revisions"))
+    current: dict[str, str] = {}
+    if target_root is not None:
+        for relative in expected:
+            path = target_root / relative
+            current[relative] = hashlib.sha256(path.read_bytes()).hexdigest()[:16] if path.is_file() else "missing"
+    changed = sorted(relative for relative, digest in expected.items() if current.get(relative) != digest)
+    return {"status": "changed" if changed else "preserved", "expected": expected, "current": current, "changed_sources": changed}
+
+
+def _record_decision_point_confirmation(
+    *, target_root: Path | None, phase: str, confirmation: dict[str, Any], task_text: str | None = None
+) -> dict[str, Any]:
+    if target_root is None:
+        return confirmation
+    record = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
+    if not record:
+        return confirmation
+    confirmations = _as_dict(record.get("phase_confirmations"))
+    confirmations[phase] = confirmation
+    record["phase_confirmations"] = confirmations
+    try:
+        binding = _as_dict(record.get("work_binding"))
+        (target_root / _DECISION_POINT_FORECAST_DIR / f"{binding.get('key', '')}.json").write_text(
+            json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+    except (AttributeError, OSError):
+        pass
+    return confirmation
 
 
 def _note_task_matches(*, task_text: str | None, values: Any) -> list[str]:
@@ -28908,6 +29086,7 @@ def _start_tiny_payload_fast(
             scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
+        _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast, task_text=task_text)
         if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"}:
             payload["architecture_principles_forecast"] = architecture_forecast
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
@@ -39443,9 +39622,12 @@ def _intent_decision_projection(
                 "matches": [
                     {
                         "id": match.get("id", ""),
+                        "summary": match.get("summary", ""),
                         "decision_tests": list(match.get("decision_tests", []))[:1],
+                        "confidence": match.get("confidence", "low"),
                         "needs_review": match.get("needs_review", True),
                         "match_source": match.get("match_source", ""),
+                        "ownership": match.get("ownership", {}),
                     }
                     for match in projection["subsystem_intent"]["matches"][:2]
                     if isinstance(match, dict)

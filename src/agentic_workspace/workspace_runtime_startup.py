@@ -91,6 +91,7 @@ from agentic_workspace.workspace_runtime_core import (
     _ordinary_decision_packet,
     _package_boundary_payload,
     _parent_intent_status_payload,
+    _persist_decision_point_forecast,
     _pre_test_evidence_guardrail_payload,
     _prep_only_handoff_payload,
     _read_only_response_posture_payload,
@@ -843,7 +844,10 @@ def _start_payload(
             scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
-        if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"}:
+        _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast, task_text=task_text)
+        if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"} or architecture_forecast.get(
+            "relevant_intent"
+        ):
             payload["architecture_principles_forecast"] = architecture_forecast
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
