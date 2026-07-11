@@ -340,6 +340,7 @@ def render_python_typed_operations(profile: dict[str, object]) -> str:
                 f"def {function_name}(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:",
                 f'    return invoke_operation("{entry["id"]}", values, target=target, invocation=invocation, allow_runtime_backed=True)',
                 "",
+                "",
             ]
         )
     return "\n".join(lines)
