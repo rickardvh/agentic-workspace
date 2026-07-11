@@ -641,16 +641,10 @@ def _patch_external_consumer_exports(output: GeneratedOutput, *, repo_root: Path
     if path.relative_to(repo_root).as_posix() != "generated/workspace/typescript/package.json":
         return output
     payload = json.loads(output.content)
-    payload["exports"] = {
-        ".": "./src/client.mjs",
-        "./profile": "./external_consumer_profile.json",
-        "./contracts": "./external_contract_bundle.json",
-    }
+    payload["exports"] = {".": "./src/client.mjs", "./profile": "./external_consumer_profile.json"}
     files = list(payload.get("files", []))
     if "external_consumer_profile.json" not in files:
         files.append("external_consumer_profile.json")
-    if "external_contract_bundle.json" not in files:
-        files.append("external_contract_bundle.json")
     payload["files"] = files
     return GeneratedOutput(output.path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
 

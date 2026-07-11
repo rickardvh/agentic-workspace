@@ -226,7 +226,6 @@ def test_root_wheel_ships_generated_cli_package_import_dependency(workspace_whee
     assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in inventory
     assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in inventory
     assert "agentic_workspace/_generated_cli_package_impl/external_consumer_profile.json" in inventory
-    assert "agentic_workspace/_generated_cli_package_impl/external_contract_bundle.json" in inventory
     assert "agentic_workspace/client.py" in inventory
 
 
@@ -280,12 +279,7 @@ def test_installed_workspace_wheel_exposes_public_external_client(workspace_whee
         check=True,
     )
     result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            "from agentic_workspace import external_consumer_profile, external_contract_bundle; "
-            "assert external_consumer_profile()['operations']; assert external_contract_bundle()['operations']",
-        ],
+        [sys.executable, "-c", "from agentic_workspace import external_consumer_profile; assert external_consumer_profile()['operations']"],
         cwd=tmp_path,
         env={**os.environ, "PYTHONPATH": str(install_root)},
         capture_output=True,

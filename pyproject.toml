@@ -56,7 +56,6 @@ packages = ["src/agentic_workspace"]
 "generated/workspace/python/adapter_commands.json" = "src/agentic_workspace/_generated_cli_package_impl/adapter_commands.json"
 "generated/workspace/python/external_consumer_profile.json" = "src/agentic_workspace/_generated_cli_package_impl/external_consumer_profile.json"
 "generated/workspace/python/client.py" = "src/agentic_workspace/_generated_cli_package_impl/client.py"
-"generated/workspace/python/external_contract_bundle.json" = "src/agentic_workspace/_generated_cli_package_impl/external_contract_bundle.json"
 "generated/workspace/python/operations" = "src/agentic_workspace/_generated_cli_package_impl/operations"
 "generated/workspace/python/commands" = "src/agentic_workspace/_generated_cli_package_impl/commands"
 "generated/workspace/python/primitives" = "src/agentic_workspace/_generated_cli_package_impl/primitives"
