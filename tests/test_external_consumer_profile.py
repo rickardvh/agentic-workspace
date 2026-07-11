@@ -21,9 +21,14 @@ def test_profile_is_fresh_and_fail_closed() -> None:
     expected = module.render()
     for output in module.OUTPUTS:
         assert output.read_text(encoding="utf-8") == expected
+    profile = json.loads(expected)
     assert module.PYTHON_CLIENT.read_text(encoding="utf-8") == module.render_python_client()
     assert module.TYPESCRIPT_CLIENT.read_text(encoding="utf-8") == module.render_typescript_client()
-    profile = json.loads(expected)
+    bundle = module.render_bundle(profile)
+    assert all(output.read_text(encoding="utf-8") == bundle for output in module.BUNDLE_OUTPUTS)
+    bundle_payload = json.loads(bundle)
+    assert bundle_payload["profile_fingerprint"] == profile["compatibility"]["fingerprint"]
+    assert bundle_payload["operation_contracts"]
     assert profile["authority"] == "command_package_ir.json"
     assert profile["compatibility"]["fingerprint"].startswith("sha256:")
     assert profile["operations"]

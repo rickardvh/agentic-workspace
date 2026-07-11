@@ -14,6 +14,10 @@ OUTPUTS = (
 )
 PYTHON_CLIENT = REPO_ROOT / "generated/workspace/python/client.py"
 TYPESCRIPT_CLIENT = REPO_ROOT / "generated/workspace/typescript/src/client.mjs"
+BUNDLE_OUTPUTS = (
+    REPO_ROOT / "generated/workspace/python/external_contract_bundle.json",
+    REPO_ROOT / "generated/workspace/typescript/external_contract_bundle.json",
+)
 
 
 def _commands(command: dict[str, object], inherited: dict[str, object] | None = None):
@@ -93,6 +97,25 @@ def render() -> str:
     return json.dumps(build_profile(json.loads(IR_PATH.read_text(encoding="utf-8"))), indent=2) + "\n"
 
 
+def render_bundle(profile: dict[str, object]) -> str:
+    resources = sorted(
+        {
+            str(entry["operation_contract"])
+            for entry in profile["operations"]
+            if isinstance(entry, dict) and entry.get("external_consumption", {}).get("status") != "internal"
+        }
+    )
+    payload = {
+        "schema_version": "agentic-workspace/external-contract-bundle/v1",
+        "protocol": profile["compatibility"]["protocol"],
+        "profile_fingerprint": profile["compatibility"]["fingerprint"],
+        "profile": "external_consumer_profile.json",
+        "operation_contracts": resources,
+        "compatibility_rule": "Protocol major versions must match; fingerprint changes require requirement negotiation.",
+    }
+    return json.dumps(payload, indent=2) + "\n"
+
+
 def render_python_client() -> str:
     return '''# Generated from command_package_ir.json. Do not edit.\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nfrom importlib.resources import files\nfrom pathlib import Path\nfrom typing import Any, Sequence\n\n\ndef external_consumer_profile() -> dict[str, Any]:\n    resource = files("agentic_workspace._generated_cli_package_impl").joinpath("external_consumer_profile.json")\n    return json.loads(resource.read_text(encoding="utf-8"))\n\n\ndef require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:\n    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}\n    failures = []\n    for operation_id in operation_ids:\n        entry = entries.get(operation_id)\n        status = entry and entry["external_consumption"]["status"]\n        if entry is None or status == "internal" or (status == "runtime-backed" and not allow_runtime_backed):\n            failures.append(f"{operation_id}: {status or 'unknown'}")\n    if failures:\n        raise ValueError("incompatible operation requirements: " + ", ".join(failures))\n\n\ndef invoke_json(argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] = ("agentic-workspace",)) -> dict[str, Any]:\n    command = [*executable, *argv]\n    if target is not None and "--target" not in command:\n        command.extend(["--target", str(target)])\n    if "--format" not in command:\n        command.extend(["--format", "json"])\n    completed = subprocess.run(command, text=True, capture_output=True, check=False)\n    stream = completed.stdout or completed.stderr\n    try:\n        payload = json.loads(stream)\n    except json.JSONDecodeError as exc:\n        raise RuntimeError(f"AW returned non-JSON output (exit {completed.returncode})") from exc\n    if completed.returncode:\n        raise RuntimeError(json.dumps({"exit_code": completed.returncode, "error": payload}))\n    return payload\n'''
 
@@ -105,8 +128,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    expected = render()
-    rendered = {**{path: expected for path in OUTPUTS}, PYTHON_CLIENT: render_python_client(), TYPESCRIPT_CLIENT: render_typescript_client()}
+    profile = build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")))
+    expected = json.dumps(profile, indent=2) + "\n"
+    bundle = render_bundle(profile)
+    rendered = {
+        **{path: expected for path in OUTPUTS},
+        **{path: bundle for path in BUNDLE_OUTPUTS},
+        PYTHON_CLIENT: render_python_client(),
+        TYPESCRIPT_CLIENT: render_typescript_client(),
+    }
     stale = [path for path, content in rendered.items() if not path.is_file() or path.read_text(encoding="utf-8") != content]
     if args.check:
         for path in stale:
