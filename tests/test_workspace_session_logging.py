@@ -1174,6 +1174,36 @@ def test_diagnostic_promotion_contract_supports_proof_failure_artifact_without_s
     assert raw["python_executable"] == python_path
 
 
+def test_external_minimal_export_preserves_ordered_entry_relationships_without_opaque_text(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    secret = "api_key=never-export"
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _: (print(secret), 0)[1]) == 0
+    first_id = json.loads(_current_index(target).read_text(encoding="utf-8"))["entries"][0]["id"]
+    monkeypatch.setenv("AW_SESSION_LOG_PARENT_ENTRY_ID", first_id)
+    monkeypatch.setenv("AW_SESSION_LOG_PARENT_COMMAND", f"config --token {secret}")
+    monkeypatch.setenv("AW_SESSION_LOG_PARENT_CONTEXT", "follow-up")
+    assert session_logging.run_with_session_logging(["summary", "--target", str(target)], lambda _: (print(secret), 0)[1]) == 0
+    capsys.readouterr()
+
+    assert source_cli.main(["session-log", "--target", str(target), "export", "--no-artifacts", "--format", "json"]) == 0
+    exported = json.loads(capsys.readouterr().out)
+    with zipfile.ZipFile(target / exported["path"]) as archive:
+        promoted = json.loads(archive.read("index.json"))
+        rendered = json.dumps(promoted)
+
+    assert len(promoted["entries"]) == 2
+    assert [entry["id"] for entry in promoted["entries"]] == [
+        entry["id"] for entry in json.loads(_current_index(target).read_text(encoding="utf-8"))["entries"]
+    ]
+    assert promoted["entries"][1]["parent_context"]["entry_id"] == first_id
+    assert all(entry["timestamp"] for entry in promoted["entries"])
+    assert secret not in rendered
+    assert "opaque field omitted" in rendered
+
+
 def test_external_minimal_omits_secret_like_opaque_text_but_preserves_integrity() -> None:
     from agentic_workspace.diagnostic_promotion import promote_diagnostic_payload
 
