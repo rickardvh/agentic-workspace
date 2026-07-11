@@ -1,0 +1,1158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/workspace-config.schema.json",
+  "title": "Agentic Workspace Repo Config",
+  "description": "Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.toml.",
+  "type": "object",
+  "required": [
+    "schema_version"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Config contract version. Workspace config files must set this to 1.",
+      "const": 1,
+      "default": 1
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "planning",
+              "memory",
+              "verification"
+            ]
+          },
+          "uniqueItems": true,
+          "description": "Repo-owned enabled Agentic Workspace modules. Use [] for routing/config-only installs.",
+          "default": [
+            "planning",
+            "memory"
+          ]
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "description": "Authoritative module enablement for this repository."
+    },
+    "workspace": {
+      "description": "Repo-owned workspace policy for startup adapter shape, output posture, and advanced feature opt-ins. Module selection lives in top-level modules.enabled.",
+      "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "public",
+      "x-agentic-workspace-unknown-properties": "warn",
+      "properties": {
+        "enabled": {
+          "description": "Effective Agentic Workspace operation switch. Defaults to true; when false, ordinary AW workflow commands return a disabled-state packet while diagnostic and recovery commands remain available. Machine-local config.local.toml may override this value.",
+          "type": "boolean",
+          "default": true,
+          "x-agentic-workspace-effective-default-source": "product-default-or-repo-config-or-local-override"
+        },
+        "agent_instructions_file": {
+          "description": "Repo startup adapter text file agents should read first.",
+          "type": "string",
+          "minLength": 1,
+          "default": "AGENTS.md",
+          "examples": [
+            "AGENTS.md",
+            "CLAUDE.md",
+            ".cursorrules",
+            ".cursor/rules/project.mdc",
+            "docs/agent-instructions.md"
+          ],
+          "x-agentic-workspace-effective-default-source": "product-default-or-autodetected-existing"
+        },
+        "workflow_artifact_profile": {
+          "description": "Shape of generated workflow and handoff artifacts.",
+          "enum": [
+            "repo-owned",
+            "gemini"
+          ],
+          "default": "repo-owned"
+        },
+        "improvement_latitude": {
+          "description": "How much repo-directed improvement initiative Agentic Workspace may surface by default.",
+          "enum": [
+            "none",
+            "reporting",
+            "conservative",
+            "balanced",
+            "proactive"
+          ],
+          "default": "conservative"
+        },
+        "optimization_bias": {
+          "description": "Preferred rendering bias for durable outputs; this does not change canonical truth or execution method.",
+          "enum": [
+            "agent-efficiency",
+            "balanced",
+            "human-legibility"
+          ],
+          "default": "balanced"
+        },
+        "advanced_features": {
+          "description": "Explicit opt-ins for reusable diagnostics that are not ordinary startup requirements.",
+          "type": "array",
+          "items": {
+            "enum": [
+              "review_artifacts",
+              "external_adapters"
+            ],
+            "description": "One entry in the advanced features list."
+          },
+          "uniqueItems": true,
+          "default": [],
+          "examples": [
+            [
+              "review_artifacts"
+            ]
+          ],
+          "x-agentic-workspace-doc-role": "advanced"
+        },
+        "maintainer_mode": {
+          "description": "Opt in to package-maintainer dogfooding report routes during ordinary start/report use. Prefer config.local.toml when dogfooding the package from another repository.",
+          "type": "boolean",
+          "default": false,
+          "x-agentic-workspace-doc-role": "maintainer"
+        },
+        "cli_invoke": {
+          "description": "Repo-owned command prefix agents should use to invoke Agentic Workspace in this repository, such as a source-checkout or dev-dependency invocation. User-specific installs can still override this with .agentic-workspace/config.local.toml.",
+          "type": "string",
+          "minLength": 1,
+          "default": "agentic-workspace",
+          "examples": [
+            "agentic-workspace",
+            "uv run agentic-workspace",
+            "npm exec agentic-workspace"
+          ],
+          "x-agentic-workspace-effective-default-source": "product-default-or-repo-config-or-local-override"
+        }
+      },
+      "additionalProperties": true
+    },
+    "update": {
+      "description": "Module update-source policy for installed Agentic Workspace modules.",
+      "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "maintainer",
+      "x-agentic-workspace-unknown-properties": "warn",
+      "properties": {
+        "modules": {
+          "description": "Per-module update-source overrides. Omitted modules use product defaults.",
+          "type": "object",
+          "default": {},
+          "properties": {
+            "planning": {
+              "description": "Update-source policy for the planning module.",
+              "$ref": "#/$defs/module_update_policy"
+            },
+            "memory": {
+              "description": "Update-source policy for the memory module.",
+              "$ref": "#/$defs/module_update_policy"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "workflow_obligations": {
+      "description": "Repo-local workflow obligations that reports can surface for matching work scopes.",
+      "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "maintainer",
+      "patternProperties": {
+        "^.+$": {
+          "$ref": "#/$defs/workflow_obligation",
+          "description": "+$ referenced contract shape used by this contract."
+        }
+      },
+      "additionalProperties": false
+    },
+    "system_intent": {
+      "description": "Repo-owned sources for durable product or project intent.",
+      "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "public",
+      "x-agentic-workspace-unknown-properties": "warn",
+      "properties": {
+        "sources": {
+          "description": "Ordered candidate files that describe durable repo intent.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One entry in the sources list."
+          },
+          "uniqueItems": true,
+          "examples": [
+            [
+              "README.md",
+              "docs/product.md"
+            ]
+          ],
+          "x-agentic-workspace-effective-default-source": "autodetected-existing-or-product-default"
+        },
+        "preferred_source": {
+          "description": "Preferred intent source, usually one of system_intent.sources.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "README.md"
+          ],
+          "x-agentic-workspace-effective-default-source": "autodetected-existing-or-product-default"
+        }
+      },
+      "additionalProperties": true
+    },
+    "assurance": {
+      "description": "Default trust and proof posture for work when active planning does not override it.",
+      "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "advanced",
+      "x-agentic-workspace-unknown-properties": "warn",
+      "properties": {
+        "default_level": {
+          "description": "Baseline assurance level for proof and trust guidance.",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ],
+          "default": "low"
+        },
+        "agent_may_escalate": {
+          "description": "Whether agents may raise assurance level when risk or scope warrants it.",
+          "type": "boolean",
+          "default": true
+        },
+        "agent_may_deescalate": {
+          "description": "Whether agents may lower assurance level below the configured default.",
+          "type": "boolean",
+          "default": false
+        },
+        "strict_closeout": {
+          "description": "Whether closeout should block when required proof references or gates are missing.",
+          "type": "boolean",
+          "default": false
+        },
+        "decision_record_target": {
+          "description": "Path for durable decision records when work requires one; explicit config wins, but conventional ADR directories may be discovered when this is unset.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "docs/decisions/"
+          ]
+        },
+        "decision_record_format": {
+          "description": "Host-declared file format for durable decision records.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "markdown"
+          ]
+        },
+        "decision_record_template": {
+          "description": "Optional host template id or repo-relative template path for decision scaffolds.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "adr-lite"
+          ]
+        },
+        "decision_record_statuses": {
+          "description": "Optional accepted status values for decision records.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "examples": [
+            [
+              "proposed",
+              "accepted",
+              "dismissed"
+            ]
+          ]
+        },
+        "invariant_registry": {
+          "description": "Path to the repo invariant registry used during higher-assurance work.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "docs/invariants.md"
+          ]
+        },
+        "risk_registry": {
+          "description": "Path to the repo risk registry used during higher-assurance work.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "docs/risks.md"
+          ]
+        },
+        "proof_profiles": {
+          "description": "Named proof profiles available to active planning assurance fields.",
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "description": "Reusable command and review-aid set for a named proof profile.",
+            "x-agentic-workspace-unknown-properties": "warn",
+            "properties": {
+              "required_commands": {
+                "description": "Commands that must pass for this proof profile.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "One entry in the required commands list."
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "optional_commands": {
+                "description": "Commands that are useful but not required for this proof profile.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "One entry in the optional commands list."
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "review_aids": {
+                "description": "Manual review aids or checklists associated with this proof profile.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "One entry in the review aids list."
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "disallowed_commands": {
+                "description": "Commands that this proof profile disallows for the matched assurance concern.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "One entry in the disallowed commands list."
+                },
+                "uniqueItems": true,
+                "default": []
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "requirements": {
+          "description": "Repo-declared assurance requirements that map work signals to authority refs, required evidence, proof profiles, review owners, and completion claim boundaries.",
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "description": "One repo-defined assurance requirement. Domain meaning stays in repo-owned authority refs and free-form evidence labels.",
+            "x-agentic-workspace-unknown-properties": "warn",
+            "required": [
+              "level",
+              "force"
+            ],
+            "properties": {
+              "level": {
+                "description": "Repo-interpreted assurance level for the matched requirement.",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ]
+              },
+              "applies_to_paths": {
+                "description": "Path globs that activate this requirement when changed paths match.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_task_markers": {
+                "description": "Task-text markers that activate this requirement.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_planning_refs": {
+                "description": "Planning refs or requirement ids that activate this requirement from active planning state.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_proof_profiles": {
+                "description": "Active planning proof profile ids that activate this requirement.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_risk_refs": {
+                "description": "Risk registry refs that activate this requirement from active planning state.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_invariant_refs": {
+                "description": "Invariant refs that activate this requirement from active planning state.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "authority_refs": {
+                "description": "Repo-owned docs, policies, runbooks, registries, or decision records agents should consult.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "required_evidence": {
+                "description": "Free-form repo vocabulary naming evidence expected before supported completion claims.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "proof_profile": {
+                "description": "Optional assurance.proof_profiles id to add when this requirement is active.",
+                "type": "string",
+                "minLength": 1
+              },
+              "workflow_obligation_refs": {
+                "description": "Workflow obligation ids related to this requirement.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "review_owner": {
+                "description": "Repo-local owner label for review or waiver decisions.",
+                "type": "string",
+                "minLength": 1
+              },
+              "force": {
+                "description": "How strongly this requirement affects guidance and closeout claim gates.",
+                "enum": [
+                  "informational",
+                  "recommended",
+                  "required-before-closeout",
+                  "blocking"
+                ]
+              },
+              "blocking_claims": {
+                "description": "Completion option ids blocked while required evidence for this requirement is missing.",
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "claim-slice-complete",
+                    "claim-work-complete",
+                    "close-parent-lane"
+                  ]
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "waiver": {
+                "description": "Recorded waiver with reason and owner for this requirement.",
+                "$ref": "#/$defs/assurance_requirement_disposition"
+              },
+              "dismissal": {
+                "description": "Recorded dismissal or not-applicable decision with reason and owner for this requirement.",
+                "$ref": "#/$defs/assurance_requirement_disposition"
+              },
+              "notes": {
+                "description": "Optional repo-local note about this requirement.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "subsystem_profiles": {
+          "description": "Subsystem-scoped assurance profiles keyed by existing .agentic-workspace/OWNERSHIP.toml subsystem ids.",
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "description": "One host-owned assurance profile for an ownership subsystem.",
+            "x-agentic-workspace-unknown-properties": "warn",
+            "required": [
+              "assurance_level",
+              "force"
+            ],
+            "properties": {
+              "assurance_level": {
+                "description": "Repo-interpreted assurance level for the matched subsystem.",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ]
+              },
+              "level": {
+                "description": "Alias for assurance_level.",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high",
+                  "critical"
+                ]
+              },
+              "scope_refs": {
+                "description": "Additional refs for the existing ownership subsystem that may activate this profile, such as ownership.subsystems.<id> or subsystem:<id>. The profile id must already be declared in .agentic-workspace/OWNERSHIP.toml [[subsystems]].",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "requirement_refs": {
+                "description": "Repo-owned requirement refs normally applying to this subsystem.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "required_evidence": {
+                "description": "Free-form repo vocabulary naming evidence expected before supported subsystem claims.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "proof_profile": {
+                "description": "Optional assurance.proof_profiles id to add when this subsystem profile is active.",
+                "type": "string",
+                "minLength": 1
+              },
+              "workflow_obligation_refs": {
+                "description": "Workflow obligation ids related to this subsystem profile.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "review_owner": {
+                "description": "Repo-local owner label for review or waiver decisions.",
+                "type": "string",
+                "minLength": 1
+              },
+              "force": {
+                "description": "How strongly this subsystem profile affects guidance and closeout claim gates.",
+                "enum": [
+                  "informational",
+                  "recommended",
+                  "required-before-closeout",
+                  "blocking"
+                ]
+              },
+              "blocked_without_evidence": {
+                "description": "Claim ids or labels blocked while required subsystem evidence is missing.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "claim_boundary": {
+                "description": "Human-readable boundary for claims supported by this subsystem profile.",
+                "type": "string",
+                "minLength": 1
+              },
+              "notes": {
+                "description": "Optional repo-local note about this subsystem profile.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "domain_proof_lanes": {
+          "description": "Host-declared proof lanes for domain-specific changed-path or task-marker matches.",
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "description": "One host-defined domain proof lane. Domain meaning stays in repo-owned authority refs and evidence concepts.",
+            "x-agentic-workspace-unknown-properties": "warn",
+            "required": [
+              "purpose"
+            ],
+            "properties": {
+              "purpose": {
+                "description": "Human-readable reason this domain lane exists.",
+                "type": "string",
+                "minLength": 1
+              },
+              "applies_to_paths": {
+                "description": "Path globs that activate this lane when changed paths match.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_task_markers": {
+                "description": "Task-text markers that activate this lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "commands": {
+                "description": "Commands expected for this lane when executable proof exists.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "manual_evidence": {
+                "description": "Manual evidence labels expected before closeout.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "review_aids": {
+                "description": "Manual review aids or checklists associated with this lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "evidence_concepts": {
+                "description": "Core or declared host evidence concept ids used by this lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "assurance_requirement_refs": {
+                "description": "Assurance requirement ids related to this lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "proof_profiles": {
+                "description": "Proof profile ids related to this lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "authority_refs": {
+                "description": "Repo-owned authority refs for interpreting the lane.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "escalation": {
+                "description": "Conditions that should escalate proof or review.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "claim_boundary": {
+                "description": "Human-readable boundary for claims supported by this lane.",
+                "type": "string",
+                "minLength": 1
+              },
+              "owner": {
+                "description": "Repo-local owner label for the lane.",
+                "type": "string",
+                "minLength": 1
+              },
+              "notes": {
+                "description": "Optional repo-local note about this lane.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "closeout_postures": {
+          "description": "Host-declared high-assurance closeout postures that project evidence, waiver, uncertainty, and claim boundaries.",
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "object",
+            "description": "One host-defined closeout posture. It declares claim boundaries; it does not certify domain correctness.",
+            "x-agentic-workspace-unknown-properties": "warn",
+            "required": [
+              "purpose"
+            ],
+            "properties": {
+              "purpose": {
+                "description": "Human-readable reason this posture exists.",
+                "type": "string",
+                "minLength": 1
+              },
+              "applies_to_paths": {
+                "description": "Path globs that activate this posture when changed paths match.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "applies_to_task_markers": {
+                "description": "Task-text markers that activate this posture.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "assurance_requirement_refs": {
+                "description": "Active assurance requirement ids that activate this posture.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "proof_profiles": {
+                "description": "Selected proof profile ids that activate this posture.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "required_evidence": {
+                "description": "Evidence labels expected before the posture supports a completion claim.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "review_owner": {
+                "description": "Repo-local owner label for review or waiver decisions.",
+                "type": "string",
+                "minLength": 1
+              },
+              "authority_refs": {
+                "description": "Repo-owned authority refs for interpreting the posture.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "claim_boundary": {
+                "description": "Human-readable boundary for claims supported by this posture.",
+                "type": "string",
+                "minLength": 1
+              },
+              "uncertainty": {
+                "description": "Uncertainty statement that must remain explicit at closeout.",
+                "type": "string",
+                "minLength": 1
+              },
+              "human_waiver_refs": {
+                "description": "Human-owned waiver refs required for this posture.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "certification_limits": {
+                "description": "Domain certification limits that final claims must not exceed.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
+              "notes": {
+                "description": "Optional repo-local note about this posture.",
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "test_data_policy": {
+          "description": "Repo-specific policy for test data, privacy, fixtures, or generated samples.",
+          "type": "object",
+          "default": {},
+          "x-agentic-workspace-unknown-properties": "warn",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "payload": {
+      "description": "Repo-owned installed payload target policy. Use this when the checked-in payload must be kept aligned with a release or source-checkout capability target independent of the CLI install location.",
+      "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "maintainer",
+      "x-agentic-workspace-unknown-properties": "warn",
+      "properties": {
+        "target_release": {
+          "description": "Desired checked-in Agentic Workspace payload release. Use source-current for source-checkout dogfooding.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "0.24.0",
+            "source-current"
+          ]
+        },
+        "minimum_capabilities": {
+          "description": "Payload capabilities that must be present in checked-in payload provenance before the target is satisfied.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One required payload capability."
+          },
+          "uniqueItems": true,
+          "default": [],
+          "examples": [
+            [
+              "installed-state-sync-v2"
+            ]
+          ]
+        },
+        "policy": {
+          "description": "How strongly startup should gate work when the installed payload does not satisfy the repo-declared target.",
+          "enum": [
+            "advisory",
+            "required-before-claim",
+            "required-before-work"
+          ],
+          "default": "advisory"
+        },
+        "dogfood_latest": {
+          "description": "For the Agentic Workspace source repo, require the checked-in payload to track the latest source-checkout payload before ordinary work.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": true
+    },
+    "cli_compatibility": {
+      "description": "Expected CLI identity and posture for commands executed in this repo.",
+      "type": "object",
+      "default": {},
+      "x-agentic-workspace-doc-role": "maintainer",
+      "x-agentic-workspace-unknown-properties": "warn",
+      "properties": {
+        "enforcement": {
+          "description": "How strictly CLI compatibility expectations should be enforced.",
+          "enum": [
+            "off",
+            "advisory",
+            "blocking"
+          ],
+          "default": "off"
+        },
+        "minimum_version": {
+          "description": "Minimum accepted Agentic Workspace CLI version.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "0.4.0"
+          ]
+        },
+        "exact_version": {
+          "description": "Exact accepted Agentic Workspace CLI version when a repo must pin execution.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "0.4.0"
+          ]
+        },
+        "source_classes": {
+          "description": "Allowed source classes for the invoked CLI executable.",
+          "type": "array",
+          "items": {
+            "enum": [
+              "source-checkout",
+              "installed-package",
+              "editable-dev",
+              "unknown"
+            ],
+            "description": "One entry in the source classes list."
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "target_relations": {
+          "description": "Allowed relation between the invoked CLI executable and the target repo.",
+          "type": "array",
+          "items": {
+            "enum": [
+              "inside-target",
+              "outside-target",
+              "no-target"
+            ],
+            "description": "One entry in the target relations list."
+          },
+          "uniqueItems": true,
+          "default": []
+        },
+        "command": {
+          "description": "Expected CLI command string when the repo wants compatibility checks to match a specific invocation.",
+          "type": "string",
+          "minLength": 1,
+          "examples": [
+            "agentic-workspace"
+          ]
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "x-agentic-workspace-doc-role": "public-reference",
+  "x-agentic-workspace-see-also": [
+    ".agentic-workspace/docs/workspace-config-contract.md",
+    "docs/reference",
+    "docs/generated"
+  ],
+  "x-agentic-workspace-unknown-properties": "warn",
+  "additionalProperties": true,
+  "$defs": {
+    "module_update_policy": {
+      "description": "Update source metadata for a managed module.",
+      "type": "object",
+      "x-agentic-workspace-doc-role": "maintainer",
+      "properties": {
+        "source_type": {
+          "description": "Where upgrade or install should resolve the module payload from.",
+          "enum": [
+            "git",
+            "local"
+          ]
+        },
+        "source_ref": {
+          "description": "Git URL/ref or local path, depending on source_type.",
+          "type": "string",
+          "minLength": 1
+        },
+        "source_label": {
+          "description": "Human-readable label for status and report output.",
+          "type": "string",
+          "minLength": 1
+        },
+        "recommended_upgrade_after_days": {
+          "description": "Age threshold after which status or doctor may suggest checking for updates.",
+          "type": "integer"
+        }
+      },
+      "x-agentic-workspace-unknown-properties": "warn",
+      "additionalProperties": true
+    },
+    "workflow_obligation": {
+      "description": "Repo-local workflow obligation that can be surfaced when stage and scope match current work.",
+      "type": "object",
+      "required": [
+        "summary",
+        "stage",
+        "scope_tags",
+        "commands"
+      ],
+      "x-agentic-workspace-doc-role": "maintainer",
+      "properties": {
+        "summary": {
+          "description": "Short explanation of the obligation.",
+          "type": "string",
+          "minLength": 1
+        },
+        "stage": {
+          "description": "Workflow stage where this obligation matters.",
+          "enum": [
+            "pre-work",
+            "before-claiming-completion",
+            "before-commit",
+            "review",
+            "closeout"
+          ]
+        },
+        "force": {
+          "description": "How strongly a matched obligation affects the next action or closeout gate.",
+          "enum": [
+            "informational",
+            "recommended",
+            "required-before-closeout",
+            "blocking"
+          ],
+          "default": "recommended"
+        },
+        "scope_tags": {
+          "description": "Tags used to match the obligation to touched work scopes.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One entry in the scope tags list."
+          },
+          "minItems": 1,
+          "examples": [
+            [
+              "contracts",
+              "docs"
+            ]
+          ]
+        },
+        "commands": {
+          "description": "Commands to run or consider at the matching workflow stage.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One entry in the commands list."
+          },
+          "minItems": 1,
+          "examples": [
+            [
+              "make maintainer-surfaces"
+            ]
+          ]
+        },
+        "review_hint": {
+          "description": "Short reminder to surface during review or closeout.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "x-agentic-workspace-unknown-properties": "warn",
+      "additionalProperties": true
+    },
+    "assurance_requirement_disposition": {
+      "description": "Recorded waiver or dismissal for a repo-declared assurance requirement.",
+      "type": "object",
+      "required": [
+        "reason",
+        "owner"
+      ],
+      "properties": {
+        "reason": {
+          "description": "Why the requirement was waived, dismissed, or found not applicable.",
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "description": "Repo-local owner or role accountable for the waiver or dismissal.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

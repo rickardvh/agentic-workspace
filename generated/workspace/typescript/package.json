@@ -47,9 +47,13 @@
   "engines": {
     "node": ">=20"
   },
+  "exports": {
+    "./profile": "./external_consumer_profile.json"
+  },
   "files": [
     "src",
-    "resources"
+    "resources",
+    "external_consumer_profile.json"
   ],
   "name": "@agentic-workspace/workspace-cli",
   "private": false,
