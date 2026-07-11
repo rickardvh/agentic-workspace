@@ -19,21 +19,22 @@ export function operationCompatibilityFingerprint(contract) {
   const normalize = (value) => {
     if (Array.isArray(value)) return value.map(normalize);
     if (!value || typeof value !== 'object') return value;
-    const required = new Set(Array.isArray(value.required) ? value.required : []);
-    return Object.fromEntries(Object.entries(value).filter(([key]) => !['description', 'title', '$id', '$comment', 'examples', 'default'].includes(key)).map(([key, item]) => [key, key === 'properties' && item && typeof item === 'object' ? Object.fromEntries(Object.entries(item).filter(([name]) => required.has(name)).map(([name, schema]) => [name, normalize(schema)])) : normalize(item)]));
+    return Object.fromEntries(Object.entries(value).filter(([key]) => !['description', 'title', '$id', '$comment', 'examples', 'default'].includes(key)).map(([key, item]) => [key, normalize(item)]));
   };
   const canonical = JSON.stringify(sortValue({ contract: normalized, schemas: normalize(schemas) }));
   return `sha256:${createHash('sha256').update(canonical).digest('hex')}`;
 }
 export function negotiateRequirements(requirements, { allowRuntimeBacked = false } = {}) {
   const bundle = externalContractBundle(); const results = [];
+  const surfaceCompatible = (required, available) => Array.isArray(required) ? Array.isArray(available) && required.every((item) => available.some((candidate) => JSON.stringify(candidate) === JSON.stringify(item))) : required && typeof required === 'object' ? available && typeof available === 'object' && Object.entries(required).every(([key, value]) => key in available && surfaceCompatible(value, available[key])) : required === available;
   for (const [operationId, fingerprint] of Object.entries(requirements)) {
     const operation = bundle.operations[operationId];
     if (!operation) { results.push({ operation: operationId, status: 'missing', reason: 'operation is not packaged' }); continue; }
     const support = operation.external_consumption.status;
     if (support === 'runtime-backed' && !allowRuntimeBacked) results.push({ operation: operationId, status: 'runtime-backed', reason: 'explicit runtime-backed opt-in required' });
     else if (!['supported', 'runtime-backed'].includes(support)) results.push({ operation: operationId, status: 'unsupported', reason: `support status is ${support}` });
-    else if (fingerprint && fingerprint !== operation.compatibility_fingerprint) results.push({ operation: operationId, status: 'incompatible', reason: 'operation compatibility fingerprint mismatch' });
+    else if (fingerprint && typeof fingerprint === 'object' && !surfaceCompatible(fingerprint.compatibility_surface, operation.compatibility_surface)) results.push({ operation: operationId, status: 'incompatible', reason: 'operation compatibility surface is breaking' });
+    else if (typeof fingerprint === 'string' && fingerprint !== operation.compatibility_fingerprint) results.push({ operation: operationId, status: 'incompatible', reason: 'operation compatibility fingerprint mismatch' });
     else results.push({ operation: operationId, status: 'compatible', reason: 'requirement satisfied' });
   }
   return { compatible: results.every((item) => item.status === 'compatible'), requirements: results };

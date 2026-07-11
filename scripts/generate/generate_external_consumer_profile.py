@@ -272,14 +272,15 @@ def resolve_schema_reference(name: str, *, repo_root: Path = REPO_ROOT, base_pat
 def schema_references(value: object) -> set[str]:
     refs: set[str] = set()
     if isinstance(value, dict):
-        for item in value.values():
-            refs.update(schema_references(item))
+        reference = value.get("$ref")
+        if isinstance(reference, str) and reference.split("#", 1)[0].endswith(".schema.json"):
+            refs.add(reference)
+        for key, item in value.items():
+            if key != "$ref":
+                refs.update(schema_references(item))
     elif isinstance(value, list):
         for item in value:
             refs.update(schema_references(item))
-    elif isinstance(value, str) and ".schema.json" in value and not any(character.isspace() for character in value):
-        if value.split("#", 1)[0].endswith(".schema.json"):
-            refs.add(value)
     return refs
 
 
@@ -311,15 +312,11 @@ def render_bundle(profile: dict[str, object]) -> str:
             return [compatibility_schema(item) for item in value]
         if not isinstance(value, dict):
             return value
-        required = set(value.get("required", [])) if isinstance(value.get("required"), list) else set()
         normalized: dict[str, object] = {}
         for key, item in value.items():
             if key in {"description", "title", "$id", "$comment", "examples", "default"}:
                 continue
-            if key == "properties" and isinstance(item, dict):
-                normalized[key] = {name: compatibility_schema(schema) for name, schema in item.items() if name in required}
-            else:
-                normalized[key] = compatibility_schema(item)
+            normalized[key] = compatibility_schema(item)
         return normalized
 
     def schema_closure(initial: set[str]) -> set[str]:
@@ -338,6 +335,7 @@ def render_bundle(profile: dict[str, object]) -> str:
             for values in entry.get("schemas", {}).values()
             for item in values
         }
+        declared_schemas.add("operation_failure.schema.json")
         closure = schema_closure(declared_schemas | schema_refs(contract))
         compatibility_contract = {
             key: contract.get(key)
@@ -357,6 +355,7 @@ def render_bundle(profile: dict[str, object]) -> str:
         closure = {name: schemas[name]["schema"] for name in operation["schemas"]}
         exact = {"contract": operation["contract"], "schemas": closure}
         compatible = {"contract": {key: operation["contract"].get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")}, "schemas": compatibility_schema(closure)}
+        operation["compatibility_surface"] = compatible
         operation["fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(exact, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         operation["compatibility_fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(compatible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     payload = {

@@ -270,6 +270,17 @@ def test_recursive_schema_graph_preserves_relative_context_and_fragments(tmp_pat
     closure, graph = module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
     assert "src/owner/nested/child.schema.json" in closure
     assert graph["src/owner/nested/child.schema.json"]["source"] == "src/owner/nested/child.schema.json"
+    child.write_text('{"$id":"ignored.schema.json","$defs":{"value":{"type":"string"}}}\n', encoding="utf-8")
+    closure, _ = module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
+    assert not any("ignored.schema.json" in name for name in closure)
     root.write_text('{"$ref":"nested/child.schema.json#/$defs/missing"}\n', encoding="utf-8")
     with pytest.raises(ValueError, match="missing schema fragment"):
         module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
+
+
+def test_bundle_has_canonical_unique_schemas_and_failure_contract() -> None:
+    bundle = json.loads(_module().render_bundle(json.loads(_module().render())))
+    for operation in bundle["operations"].values():
+        assert "operation_failure.schema.json" in operation["schemas"]
+        sources = [bundle["schemas"][name]["source"] for name in operation["schemas"]]
+        assert len(sources) == len(set(sources))

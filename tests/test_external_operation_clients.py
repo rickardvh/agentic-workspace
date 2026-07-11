@@ -162,18 +162,20 @@ console.log(JSON.stringify([negotiateRequirements({{{json.dumps(operation_id)}: 
 
 def test_schema_compatibility_distinguishes_optional_addition_from_breaking_change(monkeypatch) -> None:
     bundle = external_contract_bundle()
-    operation = next(iter(bundle["operations"].values()))
-    schema_name = operation["schemas"][0]
+    operation_id, operation = next(iter(bundle["operations"].items()))
+    requirement = {"compatibility_surface": copy.deepcopy(operation["compatibility_surface"])}
     additive = copy.deepcopy(bundle)
-    schema = additive["schemas"][schema_name]["schema"]
+    schema_name = operation["schemas"][0]
+    schema = additive["operations"][operation_id]["compatibility_surface"]["schemas"][schema_name]
     schema.setdefault("properties", {})["future_optional"] = {"type": "string"}
     monkeypatch.setattr(public_client, "external_contract_bundle", lambda: additive)
-    assert operation_compatibility_fingerprint(operation["contract"]) == operation["compatibility_fingerprint"]
-    breaking = copy.deepcopy(additive)
-    changed = breaking["schemas"][schema_name]["schema"]
-    changed["required"] = [*changed.get("required", []), "future_optional"]
+    assert negotiate_requirements({operation_id: requirement}, allow_runtime_backed=True)["compatible"] is True
+    breaking = copy.deepcopy(bundle)
+    changed = breaking["operations"][operation_id]["compatibility_surface"]["schemas"][schema_name]
+    optional = next(name for name in changed.get("properties", {}) if name not in changed.get("required", []))
+    del changed["properties"][optional]
     monkeypatch.setattr(public_client, "external_contract_bundle", lambda: breaking)
-    assert operation_compatibility_fingerprint(operation["contract"]) != operation["compatibility_fingerprint"]
+    assert negotiate_requirements({operation_id: requirement}, allow_runtime_backed=True)["compatible"] is False
 
 
 def test_requirement_matrix_reports_unsupported(monkeypatch) -> None:

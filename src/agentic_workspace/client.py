@@ -57,13 +57,8 @@ def operation_compatibility_fingerprint(contract: Mapping[str, Any]) -> str:
             return [normalize(item) for item in value]
         if not isinstance(value, dict):
             return value
-        required = set(value.get("required", [])) if isinstance(value.get("required"), list) else set()
         return {
-            key: (
-                {name: normalize(schema) for name, schema in item.items() if name in required}
-                if key == "properties" and isinstance(item, dict)
-                else normalize(item)
-            )
+            key: normalize(item)
             for key, item in value.items()
             if key not in {"description", "title", "$id", "$comment", "examples", "default"}
         }
@@ -76,10 +71,22 @@ def operation_compatibility_fingerprint(contract: Mapping[str, Any]) -> str:
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
-def negotiate_requirements(requirements: Mapping[str, str | None], *, allow_runtime_backed: bool = False) -> dict[str, Any]:
+def _surface_compatible(required: Any, available: Any) -> bool:
+    if isinstance(required, dict):
+        return isinstance(available, dict) and all(
+            key in available and _surface_compatible(value, available[key]) for key, value in required.items()
+        )
+    if isinstance(required, list):
+        return isinstance(available, list) and all(item in available for item in required)
+    return required == available
+
+
+def negotiate_requirements(
+    requirements: Mapping[str, str | Mapping[str, Any] | None], *, allow_runtime_backed: bool = False
+) -> dict[str, Any]:
     bundle = external_contract_bundle()
     results = []
-    for operation_id, fingerprint in requirements.items():
+    for operation_id, requirement in requirements.items():
         operation = bundle["operations"].get(operation_id)
         if operation is None:
             results.append({"operation": operation_id, "status": "missing", "reason": "operation is not packaged"})
@@ -89,7 +96,11 @@ def negotiate_requirements(requirements: Mapping[str, str | None], *, allow_runt
             results.append({"operation": operation_id, "status": "runtime-backed", "reason": "explicit runtime-backed opt-in required"})
         elif support not in {"supported", "runtime-backed"}:
             results.append({"operation": operation_id, "status": "unsupported", "reason": f"support status is {support}"})
-        elif fingerprint and fingerprint != operation["compatibility_fingerprint"]:
+        elif isinstance(requirement, Mapping) and not _surface_compatible(
+            requirement.get("compatibility_surface"), operation.get("compatibility_surface")
+        ):
+            results.append({"operation": operation_id, "status": "incompatible", "reason": "operation compatibility surface is breaking"})
+        elif isinstance(requirement, str) and requirement != operation["compatibility_fingerprint"]:
             results.append({"operation": operation_id, "status": "incompatible", "reason": "operation fingerprint mismatch"})
         else:
             results.append({"operation": operation_id, "status": "compatible", "reason": "requirement satisfied"})
