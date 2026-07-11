@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:ad05059862e97531647fe6768eb50702bc90fd99cfb21f27cabc7aa25f27e0f0",
+  "profile_fingerprint": "sha256:0ce0c285e09b83134354d484c92cbd42b9f660badc260197de1e2cf6043f0a60",
   "profile": "external_consumer_profile.json",
   "operation_contracts": [
     "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.adopt.lifecycle.json",
