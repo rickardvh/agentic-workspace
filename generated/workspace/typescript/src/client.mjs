@@ -63,7 +63,11 @@ export function invokeJson(argv, { target, invocation } = {}) {
   if (result.error) throw new AWClientError('invocation-unavailable', result.error.message, { command });
   const text = result.stdout || result.stderr; let payload;
   try { payload = JSON.parse(text); } catch { throw new AWClientError('malformed', 'AW returned non-JSON output', { exit_code: result.status }); }
-  if (result.status !== 0) throw new AWClientError(result.status === 2 ? 'rejected' : 'failed', 'AW operation failed', { exit_code: result.status, error: payload });
+  if (result.status !== 0) {
+    const failureSchema = JSON.parse(readFileSync(new URL('../resources/_contracts/operation_failure.schema.json', import.meta.url), 'utf8'));
+    const errors = validateSchema(failureSchema, payload); if (errors.length) throw new AWClientError('malformed', 'operation failure failed schema validation', { errors });
+    throw new AWClientError(payload.status, 'AW operation failed', { exit_code: result.status, error: payload });
+  }
   if (!payload || Array.isArray(payload) || typeof payload !== 'object') throw new AWClientError('malformed', 'AW result envelope must be an object');
   return payload;
 }
@@ -73,6 +77,8 @@ function validateSchema(schema, value, path = '$') {
   const actual = value === null ? 'null' : Array.isArray(value) ? 'array' : Number.isInteger(value) ? 'integer' : typeof value;
   if (types.length && !types.includes(actual)) errors.push(`${path} must be ${types.join(' or ')}`);
   if (schema.enum && !schema.enum.some((item) => JSON.stringify(item) === JSON.stringify(value))) errors.push(`${path} is not an allowed value`);
+  if (schema.const !== undefined && JSON.stringify(schema.const) !== JSON.stringify(value)) errors.push(`${path} must equal the declared constant`);
+  if (typeof value === 'number' && schema.minimum !== undefined && value < schema.minimum) errors.push(`${path} must be at least ${schema.minimum}`);
   if (typeof value === 'string' && schema.minLength !== undefined && [...value].length < schema.minLength) errors.push(`${path} is shorter than ${schema.minLength}`);
   if (typeof value === 'string' && schema.pattern !== undefined && !(new RegExp(schema.pattern).test(value))) errors.push(`${path} does not match ${schema.pattern}`);
   if (actual === 'array') {

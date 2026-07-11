@@ -22,6 +22,10 @@ BUNDLE_OUTPUTS = (
 )
 PYTHON_TYPED_OPERATIONS = REPO_ROOT / "src/agentic_workspace/generated_operations.py"
 SCHEMA_RESOURCE_OUTPUTS = {
+    REPO_ROOT / "generated/workspace/python/_contracts/operation_failure.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/operation_failure.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/operation_failure.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/operation_failure.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/delegation_outcome_append_input.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/delegation_outcome_append_result.schema.json": REPO_ROOT

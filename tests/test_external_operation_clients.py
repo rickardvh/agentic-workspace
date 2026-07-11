@@ -189,6 +189,7 @@ def test_public_client_classifies_disabled_and_invocation_unavailable(tmp_path: 
         (0, "not-json", "", "malformed"),
         (2, '{"status":"rejected"}', "", "rejected"),
         (1, '{"status":"failed"}', "", "failed"),
+        (1, "{}", "", "malformed"),
     ],
 )
 def test_public_client_classifies_result_and_failure_envelopes(
@@ -226,3 +227,33 @@ console.log(JSON.stringify(payload));
     typescript_payload = json.loads(completed.stdout)
     assert python_payload["kind"] == typescript_payload["kind"] == "agentic-workspace/delegation-outcomes/v1"
     assert python_payload["recorded"]["outcome"] == typescript_payload["recorded"]["outcome"] == "success"
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"kind": "wrong", "path": "x", "record_count": 1, "recorded": {}},
+        {"kind": "agentic-workspace/delegation-outcomes/v1", "path": "x", "record_count": 0, "recorded": {}},
+    ],
+)
+def test_python_and_typescript_reject_same_invalid_result(payload: dict[str, object], tmp_path: Path) -> None:
+    config = tmp_path / ".agentic-workspace/config.toml"
+    config.parent.mkdir()
+    config.write_text("[workspace]\nenabled = true\n", encoding="utf-8")
+    values = {"delegation_target": "fixture", "task_class": "parity", "outcome": "success"}
+    with pytest.raises(AWClientError) as python_error:
+        invoke_operation(
+            "delegation-outcome.append",
+            values,
+            target=tmp_path,
+            invocation=[sys.executable, "-c", f"print({json.dumps(json.dumps(payload))})"],
+            allow_runtime_backed=True,
+        )
+    script = f"""
+import {{ invokeOperation }} from './generated/workspace/typescript/src/client.mjs';
+try {{ invokeOperation('delegation-outcome.append', {json.dumps(values)}, {{ target: {json.dumps(str(tmp_path))}, invocation: ['node', '-e', {json.dumps("console.log(" + json.dumps(json.dumps(payload)) + ")")}], allowRuntimeBacked: true }}); }} catch (error) {{ console.log(error.kind); }}
+"""
+    result = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
+    assert python_error.value.kind == "malformed"
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "malformed"

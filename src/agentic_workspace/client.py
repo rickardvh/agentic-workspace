@@ -138,6 +138,14 @@ def _validate_schema(entry: Mapping[str, Any], schema_name: str, value: Any, *, 
         )
 
 
+def _validate_failure(entry: Mapping[str, Any], value: Any) -> None:
+    resource_ref = entry["operation_resources"]["python"]
+    schema = json.loads(_resource("_contracts/operation_failure.schema.json", resource_ref["package"]).read_text(encoding="utf-8"))
+    errors = sorted(Draft202012Validator(schema).iter_errors(value), key=lambda error: list(error.path))
+    if errors:
+        raise AWClientError("malformed", "operation failure failed schema validation", {"errors": [error.message for error in errors]})
+
+
 def _argv(contract: Mapping[str, Any], values: Mapping[str, Any], target: Path) -> list[str]:
     surface = contract.get("command_surface", {})
     command = str(surface.get("command", "")).split()
@@ -199,6 +207,7 @@ def invoke_operation(
     except json.JSONDecodeError as exc:
         raise AWClientError("malformed", "AW returned non-JSON output", {"exit_code": completed.returncode}) from exc
     if completed.returncode:
+        _validate_failure(entry, payload)
         kind = str(payload.get("status", "failed")) if isinstance(payload, dict) else "failed"
         if kind not in FAILURE_KINDS:
             kind = "rejected" if completed.returncode == 2 else "failed"
