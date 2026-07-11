@@ -110,3 +110,22 @@ def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> 
         cached, context = lookup_projection_reuse(root=target, operation="doctor", query={"index": index}, full_detail_command="doctor")
         record_projection_reuse(root=target, operation="doctor", query={"index": index}, context=context, payload={"status": "ok"})
     assert len(list((target / ".agentic-workspace/local/projection-cache").glob("*.json"))) <= 32
+
+
+def test_doctor_declares_package_inputs_and_caller_external_freshness_recomputes(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    capsys.readouterr()
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    assert json.loads(capsys.readouterr().out)["kind"] == "agentic-workspace/unchanged-projection/v1"
+
+    package_file = target / "packages/example/src/example.py"
+    package_file.parent.mkdir(parents=True)
+    package_file.write_text("VALUE = 1\n", encoding="utf-8")
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    assert json.loads(capsys.readouterr().out).get("kind") != "agentic-workspace/unchanged-projection/v1"
+
+    monkeypatch.setenv("AW_PROJECTION_EXTERNAL_STATE", "1")
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    assert json.loads(capsys.readouterr().out).get("kind") != "agentic-workspace/unchanged-projection/v1"

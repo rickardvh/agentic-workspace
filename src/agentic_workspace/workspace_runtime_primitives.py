@@ -39649,6 +39649,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             "preset": resolved_preset or "",
             "task": str(task_text or ""),
             "changed": changed_paths,
+            "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
         }
         full_detail_command = _command_with_cli_invoke(
             command=f"agentic-workspace report --target {target_root.as_posix()} --verbose --format json",
@@ -40084,6 +40085,7 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         "modules": selected_modules,
         "preset": resolved_preset or "",
         "format": str(args.format),
+        "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
     }
     reuse_context: dict[str, Any] | None = None
     if command_name == "doctor" and args.format == "json" and not select and profile == "tiny":

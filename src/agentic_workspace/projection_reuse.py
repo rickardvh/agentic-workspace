@@ -13,10 +13,15 @@ from typing import Any
 _CACHE_KIND = "agentic-workspace/projection-reuse-record/v1"
 _CACHE_CONTRACT_VERSION = 2
 _MAX_CACHE_RECORDS = 32
+_OPERATION_DEPENDENCY_ROOTS = {
+    "doctor": ("src/agentic_workspace", "generated/workspace", "scripts", "packages"),
+    "report": ("src/agentic_workspace", "generated/workspace", "scripts", "packages", "docs"),
+}
 
 
 def _dependency_files(root: Path, operation: str) -> list[Path]:
-    candidates = [root / "AGENTS.md", root / "pyproject.toml", root / "Makefile", root / ".git" / "HEAD"]
+    candidates = [root / "AGENTS.md", root / "pyproject.toml", root / "uv.lock", root / "Makefile"]
+    candidates.extend(root.glob("*/AGENTS.md"))
     aw_root = root / ".agentic-workspace"
     if aw_root.is_dir():
         candidates.extend(
@@ -24,7 +29,7 @@ def _dependency_files(root: Path, operation: str) -> list[Path]:
             for path in aw_root.rglob("*")
             if path.is_file() and not {"projection-cache", "logs", "session-logging"}.intersection(path.relative_to(aw_root).parts)
         )
-    for relative_root in ("src/agentic_workspace", "generated/workspace", "scripts"):
+    for relative_root in _OPERATION_DEPENDENCY_ROOTS.get(operation, ()):
         folder = root / relative_root
         if folder.is_dir():
             candidates.extend(path for path in folder.rglob("*") if path.is_file())
@@ -85,10 +90,19 @@ def lookup_projection_reuse(
     digest, dependencies = dependency_digest(root=root, operation=operation, query=query)
     path = _cache_path(root, operation, query)
     forced = force_refresh or os.environ.get("AW_PROJECTION_FORCE_REFRESH", "").lower() in {"1", "true", "yes"}
-    volatile = bool(query.get("volatile") or query.get("external_freshness_required")) or os.environ.get(
-        "AW_PROJECTION_VOLATILE", ""
-    ).lower() in {"1", "true", "yes"}
-    context = {"digest": digest, "dependencies": dependencies, "path": path, "forced": forced, "volatile": volatile}
+    volatile = (
+        operation not in _OPERATION_DEPENDENCY_ROOTS
+        or bool(query.get("volatile") or query.get("external_freshness_required"))
+        or os.environ.get("AW_PROJECTION_VOLATILE", "").lower() in {"1", "true", "yes"}
+    )
+    context = {
+        "digest": digest,
+        "dependencies": dependencies,
+        "path": path,
+        "forced": forced,
+        "volatile": volatile,
+        "dependency_contract": operation,
+    }
     if forced or volatile or not path.is_file():
         return None, context
     try:
