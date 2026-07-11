@@ -26,6 +26,7 @@ from repo_verification_bootstrap.runtime_primitives import (
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
+from agentic_workspace.current_work_context import resolve_current_work_context
 from agentic_workspace.runtime_source_review import runtime_source_edit_review_for_changed_paths
 from agentic_workspace.runtime_symbol_working_set import runtime_symbol_working_set_for_changed_paths
 from agentic_workspace.workspace_runtime_core import (
@@ -4196,6 +4197,10 @@ def _proof_selection_for_changed_paths(
             if intent_effect not in proof_selection["escalate_when"]:
                 proof_selection["escalate_when"].append(intent_effect)
     if include_routine_work_context and config is not None and target_root is not None:
+        proof_selection["current_work_context"] = resolve_current_work_context(
+            root=target_root,
+            task=str(task_text or ""),
+        )
         workflow_obligations = _workflow_obligations_report_payload(
             config=config,
             active_planning_record=None,

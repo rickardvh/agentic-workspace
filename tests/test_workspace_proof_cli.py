@@ -421,6 +421,9 @@ review_hint = "Workspace orchestration applies to workspace paths."
     )
 
     answer = json.loads(capsys.readouterr().out)["answer"]
+    binding = answer["current_work_context"]
+    assert binding["kind"] == "agentic-workspace/current-work-context/v1"
+    assert binding["authority"] == "local-advisory-binding"
     routine = answer["routine_work_context"]
     assert routine["surface"] == "proof"
     assert routine["categories"]["authority"]["status"] == "attention"

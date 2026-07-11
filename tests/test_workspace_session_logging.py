@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from agentic_workspace import cli as source_cli
-from agentic_workspace import session_logging
+from agentic_workspace import current_work_context, session_logging
 
 
 def _write(path: Path, content: str) -> None:
@@ -786,6 +786,76 @@ def test_session_log_segments_can_be_summarized_and_selected(tmp_path: Path, mon
     selected = session_logging.analyze_session_log(state=state, segment_id=selected_id)
     assert selected["selected_segment"] == selected_id
     assert selected["summary"]["command_count"] == 1
+
+
+def test_session_log_work_context_does_not_carry_stale_pr_across_task_transition(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    monkeypatch.setenv("AW_SESSION_LOG_PR", "2144")
+    assert (
+        session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "Implement issue #2144"], lambda _argv: 0)
+        == 0
+    )
+
+    monkeypatch.delenv("AW_SESSION_LOG_PR")
+    assert (
+        session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "Implement issue #2145"], lambda _argv: 0)
+        == 0
+    )
+    assert (
+        session_logging.run_with_session_logging(["start", "--target", str(target), "--task", "Implement issue #2146"], lambda _argv: 0)
+        == 0
+    )
+
+    entries = json.loads(_current_index(target).read_text(encoding="utf-8"))["entries"]
+    assert len(entries) == 3
+    assert entries[0]["segment"]["pr_ref"] == "#2144"
+    assert entries[1]["segment"]["pr_ref"] == ""
+    assert entries[2]["segment"]["pr_ref"] == ""
+    assert entries[2]["segment"]["work_context"]["issue_refs"] == ["#2146"]
+    binding = entries[1]["segment"]["work_context"]
+    assert binding["issue_refs"] == ["#2145"]
+    assert binding["provenance"]["issue_refs"] == "explicit-task"
+    assert "task changes" in binding["freshness"]["invalidate_when"]
+    assert binding["authority"] == "local-advisory-binding"
+
+
+def test_current_work_context_branch_round_trip_rebinds_thread_identity(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    for branch, issue, pr in (
+        ("branch-a", "#2175", "#2182"),
+        ("branch-b", "#2180", "#2183"),
+        ("branch-c", "#2177", "#2184"),
+    ):
+        _write(
+            target / ".agentic-workspace" / "local" / "work-threads" / f"{branch}.json",
+            json.dumps(
+                {
+                    "kind": "agentic-workspace/local-work-thread/v1",
+                    "id": branch,
+                    "refs": {"issues": [issue], "prs": [pr], "planning": []},
+                    "observations": {"branch": {"value": branch}},
+                }
+            ),
+        )
+    live = {"branch": "branch-a"}
+    monkeypatch.setattr(
+        current_work_context,
+        "_git",
+        lambda _root, *args: live["branch"] if args == ("branch", "--show-current") else f"head-{live['branch']}",
+    )
+
+    first = current_work_context.resolve_current_work_context(root=target)
+    live["branch"] = "branch-b"
+    second = current_work_context.resolve_current_work_context(root=target)
+    live["branch"] = "branch-a"
+    returned = current_work_context.resolve_current_work_context(root=target)
+
+    assert (first["thread_id"], first["pr_ref"], first["issue_refs"]) == ("branch-a", "#2182", ["#2175"])
+    assert (second["thread_id"], second["pr_ref"], second["issue_refs"]) == ("branch-b", "#2183", ["#2180"])
+    assert returned["thread_id"] == "branch-a"
+    assert returned["id"] == first["id"]
 
 
 def test_session_log_segments_ignore_closeout_text_without_a_closeout_transition(tmp_path: Path, monkeypatch) -> None:

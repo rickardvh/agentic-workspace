@@ -22,6 +22,7 @@ from typing import Any
 
 from agentic_workspace import __version__
 from agentic_workspace import config as config_lib
+from agentic_workspace.current_work_context import resolve_current_work_context
 from agentic_workspace.result_adapter import serialise_value
 
 SESSION_LOG_ROOT = Path(".agentic-workspace") / "local" / "logs"
@@ -692,19 +693,24 @@ def _segment_metadata(
     prior_segment = prior_entries[-1].get("segment", {}) if prior_entries else {}
     if not isinstance(prior_segment, dict):
         prior_segment = {}
-    task = _option_value(argv, "--task") or str(prior_segment.get("task", ""))
-    plan_id = _active_plan_id(state.target_root) or str(prior_segment.get("plan_id", ""))
+    explicit_task = _option_value(argv, "--task")
+    task = explicit_task or str(prior_segment.get("task", ""))
+    binding = resolve_current_work_context(
+        root=state.target_root,
+        task=task,
+        argv=argv,
+        explicit_pr=os.environ.get("AW_SESSION_LOG_PR", ""),
+    )
+    plan_id = str(binding.get("plan_id") or "")
     if "new-plan" in argv:
         plan_id = _option_value(argv, "--id") or plan_id
     explicit_pr = os.environ.get("AW_SESSION_LOG_PR", "").lstrip("#")
     pr_matches = re.findall(r"\bPR\s+#?(\d+)\b", f"{task} {command_text}", flags=re.I)
-    pr_ref = (
-        f"#{explicit_pr or (pr_matches[-1] if pr_matches else '')}" if explicit_pr or pr_matches else str(prior_segment.get("pr_ref", ""))
-    )
+    pr_ref = f"#{explicit_pr or (pr_matches[-1] if pr_matches else '')}" if explicit_pr or pr_matches else str(binding.get("pr_ref") or "")
     refs = sorted({f"#{value}" for value in re.findall(r"#(\d+)", f"{task} {command_text}")})
     issue_refs = [ref for ref in refs if ref != pr_ref]
-    if not issue_refs and isinstance(prior_segment.get("issue_refs"), list):
-        issue_refs = [str(ref) for ref in prior_segment["issue_refs"]]
+    if not issue_refs:
+        issue_refs = [str(ref) for ref in binding.get("issue_refs", [])]
     if _is_closeout_transition(argv):
         closeout_status = "closed" if capture.exit_code == 0 else "attempted"
     else:
@@ -723,6 +729,7 @@ def _segment_metadata(
         **identity,
         "issue_refs": issue_refs,
         "authoritative": False,
+        "work_context": binding,
     }
 
 
