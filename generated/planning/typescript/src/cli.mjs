@@ -1608,13 +1608,6 @@ const commandDefinitions = [
           "name": "lane"
         },
         {
-          "flags": [
-            "--child-status-file"
-          ],
-          "help": "Repo-relative JSON file containing externally refreshed child outcomes.",
-          "name": "child_status_file"
-        },
-        {
           "action": "store_true",
           "flags": [
             "--apply-lane-reconcile"

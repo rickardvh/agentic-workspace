@@ -7095,11 +7095,6 @@
               "default": ""
             },
             {
-              "name": "child_status_file",
-              "arg": "child_status_file",
-              "default": ""
-            },
-            {
               "name": "apply_lane_reconcile",
               "arg": "apply_lane_reconcile",
               "default": false
@@ -10295,11 +10290,6 @@
                 "name": "lane",
                 "flags": ["--lane"],
                 "help": "Lane id whose machine-readable child outcomes should be reconciled."
-              },
-              {
-                "name": "child_status_file",
-                "flags": ["--child-status-file"],
-                "help": "Repo-relative JSON file containing externally refreshed child outcomes."
               },
               {
                 "name": "apply_lane_reconcile",

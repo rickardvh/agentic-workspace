@@ -21617,12 +21617,16 @@ def _fetch_github_external_intent_issue_items(*, target_root: Path, repo: str, i
 
 def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> list[dict[str, Any]]:
     try:
-        raw_pr = _run_gh_json(
+        raw_prs = _run_gh_json(
             [
                 "pr",
-                "view",
+                "list",
                 "--repo",
                 repo,
+                "--state",
+                "all",
+                "--limit",
+                "1000",
                 "--json",
                 "number,title,state,url,headRefName,baseRefName,isDraft,body",
             ],
@@ -21630,9 +21634,8 @@ def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> li
         )
     except Exception:
         return []
-    if not isinstance(raw_pr, dict) or raw_pr.get("number") is None:
+    if not isinstance(raw_prs, list):
         return []
-    body = str(raw_pr.get("body", "") or "")
     return [
         {
             "system": "github",
@@ -21643,8 +21646,10 @@ def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> li
             "head_ref": str(raw_pr.get("headRefName", "")).strip(),
             "base_ref": str(raw_pr.get("baseRefName", "")).strip(),
             "is_draft": bool(raw_pr.get("isDraft", False)),
-            "close_keyword_issue_ids": _close_keyword_issue_refs(body),
+            "close_keyword_issue_ids": _close_keyword_issue_refs(str(raw_pr.get("body", "") or "")),
         }
+        for raw_pr in raw_prs
+        if isinstance(raw_pr, dict) and raw_pr.get("number") is not None
     ]
 
 
@@ -22200,8 +22205,21 @@ def _refresh_github_external_intent_evidence(
             if item is not None
         ]
         items = fetched_items
-    items.sort(key=lambda item: int(str(item["id"]).lstrip("#") or "0"))
     pull_requests = _github_current_pull_request_evidence(target_root=target_root, repo=resolved_repo)
+    items.extend(
+        {
+            "system": "github",
+            "id": f"PR #{pr['number']}",
+            "title": pr["title"],
+            "status": pr["state"],
+            "kind": "pull-request",
+            "parent_id": "",
+            "reopens": [],
+            "planning_residue_expected": "optional",
+        }
+        for pr in pull_requests
+    )
+    items.sort(key=lambda item: (str(item.get("kind", "")), int(re.sub(r"\D", "", str(item["id"])) or "0")))
     previous_count = len([item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)])
     refreshed_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     fetched_item_count = len(items)
@@ -22242,16 +22260,15 @@ def _refresh_github_external_intent_evidence(
         "refresh_metadata": refresh_metadata,
         "items": items,
     }
-    if pull_requests:
-        next_payload["pull_requests"] = pull_requests
     previous_items = [item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)]
     if previous_items:
         next_payload["previous_items"] = previous_items
     if cache_compaction is not None:
         next_payload["refresh_metadata"]["cache_compaction"] = cache_compaction
-    planning_candidate_suggestions = _planning_candidate_suggestions_from_external_items(target_root=target_root, items=items)
+    issue_items = [item for item in items if item.get("kind") != "pull-request"]
+    planning_candidate_suggestions = _planning_candidate_suggestions_from_external_items(target_root=target_root, items=issue_items)
     planning_candidate_grouping = _external_issue_grouping_hints(
-        items=items,
+        items=issue_items,
         candidates=[
             candidate for candidate in _list_payload(planning_candidate_suggestions.get("candidates")) if isinstance(candidate, dict)
         ],

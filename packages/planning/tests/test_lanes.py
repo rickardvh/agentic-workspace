@@ -435,6 +435,7 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
             "proof_ref": "",
             "new_owner": "",
             "residual_intent": "",
+            "outcome_authority": "human-reviewed",
         },
         {
             "id": "follow-up",
@@ -445,6 +446,37 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
             "proof_ref": "",
             "new_owner": "",
             "residual_intent": "follow-up remains",
+        },
+        {
+            "id": "closed-pr",
+            "issue_ref": "#4",
+            "pr_ref": "#13",
+            "outcome": "unresolved",
+            "reason": "",
+            "proof_ref": "",
+            "new_owner": "",
+            "residual_intent": "",
+        },
+        {
+            "id": "rerouted",
+            "issue_ref": "#5",
+            "pr_ref": "",
+            "outcome": "superseded-or-rerouted",
+            "reason": "moved to #99",
+            "proof_ref": "",
+            "new_owner": "#99",
+            "residual_intent": "owned by #99",
+            "outcome_authority": "human-reviewed",
+        },
+        {
+            "id": "reopened",
+            "issue_ref": "#6",
+            "pr_ref": "#14",
+            "outcome": "landed",
+            "reason": "",
+            "proof_ref": "old proof",
+            "new_owner": "",
+            "residual_intent": "",
         },
     ]
     lane["slice_sequence"] = [
@@ -458,10 +490,18 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
             {
                 "kind": "planning-external-intent-evidence/v1",
                 "refreshed_at": "2026-07-11T12:00:00+00:00",
+                "refresh_metadata": {"adapter": "github-gh-cli", "state": "all", "refreshed_at": "2026-07-11T12:00:00+00:00"},
                 "items": [
                     {"system": "github", "id": "#1", "title": "one", "kind": "issue", "status": "closed"},
                     {"system": "github", "id": "#2", "title": "two", "kind": "issue", "status": "closed"},
                     {"system": "github", "id": "#3", "title": "three", "kind": "issue", "status": "open"},
+                    {"system": "github", "id": "#4", "title": "four", "kind": "issue", "status": "closed"},
+                    {"system": "github", "id": "#5", "title": "five", "kind": "issue", "status": "closed"},
+                    {"system": "github", "id": "#6", "title": "six", "kind": "issue", "status": "open"},
+                    {"system": "github", "id": "PR #11", "title": "merged", "kind": "pull-request", "status": "merged"},
+                    {"system": "github", "id": "PR #12", "title": "closed", "kind": "pull-request", "status": "closed"},
+                    {"system": "github", "id": "PR #13", "title": "closed", "kind": "pull-request", "status": "closed"},
+                    {"system": "github", "id": "PR #14", "title": "open", "kind": "pull-request", "status": "open"},
                 ],
             }
         ),
@@ -470,7 +510,7 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
     before = lane_path.read_text(encoding="utf-8")
 
     dry_run = planning_reconcile(target=tmp_path, lane="trust-lane", apply_lane_reconcile=True, dry_run=True)["lane_child_reconciliation"]
-    assert dry_run["unknown_count"] == 1
+    assert dry_run["unknown_count"] == 2
     assert dry_run["parent_auto_closed"] is False
     assert dry_run["applied"] is False
     assert lane_path.read_text(encoding="utf-8") == before
@@ -481,6 +521,9 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
     assert record["children"][0]["outcome"] == "landed"
     assert record["children"][1]["outcome"] == "dismissed-not-planned"
     assert record["children"][2]["outcome"] == "unresolved"
+    assert record["children"][3]["outcome"] == "closed-without-merge"
+    assert record["children"][4]["outcome"] == "superseded-or-rerouted"
+    assert record["children"][5]["outcome"] == "unresolved"
     assert record["parent_close_permission"] == "do-not-close-parent"
     assert record["status"] == "ready"
     assert record["slice_sequence"][0]["status"] == "completed"
@@ -488,38 +531,13 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
     assert applied["exact_delta"]["slice_sequence"]["after"][0]["status"] == "completed"
     assert applied["external_state"]["authority"] == "provider-adapter-observation"
 
-
-def test_lane_reconcile_rejects_unverified_partial_child_import(tmp_path: Path) -> None:
-    create_lane_record(lane_id="trust-lane", title="Trust Lane", target=tmp_path)
-    lane_path = tmp_path / ".agentic-workspace/planning/lanes/trust-lane.lane.json"
-    lane = json.loads(lane_path.read_text(encoding="utf-8"))
-    lane["children"] = [
-        {
-            "id": child,
-            "issue_ref": f"#{index}",
-            "pr_ref": "",
-            "outcome": "unresolved",
-            "reason": "",
-            "proof_ref": "",
-            "new_owner": "",
-            "residual_intent": "",
-        }
-        for index, child in enumerate(("one", "two"), start=1)
-    ]
-    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
-    cache = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
-    cache.parent.mkdir(parents=True)
-    cache.write_text(json.dumps({"kind": "planning-external-intent-evidence/v1", "items": []}), encoding="utf-8")
-    imported = tmp_path / "partial.json"
-    imported.write_text(json.dumps({"items": [{"child_id": "one", "status": "merged"}]}), encoding="utf-8")
-
-    result = planning_reconcile(target=tmp_path, lane="trust-lane", child_status_file="partial.json", apply_lane_reconcile=True)[
-        "lane_child_reconciliation"
-    ]
-
-    assert result["status"] == "blocked"
-    assert result["reason"] == "unverified-child-status-import"
-    assert json.loads(lane_path.read_text(encoding="utf-8"))["children"] == lane["children"]
+    cached = json.loads(cache_path.read_text(encoding="utf-8"))
+    cached["refreshed_at"] = "2020-01-01T00:00:00+00:00"
+    cached["refresh_metadata"]["refreshed_at"] = cached["refreshed_at"]
+    cache_path.write_text(json.dumps(cached), encoding="utf-8")
+    stale = planning_reconcile(target=tmp_path, lane="trust-lane", apply_lane_reconcile=True)["lane_child_reconciliation"]
+    assert stale["status"] == "blocked"
+    assert stale["reason"] == "external-state-stale-or-insufficient"
 
 
 def test_planning_report_includes_lane_writer_helper_and_status(tmp_path: Path) -> None:

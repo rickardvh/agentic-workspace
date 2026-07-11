@@ -286,7 +286,8 @@
       "reason": "Premise invalid; secrecy was not required and the PR was closed without merge.",
       "proof_ref": "",
       "new_owner": "",
-      "residual_intent": ""
+      "residual_intent": "",
+      "outcome_authority": "human-reviewed"
     },
     {
       "id": "2180-decision-point-intent",
@@ -301,30 +302,30 @@
     {
       "id": "2188-rejected-latest-receipt",
       "issue_ref": "#2188",
-      "pr_ref": "",
+      "pr_ref": "#2191",
       "outcome": "unresolved",
       "reason": "",
-      "proof_ref": "",
+      "proof_ref": "PR #2191 CI and damaged-latest receipt regressions",
       "new_owner": "",
       "residual_intent": "Follow-up proof trust gap remains owned by #2188."
     },
     {
       "id": "2189-intent-carry-lifecycle",
       "issue_ref": "#2189",
-      "pr_ref": "",
+      "pr_ref": "#2192",
       "outcome": "unresolved",
       "reason": "",
-      "proof_ref": "",
+      "proof_ref": "PR #2192 CI and carry lifecycle regressions",
       "new_owner": "",
       "residual_intent": "Follow-up carry lifecycle gap remains owned by #2189."
     },
     {
       "id": "2190-lane-reconciliation",
       "issue_ref": "#2190",
-      "pr_ref": "",
+      "pr_ref": "#2193",
       "outcome": "unresolved",
       "reason": "",
-      "proof_ref": "",
+      "proof_ref": "PR #2193 CI and lane reconciliation regressions",
       "new_owner": "",
       "residual_intent": "This reconciliation implementation and proof remain under review."
     }

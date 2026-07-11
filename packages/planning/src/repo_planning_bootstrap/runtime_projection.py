@@ -62,7 +62,6 @@ def load_planning_reconcile_operation(values: dict, _arguments: dict, _context) 
         apply_safe_prune=bool(values.get("apply_safe_prune")),
         dry_run=bool(values.get("dry_run")),
         lane=str(values.get("lane") or ""),
-        child_status_file=str(values.get("child_status_file") or ""),
         apply_lane_reconcile=bool(values.get("apply_lane_reconcile")),
     )
 

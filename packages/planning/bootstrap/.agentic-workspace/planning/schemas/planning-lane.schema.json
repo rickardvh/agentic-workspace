@@ -129,6 +129,7 @@
         "proof_ref": {"type": "string"},
         "new_owner": {"type": "string"},
         "residual_intent": {"type": "string"}
+        ,"outcome_authority": {"enum": ["observed-external-state", "human-reviewed"]}
       }
     },
     "string_array": {

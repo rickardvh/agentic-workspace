@@ -46,11 +46,6 @@
       "source": "cli-option"
     },
     {
-      "name": "child_status_file",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
       "name": "apply_lane_reconcile",
       "required": false,
       "source": "cli-option"

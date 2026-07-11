@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import tomllib
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping, cast
 
@@ -2525,16 +2525,14 @@ def planning_reconcile(
     apply_safe_prune: bool = False,
     dry_run: bool = False,
     lane: str = "",
-    child_status_file: str = "",
     apply_lane_reconcile: bool = False,
 ) -> dict[str, Any]:
     target_root = resolve_target_root(target)
     payload = _planning_reconcile_payload(target_root)
-    if lane or child_status_file or apply_lane_reconcile:
+    if lane or apply_lane_reconcile:
         payload["lane_child_reconciliation"] = _reconcile_lane_children(
             target_root=target_root,
             lane_id=lane,
-            child_status_file=child_status_file,
             apply=apply_lane_reconcile,
             dry_run=dry_run,
         )
@@ -2557,7 +2555,7 @@ def planning_reconcile(
     return payload
 
 
-def _reconcile_lane_children(*, target_root: Path, lane_id: str, child_status_file: str, apply: bool, dry_run: bool) -> dict[str, Any]:
+def _reconcile_lane_children(*, target_root: Path, lane_id: str, apply: bool, dry_run: bool) -> dict[str, Any]:
     lane_path = _lane_record_path(target_root, lane_id)
     lane_record = _load_lane_record(lane_path)
     if lane_record is None:
@@ -2570,6 +2568,21 @@ def _reconcile_lane_children(*, target_root: Path, lane_id: str, child_status_fi
             "lane": lane_id,
             "applied": False,
             "safe_recovery": external.get("refresh_command", "agentic-workspace external-intent refresh-github --state all"),
+        }
+    refreshed_at = str(external.get("refreshed_at") or "")
+    try:
+        refresh_age = datetime.now(timezone.utc) - datetime.fromisoformat(refreshed_at.replace("Z", "+00:00"))
+    except ValueError:
+        refresh_age = timedelta.max
+    refresh_metadata = external.get("refresh_metadata", {}) if isinstance(external.get("refresh_metadata"), dict) else {}
+    if refresh_age > timedelta(hours=24) or refresh_metadata.get("adapter") != "github-gh-cli" or refresh_metadata.get("state") != "all":
+        return {
+            "status": "blocked",
+            "reason": "external-state-stale-or-insufficient",
+            "lane": lane_id,
+            "applied": False,
+            "refreshed_at": refreshed_at,
+            "safe_recovery": "agentic-workspace external-intent refresh-github --state all --storage cache --format json",
         }
     declared = lane_record.get("children", []) if isinstance(lane_record.get("children"), list) else []
     if not declared:
@@ -2589,17 +2602,6 @@ def _reconcile_lane_children(*, target_root: Path, lane_id: str, child_status_fi
     declared_ids = [str(child.get("id") or "") for child in declared if isinstance(child, dict)]
     if len(declared_ids) != len(set(declared_ids)) or not all(declared_ids):
         return {"status": "blocked", "reason": "duplicate-or-missing-declared-child-id", "lane": lane_id, "applied": False}
-    if child_status_file:
-        status_path = (target_root / child_status_file).resolve()
-        try:
-            imported = json.loads(status_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as exc:
-            return {"status": "blocked", "reason": "invalid-child-status-import", "detail": str(exc), "applied": False}
-        imported_ids = [str(item.get("child_id") or "") for item in imported.get("items", []) if isinstance(item, dict)]
-        if imported.get("kind") != "planning-lane-child-status-import/v1" or imported.get("authority_class") != "observed-external-state":
-            return {"status": "blocked", "reason": "unverified-child-status-import", "lane": lane_id, "applied": False}
-        if len(imported_ids) != len(set(imported_ids)) or set(imported_ids) != set(declared_ids):
-            return {"status": "blocked", "reason": "child-status-import-does-not-match-declared-set", "lane": lane_id, "applied": False}
     external_by_id = {str(item.get("id") or ""): item for item in external.get("items", []) if isinstance(item, dict)}
     children: list[dict[str, Any]] = []
     for declared_child in declared:
@@ -2608,14 +2610,27 @@ def _reconcile_lane_children(*, target_root: Path, lane_id: str, child_status_fi
         observed = external_by_id.get(issue_ref)
         observed_status = str(observed.get("status") or "unknown") if isinstance(observed, dict) else "unknown"
         previous_outcome = str(child.get("outcome") or "unresolved")
-        if _external_status_is_open(observed_status) or observed is None:
+        pr_ref = str(child.get("pr_ref") or "")
+        normalized_pr_ref = f"PR {pr_ref}" if pr_ref.startswith("#") else pr_ref
+        observed_pr = external_by_id.get(normalized_pr_ref) if normalized_pr_ref else None
+        pr_status = str(observed_pr.get("status") or "unknown") if isinstance(observed_pr, dict) else "unknown"
+        human_final = (
+            previous_outcome in {"dismissed-not-planned", "superseded-or-rerouted"}
+            and child.get("outcome_authority") == "human-reviewed"
+            and bool(str(child.get("reason") or "").strip())
+        )
+        if human_final and _external_status_is_closed(observed_status):
+            child["outcome"] = previous_outcome
+        elif pr_status == "merged":
+            child["outcome"] = "landed"
+        elif pr_status == "closed":
+            child["outcome"] = "closed-without-merge"
+        elif pr_ref and pr_status != "merged":
+            child["outcome"] = "unresolved"
+        elif _external_status_is_open(observed_status) or observed is None:
             child["outcome"] = "unresolved"
         elif _external_status_is_closed(observed_status):
-            child["outcome"] = (
-                previous_outcome
-                if previous_outcome in {"landed", "dismissed-not-planned", "closed-without-merge", "superseded-or-rerouted"}
-                else "closed-without-merge"
-            )
+            child["outcome"] = "closed-without-merge"
         children.append(child)
     unresolved = [child for child in children if child["outcome"] == "unresolved"]
     missing_proof = [child for child in children if child["outcome"] == "landed" and not child["proof_ref"]]
@@ -8072,6 +8087,7 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
             "closed_count": refresh_metadata.get("closed_count", 0),
             "limit": refresh_metadata.get("limit", 0),
             "state": str(refresh_metadata.get("state", "")),
+            "refreshed_at": str(refresh_metadata.get("refreshed_at", "")),
         },
         "item_count": len(normalized_items),
         "items": normalized_items,

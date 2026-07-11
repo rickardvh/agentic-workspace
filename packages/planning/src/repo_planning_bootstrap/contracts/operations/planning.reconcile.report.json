@@ -32,7 +32,6 @@
       "description": "Preview safe-prune application without writing repo state."
     },
     {"name": "lane", "source": "cli-option", "required": false},
-    {"name": "child_status_file", "source": "cli-option", "required": false},
     {"name": "apply_lane_reconcile", "source": "cli-option", "required": false}
   ],
   "output": {
