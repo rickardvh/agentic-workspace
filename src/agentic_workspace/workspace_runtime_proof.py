@@ -39,7 +39,6 @@ from agentic_workspace.workspace_runtime_core import (
     _adapt_make_proof_command_for_target,
     _applicable_intent_status_payload,
     _apply_learned_route_hints_to_capabilities,
-    _architecture_principles_forecast_payload,
     _architecture_principles_payload,
     _assurance_item_state,
     _assurance_requirements_report_payload,
@@ -70,6 +69,7 @@ from agentic_workspace.workspace_runtime_core import (
     _lane_execution_metadata,
     _learned_proof_lanes_for_changed_paths,
     _learned_route_reliance_payload,
+    _load_decision_point_forecast,
     _load_proof_route_hints,
     _load_workspace_config,
     _make_targets_without_negative_routes,
@@ -94,6 +94,7 @@ from agentic_workspace.workspace_runtime_core import (
     _proof_route_decision_payload,
     _proof_route_explanation_payload,
     _proof_route_source_for_lane,
+    _record_decision_point_confirmation,
     _requirement_grounding_payload,
     _routine_work_context_payload,
     _run_lifecycle_command,
@@ -4015,14 +4016,9 @@ def _proof_selection_for_changed_paths(
         local_overlay=local_overlay,
         local_high_risk_overlay=local_high_risk_overlay,
     )
-    canonical_core = _as_dict(active_planning_record_for_requirement.get("canonical_core"))
-    forecast_packet = _architecture_principles_forecast_payload(
-        target_root=target_root,
-        planned_paths=_list_payload(canonical_core.get("touched_scope")),
-        scope_source="active_planning_record.canonical_core.touched_scope",
-        cli_invoke=cli_invoke,
-    )
-    forecast_identity = _as_dict(forecast_packet.get("forecast_identity"))
+    forecast_carry = _load_decision_point_forecast(target_root=target_root)
+    forecast_identity = _as_dict(forecast_carry.get("forecast_identity"))
+    implementation_confirmation = _as_dict(_as_dict(forecast_carry.get("phase_confirmations")).get("implementation"))
     actual_intent = (
         _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
         if target_root is not None and isinstance(config, WorkspaceConfig)
@@ -4053,9 +4049,14 @@ def _proof_selection_for_changed_paths(
         "changed_paths": changed_paths,
         "system_principles": _list_payload(architecture_principles.get("matched_principles"))[:2],
         "subsystem_intents": actual_subsystems,
+        "implementation_confirmation": implementation_confirmation,
+        "implementation_record_digest": _as_dict(implementation_confirmation.get("carry_forward")).get("record_digest", ""),
         "claim_boundary": "Closeout must consume this exact confirmation record and account for preserved, corrected, or unresolved intent.",
         "closeout_required_claim": "preserved|corrected|unresolved",
     }
+    decision_point_confirmation = _record_decision_point_confirmation(
+        target_root=target_root, phase="proof", confirmation=decision_point_confirmation
+    )
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,

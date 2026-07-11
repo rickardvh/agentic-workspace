@@ -985,6 +985,36 @@ def test_closeout_trust_preserves_independent_lower_trust_gates_with_relevant_re
     assert answer["terminal_action"]["blocking"] is True
 
 
+def test_planning_completion_gate_requires_carried_decision_point_confirmation() -> None:
+    from repo_planning_bootstrap.installer import _planning_completion_gate_payload
+
+    record = {
+        "decision_point_intent_confirmation_required": True,
+        "required_continuation": {"required follow-on for the larger intended outcome": "no"},
+        "intent_continuity": {"continuation surface": "none"},
+    }
+    base_patch = {
+        "intent_satisfaction": {"was original intent fully satisfied?": "yes", "unsolved intent passed to": "none"},
+        "closure_check": {"closure decision": "archive-and-close", "larger-intent status": "closed"},
+        "proof_report": {"validation proof": "focused proof passed"},
+    }
+    blocked = _planning_completion_gate_payload(record=record, patch=base_patch)
+    assert blocked["status"] == "clarification-required"
+    assert "issue_closure" in blocked["claim_authorization"]["blocked_claim_classes"]
+
+    confirmed_patch = {
+        **base_patch,
+        "decision_point_intent_confirmation": {
+            "status": "corrected",
+            "forecast_digest": "forecast-1",
+            "implementation_confirmation": {"forecast_digest": "forecast-1"},
+            "proof_confirmation": {"forecast_digest": "forecast-1"},
+        },
+    }
+    allowed = _planning_completion_gate_payload(record=record, patch=confirmed_patch)
+    assert allowed["status"] == "allowed"
+
+
 def test_closeout_trust_reports_bounded_ambiguity_for_multiple_task_matches(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

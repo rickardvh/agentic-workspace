@@ -5359,6 +5359,12 @@ def test_implement_corrects_pre_edit_forecast_when_scope_changes(tmp_path: Path,
     )
     _write(tmp_path / "src/agentic_workspace/workspace_runtime_core.py", "VALUE = 1\n")
 
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Implement the forecast plan", "--format", "json"]) == 0
+    capsys.readouterr()
+    carry = json.loads((tmp_path / ".agentic-workspace/local/decision-point-intent-forecast.json").read_text(encoding="utf-8"))
+    intent_path = tmp_path / ".agentic-workspace/system-intent/intent.toml"
+    intent_path.write_text(intent_path.read_text(encoding="utf-8") + "\n# changed after forecast\n", encoding="utf-8")
+
     assert (
         cli.main(
             [
@@ -5378,6 +5384,8 @@ def test_implement_corrects_pre_edit_forecast_when_scope_changes(tmp_path: Path,
     confirmation = json.loads(capsys.readouterr().out)["values"]["decision_point_intent_confirmation"]
     assert confirmation["status"] == "corrected-from-changed-paths"
     assert confirmation["correction_required"] is True
+    assert confirmation["forecast_digest"] == carry["forecast_digest"]
+    assert carry["source_revisions"]
     assert confirmation["forecast_digest"] != confirmation["actual_scope_digest"]
     assert confirmation["closeout_accounting"] == "corrected"
 

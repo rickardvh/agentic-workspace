@@ -61,6 +61,12 @@
     },
     "closeout_distillation": {
       "type": "object"
+    },
+    "completion_gate": {
+      "type": "object"
+    },
+    "decision_point_intent_confirmation": {
+      "type": "object"
     }
   },
   "$defs": {

@@ -33,7 +33,6 @@ from agentic_workspace.workspace_runtime_core import (
     _active_intent_contract_payload,
     _adaptive_routing_payload,
     _applicable_intent_status_payload,
-    _architecture_principles_forecast_payload,
     _architecture_principles_payload,
     _as_int,
     _assurance_requirements_report_payload,
@@ -59,6 +58,7 @@ from agentic_workspace.workspace_runtime_core import (
     _intent_discovery_dialogue_payload,
     _intent_proof_prompt_payload,
     _intent_satisfaction_matrix_payload,
+    _load_decision_point_forecast,
     _load_workspace_config,
     _memory_consult_from_payload,
     _memory_consult_payload,
@@ -72,6 +72,7 @@ from agentic_workspace.workspace_runtime_core import (
     _plan_delegation_packet_payload,
     _read_changed_surface_text,
     _read_task_text_from_file,
+    _record_decision_point_confirmation,
     _replacement_or_removal_intent,
     _requested_outcome_present,
     _requirement_grounding_payload,
@@ -865,16 +866,10 @@ def _implement_payload(
     }
     subsystem_intents = _list_payload(_as_dict(payload["durable_intent"].get("subsystem_intent")).get("matches"))
     principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
-    if subsystem_intents or principles:
-        canonical_core = _as_dict(active_planning_record_for_intent.get("canonical_core"))
-        forecast_paths = _normalize_changed_paths(_list_payload(canonical_core.get("touched_scope")))
-        forecast_packet = _architecture_principles_forecast_payload(
-            target_root=target_root,
-            planned_paths=forecast_paths,
-            scope_source="active_planning_record.canonical_core.touched_scope",
-            cli_invoke=config.cli_invoke,
-        )
-        forecast_identity = _as_dict(forecast_packet.get("forecast_identity"))
+    forecast_carry = _load_decision_point_forecast(target_root=target_root)
+    if subsystem_intents or principles or forecast_carry:
+        forecast_identity = _as_dict(forecast_carry.get("forecast_identity"))
+        forecast_paths = _normalize_changed_paths(_list_payload(forecast_identity.get("planned_paths")))
         actual_basis = {
             "actual_paths": normalized_paths,
             "system_principle_ids": [str(item.get("id", "")) for item in principles[:2]],
@@ -889,9 +884,13 @@ def _implement_payload(
                 or forecast_identity.get("subsystem_intent_ids", []) != actual_basis["subsystem_intent_ids"]
             )
         )
-        payload["decision_point_intent_confirmation"] = {
+        confirmation = {
             "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
-            "status": "corrected-from-changed-paths" if correction_required else "confirmed-from-changed-paths",
+            "status": "corrected-from-changed-paths"
+            if correction_required
+            else "confirmed-from-changed-paths"
+            if forecast_identity
+            else "unresolved",
             "phase": "implementation",
             "changed_paths": normalized_paths,
             "system_principles": principles[:2],
@@ -910,6 +909,9 @@ def _implement_payload(
             },
             "rule": "Actual changed paths confirm or correct the pre-edit intent forecast; proof and closeout must preserve the confirmed owning boundary.",
         }
+        payload["decision_point_intent_confirmation"] = _record_decision_point_confirmation(
+            target_root=target_root, phase="implementation", confirmation=confirmation
+        )
     if not planning_safety_gate["workflow_sufficient"]:
         payload["next_allowed_action"] = "Create or promote an active execplan before continuing implementation."
         payload["handoff_requirements"]["stop_when"] = [
