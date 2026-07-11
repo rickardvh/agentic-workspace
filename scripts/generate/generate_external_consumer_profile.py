@@ -13,6 +13,7 @@ OUTPUTS = (
     REPO_ROOT / "generated/workspace/python/external_consumer_profile.json",
     REPO_ROOT / "generated/workspace/typescript/external_consumer_profile.json",
 )
+USABLE_MATURITY_LEVELS = {"runnable-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
 PYTHON_CLIENT = REPO_ROOT / "generated/workspace/python/client.py"
 TYPESCRIPT_CLIENT = REPO_ROOT / "generated/workspace/typescript/src/client.mjs"
 BUNDLE_OUTPUTS = (

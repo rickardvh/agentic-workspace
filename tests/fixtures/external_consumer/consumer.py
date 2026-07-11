@@ -1,27 +1,20 @@
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
-from pathlib import Path
+
+from agentic_workspace import invoke_operation
 
 
 def main() -> int:
-    profile_path, executable, runner, target = sys.argv[1:5]
-    profile = json.loads(Path(profile_path).read_text(encoding="utf-8"))
-    operation = next(item for item in profile["operations"] if item["id"] == "config.report")
-    if operation["external_consumption"]["status"] not in {"supported", "runtime-backed"}:
-        raise SystemExit("config.report is not consumable")
-    completed = subprocess.run(
-        [executable, runner, "config", "--target", target, "--select", "workspace.workflow_obligations", "--format", "json"],
-        text=True,
-        capture_output=True,
-        check=False,
+    target = sys.argv[1]
+    payload = invoke_operation(
+        "config.report",
+        {},
+        target=target,
+        invocation=[sys.executable, "-c", "from agentic_workspace import cli; import sys; raise SystemExit(cli.main(sys.argv[1:]))"],
+        allow_runtime_backed=True,
     )
-    if completed.returncode:
-        sys.stderr.write(completed.stderr)
-        return completed.returncode
-    payload = json.loads(completed.stdout)
     print(json.dumps({"operation": "config.report", "result": payload}, sort_keys=True))
     return 0
 

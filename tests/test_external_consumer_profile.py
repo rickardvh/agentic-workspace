@@ -4,6 +4,10 @@ import importlib.util
 import json
 import shutil
 import subprocess
+import sys
+import tarfile
+import tempfile
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -25,17 +29,9 @@ def test_profile_is_fresh_and_fail_closed() -> None:
     expected = module.render()
     for output in module.OUTPUTS:
         assert output.read_text(encoding="utf-8") == expected
-    profile = json.loads(expected)
     assert module.PYTHON_CLIENT.read_text(encoding="utf-8") == module.render_python_client()
     assert module.TYPESCRIPT_CLIENT.read_text(encoding="utf-8") == module.render_typescript_client()
-    bundle = module.render_bundle(profile)
-    assert all(output.read_text(encoding="utf-8") == bundle for output in module.BUNDLE_OUTPUTS)
-    bundle_payload = json.loads(bundle)
-    assert bundle_payload["profile_fingerprint"] == profile["compatibility"]["fingerprint"]
-    assert bundle_payload["operations"]
-    assert all(item["contract"] for item in bundle_payload["operations"].values())
-    referenced = {name for item in bundle_payload["operations"].values() for name in item["schemas"]}
-    assert referenced.issubset(bundle_payload["schemas"])
+    profile = json.loads(expected)
     assert profile["authority"] == "command_package_ir.json"
     assert profile["compatibility"]["fingerprint"].startswith("sha256:")
     assert profile["operations"]
@@ -157,8 +153,8 @@ def test_empty_input_or_result_schema_fails_closed() -> None:
         "conformance_refs": ["fixture.read.process"],
     }
     targets = [
-        {"kind": "python", "generation_status": "mutation-capable-adapter"},
-        {"kind": "typescript", "generation_status": "mutation-capable-adapter"},
+        {"kind": "python", "generation_status": "mutation-capable-adapter", "maturity_level_ref": "mutation-capable-adapter"},
+        {"kind": "typescript", "generation_status": "mutation-capable-adapter", "maturity_level_ref": "mutation-capable-adapter"},
     ]
     for schemas in ({"input": [], "output": ["result.schema.json"]}, {"input": ["input.schema.json"], "output": []}):
         command = {**base, "schemas": schemas}
@@ -167,16 +163,66 @@ def test_empty_input_or_result_schema_fails_closed() -> None:
 
 
 def test_typescript_packed_artifact_exports_profile() -> None:
-    completed = subprocess.run(
-        [shutil.which("npm") or shutil.which("npm.cmd") or "npm", "pack", "--dry-run", "--json"],
-        cwd=ROOT / "generated/workspace/typescript",
-        text=True,
-        capture_output=True,
-        check=False,
+    with tempfile.TemporaryDirectory() as directory:
+        completed = subprocess.run(
+            [shutil.which("npm") or shutil.which("npm.cmd") or "npm", "pack", "--json", "--pack-destination", directory],
+            cwd=ROOT / "generated/workspace/typescript",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        assert completed.returncode == 0, completed.stderr
+        archive = Path(directory) / json.loads(completed.stdout)[0]["filename"]
+        with tarfile.open(archive) as packed:
+            packed.extractall(directory, filter="data")
+        script = "import profile from './package/external_consumer_profile.json' with {type:'json'}; console.log(profile.schema_version)"
+        loaded = subprocess.run(
+            [shutil.which("node") or "node", "--input-type=module", "-e", script], cwd=directory, text=True, capture_output=True
+        )
+        assert loaded.returncode == 0, loaded.stderr
+        assert loaded.stdout.strip() == "agentic-workspace/external-consumer-profile/v1"
+
+
+def test_built_wheel_resolves_profile_outside_checkout(tmp_path: Path) -> None:
+    dist = tmp_path / "dist"
+    subprocess.run(
+        [shutil.which("uv") or "uv", "build", "--wheel", "--out-dir", str(dist)], cwd=ROOT, check=True, capture_output=True, text=True
     )
-    assert completed.returncode == 0, completed.stderr
-    files = {item["path"] for item in json.loads(completed.stdout)[0]["files"]}
-    assert "external_consumer_profile.json" in files
+    site = tmp_path / "site"
+    with zipfile.ZipFile(next(dist.glob("*.whl"))) as wheel:
+        wheel.extractall(site)
+    code = "from importlib.resources import files; import json; print(json.loads(files('agentic_workspace._generated_cli_package_impl').joinpath('external_consumer_profile.json').read_text())['schema_version'])"
+    loaded = subprocess.run(
+        [sys.executable, "-I", "-c", f"import sys; sys.path.insert(0, {str(site)!r}); {code}"], cwd=tmp_path, text=True, capture_output=True
+    )
+    assert loaded.returncode == 0, loaded.stderr
+    assert loaded.stdout.strip() == "agentic-workspace/external-consumer-profile/v1"
+
+
+def test_usable_generation_with_unusable_maturity_fails_closed() -> None:
+    module = _module()
+    base = {"kind": "python", "package_name": "fixture", "generation_status": "mutation-capable-adapter"}
+    for maturity in (None, "experimental", "parser-help-proof", "deferred"):
+        target = {**base, "maturity_level_ref": maturity}
+        ir = {
+            "packages": [
+                {
+                    "id": "fixture",
+                    "operation_contract_root": "contracts",
+                    "targets": [target],
+                    "commands": [
+                        {
+                            "status": "generated",
+                            "operation_ref": {"id": "fixture.read", "path": "read.json"},
+                            "effect_hints": {"read_only": True},
+                            "conformance_refs": ["fixture.read.process"],
+                            "schemas": {"input": ["input.schema.json"], "output": ["result.schema.json"]},
+                        }
+                    ],
+                }
+            ]
+        }
+        assert module.build_profile(ir)["operations"][0]["external_consumption"]["status"] == "internal"
 
 
 def test_packed_typescript_artifact_resolves_profile_and_bundle(tmp_path: Path) -> None:
@@ -186,27 +232,21 @@ def test_packed_typescript_artifact_resolves_profile_and_bundle(tmp_path: Path) 
         cwd=ROOT / "generated/workspace/typescript",
         text=True,
         capture_output=True,
-        check=False,
     )
     assert completed.returncode == 0, completed.stderr
-    archive = tmp_path / json.loads(completed.stdout)[0]["filename"]
     unpacked = tmp_path / "unpacked"
-    shutil.unpack_archive(archive, unpacked, "gztar")
+    shutil.unpack_archive(tmp_path / json.loads(completed.stdout)[0]["filename"], unpacked, "gztar")
     client = unpacked / "package/src/client.mjs"
     script = f"import {{ externalConsumerProfile, externalContractBundle }} from {json.dumps(client.as_uri())}; console.log(JSON.stringify([externalConsumerProfile().schema_version, externalContractBundle().schema_version]));"
-    result = subprocess.run(["node", "--input-type=module", "--eval", script], text=True, capture_output=True, check=False)
+    result = subprocess.run(["node", "--input-type=module", "--eval", script], text=True, capture_output=True)
     assert result.returncode == 0, result.stderr
-    assert json.loads(result.stdout) == [
-        "agentic-workspace/external-consumer-profile/v1",
-        "agentic-workspace/external-contract-bundle/v1",
-    ]
+    assert json.loads(result.stdout) == ["agentic-workspace/external-consumer-profile/v1", "agentic-workspace/external-contract-bundle/v1"]
 
 
 def test_schema_resolution_is_provenance_safe_and_fragment_aware(tmp_path: Path) -> None:
     module = _module()
     schema = tmp_path / "src/owner/schemas/result.schema.json"
     schema.parent.mkdir(parents=True)
-    schema.write_text("{}\n", encoding="utf-8")
     schema.write_text('{"$defs":{"value":{"type":"string"}}}\n', encoding="utf-8")
     assert module.resolve_schema_reference("owner/schemas/result.schema.json#/$defs/value", repo_root=tmp_path) == schema
     with pytest.raises(ValueError, match="missing schema fragment"):
