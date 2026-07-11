@@ -10699,8 +10699,9 @@ def close_lane_record(
             "owner surface": record["closeout_state"]["next_owner"] if known_gaps else "none",
         },
     }
+    claim_level_requested = "full-intent-complete" if parent_close_permission == "may-close-parent" else "lane-complete"
     record["completion_gate"] = _planning_completion_gate_payload(
-        record=record, patch=lane_gate_patch, claim_level_requested="lane-complete"
+        record=record, patch=lane_gate_patch, claim_level_requested=claim_level_requested
     )
     lane_relative = record_path.relative_to(target_root).as_posix()
     if dry_run:

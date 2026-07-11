@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "2173-trust-continuity-projections",
   "title": "Harden AW trust continuity and projection boundaries",
-  "status": "active",
+  "status": "archived",
   "parent_decomposition_ref": "",
   "lane_outcome": "Make the seven #2173 child invariants true in ordinary product paths, each with issue-specific regression evidence and a separately reviewable PR.",
   "purpose_for_parent": "Close #2173 only after #2174 through #2180 are closed or deliberately rerouted with residual intent preserved.",
@@ -91,11 +91,11 @@
       "residual_after_slice": ""
     }
   ],
-  "current_slice": "reconcile-2190-lane-reconciliation",
+  "current_slice": "aggregate-final-lane-proof",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "For every child, run routed changed-path proof plus the issue's required regression cases. Aggregate merged PRs, exact validation commands, and any residual owner before closing the lane.",
   "proof_aggregation": {
-    "status": "partial",
+    "status": "satisfied",
     "evidence": [
       "PR #2181 CI and receipt reconciliation tests",
       "PR #2182 CI and context replay tests",
@@ -104,20 +104,20 @@
       "PR #2186 CI and session semantic tests",
       "PR #2183 CI and decision-point continuity tests",
       "PR #2191 CI and damaged-latest receipt regressions",
-      "PR #2192 CI and carry lifecycle regressions"
+      "PR #2192 CI and carry lifecycle regressions",
+      "PR #2193 CI and lane reconciliation regressions",
+      "Merged PRs #2181, #2182, #2183, #2184, #2185, #2186, #2191, #2192, and #2193 with focused regressions and green CI; #2179 was reviewed and dismissed not-planned."
     ],
-    "known_gaps": [
-      "2190-lane-reconciliation remains unresolved or external state is unknown."
-    ]
+    "known_gaps": []
   },
-  "residual_lane_work": "Resolve remaining child outcomes and proof gaps shown in proof_aggregation.known_gaps.",
-  "lane_to_epic_contribution": "Provides the trust, continuity, projection, invocation, promotion, and intent-routing invariants named by #2173 without absorbing #2172 mutation-outcome scope.",
-  "parent_close_permission": "do-not-close-parent",
+  "residual_lane_work": "none",
+  "lane_to_epic_contribution": "All #2173 trust, continuity, projection, invocation, actionability, proof-admission, and intent-routing invariants are satisfied or reviewed with an explicit disposition.",
+  "parent_close_permission": "may-close-parent",
   "closeout_state": {
-    "status": "open",
-    "summary": "Child outcomes reconciled; parent closure remains explicit.",
-    "residual_work": "Resolve remaining child outcomes and proof gaps shown in proof_aggregation.known_gaps.",
-    "next_owner": "maintainer/reviewer"
+    "status": "closed",
+    "summary": "All #2173 trust, continuity, projection, invocation, actionability, proof-admission, and intent-routing invariants are satisfied or reviewed with an explicit disposition.",
+    "residual_work": "none",
+    "next_owner": "maintainer/reviewer to merge the closure PR and close GitHub #2173"
   },
   "references": [
     {
@@ -307,7 +307,7 @@
       "reason": "",
       "proof_ref": "PR #2191 CI and damaged-latest receipt regressions",
       "new_owner": "",
-      "residual_intent": "Follow-up proof trust gap remains owned by #2188."
+      "residual_intent": ""
     },
     {
       "id": "2189-intent-carry-lifecycle",
@@ -317,17 +317,163 @@
       "reason": "",
       "proof_ref": "PR #2192 CI and carry lifecycle regressions",
       "new_owner": "",
-      "residual_intent": "Follow-up carry lifecycle gap remains owned by #2189."
+      "residual_intent": ""
     },
     {
       "id": "2190-lane-reconciliation",
       "issue_ref": "#2190",
       "pr_ref": "#2193",
-      "outcome": "unresolved",
+      "outcome": "landed",
       "reason": "",
       "proof_ref": "PR #2193 CI and lane reconciliation regressions",
       "new_owner": "",
-      "residual_intent": "This reconciliation implementation and proof remain under review."
+      "residual_intent": ""
     }
-  ]
+  ],
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "blocked_claim_classes": [],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#2173",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2174",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2175",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2176",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2177",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2178",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2179",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2180",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2181",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2182",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2183",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2184",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2185",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2186",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        },
+        {
+          "kind": "issue_closure",
+          "target": "#2187",
+          "authorized": true,
+          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+        }
+      ],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  }
 }
