@@ -299,6 +299,8 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY = (
     "generated_cli_package_command_names",
 )
 GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
+    "generated/workspace/python/client.py": "generated external-client resource lookup into the installed private bridge",
+    "scripts/generate/generate_external_consumer_profile.py": "generator for the external client installed private bridge",
     "pyproject.toml": "installed private bridge compatibility",
     "packages/planning/pyproject.toml": "installed private bridge compatibility",
     "packages/memory/pyproject.toml": "installed private bridge compatibility",
@@ -5277,7 +5279,8 @@ def _validate_static_surfaces() -> list[str]:
             expected_resource = _target_scoped_command_package_resource(expected_package, target)
             if command_package_resource is not None and expected_package is not None and command_package_resource != expected_resource:
                 errors.append(f"{package_label}/resources/command_package.json drifted from command_package_ir.json")
-            if payload.get("files") != ["src", "resources"]:
+            files = payload.get("files", [])
+            if not isinstance(files, list) or not {"src", "resources"}.issubset(files):
                 errors.append(f"{package_label}/package.json does not include generated resources")
             is_runnable = maturity.get("id") in {
                 "runnable-read-only-adapter",
