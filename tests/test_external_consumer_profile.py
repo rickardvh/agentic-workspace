@@ -4,6 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/generate/generate_external_consumer_profile.py"
 
@@ -49,3 +51,33 @@ def test_incomplete_operation_is_not_advertised_as_supported() -> None:
     }
     entry = module.build_profile(ir)["operations"][0]
     assert entry["external_consumption"]["status"] == "internal"
+
+
+def test_child_without_explicit_operation_does_not_duplicate_parent() -> None:
+    module = _module()
+    ir = {
+        "packages": [
+            {
+                "id": "fixture",
+                "operation_contract_root": "contracts",
+                "targets": [],
+                "commands": [
+                    {
+                        "status": "generated",
+                        "operation_ref": {"id": "fixture.root", "path": "root.json"},
+                        "interface": {"subcommands": [{"name": "child"}]},
+                    }
+                ],
+            }
+        ]
+    }
+    assert [entry["id"] for entry in module.build_profile(ir)["operations"]] == ["fixture.root"]
+
+
+def test_conflicting_explicit_operation_ids_fail_closed() -> None:
+    module = _module()
+    first = {"status": "generated", "operation_ref": {"id": "fixture.read", "path": "read.json"}}
+    second = {"status": "generated", "operation_ref": {"id": "fixture.read", "path": "other.json"}}
+    ir = {"packages": [{"id": "fixture", "operation_contract_root": "contracts", "targets": [], "commands": [first, second]}]}
+    with pytest.raises(ValueError, match="conflicting explicit operation id"):
+        module.build_profile(ir)
