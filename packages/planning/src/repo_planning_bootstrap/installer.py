@@ -2618,10 +2618,15 @@ def _reconcile_lane_children(*, target_root: Path, lane_id: str, apply: bool, dr
             previous_outcome in {"dismissed-not-planned", "superseded-or-rerouted"}
             and child.get("outcome_authority") == "human-reviewed"
             and bool(str(child.get("reason") or "").strip())
-            and (previous_outcome != "superseded-or-rerouted" or bool(str(child.get("new_owner") or "").strip()))
+            and (
+                previous_outcome != "superseded-or-rerouted"
+                or (bool(str(child.get("new_owner") or "").strip()) and bool(str(child.get("residual_intent") or "").strip()))
+            )
         )
         if human_final:
             child["outcome"] = previous_outcome
+        elif previous_outcome in {"dismissed-not-planned", "superseded-or-rerouted"}:
+            child["outcome"] = "unresolved"
         elif _external_status_is_open(observed_status) or observed is None:
             child["outcome"] = "unresolved"
         elif _external_status_is_closed(observed_status):
@@ -2629,7 +2634,7 @@ def _reconcile_lane_children(*, target_root: Path, lane_id: str, apply: bool, dr
                 "landed" if pr_status == "merged" else "closed-without-merge" if pr_status == "closed" or not pr_ref else "unresolved"
             )
         children.append(child)
-    unresolved = [child for child in children if child["outcome"] == "unresolved"]
+    unresolved = [child for child in children if child["outcome"] in {"unresolved", "closed-without-merge"}]
     missing_proof = [child for child in children if child["outcome"] == "landed" and not child["proof_ref"]]
     proof_evidence = [child["proof_ref"] for child in children if child["outcome"] == "landed" and child["proof_ref"]]
     updated = copy.deepcopy(lane_record)
@@ -2642,7 +2647,7 @@ def _reconcile_lane_children(*, target_root: Path, lane_id: str, apply: bool, dr
             "status": "completed"
             if child_by_id.get(str(value), {}).get("outcome") == "landed"
             else "skipped"
-            if child_by_id.get(str(value), {}).get("outcome") in {"dismissed-not-planned", "closed-without-merge"}
+            if child_by_id.get(str(value), {}).get("outcome") == "dismissed-not-planned"
             else "active",
             "execplan_ref": "",
             "depends_on": [],
@@ -2661,11 +2666,7 @@ def _reconcile_lane_children(*, target_root: Path, lane_id: str, apply: bool, dr
         if not child:
             continue
         slice_record["status"] = (
-            "completed"
-            if child.get("outcome") == "landed"
-            else "skipped"
-            if child.get("outcome") in {"dismissed-not-planned", "closed-without-merge"}
-            else "active"
+            "completed" if child.get("outcome") == "landed" else "skipped" if child.get("outcome") == "dismissed-not-planned" else "active"
         )
         slice_record["proof"] = child.get("proof_ref", "")
         slice_record["residual_after_slice"] = child.get("residual_intent", "")

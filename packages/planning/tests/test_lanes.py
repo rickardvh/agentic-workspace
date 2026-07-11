@@ -488,6 +488,17 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
             "new_owner": "",
             "residual_intent": "",
         },
+        {
+            "id": "incomplete-reroute",
+            "issue_ref": "#8",
+            "pr_ref": "",
+            "outcome": "superseded-or-rerouted",
+            "reason": "moved somewhere else",
+            "proof_ref": "",
+            "new_owner": "#100",
+            "residual_intent": "",
+            "outcome_authority": "human-reviewed",
+        },
     ]
     lane["slice_sequence"] = [
         {"id": "landed", "title": "Landed", "status": "active", "execplan_ref": "", "depends_on": [], "purpose_for_lane": "test"}
@@ -508,6 +519,7 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
                     {"system": "github", "id": "#4", "title": "four", "kind": "issue", "status": "closed"},
                     {"system": "github", "id": "#5", "title": "five", "kind": "issue", "status": "closed"},
                     {"system": "github", "id": "#6", "title": "six", "kind": "issue", "status": "open"},
+                    {"system": "github", "id": "#8", "title": "eight", "kind": "issue", "status": "closed"},
                     {"system": "github", "id": "PR #11", "title": "merged", "kind": "pull-request", "status": "merged"},
                     {"system": "github", "id": "PR #12", "title": "closed", "kind": "pull-request", "status": "closed"},
                     {"system": "github", "id": "PR #13", "title": "closed", "kind": "pull-request", "status": "closed"},
@@ -521,7 +533,7 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
     before = lane_path.read_text(encoding="utf-8")
 
     dry_run = planning_reconcile(target=tmp_path, lane="trust-lane", apply_lane_reconcile=True, dry_run=True)["lane_child_reconciliation"]
-    assert dry_run["unknown_count"] == 3
+    assert dry_run["unknown_count"] == 5
     assert dry_run["parent_auto_closed"] is False
     assert dry_run["applied"] is False
     assert lane_path.read_text(encoding="utf-8") == before
@@ -536,6 +548,8 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
     assert record["children"][4]["outcome"] == "superseded-or-rerouted"
     assert record["children"][5]["outcome"] == "unresolved"
     assert record["children"][6]["outcome"] == "unresolved"
+    assert record["children"][7]["outcome"] == "unresolved"
+    assert any("closed-pr" in gap for gap in record["proof_aggregation"]["known_gaps"])
     assert record["parent_close_permission"] == "do-not-close-parent"
     assert record["status"] == "ready"
     assert record["slice_sequence"][0]["status"] == "completed"
