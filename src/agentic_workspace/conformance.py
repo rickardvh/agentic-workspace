@@ -175,7 +175,11 @@ def _assert_filesystem_effects(
 ) -> None:
     allowed = set(_strings(expectations["allowed_write_paths"]))
     changed = {path for path in set(before) | set(after) if before.get(path) != after.get(path)}
-    unexpected = sorted(path for path in changed if path not in allowed)
+    unexpected = sorted(
+        path
+        for path in changed
+        if not any(path == allowed_path or path.startswith(f"{allowed_path.rstrip('/')}/") for allowed_path in allowed)
+    )
     if unexpected:
         raise AssertionError(f"{contract_id} changed forbidden fixture paths: {unexpected}")
     for relative in _strings(expectations["required_paths"]):

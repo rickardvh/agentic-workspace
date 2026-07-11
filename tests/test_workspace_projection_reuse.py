@@ -112,6 +112,16 @@ def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> 
     assert len(list((target / ".agentic-workspace/local/projection-cache").glob("*.json"))) <= 32
 
 
+def test_projection_cache_does_not_bootstrap_workspace_state(tmp_path: Path) -> None:
+    from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
+
+    cached, context = lookup_projection_reuse(root=tmp_path, operation="report", query={}, full_detail_command="report")
+    assert cached is None
+    record_projection_reuse(root=tmp_path, operation="report", query={}, context=context, payload={"status": "ok"})
+
+    assert not (tmp_path / ".agentic-workspace").exists()
+
+
 def test_doctor_declares_package_inputs_and_caller_external_freshness_recomputes(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     capsys.readouterr()
