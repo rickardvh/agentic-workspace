@@ -7,15 +7,21 @@
     "command_ir_schema": "command-generation/command-package-ir/v1",
     "client_package": "0.33.4",
     "runtime_protocol": "1.0.0",
-    "python_package": "agentic-workspace",
-    "typescript_package": "@agentic-workspace/workspace-cli"
+    "python_package": {
+      "name": "agentic-workspace",
+      "version": "0.33.4"
+    },
+    "typescript_package": {
+      "name": "@agentic-workspace/workspace-cli",
+      "version": "0.33.4"
+    }
   },
   "operations": {
     "config.report": {
       "identity": "config.report",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:98a90455f378876b95e4789f1ddae5dea95bd871a76335aa11562676acaf4097",
-      "compatibility_fingerprint": "sha256:4a7d549ddfa2fb673cf11e4dfbcd640ea1e47174bea79b570486e82c95aa3e5c",
+      "fingerprint": "sha256:b0468dfc61f78a98a9ce20917e9bb194230e1fb21f9ead914ff4ab3c052189f6",
+      "compatibility_fingerprint": "sha256:01adb0fb463ad6bd374a709fc710af84ea870e3e6005f0f588f120ff51034e10",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "config.report",
@@ -208,7 +214,10 @@
           ]
         }
       },
-      "schemas": [],
+      "schemas": [
+        "config_report_input.schema.json",
+        "config_report_result.schema.json"
+      ],
       "targets": {
         "python": {
           "package": "agentic-workspace",
@@ -285,8 +294,8 @@
     "delegation-outcome.append": {
       "identity": "delegation-outcome.append",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:bffc943c2b0dec15e4066afa92f8dd779899ebc09bdad1e314dab17a4b0f8a09",
-      "compatibility_fingerprint": "sha256:450e631bd2dedfc616facd2642968003a566b5ce74f6320c65e6c3dadc450040",
+      "fingerprint": "sha256:567cf2bacfe2da0c78912da41e4a5b81cb5890d3d970e3aba502774761266ed1",
+      "compatibility_fingerprint": "sha256:c2d0b8cb79299e998fd904258b1097e2f73fd929d0832c55932f9163ce7ef674",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "delegation-outcome.append",
@@ -430,7 +439,10 @@
           ]
         }
       },
-      "schemas": [],
+      "schemas": [
+        "delegation_outcome_append_input.schema.json",
+        "delegation_outcome_append_result.schema.json"
+      ],
       "targets": {
         "python": {
           "package": "agentic-workspace",
@@ -495,7 +507,354 @@
       }
     }
   },
-  "schemas": {},
+  "schemas": {
+    "agentic-workspace/config-report-input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/config_report_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/config-report-input.schema.json",
+        "description": "External client input contract for the config.report operation.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Target workspace repository."
+          },
+          "format": {
+            "enum": [
+              "text",
+              "json",
+              null
+            ],
+            "description": "Requested output format."
+          },
+          "select": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional dotted-field selector."
+          },
+          "verbose": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether to request the full config projection."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "agentic-workspace/config-report-result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/config_report_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/config-report-result.schema.json",
+        "description": "Schema-validated result envelope for config.report.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "kind",
+          "profile",
+          "target",
+          "workspace"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "pattern": "^agentic-workspace/config-",
+            "description": "Result contract kind."
+          },
+          "profile": {
+            "enum": [
+              "tiny",
+              "full"
+            ],
+            "description": "Projection profile returned by AW."
+          },
+          "target": {
+            "type": "string",
+            "description": "Resolved target identifier."
+          },
+          "workspace": {
+            "type": "object",
+            "description": "Resolved workspace configuration projection."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "agentic-workspace/delegation-outcome-append-input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/delegation-outcome-append-input.schema.json",
+        "description": "External client input contract for delegation-outcome.append.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "delegation_target",
+          "task_class",
+          "outcome"
+        ],
+        "properties": {
+          "delegation_target": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Delegation target alias."
+          },
+          "task_class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bounded task classification."
+          },
+          "outcome": {
+            "enum": [
+              "success",
+              "mixed",
+              "failed"
+            ],
+            "description": "Observed delegation outcome."
+          },
+          "handoff_sufficiency": {
+            "enum": [
+              "sufficient",
+              "borderline",
+              "insufficient"
+            ],
+            "description": "Handoff sufficiency classification."
+          },
+          "review_burden": {
+            "enum": [
+              "light",
+              "normal",
+              "high"
+            ],
+            "description": "Review burden classification."
+          },
+          "escalation_required": {
+            "type": "boolean",
+            "description": "Whether execution required escalation."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "agentic-workspace/delegation-outcome-append-result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/delegation_outcome_append_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/delegation-outcome-append-result.schema.json",
+        "description": "Schema-validated result envelope for delegation-outcome.append.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "kind",
+          "path",
+          "record_count",
+          "recorded"
+        ],
+        "properties": {
+          "kind": {
+            "const": "agentic-workspace/delegation-outcomes/v1",
+            "description": "Result contract kind."
+          },
+          "path": {
+            "type": "string",
+            "description": "Local advisory record path."
+          },
+          "record_count": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of stored records."
+          },
+          "recorded": {
+            "type": "object",
+            "description": "The newly recorded delegation outcome."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "config_report_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/config_report_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/config-report-input.schema.json",
+        "description": "External client input contract for the config.report operation.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Target workspace repository."
+          },
+          "format": {
+            "enum": [
+              "text",
+              "json",
+              null
+            ],
+            "description": "Requested output format."
+          },
+          "select": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional dotted-field selector."
+          },
+          "verbose": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether to request the full config projection."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "config_report_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/config_report_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/config-report-result.schema.json",
+        "description": "Schema-validated result envelope for config.report.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "kind",
+          "profile",
+          "target",
+          "workspace"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "pattern": "^agentic-workspace/config-",
+            "description": "Result contract kind."
+          },
+          "profile": {
+            "enum": [
+              "tiny",
+              "full"
+            ],
+            "description": "Projection profile returned by AW."
+          },
+          "target": {
+            "type": "string",
+            "description": "Resolved target identifier."
+          },
+          "workspace": {
+            "type": "object",
+            "description": "Resolved workspace configuration projection."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "delegation_outcome_append_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/delegation-outcome-append-input.schema.json",
+        "description": "External client input contract for delegation-outcome.append.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "delegation_target",
+          "task_class",
+          "outcome"
+        ],
+        "properties": {
+          "delegation_target": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Delegation target alias."
+          },
+          "task_class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bounded task classification."
+          },
+          "outcome": {
+            "enum": [
+              "success",
+              "mixed",
+              "failed"
+            ],
+            "description": "Observed delegation outcome."
+          },
+          "handoff_sufficiency": {
+            "enum": [
+              "sufficient",
+              "borderline",
+              "insufficient"
+            ],
+            "description": "Handoff sufficiency classification."
+          },
+          "review_burden": {
+            "enum": [
+              "light",
+              "normal",
+              "high"
+            ],
+            "description": "Review burden classification."
+          },
+          "escalation_required": {
+            "type": "boolean",
+            "description": "Whether execution required escalation."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "delegation_outcome_append_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/delegation_outcome_append_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/delegation-outcome-append-result.schema.json",
+        "description": "Schema-validated result envelope for delegation-outcome.append.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "kind",
+          "path",
+          "record_count",
+          "recorded"
+        ],
+        "properties": {
+          "kind": {
+            "const": "agentic-workspace/delegation-outcomes/v1",
+            "description": "Result contract kind."
+          },
+          "path": {
+            "type": "string",
+            "description": "Local advisory record path."
+          },
+          "record_count": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of stored records."
+          },
+          "recorded": {
+            "type": "object",
+            "description": "The newly recorded delegation outcome."
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
   "requirement_states": [
     "compatible",
     "incompatible",

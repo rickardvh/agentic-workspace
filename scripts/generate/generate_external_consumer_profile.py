@@ -43,6 +43,12 @@ SCHEMA_RESOURCE_OUTPUTS = {
     / "src/agentic_workspace/contracts/schemas/delegation_outcome_append_result.schema.json",
 }
 
+USABLE_MATURITY_LEVELS = {
+    "runnable-read-only-adapter",
+    "weak-agent-safe-adapter",
+    "mutation-capable-adapter",
+}
+
 
 def _commands(command: dict[str, object], inherited: dict[str, object] | None = None):
     current = dict(inherited or {})
@@ -85,6 +91,7 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
             target_id
             for target_id, target in targets.items()
             if target.get("status") not in {"deferred", "unsupported", "metadata-proof-fixture", "parser-help-proof"}
+            and target.get("maturity") in USABLE_MATURITY_LEVELS
         }
         for root in package.get("commands", []):
             if not isinstance(root, dict):
@@ -223,22 +230,38 @@ def render() -> str:
     return json.dumps(build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")), repo_root=REPO_ROOT), indent=2) + "\n"
 
 
-def resolve_schema_reference(name: str, *, repo_root: Path = REPO_ROOT) -> Path:
+def resolve_schema_reference(name: str, *, repo_root: Path = REPO_ROOT, base_path: Path | None = None) -> Path:
     reference = name.split("#", 1)[0]
+    fragment = name.partition("#")[2]
+    if base_path is not None and reference and (base_path.parent / reference).is_file():
+        selected_path = (base_path.parent / reference).resolve()
+    else:
+        selected_path = None
+    basename = Path(reference).name
+    candidate_names = {basename, basename.replace("-", "_")}
     candidates = [
         path
         for root in (repo_root / "src", repo_root / "packages")
         if root.exists()
-        for path in root.rglob(Path(reference).name)
+        for candidate_name in candidate_names
+        for path in root.rglob(candidate_name)
         if "generated" not in path.parts
     ]
-    if not candidates:
+    if selected_path is None and not candidates:
         raise ValueError(f"missing transitive schema: {name}")
     suffix_matches = [path for path in candidates if path.as_posix().endswith(reference)]
     selected = suffix_matches or candidates
-    if len(selected) != 1:
+    if selected_path is None and len(selected) != 1:
         raise ValueError(f"ambiguous transitive schema reference: {name}: {[path.as_posix() for path in selected]}")
-    return selected[0]
+    selected_path = selected_path or selected[0]
+    if fragment:
+        node: object = json.loads(selected_path.read_text(encoding="utf-8"))
+        for token in fragment.removeprefix("/").split("/"):
+            token = token.replace("~1", "/").replace("~0", "~")
+            if not isinstance(node, dict) or token not in node:
+                raise ValueError(f"missing schema fragment: {name}")
+            node = node[token]
+    return selected_path
 
 
 def render_bundle(profile: dict[str, object]) -> str:
@@ -263,20 +286,23 @@ def render_bundle(profile: dict[str, object]) -> str:
         if not isinstance(entry, dict) or entry.get("external_consumption", {}).get("status") == "internal":
             continue
         contract = json.loads((REPO_ROOT / str(entry["operation_contract"])).read_text(encoding="utf-8"))
-        pending_schemas.update(schema_refs(contract))
-        identity_input = json.dumps(contract, sort_keys=True, separators=(",", ":")).encode()
+        declared_schemas = {
+            str(item)
+            for values in entry.get("schemas", {}).values()
+            for item in values
+        }
+        pending_schemas.update(declared_schemas | schema_refs(contract))
         compatibility_contract = {
             key: contract.get(key)
             for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")
         }
-        compatibility_input = json.dumps(compatibility_contract, sort_keys=True, separators=(",", ":")).encode()
         operations[str(entry["id"])] = {
             "identity": str(entry["id"]),
             "version": contract.get("schema_version"),
-            "fingerprint": f"sha256:{hashlib.sha256(identity_input).hexdigest()}",
-            "compatibility_fingerprint": f"sha256:{hashlib.sha256(compatibility_input).hexdigest()}",
+            "fingerprint": "pending",
+            "compatibility_fingerprint": "pending",
             "contract": contract,
-            "schemas": sorted(schema_refs(contract)),
+            "schemas": sorted(declared_schemas | schema_refs(contract)),
             "targets": entry["targets"],
             "external_consumption": entry["external_consumption"],
         }
@@ -288,6 +314,12 @@ def render_bundle(profile: dict[str, object]) -> str:
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         schemas[name] = {"source": schema_path.relative_to(REPO_ROOT).as_posix(), "schema": schema}
         pending_schemas.update(schema_refs(schema) - set(schemas))
+    for operation in operations.values():
+        closure = {name: schemas[name]["schema"] for name in operation["schemas"]}
+        exact = {"contract": operation["contract"], "schemas": closure}
+        compatible = {"contract": {key: operation["contract"].get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")}, "schemas": closure}
+        operation["fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(exact, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        operation["compatibility_fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(compatible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     payload = {
         "schema_version": "agentic-workspace/external-contract-bundle/v1",
         "protocol": profile["compatibility"]["protocol"],
@@ -297,8 +329,8 @@ def render_bundle(profile: dict[str, object]) -> str:
             "command_ir_schema": json.loads(IR_PATH.read_text(encoding="utf-8"))["schema_version"],
             "client_package": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"],
             "runtime_protocol": profile["compatibility"]["protocol"],
-            "python_package": "agentic-workspace",
-            "typescript_package": "@agentic-workspace/workspace-cli",
+            "python_package": {"name": "agentic-workspace", "version": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]},
+            "typescript_package": {"name": "@agentic-workspace/workspace-cli", "version": json.loads((REPO_ROOT / "generated/workspace/typescript/package.json").read_text(encoding="utf-8"))["version"]},
         },
         "operations": operations,
         "schemas": dict(sorted(schemas.items())),

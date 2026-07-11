@@ -53,7 +53,10 @@ def external_contract_bundle() -> dict[str, Any]:
 
 def operation_compatibility_fingerprint(contract: Mapping[str, Any]) -> str:
     normalized = {key: contract.get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")}
-    encoded = json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode()
+    bundle = external_contract_bundle()
+    operation = bundle["operations"].get(str(contract.get("id")), {})
+    schemas = {name: bundle["schemas"][name]["schema"] for name in operation.get("schemas", [])}
+    encoded = json.dumps({"contract": normalized, "schemas": schemas}, sort_keys=True, separators=(",", ":")).encode()
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 

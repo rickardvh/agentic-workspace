@@ -123,7 +123,7 @@ def test_single_usable_target_is_target_specific() -> None:
                 "id": "fixture",
                 "operation_contract_root": "contracts",
                 "targets": [
-                    {"kind": "python", "generation_status": "mutation-capable-adapter"},
+                    {"kind": "python", "generation_status": "mutation-capable-adapter", "maturity_level_ref": "mutation-capable-adapter"},
                     {"kind": "typescript", "generation_status": "deferred"},
                 ],
                 "commands": [
@@ -207,7 +207,10 @@ def test_schema_resolution_is_provenance_safe_and_fragment_aware(tmp_path: Path)
     schema = tmp_path / "src/owner/schemas/result.schema.json"
     schema.parent.mkdir(parents=True)
     schema.write_text("{}\n", encoding="utf-8")
+    schema.write_text('{"$defs":{"value":{"type":"string"}}}\n', encoding="utf-8")
     assert module.resolve_schema_reference("owner/schemas/result.schema.json#/$defs/value", repo_root=tmp_path) == schema
+    with pytest.raises(ValueError, match="missing schema fragment"):
+        module.resolve_schema_reference("owner/schemas/result.schema.json#/$defs/missing", repo_root=tmp_path)
     duplicate = tmp_path / "packages/other/result.schema.json"
     duplicate.parent.mkdir(parents=True)
     duplicate.write_text("{}\n", encoding="utf-8")
