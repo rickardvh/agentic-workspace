@@ -1613,6 +1613,21 @@ const commandDefinitions = [
           ],
           "help": "Preview --apply-safe-prune without writing files.",
           "name": "dry_run"
+        },
+        {
+          "flags": [
+            "--lane"
+          ],
+          "help": "Lane id whose machine-readable child outcomes should be reconciled.",
+          "name": "lane"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--apply-lane-reconcile"
+          ],
+          "help": "Apply the reported child-outcome delta without closing the parent lane.",
+          "name": "apply_lane_reconcile"
         }
       ]
     },

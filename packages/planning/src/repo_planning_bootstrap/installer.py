@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import tomllib
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping, cast
 
@@ -2524,9 +2524,18 @@ def planning_reconcile(
     target: str | Path | None = None,
     apply_safe_prune: bool = False,
     dry_run: bool = False,
+    lane: str = "",
+    apply_lane_reconcile: bool = False,
 ) -> dict[str, Any]:
     target_root = resolve_target_root(target)
     payload = _planning_reconcile_payload(target_root)
+    if lane or apply_lane_reconcile:
+        payload["lane_child_reconciliation"] = _reconcile_lane_children(
+            target_root=target_root,
+            lane_id=lane,
+            apply=apply_lane_reconcile,
+            dry_run=dry_run,
+        )
     if apply_safe_prune:
         apply_result = _apply_reconcile_safe_prune(
             target_root=target_root,
@@ -2544,6 +2553,176 @@ def planning_reconcile(
             "command": "agentic-planning reconcile --format json",
         }
     return payload
+
+
+def _reconcile_lane_children(*, target_root: Path, lane_id: str, apply: bool, dry_run: bool) -> dict[str, Any]:
+    lane_path = _lane_record_path(target_root, lane_id)
+    lane_record = _load_lane_record(lane_path)
+    if lane_record is None:
+        return {"status": "blocked", "reason": "lane-not-found", "lane": lane_id, "applied": False}
+    external = _load_external_intent_evidence(target_root)
+    if external.get("status") != "loaded":
+        return {
+            "status": "blocked",
+            "reason": "refreshed-external-state-required",
+            "lane": lane_id,
+            "applied": False,
+            "safe_recovery": external.get("refresh_command", "agentic-workspace external-intent refresh-github --state all"),
+        }
+    refreshed_at = str(external.get("refreshed_at") or "")
+    try:
+        refresh_age = datetime.now(timezone.utc) - datetime.fromisoformat(refreshed_at.replace("Z", "+00:00"))
+    except ValueError:
+        refresh_age = timedelta.max
+    refresh_metadata = external.get("refresh_metadata", {}) if isinstance(external.get("refresh_metadata"), dict) else {}
+    if refresh_age > timedelta(hours=24) or refresh_metadata.get("adapter") != "github-gh-cli" or refresh_metadata.get("state") != "all":
+        return {
+            "status": "blocked",
+            "reason": "external-state-stale-or-insufficient",
+            "lane": lane_id,
+            "applied": False,
+            "refreshed_at": refreshed_at,
+            "safe_recovery": "agentic-workspace external-intent refresh-github --state all --storage cache --format json",
+        }
+    declared = lane_record.get("children", []) if isinstance(lane_record.get("children"), list) else []
+    if not declared:
+        declared = [
+            {
+                "id": str(item.get("id") if isinstance(item, dict) else item),
+                "issue_ref": f"#{str(item.get('id') if isinstance(item, dict) else item).split('-', 1)[0]}",
+                "pr_ref": "",
+                "outcome": "unresolved",
+                "reason": "",
+                "proof_ref": str(item.get("proof") or "") if isinstance(item, dict) else "",
+                "new_owner": "",
+                "residual_intent": str(item.get("residual_after_slice") or "") if isinstance(item, dict) else "",
+            }
+            for item in lane_record.get("slice_sequence", [])
+        ]
+    declared_ids = [str(child.get("id") or "") for child in declared if isinstance(child, dict)]
+    if len(declared_ids) != len(set(declared_ids)) or not all(declared_ids):
+        return {"status": "blocked", "reason": "duplicate-or-missing-declared-child-id", "lane": lane_id, "applied": False}
+    external_by_id = {str(item.get("id") or ""): item for item in external.get("items", []) if isinstance(item, dict)}
+    children: list[dict[str, Any]] = []
+    for declared_child in declared:
+        child = copy.deepcopy(declared_child)
+        issue_ref = str(child.get("issue_ref") or "")
+        observed = external_by_id.get(issue_ref)
+        observed_status = str(observed.get("status") or "unknown") if isinstance(observed, dict) else "unknown"
+        previous_outcome = str(child.get("outcome") or "unresolved")
+        pr_ref = str(child.get("pr_ref") or "")
+        normalized_pr_ref = f"PR {pr_ref}" if pr_ref.startswith("#") else pr_ref
+        observed_pr = external_by_id.get(normalized_pr_ref) if normalized_pr_ref else None
+        pr_status = str(observed_pr.get("status") or "unknown") if isinstance(observed_pr, dict) else "unknown"
+        human_final = (
+            previous_outcome in {"dismissed-not-planned", "superseded-or-rerouted"}
+            and child.get("outcome_authority") == "human-reviewed"
+            and bool(str(child.get("reason") or "").strip())
+            and (
+                previous_outcome != "superseded-or-rerouted"
+                or (bool(str(child.get("new_owner") or "").strip()) and bool(str(child.get("residual_intent") or "").strip()))
+            )
+        )
+        if human_final:
+            child["outcome"] = previous_outcome
+        elif previous_outcome in {"dismissed-not-planned", "superseded-or-rerouted"}:
+            child["outcome"] = "unresolved"
+        elif _external_status_is_open(observed_status) or observed is None:
+            child["outcome"] = "unresolved"
+        elif _external_status_is_closed(observed_status):
+            child["outcome"] = (
+                "landed" if pr_status == "merged" else "closed-without-merge" if pr_status == "closed" or not pr_ref else "unresolved"
+            )
+        children.append(child)
+    unresolved = [child for child in children if child["outcome"] in {"unresolved", "closed-without-merge"}]
+    missing_proof = [child for child in children if child["outcome"] == "landed" and not child["proof_ref"]]
+    proof_evidence = [child["proof_ref"] for child in children if child["outcome"] == "landed" and child["proof_ref"]]
+    updated = copy.deepcopy(lane_record)
+    updated["children"] = children
+    child_by_id = {child["id"]: child for child in children}
+    normalized_slices = [
+        {
+            "id": str(value),
+            "title": str(value),
+            "status": "completed"
+            if child_by_id.get(str(value), {}).get("outcome") == "landed"
+            else "skipped"
+            if child_by_id.get(str(value), {}).get("outcome") == "dismissed-not-planned"
+            else "active",
+            "execplan_ref": "",
+            "depends_on": [],
+            "purpose_for_lane": child_by_id.get(str(value), {}).get("residual_intent", "Reconciled child slice."),
+            "proof": child_by_id.get(str(value), {}).get("proof_ref", ""),
+            "residual_after_slice": child_by_id.get(str(value), {}).get("residual_intent", ""),
+        }
+        if isinstance(value, str)
+        else value
+        for value in updated.get("slice_sequence", [])
+    ]
+    for slice_record in normalized_slices:
+        if not isinstance(slice_record, dict):
+            continue
+        child = child_by_id.get(str(slice_record.get("id") or ""), {})
+        if not child:
+            continue
+        slice_record["status"] = (
+            "completed" if child.get("outcome") == "landed" else "skipped" if child.get("outcome") == "dismissed-not-planned" else "active"
+        )
+        slice_record["proof"] = child.get("proof_ref", "")
+        slice_record["residual_after_slice"] = child.get("residual_intent", "")
+    updated["slice_sequence"] = normalized_slices
+    updated["references"] = [
+        {"kind": "external-work", "target": value, "label": value, "role": "lane-reference", "locator": value}
+        if isinstance(value, str)
+        else value
+        for value in updated.get("references", [])
+    ]
+    updated["current_slice"] = "aggregate-final-lane-proof" if not unresolved else f"reconcile-{unresolved[0]['id']}"
+    aggregation = updated.get("proof_aggregation", {}) if isinstance(updated.get("proof_aggregation"), dict) else {}
+    aggregation["status"] = "satisfied" if not unresolved and not missing_proof else "partial"
+    aggregation["evidence"] = proof_evidence
+    aggregation["known_gaps"] = [
+        *[f"{child['id']} remains unresolved or external state is unknown." for child in unresolved],
+        *[f"{child['id']} landed but has no proof reference." for child in missing_proof],
+    ]
+    updated["proof_aggregation"] = aggregation
+    updated["residual_lane_work"] = (
+        "Run explicit final lane proof and parent closeout review; reconciliation does not close the parent."
+        if not unresolved and not missing_proof
+        else "Resolve remaining child outcomes and proof gaps shown in proof_aggregation.known_gaps."
+    )
+    updated["parent_close_permission"] = (
+        "may-close-parent-after-human-confirmation" if not unresolved and not missing_proof else "do-not-close-parent"
+    )
+    updated["closeout_state"] = {
+        "status": "open",
+        "summary": "Child outcomes reconciled; parent closure remains explicit.",
+        "residual_work": updated["residual_lane_work"],
+        "next_owner": "maintainer/reviewer",
+    }
+    changed_fields = [key for key in updated if updated.get(key) != lane_record.get(key)]
+    exact_delta = {key: {"before": lane_record.get(key), "after": updated.get(key)} for key in changed_fields}
+    if apply and not dry_run:
+        _write_lane_record(record_path=lane_path, record=updated)
+    return {
+        "status": "ready-for-final-review" if not unresolved and not missing_proof else "attention",
+        "lane": lane_id,
+        "changed_fields": changed_fields,
+        "exact_delta": exact_delta,
+        "external_state": {
+            "kind": external.get("kind", ""),
+            "refreshed_at": external.get("refreshed_at", ""),
+            "authority": "provider-adapter-observation",
+            "path": external.get("path", ".agentic-workspace/local/cache/external-intent-evidence.json"),
+        },
+        "child_outcomes": children,
+        "unknown_count": len(unresolved),
+        "missing_proof_count": len(missing_proof),
+        "parent_auto_closed": False,
+        "applied": bool(apply and not dry_run),
+        "dry_run": dry_run,
+        "safe_apply_command": f"agentic-planning reconcile --lane {lane_id} --apply-lane-reconcile --format json",
+    }
 
 
 def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
@@ -7906,6 +8085,7 @@ def _load_external_intent_evidence(target_root: Path) -> dict[str, Any]:
             "closed_count": refresh_metadata.get("closed_count", 0),
             "limit": refresh_metadata.get("limit", 0),
             "state": str(refresh_metadata.get("state", "")),
+            "refreshed_at": str(refresh_metadata.get("refreshed_at", "")),
         },
         "item_count": len(normalized_items),
         "items": normalized_items,

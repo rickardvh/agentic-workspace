@@ -2531,6 +2531,21 @@
             ],
             "help": "Preview --apply-safe-prune without writing files.",
             "name": "dry_run"
+          },
+          {
+            "flags": [
+              "--lane"
+            ],
+            "help": "Lane id whose machine-readable child outcomes should be reconciled.",
+            "name": "lane"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--apply-lane-reconcile"
+            ],
+            "help": "Apply the reported child-outcome delta without closing the parent lane.",
+            "name": "apply_lane_reconcile"
           }
         ]
       },
@@ -3460,6 +3475,16 @@
           "arg": "dry_run",
           "default": false,
           "name": "dry_run"
+        },
+        {
+          "arg": "lane",
+          "default": "",
+          "name": "lane"
+        },
+        {
+          "arg": "apply_lane_reconcile",
+          "default": false,
+          "name": "apply_lane_reconcile"
         },
         {
           "arg": "item",

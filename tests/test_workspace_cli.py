@@ -5642,6 +5642,48 @@ def test_external_intent_issue_scoped_refresh_satisfies_issue_reference_intent(t
     assert after["action_effect"]["blocked_until_reconciled"] == []
 
 
+def test_github_pr_evidence_fetches_exact_declared_lane_refs_without_bulk_history(tmp_path: Path, monkeypatch) -> None:
+    from agentic_workspace import workspace_runtime_core as runtime_module
+
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/old-pr.lane.json"
+    _write(
+        lane_path,
+        json.dumps(
+            {
+                "children": [
+                    {"id": "old", "pr_ref": "#42"},
+                    {"id": "newer", "pr_ref": "PR #9001"},
+                    {"id": "duplicate", "pr_ref": "#42"},
+                    {"id": "none", "pr_ref": ""},
+                ]
+            }
+        ),
+    )
+    calls: list[list[str]] = []
+
+    def fake_gh_json(arguments, *, cwd):
+        calls.append(arguments)
+        assert arguments[:2] == ["pr", "view"]
+        number = int(arguments[2])
+        return {
+            "number": number,
+            "title": f"PR {number}",
+            "state": "MERGED" if number == 42 else "CLOSED",
+            "url": f"https://github.com/acme/project/pull/{number}",
+        }
+
+    monkeypatch.setattr(runtime_module, "_run_gh_json", fake_gh_json)
+    evidence = runtime_module._github_current_pull_request_evidence(target_root=tmp_path, repo="acme/project")
+
+    assert [item["number"] for item in evidence] == [42, 9001]
+    assert [item["state"] for item in evidence] == ["merged", "closed"]
+    assert calls == [
+        ["pr", "view", "42", "--repo", "acme/project", "--json", "number,title,state,url"],
+        ["pr", "view", "9001", "--repo", "acme/project", "--json", "number,title,state,url"],
+    ]
+    assert all("list" not in call for call in calls)
+
+
 def test_start_open_issue_intake_routes_refresh_and_grouping(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
