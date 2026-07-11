@@ -225,6 +225,8 @@ def test_root_wheel_ships_generated_cli_package_import_dependency(workspace_whee
     assert "agentic_workspace/_generated_cli_package_impl/__init__.py" in inventory
     assert "agentic_workspace/_generated_cli_package_impl/command_package.json" in inventory
     assert "agentic_workspace/_generated_cli_package_impl/adapter_commands.json" in inventory
+    assert "agentic_workspace/_generated_cli_package_impl/external_consumer_profile.json" in inventory
+    assert "agentic_workspace/client.py" in inventory
 
 
 def test_root_sdist_ships_generated_cli_package_import_dependency(workspace_sdist: Path) -> None:
@@ -264,6 +266,26 @@ def test_installed_workspace_wheel_imports_cli_module(workspace_wheel: Path, tmp
         check=False,
     )
 
+    assert result.returncode == 0, result.stderr
+
+
+def test_installed_workspace_wheel_exposes_public_external_client(workspace_wheel: Path, tmp_path: Path) -> None:
+    install_root = tmp_path / "installed-client"
+    subprocess.run(
+        ["uv", "pip", "install", "--no-deps", "--target", str(install_root), str(workspace_wheel)],
+        cwd=WORKSPACE_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", "from agentic_workspace import external_consumer_profile; assert external_consumer_profile()['operations']"],
+        cwd=tmp_path,
+        env={**os.environ, "PYTHONPATH": str(install_root)},
+        capture_output=True,
+        text=True,
+        check=False,
+    )
     assert result.returncode == 0, result.stderr
 
 
