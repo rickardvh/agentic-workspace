@@ -1,12 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "agentic-workspace/config-report-input.schema.json",
+  "description": "External client input contract for the config.report operation.",
+  "x-agentic-workspace-doc-role": "contract-reference",
   "type": "object",
   "properties": {
-    "target": {"type": ["string", "null"]},
-    "format": {"enum": ["text", "json", null]},
-    "select": {"type": ["string", "null"]},
-    "verbose": {"type": ["boolean", "null"]}
+    "target": {"type": ["string", "null"], "description": "Target workspace repository."},
+    "format": {"enum": ["text", "json", null], "description": "Requested output format."},
+    "select": {"type": ["string", "null"], "description": "Optional dotted-field selector."},
+    "verbose": {"type": ["boolean", "null"], "description": "Whether to request the full config projection."}
   },
   "additionalProperties": false
 }
