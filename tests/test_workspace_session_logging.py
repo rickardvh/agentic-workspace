@@ -858,6 +858,62 @@ def test_current_work_context_branch_round_trip_rebinds_thread_identity(tmp_path
     assert returned["id"] == first["id"]
 
 
+def test_current_work_context_same_branch_task_transition_drops_incompatible_thread_pr(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(
+        target / ".agentic-workspace/local/work-threads/current.json",
+        json.dumps(
+            {
+                "id": "task-a",
+                "refs": {"issues": ["#2175"], "prs": ["#2182"]},
+                "observations": {"branch": {"value": "main"}, "head": {"value": "head-a"}},
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        current_work_context,
+        "_git",
+        lambda _root, *args: "main" if args == ("branch", "--show-current") else "head-a",
+    )
+
+    task_a = current_work_context.resolve_current_work_context(root=target, task="Implement #2175")
+    task_b = current_work_context.resolve_current_work_context(root=target, task="Implement #2180")
+
+    assert task_a["pr_ref"] == "#2182"
+    assert task_b["issue_refs"] == ["#2180"]
+    assert task_b["pr_ref"] == ""
+    assert task_b["status"] == "ambiguous"
+    assert task_b["conflicts"] == ["task-thread-issue-conflict"]
+
+
+def test_current_work_context_stale_thread_does_not_bind(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(
+        target / ".agentic-workspace/local/work-threads/stale.json",
+        json.dumps(
+            {
+                "id": "stale",
+                "status": "stale",
+                "refs": {"issues": ["#2175"], "prs": ["#2182"]},
+                "observations": {"branch": {"value": "main"}, "head": {"value": "old-head"}},
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        current_work_context,
+        "_git",
+        lambda _root, *args: "main" if args == ("branch", "--show-current") else "new-head",
+    )
+
+    binding = current_work_context.resolve_current_work_context(root=target)
+
+    assert binding["status"] == "ambiguous"
+    assert binding["issue_refs"] == []
+    assert binding["pr_ref"] == ""
+    assert binding["thread_id"] == ""
+    assert "thread-stale" in binding["conflicts"]
+
+
 def test_session_log_segments_ignore_closeout_text_without_a_closeout_transition(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
