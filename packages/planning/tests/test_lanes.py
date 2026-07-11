@@ -14,6 +14,7 @@ from repo_planning_bootstrap.installer import (
     create_lane_record,
     doctor_bootstrap,
     install_bootstrap,
+    planning_reconcile,
     planning_report,
     planning_summary,
     promote_decomposition_lane_to_lane_record,
@@ -408,6 +409,44 @@ def test_summary_projects_lane_records_with_accepted_status_values(tmp_path: Pat
     assert not [
         warning for warning in summary["planning_surface_health"]["warnings"] if warning["warning_class"] == "planning_lane_schema_invalid"
     ]
+
+
+def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_path: Path) -> None:
+    create_lane_record(lane_id="trust-lane", title="Trust Lane", target=tmp_path)
+    status_path = tmp_path / "child-status.json"
+    status_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {"child_id": "landed", "issue_ref": "#1", "pr_ref": "#11", "status": "merged", "proof_ref": "PR #11 CI"},
+                    {"child_id": "dismissed", "issue_ref": "#2", "pr_ref": "#12", "status": "not-planned", "reason": "premise invalid"},
+                    {"child_id": "follow-up", "issue_ref": "#3", "status": "unknown"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/trust-lane.lane.json"
+    before = lane_path.read_text(encoding="utf-8")
+
+    dry_run = planning_reconcile(
+        target=tmp_path, lane="trust-lane", child_status_file="child-status.json", apply_lane_reconcile=True, dry_run=True
+    )["lane_child_reconciliation"]
+    assert dry_run["unknown_count"] == 1
+    assert dry_run["parent_auto_closed"] is False
+    assert dry_run["applied"] is False
+    assert lane_path.read_text(encoding="utf-8") == before
+
+    applied = planning_reconcile(target=tmp_path, lane="trust-lane", child_status_file="child-status.json", apply_lane_reconcile=True)[
+        "lane_child_reconciliation"
+    ]
+    record = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert applied["applied"] is True
+    assert record["children"][0]["outcome"] == "landed"
+    assert record["children"][1]["outcome"] == "dismissed-not-planned"
+    assert record["children"][2]["outcome"] == "unresolved"
+    assert record["parent_close_permission"] == "do-not-close-parent"
+    assert record["status"] == "ready"
 
 
 def test_planning_report_includes_lane_writer_helper_and_status(tmp_path: Path) -> None:

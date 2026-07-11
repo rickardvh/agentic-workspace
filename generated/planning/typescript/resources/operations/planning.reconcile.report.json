@@ -39,6 +39,21 @@
       "name": "dry_run",
       "required": false,
       "source": "cli-option"
+    },
+    {
+      "name": "lane",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "child_status_file",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "apply_lane_reconcile",
+      "required": false,
+      "source": "cli-option"
     }
   ],
   "ir_plan": {

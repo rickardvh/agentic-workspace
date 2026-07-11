@@ -71,6 +71,10 @@
     "current_slice": {
       "type": "string"
     },
+    "children": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/child"}
+    },
     "acceptance_boundary": {
       "type": "string"
     },
@@ -112,6 +116,21 @@
     }
   },
   "$defs": {
+    "child": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "issue_ref", "pr_ref", "outcome", "reason", "proof_ref", "new_owner", "residual_intent"],
+      "properties": {
+        "id": {"type": "string"},
+        "issue_ref": {"type": "string"},
+        "pr_ref": {"type": "string"},
+        "outcome": {"enum": ["landed", "closed-without-merge", "dismissed-not-planned", "superseded-or-rerouted", "unresolved"]},
+        "reason": {"type": "string"},
+        "proof_ref": {"type": "string"},
+        "new_owner": {"type": "string"},
+        "residual_intent": {"type": "string"}
+      }
+    },
     "string_array": {
       "type": "array",
       "items": {
