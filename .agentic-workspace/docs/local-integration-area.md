@@ -57,5 +57,8 @@ Use `.agentic-workspace/local/scratch/` freely for temporary agent working files
 - It is non-authoritative for planning, memory, startup, review, and workflow state.
 - It must be safe to delete without changing repo-owned shared behavior.
 - It is not a plugin registry, shared compatibility framework, or source of canonical workflow truth.
+- Adapter configuration, credentials, trust decisions, package lifecycle, and global caches stay in the external tool's own storage.
+- A local integration may consume released AW client/profile resources, but ordinary AW commands and necessary-surface installs must never depend on its files.
+- Deleting a consumer and its local subfolder must leave checked-in AW state and ordinary AW operation unchanged.
 
 Durable facts that should survive across agents belong in the appropriate checked-in workspace, planning, memory, or repo-owned documentation surface instead.
