@@ -49,6 +49,12 @@ function validateSchema(schema, value, path = '$') {
   const actual = value === null ? 'null' : Array.isArray(value) ? 'array' : Number.isInteger(value) ? 'integer' : typeof value;
   if (types.length && !types.includes(actual)) errors.push(`${path} must be ${types.join(' or ')}`);
   if (schema.enum && !schema.enum.some((item) => JSON.stringify(item) === JSON.stringify(value))) errors.push(`${path} is not an allowed value`);
+  if (typeof value === 'string' && schema.minLength !== undefined && [...value].length < schema.minLength) errors.push(`${path} is shorter than ${schema.minLength}`);
+  if (typeof value === 'string' && schema.pattern !== undefined && !(new RegExp(schema.pattern).test(value))) errors.push(`${path} does not match ${schema.pattern}`);
+  if (actual === 'array') {
+    if (schema.minItems !== undefined && value.length < schema.minItems) errors.push(`${path} has fewer than ${schema.minItems} items`);
+    if (schema.items) value.forEach((item, index) => errors.push(...validateSchema(schema.items, item, `${path}[${index}]`)));
+  }
   if (actual === 'object') {
     for (const name of schema.required ?? []) if (!(name in value)) errors.push(`${path}.${name} is required`);
     for (const [name, child] of Object.entries(value)) {

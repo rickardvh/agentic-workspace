@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
+import tarfile
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -49,6 +51,22 @@ def test_typescript_client_public_export_reads_profile() -> None:
     completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout.strip() == "agentic-workspace/external-consumer-profile/v1"
+
+
+def test_packed_typescript_client_loads_and_enforces_shipped_constraints(tmp_path: Path) -> None:
+    completed = subprocess.run(
+        [shutil.which("npm") or shutil.which("npm.cmd") or "npm", "pack", "--json", "--pack-destination", str(tmp_path)],
+        cwd=ROOT / "generated/workspace/typescript",
+        text=True,
+        capture_output=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+    with tarfile.open(tmp_path / json.loads(completed.stdout)[0]["filename"]) as archive:
+        archive.extractall(tmp_path, filter="data")
+    script = "import {invokeOperation} from './package/src/client.mjs'; try { invokeOperation('delegation-outcome.append',{delegation_target:'',task_class:'',outcome:'success'},{target:'.',allowRuntimeBacked:true}); } catch(e) { console.log(e.kind); }"
+    loaded = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=tmp_path, text=True, capture_output=True)
+    assert loaded.returncode == 0, loaded.stderr
+    assert loaded.stdout.strip() == "malformed"
 
 
 def test_typescript_client_fails_closed_and_detects_workspace() -> None:
