@@ -32,6 +32,7 @@ from typing import Any, cast, overload
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
+from agentic_workspace.actionability import derive_actionability
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
@@ -9765,6 +9766,18 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             "commands": commands,
             "detail_command": detail_command,
         }
+    actionability = derive_actionability(
+        command_name=command_name,
+        health=str(payload.get("health") or "unknown"),
+        warnings=_list_payload(payload.get("warnings")),
+        repair_actions=_list_payload(payload.get("repair_actions")),
+        manual_review_actions=_list_payload(payload.get("manual_review_actions")),
+        proposed_next_action=_as_dict(payload.get("next_action")),
+        claim_limits=_list_payload(payload.get("needs_review")),
+    )
+    payload["actionability"] = actionability
+    payload["action_required"] = actionability["action_required"]
+    payload["next_action"] = actionability["next_action"]
     return payload
 
 

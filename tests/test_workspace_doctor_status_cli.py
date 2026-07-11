@@ -70,6 +70,12 @@ def test_doctor_emits_affordance_shaped_repair_and_manual_review_actions(tmp_pat
     assert payload["repair_actions"][0]["id"] == "restore-missing-workspace-surface"
     assert any(action["id"] == "restore-root-startup-pointer-fence" for action in payload["repair_actions"])
     assert payload["manual_review_actions"] == []
+    actionability = payload["actionability"]
+    assert actionability["status"] == "action-required"
+    assert actionability["action_required"] is True
+    assert actionability["findings"][0]["class"] == "required-repair"
+    assert actionability["next_action"]["action"] != "no-immediate-action"
+    assert actionability["progress_check"]["result"] == "progress-making"
 
 
 def test_root_startup_pointer_repair_preserves_repo_content_and_clears_doctor_warning(tmp_path: Path, capsys) -> None:
@@ -939,7 +945,7 @@ def test_status_reports_advisory_cli_compatibility_drift(tmp_path: Path, capsys)
     assert compatibility["remediation"]["payload_drift_separate"] is True
 
 
-def test_status_and_doctor_compact_outputs_include_machine_next_action(tmp_path: Path, capsys) -> None:
+def test_status_and_doctor_advisory_outputs_are_coherent_and_do_not_self_loop(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
@@ -952,15 +958,41 @@ def test_status_and_doctor_compact_outputs_include_machine_next_action(tmp_path:
 
     assert cli.main(["status", "--target", str(target), "--format", "json"]) == 0
     status_payload = json.loads(capsys.readouterr().out)
-    assert status_payload["next_action"]["action"] == "inspect-health-with-doctor"
-    assert status_payload["next_action"]["command"] == "agentic-workspace doctor --target ./repo --format json"
-    assert status_payload["next_action"]["run"] == status_payload["next_action"]["command"]
+    assert status_payload["health"] == "attention-needed"
+    assert status_payload["action_required"] is False
+    assert status_payload["next_action"]["action"] == "no-immediate-action"
+    assert status_payload["actionability"]["status"] == "advisory-only"
+    assert status_payload["actionability"]["findings"][0]["class"] == "optional-advisory"
 
     assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
     doctor_payload = json.loads(capsys.readouterr().out)
-    assert doctor_payload["next_action"]["action"] == "inspect-repair-or-full-detail"
-    assert doctor_payload["next_action"]["command"] == "agentic-workspace doctor --target ./repo --verbose --format json"
-    assert doctor_payload["next_action"]["run"] == doctor_payload["next_action"]["command"]
+    assert doctor_payload["health"] == "attention-needed"
+    assert doctor_payload["action_required"] is False
+    assert doctor_payload["next_action"]["action"] == "no-immediate-action"
+    progress = doctor_payload["actionability"]["progress_check"]
+    assert progress["same_operation"] is True
+    assert progress["result"] == "rejected-same-state-loop"
+
+
+def test_actionability_allows_same_operation_only_as_explicit_external_condition_watch() -> None:
+    from agentic_workspace.actionability import derive_actionability
+
+    packet = derive_actionability(
+        command_name="doctor",
+        health="attention-needed",
+        warnings=["remote state is pending"],
+        repair_actions=[{"id": "wait-for-remote"}],
+        manual_review_actions=[],
+        proposed_next_action={
+            "action": "watch-remote-state",
+            "command": "agentic-workspace doctor --target . --format json",
+            "external_change_condition": "remote workflow completes",
+        },
+    )
+    assert packet["next_action"]["action"] == "watch-remote-state"
+    assert packet["progress_check"]["same_operation"] is True
+    assert packet["progress_check"]["external_change_condition"] == "remote workflow completes"
+    assert packet["progress_check"]["result"] == "progress-making"
 
 
 def test_doctor_select_returns_requested_fields(tmp_path: Path, capsys) -> None:
