@@ -305,12 +305,18 @@
         "slice_complete",
         "lane_complete",
         "parent_complete",
-        "full_intent_complete"
-      ],
-      "blocked_claim_classes": [
+        "full_intent_complete",
         "issue_closure"
       ],
-      "closure_actions": [],
+      "blocked_claim_classes": [],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#2178",
+          "authorized": true,
+          "reason": "This completed slice authorizes closure of child issue #2178 only; parent lane #2173 remains open."
+        }
+      ],
       "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
       "diagnostics": {
         "unsafe_claim_examples": [],
