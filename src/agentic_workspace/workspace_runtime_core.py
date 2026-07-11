@@ -117,6 +117,7 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
+from agentic_workspace.current_work_context import resolve_current_work_context
 from agentic_workspace.reporting_support import (
     closeout_claim_boundary_payload,
     communication_contract_payload,
@@ -32169,6 +32170,7 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
     else:
         status = "none"
     selected_thread = selected_matches[0] if selected_matches else current_matches[0] if len(current_matches) == 1 else {}
+    current_work_context = resolve_current_work_context(root=target_root, task=str(task_text or ""))
     return {
         "kind": "agentic-workspace/local-work-threads-projection/v1",
         "status": status,
@@ -32181,6 +32183,7 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
         "stale_count": len(stale_threads),
         "unreadable": unreadable,
         "selected_thread": selected_thread,
+        "current_work_context": current_work_context,
         "current_matches": current_matches[:5],
         "stale_threads": stale_threads[:5],
         "checkpoint_bridge": checkpoint_bridge,
