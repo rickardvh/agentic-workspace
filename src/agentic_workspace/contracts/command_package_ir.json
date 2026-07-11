@@ -4957,7 +4957,9 @@
             ]
           },
           "schemas": {
-            "input": [],
+            "input": [
+              "config_report_input.schema.json"
+            ],
             "output": [
               "workspace_config.schema.json"
             ]
