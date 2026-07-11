@@ -1194,6 +1194,40 @@
       "routed_to": "#1005"
     },
     {
+      "pattern": "generated/workspace/*/external_consumer_profile.json",
+      "format": "json",
+      "owner": "external-consumer-profile-generation",
+      "status": "generated-derived",
+      "schema_or_validator": "tests/test_external_consumer_profile.py",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated fail-closed external operation support profile for released clients.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Released Python and TypeScript clients require identical package-owned discovery metadata.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_external_consumer_profile.py",
+        "src/agentic_workspace/contracts/command_package_ir.json"
+      ],
+      "routed_to": "#2195"
+    },
+    {
+      "pattern": "generated/workspace/*/external_contract_bundle.json",
+      "format": "json",
+      "owner": "external-consumer-profile-generation",
+      "status": "generated-derived",
+      "schema_or_validator": "tests/test_external_consumer_profile.py",
+      "editable_by_agents": false,
+      "generated": true,
+      "notes": "Generated self-contained external operation contracts and transitive schemas.",
+      "storage_class": "generated-required-adapter",
+      "checked_in_justification": "Released clients validate operation requirements without source-checkout or mirrored host payload dependencies.",
+      "reconstructable_from": [
+        "uv run python scripts/generate/generate_external_consumer_profile.py",
+        "operation contracts and schema authorities"
+      ],
+      "routed_to": "#2197"
+    },
+    {
       "pattern": "generated/workspace/plugins/*/.codex-plugin/plugin.json",
       "format": "json",
       "owner": "generated-skillspec-targets",
@@ -1709,6 +1743,26 @@
     }
   ],
   "generated_mirrors": [
+    {
+      "pattern": "generated/workspace/*/external_consumer_profile.json",
+      "source_command": "uv run python scripts/generate/generate_external_consumer_profile.py",
+      "named_consumer": "released Python and TypeScript external operation clients",
+      "checked_in_justification": "Package-owned operation support discovery is required outside a source checkout.",
+      "freshness_check": "uv run python scripts/generate/generate_external_consumer_profile.py --check",
+      "ordinary_agent_route": "not an ordinary startup surface; consumed by external clients",
+      "removal_or_demotion_path": "remove only if released clients gain an equivalent package-owned discovery resource",
+      "max_bytes": 2000000
+    },
+    {
+      "pattern": "generated/workspace/*/external_contract_bundle.json",
+      "source_command": "uv run python scripts/generate/generate_external_consumer_profile.py",
+      "named_consumer": "released Python and TypeScript external operation clients",
+      "checked_in_justification": "Self-contained operation validation must work outside a source checkout without host payload mirrors.",
+      "freshness_check": "uv run python scripts/generate/generate_external_consumer_profile.py --check",
+      "ordinary_agent_route": "not an ordinary startup surface; consumed by external clients",
+      "removal_or_demotion_path": "remove only if released clients gain an equivalent self-contained contract transport",
+      "max_bytes": 5000000
+    },
     {
       "pattern": ".agentic-workspace/planning/agent-manifest.json",
       "source_command": "uv run agentic-planning doctor --target . --format json",
