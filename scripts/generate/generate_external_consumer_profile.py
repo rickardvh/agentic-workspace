@@ -239,6 +239,7 @@ def render_python_typed_operations(profile: dict[str, object]) -> str:
         "",
         "from .client import invoke_operation",
         "",
+        "",
     ]
     for entry in profile["operations"]:
         if entry["external_consumption"]["status"] == "internal":
