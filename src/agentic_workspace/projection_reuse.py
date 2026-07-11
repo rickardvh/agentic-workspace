@@ -140,7 +140,7 @@ def lookup_projection_reuse(
 
 
 def record_projection_reuse(*, root: Path, operation: str, query: dict[str, Any], context: dict[str, Any], payload: dict[str, Any]) -> None:
-    if context.get("volatile"):
+    if context.get("volatile") or not (root / ".agentic-workspace").is_dir():
         return
     path = context["path"]
     actionability = payload.get("actionability", {}) if isinstance(payload.get("actionability"), dict) else {}

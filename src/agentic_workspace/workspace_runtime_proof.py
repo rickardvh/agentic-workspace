@@ -358,7 +358,7 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                     ),
                 ),
                 placeholders={"paths": _list_payload(payload.get("selector", {}).get("changed"))},
-                purpose="verbose proof drill-down after substituting the actual changed paths",
+                purpose="verbose proof drill-down for changed paths",
             )
             if include_intent_proof:
                 next_decision["intent_proof"] = _compact_tiny_intent_proof(answer["intent_proof"])
@@ -465,7 +465,7 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                     cli_invoke=cli_invoke,
                 ),
                 placeholders={"paths": _list_payload(payload.get("selector", {}).get("changed"))},
-                purpose="verbose proof drill-down after substituting the actual changed paths",
+                purpose="verbose proof drill-down for changed paths",
             ),
         }
         return _guidance_with_cli_invoke(value=next_payload, cli_invoke=cli_invoke)

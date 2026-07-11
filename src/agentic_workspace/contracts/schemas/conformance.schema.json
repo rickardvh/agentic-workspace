@@ -118,7 +118,11 @@
                 },
                 "allowed_write_paths": {
                   "$ref": "#/$defs/path_list",
-                  "description": "Fixture paths the setup command may create or modify."
+                  "description": "Exact fixture paths the setup command may create or modify."
+                },
+                "allowed_write_directories": {
+                  "$ref": "#/$defs/path_list",
+                  "description": "Fixture directories below which the setup command may create or modify paths recursively."
                 }
               },
               "additionalProperties": false,
@@ -234,7 +238,11 @@
           "properties": {
             "allowed_write_paths": {
               "$ref": "#/$defs/path_list",
-              "description": "Fixture or repo paths the command may write."
+              "description": "Exact fixture or repo paths the command may write."
+            },
+            "allowed_write_directories": {
+              "$ref": "#/$defs/path_list",
+              "description": "Fixture or repo directories below which the command may write recursively."
             },
             "required_paths": {
               "$ref": "#/$defs/path_list",

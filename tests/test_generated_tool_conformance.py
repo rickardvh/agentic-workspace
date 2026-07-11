@@ -124,6 +124,70 @@ def test_process_conformance_setup_steps_reject_unlisted_writes(tmp_path: Path) 
         run_process_conformance(contract=contract, fixture_root=fixture_root, repo_root=fixture_root)
 
 
+def test_process_conformance_allows_writes_below_allowed_directory(tmp_path: Path) -> None:
+    contract = copy.deepcopy(conformance_contract_manifest("conformance/defaults.report.process.json"))
+    contract["adapter"]["command_template"] = [
+        "{python}",
+        "-c",
+        (
+            "from pathlib import Path; "
+            "Path('output/nested').mkdir(parents=True, exist_ok=True); "
+            "Path('output/nested/result.txt').write_text('ready'); "
+            'print(\'{"profile":"compact-contract-answer/v1","surface":"defaults",'
+            '"selector":{"section":"startup"},"matched":true,'
+            '"answer":{"default_canonical_agent_instructions_file":"AGENTS.md"},"refs":[]}\')'
+        ),
+    ]
+    contract["expectations"]["stdout"].pop("schema")
+    contract["expectations"]["filesystem"]["allowed_write_directories"] = ["output"]
+    fixture_root = tmp_path / "directory-write-fixture"
+    materialize_fixture(fixture=contract["fixtures"][0], fixture_root=fixture_root)
+
+    run_process_conformance(contract=contract, fixture_root=fixture_root, repo_root=fixture_root)
+
+
+def test_process_conformance_rejects_descendant_of_exact_allowed_file(tmp_path: Path) -> None:
+    contract = copy.deepcopy(conformance_contract_manifest("conformance/defaults.report.process.json"))
+    contract["adapter"]["command_template"] = [
+        "{python}",
+        "-c",
+        (
+            "from pathlib import Path; Path('result/nested').mkdir(parents=True, exist_ok=True); "
+            "Path('result/nested/file').write_text('unexpected')"
+        ),
+    ]
+    contract["expectations"]["stdout"]["allow_empty"] = True
+    contract["expectations"]["stdout"].pop("schema")
+    contract["expectations"]["stdout"]["format"] = "text"
+    contract["expectations"]["filesystem"]["allowed_write_paths"] = ["result"]
+    fixture_root = tmp_path / "exact-file-write-fixture"
+    materialize_fixture(fixture=contract["fixtures"][0], fixture_root=fixture_root)
+
+    with pytest.raises(AssertionError, match="forbidden fixture path"):
+        run_process_conformance(contract=contract, fixture_root=fixture_root, repo_root=fixture_root)
+
+
+def test_process_conformance_setup_step_uses_recursive_directory_scope(tmp_path: Path) -> None:
+    contract = copy.deepcopy(conformance_contract_manifest("conformance/defaults.report.process.json"))
+    contract["fixtures"][0]["setup_steps"] = [
+        {
+            "id": "prepare-directory",
+            "command_template": [
+                "{python}",
+                "-c",
+                "from pathlib import Path; Path('prepared/nested').mkdir(parents=True); Path('prepared/nested/file').write_text('ok')",
+            ],
+            "cwd": "fixture_root",
+            "allowed_write_paths": [],
+            "allowed_write_directories": ["prepared"],
+        }
+    ]
+    fixture_root = tmp_path / "setup-directory-write-fixture"
+    materialize_fixture(fixture=contract["fixtures"][0], fixture_root=fixture_root)
+
+    run_process_conformance(contract=contract, fixture_root=fixture_root, repo_root=fixture_root)
+
+
 def test_conformance_registry_points_at_schema_valid_contracts() -> None:
     registry = conformance_contracts_manifest()
 
