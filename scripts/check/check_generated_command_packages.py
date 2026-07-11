@@ -299,6 +299,9 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY = (
     "generated_cli_package_command_names",
 )
 GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
+    "src/agentic_workspace/client.py": "public external client resolving generated package-owned contract resources",
+    "generated/workspace/python/client.py": "generated external-client resource lookup into the installed private bridge",
+    "scripts/generate/generate_external_consumer_profile.py": "generator for the external client installed private bridge",
     "pyproject.toml": "installed private bridge compatibility",
     "packages/planning/pyproject.toml": "installed private bridge compatibility",
     "packages/memory/pyproject.toml": "installed private bridge compatibility",

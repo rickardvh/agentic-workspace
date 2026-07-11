@@ -6,3 +6,14 @@ try:
     __version__ = version("agentic-workspace")
 except PackageNotFoundError:
     __version__ = "0.0.0"
+
+from .client import AWClientError, detect_workspace, external_consumer_profile, invoke_operation, require_operations, resolve_invocation
+
+__all__ = [
+    "AWClientError",
+    "detect_workspace",
+    "external_consumer_profile",
+    "invoke_operation",
+    "require_operations",
+    "resolve_invocation",
+]

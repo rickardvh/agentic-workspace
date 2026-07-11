@@ -617,7 +617,7 @@ def render_workspace_command_package_outputs(
     )
     release_metadata = _typescript_release_package_metadata(repo_root=repo_root)
     return [
-        _patch_external_profile_export(
+        _patch_external_consumer_exports(
         _patch_typescript_runtime_template_ops(
             _patch_typescript_strict_preflight_gate(
                 _patch_workspace_typescript_sample_command_test(
@@ -636,12 +636,12 @@ def render_workspace_command_package_outputs(
     ]
 
 
-def _patch_external_profile_export(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+def _patch_external_consumer_exports(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
     path = output.path if output.path.is_absolute() else repo_root / output.path
     if path.relative_to(repo_root).as_posix() != "generated/workspace/typescript/package.json":
         return output
     payload = json.loads(output.content)
-    payload["exports"] = {"./profile": "./external_consumer_profile.json"}
+    payload["exports"] = {".": "./src/client.mjs", "./profile": "./external_consumer_profile.json"}
     files = list(payload.get("files", []))
     if "external_consumer_profile.json" not in files:
         files.append("external_consumer_profile.json")

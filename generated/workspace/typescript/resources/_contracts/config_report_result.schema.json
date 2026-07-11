@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/config-report-result.schema.json",
+  "description": "Schema-validated result envelope for config.report.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "required": ["kind", "profile", "target", "workspace"],
+  "properties": {
+    "kind": {"type": "string", "pattern": "^agentic-workspace/config-", "description": "Result contract kind."},
+    "profile": {"enum": ["tiny", "full"], "description": "Projection profile returned by AW."},
+    "target": {"type": "string", "description": "Resolved target identifier."},
+    "workspace": {"type": "object", "description": "Resolved workspace configuration projection."}
+  },
+  "additionalProperties": true
+}

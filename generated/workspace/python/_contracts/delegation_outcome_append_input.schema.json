@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/delegation-outcome-append-input.schema.json",
+  "description": "External client input contract for delegation-outcome.append.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "required": ["delegation_target", "task_class", "outcome"],
+  "properties": {
+    "delegation_target": {"type": "string", "minLength": 1, "description": "Delegation target alias."},
+    "task_class": {"type": "string", "minLength": 1, "description": "Bounded task classification."},
+    "outcome": {"enum": ["success", "mixed", "failed"], "description": "Observed delegation outcome."},
+    "handoff_sufficiency": {"enum": ["sufficient", "borderline", "insufficient"], "description": "Handoff sufficiency classification."},
+    "review_burden": {"enum": ["light", "normal", "high"], "description": "Review burden classification."},
+    "escalation_required": {"type": "boolean", "description": "Whether execution required escalation."}
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/operation-failure.schema.json",
+  "description": "Structured failure envelope returned by an external operation invocation.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "required": ["status"],
+  "properties": {
+    "kind": {"type": "string", "minLength": 1, "description": "Optional versioned runtime error kind."},
+    "status": {"type": "string", "enum": ["rejected", "failed"], "description": "Stable external failure classification."},
+    "message": {"type": "string", "description": "Human-readable failure summary when supplied."},
+    "command": {"type": "string", "description": "Command surface that failed when supplied."},
+    "exit_status": {"type": "integer", "minimum": 1, "description": "Positive process exit status when supplied."}
+  },
+  "additionalProperties": true
+}

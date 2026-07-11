@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:fa4e883675148b7a451b2374a03b652c1ac44ad164425fed826174110e3cbddb",
+    "fingerprint": "sha256:eaf6ce9a071165d5d9b098c24077b2ea494771e2511b2f5f2016f99961ac04d8",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -129,7 +129,7 @@
           "config_report_input.schema.json"
         ],
         "output": [
-          "workspace_config.schema.json"
+          "config_report_result.schema.json"
         ]
       },
       "effects": {
@@ -345,8 +345,12 @@
         }
       },
       "schemas": {
-        "input": [],
-        "output": []
+        "input": [
+          "delegation_outcome_append_input.schema.json"
+        ],
+        "output": [
+          "delegation_outcome_append_result.schema.json"
+        ]
       },
       "effects": {
         "read_only": false,
@@ -386,7 +390,7 @@
         "delegation-outcome.append-text.process"
       ],
       "external_consumption": {
-        "status": "internal",
+        "status": "runtime-backed",
         "runtime_exceptions": [
           {
             "owner": "root-workspace",

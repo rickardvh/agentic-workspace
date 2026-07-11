@@ -160,4 +160,4 @@ def test_runtime_and_payload_have_no_external_adapter_reverse_dependency() -> No
         if source.suffix not in {".py", ".mjs", ".js"}:
             continue
         text = source.read_text(encoding="utf-8")
-        assert not re.search(r"(?:from|import|require\s*\()[^\n]*(?:external_consumer|adapter_package)", text), source
+        assert not re.search(r"(?:from|import|require\s*\()[^\n]*adapter_package", text), source

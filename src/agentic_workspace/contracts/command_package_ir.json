@@ -4961,7 +4961,7 @@
               "config_report_input.schema.json"
             ],
             "output": [
-              "workspace_config.schema.json"
+              "config_report_result.schema.json"
             ]
           },
           "effect_hints": {
@@ -5198,8 +5198,12 @@
             ]
           },
           "schemas": {
-            "input": [],
-            "output": []
+            "input": [
+              "delegation_outcome_append_input.schema.json"
+            ],
+            "output": [
+              "delegation_outcome_append_result.schema.json"
+            ]
           },
           "effect_hints": {
             "read_only": false,

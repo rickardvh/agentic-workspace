@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/delegation-outcome-append-result.schema.json",
+  "description": "Schema-validated result envelope for delegation-outcome.append.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "required": ["kind", "path", "record_count", "recorded"],
+  "properties": {
+    "kind": {"const": "agentic-workspace/delegation-outcomes/v1", "description": "Result contract kind."},
+    "path": {"type": "string", "description": "Local advisory record path."},
+    "record_count": {"type": "integer", "minimum": 1, "description": "Number of stored records."},
+    "recorded": {"type": "object", "description": "The newly recorded delegation outcome."}
+  },
+  "additionalProperties": true
+}
