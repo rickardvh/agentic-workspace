@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/delegation-outcome-append-result.schema.json",
+  "type": "object",
+  "required": ["kind", "path", "record_count", "recorded"],
+  "properties": {
+    "kind": {"const": "agentic-workspace/delegation-outcomes/v1"},
+    "path": {"type": "string"},
+    "record_count": {"type": "integer", "minimum": 1},
+    "recorded": {"type": "object"}
+  },
+  "additionalProperties": true
+}

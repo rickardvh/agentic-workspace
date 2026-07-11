@@ -39,6 +39,7 @@ dependencies = [
     { name = "agentic-memory" },
     { name = "agentic-planning" },
     { name = "agentic-verification" },
+    { name = "jsonschema" },
 ]
 
 [package.dev-dependencies]
@@ -59,6 +60,7 @@ requires-dist = [
     { name = "agentic-memory", editable = "packages/memory" },
     { name = "agentic-planning", editable = "packages/planning" },
     { name = "agentic-verification", editable = "packages/verification" },
+    { name = "jsonschema", specifier = ">=4.23" },
 ]
 
 [package.metadata.requires-dev]

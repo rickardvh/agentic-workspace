@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:7d2fddda282b36412dea77584289443ce26b257398a65d3e7763e53130e4eb86",
+    "fingerprint": "sha256:eaf6ce9a071165d5d9b098c24077b2ea494771e2511b2f5f2016f99961ac04d8",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -12,6 +12,10 @@
       "id": "checkpoint.write",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/checkpoint.write.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:373f76820cb7bb9464f6cc75c684ddc0b000928db55604521fdcaa16fc81872a"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -104,6 +108,10 @@
       "id": "config.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/config.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:98a90455f378876b95e4789f1ddae5dea95bd871a76335aa11562676acaf4097"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -117,9 +125,11 @@
         }
       },
       "schemas": {
-        "input": [],
+        "input": [
+          "config_report_input.schema.json"
+        ],
         "output": [
-          "workspace_config.schema.json"
+          "config_report_result.schema.json"
         ]
       },
       "effects": {
@@ -160,7 +170,7 @@
         "config.selected-text.process"
       ],
       "external_consumption": {
-        "status": "internal",
+        "status": "runtime-backed",
         "runtime_exceptions": [
           {
             "owner": "root-workspace",
@@ -210,6 +220,10 @@
       "id": "defaults.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/defaults.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:51c7a4b92dc7e9bace18517ff3e71b28382675d169fb77476eec976571b4ce02"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -314,6 +328,10 @@
       "id": "delegation-outcome.append",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/delegation-outcome.append.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:bffc943c2b0dec15e4066afa92f8dd779899ebc09bdad1e314dab17a4b0f8a09"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -327,8 +345,12 @@
         }
       },
       "schemas": {
-        "input": [],
-        "output": []
+        "input": [
+          "delegation_outcome_append_input.schema.json"
+        ],
+        "output": [
+          "delegation_outcome_append_result.schema.json"
+        ]
       },
       "effects": {
         "read_only": false,
@@ -408,6 +430,10 @@
       "id": "doctor.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/doctor.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:fa4609f15ad1510e37b50d1a73659c2930ff03c45d869c73bb029b2f89f71bf7"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -516,6 +542,10 @@
       "id": "external-intent.refresh-github",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/external-intent.refresh-github.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:a68bb74f3d7f4298fed4ff0e4a1c3b035b4b2e2089585ff53f803679a3993054"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -612,6 +642,10 @@
       "id": "implement.context",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/implement.context.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:c7c672afc792d15ba27d17ece497bfd864e0ca0d3507bd0fc0d52b1f6d39ee26"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -711,6 +745,10 @@
       "id": "init.lifecycle",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/init.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:f4f4321146c7602e3ce249146fb59600d34bdbb443477034de439559d6d8941b"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -810,6 +848,10 @@
       "id": "install.lifecycle",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/install.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:c7ecbca82bce997fbd833b10c918f762bb2b4cfc6ebb229dfe402dae0cb9749b"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -909,6 +951,10 @@
       "id": "memory.adopt.lifecycle",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.adopt.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:c9f676af14fc2f142a1c776493e05b8d2ab48541d49bfc902fbf6eafda6d60bd"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -950,7 +996,7 @@
         "memory.adopt.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -987,6 +1033,10 @@
       "id": "memory.bootstrap-cleanup.apply",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.bootstrap-cleanup.apply.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:514906ba061ac5da09023890e7cb97a2e360adcdcaf576ea2f33cb2cac65513a"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1028,7 +1078,7 @@
         "memory.bootstrap-cleanup.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1065,6 +1115,10 @@
       "id": "memory.capture-note.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.capture-note.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:b376a61e82109c7b02efea6703576ef027a1d2d04022d677f92792e4e9ed00ea"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1106,7 +1160,7 @@
         "memory.capture-note.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1143,6 +1197,10 @@
       "id": "memory.create-note.apply",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.create-note.apply.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:ac32960bd8d8faefbda56f3a62c2e75dc29c445a5bd1c28ce45991dfd2e09e2f"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1184,7 +1242,7 @@
         "memory.create-note.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1221,6 +1279,10 @@
       "id": "memory.current.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.current.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:c54a62b6fd960a539c87a8e89ab96620cdc6dd9e996bca83f0baec494137a143"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1263,7 +1325,7 @@
         "memory.current-check.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1303,6 +1365,10 @@
       "id": "memory.doctor.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.doctor.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:98a6dcc8630a29a78c74051f77aa9a9d66eccab75552a04f6ae1cd2e7f752c5e"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1344,7 +1410,7 @@
         "memory.doctor.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1381,6 +1447,10 @@
       "id": "memory.front-door",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/memory.front-door.json",
+      "operation_compatibility": {
+        "schema_version": null,
+        "fingerprint": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -1473,6 +1543,10 @@
       "id": "memory.init.lifecycle",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.init.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:bc006c35633f1ba700464474721ba51d1a10ed097829e238433e9367402e68b1"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1514,7 +1588,7 @@
         "memory.init.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1551,6 +1625,10 @@
       "id": "memory.install.lifecycle",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.install.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:c6e04092204f7272c7d4bf66e5aabee66ed0c2522be5724bc79c6c8aeeef10e4"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1592,7 +1670,7 @@
         "memory.install.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1629,6 +1707,10 @@
       "id": "memory.list-files.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.list-files.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:bf217b4dd55780b35c9f6ce868f084d9df6541bb03c363b94d6145aa0f2abb71"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1670,7 +1752,7 @@
         "memory.list-files.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1707,6 +1789,10 @@
       "id": "memory.list-skills.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.list-skills.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:5e56f6de5728b819915c0c79b3973667daad46ef9d8d7258b52af06b9bf4989d"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1748,7 +1834,7 @@
         "memory.list-skills.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1785,6 +1871,10 @@
       "id": "memory.migrate-layout.lifecycle",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.migrate-layout.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:2426f3254dc535f707d44c7b6017fc8a61974f8c2d868ebfb8665fed649f2362"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1826,7 +1916,7 @@
         "memory.migrate-layout.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1863,6 +1953,10 @@
       "id": "memory.promotion-report.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.promotion-report.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:1e896df6a9a7ff0b3540e0cb98e60a73f0fccba88d7cfaea4b10ca59c0875814"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1904,7 +1998,7 @@
         "memory.promotion-report.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -1941,6 +2035,10 @@
       "id": "memory.prompt.render",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.prompt.render.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:0a6f726488a4f90cc6203f3d12a16725014c8f8e04b32687524e23d40f506a90"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -1982,7 +2080,7 @@
         "memory.prompt.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2010,6 +2108,10 @@
       "id": "memory.report.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.report.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:3663e2f2280630cadc9b20b44f4709f35d76ff2015a2c36c5505c3b970922259"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -2051,7 +2153,7 @@
         "memory.report.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2088,6 +2190,10 @@
       "id": "memory.route-report.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.route-report.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:546f773e0450d2f65616acc95e32f5cfecfcb9f2cf8042a6e62dd513eb109bd8"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -2129,7 +2235,7 @@
         "memory.route-report.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2166,6 +2272,10 @@
       "id": "memory.route-review.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.route-review.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:1895af3b185acd4cce8e969f49f18b1e8720d28b84c3e7c37298a8d445336553"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -2207,7 +2317,7 @@
         "memory.route-review.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2244,6 +2354,10 @@
       "id": "memory.route.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.route.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:bf618b4ba51935b6107201eeb81c06598ceebe908fb4f83619b4e1cc8c5dabf6"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -2285,7 +2399,7 @@
         "memory.route.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2322,6 +2436,10 @@
       "id": "memory.search.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.search.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:87d1c9e2b7b3ce5a6e19d1fa89e29a0307bc523865f0259468c64ba9fff54134"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -2363,7 +2481,7 @@
         "memory.search.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2400,6 +2518,10 @@
       "id": "memory.status.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:4331345f9d2bb70d10418728b7deac2a27e37c81f42cfb6a9c6285f2bd696f5c"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -2441,7 +2563,7 @@
         "memory.status.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2478,6 +2600,10 @@
       "id": "memory.sync-memory.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.sync-memory.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:ccf7f7f4f73d946d5961e4106d09a52a70a811dd7be9c0512cf584f8e7777347"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -2519,7 +2645,7 @@
         "memory.sync-memory.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2556,6 +2682,10 @@
       "id": "memory.uninstall.lifecycle",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.uninstall.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:31aca7fd6d86abe182614bff0fc553569db59291257d33a8a84cdffdece942ec"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -2597,7 +2727,7 @@
         "memory.uninstall.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2634,6 +2764,10 @@
       "id": "memory.upgrade.lifecycle",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.upgrade.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:6668826b792ed220ae00c7dec32591d0b42e7bf838b72853b23c6b23f01adb38"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -2675,7 +2809,7 @@
         "memory.upgrade.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2712,6 +2846,10 @@
       "id": "memory.verify-payload.report",
       "owner": "memory-bootstrap",
       "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.verify-payload.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:40b8de49ff280942f53ba4c4cab6e535de7493e062cc45e147b3f86f541eb705"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-memory",
@@ -2753,7 +2891,7 @@
         "memory.verify-payload.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "memory-bootstrap",
@@ -2790,6 +2928,10 @@
       "id": "modules.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/modules.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:0ed73e02aac4fd8fdb80f4a99e9f22da840723c35257b889277e241fd69ffe59"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -2889,6 +3031,10 @@
       "id": "ownership.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/ownership.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:130b4218cfcb88508d217870d6893b1afd730397f744ef84c29807c8eca9654c"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -2988,6 +3134,10 @@
       "id": "planning.adopt.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.adopt.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:672006d1951ec37e56ca26bf2fcb8e29678c7783da424e0a82a2dcc6b542ec9d"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3029,7 +3179,7 @@
         "planning.adopt.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3066,6 +3216,10 @@
       "id": "planning.archive-plan.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.archive-plan.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:f952f233fa732ff302eda45e869e3c07149a51272dd6efa23b0ac48a9eaa604f"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3107,7 +3261,7 @@
         "planning.archive-plan.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3144,6 +3298,10 @@
       "id": "planning.close-item.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.close-item.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:e4711f4ba12453088067ca67e044e30057fe30b6cc08902007ee0d01d787e2d9"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3185,7 +3343,7 @@
         "planning.close-item.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3222,6 +3380,10 @@
       "id": "planning.closeout.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.closeout.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:ac917766995052c7ec074deab1c30ec2853d790643205265d30f6e56e49b9b32"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3263,7 +3425,7 @@
         "planning.closeout.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3300,6 +3462,10 @@
       "id": "planning.create-review.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.create-review.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:76a174e9da8f6f75956aa23ac18d54ad9045fafc3353bc74366f7338d1861e91"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3341,7 +3507,7 @@
         "planning.create-review.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3378,6 +3544,10 @@
       "id": "planning.delegation-decision.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.delegation-decision.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:7d1416598005273a4e10bf296d2d758762521c88cefd6ac8d0dd03d396d714cf"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3419,7 +3589,7 @@
         "planning.delegation-decision.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3456,6 +3626,10 @@
       "id": "planning.doctor.report",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.doctor.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:5157ca023f606a82ee8f7f945482a238c5480e8955e195045edd9516fb2da7e1"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3497,7 +3671,7 @@
         "planning.doctor.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3534,6 +3708,10 @@
       "id": "planning.front-door",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "operation_compatibility": {
+        "schema_version": null,
+        "fingerprint": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -3626,6 +3804,10 @@
       "id": "planning.handoff.report",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.handoff.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:45f7e920b25bc9a033cd07345b54d72426e59a53eb71e03b0eb4eb89bc8b84a0"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3667,7 +3849,7 @@
         "planning.handoff.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3695,6 +3877,10 @@
       "id": "planning.init.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.init.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:8761b9a3079a1eca7346e1da6dbb18ee19d8d414f65c3b1524a905cdc4b95c66"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3736,7 +3922,7 @@
         "planning.init.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3773,6 +3959,10 @@
       "id": "planning.install.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.install.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:49a7c2eafa18d5bc8ae017c3eef989e6afdedc6137935eaa29228f25da88e6b8"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3814,7 +4004,7 @@
         "planning.install.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3851,6 +4041,10 @@
       "id": "planning.intake-artifact.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.intake-artifact.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:dea5d366fed357e14ca98676088701f25099889c91e12bc6f3dec41fbf16b0d0"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3892,7 +4086,7 @@
         "planning.intake-artifact.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3929,6 +4123,10 @@
       "id": "planning.lane-activate.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-activate.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:065dedd1d20fc1f884db4dfd5eee7eb5d1ffd670b49c59418c211d6bb616d6aa"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -3970,7 +4168,7 @@
         "planning.lane-activate.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -3998,6 +4196,10 @@
       "id": "planning.lane-archive.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-archive.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:d79f6e208648949202c2a101c7e3f6fcd11e23d9a7cafdab9924272c248c997f"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4039,7 +4241,7 @@
         "planning.lane-archive.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4067,6 +4269,10 @@
       "id": "planning.lane-close.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-close.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:3c372a69edba81439b0a910ef6aa2b12205ecb8483e665fca8b98fe8f514a687"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4108,7 +4314,7 @@
         "planning.lane-close.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4136,6 +4342,10 @@
       "id": "planning.lane-create.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-create.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:6c7c007dcc57cbc58debeab2a2e5d4b32c30900acb26b8805b1b66d27a2c701a"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4177,7 +4387,7 @@
         "planning.lane-create.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4205,6 +4415,10 @@
       "id": "planning.lane-promote.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-promote.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:d0c745651d601ed3b40d39a4b871b61f9dbc0299052ad6807391ae774398f5e1"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4246,7 +4460,7 @@
         "planning.lane-promote.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4274,6 +4488,10 @@
       "id": "planning.list-files.report",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.list-files.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:5b01414ca79fe031c58587ad27c30cf7e47dc446b52562fc7e0f030c5efa9406"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4315,7 +4533,7 @@
         "planning.list-files.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4343,6 +4561,10 @@
       "id": "planning.new-plan.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.new-plan.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:16d636b078327e45111e2acc415eeb6b6976736d0abcbf9e8d32246b945d893b"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4384,7 +4606,7 @@
         "planning.new-plan.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4421,6 +4643,10 @@
       "id": "planning.promote-to-plan.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.promote-to-plan.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:23f622f6e9fa0ebb72e27b3af4e67eb09d5adaa5db3b7e61cfef8377ba1910ec"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4462,7 +4688,7 @@
         "planning.promote-to-plan.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4499,6 +4725,10 @@
       "id": "planning.prompt.render",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.prompt.render.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:7d010e4a3ca4576a92948b510c320f04b64be346499784ac9ac4f76c995418bd"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4540,7 +4770,7 @@
         "planning.prompt.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4568,6 +4798,10 @@
       "id": "planning.reconcile.report",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.reconcile.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:27b7c661c14ca87fd45edb4aea334688827b835a43b450a41b3a5c4aeb4a629d"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4609,7 +4843,7 @@
         "planning.reconcile.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4646,6 +4880,10 @@
       "id": "planning.report.report",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.report.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:018f238207cbf5f44fa5dbb9c702b614e8d393f0a3442fc8c6e478b86be9734f"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4687,7 +4925,7 @@
         "planning.report.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4724,6 +4962,10 @@
       "id": "planning.status.report",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.status.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:68d11198ac56bcf0308064ca1e9b7208682f773ad5da4efbc169a46e0613e815"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4765,7 +5007,7 @@
         "planning.status.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4802,6 +5044,10 @@
       "id": "planning.summary.report",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.summary.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:eb247a4cfc8fbf4595a726d5d83d7363efb20db6336b6d049e1ba0441c74bcb0"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4843,7 +5089,7 @@
         "planning.summary.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4880,6 +5126,10 @@
       "id": "planning.uninstall.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.uninstall.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:4603e9317d725124c414f0bafa743ab2f7a951f9819467f0b2c338c2902e7aba"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4921,7 +5171,7 @@
         "planning.uninstall.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -4958,6 +5208,10 @@
       "id": "planning.upgrade.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.upgrade.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:e95df7248c084093653e5508b8b72a628fd1355f01b2b0e1ad0ca5879013a487"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -4999,7 +5253,7 @@
         "planning.upgrade.lifecycle.dry-run.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -5036,6 +5290,10 @@
       "id": "planning.verify-payload.report",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.verify-payload.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:5031f1d283c7745d10711b093f542e8c6347b2962b3e84e548949bb711811d85"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-planning",
@@ -5077,7 +5335,7 @@
         "planning.verify-payload.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "planning-bootstrap",
@@ -5114,6 +5372,10 @@
       "id": "preflight.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/preflight.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:1478eb3e47c5faf5b7d6ee0c4f1aaa0eac255f57bb36fe476de65d2b345a441a"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -5213,6 +5475,10 @@
       "id": "prompt.init",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/prompt.init.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:f5a4c92ffc6dd4935e2eb9f068735f88c967236d760ce664e46e6fa6db43aac1"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -5268,7 +5534,7 @@
         "prompt.uninstall.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "root-workspace",
@@ -5311,6 +5577,10 @@
       "id": "prompt.uninstall",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/prompt.uninstall.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:2f253cc7805be68c11bd3ac7df7aef9343b1023063c617173813db6ea4d1681d"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -5366,7 +5636,7 @@
         "prompt.uninstall.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "root-workspace",
@@ -5409,6 +5679,10 @@
       "id": "prompt.upgrade",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/prompt.upgrade.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:d271a6a8d8242e92bd15e65d9a571ca3cc9d70f0f7bd628e541f3c2ec86e0b46"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -5464,7 +5738,7 @@
         "prompt.uninstall.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "root-workspace",
@@ -5507,6 +5781,10 @@
       "id": "proof.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/proof.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:aaa9ba7316e2b8d5675d4c8e7b6af9e80f3dead61a1a46a615e6447bd16e26d2"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -5615,6 +5893,10 @@
       "id": "reconcile.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/reconcile.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:6dfc9a498543625e180d895131334b951190e632bd5118c7af575c200edc5e48"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -5723,6 +6005,10 @@
       "id": "report.combined",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/report.combined.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:5dd1fdd893beff140d7963a8e829db30a4186c26ab4e7d5bcc2a1295ae8f9019"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -5840,6 +6126,10 @@
       "id": "session-log.manage",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/session-log.manage.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:fa1a19558d0f36c0d6e0084ed681fb041e269e1465b780d236a3f27b79bce80f"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -5930,6 +6220,10 @@
       "id": "setup.guidance",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/setup.guidance.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:c1e2e04ba1ae8dc94b087b1b90704002a22eb45ee6372645a977ea4b1a6816fc"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -6029,6 +6323,10 @@
       "id": "skills.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/skills.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:64a9d4c7e34c0e3a7ff035791703f5ec53ff633428151070b83f626458354f01"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -6128,6 +6426,10 @@
       "id": "start.context",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/start.context.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:14e2e14c44db67d247b308862f6448ab56335ad7e27af4eeef3af73f5dd1fa2a"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -6229,6 +6531,10 @@
       "id": "status.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/status.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:a5e9215f9c11192e9952e45f622c1c4baf8e4a324e42d39e26a759fab04463a7"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -6337,6 +6643,10 @@
       "id": "summary.report",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/summary.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:c851ec85f5b323be68cc52adf790490c46d8a0cd6d274083ce63372b2cc62567"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -6436,6 +6746,10 @@
       "id": "system-intent.sync",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/system-intent.sync.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:cf7b80aeaedd8e0ec58616888ed23e39d505f9a254f6721becce975316eb00cd"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -6489,7 +6803,7 @@
         "system-intent.sync.process"
       ],
       "external_consumption": {
-        "status": "runtime-backed",
+        "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "root-workspace",
@@ -6535,6 +6849,10 @@
       "id": "uninstall.lifecycle",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/uninstall.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:61c28e09eacaa2cb107b72dd4bab986c4778ecba5f12657b1a8aa674fea2bff8"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -6639,6 +6957,10 @@
       "id": "upgrade.lifecycle",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/upgrade.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:ed788b8f8d87f647ed3e446d3586742af069a6bb827b6ffbd53e9540a45c5daa"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
@@ -6743,6 +7065,10 @@
       "id": "verification.report.report",
       "owner": "verification-cli",
       "operation_contract": "packages/verification/src/repo_verification_bootstrap/contracts/operations/verification.report.report.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:99f822a27a527b425800cc11ed725b681f2521b45bd8780ad4132dd4494c97bc"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-verification",
@@ -6806,6 +7132,10 @@
       "id": "work-thread.prune",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/work-thread.prune.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:22f0059c0ca2be180c5679469bd6ff790049d98fdcd5b0b514fea3e71b33a511"
+      },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",

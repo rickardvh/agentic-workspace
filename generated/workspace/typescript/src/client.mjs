@@ -58,6 +58,21 @@ export function invokeJson(argv, { target, invocation } = {}) {
   if (!payload || Array.isArray(payload) || typeof payload !== 'object') throw new AWClientError('malformed', 'AW result envelope must be an object');
   return payload;
 }
+function validateSchema(schema, value, path = '$') {
+  const errors = [];
+  const types = Array.isArray(schema.type) ? schema.type : schema.type ? [schema.type] : [];
+  const actual = value === null ? 'null' : Array.isArray(value) ? 'array' : Number.isInteger(value) ? 'integer' : typeof value;
+  if (types.length && !types.includes(actual)) errors.push(`${path} must be ${types.join(' or ')}`);
+  if (schema.enum && !schema.enum.some((item) => JSON.stringify(item) === JSON.stringify(value))) errors.push(`${path} is not an allowed value`);
+  if (actual === 'object') {
+    for (const name of schema.required ?? []) if (!(name in value)) errors.push(`${path}.${name} is required`);
+    for (const [name, child] of Object.entries(value)) {
+      if (schema.properties?.[name]) errors.push(...validateSchema(schema.properties[name], child, `${path}.${name}`));
+      else if (schema.additionalProperties === false) errors.push(`${path}.${name} is not allowed`);
+    }
+  }
+  return errors;
+}
 export function invokeOperation(operationId, values, { target, invocation, allowRuntimeBacked = false } = {}) {
   requireOperations([operationId], { allowRuntimeBacked });
   const entry = externalConsumerProfile().operations.find((item) => item.id === operationId);
@@ -65,6 +80,10 @@ export function invokeOperation(operationId, values, { target, invocation, allow
     throw new AWClientError('unsupported', 'operation belongs to a separate generated package', { operation: operationId });
   }
   const contract = JSON.parse(readFileSync(new URL(`../${entry.operation_resources.typescript.path}`, import.meta.url), 'utf8'));
+  for (const schemaName of entry.schemas.input) {
+    const schema = JSON.parse(readFileSync(new URL(`../resources/_contracts/${schemaName}`, import.meta.url), 'utf8'));
+    const errors = validateSchema(schema, values); if (errors.length) throw new AWClientError('malformed', 'operation input failed schema validation', { schema: schemaName, errors });
+  }
   const declared = new Map((contract.inputs ?? []).map((item) => [item.name, item]));
   const unknown = Object.keys(values).filter((name) => !declared.has(name));
   const missing = [...declared].filter(([name, item]) => item.required && !(name in values)).map(([name]) => name);
@@ -77,5 +96,10 @@ export function invokeOperation(operationId, values, { target, invocation, allow
   }
   if (declared.has('target')) argv.push('--target', resolve(target));
   if (declared.has('format')) argv.push('--format', 'json');
-  return invokeJson(argv, { target, invocation });
+  const payload = invokeJson(argv, { target, invocation });
+  for (const schemaName of entry.schemas.output) {
+    const schema = JSON.parse(readFileSync(new URL(`../resources/_contracts/${schemaName}`, import.meta.url), 'utf8'));
+    const errors = validateSchema(schema, payload); if (errors.length) throw new AWClientError('malformed', 'operation result failed schema validation', { schema: schemaName, errors });
+  }
+  return payload;
 }

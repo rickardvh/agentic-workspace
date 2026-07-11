@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -37,6 +39,7 @@ def test_profile_is_fresh_and_fail_closed() -> None:
     assert profile["authority"] == "command_package_ir.json"
     assert profile["compatibility"]["fingerprint"].startswith("sha256:")
     assert profile["operations"]
+    assert all(entry["operation_compatibility"]["fingerprint"].startswith("sha256:") for entry in profile["operations"])
     assert all(entry["external_consumption"]["status"] in {"supported", "runtime-backed", "internal"} for entry in profile["operations"])
 
 
@@ -103,6 +106,7 @@ def test_present_but_deferred_targets_fail_closed() -> None:
                         "operation_ref": {"id": "fixture.read", "path": "read.json"},
                         "effect_hints": {"read_only": True},
                         "conformance_refs": ["fixture.read.process"],
+                        "schemas": {"input": ["input.schema.json"], "output": ["result.schema.json"]},
                     }
                 ],
             }
@@ -128,6 +132,7 @@ def test_single_usable_target_is_target_specific() -> None:
                         "operation_ref": {"id": "fixture.read", "path": "read.json"},
                         "effect_hints": {"read_only": True},
                         "conformance_refs": ["fixture.read.process"],
+                        "schemas": {"input": ["input.schema.json"], "output": ["result.schema.json"]},
                     }
                 ],
             }
@@ -141,3 +146,34 @@ def test_runtime_exception_provenance_is_structured() -> None:
     runtime_backed = next(entry for entry in profile["operations"] if entry["external_consumption"]["status"] == "runtime-backed")
     exception = runtime_backed["external_consumption"]["runtime_exceptions"][0]
     assert {"owner", "scope", "reason", "proof", "migration_dependency"}.issubset(exception)
+
+
+def test_empty_input_or_result_schema_fails_closed() -> None:
+    module = _module()
+    base = {
+        "status": "generated",
+        "operation_ref": {"id": "fixture.read", "path": "read.json"},
+        "effect_hints": {"read_only": True},
+        "conformance_refs": ["fixture.read.process"],
+    }
+    targets = [
+        {"kind": "python", "generation_status": "mutation-capable-adapter"},
+        {"kind": "typescript", "generation_status": "mutation-capable-adapter"},
+    ]
+    for schemas in ({"input": [], "output": ["result.schema.json"]}, {"input": ["input.schema.json"], "output": []}):
+        command = {**base, "schemas": schemas}
+        ir = {"packages": [{"id": "fixture", "operation_contract_root": "contracts", "targets": targets, "commands": [command]}]}
+        assert module.build_profile(ir)["operations"][0]["external_consumption"]["status"] == "internal"
+
+
+def test_typescript_packed_artifact_exports_profile() -> None:
+    completed = subprocess.run(
+        [shutil.which("npm") or shutil.which("npm.cmd") or "npm", "pack", "--dry-run", "--json"],
+        cwd=ROOT / "generated/workspace/typescript",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    files = {item["path"] for item in json.loads(completed.stdout)[0]["files"]}
+    assert "external_consumer_profile.json" in files
