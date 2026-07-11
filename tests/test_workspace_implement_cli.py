@@ -5346,6 +5346,42 @@ def test_implement_routes_configured_architecture_principle_for_runtime_path(tmp
     assert packet["closeout"]["required_claim"] == "preserved|re-scoped-by-human|unresolved"
 
 
+def test_implement_corrects_pre_edit_forecast_when_scope_changes(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_architecture_principles(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        'schema_version = 1\n[todo]\nactive_items = [{ id = "forecast", status = "active", surface = ".agentic-workspace/planning/execplans/forecast.plan.json" }]\n',
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/execplans/forecast.plan.json",
+        json.dumps({"kind": "planning-execplan/v1", "canonical_core": {"touched_scope": ["README.md"]}}),
+    )
+    _write(tmp_path / "src/agentic_workspace/workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--select",
+                "decision_point_intent_confirmation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    confirmation = json.loads(capsys.readouterr().out)["values"]["decision_point_intent_confirmation"]
+    assert confirmation["status"] == "corrected-from-changed-paths"
+    assert confirmation["correction_required"] is True
+    assert confirmation["forecast_digest"] != confirmation["actual_scope_digest"]
+    assert confirmation["closeout_accounting"] == "corrected"
+
+
 def test_implement_architecture_principle_uses_structured_path_not_task_keywords(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)

@@ -32,16 +32,16 @@
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
     "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
     "proof_expectations": [
-      "Fill in the narrowest command that proves the promoted work."
+      "uv run pytest focused implement/proof tests: 100 passed"
     ],
     "touched_scope": [
-      "Fill in the concrete files before implementation starts."
+      "closeout scope recorded in closure_check and generated_closeout."
     ],
     "completion_criteria": [
       "Surface relevant system and subsystem intent at the decision point is implemented, validated, and closed out honestly."
     ],
     "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "closeout_decision": "archive-and-close"
   },
   "goal": [
     "Create a bounded plan for Surface relevant system and subsystem intent at the decision point."
@@ -54,17 +54,18 @@
       "outcome": "Create a bounded plan for Surface relevant system and subsystem intent at the decision point.",
       "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
       "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
-      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+      "proof": "uv run pytest focused implement/proof tests: 100 passed"
     },
     "execution": {
       "milestone": "2180-decision-point-intent",
-      "status": "active",
-      "next_step": "Fill in execution bounds, touched paths, and validation before implementation starts.",
-      "proof": "Fill in the narrowest command that proves the promoted work."
+      "status": "completed",
+      "next_step": "No required continuation remains for this archived slice.",
+      "proof": "uv run pytest focused implement/proof tests: 100 passed"
     },
     "scope": {
       "touched": [
-        "Fill in the concrete files before implementation starts."
+        "closeout scope recorded in closure_check and generated_closeout."
       ],
       "invariants": [
         "Preserve the planning contract and keep the work bounded to this plan."
@@ -85,21 +86,21 @@
     "what this slice enabled": "none yet",
     "intentionally deferred": "none",
     "discovered implications": "none yet",
-    "proof achieved now": "pending",
-    "validation still needed": "current milestone validation remains pending",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "validation still needed": "None for this archived slice; reopen only if new evidence invalidates the proof.",
+    "next likely slice": "No required continuation remains for this archived slice."
   },
   "intent_interpretation": {
     "literal request": "Surface relevant system and subsystem intent at the decision point",
     "inferred intended outcome": "Create a bounded plan for Surface relevant system and subsystem intent at the decision point.",
-    "chosen concrete what": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "chosen concrete what": "Ordinary implementation reports preserved versus corrected applicability, and proof requires closeout to account for preserved, corrected, or unresolved intent.",
     "interpretation distance": "low",
     "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
   },
   "execution_bounds": {
-    "allowed paths": "Fill in the concrete write scope before implementation starts.",
-    "max changed files": "Fill in an expected upper bound before implementation starts.",
-    "required validation commands": "Fill in the narrowest command that proves the promoted work.",
+    "allowed paths": "closeout scope recorded in closure_check and generated_closeout.",
+    "max changed files": "closed slice; no further writes expected without reopening a fresh plan.",
+    "required validation commands": "uv run pytest focused implement/proof tests: 100 passed",
     "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
     "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
   },
@@ -115,7 +116,7 @@
     "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
     "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
     "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
-    "tiny resumability note": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+    "tiny resumability note": "Archived slice is complete; reopen only if closeout evidence is invalidated.",
     "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
   },
   "delegated_judgment": {
@@ -125,7 +126,7 @@
     "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
   },
   "post_decomposition_delegation": {
-    "status": "pending",
+    "status": "skipped-local-bounded-slice",
     "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
     "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
@@ -139,26 +140,26 @@
   "references": [],
   "active_milestone": {
     "id": "2180-decision-point-intent",
-    "status": "active",
+    "status": "completed",
     "scope": "Keep this execution thread bounded to the promoted TODO item.",
     "ready": "ready",
     "blocked": "none",
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Fill in execution bounds, touched paths, and validation before implementation starts."
+    "No required continuation remains for this archived slice."
   ],
   "blockers": [
     "None."
   ],
   "touched_paths": [
-    "Fill in the concrete files before implementation starts."
+    "closeout scope recorded in closure_check and generated_closeout."
   ],
   "invariants": [
     "Preserve the planning contract and keep the work bounded to this plan."
   ],
   "validation_commands": [
-    "Fill in the narrowest command that proves the promoted work."
+    "uv run pytest focused implement/proof tests: 100 passed"
   ],
   "required_tools": [
     "None."
@@ -167,79 +168,79 @@
     "Surface relevant system and subsystem intent at the decision point is implemented, validated, and closed out honestly."
   ],
   "execution_run": {
-    "run status": "not-run-yet",
-    "executor": "",
+    "run status": "completed",
+    "executor": "agentic-planning closeout",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "execution has not started",
-    "scope touched": "none yet",
-    "changed surfaces": "none yet; execution has not changed files",
-    "validations run": "pending",
-    "result for continuation": "continue from this scaffolded execplan",
-    "next step": "Fill in execution bounds, touched paths, and validation before implementation starts."
+    "what happened": "Connected pre-edit forecast scope to actual implementation scope with stable digests and carried the confirmed intent boundary into proof and closeout claims.",
+    "scope touched": "decision-point intent forecast, implementation confirmation, proof claim boundary",
+    "changed surfaces": "src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/workspace_runtime_proof.py; tests/test_workspace_implement_cli.py",
+    "validations run": "uv run pytest focused implement/proof tests: 100 passed",
+    "result for continuation": "bounded closeout complete",
+    "next step": "archive this execplan"
   },
   "finished_run_review": {
-    "review status": "pending",
-    "scope respected": "pending",
-    "proof status": "pending",
-    "intent served": "pending",
-    "config compliance": "pending",
-    "misinterpretation risk": "pending",
-    "follow-on decision": "pending"
+    "review status": "complete",
+    "scope respected": "Added a scope-change correction fixture and proof/closeout accounting fields.",
+    "proof status": "passed",
+    "intent served": "yes",
+    "config compliance": "used planning closeout command-owned writer",
+    "misinterpretation risk": "low",
+    "follow-on decision": "none"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "pending",
-    "route skipped reason": "pending",
-    "expected savings": "pending",
-    "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "none"
   },
   "proof_report": {
-    "validation proof": "pending",
-    "proof achieved now": "pending",
-    "evidence for \"proof achieved\" state": ""
+    "validation proof": "uv run pytest focused implement/proof tests: 100 passed",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "uv run pytest focused implement/proof tests: 100 passed"
   },
   "intent_satisfaction": {
     "original intent": "Create a bounded plan for Surface relevant system and subsystem intent at the decision point.",
-    "was original intent fully satisfied?": "pending",
-    "evidence of intent satisfaction": "",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "uv run pytest focused implement/proof tests: 100 passed",
+    "unsolved intent passed to": "none"
   },
   "execution_summary": {
-    "outcome delivered": "not completed yet",
-    "validation confirmed": "pending",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
-    "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "outcome delivered": "Ordinary implementation reports preserved versus corrected applicability, and proof requires closeout to account for preserved, corrected, or unresolved intent.",
+    "validation confirmed": "uv run pytest focused implement/proof tests: 100 passed",
+    "follow-on routed to": "none",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": "archive",
+    "knowledge promoted (Memory/Docs/Config)": "none"
   },
   "durable_residue": {
     "status": "none",
-    "learned constraint": "none yet",
-    "motivation worth preserving": "none yet",
-    "canonical owner now": "none",
+    "learned constraint": "No future-relevant learning was identified beyond the closeout evidence.",
+    "motivation worth preserving": "Closeout reviewed durable residue and found no live follow-up.",
+    "canonical owner now": "archive",
     "promotion trigger": "none",
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": "archive",
+    "proposed durable intent": "Closeout reviewed durable residue and found no live follow-up.",
     "confidence": "low",
     "needs review": true,
-    "owner surface": ""
+    "owner surface": "archive"
   },
   "closure_check": {
-    "slice status": "pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "uv run pytest focused implement/proof tests: 100 passed",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
   },
   "improvement_signal_review": {
     "status": "not_checked",
@@ -259,11 +260,17 @@
     "signals fixed": [],
     "signals routed": [],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "agent closeout reflection"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
       "continuation": [],
       "memory": [],
       "config_check": [],
@@ -273,5 +280,76 @@
   },
   "drift_log": [
     "2026-07-11: Scaffolded by agentic-planning new-plan."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "no",
+    "decision": "none",
+    "target": "none",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "allowed",
+    "active_intent_satisfied": true,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": "",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
+    },
+    "continuation": {
+      "owner_surface": "",
+      "created_or_required": false,
+      "reason": ""
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Create a bounded plan for Surface relevant system and subsystem intent at the decision point.\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: uv run pytest focused implement/proof tests: 100 passed\nChanged surfaces: src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/workspace_runtime_proof.py; tests/test_workspace_implement_cli.py\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
+  }
 }

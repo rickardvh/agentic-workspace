@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
+import json
 from pathlib import Path
 from typing import Any, cast
 
@@ -863,14 +865,26 @@ def _implement_payload(
     subsystem_intents = _list_payload(_as_dict(payload["durable_intent"].get("subsystem_intent")).get("matches"))
     principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
     if subsystem_intents or principles:
+        canonical_core = _as_dict(active_planning_record_for_intent.get("canonical_core"))
+        forecast_paths = _normalize_changed_paths(_list_payload(canonical_core.get("touched_scope")))
+        forecast_basis = {"paths": forecast_paths, "principle_ids": [str(item.get("id", "")) for item in principles]}
+        actual_basis = {"paths": normalized_paths, "principle_ids": [str(item.get("id", "")) for item in principles]}
+        forecast_digest = hashlib.sha256(json.dumps(forecast_basis, sort_keys=True).encode()).hexdigest()[:16]
+        actual_digest = hashlib.sha256(json.dumps(actual_basis, sort_keys=True).encode()).hexdigest()[:16]
+        correction_required = bool(forecast_paths and set(forecast_paths) != set(normalized_paths))
         payload["decision_point_intent_confirmation"] = {
             "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
-            "status": "confirmed-from-changed-paths",
+            "status": "corrected-from-changed-paths" if correction_required else "confirmed-from-changed-paths",
             "phase": "implementation",
             "changed_paths": normalized_paths,
             "system_principles": principles[:2],
             "subsystem_intents": subsystem_intents[:2],
-            "correction_required": False,
+            "forecast_scope": forecast_paths,
+            "forecast_digest": forecast_digest,
+            "actual_scope_digest": actual_digest,
+            "correction_required": correction_required,
+            "closeout_accounting": "corrected" if correction_required else "preserved",
+            "proof_claim_boundary": "proof must apply the actual changed-path intent boundary",
             "rule": "Actual changed paths confirm or correct the pre-edit intent forecast; proof and closeout must preserve the confirmed owning boundary.",
         }
     if not planning_safety_gate["workflow_sufficient"]:
