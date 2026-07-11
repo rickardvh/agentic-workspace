@@ -27,7 +27,11 @@ from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
 from agentic_workspace.current_work_context import resolve_current_work_context
-from agentic_workspace.proof_receipt_admission import proof_command_admission, proof_receipt_admission
+from agentic_workspace.proof_receipt_admission import (
+    PROOF_RECEIPT_RESULT_OPTIONS,
+    proof_command_admission,
+    proof_receipt_admission,
+)
 from agentic_workspace.runtime_source_review import runtime_source_edit_review_for_changed_paths
 from agentic_workspace.runtime_symbol_working_set import runtime_symbol_working_set_for_changed_paths
 from agentic_workspace.workspace_runtime_core import (
@@ -881,7 +885,12 @@ def _proof_receipt_bridge_payload(
             "command": command,
             "receipt_state": evidence_state or "not-recorded",
             "diagnostic": str(item.get("diagnostic", "")),
-            "result_options": ["passed", "failed", "skipped", "waived"],
+            "result_options": list(PROOF_RECEIPT_RESULT_OPTIONS),
+            "result_contract": {
+                "admissible": list(PROOF_RECEIPT_RESULT_OPTIONS),
+                "proof_sufficient": ["passed"],
+                "rule": "Admissibility records what happened; only passed evidence satisfies proof.",
+            },
             "after_running": "Record the actual result only after executing or deliberately classifying this selected proof command.",
         }
         if not command_admission["admitted"]:

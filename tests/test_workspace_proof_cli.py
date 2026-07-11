@@ -1442,6 +1442,7 @@ def test_proof_changed_exposes_receipt_bridge_for_unrecorded_commands(tmp_path: 
     assert '--receipt-command "make test-workspace"' in action["record_passed_command"]
     assert "--receipt-result passed" in action["record_passed_command"]
     assert action["result_options"] == ["passed", "failed", "skipped", "waived"]
+    assert action["result_contract"]["proof_sufficient"] == ["passed"]
     summary_bridge = answer["proof_closeout_summary"]["receipt_bridge"]
     assert summary_bridge == {
         "status": "action-required",
@@ -1501,6 +1502,30 @@ def test_proof_receipt_bridge_marks_template_commands_unrecordable() -> None:
     assert "Substitute every placeholder" in template["safe_recovery"]
     assert "recording_command" not in template
     assert template["next_action"] == "instantiate placeholders, run the concrete command, then record the actual result"
+
+
+def test_every_bridge_result_is_admissible_but_only_passed_satisfies_proof() -> None:
+    from agentic_workspace.proof_receipt_admission import proof_receipt_admission
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_bridge_payload
+
+    bridge = _proof_receipt_bridge_payload(
+        changed_paths=["src/example.py"],
+        proof_receipt_reconciliation={"commands": [{"command": "make test", "evidence_state": "missing"}]},
+        cli_invoke=REPO_LOCAL_CLI_INVOKE,
+    )
+    for result in bridge["actions"][0]["result_options"]:
+        admission = proof_receipt_admission(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "command": "make test",
+                "result": result,
+                "recorded_at": "2026-07-11T10:00:00+00:00",
+                "changed_paths": ["src/example.py"],
+            }
+        )
+        assert admission["admitted"] is True
+        assert admission["result_class"] == result
+        assert admission["proof_sufficient"] is (result == "passed")
 
 
 def test_proof_changed_projects_learned_route_model_for_two_route_classes(tmp_path: Path, capsys) -> None:

@@ -7,7 +7,34 @@ from datetime import datetime
 from typing import Any
 
 _UNRESOLVED_TEMPLATE = re.compile(r"<[^<>\r\n]+>|\{\{[^{}\r\n]+\}\}|\$\{[^{}\r\n]+\}")
-_ACCEPTED_RESULTS = {"passed", "pass", "success", "succeeded", "failed", "fail", "failure", "error"}
+_RESULT_ALIASES = {
+    "passed": "passed",
+    "pass": "passed",
+    "success": "passed",
+    "succeeded": "passed",
+    "failed": "failed",
+    "fail": "failed",
+    "failure": "failed",
+    "error": "failed",
+    "skipped": "skipped",
+    "skip": "skipped",
+    "waived": "waived",
+    "waive": "waived",
+}
+PROOF_RECEIPT_RESULT_OPTIONS = ("passed", "failed", "skipped", "waived")
+
+
+def proof_receipt_result_contract(result: Any) -> dict[str, Any]:
+    """Classify a receipt result independently from whether it satisfies proof."""
+
+    observed = str(result or "").strip().lower()
+    result_class = _RESULT_ALIASES.get(observed, "")
+    return {
+        "admitted": bool(result_class),
+        "observed_result": observed,
+        "result_class": result_class,
+        "proof_sufficient": result_class == "passed",
+    }
 
 
 def proof_command_admission(command: Any) -> dict[str, Any]:
@@ -43,11 +70,11 @@ def proof_receipt_admission(receipt: dict[str, Any]) -> dict[str, Any]:
     command_admission = proof_command_admission(receipt.get("command"))
     if not command_admission["admitted"]:
         reject(command_admission["reason"], "command", command_admission["safe_recovery"])
-    result = str(receipt.get("result") or "").strip().lower()
-    if not result:
+    result_contract = proof_receipt_result_contract(receipt.get("result"))
+    if not result_contract["observed_result"]:
         reject("missing-result", "result", "Supply the observed result with --receipt-result.")
-    elif result not in _ACCEPTED_RESULTS:
-        reject("unsupported-result", "result", "Use an observed pass/fail result class: passed, success, failed, failure, or error.")
+    elif not result_contract["admitted"]:
+        reject("unsupported-result", "result", "Use an admitted result class: passed, failed, skipped, or waived.")
     recorded_at = str(receipt.get("recorded_at") or "").strip()
     try:
         parsed_at = datetime.fromisoformat(recorded_at.replace("Z", "+00:00")) if recorded_at else None
@@ -73,6 +100,8 @@ def proof_receipt_admission(receipt: dict[str, Any]) -> dict[str, Any]:
         "kind": "agentic-workspace/proof-receipt-admission/v1",
         "status": "admitted" if admitted else "rejected",
         "admitted": admitted,
+        "result_class": result_contract["result_class"],
+        "proof_sufficient": admitted and result_contract["proof_sufficient"],
         "failures": failures,
         "reason": "admissible" if admitted else failures[0]["reason"],
         "safe_recovery": "none" if admitted else failures[0]["recovery"],
