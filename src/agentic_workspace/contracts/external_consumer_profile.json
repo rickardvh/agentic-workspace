@@ -1,0 +1,5578 @@
+{
+  "schema_version": "agentic-workspace/external-consumer-profile/v1",
+  "authority": "command_package_ir.json",
+  "compatibility": {
+    "protocol": "1.0.0",
+    "fingerprint": "sha256:ad05059862e97531647fe6768eb50702bc90fd99cfb21f27cabc7aa25f27e0f0",
+    "additive_fields": "allowed"
+  },
+  "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
+  "operations": [
+    {
+      "id": "checkpoint.write",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/checkpoint.write.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "local_chat_checkpoint_write_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "checkpoint.write.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only checkpoint write",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "checkpoint.write",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/checkpoint.write.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "local_chat_checkpoint_write_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "checkpoint.write.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only checkpoint write",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "config.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/config.report.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "workspace_config.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "config.report.process",
+        "config.selected-text.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "config loading",
+          "payload assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "defaults.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/defaults.report.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "defaults.report.process",
+        "defaults.root-cli-authority.process",
+        "defaults.selected-text.process",
+        "defaults.tiny-text.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "defaults payload assembly",
+          "section selection",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "delegation-outcome.append",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/delegation-outcome.append.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "delegation-outcome.append.process",
+        "delegation-outcome.append-text.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "local delegation outcome append",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "doctor.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/doctor.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "doctor.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "module selection",
+          "doctor report assembly",
+          "repair guidance assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "external-intent.refresh-github",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/external-intent.refresh-github.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "external-intent.refresh-github.help.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "optional gh adapter invocation",
+          "provider-agnostic evidence normalization",
+          "evidence write policy",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "external-intent.refresh-github",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/external-intent.refresh-github.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "external-intent.refresh-github.help.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "optional gh adapter invocation",
+          "provider-agnostic evidence normalization",
+          "evidence write policy",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "implement.context",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/implement.context.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "implement.context.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "implementer context assembly",
+          "changed-path proof selection",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "init.lifecycle",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/init.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "init.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "lifecycle selection",
+          "preflight/destructive safety gates",
+          "module mutation policy",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "install.lifecycle",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/install.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "install.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "lifecycle selection",
+          "preflight/destructive safety gates",
+          "module mutation policy",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.adopt.lifecycle",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.adopt.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.adopt.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.bootstrap-cleanup.apply",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.bootstrap-cleanup.apply.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.bootstrap-cleanup.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory bootstrap cleanup safety policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.capture-note.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.capture-note.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.capture-note.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory capture recommendation policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.create-note.apply",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.create-note.apply.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.create-note.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory note creation policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.current.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.current.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.current-show.process",
+        "memory.current-check.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "legacy current-memory review policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.current.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.current.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.current-show.process",
+        "memory.current-check.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "legacy current-memory review policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.current.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.current.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.current-show.process",
+        "memory.current-check.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "legacy current-memory review policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.doctor.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.doctor.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.doctor.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/memory.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "memory.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/memory.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "memory.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/memory.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "memory.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/memory.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "memory.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/memory.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "memory.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/memory.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "memory.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/memory.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "memory.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.init.lifecycle",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.init.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.init.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.install.lifecycle",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.install.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.install.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.list-files.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.list-files.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.list-files.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory bootstrap inspection",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.list-skills.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.list-skills.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.list-skills.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory bootstrap inspection",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.migrate-layout.lifecycle",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.migrate-layout.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.migrate-layout.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.promotion-report.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.promotion-report.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.promotion-report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory bootstrap inspection",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.prompt.render",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.prompt.render.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.prompt.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory prompt wording",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.prompt.render",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.prompt.render.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.prompt.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory prompt wording",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.prompt.render",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.prompt.render.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.prompt.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory prompt wording",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.prompt.render",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.prompt.render.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.prompt.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory prompt wording",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.prompt.render",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.prompt.render.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.prompt.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory prompt wording",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.prompt.render",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.prompt.render.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.prompt.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory prompt wording",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.report.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.report.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.route-report.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.route-report.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.route-report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory bootstrap inspection",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.route-review.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.route-review.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.route-review.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory routing review policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.route.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.route.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.route.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory routing policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.search.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.search.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.search.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory search policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.status.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.status.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.status.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory bootstrap inspection",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.sync-memory.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.sync-memory.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.sync-memory.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory sync suggestion policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.uninstall.lifecycle",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.uninstall.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.uninstall.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.upgrade.lifecycle",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.upgrade.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.upgrade.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory lifecycle policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "memory.verify-payload.report",
+      "owner": "memory-bootstrap",
+      "operation_contract": "packages/memory/src/repo_memory_bootstrap/contracts/operations/memory.verify-payload.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-memory",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/memory-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "memory.verify-payload.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "memory payload verification policy",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "modules.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/modules.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "modules.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "module descriptor inspection",
+          "installed-signal detection",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "ownership.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/ownership.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "ownership.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "ownership ledger loading",
+          "authority answer selection",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.adopt.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.adopt.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.adopt.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lifecycle policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.archive-plan.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.archive-plan.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.archive-plan.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.close-item.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.close-item.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.close-item.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lifecycle mutation primitive",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.closeout.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.closeout.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.closeout.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning closeout policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.create-review.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.create-review.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.create-review.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lifecycle mutation primitive",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.delegation-decision.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.delegation-decision.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.delegation-decision.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.doctor.report",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.doctor.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.doctor.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.front-door",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/planning.front-door.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "compact_contract_answer.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "planning.front-door.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning module policy",
+          "module runtime execution",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.handoff.report",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.handoff.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.handoff.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning handoff assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.init.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.init.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.init.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lifecycle policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.install.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.install.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.install.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lifecycle policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.intake-artifact.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.intake-artifact.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.intake-artifact.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning artifact routing policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.lane-activate.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-activate.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.lane-activate.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lane mutation policy",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.lane-archive.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-archive.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.lane-archive.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lane mutation policy",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.lane-close.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-close.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.lane-close.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lane mutation policy",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.lane-create.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-create.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.lane-create.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lane mutation policy",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.lane-promote.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-promote.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.lane-promote.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lane mutation policy",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.list-files.report",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.list-files.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.list-files.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning payload inventory",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.new-plan.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.new-plan.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.new-plan.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.promote-to-plan.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.promote-to-plan.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.promote-to-plan.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning state mutation policy",
+          "planning provenance updates",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.prompt.render",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.prompt.render.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.prompt.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning upgrade-source guidance",
+          "prompt text compatibility formatting"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.reconcile.report",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.reconcile.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.reconcile.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.report.report",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.report.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.status.report",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.status.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.status.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning bootstrap inspection",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.summary.report",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.summary.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.summary.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "package-local primitive implementation",
+          "payload assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.uninstall.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.uninstall.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.uninstall.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lifecycle policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.upgrade.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.upgrade.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.upgrade.lifecycle.dry-run.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning lifecycle policy",
+          "managed planning payload mutation",
+          "module result assembly"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.verify-payload.report",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.verify-payload.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        }
+      },
+      "conformance": [
+        "planning.verify-payload.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "planning payload verification",
+          "module result assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "preflight.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/preflight.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "preflight.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "preflight token creation",
+          "takeover context assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "prompt.init",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/prompt.init.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "prompt.init.process",
+        "prompt.upgrade.process",
+        "prompt.uninstall.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "module selection",
+          "lifecycle handoff prompt rendering",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "prompt.init",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/prompt.init.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "prompt.init.process",
+        "prompt.upgrade.process",
+        "prompt.uninstall.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "module selection",
+          "lifecycle handoff prompt rendering",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "prompt.uninstall",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/prompt.uninstall.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "prompt.init.process",
+        "prompt.upgrade.process",
+        "prompt.uninstall.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "module selection",
+          "lifecycle handoff prompt rendering",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "prompt.upgrade",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/prompt.upgrade.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "prompt.init.process",
+        "prompt.upgrade.process",
+        "prompt.uninstall.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "module selection",
+          "lifecycle handoff prompt rendering",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "proof.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/proof.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "proof.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "proof route resolution",
+          "changed-path proof selection",
+          "surface-value review",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "reconcile.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/reconcile.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "reconcile.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "external intent cache refresh when available",
+          "planning reconciliation loading",
+          "safe-prune state mutation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "report.combined",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/report.combined.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "report.combined.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "config loading",
+          "module selection",
+          "combined report assembly",
+          "profile or section selection",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "session-log.manage",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/session-log.manage.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "session-log.manage.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only session log writes",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "session-log.manage",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/session-log.manage.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "session-log.manage.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only session log writes",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "session-log.manage",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/session-log.manage.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "session-log.manage.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only session log writes",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "session-log.manage",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/session-log.manage.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "session-log.manage.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only session log writes",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "session-log.manage",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/session-log.manage.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "session-log.manage.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only session log writes",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "session-log.manage",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/session-log.manage.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "session-log.manage.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only session log writes",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "session-log.manage",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/session-log.manage.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": false,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "session-log.manage.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only session log writes",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "setup.guidance",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/setup.guidance.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "setup.guidance.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "module selection",
+          "setup guidance assembly",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "skills.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/skills.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "skills.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "skill registry discovery",
+          "task recommendation scoring",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "start.context",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/start.context.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "startup_context.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "start.context.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "startup context assembly",
+          "changed-path proof selection",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "status.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/status.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "status.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "module selection",
+          "status report assembly",
+          "field selection",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "summary.report",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/summary.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "summary.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "planning summary loading",
+          "memory consult augmentation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "system-intent.sync",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/system-intent.sync.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "system-intent.sync.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "target root resolution",
+          "system-intent source metadata refresh",
+          "compiled intent mirror loading",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "uninstall.lifecycle",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/uninstall.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "uninstall.lifecycle.destructive-refusal.process",
+        "uninstall.lifecycle.strict-preflight-refusal.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "lifecycle selection",
+          "preflight/destructive safety gates",
+          "module mutation policy",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "upgrade.lifecycle",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/upgrade.lifecycle.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "upgrade.lifecycle.dry-run.process",
+        "upgrade.lifecycle.strict-preflight-refusal.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "lifecycle selection",
+          "preflight/destructive safety gates",
+          "module mutation policy",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "verification.report.report",
+      "owner": "verification-cli",
+      "operation_contract": "packages/verification/src/repo_verification_bootstrap/contracts/operations/verification.report.report.json",
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "effects": {
+        "read_only": true,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-verification",
+          "status": "runtime-backed-read-only-adapter",
+          "maturity": "runtime-backed-read-only-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/verification-cli",
+          "status": "runtime-backed-read-only-adapter",
+          "maturity": "runtime-backed-read-only-adapter"
+        }
+      },
+      "conformance": [
+        "verification.report.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "verification manifest semantics",
+          "bounded evidence report projection"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "work-thread.prune",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/work-thread.prune.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "local_work_thread_prune_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "work-thread.prune.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only work-thread prune",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "work-thread.prune",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/work-thread.prune.json",
+      "schemas": {
+        "input": [],
+        "output": [
+          "local_work_thread_prune_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred"
+        }
+      },
+      "conformance": [
+        "work-thread.prune.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          "local-only work-thread prune",
+          "target root validation",
+          "output emission"
+        ],
+        "dependency": "#2044"
+      }
+    }
+  ]
+}
