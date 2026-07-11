@@ -153,6 +153,20 @@
             "name": "prepare_closeout"
           },
           {
+            "flags": [
+              "--decision-point-carry-key"
+            ],
+            "help": "Select one exact decision-point carry work-binding key for closeout.",
+            "name": "decision_point_carry_key"
+          },
+          {
+            "flags": [
+              "--prune-decision-point-carry-key"
+            ],
+            "help": "Mark one exact abandoned decision-point carry stale while preserving other active carries.",
+            "name": "prune_decision_point_carry_key"
+          },
+          {
             "action": "store_true",
             "flags": [
               "--retain-archive"
@@ -3636,6 +3650,16 @@
           "arg": "retain_archive",
           "default": false,
           "name": "retain_archive"
+        },
+        {
+          "arg": "decision_point_carry_key",
+          "default": "",
+          "name": "decision_point_carry_key"
+        },
+        {
+          "arg": "prune_decision_point_carry_key",
+          "default": "",
+          "name": "prune_decision_point_carry_key"
         },
         {
           "arg": "parent_lane_closeout",

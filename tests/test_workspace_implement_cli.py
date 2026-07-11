@@ -5452,12 +5452,25 @@ def test_repeated_start_preserves_concurrent_active_carries_for_same_plan(tmp_pa
         "Implement forecast task A",
         "Implement forecast task B",
     }
+    blocked_payload = {}
     for index in range(2, 12):
         assert cli.main(["start", "--target", str(tmp_path), "--task", f"Implement forecast task {index}", "--format", "json"]) == 0
-        capsys.readouterr()
+        latest_payload = json.loads(capsys.readouterr().out)
+        if latest_payload.get("decision_point_intent_carry", {}).get("status") == "capacity-blocked":
+            blocked_payload = latest_payload
     bounded = list((tmp_path / ".agentic-workspace/local/decision-point-intent").glob("*.json"))
-    assert len(bounded) == 8
-    assert all(json.loads(path.read_text(encoding="utf-8"))["lifecycle"]["state"] == "active" for path in bounded)
+    assert len(bounded) == 9
+    states = [json.loads(path.read_text(encoding="utf-8"))["lifecycle"]["state"] for path in bounded]
+    assert states.count("active") == 8
+    assert states.count("capacity-blocked") == 1
+    assert blocked_payload["decision_point_intent_carry"]["status"] == "capacity-blocked"
+
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    state_path.write_text(state_path.read_text(encoding="utf-8").replace('id = "forecast"', 'id = "other-plan"'), encoding="utf-8")
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Other plan task", "--format", "json"]) == 0
+    other_payload = json.loads(capsys.readouterr().out)
+    assert "decision_point_intent_carry" not in other_payload
+    assert len(list((tmp_path / ".agentic-workspace/local/decision-point-intent").glob("*.json"))) == 10
 
 
 def test_implement_architecture_principle_uses_structured_path_not_task_keywords(tmp_path: Path, capsys) -> None:

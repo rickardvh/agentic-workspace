@@ -7280,6 +7280,16 @@
               "default": false
             },
             {
+              "name": "decision_point_carry_key",
+              "arg": "decision_point_carry_key",
+              "default": ""
+            },
+            {
+              "name": "prune_decision_point_carry_key",
+              "arg": "prune_decision_point_carry_key",
+              "default": ""
+            },
+            {
               "name": "parent_lane_closeout",
               "arg": "parent_lane_closeout",
               "default": null
@@ -7924,6 +7934,16 @@
                 ],
                 "action": "store_true",
                 "help": "Write package-normalized closeout fields before archive validation runs."
+              },
+              {
+                "name": "decision_point_carry_key",
+                "flags": ["--decision-point-carry-key"],
+                "help": "Select one exact decision-point carry work-binding key for closeout."
+              },
+              {
+                "name": "prune_decision_point_carry_key",
+                "flags": ["--prune-decision-point-carry-key"],
+                "help": "Mark one exact abandoned decision-point carry stale while preserving other active carries."
               },
               {
                 "name": "retain_archive",

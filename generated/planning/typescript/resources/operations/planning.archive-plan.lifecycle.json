@@ -49,6 +49,16 @@
       "source": "cli-option"
     },
     {
+      "name": "decision_point_carry_key",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "prune_decision_point_carry_key",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "parent_lane_closeout",
       "required": false,
       "source": "cli-option"

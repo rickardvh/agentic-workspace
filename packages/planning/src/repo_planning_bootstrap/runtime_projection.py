@@ -272,6 +272,8 @@ def apply_planning_archive_plan_operation(values: dict, _arguments: dict, _conte
             ("continuation_summary", "continuation_summary", "raw", None),
             ("retain_archive", "retain_archive", "bool", None),
             ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("decision_point_carry_key", "decision_point_carry_key", "str", ""),
+            ("prune_decision_point_carry_key", "prune_decision_point_carry_key", "str", ""),
         ),
     )
 

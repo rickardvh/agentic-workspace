@@ -18890,10 +18890,27 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
                 candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError):
                 continue
-            if _as_dict(candidate.get("lifecycle")).get("state", "active") == "active":
+            candidate_binding = _as_dict(candidate.get("work_binding"))
+            if (
+                candidate_binding.get("plan_id") == binding.get("plan_id")
+                and _as_dict(candidate.get("lifecycle")).get("state", "active") == "active"
+            ):
                 active_paths.append(candidate_path)
         if target_path not in active_paths and len(active_paths) >= 8:
-            return {}
+            capacity_path = carry_dir / f"capacity-{hashlib.sha256(str(binding.get('plan_id', '')).encode()).hexdigest()[:16]}.json"
+            blocked = {
+                "kind": "agentic-workspace/decision-point-intent-carry/v1",
+                "status": "capacity-blocked",
+                "forecast_identity": identity,
+                "forecast_digest": identity.get("digest", ""),
+                "source_revisions": source_revisions,
+                "phase_confirmations": {},
+                "work_binding": binding,
+                "lifecycle": {"state": "capacity-blocked", "created_at": now, "updated_at": now, "retention_limit": 8},
+                "safe_recovery": "Close or explicitly prune a positively stale carry for this plan, then rerun start; the forecast was not silently discarded.",
+            }
+            capacity_path.write_text(json.dumps(blocked, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            return blocked
         superseded = sorted(carry_dir.glob("*.json"), key=lambda candidate: candidate.stat().st_mtime, reverse=True)
         for old_path in superseded[8:]:
             try:
@@ -29112,7 +29129,9 @@ def _start_tiny_payload_fast(
             scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
-        _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast, task_text=task_text)
+        carry_result = _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast, task_text=task_text)
+        if carry_result.get("status") == "capacity-blocked":
+            payload["decision_point_intent_carry"] = carry_result
         if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"}:
             payload["architecture_principles_forecast"] = architecture_forecast
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
