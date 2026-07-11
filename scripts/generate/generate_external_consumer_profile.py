@@ -12,6 +12,7 @@ OUTPUTS = (
     REPO_ROOT / "generated/workspace/python/external_consumer_profile.json",
     REPO_ROOT / "generated/workspace/typescript/external_consumer_profile.json",
 )
+USABLE_MATURITY_LEVELS = {"runnable-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
 PYTHON_CLIENT = REPO_ROOT / "generated/workspace/python/client.py"
 TYPESCRIPT_CLIENT = REPO_ROOT / "generated/workspace/typescript/src/client.mjs"
 PYTHON_TYPED_OPERATIONS = REPO_ROOT / "src/agentic_workspace/generated_operations.py"
@@ -80,6 +81,7 @@ def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> di
             target_id
             for target_id, target in targets.items()
             if target.get("status") not in {"deferred", "unsupported", "metadata-proof-fixture", "parser-help-proof"}
+            and target.get("maturity") in USABLE_MATURITY_LEVELS
         }
         for root in package.get("commands", []):
             if not isinstance(root, dict):

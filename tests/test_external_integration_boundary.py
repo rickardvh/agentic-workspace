@@ -52,14 +52,11 @@ def _assert_no_adapter_managed_residue(path: Path) -> None:
     assert not any(part.lower() in forbidden for item in path.rglob("*") for part in item.relative_to(path).parts)
 
 
-def _run_external_consumer(target: Path) -> dict[str, object]:
+def _run_external_consumer(target: Path, python: Path) -> dict[str, object]:
     completed = subprocess.run(
         [
-            sys.executable,
+            str(python),
             str(ROOT / "tests/fixtures/external_consumer/consumer.py"),
-            str(ROOT / "generated/workspace/python/external_consumer_profile.json"),
-            sys.executable,
-            str(ROOT / "scripts/run_agentic_workspace.py"),
             str(target),
         ],
         cwd=target,
@@ -67,7 +64,7 @@ def _run_external_consumer(target: Path) -> dict[str, object]:
         capture_output=True,
         check=False,
     )
-    assert completed.returncode == 0, completed.stderr
+    assert completed.returncode == 0, completed.stderr or completed.stdout
     return json.loads(completed.stdout)
 
 
@@ -78,6 +75,18 @@ def test_lifecycle_profiles_preserve_zero_adapter_footprint_and_equivalent_consu
     mirrored.mkdir()
     _init_repo(necessary)
     _init_repo(mirrored)
+    dist = tmp_path / "dist"
+    subprocess.run([shutil.which("uv") or "uv", "build", "--wheel", "--out-dir", str(dist)], cwd=ROOT, check=True)
+    for package in ("agentic-memory", "agentic-planning", "agentic-verification"):
+        subprocess.run([shutil.which("uv") or "uv", "build", "--wheel", "--package", package, "--out-dir", str(dist)], cwd=ROOT, check=True)
+    consumer_env = tmp_path / "consumer-env"
+    subprocess.run([shutil.which("uv") or "uv", "venv", str(consumer_env)], check=True)
+    consumer_python = consumer_env / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
+    subprocess.run([shutil.which("uv") or "uv", "pip", "install", "--python", str(consumer_python), "jsonschema>=4.23"], check=True)
+    subprocess.run(
+        [shutil.which("uv") or "uv", "pip", "install", "--python", str(consumer_python), "--no-deps", *map(str, dist.glob("*.whl"))],
+        check=True,
+    )
 
     assert cli.main(["install", "--target", str(necessary), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
@@ -97,7 +106,7 @@ def test_lifecycle_profiles_preserve_zero_adapter_footprint_and_equivalent_consu
     assert cli.main(["status", "--target", str(mirrored), "--format", "json"]) == 0
     mirrored_status = json.loads(capsys.readouterr().out)
     assert necessary_status["health"] == mirrored_status["health"] == "healthy"
-    assert _run_external_consumer(necessary) == _run_external_consumer(mirrored)
+    assert _run_external_consumer(necessary, consumer_python) == _run_external_consumer(mirrored, consumer_python)
 
     assert cli.main(["upgrade", "--target", str(necessary), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
@@ -106,19 +115,17 @@ def test_lifecycle_profiles_preserve_zero_adapter_footprint_and_equivalent_consu
     convergence_delta = converged_tree.symmetric_difference(necessary_install_tree)
     assert not any(part.lower() in {"adapters", "plugins"} for path in convergence_delta for part in Path(path).parts)
 
-    local_consumer = necessary / ".agentic-workspace/local/integrations/test-consumer"
-    local_consumer.mkdir(parents=True)
-    (local_consumer / "cache.json").write_text("{}\n", encoding="utf-8")
     checked_in_before = {
         path: (necessary / path).read_bytes()
         for path in converged_tree
         if not path.startswith(".git/") and not path.startswith(".agentic-workspace/local/")
     }
-    shutil.rmtree(local_consumer)
+    shutil.rmtree(consumer_env)
     assert all((necessary / path).read_bytes() == content for path, content in checked_in_before.items())
     assert cli.main(["status", "--target", str(necessary), "--format", "json"]) == 0
     assert json.loads(capsys.readouterr().out)["health"] == "healthy"
-    assert _run_external_consumer(necessary)["operation"] == "config.report"
+    assert cli.main(["config", "--target", str(necessary), "--select", "workspace.workflow_obligations", "--format", "json"]) == 0
+    capsys.readouterr()
 
     assert cli.main(["uninstall", "--target", str(necessary), "--modules", "planning,memory", "--format", "json"]) == 0
     capsys.readouterr()
@@ -137,3 +144,20 @@ def test_runtime_and_payload_have_no_external_adapter_reverse_dependency() -> No
     payload = json.loads((ROOT / "src/agentic_workspace/contracts/workspace_defaults/payload.json").read_text(encoding="utf-8"))
     encoded_payload = json.dumps(payload).lower()
     assert not any(token in encoded_payload for token in ("adapter_package", "plugin_package", "adapter_registry"))
+    for manifest in ROOT.rglob("package.json"):
+        if "node_modules" in manifest.parts:
+            continue
+        package = json.loads(manifest.read_text(encoding="utf-8"))
+        dependencies = {
+            name.lower()
+            for field in ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies")
+            for name in package.get(field, {})
+        }
+        assert not any("adapter" in name or "external-consumer" in name for name in dependencies), (manifest, dependencies)
+    packaged = json.loads((ROOT / "generated/workspace/typescript/package.json").read_text(encoding="utf-8"))["files"]
+    assert not any("adapter" in item.lower() for item in packaged)
+    for source in [*ROOT.glob("src/**/*.py"), *ROOT.glob("generated/workspace/**/*.*")]:
+        if source.suffix not in {".py", ".mjs", ".js"}:
+            continue
+        text = source.read_text(encoding="utf-8")
+        assert not re.search(r"(?:from|import|require\s*\()[^\n]*(?:external_consumer|adapter_package)", text), source
