@@ -278,6 +278,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
             if isinstance(payload.get("architecture_principles_forecast"), dict)
             else {}
         ),
+        **(
+            {"decision_point_intent_carry": payload["decision_point_intent_carry"]}
+            if isinstance(payload.get("decision_point_intent_carry"), dict)
+            else {}
+        ),
         **({"pre_test_evidence_guardrail": payload["pre_test_evidence_guardrail"]} if "pre_test_evidence_guardrail" in payload else {}),
         **({"pr_comment_attention": payload["pr_comment_attention"]} if isinstance(payload.get("pr_comment_attention"), dict) else {}),
         **(
@@ -844,7 +849,9 @@ def _start_payload(
             scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
-        _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast, task_text=task_text)
+        carry_result = _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast, task_text=task_text)
+        if carry_result.get("status") == "capacity-blocked":
+            payload["decision_point_intent_carry"] = carry_result
         if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"} or architecture_forecast.get(
             "relevant_intent"
         ):
@@ -2092,6 +2099,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             },
         },
     }
+    if isinstance(payload.get("decision_point_intent_carry"), dict):
+        selected["decision_point_intent_carry"] = payload["decision_point_intent_carry"]
     if read_only_compact_default:
         decision = selected.get("decision_packet", {})
         if isinstance(decision, dict):

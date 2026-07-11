@@ -12668,6 +12668,8 @@ def _prepare_execplan_closeout(
     reopen_trigger: str | None,
     discard_summary: str | None,
     continuation_summary: str | None,
+    decision_point_carry_key: str = "",
+    prune_decision_point_carry_key: str = "",
 ) -> bool:
     record_path = _canonical_execplan_record_path(plan_path)
     record = _load_execplan_record(plan_path)
@@ -12908,7 +12910,7 @@ def _prepare_execplan_closeout(
             }
         )
     patch["closeout_distillation"] = {"buckets": buckets}
-    carry_candidates: list[dict[str, Any]] = []
+    carry_candidates: list[tuple[Path, dict[str, Any]]] = []
     carry_dir = target_root / ".agentic-workspace/local/decision-point-intent"
     active_milestone = _record_section_dict(record, "active_milestone") or {}
     plan_ids = {plan_path.stem.removesuffix(".plan"), str(active_milestone.get("id") or "")}
@@ -12918,10 +12920,40 @@ def _prepare_execplan_closeout(
         except (OSError, json.JSONDecodeError):
             continue
         binding = candidate.get("work_binding", {}) if isinstance(candidate, dict) else {}
-        if isinstance(binding, dict) and str(binding.get("plan_id") or "") in plan_ids:
-            carry_candidates.append(candidate)
+        lifecycle = candidate.get("lifecycle", {}) if isinstance(candidate, dict) else {}
+        matches_plan = (
+            isinstance(binding, dict)
+            and str(binding.get("plan_id") or "") in plan_ids
+            and (not isinstance(lifecycle, dict) or str(lifecycle.get("state") or "active") in {"active", "capacity-blocked"})
+        )
+        if matches_plan and str(binding.get("key") or "") == str(prune_decision_point_carry_key or "").strip():
+            lifecycle = lifecycle if isinstance(lifecycle, dict) else {}
+            lifecycle["state"] = "stale"
+            lifecycle["stale_reason"] = "explicit archive-plan exact-key prune"
+            candidate["lifecycle"] = lifecycle
+            if dry_run:
+                result.add(
+                    "would prune local carry", carry_path, "exact key selected as positively stale; other active carries are preserved"
+                )
+            else:
+                carry_path.write_text(json.dumps(candidate, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+                result.add("pruned local carry", carry_path, "marked stale by exact-key archive-plan recovery")
+            continue
+        if matches_plan:
+            carry_candidates.append((carry_path, candidate))
+    selected_key = str(decision_point_carry_key or "").strip()
+    selection_matched = not selected_key
+    if selected_key and carry_candidates:
+        selected_candidates = [
+            (path, candidate)
+            for path, candidate in carry_candidates
+            if str((candidate.get("work_binding") or {}).get("key") or "") == selected_key
+        ]
+        if selected_candidates:
+            carry_candidates = selected_candidates
+            selection_matched = True
     if carry_candidates:
-        carry = carry_candidates[0] if len(carry_candidates) == 1 else {}
+        carry = carry_candidates[0][1] if len(carry_candidates) == 1 else {}
         phases = carry.get("phase_confirmations", {}) if isinstance(carry, dict) else {}
         implementation = phases.get("implementation", {}) if isinstance(phases, dict) else {}
         proof = phases.get("proof", {}) if isinstance(phases, dict) else {}
@@ -12938,14 +12970,33 @@ def _prepare_execplan_closeout(
             "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
             "phase": "closeout",
             "status": proof_status
-            if len(carry_candidates) == 1 and same_forecast and proof_status in {"preserved", "corrected"}
+            if selection_matched and len(carry_candidates) == 1 and same_forecast and proof_status in {"preserved", "corrected"}
             else "unresolved",
             "forecast_digest": forecast_digest,
             "source_revisions": carry.get("source_revisions", {}) if isinstance(carry, dict) else {},
             "implementation_confirmation": implementation,
             "proof_confirmation": proof,
-            "same_forecast_consumed": same_forecast,
-            "carry_selection": "unique-plan-binding" if len(carry_candidates) == 1 else "ambiguous-plan-binding",
+            "same_forecast_consumed": selection_matched and same_forecast,
+            "carry_selection": (
+                "unknown-key"
+                if selected_key and not selection_matched
+                else "unique-plan-binding"
+                if len(carry_candidates) == 1
+                else "ambiguous-plan-binding"
+            ),
+            "carry_candidates": [
+                {
+                    "path": path.relative_to(target_root).as_posix(),
+                    "work_binding": candidate.get("work_binding", {}),
+                    "lifecycle": candidate.get("lifecycle", {}),
+                }
+                for path, candidate in carry_candidates
+            ],
+            "safe_recovery": (
+                "Rerun the same archive-plan command with --decision-point-carry-key <listed work_binding.key>; selection is exact and does not mutate other active carries."
+                if len(carry_candidates) > 1 or (selected_key and not selection_matched)
+                else "none"
+            ),
         }
     patch["completion_gate"] = _planning_completion_gate_payload(record=record, patch=patch)
     patch["generated_closeout"] = _generated_closeout_adapter(record=record, patch=patch)
@@ -12967,6 +13018,17 @@ def _prepare_execplan_closeout(
         return True
 
     _write_execplan_record(record_path=record_path, record=updated_record, render_markdown=plan_path != record_path)
+    if selection_matched and len(carry_candidates) == 1 and patch["completion_gate"].get("status") == "allowed":
+        selected_path, selected_carry = carry_candidates[0]
+        lifecycle = selected_carry.get("lifecycle", {}) if isinstance(selected_carry.get("lifecycle"), dict) else {}
+        selected_carry["lifecycle"] = {
+            **lifecycle,
+            "state": "consumed",
+            "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "consumed_by": plan_path.stem.removesuffix(".plan"),
+        }
+        selected_path.write_text(json.dumps(selected_carry, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result.add("consumed local carry", selected_path, "marked the uniquely selected carry consumed after durable closeout write")
     result.add("updated", record_path, "prepared normalized closeout fields before archive validation")
     return True
 
@@ -14093,6 +14155,54 @@ def close_planning_item(
     return result
 
 
+def _prune_decision_point_carry_for_plan(*, plan_path: Path, target_root: Path, result: InstallResult, key: str, dry_run: bool) -> bool:
+    carry_dir = target_root / ".agentic-workspace/local/decision-point-intent"
+    record = _load_execplan_record(plan_path) or {}
+    active_milestone = _record_section_dict(record, "active_milestone") or {}
+    plan_ids = {plan_path.stem.removesuffix(".plan"), str(active_milestone.get("id") or "")}
+    matches: list[tuple[Path, dict[str, Any]]] = []
+    capacity_records: list[tuple[Path, dict[str, Any]]] = []
+    for carry_path in sorted(carry_dir.glob("*.json")) if carry_dir.is_dir() else []:
+        try:
+            candidate = json.loads(carry_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        binding = candidate.get("work_binding", {}) if isinstance(candidate, dict) else {}
+        lifecycle = candidate.get("lifecycle", {}) if isinstance(candidate, dict) else {}
+        if not isinstance(binding, dict) or str(binding.get("plan_id") or "") not in plan_ids:
+            continue
+        state = str(lifecycle.get("state") or "active") if isinstance(lifecycle, dict) else "active"
+        if state == "capacity-blocked":
+            capacity_records.append((carry_path, candidate))
+        elif state == "active" and str(binding.get("key") or "") == key:
+            matches.append((carry_path, candidate))
+    if len(matches) != 1:
+        result.add(
+            "blocked-with-reason",
+            carry_dir,
+            f"exact decision-point carry key {key!r} matched {len(matches)} active records for this plan; no carry was changed",
+        )
+        return False
+    selected_path, selected = matches[0]
+    affected = [(selected_path, selected), *capacity_records]
+    if dry_run:
+        for carry_path, _candidate in affected:
+            result.add("would prune local carry", carry_path, "exact-key active-plan recovery; other active carries are preserved")
+        return True
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    for carry_path, candidate in affected:
+        lifecycle = candidate.get("lifecycle", {}) if isinstance(candidate.get("lifecycle"), dict) else {}
+        candidate["lifecycle"] = {
+            **lifecycle,
+            "state": "stale",
+            "updated_at": now,
+            "stale_reason": "explicit archive-plan exact-key active-plan recovery",
+        }
+        carry_path.write_text(json.dumps(candidate, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result.add("pruned local carry", carry_path, "marked stale by exact-key recovery; other active carries were preserved")
+    return True
+
+
 def archive_execplan(
     plan: str,
     *,
@@ -14111,6 +14221,8 @@ def archive_execplan(
     continuation_summary: str | None = None,
     retain_archive: bool = False,
     expected_planning_revision: str = "",
+    decision_point_carry_key: str = "",
+    prune_decision_point_carry_key: str = "",
 ) -> InstallResult:
     target_root = resolve_target_root(target)
     result = InstallResult(target_root=target_root, message=f"Archive execplan '{plan}'", dry_run=dry_run)
@@ -14143,6 +14255,18 @@ def archive_execplan(
         return result
 
     status = _execplan_status(plan_path)
+    prune_key = str(prune_decision_point_carry_key or "").strip()
+    if prune_key:
+        if not _prune_decision_point_carry_for_plan(
+            plan_path=plan_path,
+            target_root=target_root,
+            result=result,
+            key=prune_key,
+            dry_run=dry_run,
+        ):
+            return result
+        if status not in {"completed", "done", "closed"} or dry_run:
+            return result
     if status not in {"completed", "done", "closed"}:
         result.add("manual review", plan_path, "archive requires the active milestone status to be completed/done/closed")
         return result
@@ -14161,6 +14285,8 @@ def archive_execplan(
             reopen_trigger=reopen_trigger,
             discard_summary=discard_summary,
             continuation_summary=continuation_summary,
+            decision_point_carry_key=decision_point_carry_key,
+            prune_decision_point_carry_key="",
         )
         if not prepared or dry_run:
             return result
