@@ -413,33 +413,69 @@ def test_summary_projects_lane_records_with_accepted_status_values(tmp_path: Pat
 
 def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_path: Path) -> None:
     create_lane_record(lane_id="trust-lane", title="Trust Lane", target=tmp_path)
-    status_path = tmp_path / "child-status.json"
-    status_path.write_text(
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/trust-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["children"] = [
+        {
+            "id": "landed",
+            "issue_ref": "#1",
+            "pr_ref": "#11",
+            "outcome": "landed",
+            "reason": "",
+            "proof_ref": "PR #11 CI",
+            "new_owner": "",
+            "residual_intent": "",
+        },
+        {
+            "id": "dismissed",
+            "issue_ref": "#2",
+            "pr_ref": "#12",
+            "outcome": "dismissed-not-planned",
+            "reason": "premise invalid",
+            "proof_ref": "",
+            "new_owner": "",
+            "residual_intent": "",
+        },
+        {
+            "id": "follow-up",
+            "issue_ref": "#3",
+            "pr_ref": "",
+            "outcome": "unresolved",
+            "reason": "",
+            "proof_ref": "",
+            "new_owner": "",
+            "residual_intent": "follow-up remains",
+        },
+    ]
+    lane["slice_sequence"] = [
+        {"id": "landed", "title": "Landed", "status": "active", "execplan_ref": "", "depends_on": [], "purpose_for_lane": "test"}
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+    cache_path = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
+    cache_path.parent.mkdir(parents=True)
+    cache_path.write_text(
         json.dumps(
             {
+                "kind": "planning-external-intent-evidence/v1",
+                "refreshed_at": "2026-07-11T12:00:00+00:00",
                 "items": [
-                    {"child_id": "landed", "issue_ref": "#1", "pr_ref": "#11", "status": "merged", "proof_ref": "PR #11 CI"},
-                    {"child_id": "dismissed", "issue_ref": "#2", "pr_ref": "#12", "status": "not-planned", "reason": "premise invalid"},
-                    {"child_id": "follow-up", "issue_ref": "#3", "status": "unknown"},
-                ]
+                    {"system": "github", "id": "#1", "title": "one", "kind": "issue", "status": "closed"},
+                    {"system": "github", "id": "#2", "title": "two", "kind": "issue", "status": "closed"},
+                    {"system": "github", "id": "#3", "title": "three", "kind": "issue", "status": "open"},
+                ],
             }
         ),
         encoding="utf-8",
     )
-    lane_path = tmp_path / ".agentic-workspace/planning/lanes/trust-lane.lane.json"
     before = lane_path.read_text(encoding="utf-8")
 
-    dry_run = planning_reconcile(
-        target=tmp_path, lane="trust-lane", child_status_file="child-status.json", apply_lane_reconcile=True, dry_run=True
-    )["lane_child_reconciliation"]
+    dry_run = planning_reconcile(target=tmp_path, lane="trust-lane", apply_lane_reconcile=True, dry_run=True)["lane_child_reconciliation"]
     assert dry_run["unknown_count"] == 1
     assert dry_run["parent_auto_closed"] is False
     assert dry_run["applied"] is False
     assert lane_path.read_text(encoding="utf-8") == before
 
-    applied = planning_reconcile(target=tmp_path, lane="trust-lane", child_status_file="child-status.json", apply_lane_reconcile=True)[
-        "lane_child_reconciliation"
-    ]
+    applied = planning_reconcile(target=tmp_path, lane="trust-lane", apply_lane_reconcile=True)["lane_child_reconciliation"]
     record = json.loads(lane_path.read_text(encoding="utf-8"))
     assert applied["applied"] is True
     assert record["children"][0]["outcome"] == "landed"
@@ -447,6 +483,43 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
     assert record["children"][2]["outcome"] == "unresolved"
     assert record["parent_close_permission"] == "do-not-close-parent"
     assert record["status"] == "ready"
+    assert record["slice_sequence"][0]["status"] == "completed"
+    assert applied["exact_delta"]["slice_sequence"]["before"] == lane["slice_sequence"]
+    assert applied["exact_delta"]["slice_sequence"]["after"][0]["status"] == "completed"
+    assert applied["external_state"]["authority"] == "provider-adapter-observation"
+
+
+def test_lane_reconcile_rejects_unverified_partial_child_import(tmp_path: Path) -> None:
+    create_lane_record(lane_id="trust-lane", title="Trust Lane", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/trust-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["children"] = [
+        {
+            "id": child,
+            "issue_ref": f"#{index}",
+            "pr_ref": "",
+            "outcome": "unresolved",
+            "reason": "",
+            "proof_ref": "",
+            "new_owner": "",
+            "residual_intent": "",
+        }
+        for index, child in enumerate(("one", "two"), start=1)
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+    cache = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
+    cache.parent.mkdir(parents=True)
+    cache.write_text(json.dumps({"kind": "planning-external-intent-evidence/v1", "items": []}), encoding="utf-8")
+    imported = tmp_path / "partial.json"
+    imported.write_text(json.dumps({"items": [{"child_id": "one", "status": "merged"}]}), encoding="utf-8")
+
+    result = planning_reconcile(target=tmp_path, lane="trust-lane", child_status_file="partial.json", apply_lane_reconcile=True)[
+        "lane_child_reconciliation"
+    ]
+
+    assert result["status"] == "blocked"
+    assert result["reason"] == "unverified-child-status-import"
+    assert json.loads(lane_path.read_text(encoding="utf-8"))["children"] == lane["children"]
 
 
 def test_planning_report_includes_lane_writer_helper_and_status(tmp_path: Path) -> None:
