@@ -283,6 +283,33 @@ def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> 
     assert post_archive["lanes"]["archived_count"] == 1
 
 
+def test_lane_close_authorizes_full_parent_issue_closure_when_explicitly_permitted(tmp_path: Path) -> None:
+    create_lane_record(lane_id="parent-closeable", title="Parent Closeable", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/parent-closeable.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["references"] = [
+        {"kind": "external-work", "target": "GitHub #123", "label": "GitHub #123", "role": "parent", "locator": "GitHub #123"}
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+
+    close_lane_record(
+        "parent-closeable",
+        target=tmp_path,
+        proof="all child proof satisfied",
+        residual_work="none",
+        parent_contribution="the parent intent is fully satisfied",
+        parent_close_permission="may-close-parent",
+    )
+
+    closed = json.loads(lane_path.read_text(encoding="utf-8"))
+    gate = closed["completion_gate"]
+    assert gate["claim_level_requested"] == "full-intent-complete"
+    assert gate["claim_level_allowed"] == "full-intent-complete"
+    assert "full_intent_complete" in gate["claim_authorization"]["allowed_claim_classes"]
+    issue_action = next(action for action in gate["claim_authorization"]["closure_actions"] if action["target"] == "#123")
+    assert issue_action["authorized"] is True
+
+
 def test_summary_and_doctor_validate_invalid_active_lane_schema(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     lane_path = tmp_path / ".agentic-workspace" / "planning" / "lanes" / "invalid-lane.lane.json"

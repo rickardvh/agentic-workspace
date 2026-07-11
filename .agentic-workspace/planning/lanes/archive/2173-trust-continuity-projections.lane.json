@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "2173-trust-continuity-projections",
   "title": "Harden AW trust continuity and projection boundaries",
-  "status": "closed",
+  "status": "archived",
   "parent_decomposition_ref": "",
   "lane_outcome": "Make the seven #2173 child invariants true in ordinary product paths, each with issue-specific regression evidence and a separately reviewable PR.",
   "purpose_for_parent": "Close #2173 only after #2174 through #2180 are closed or deliberately rerouted with residual intent preserved.",
@@ -335,110 +335,109 @@
     "status": "allowed",
     "active_intent_satisfied": true,
     "human_accepted_partial": false,
-    "claim_level_requested": "lane-complete",
-    "claim_level_allowed": "lane-complete",
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "full-intent-complete",
     "required_next_action": "close-complete",
     "claim_authorization": {
       "kind": "agentic-workspace/claim-authorization/v1",
       "allowed_claim_classes": [
         "partial_progress",
         "slice_complete",
-        "lane_complete"
-      ],
-      "blocked_claim_classes": [
+        "lane_complete",
         "parent_complete",
         "full_intent_complete",
         "issue_closure"
       ],
+      "blocked_claim_classes": [],
       "closure_actions": [
         {
           "kind": "issue_closure",
           "target": "#2173",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2174",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2175",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2176",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2177",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2178",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2179",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2180",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2181",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2182",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2183",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2184",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2185",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2186",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         },
         {
           "kind": "issue_closure",
           "target": "#2187",
-          "authorized": false,
+          "authorized": true,
           "reason": "issue closure requires full-intent completion authorization from the completion gate"
         }
       ],
