@@ -21615,42 +21615,42 @@ def _fetch_github_external_intent_issue_items(*, target_root: Path, repo: str, i
     return items
 
 
+def _declared_lane_pull_request_numbers(*, target_root: Path) -> list[int]:
+    numbers: set[int] = set()
+    lane_dir = target_root / ".agentic-workspace/planning/lanes"
+    for lane_path in sorted(lane_dir.glob("*.lane.json")) if lane_dir.is_dir() else []:
+        try:
+            lane = json.loads(lane_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        for child in _list_payload(lane.get("children")):
+            if not isinstance(child, dict):
+                continue
+            match = re.fullmatch(r"(?:PR\s*)?#(\d+)", str(child.get("pr_ref") or "").strip(), flags=re.IGNORECASE)
+            if match:
+                numbers.add(int(match.group(1)))
+    return sorted(numbers)
+
+
 def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> list[dict[str, Any]]:
-    try:
-        raw_prs = _run_gh_json(
-            [
-                "pr",
-                "list",
-                "--repo",
-                repo,
-                "--state",
-                "all",
-                "--limit",
-                "1000",
-                "--json",
-                "number,title,state,url,headRefName,baseRefName,isDraft,body",
-            ],
+    evidence: list[dict[str, Any]] = []
+    for number in _declared_lane_pull_request_numbers(target_root=target_root):
+        raw_pr = _run_gh_json(
+            ["pr", "view", str(number), "--repo", repo, "--json", "number,title,state,url"],
             cwd=target_root,
         )
-    except Exception:
-        return []
-    if not isinstance(raw_prs, list):
-        return []
-    return [
-        {
-            "system": "github",
-            "number": int(raw_pr.get("number") or 0),
-            "title": str(raw_pr.get("title", "")).strip(),
-            "state": str(raw_pr.get("state", "")).strip().lower(),
-            "url": str(raw_pr.get("url", "")).strip(),
-            "head_ref": str(raw_pr.get("headRefName", "")).strip(),
-            "base_ref": str(raw_pr.get("baseRefName", "")).strip(),
-            "is_draft": bool(raw_pr.get("isDraft", False)),
-            "close_keyword_issue_ids": _close_keyword_issue_refs(str(raw_pr.get("body", "") or "")),
-        }
-        for raw_pr in raw_prs
-        if isinstance(raw_pr, dict) and raw_pr.get("number") is not None
-    ]
+        if not isinstance(raw_pr, dict) or raw_pr.get("number") is None:
+            raise WorkspaceUsageError(f"GitHub PR view for declared lane reference #{number} did not return a JSON object.")
+        evidence.append(
+            {
+                "system": "github",
+                "number": int(raw_pr.get("number") or 0),
+                "title": str(raw_pr.get("title", "")).strip(),
+                "state": str(raw_pr.get("state", "")).strip().lower(),
+                "url": str(raw_pr.get("url", "")).strip(),
+            }
+        )
+    return evidence
 
 
 def _planning_candidate_priority_from_labels(labels: Sequence[str]) -> str | None:
