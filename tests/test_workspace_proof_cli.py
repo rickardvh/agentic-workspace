@@ -1528,6 +1528,42 @@ def test_every_bridge_result_is_admissible_but_only_passed_satisfies_proof() -> 
         assert admission["proof_sufficient"] is (result == "passed")
 
 
+@pytest.mark.parametrize(
+    ("result", "expected_state"),
+    [("passed", "accepted"), ("failed", "recorded-failed"), ("skipped", "recorded-skipped"), ("waived", "recorded-waived")],
+)
+def test_every_bridge_result_reconciles_through_admission_contract(tmp_path: Path, result: str, expected_state: str) -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt_path = tmp_path / ".agentic-workspace/local/proof-receipts/last.json"
+    receipt_path.parent.mkdir(parents=True)
+    receipt_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/proof-receipt/v1",
+                "command": "make test",
+                "result": result,
+                "recorded_at": "2026-07-11T10:00:00+00:00",
+                "changed_paths": ["src/example.py"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        required_commands=["make test"],
+        changed_paths=["src/example.py"],
+        selected_commands=[{"command": "make test", "lane": "workspace_cli"}],
+    )
+    state = reconciliation["commands"][0]
+    assert state["evidence_state"] == expected_state
+    assert state["evidence_state"] != "record-stale-untrusted"
+    if result in {"skipped", "waived"}:
+        assert state["proof_sufficient"] is False
+        assert state["result_class"] == result
+
+
 def test_proof_changed_projects_learned_route_model_for_two_route_classes(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(tmp_path / "docs" / "runbook.md", "# Runbook\n")
