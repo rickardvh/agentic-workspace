@@ -5355,13 +5355,20 @@ def test_implement_corrects_pre_edit_forecast_when_scope_changes(tmp_path: Path,
     )
     _write(
         tmp_path / ".agentic-workspace/planning/execplans/forecast.plan.json",
-        json.dumps({"kind": "planning-execplan/v1", "canonical_core": {"touched_scope": ["README.md"]}}),
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "canonical_core": {"touched_scope": ["src/agentic_workspace/workspace_runtime_core.py"]},
+            }
+        ),
     )
     _write(tmp_path / "src/agentic_workspace/workspace_runtime_core.py", "VALUE = 1\n")
 
     assert cli.main(["start", "--target", str(tmp_path), "--task", "Implement the forecast plan", "--format", "json"]) == 0
     capsys.readouterr()
-    carry = json.loads((tmp_path / ".agentic-workspace/local/decision-point-intent-forecast.json").read_text(encoding="utf-8"))
+    carry_paths = list((tmp_path / ".agentic-workspace/local/decision-point-intent").glob("*.json"))
+    assert len(carry_paths) == 1
+    carry = json.loads(carry_paths[0].read_text(encoding="utf-8"))
     intent_path = tmp_path / ".agentic-workspace/system-intent/intent.toml"
     intent_path.write_text(intent_path.read_text(encoding="utf-8") + "\n# changed after forecast\n", encoding="utf-8")
 
@@ -5372,7 +5379,9 @@ def test_implement_corrects_pre_edit_forecast_when_scope_changes(tmp_path: Path,
                 "--target",
                 str(tmp_path),
                 "--changed",
-                "src/agentic_workspace/workspace_runtime_core.py",
+                "README.md",
+                "--task",
+                "Implement the forecast plan",
                 "--select",
                 "decision_point_intent_confirmation",
                 "--format",
@@ -5388,6 +5397,28 @@ def test_implement_corrects_pre_edit_forecast_when_scope_changes(tmp_path: Path,
     assert carry["source_revisions"]
     assert confirmation["forecast_digest"] != confirmation["actual_scope_digest"]
     assert confirmation["closeout_accounting"] == "corrected"
+    assert confirmation["source_revision_confirmation"]["status"] == "changed"
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Unrelated task",
+                "--select",
+                "decision_point_intent_confirmation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    unrelated = json.loads(capsys.readouterr().out)["values"].get("decision_point_intent_confirmation", {})
+    assert unrelated.get("forecast_digest", "") == ""
 
 
 def test_implement_architecture_principle_uses_structured_path_not_task_keywords(tmp_path: Path, capsys) -> None:

@@ -989,7 +989,6 @@ def test_planning_completion_gate_requires_carried_decision_point_confirmation()
     from repo_planning_bootstrap.installer import _planning_completion_gate_payload
 
     record = {
-        "decision_point_intent_confirmation_required": True,
         "required_continuation": {"required follow-on for the larger intended outcome": "no"},
         "intent_continuity": {"continuation surface": "none"},
     }
@@ -998,7 +997,10 @@ def test_planning_completion_gate_requires_carried_decision_point_confirmation()
         "closure_check": {"closure decision": "archive-and-close", "larger-intent status": "closed"},
         "proof_report": {"validation proof": "focused proof passed"},
     }
-    blocked = _planning_completion_gate_payload(record=record, patch=base_patch)
+    blocked = _planning_completion_gate_payload(
+        record=record,
+        patch={**base_patch, "decision_point_intent_confirmation": {"status": "unresolved"}},
+    )
     assert blocked["status"] == "clarification-required"
     assert "issue_closure" in blocked["claim_authorization"]["blocked_claim_classes"]
 

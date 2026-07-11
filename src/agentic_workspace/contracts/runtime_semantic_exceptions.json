@@ -1,0 +1,14 @@
+{
+  "schema_version": "agentic-workspace/runtime-semantic-exceptions/v1",
+  "exceptions": [
+    {
+      "id": "planning.closeout.decision-point-intent-carry",
+      "owner": "Planning",
+      "runtime": "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "reason": "The actor-local, gitignored carry is resolved against live work and plan identity at closeout and cannot be represented as repository-portable generated IR yet.",
+      "scope": "Selection and validation of decision-point intent carry during archive-plan --prepare-closeout only.",
+      "migration_path": "Move the closeout obligation and carry-selection predicate into planning operation IR when actor-local input bindings are supported by code generation.",
+      "proof": "Task-switch, source-revision-change, unique-plan-selection, and ambiguous-plan-selection regressions."
+    }
+  ]
+}

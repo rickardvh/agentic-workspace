@@ -57,6 +57,7 @@ from agentic_workspace.workspace_runtime_core import (
     _closeout_report_traceability_rows,
     _completion_gate_payload,
     _confirm_learned_route_hints,
+    _decision_point_source_revision_status,
     _dedupe,
     _defaults_payload,
     _direct_cli_edit_review_for_changed_paths,
@@ -4016,14 +4017,17 @@ def _proof_selection_for_changed_paths(
         local_overlay=local_overlay,
         local_high_risk_overlay=local_high_risk_overlay,
     )
-    forecast_carry = _load_decision_point_forecast(target_root=target_root)
+    forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
     forecast_identity = _as_dict(forecast_carry.get("forecast_identity"))
     implementation_confirmation = _as_dict(_as_dict(forecast_carry.get("phase_confirmations")).get("implementation"))
-    actual_intent = (
-        _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
-        if target_root is not None and isinstance(config, WorkspaceConfig)
-        else {}
-    )
+    try:
+        actual_intent = (
+            _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
+            if target_root is not None and isinstance(config, WorkspaceConfig)
+            else {}
+        )
+    except WorkspaceUsageError:
+        actual_intent = {}
     actual_subsystems = _list_payload(_as_dict(actual_intent.get("subsystem_intent")).get("matches"))[:2]
     actual_basis = {
         "actual_paths": changed_paths,
@@ -4037,6 +4041,7 @@ def _proof_selection_for_changed_paths(
             set(forecast_identity.get("planned_paths", [])) != set(changed_paths)
             or forecast_identity.get("system_principle_ids", []) != actual_basis["system_principle_ids"]
             or forecast_identity.get("subsystem_intent_ids", []) != actual_basis["subsystem_intent_ids"]
+            or _decision_point_source_revision_status(target_root=target_root, carry=forecast_carry)["status"] == "changed"
         )
     )
     decision_point_confirmation = {
@@ -4050,12 +4055,13 @@ def _proof_selection_for_changed_paths(
         "system_principles": _list_payload(architecture_principles.get("matched_principles"))[:2],
         "subsystem_intents": actual_subsystems,
         "implementation_confirmation": implementation_confirmation,
+        "source_revision_confirmation": _decision_point_source_revision_status(target_root=target_root, carry=forecast_carry),
         "implementation_record_digest": _as_dict(implementation_confirmation.get("carry_forward")).get("record_digest", ""),
         "claim_boundary": "Closeout must consume this exact confirmation record and account for preserved, corrected, or unresolved intent.",
         "closeout_required_claim": "preserved|corrected|unresolved",
     }
     decision_point_confirmation = _record_decision_point_confirmation(
-        target_root=target_root, phase="proof", confirmation=decision_point_confirmation
+        target_root=target_root, phase="proof", confirmation=decision_point_confirmation, task_text=task_text
     )
     proof_selection = {
         "kind": "proof-selection/v1",

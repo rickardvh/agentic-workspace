@@ -48,6 +48,7 @@ from agentic_workspace.workspace_runtime_core import (
     _compact_task_posture_packet_projection,
     _compact_tiny_required_proof_commands,
     _completion_boundary_payload,
+    _decision_point_source_revision_status,
     _delegation_decision_requires_attention,
     _diagnostic_profile,
     _emit_payload,
@@ -866,7 +867,7 @@ def _implement_payload(
     }
     subsystem_intents = _list_payload(_as_dict(payload["durable_intent"].get("subsystem_intent")).get("matches"))
     principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
-    forecast_carry = _load_decision_point_forecast(target_root=target_root)
+    forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
     if subsystem_intents or principles or forecast_carry:
         forecast_identity = _as_dict(forecast_carry.get("forecast_identity"))
         forecast_paths = _normalize_changed_paths(_list_payload(forecast_identity.get("planned_paths")))
@@ -876,12 +877,14 @@ def _implement_payload(
             "subsystem_intent_ids": [str(item.get("id", "")) for item in subsystem_intents[:2]],
         }
         actual_digest = hashlib.sha256(json.dumps(actual_basis, sort_keys=True).encode()).hexdigest()[:16]
+        revision_status = _decision_point_source_revision_status(target_root=target_root, carry=forecast_carry)
         correction_required = bool(
             forecast_identity
             and (
                 set(forecast_identity.get("planned_paths", [])) != set(normalized_paths)
                 or forecast_identity.get("system_principle_ids", []) != actual_basis["system_principle_ids"]
                 or forecast_identity.get("subsystem_intent_ids", []) != actual_basis["subsystem_intent_ids"]
+                or revision_status["status"] == "changed"
             )
         )
         confirmation = {
@@ -900,6 +903,7 @@ def _implement_payload(
             "forecast_digest": forecast_identity.get("digest", ""),
             "actual_scope_digest": actual_digest,
             "correction_required": correction_required,
+            "source_revision_confirmation": revision_status,
             "closeout_accounting": "corrected" if correction_required else "preserved",
             "proof_claim_boundary": "proof must apply the actual changed-path intent boundary",
             "carry_forward": {
@@ -910,7 +914,7 @@ def _implement_payload(
             "rule": "Actual changed paths confirm or correct the pre-edit intent forecast; proof and closeout must preserve the confirmed owning boundary.",
         }
         payload["decision_point_intent_confirmation"] = _record_decision_point_confirmation(
-            target_root=target_root, phase="implementation", confirmation=confirmation
+            target_root=target_root, phase="implementation", confirmation=confirmation, task_text=task_text
         )
     if not planning_safety_gate["workflow_sufficient"]:
         payload["next_allowed_action"] = "Create or promote an active execplan before continuing implementation."

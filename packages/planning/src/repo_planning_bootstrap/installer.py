@@ -11994,8 +11994,8 @@ def _planning_completion_gate_payload(
     )
     intent_continuity = _record_section_dict(patch, "intent_continuity") or _record_section_dict(record, "intent_continuity") or {}
     parent_acceptance = _record_section_dict(patch, "parent_acceptance") or _record_section_dict(record, "parent_acceptance") or {}
-    confirmation_required = bool(record.get("decision_point_intent_confirmation_required"))
     intent_confirmation = _record_section_dict(patch, "decision_point_intent_confirmation") or {}
+    confirmation_required = bool(intent_confirmation) or bool(record.get("decision_point_intent_confirmation_required"))
     intent_confirmation_satisfied = not confirmation_required or (
         intent_confirmation.get("status") in {"preserved", "corrected"}
         and bool(intent_confirmation.get("forecast_digest"))
@@ -12908,12 +12908,20 @@ def _prepare_execplan_closeout(
             }
         )
     patch["closeout_distillation"] = {"buckets": buckets}
-    if record.get("decision_point_intent_confirmation_required"):
-        carry_path = target_root / ".agentic-workspace/local/decision-point-intent-forecast.json"
+    carry_candidates: list[dict[str, Any]] = []
+    carry_dir = target_root / ".agentic-workspace/local/decision-point-intent"
+    active_milestone = _record_section_dict(record, "active_milestone") or {}
+    plan_ids = {plan_path.stem.removesuffix(".plan"), str(active_milestone.get("id") or "")}
+    for carry_path in sorted(carry_dir.glob("*.json")) if carry_dir.is_dir() else []:
         try:
-            carry = json.loads(carry_path.read_text(encoding="utf-8"))
+            candidate = json.loads(carry_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            carry = {}
+            continue
+        binding = candidate.get("work_binding", {}) if isinstance(candidate, dict) else {}
+        if isinstance(binding, dict) and str(binding.get("plan_id") or "") in plan_ids:
+            carry_candidates.append(candidate)
+    if carry_candidates:
+        carry = carry_candidates[0] if len(carry_candidates) == 1 else {}
         phases = carry.get("phase_confirmations", {}) if isinstance(carry, dict) else {}
         implementation = phases.get("implementation", {}) if isinstance(phases, dict) else {}
         proof = phases.get("proof", {}) if isinstance(phases, dict) else {}
@@ -12929,12 +12937,15 @@ def _prepare_execplan_closeout(
         patch["decision_point_intent_confirmation"] = {
             "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
             "phase": "closeout",
-            "status": proof_status if same_forecast and proof_status in {"preserved", "corrected"} else "unresolved",
+            "status": proof_status
+            if len(carry_candidates) == 1 and same_forecast and proof_status in {"preserved", "corrected"}
+            else "unresolved",
             "forecast_digest": forecast_digest,
             "source_revisions": carry.get("source_revisions", {}) if isinstance(carry, dict) else {},
             "implementation_confirmation": implementation,
             "proof_confirmation": proof,
             "same_forecast_consumed": same_forecast,
+            "carry_selection": "unique-plan-binding" if len(carry_candidates) == 1 else "ambiguous-plan-binding",
         }
     patch["completion_gate"] = _planning_completion_gate_payload(record=record, patch=patch)
     patch["generated_closeout"] = _generated_closeout_adapter(record=record, patch=patch)

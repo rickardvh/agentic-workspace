@@ -18844,14 +18844,34 @@ def _architecture_principles_forecast_payload(
     return payload
 
 
-_DECISION_POINT_FORECAST_PATH = Path(".agentic-workspace/local/decision-point-intent-forecast.json")
+_DECISION_POINT_FORECAST_DIR = Path(".agentic-workspace/local/decision-point-intent")
 
 
-def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict[str, Any]) -> dict[str, Any]:
+def _decision_point_binding(*, target_root: Path, task_text: str | None) -> dict[str, Any]:
+    context = resolve_current_work_context(root=target_root, task=str(task_text or ""))
+    basis = {
+        "branch": context.get("branch", ""),
+        "task": context.get("task", ""),
+        "plan_id": context.get("plan_id", ""),
+        "pr_ref": context.get("pr_ref", ""),
+        "thread_id": context.get("thread_id", ""),
+    }
+    return {
+        **basis,
+        "context_id": context.get("id", ""),
+        "status": context.get("status", "unknown"),
+        "key": hashlib.sha256(json.dumps(basis, sort_keys=True).encode()).hexdigest()[:16],
+    }
+
+
+def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict[str, Any], task_text: str | None = None) -> dict[str, Any]:
     """Persist exactly the pre-edit forecast emitted to the actor."""
 
     identity = _as_dict(forecast.get("forecast_identity"))
-    if target_root is None or not identity:
+    if target_root is None or not identity or not (identity.get("system_principle_ids") or identity.get("subsystem_intent_ids")):
+        return {}
+    binding = _decision_point_binding(target_root=target_root, task_text=task_text)
+    if binding["status"] == "ambiguous":
         return {}
     source_revisions: dict[str, str] = {}
     for relative in _list_payload(identity.get("authoritative_sources")):
@@ -18865,8 +18885,9 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
         "source_revisions": source_revisions,
         "emitted_forecast": forecast,
         "phase_confirmations": {},
+        "work_binding": binding,
     }
-    path = target_root / _DECISION_POINT_FORECAST_PATH
+    path = target_root / _DECISION_POINT_FORECAST_DIR / f"{binding['key']}.json"
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -18875,27 +18896,47 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
     return record
 
 
-def _load_decision_point_forecast(*, target_root: Path | None) -> dict[str, Any]:
+def _load_decision_point_forecast(*, target_root: Path | None, task_text: str | None = None) -> dict[str, Any]:
     if target_root is None:
         return {}
+    binding = _decision_point_binding(target_root=target_root, task_text=task_text)
+    if binding["status"] == "ambiguous":
+        return {}
+    path = target_root / _DECISION_POINT_FORECAST_DIR / f"{binding['key']}.json"
     try:
-        loaded = json.loads((target_root / _DECISION_POINT_FORECAST_PATH).read_text(encoding="utf-8"))
+        loaded = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return {}
     return loaded if isinstance(loaded, dict) and loaded.get("kind") == "agentic-workspace/decision-point-intent-carry/v1" else {}
 
 
-def _record_decision_point_confirmation(*, target_root: Path | None, phase: str, confirmation: dict[str, Any]) -> dict[str, Any]:
+def _decision_point_source_revision_status(*, target_root: Path | None, carry: dict[str, Any]) -> dict[str, Any]:
+    expected = _as_dict(carry.get("source_revisions"))
+    current: dict[str, str] = {}
+    if target_root is not None:
+        for relative in expected:
+            path = target_root / relative
+            current[relative] = hashlib.sha256(path.read_bytes()).hexdigest()[:16] if path.is_file() else "missing"
+    changed = sorted(relative for relative, digest in expected.items() if current.get(relative) != digest)
+    return {"status": "changed" if changed else "preserved", "expected": expected, "current": current, "changed_sources": changed}
+
+
+def _record_decision_point_confirmation(
+    *, target_root: Path | None, phase: str, confirmation: dict[str, Any], task_text: str | None = None
+) -> dict[str, Any]:
     if target_root is None:
         return confirmation
-    record = _load_decision_point_forecast(target_root=target_root)
+    record = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
     if not record:
         return confirmation
     confirmations = _as_dict(record.get("phase_confirmations"))
     confirmations[phase] = confirmation
     record["phase_confirmations"] = confirmations
     try:
-        (target_root / _DECISION_POINT_FORECAST_PATH).write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        binding = _as_dict(record.get("work_binding"))
+        (target_root / _DECISION_POINT_FORECAST_DIR / f"{binding.get('key', '')}.json").write_text(
+            json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
     except (AttributeError, OSError):
         pass
     return confirmation
@@ -29044,7 +29085,7 @@ def _start_tiny_payload_fast(
             scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
-        _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast)
+        _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast, task_text=task_text)
         if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"}:
             payload["architecture_principles_forecast"] = architecture_forecast
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)

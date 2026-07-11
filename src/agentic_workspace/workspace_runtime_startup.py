@@ -844,7 +844,7 @@ def _start_payload(
             scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
-        _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast)
+        _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast, task_text=task_text)
         if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"} or architecture_forecast.get(
             "relevant_intent"
         ):
