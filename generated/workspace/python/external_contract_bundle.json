@@ -21,7 +21,7 @@
       "identity": "config.report",
       "version": "agentic-workspace/operation/v1",
       "fingerprint": "sha256:653712108ea4757a7f337741adc1c68d758a6db1bf581afe3a9c7fcd43b5ec08",
-      "compatibility_fingerprint": "sha256:8f9d1292875f2ffaff804cdcfa6af4d7b912a5cdf9bee188f315d93a7012ab38",
+      "compatibility_fingerprint": "sha256:8cb4d804dd32bdd6cb940e96426f6d18fe830e7aa054d45dbec471a3607649d1",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "config.report",
@@ -291,6 +291,17 @@
         ],
         "dependency": "#2044"
       },
+      "schema_roles": {
+        "input": [
+          "config_report_input.schema.json"
+        ],
+        "output": [
+          "config_report_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
       "compatibility_surface": {
         "contract": {
           "schema_version": "agentic-workspace/operation/v1",
@@ -335,100 +346,106 @@
           ]
         },
         "schemas": {
-          "config_report_input.schema.json": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "x-agentic-workspace-doc-role": "contract-reference",
-            "type": "object",
-            "properties": {
-              "target": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+          "input": {
+            "config_report_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json",
+                    null
+                  ]
+                },
+                "select": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "verbose": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                }
               },
-              "format": {
-                "enum": [
-                  "text",
-                  "json",
-                  null
-                ]
-              },
-              "select": {
-                "type": [
-                  "string",
-                  "null"
-                ]
-              },
-              "verbose": {
-                "type": [
-                  "boolean",
-                  "null"
-                ]
-              }
-            },
-            "additionalProperties": false
+              "additionalProperties": false
+            }
           },
-          "config_report_result.schema.json": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "x-agentic-workspace-doc-role": "contract-reference",
-            "type": "object",
-            "required": [
-              "kind",
-              "profile",
-              "target",
-              "workspace"
-            ],
-            "properties": {
-              "kind": {
-                "type": "string",
-                "pattern": "^agentic-workspace/config-"
+          "output": {
+            "config_report_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind",
+                "profile",
+                "target",
+                "workspace"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "pattern": "^agentic-workspace/config-"
+                },
+                "profile": {
+                  "enum": [
+                    "tiny",
+                    "full"
+                  ]
+                },
+                "target": {
+                  "type": "string"
+                },
+                "workspace": {
+                  "type": "object"
+                }
               },
-              "profile": {
-                "enum": [
-                  "tiny",
-                  "full"
-                ]
-              },
-              "target": {
-                "type": "string"
-              },
-              "workspace": {
-                "type": "object"
-              }
-            },
-            "additionalProperties": true
+              "additionalProperties": true
+            }
           },
-          "operation_failure.schema.json": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "x-agentic-workspace-doc-role": "contract-reference",
-            "type": "object",
-            "required": [
-              "status"
-            ],
-            "properties": {
-              "kind": {
-                "type": "string",
-                "minLength": 1
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
               },
-              "status": {
-                "type": "string",
-                "enum": [
-                  "rejected",
-                  "failed"
-                ]
-              },
-              "message": {
-                "type": "string"
-              },
-              "command": {
-                "type": "string"
-              },
-              "exit_status": {
-                "type": "integer",
-                "minimum": 1
-              }
-            },
-            "additionalProperties": true
+              "additionalProperties": true
+            }
           }
         }
       }
@@ -437,7 +454,7 @@
       "identity": "delegation-outcome.append",
       "version": "agentic-workspace/operation/v1",
       "fingerprint": "sha256:3f4b5cb1a61c106cb52d4016a54eabd37a0899661aacea27aee48bfd439e46ff",
-      "compatibility_fingerprint": "sha256:6ec8bea3b6045b07c4f7467785f41bff2ed315da22cd30a2a0d04bd51a49dfa8",
+      "compatibility_fingerprint": "sha256:2c5c33e149040ee8fae0fe89550b107cc12d99ecd64cccfb37420b91515db8dc",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "delegation-outcome.append",
@@ -648,6 +665,17 @@
         ],
         "dependency": "#2044"
       },
+      "schema_roles": {
+        "input": [
+          "delegation_outcome_append_input.schema.json"
+        ],
+        "output": [
+          "delegation_outcome_append_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
       "compatibility_surface": {
         "contract": {
           "schema_version": "agentic-workspace/operation/v1",
@@ -711,109 +739,115 @@
           ]
         },
         "schemas": {
-          "delegation_outcome_append_input.schema.json": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "x-agentic-workspace-doc-role": "contract-reference",
-            "type": "object",
-            "required": [
-              "delegation_target",
-              "task_class",
-              "outcome"
-            ],
-            "properties": {
-              "delegation_target": {
-                "type": "string",
-                "minLength": 1
+          "input": {
+            "delegation_outcome_append_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "delegation_target",
+                "task_class",
+                "outcome"
+              ],
+              "properties": {
+                "delegation_target": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "task_class": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "outcome": {
+                  "enum": [
+                    "success",
+                    "mixed",
+                    "failed"
+                  ]
+                },
+                "handoff_sufficiency": {
+                  "enum": [
+                    "sufficient",
+                    "borderline",
+                    "insufficient"
+                  ]
+                },
+                "review_burden": {
+                  "enum": [
+                    "light",
+                    "normal",
+                    "high"
+                  ]
+                },
+                "escalation_required": {
+                  "type": "boolean"
+                }
               },
-              "task_class": {
-                "type": "string",
-                "minLength": 1
-              },
-              "outcome": {
-                "enum": [
-                  "success",
-                  "mixed",
-                  "failed"
-                ]
-              },
-              "handoff_sufficiency": {
-                "enum": [
-                  "sufficient",
-                  "borderline",
-                  "insufficient"
-                ]
-              },
-              "review_burden": {
-                "enum": [
-                  "light",
-                  "normal",
-                  "high"
-                ]
-              },
-              "escalation_required": {
-                "type": "boolean"
-              }
-            },
-            "additionalProperties": false
+              "additionalProperties": false
+            }
           },
-          "delegation_outcome_append_result.schema.json": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "x-agentic-workspace-doc-role": "contract-reference",
-            "type": "object",
-            "required": [
-              "kind",
-              "path",
-              "record_count",
-              "recorded"
-            ],
-            "properties": {
-              "kind": {
-                "const": "agentic-workspace/delegation-outcomes/v1"
+          "output": {
+            "delegation_outcome_append_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind",
+                "path",
+                "record_count",
+                "recorded"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/delegation-outcomes/v1"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "record_count": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "recorded": {
+                  "type": "object"
+                }
               },
-              "path": {
-                "type": "string"
-              },
-              "record_count": {
-                "type": "integer",
-                "minimum": 1
-              },
-              "recorded": {
-                "type": "object"
-              }
-            },
-            "additionalProperties": true
+              "additionalProperties": true
+            }
           },
-          "operation_failure.schema.json": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
-            "x-agentic-workspace-doc-role": "contract-reference",
-            "type": "object",
-            "required": [
-              "status"
-            ],
-            "properties": {
-              "kind": {
-                "type": "string",
-                "minLength": 1
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
               },
-              "status": {
-                "type": "string",
-                "enum": [
-                  "rejected",
-                  "failed"
-                ]
-              },
-              "message": {
-                "type": "string"
-              },
-              "command": {
-                "type": "string"
-              },
-              "exit_status": {
-                "type": "integer",
-                "minimum": 1
-              }
-            },
-            "additionalProperties": true
+              "additionalProperties": true
+            }
           }
         }
       }

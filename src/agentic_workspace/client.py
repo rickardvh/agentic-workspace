@@ -66,19 +66,32 @@ def operation_compatibility_fingerprint(contract: Mapping[str, Any]) -> str:
     normalized = {key: contract.get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")}
     bundle = external_contract_bundle()
     operation = bundle["operations"].get(str(contract.get("id")), {})
-    schemas = {name: bundle["schemas"][name]["schema"] for name in operation.get("schemas", [])}
+    schemas = operation.get("compatibility_surface", {}).get("schemas", {})
     encoded = json.dumps({"contract": normalized, "schemas": normalize(schemas)}, sort_keys=True, separators=(",", ":")).encode()
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
-def _surface_compatible(required: Any, available: Any) -> bool:
+def _surface_compatible(required: Any, available: Any, *, role: str = "contract", keyword: str = "") -> bool:
     if isinstance(required, dict):
         return isinstance(available, dict) and all(
-            key in available and _surface_compatible(value, available[key]) for key, value in required.items()
+            key in available and _surface_compatible(value, available[key], role=role, keyword=key) for key, value in required.items()
         )
     if isinstance(required, list):
-        return isinstance(available, list) and all(item in available for item in required)
+        if not isinstance(available, list):
+            return False
+        if keyword == "required":
+            return all(item in required for item in available) if role == "input" else all(item in available for item in required)
+        if keyword in {"enum", "type"}:
+            return all(item in available for item in required) if role == "input" else all(item in required for item in available)
+        return required == available
     return required == available
+
+
+def compatibility_surface_satisfied(required: Mapping[str, Any], available: Mapping[str, Any]) -> bool:
+    return _surface_compatible(required.get("contract"), available.get("contract")) and all(
+        _surface_compatible(schemas, available.get("schemas", {}).get(role), role=role)
+        for role, schemas in required.get("schemas", {}).items()
+    )
 
 
 def negotiate_requirements(
@@ -96,8 +109,8 @@ def negotiate_requirements(
             results.append({"operation": operation_id, "status": "runtime-backed", "reason": "explicit runtime-backed opt-in required"})
         elif support not in {"supported", "runtime-backed"}:
             results.append({"operation": operation_id, "status": "unsupported", "reason": f"support status is {support}"})
-        elif isinstance(requirement, Mapping) and not _surface_compatible(
-            requirement.get("compatibility_surface"), operation.get("compatibility_surface")
+        elif isinstance(requirement, Mapping) and not compatibility_surface_satisfied(
+            requirement.get("compatibility_surface", {}), operation.get("compatibility_surface", {})
         ):
             results.append({"operation": operation_id, "status": "incompatible", "reason": "operation compatibility surface is breaking"})
         elif isinstance(requirement, str) and requirement != operation["compatibility_fingerprint"]:

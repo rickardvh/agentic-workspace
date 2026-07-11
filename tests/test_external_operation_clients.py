@@ -165,13 +165,14 @@ def test_schema_compatibility_distinguishes_optional_addition_from_breaking_chan
     operation_id, operation = next(iter(bundle["operations"].items()))
     requirement = {"compatibility_surface": copy.deepcopy(operation["compatibility_surface"])}
     additive = copy.deepcopy(bundle)
-    schema_name = operation["schemas"][0]
-    schema = additive["operations"][operation_id]["compatibility_surface"]["schemas"][schema_name]
+    role = next(role for role, schemas in operation["compatibility_surface"]["schemas"].items() if schemas)
+    schema_name = next(iter(operation["compatibility_surface"]["schemas"][role]))
+    schema = additive["operations"][operation_id]["compatibility_surface"]["schemas"][role][schema_name]
     schema.setdefault("properties", {})["future_optional"] = {"type": "string"}
     monkeypatch.setattr(public_client, "external_contract_bundle", lambda: additive)
     assert negotiate_requirements({operation_id: requirement}, allow_runtime_backed=True)["compatible"] is True
     breaking = copy.deepcopy(bundle)
-    changed = breaking["operations"][operation_id]["compatibility_surface"]["schemas"][schema_name]
+    changed = breaking["operations"][operation_id]["compatibility_surface"]["schemas"][role][schema_name]
     optional = next(name for name in changed.get("properties", {}) if name not in changed.get("required", []))
     del changed["properties"][optional]
     monkeypatch.setattr(public_client, "external_contract_bundle", lambda: breaking)
@@ -184,6 +185,30 @@ def test_requirement_matrix_reports_unsupported(monkeypatch) -> None:
     operation["external_consumption"]["status"] = "target-specific"
     monkeypatch.setattr(public_client, "external_contract_bundle", lambda: bundle)
     assert negotiate_requirements({operation_id: None})["requirements"][0]["status"] == "unsupported"
+
+
+@pytest.mark.parametrize(
+    ("role", "old_schema", "new_schema", "compatible"),
+    [
+        ("input", {"required": ["a"]}, {"required": ["a", "b"]}, False),
+        ("input", {"enum": ["a", "b"]}, {"enum": ["a"]}, False),
+        ("input", {"enum": ["a"]}, {"enum": ["a", "b"]}, True),
+        ("input", {"type": ["string"]}, {"type": ["string", "null"]}, True),
+        ("output", {"required": ["a"]}, {"required": []}, False),
+        ("output", {"enum": ["a"]}, {"enum": ["a", "b"]}, False),
+        ("output", {"type": ["string"]}, {"type": ["string", "null"]}, False),
+    ],
+)
+def test_python_and_typescript_role_aware_compatibility(
+    role: str, old_schema: dict[str, object], new_schema: dict[str, object], compatible: bool
+) -> None:
+    old = {"contract": {}, "schemas": {role: {"fixture": old_schema}}}
+    new = {"contract": {}, "schemas": {role: {"fixture": new_schema}}}
+    assert public_client.compatibility_surface_satisfied(old, new) is compatible
+    script = f"import {{compatibilitySurfaceSatisfied}} from './generated/workspace/typescript/src/client.mjs'; console.log(compatibilitySurfaceSatisfied({json.dumps(old)}, {json.dumps(new)}));"
+    result = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == str(compatible).lower()
 
 
 def test_generated_operation_specific_wrapper_uses_public_contract() -> None:

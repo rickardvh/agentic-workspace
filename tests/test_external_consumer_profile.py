@@ -266,13 +266,16 @@ def test_recursive_schema_graph_preserves_relative_context_and_fragments(tmp_pat
     child = tmp_path / "src/owner/nested/child.schema.json"
     child.parent.mkdir(parents=True)
     root.write_text('{"$ref":"nested/child.schema.json#/$defs/value"}\n', encoding="utf-8")
-    child.write_text('{"$defs":{"value":{"type":"string"}}}\n', encoding="utf-8")
+    child.write_text('{"$defs":{"value":{"$ref":"#/$defs/leaf"},"leaf":{"type":"string"}}}\n', encoding="utf-8")
     closure, graph = module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
     assert "src/owner/nested/child.schema.json" in closure
     assert graph["src/owner/nested/child.schema.json"]["source"] == "src/owner/nested/child.schema.json"
-    child.write_text('{"$id":"ignored.schema.json","$defs":{"value":{"type":"string"}}}\n', encoding="utf-8")
+    child.write_text('{"$id":"ignored.schema.json","$defs":{"value":{"$ref":"#/$defs/leaf"},"leaf":{"type":"string"}}}\n', encoding="utf-8")
     closure, _ = module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
     assert not any("ignored.schema.json" in name for name in closure)
+    child.write_text('{"$defs":{"value":{"$ref":"#/$defs/missing"}}}\n', encoding="utf-8")
+    with pytest.raises(ValueError, match="missing schema fragment"):
+        module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
     root.write_text('{"$ref":"nested/child.schema.json#/$defs/missing"}\n', encoding="utf-8")
     with pytest.raises(ValueError, match="missing schema fragment"):
         module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)

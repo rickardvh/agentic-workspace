@@ -14,7 +14,7 @@ export function externalContractBundle() { return JSON.parse(readFileSync(bundle
 export function operationCompatibilityFingerprint(contract) {
   const normalized = Object.fromEntries(['schema_version', 'id', 'classification', 'inputs', 'output', 'effects', 'guards'].map((key) => [key, contract[key] ?? null]));
   const bundle = externalContractBundle(); const operation = bundle.operations[String(contract.id)] ?? {};
-  const schemas = Object.fromEntries((operation.schemas ?? []).map((name) => [name, bundle.schemas[name].schema]));
+  const schemas = operation.compatibility_surface?.schemas ?? {};
   const sortValue = (value) => Array.isArray(value) ? value.map(sortValue) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortValue(value[key])])) : value;
   const normalize = (value) => {
     if (Array.isArray(value)) return value.map(normalize);
@@ -26,18 +26,39 @@ export function operationCompatibilityFingerprint(contract) {
 }
 export function negotiateRequirements(requirements, { allowRuntimeBacked = false } = {}) {
   const bundle = externalContractBundle(); const results = [];
-  const surfaceCompatible = (required, available) => Array.isArray(required) ? Array.isArray(available) && required.every((item) => available.some((candidate) => JSON.stringify(candidate) === JSON.stringify(item))) : required && typeof required === 'object' ? available && typeof available === 'object' && Object.entries(required).every(([key, value]) => key in available && surfaceCompatible(value, available[key])) : required === available;
+  const surfaceCompatible = (required, available, role = 'contract', keyword = '') => {
+    if (Array.isArray(required)) {
+      if (!Array.isArray(available)) return false;
+      if (keyword === 'required') return role === 'input' ? available.every((item) => required.includes(item)) : required.every((item) => available.includes(item));
+      if (['enum', 'type'].includes(keyword)) return role === 'input' ? required.every((item) => available.includes(item)) : available.every((item) => required.includes(item));
+      return JSON.stringify(required) === JSON.stringify(available);
+    }
+    return required && typeof required === 'object' ? available && typeof available === 'object' && Object.entries(required).every(([key, value]) => key in available && surfaceCompatible(value, available[key], role, key)) : required === available;
+  };
+  const compatibilitySatisfied = compatibilitySurfaceSatisfied;
   for (const [operationId, fingerprint] of Object.entries(requirements)) {
     const operation = bundle.operations[operationId];
     if (!operation) { results.push({ operation: operationId, status: 'missing', reason: 'operation is not packaged' }); continue; }
     const support = operation.external_consumption.status;
     if (support === 'runtime-backed' && !allowRuntimeBacked) results.push({ operation: operationId, status: 'runtime-backed', reason: 'explicit runtime-backed opt-in required' });
     else if (!['supported', 'runtime-backed'].includes(support)) results.push({ operation: operationId, status: 'unsupported', reason: `support status is ${support}` });
-    else if (fingerprint && typeof fingerprint === 'object' && !surfaceCompatible(fingerprint.compatibility_surface, operation.compatibility_surface)) results.push({ operation: operationId, status: 'incompatible', reason: 'operation compatibility surface is breaking' });
+    else if (fingerprint && typeof fingerprint === 'object' && !compatibilitySatisfied(fingerprint.compatibility_surface, operation.compatibility_surface)) results.push({ operation: operationId, status: 'incompatible', reason: 'operation compatibility surface is breaking' });
     else if (typeof fingerprint === 'string' && fingerprint !== operation.compatibility_fingerprint) results.push({ operation: operationId, status: 'incompatible', reason: 'operation compatibility fingerprint mismatch' });
     else results.push({ operation: operationId, status: 'compatible', reason: 'requirement satisfied' });
   }
   return { compatible: results.every((item) => item.status === 'compatible'), requirements: results };
+}
+export function compatibilitySurfaceSatisfied(required, available) {
+  const compare = (oldValue, newValue, role = 'contract', keyword = '') => {
+    if (Array.isArray(oldValue)) {
+      if (!Array.isArray(newValue)) return false;
+      if (keyword === 'required') return role === 'input' ? newValue.every((item) => oldValue.includes(item)) : oldValue.every((item) => newValue.includes(item));
+      if (['enum', 'type'].includes(keyword)) return role === 'input' ? oldValue.every((item) => newValue.includes(item)) : newValue.every((item) => oldValue.includes(item));
+      return JSON.stringify(oldValue) === JSON.stringify(newValue);
+    }
+    return oldValue && typeof oldValue === 'object' ? newValue && typeof newValue === 'object' && Object.entries(oldValue).every(([key, value]) => key in newValue && compare(value, newValue[key], role, key)) : oldValue === newValue;
+  };
+  return compare(required.contract, available.contract) && Object.entries(required.schemas ?? {}).every(([role, schemas]) => compare(schemas, available.schemas?.[role], role));
 }
 export function detectWorkspace(target) {
   const root = resolve(target); const path = join(root, '.agentic-workspace', 'config.toml');
