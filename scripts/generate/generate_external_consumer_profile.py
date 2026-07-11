@@ -74,11 +74,14 @@ def build_profile(ir: dict[str, object]) -> dict[str, object]:
                     },
                 }
                 operations.append(entry)
-    operations.sort(key=lambda item: str(item["id"]))
-    operation_ids = [str(item["id"]) for item in operations]
-    duplicates = sorted({operation_id for operation_id in operation_ids if operation_ids.count(operation_id) > 1})
-    if duplicates:
-        raise ValueError(f"duplicate explicit operation ids: {', '.join(duplicates)}")
+    unique: dict[str, dict[str, object]] = {}
+    for entry in operations:
+        operation_id = str(entry["id"])
+        previous = unique.get(operation_id)
+        if previous is not None and previous["operation_contract"] != entry["operation_contract"]:
+            raise ValueError(f"conflicting explicit operation id: {operation_id}")
+        unique.setdefault(operation_id, entry)
+    operations = sorted(unique.values(), key=lambda item: str(item["id"]))
     fingerprint_input = json.dumps(operations, sort_keys=True, separators=(",", ":")).encode()
     return {
         "schema_version": "agentic-workspace/external-consumer-profile/v1",

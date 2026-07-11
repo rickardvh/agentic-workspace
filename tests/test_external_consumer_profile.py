@@ -67,9 +67,10 @@ def test_child_without_explicit_operation_does_not_duplicate_parent() -> None:
     assert [entry["id"] for entry in module.build_profile(ir)["operations"]] == ["fixture.root"]
 
 
-def test_duplicate_explicit_operation_ids_fail_closed() -> None:
+def test_conflicting_explicit_operation_ids_fail_closed() -> None:
     module = _module()
-    command = {"status": "generated", "operation_ref": {"id": "fixture.read", "path": "read.json"}}
-    ir = {"packages": [{"id": "fixture", "operation_contract_root": "contracts", "targets": [], "commands": [command, command]}]}
-    with pytest.raises(ValueError, match="duplicate explicit operation ids"):
+    first = {"status": "generated", "operation_ref": {"id": "fixture.read", "path": "read.json"}}
+    second = {"status": "generated", "operation_ref": {"id": "fixture.read", "path": "other.json"}}
+    ir = {"packages": [{"id": "fixture", "operation_contract_root": "contracts", "targets": [], "commands": [first, second]}]}
+    with pytest.raises(ValueError, match="conflicting explicit operation id"):
         module.build_profile(ir)
