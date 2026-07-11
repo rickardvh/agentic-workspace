@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import shutil
@@ -12,7 +13,16 @@ from types import SimpleNamespace
 import pytest
 
 import agentic_workspace.client as public_client
-from agentic_workspace import AWClientError, detect_workspace, invoke_operation, require_operations, resolve_invocation
+from agentic_workspace import (
+    AWClientError,
+    detect_workspace,
+    external_contract_bundle,
+    invoke_operation,
+    negotiate_requirements,
+    operation_compatibility_fingerprint,
+    require_operations,
+    resolve_invocation,
+)
 from agentic_workspace.generated_operations import config_report, delegation_outcome_append
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -117,6 +127,120 @@ def test_public_operation_client_invokes_by_operation_identity() -> None:
         allow_runtime_backed=True,
     )
     assert payload["kind"] == "agentic-workspace/config-tiny/v1"
+
+
+def test_contract_requirement_negotiation_distinguishes_change_classes() -> None:
+    bundle = external_contract_bundle()
+    operation_id, operation = next(iter(bundle["operations"].items()))
+    compatible = negotiate_requirements({operation_id: operation["compatibility_fingerprint"]}, allow_runtime_backed=True)
+    assert compatible["compatible"] is True
+    additive = dict(operation["contract"])
+    additive["future_additive_field"] = {"preserved": True}
+    assert operation_compatibility_fingerprint(additive) == operation["compatibility_fingerprint"]
+    breaking_contract = dict(operation["contract"])
+    breaking_contract["output"] = {"kind": "breaking"}
+    breaking_fingerprint = operation_compatibility_fingerprint(breaking_contract)
+    assert breaking_fingerprint != operation["compatibility_fingerprint"]
+    breaking = negotiate_requirements({operation_id: breaking_fingerprint}, allow_runtime_backed=True)
+    assert breaking == {
+        "compatible": False,
+        "requirements": [{"operation": operation_id, "status": "incompatible", "reason": "operation fingerprint mismatch"}],
+    }
+    missing = negotiate_requirements({"does.not.exist": None})
+    assert missing["requirements"][0]["status"] == "missing"
+    runtime_backed = negotiate_requirements({operation_id: None})
+    assert runtime_backed["requirements"][0]["status"] == "runtime-backed"
+    script = f"""
+import {{ negotiateRequirements, operationCompatibilityFingerprint, externalContractBundle }} from './generated/workspace/typescript/src/client.mjs';
+const operation = externalContractBundle().operations[{json.dumps(operation_id)}];
+console.log(JSON.stringify([negotiateRequirements({{{json.dumps(operation_id)}: null}}).requirements[0].status, negotiateRequirements({{'does.not.exist': null}}).requirements[0].status, operationCompatibilityFingerprint(operation.contract) === operation.compatibility_fingerprint]));
+"""
+    result = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == ["runtime-backed", "missing", True]
+
+
+def test_schema_compatibility_distinguishes_optional_addition_from_breaking_change(monkeypatch) -> None:
+    bundle = external_contract_bundle()
+    operation_id, operation = next(iter(bundle["operations"].items()))
+    requirement = {"compatibility_surface": copy.deepcopy(operation["compatibility_surface"])}
+    additive = copy.deepcopy(bundle)
+    role = next(role for role, schemas in operation["compatibility_surface"]["schemas"].items() if schemas)
+    schema_name = next(iter(operation["compatibility_surface"]["schemas"][role]))
+    schema = additive["operations"][operation_id]["compatibility_surface"]["schemas"][role][schema_name]
+    schema.setdefault("properties", {})["future_optional"] = {"type": "string"}
+    monkeypatch.setattr(public_client, "external_contract_bundle", lambda: additive)
+    assert negotiate_requirements({operation_id: requirement}, allow_runtime_backed=True)["compatible"] is True
+    breaking = copy.deepcopy(bundle)
+    changed = breaking["operations"][operation_id]["compatibility_surface"]["schemas"][role][schema_name]
+    optional = next(name for name in changed.get("properties", {}) if name not in changed.get("required", []))
+    del changed["properties"][optional]
+    monkeypatch.setattr(public_client, "external_contract_bundle", lambda: breaking)
+    assert negotiate_requirements({operation_id: requirement}, allow_runtime_backed=True)["compatible"] is False
+
+
+def test_requirement_matrix_reports_unsupported(monkeypatch) -> None:
+    bundle = copy.deepcopy(external_contract_bundle())
+    operation_id, operation = next(iter(bundle["operations"].items()))
+    operation["external_consumption"]["status"] = "target-specific"
+    monkeypatch.setattr(public_client, "external_contract_bundle", lambda: bundle)
+    assert negotiate_requirements({operation_id: None})["requirements"][0]["status"] == "unsupported"
+
+
+@pytest.mark.parametrize(
+    ("role", "old_schema", "new_schema", "compatible"),
+    [
+        ("input", {"required": ["a"]}, {"required": ["a", "b"]}, False),
+        ("input", {"enum": ["a", "b"]}, {"enum": ["a"]}, False),
+        ("input", {"enum": ["a"]}, {"enum": ["a", "b"]}, True),
+        ("input", {"type": ["string"]}, {"type": ["string", "null"]}, True),
+        ("output", {"required": ["a"]}, {"required": []}, False),
+        ("output", {"enum": ["a"]}, {"enum": ["a", "b"]}, False),
+        ("output", {"type": ["string"]}, {"type": ["string", "null"]}, False),
+    ],
+)
+def test_python_and_typescript_role_aware_compatibility(
+    role: str, old_schema: dict[str, object], new_schema: dict[str, object], compatible: bool
+) -> None:
+    old = {"contract": {}, "schemas": {role: {"fixture": old_schema}}}
+    new = {"contract": {}, "schemas": {role: {"fixture": new_schema}}}
+    assert public_client.compatibility_surface_satisfied(old, new) is compatible
+    script = f"import {{compatibilitySurfaceSatisfied}} from './generated/workspace/typescript/src/client.mjs'; console.log(compatibilitySurfaceSatisfied({json.dumps(old)}, {json.dumps(new)}));"
+    result = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == str(compatible).lower()
+
+
+@pytest.mark.parametrize(
+    "change,compatible",
+    [("add_optional", True), ("add_required", False), ("make_required", False), ("remove_optional", False), ("tighten_type", False)],
+)
+def test_python_and_typescript_operation_input_evolution(change: str, compatible: bool) -> None:
+    old = {
+        "contract": {"inputs": [{"name": "a", "required": False, "type": "string"}]},
+        "schemas": {"input": {"fixture": {"type": "object", "properties": {"a": {"type": "string"}}, "required": []}}},
+    }
+    new = copy.deepcopy(old)
+    if change.startswith("add_"):
+        required = change == "add_required"
+        new["contract"]["inputs"].append({"name": "b", "required": required, "type": "string"})
+        new["schemas"]["input"]["fixture"]["properties"]["b"] = {"type": "string"}
+        if required:
+            new["schemas"]["input"]["fixture"]["required"].append("b")
+    elif change == "make_required":
+        new["contract"]["inputs"][0]["required"] = True
+        new["schemas"]["input"]["fixture"]["required"].append("a")
+    elif change == "remove_optional":
+        new["contract"]["inputs"] = []
+        del new["schemas"]["input"]["fixture"]["properties"]["a"]
+    else:
+        new["contract"]["inputs"][0]["type"] = "integer"
+        new["schemas"]["input"]["fixture"]["properties"]["a"]["type"] = "integer"
+    assert public_client.compatibility_surface_satisfied(old, new) is compatible
+    script = f"import {{compatibilitySurfaceSatisfied}} from './generated/workspace/typescript/src/client.mjs'; console.log(compatibilitySurfaceSatisfied({json.dumps(old)}, {json.dumps(new)}));"
+    result = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == str(compatible).lower()
 
 
 def test_generated_operation_specific_wrapper_uses_public_contract() -> None:

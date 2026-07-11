@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shlex
 import subprocess
@@ -7,7 +8,7 @@ import tomllib
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence, cast
 
 from jsonschema import Draft202012Validator
 
@@ -44,6 +45,112 @@ def _resource(path: str, package_name: str = "agentic-workspace"):
 def external_consumer_profile() -> dict[str, Any]:
     resource = _resource("external_consumer_profile.json")
     return json.loads(resource.read_text(encoding="utf-8"))
+
+
+def external_contract_bundle() -> dict[str, Any]:
+    return json.loads(_resource("external_contract_bundle.json").read_text(encoding="utf-8"))
+
+
+def operation_compatibility_fingerprint(contract: Mapping[str, Any]) -> str:
+    def normalize(value: Any) -> Any:
+        if isinstance(value, list):
+            return [normalize(item) for item in value]
+        if not isinstance(value, dict):
+            return value
+        return {
+            key: normalize(item)
+            for key, item in value.items()
+            if key not in {"description", "title", "$id", "$comment", "examples", "default"}
+        }
+
+    normalized = {key: contract.get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")}
+    bundle = external_contract_bundle()
+    operation = bundle["operations"].get(str(contract.get("id")), {})
+    schemas = operation.get("compatibility_surface", {}).get("schemas", {})
+    encoded = json.dumps({"contract": normalized, "schemas": normalize(schemas)}, sort_keys=True, separators=(",", ":")).encode()
+    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def _surface_compatible(required: Any, available: Any, *, role: str = "contract", keyword: str = "") -> bool:
+    if isinstance(required, dict):
+        return isinstance(available, dict) and all(
+            key in available and _surface_compatible(value, available[key], role=role, keyword=key) for key, value in required.items()
+        )
+    if isinstance(required, list):
+        if not isinstance(available, list):
+            return False
+        if keyword == "required":
+            return all(item in required for item in available) if role == "input" else all(item in available for item in required)
+        if keyword in {"enum", "type"}:
+            return all(item in available for item in required) if role == "input" else all(item in required for item in available)
+        return required == available
+    return required == available
+
+
+def compatibility_surface_satisfied(required: Mapping[str, Any], available: Mapping[str, Any]) -> bool:
+    old_contract = required.get("contract", {})
+    new_contract = available.get("contract", {})
+    if not isinstance(old_contract, Mapping) or not isinstance(new_contract, Mapping):
+        return False
+    old_inputs = {str(item.get("name")): item for item in old_contract.get("inputs", []) if isinstance(item, Mapping)}
+    new_inputs = {str(item.get("name")): item for item in new_contract.get("inputs", []) if isinstance(item, Mapping)}
+    if any(name not in new_inputs for name in old_inputs):
+        return False
+    for name, old_input in old_inputs.items():
+        new_input = new_inputs[name]
+        if not old_input.get("required", False) and new_input.get("required", False):
+            return False
+        if not _surface_compatible(
+            {key: value for key, value in old_input.items() if key != "required"},
+            {key: value for key, value in new_input.items() if key != "required"},
+            role="input",
+        ):
+            return False
+    if any(item.get("required", False) for name, item in new_inputs.items() if name not in old_inputs):
+        return False
+    old_contract_without_inputs = {key: value for key, value in old_contract.items() if key != "inputs"}
+    new_contract_without_inputs = {key: value for key, value in new_contract.items() if key != "inputs"}
+    return _surface_compatible(old_contract_without_inputs, new_contract_without_inputs) and all(
+        _surface_compatible(schemas, available.get("schemas", {}).get(role), role=role)
+        for role, schemas in required.get("schemas", {}).items()
+    )
+
+
+def negotiate_requirements(
+    requirements: Mapping[str, str | Mapping[str, Any] | None], *, allow_runtime_backed: bool = False
+) -> dict[str, Any]:
+    bundle = external_contract_bundle()
+    results = []
+    for operation_id, requirement in requirements.items():
+        operation = bundle["operations"].get(operation_id)
+        if operation is None:
+            results.append({"operation": operation_id, "status": "missing", "reason": "operation is not packaged"})
+            continue
+        support = operation["external_consumption"]["status"]
+        if support == "runtime-backed" and not allow_runtime_backed:
+            results.append({"operation": operation_id, "status": "runtime-backed", "reason": "explicit runtime-backed opt-in required"})
+        elif support not in {"supported", "runtime-backed"}:
+            results.append({"operation": operation_id, "status": "unsupported", "reason": f"support status is {support}"})
+        elif isinstance(requirement, Mapping):
+            required_surface = requirement.get("compatibility_surface")
+            available_surface = operation.get("compatibility_surface")
+            if (
+                not isinstance(required_surface, Mapping)
+                or not isinstance(available_surface, Mapping)
+                or not compatibility_surface_satisfied(
+                    cast(Mapping[str, Any], required_surface), cast(Mapping[str, Any], available_surface)
+                )
+            ):
+                results.append(
+                    {"operation": operation_id, "status": "incompatible", "reason": "operation compatibility surface is breaking"}
+                )
+                continue
+            results.append({"operation": operation_id, "status": "compatible", "reason": "requirement satisfied"})
+        elif isinstance(requirement, str) and requirement != operation["compatibility_fingerprint"]:
+            results.append({"operation": operation_id, "status": "incompatible", "reason": "operation fingerprint mismatch"})
+        else:
+            results.append({"operation": operation_id, "status": "compatible", "reason": "requirement satisfied"})
+    return {"compatible": all(item["status"] == "compatible" for item in results), "requirements": results}
 
 
 def detect_workspace(target: str | Path) -> dict[str, Any]:

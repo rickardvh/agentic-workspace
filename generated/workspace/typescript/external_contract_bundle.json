@@ -1,0 +1,1081 @@
+{
+  "schema_version": "agentic-workspace/external-contract-bundle/v1",
+  "protocol": "1.0.0",
+  "profile_fingerprint": "sha256:eaf6ce9a071165d5d9b098c24077b2ea494771e2511b2f5f2016f99961ac04d8",
+  "profile": "external_consumer_profile.json",
+  "versions": {
+    "command_ir_schema": "command-generation/command-package-ir/v1",
+    "client_package": "0.33.5",
+    "runtime_protocol": "1.0.0",
+    "python_package": {
+      "name": "agentic-workspace",
+      "version": "0.33.5"
+    },
+    "typescript_package": {
+      "name": "@agentic-workspace/workspace-cli",
+      "version": "0.33.5"
+    }
+  },
+  "operations": {
+    "config.report": {
+      "identity": "config.report",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:653712108ea4757a7f337741adc1c68d758a6db1bf581afe3a9c7fcd43b5ec08",
+      "compatibility_fingerprint": "sha256:8cb4d804dd32bdd6cb940e96426f6d18fe830e7aa054d45dbec471a3607649d1",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "config.report",
+        "command_surface": {
+          "command": "config",
+          "format_option": "format"
+        },
+        "summary": "Show the resolved repo-owned workspace config layered onto product defaults.",
+        "classification": "read-only-report",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "select",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "verbose",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "text-or-json"
+        },
+        "effects": {
+          "read_only": true,
+          "destructive": false,
+          "idempotent": true,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": false,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/config.toml",
+            "required": false
+          },
+          {
+            "surface": ".agentic-workspace/config.local.toml",
+            "required": false
+          },
+          {
+            "surface": "product defaults",
+            "required": true
+          },
+          {
+            "surface": "verbose flag for broad diagnostic output",
+            "required": false
+          },
+          {
+            "surface": "field selector for exact JSON drill-down",
+            "required": false
+          }
+        ],
+        "writes": [],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the effective target root."
+          },
+          {
+            "id": "load_config",
+            "uses": "workspace.config.load",
+            "description": "Load workspace config, defaults, local override state, and the full config payload."
+          },
+          {
+            "id": "select_fields",
+            "uses": "payload.project",
+            "description": "Return only requested JSON fields when --select is provided."
+          },
+          {
+            "id": "emit_config",
+            "uses": "workspace.config.emit",
+            "description": "Emit resolved config in the requested format."
+          }
+        ],
+        "guards": [
+          "Report config without writing repo state.",
+          "Treat missing repo config as product-default resolution.",
+          "Prefer --select for exact field drill-down and --verbose only for broad diagnostics."
+        ],
+        "proof": [
+          "operation contract validates against operation.schema.json",
+          "json output remains compatible with existing config command tests",
+          "config.report uses command-generation-owned payload.project for exact field projection"
+        ],
+        "projections": {
+          "cli": {
+            "command_ref": "config"
+          },
+          "mcp": {
+            "tool_name": "agentic_workspace_config_report",
+            "read_only_hint": true,
+            "destructive_hint": false,
+            "idempotent_hint": true
+          },
+          "skill": {
+            "activation": [
+              "resolved workspace config",
+              "workspace policy"
+            ],
+            "instruction_summary": "Use this operation when an agent needs the effective workspace config."
+          }
+        },
+        "migration_status": "runtime-consumed",
+        "ir_plan": {
+          "status": "representative",
+          "summary": "Config report executes generated operation IR through codegen-owned primitive dataflow, using payload.project for exact selected-output projection while workspace runtime supplies config loading and text compatibility formatting.",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "Resolve and validate the target root for config lookup.",
+              "arguments": {},
+              "outputs": [
+                "target_root"
+              ]
+            },
+            {
+              "id": "load_config",
+              "uses": "workspace.config.load",
+              "description": "Load workspace config, defaults, local overrides, valid module metadata, and full config payload.",
+              "arguments": {
+                "include_payload": true
+              },
+              "outputs": [
+                "config",
+                "result"
+              ]
+            },
+            {
+              "id": "select_and_emit",
+              "uses_fragment": "select-and-emit-report",
+              "description": "Project requested fields and emit report output through a reusable operation-local fragment."
+            }
+          ],
+          "fragments": [
+            {
+              "id": "select-and-emit-report",
+              "description": "Reusable report tail that projects requested fields and emits the command output.",
+              "inputs": [
+                "result",
+                "select",
+                "format"
+              ],
+              "outputs": [
+                "result",
+                "emitted"
+              ],
+              "steps": [
+                {
+                  "id": "select_fields",
+                  "uses": "payload.project",
+                  "description": "Project requested exact fields from the config payload.",
+                  "arguments": {
+                    "source": "result",
+                    "source_command": "config",
+                    "selected_output_kind": "agentic-workspace/selected-output/v1"
+                  },
+                  "outputs": [
+                    "result"
+                  ]
+                },
+                {
+                  "id": "emit_config",
+                  "uses": "workspace.config.emit",
+                  "description": "Emit config output in the requested format.",
+                  "arguments": {},
+                  "outputs": [
+                    "emitted"
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "schemas": [
+        "config_report_input.schema.json",
+        "config_report_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "config.report.process",
+              "config.selected-text.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "config loading",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "config.report.process",
+              "config.selected-text.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "payload assembly",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "config.report.process",
+              "config.selected-text.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "config.report.process",
+              "config.selected-text.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "config_report_input.schema.json"
+        ],
+        "output": [
+          "config_report_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "config.report",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "select",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "verbose",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "text-or-json"
+          },
+          "effects": {
+            "read_only": true,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Report config without writing repo state.",
+            "Treat missing repo config as product-default resolution.",
+            "Prefer --select for exact field drill-down and --verbose only for broad diagnostics."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "config_report_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "properties": {
+                "target": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json",
+                    null
+                  ]
+                },
+                "select": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "verbose": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "output": {
+            "config_report_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind",
+                "profile",
+                "target",
+                "workspace"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "pattern": "^agentic-workspace/config-"
+                },
+                "profile": {
+                  "enum": [
+                    "tiny",
+                    "full"
+                  ]
+                },
+                "target": {
+                  "type": "string"
+                },
+                "workspace": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "delegation-outcome.append": {
+      "identity": "delegation-outcome.append",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:3f4b5cb1a61c106cb52d4016a54eabd37a0899661aacea27aee48bfd439e46ff",
+      "compatibility_fingerprint": "sha256:2c5c33e149040ee8fae0fe89550b107cc12d99ecd64cccfb37420b91515db8dc",
+      "contract": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "id": "delegation-outcome.append",
+        "command_surface": {
+          "command": "note-delegation-outcome",
+          "format_option": "format"
+        },
+        "summary": "Append one local-only delegation outcome record for target-profile tuning.",
+        "classification": "local-record-append",
+        "inputs": [
+          {
+            "name": "target",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "delegation_target",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "task_class",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "outcome",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "handoff_sufficiency",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "review_burden",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "escalation_required",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "format",
+            "source": "cli-option",
+            "required": false
+          }
+        ],
+        "output": {
+          "kind": "text-or-json"
+        },
+        "effects": {
+          "read_only": false,
+          "destructive": false,
+          "idempotent": false,
+          "writes_repo_state": false,
+          "requires_preflight_gate": false
+        },
+        "locality": {
+          "requires_repo": false,
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden"
+        },
+        "reads": [
+          {
+            "surface": ".agentic-workspace/delegation-outcomes.local.json",
+            "required": false
+          }
+        ],
+        "writes": [
+          {
+            "surface": ".agentic-workspace/delegation-outcomes.local.json",
+            "required": true,
+            "when": "append one local outcome record"
+          }
+        ],
+        "steps": [
+          {
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve",
+            "description": "Resolve the target root."
+          },
+          {
+            "id": "append_record",
+            "uses": "delegation.outcome.append",
+            "description": "Append the local-only delegation outcome record."
+          },
+          {
+            "id": "emit_output",
+            "uses": "workspace.output.emit",
+            "description": "Emit append result."
+          }
+        ],
+        "guards": [
+          "Required outcome fields must be present and enum-valid.",
+          "Do not treat local outcome records as checked-in repo policy."
+        ],
+        "proof": [
+          "operation contract validates against operation.schema.json",
+          "delegation outcome append tests remain compatible",
+          "delegation outcome text output stays in generated output rather than lifecycle text fallback"
+        ],
+        "migration_status": "runtime-consumed",
+        "ir_plan": {
+          "status": "representative",
+          "summary": "Delegation outcome append executes generated operation IR through codegen-owned primitive dataflow while workspace runtime performs the local-only append compatibility operation and generated output owns the text result.",
+          "steps": [
+            {
+              "id": "resolve_root",
+              "uses": "workspace.target-root.resolve",
+              "description": "Resolve and validate the target root for the local-only delegation outcome file.",
+              "arguments": {},
+              "outputs": [
+                "target_root"
+              ],
+              "on_error": "emit_usage_error"
+            },
+            {
+              "id": "append_record",
+              "uses": "delegation.outcome.append",
+              "description": "Append the local-only delegation outcome record.",
+              "arguments": {},
+              "outputs": [
+                "result"
+              ],
+              "on_error": "fail"
+            },
+            {
+              "id": "emit_output",
+              "uses": "workspace.output.emit",
+              "description": "Emit the append result in the requested format.",
+              "arguments": {},
+              "outputs": [
+                "emitted"
+              ],
+              "on_error": "emit_usage_error"
+            }
+          ]
+        }
+      },
+      "schemas": [
+        "delegation_outcome_append_input.schema.json",
+        "delegation_outcome_append_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "delegation-outcome.append.process",
+              "delegation-outcome.append-text.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local delegation outcome append",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "delegation-outcome.append.process",
+              "delegation-outcome.append-text.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "delegation-outcome.append.process",
+              "delegation-outcome.append-text.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "delegation_outcome_append_input.schema.json"
+        ],
+        "output": [
+          "delegation_outcome_append_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "delegation-outcome.append",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "delegation_target",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "task_class",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "outcome",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "handoff_sufficiency",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "review_burden",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "escalation_required",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "format",
+              "source": "cli-option",
+              "required": false
+            }
+          ],
+          "output": {
+            "kind": "text-or-json"
+          },
+          "effects": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": false,
+            "requires_preflight_gate": false
+          },
+          "guards": [
+            "Required outcome fields must be present and enum-valid.",
+            "Do not treat local outcome records as checked-in repo policy."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "delegation_outcome_append_input.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "delegation_target",
+                "task_class",
+                "outcome"
+              ],
+              "properties": {
+                "delegation_target": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "task_class": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "outcome": {
+                  "enum": [
+                    "success",
+                    "mixed",
+                    "failed"
+                  ]
+                },
+                "handoff_sufficiency": {
+                  "enum": [
+                    "sufficient",
+                    "borderline",
+                    "insufficient"
+                  ]
+                },
+                "review_burden": {
+                  "enum": [
+                    "light",
+                    "normal",
+                    "high"
+                  ]
+                },
+                "escalation_required": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "output": {
+            "delegation_outcome_append_result.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "kind",
+                "path",
+                "record_count",
+                "recorded"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/delegation-outcomes/v1"
+                },
+                "path": {
+                  "type": "string"
+                },
+                "record_count": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "recorded": {
+                  "type": "object"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "schemas": {
+    "config_report_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/config_report_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/config-report-input.schema.json",
+        "description": "External client input contract for the config.report operation.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "properties": {
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Target workspace repository."
+          },
+          "format": {
+            "enum": [
+              "text",
+              "json",
+              null
+            ],
+            "description": "Requested output format."
+          },
+          "select": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional dotted-field selector."
+          },
+          "verbose": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Whether to request the full config projection."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "config_report_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/config_report_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/config-report-result.schema.json",
+        "description": "Schema-validated result envelope for config.report.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "kind",
+          "profile",
+          "target",
+          "workspace"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "pattern": "^agentic-workspace/config-",
+            "description": "Result contract kind."
+          },
+          "profile": {
+            "enum": [
+              "tiny",
+              "full"
+            ],
+            "description": "Projection profile returned by AW."
+          },
+          "target": {
+            "type": "string",
+            "description": "Resolved target identifier."
+          },
+          "workspace": {
+            "type": "object",
+            "description": "Resolved workspace configuration projection."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "delegation_outcome_append_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/delegation-outcome-append-input.schema.json",
+        "description": "External client input contract for delegation-outcome.append.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "delegation_target",
+          "task_class",
+          "outcome"
+        ],
+        "properties": {
+          "delegation_target": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Delegation target alias."
+          },
+          "task_class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Bounded task classification."
+          },
+          "outcome": {
+            "enum": [
+              "success",
+              "mixed",
+              "failed"
+            ],
+            "description": "Observed delegation outcome."
+          },
+          "handoff_sufficiency": {
+            "enum": [
+              "sufficient",
+              "borderline",
+              "insufficient"
+            ],
+            "description": "Handoff sufficiency classification."
+          },
+          "review_burden": {
+            "enum": [
+              "light",
+              "normal",
+              "high"
+            ],
+            "description": "Review burden classification."
+          },
+          "escalation_required": {
+            "type": "boolean",
+            "description": "Whether execution required escalation."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "delegation_outcome_append_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/delegation_outcome_append_result.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/delegation-outcome-append-result.schema.json",
+        "description": "Schema-validated result envelope for delegation-outcome.append.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "kind",
+          "path",
+          "record_count",
+          "recorded"
+        ],
+        "properties": {
+          "kind": {
+            "const": "agentic-workspace/delegation-outcomes/v1",
+            "description": "Result contract kind."
+          },
+          "path": {
+            "type": "string",
+            "description": "Local advisory record path."
+          },
+          "record_count": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Number of stored records."
+          },
+          "recorded": {
+            "type": "object",
+            "description": "The newly recorded delegation outcome."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "operation_failure.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/operation_failure.schema.json",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "agentic-workspace/operation-failure.schema.json",
+        "description": "Structured failure envelope returned by an external operation invocation.",
+        "x-agentic-workspace-doc-role": "contract-reference",
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Optional versioned runtime error kind."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "rejected",
+              "failed"
+            ],
+            "description": "Stable external failure classification."
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable failure summary when supplied."
+          },
+          "command": {
+            "type": "string",
+            "description": "Command surface that failed when supplied."
+          },
+          "exit_status": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Positive process exit status when supplied."
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "requirement_states": [
+    "compatible",
+    "incompatible",
+    "missing",
+    "runtime-backed",
+    "unsupported"
+  ],
+  "compatibility_rule": "Protocol major versions must match; fingerprint changes require requirement negotiation."
+}

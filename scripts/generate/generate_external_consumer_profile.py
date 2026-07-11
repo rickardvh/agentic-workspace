@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -15,6 +16,10 @@ OUTPUTS = (
 USABLE_MATURITY_LEVELS = {"runnable-read-only-adapter", "weak-agent-safe-adapter", "mutation-capable-adapter"}
 PYTHON_CLIENT = REPO_ROOT / "generated/workspace/python/client.py"
 TYPESCRIPT_CLIENT = REPO_ROOT / "generated/workspace/typescript/src/client.mjs"
+BUNDLE_OUTPUTS = (
+    REPO_ROOT / "generated/workspace/python/external_contract_bundle.json",
+    REPO_ROOT / "generated/workspace/typescript/external_contract_bundle.json",
+)
 PYTHON_TYPED_OPERATIONS = REPO_ROOT / "src/agentic_workspace/generated_operations.py"
 SCHEMA_RESOURCE_OUTPUTS = {
     REPO_ROOT / "generated/workspace/python/_contracts/operation_failure.schema.json": REPO_ROOT
@@ -41,6 +46,12 @@ SCHEMA_RESOURCE_OUTPUTS = {
     / "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/delegation_outcome_append_result.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/delegation_outcome_append_result.schema.json",
+}
+
+USABLE_MATURITY_LEVELS = {
+    "runnable-read-only-adapter",
+    "weak-agent-safe-adapter",
+    "mutation-capable-adapter",
 }
 
 
@@ -224,6 +235,162 @@ def render() -> str:
     return json.dumps(build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")), repo_root=REPO_ROOT), indent=2) + "\n"
 
 
+def resolve_schema_reference(name: str, *, repo_root: Path = REPO_ROOT, base_path: Path | None = None) -> Path:
+    reference = name.split("#", 1)[0]
+    fragment = name.partition("#")[2]
+    if base_path is not None and reference and (base_path.parent / reference).is_file():
+        selected_path = (base_path.parent / reference).resolve()
+    else:
+        selected_path = None
+    basename = Path(reference).name
+    candidate_names = {basename, basename.replace("-", "_")}
+    candidates = [
+        path
+        for root in (repo_root / "src", repo_root / "packages")
+        if root.exists()
+        for candidate_name in candidate_names
+        for path in root.rglob(candidate_name)
+        if "generated" not in path.parts
+    ]
+    if selected_path is None and not candidates:
+        raise ValueError(f"missing transitive schema: {name}")
+    suffix_matches = [path for path in candidates if path.as_posix().endswith(reference)]
+    selected = suffix_matches or candidates
+    if selected_path is None and len(selected) != 1:
+        raise ValueError(f"ambiguous transitive schema reference: {name}: {[path.as_posix() for path in selected]}")
+    selected_path = selected_path or selected[0]
+    if fragment:
+        node: object = json.loads(selected_path.read_text(encoding="utf-8"))
+        for token in fragment.removeprefix("/").split("/"):
+            token = token.replace("~1", "/").replace("~0", "~")
+            if not isinstance(node, dict) or token not in node:
+                raise ValueError(f"missing schema fragment: {name}")
+            node = node[token]
+    return selected_path
+
+
+def schema_references(value: object) -> set[str]:
+    refs: set[str] = set()
+    if isinstance(value, dict):
+        reference = value.get("$ref")
+        if isinstance(reference, str) and (reference.startswith("#") or reference.split("#", 1)[0].endswith(".schema.json")):
+            refs.add(reference)
+        for key, item in value.items():
+            if key != "$ref":
+                refs.update(schema_references(item))
+    elif isinstance(value, list):
+        for item in value:
+            refs.update(schema_references(item))
+    return refs
+
+
+def collect_schema_graph(initial: set[str], *, repo_root: Path = REPO_ROOT) -> tuple[set[str], dict[str, object]]:
+    closure: set[str] = set()
+    graph: dict[str, object] = {}
+    pending: list[tuple[str, Path | None, str | None]] = [(ref, None, None) for ref in sorted(initial)]
+    while pending:
+        reference, base_path, preferred_key = pending.pop()
+        schema_path = base_path if reference.startswith("#") and base_path is not None else resolve_schema_reference(reference, repo_root=repo_root, base_path=base_path)
+        if reference.startswith("#"):
+            resolve_schema_reference(schema_path.name + reference, repo_root=repo_root, base_path=schema_path)
+        key = preferred_key or reference.split("#", 1)[0]
+        if key in closure:
+            continue
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        graph[key] = {"source": schema_path.relative_to(repo_root).as_posix(), "schema": schema}
+        closure.add(key)
+        for nested in schema_references(schema):
+            nested_path = schema_path if nested.startswith("#") else resolve_schema_reference(nested, repo_root=repo_root, base_path=schema_path)
+            pending.append((nested, schema_path, nested_path.relative_to(repo_root).as_posix()))
+    return closure, graph
+
+
+def render_bundle(profile: dict[str, object]) -> str:
+    def schema_refs(value: object) -> set[str]:
+        return schema_references(value)
+
+    def compatibility_schema(value: object) -> object:
+        if isinstance(value, list):
+            return [compatibility_schema(item) for item in value]
+        if not isinstance(value, dict):
+            return value
+        normalized: dict[str, object] = {}
+        for key, item in value.items():
+            if key in {"description", "title", "$id", "$comment", "examples", "default"}:
+                continue
+            normalized[key] = compatibility_schema(item)
+        return normalized
+
+    def schema_closure(initial: set[str]) -> set[str]:
+        closure, graph = collect_schema_graph(initial)
+        schemas.update(graph)
+        return closure
+
+    operations: dict[str, object] = {}
+    schemas: dict[str, object] = {}
+    for entry in profile["operations"]:
+        if not isinstance(entry, dict) or entry.get("external_consumption", {}).get("status") == "internal":
+            continue
+        contract = json.loads((REPO_ROOT / str(entry["operation_contract"])).read_text(encoding="utf-8"))
+        input_refs = {str(item) for item in entry.get("schemas", {}).get("input", [])}
+        output_refs = {str(item) for item in entry.get("schemas", {}).get("output", [])}
+        failure_refs = {"operation_failure.schema.json"}
+        input_closure = schema_closure(input_refs | schema_refs(contract))
+        output_closure = schema_closure(output_refs)
+        failure_closure = schema_closure(failure_refs)
+        closure = input_closure | output_closure | failure_closure
+        compatibility_contract = {
+            key: contract.get(key)
+            for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")
+        }
+        operations[str(entry["id"])] = {
+            "identity": str(entry["id"]),
+            "version": contract.get("schema_version"),
+            "fingerprint": "pending",
+            "compatibility_fingerprint": "pending",
+            "contract": contract,
+            "schemas": sorted(closure),
+            "targets": entry["targets"],
+            "external_consumption": entry["external_consumption"],
+            "schema_roles": {
+                "input": sorted(input_closure),
+                "output": sorted(output_closure),
+                "failure": sorted(failure_closure),
+            },
+        }
+    for operation in operations.values():
+        closure = {name: schemas[name]["schema"] for name in operation["schemas"]}
+        exact = {"contract": operation["contract"], "schemas": closure}
+        compatible = {
+            "contract": {key: operation["contract"].get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")},
+            "schemas": {
+                role: compatibility_schema({name: closure[name] for name in names})
+                for role, names in operation["schema_roles"].items()
+            },
+        }
+        operation["compatibility_surface"] = compatible
+        operation["fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(exact, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        operation["compatibility_fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(compatible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    payload = {
+        "schema_version": "agentic-workspace/external-contract-bundle/v1",
+        "protocol": profile["compatibility"]["protocol"],
+        "profile_fingerprint": profile["compatibility"]["fingerprint"],
+        "profile": "external_consumer_profile.json",
+        "versions": {
+            "command_ir_schema": json.loads(IR_PATH.read_text(encoding="utf-8"))["schema_version"],
+            "client_package": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"],
+            "runtime_protocol": profile["compatibility"]["protocol"],
+            "python_package": {"name": "agentic-workspace", "version": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]},
+            "typescript_package": {"name": "@agentic-workspace/workspace-cli", "version": json.loads((REPO_ROOT / "generated/workspace/typescript/package.json").read_text(encoding="utf-8"))["version"]},
+        },
+        "operations": operations,
+        "schemas": dict(sorted(schemas.items())),
+        "requirement_states": ["compatible", "incompatible", "missing", "runtime-backed", "unsupported"],
+        "compatibility_rule": "Protocol major versions must match; fingerprint changes require requirement negotiation.",
+    }
+    return json.dumps(payload, indent=2) + "\n"
+
+
 def render_python_client() -> str:
     return '''# Generated from command_package_ir.json. Do not edit.\nfrom __future__ import annotations\n\nimport json\nimport subprocess\nfrom importlib.resources import files\nfrom pathlib import Path\nfrom typing import Any, Sequence\n\n\ndef external_consumer_profile() -> dict[str, Any]:\n    resource = files("agentic_workspace._generated_cli_package_impl").joinpath("external_consumer_profile.json")\n    return json.loads(resource.read_text(encoding="utf-8"))\n\n\ndef require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:\n    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}\n    failures = []\n    for operation_id in operation_ids:\n        entry = entries.get(operation_id)\n        status = entry and entry["external_consumption"]["status"]\n        if entry is None or status == "internal" or (status == "runtime-backed" and not allow_runtime_backed):\n            failures.append(f"{operation_id}: {status or 'unknown'}")\n    if failures:\n        raise ValueError("incompatible operation requirements: " + ", ".join(failures))\n\n\ndef invoke_json(argv: Sequence[str], *, target: str | Path | None = None, executable: Sequence[str] = ("agentic-workspace",)) -> dict[str, Any]:\n    command = [*executable, *argv]\n    if target is not None and "--target" not in command:\n        command.extend(["--target", str(target)])\n    if "--format" not in command:\n        command.extend(["--format", "json"])\n    completed = subprocess.run(command, text=True, capture_output=True, check=False)\n    stream = completed.stdout or completed.stderr\n    try:\n        payload = json.loads(stream)\n    except json.JSONDecodeError as exc:\n        raise RuntimeError(f"AW returned non-JSON output (exit {completed.returncode})") from exc\n    if completed.returncode:\n        raise RuntimeError(json.dumps({"exit_code": completed.returncode, "error": payload}))\n    return payload\n'''
 
@@ -256,6 +423,7 @@ def render_python_typed_operations(profile: dict[str, object]) -> str:
                 f"def {function_name}(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:",
                 f'    return invoke_operation("{entry["id"]}", values, target=target, invocation=invocation, allow_runtime_backed=True)',
                 "",
+                "",
             ]
         )
     return "\n".join(lines)
@@ -267,8 +435,10 @@ def main() -> int:
     args = parser.parse_args()
     profile = build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")), repo_root=REPO_ROOT)
     expected = json.dumps(profile, indent=2) + "\n"
+    bundle = render_bundle(profile)
     rendered = {
         **{path: expected for path in OUTPUTS},
+        **{path: bundle for path in BUNDLE_OUTPUTS},
         **{output: source.read_text(encoding="utf-8") for output, source in SCHEMA_RESOURCE_OUTPUTS.items()},
         PYTHON_CLIENT: render_python_client(),
         TYPESCRIPT_CLIENT: render_typescript_client(),

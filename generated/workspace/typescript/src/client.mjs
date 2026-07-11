@@ -2,12 +2,77 @@
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 
 const profileUrl = new URL('../external_consumer_profile.json', import.meta.url);
+const bundleUrl = new URL('../external_contract_bundle.json', import.meta.url);
 export class AWClientError extends Error {
   constructor(kind, message, details = {}) { super(message); this.name = 'AWClientError'; this.kind = kind; this.details = details; }
 }
 export function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }
+export function externalContractBundle() { return JSON.parse(readFileSync(bundleUrl, 'utf8')); }
+export function operationCompatibilityFingerprint(contract) {
+  const normalized = Object.fromEntries(['schema_version', 'id', 'classification', 'inputs', 'output', 'effects', 'guards'].map((key) => [key, contract[key] ?? null]));
+  const bundle = externalContractBundle(); const operation = bundle.operations[String(contract.id)] ?? {};
+  const schemas = operation.compatibility_surface?.schemas ?? {};
+  const sortValue = (value) => Array.isArray(value) ? value.map(sortValue) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortValue(value[key])])) : value;
+  const normalize = (value) => {
+    if (Array.isArray(value)) return value.map(normalize);
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).filter(([key]) => !['description', 'title', '$id', '$comment', 'examples', 'default'].includes(key)).map(([key, item]) => [key, normalize(item)]));
+  };
+  const canonical = JSON.stringify(sortValue({ contract: normalized, schemas: normalize(schemas) }));
+  return `sha256:${createHash('sha256').update(canonical).digest('hex')}`;
+}
+export function negotiateRequirements(requirements, { allowRuntimeBacked = false } = {}) {
+  const bundle = externalContractBundle(); const results = [];
+  const surfaceCompatible = (required, available, role = 'contract', keyword = '') => {
+    if (Array.isArray(required)) {
+      if (!Array.isArray(available)) return false;
+      if (keyword === 'required') return role === 'input' ? available.every((item) => required.includes(item)) : required.every((item) => available.includes(item));
+      if (['enum', 'type'].includes(keyword)) return role === 'input' ? required.every((item) => available.includes(item)) : available.every((item) => required.includes(item));
+      return JSON.stringify(required) === JSON.stringify(available);
+    }
+    return required && typeof required === 'object' ? available && typeof available === 'object' && Object.entries(required).every(([key, value]) => key in available && surfaceCompatible(value, available[key], role, key)) : required === available;
+  };
+  const compatibilitySatisfied = compatibilitySurfaceSatisfied;
+  for (const [operationId, fingerprint] of Object.entries(requirements)) {
+    const operation = bundle.operations[operationId];
+    if (!operation) { results.push({ operation: operationId, status: 'missing', reason: 'operation is not packaged' }); continue; }
+    const support = operation.external_consumption.status;
+    if (support === 'runtime-backed' && !allowRuntimeBacked) results.push({ operation: operationId, status: 'runtime-backed', reason: 'explicit runtime-backed opt-in required' });
+    else if (!['supported', 'runtime-backed'].includes(support)) results.push({ operation: operationId, status: 'unsupported', reason: `support status is ${support}` });
+    else if (fingerprint && typeof fingerprint === 'object' && !compatibilitySatisfied(fingerprint.compatibility_surface, operation.compatibility_surface)) results.push({ operation: operationId, status: 'incompatible', reason: 'operation compatibility surface is breaking' });
+    else if (typeof fingerprint === 'string' && fingerprint !== operation.compatibility_fingerprint) results.push({ operation: operationId, status: 'incompatible', reason: 'operation compatibility fingerprint mismatch' });
+    else results.push({ operation: operationId, status: 'compatible', reason: 'requirement satisfied' });
+  }
+  return { compatible: results.every((item) => item.status === 'compatible'), requirements: results };
+}
+export function compatibilitySurfaceSatisfied(required, available) {
+  const compare = (oldValue, newValue, role = 'contract', keyword = '') => {
+    if (Array.isArray(oldValue)) {
+      if (!Array.isArray(newValue)) return false;
+      if (keyword === 'required') return role === 'input' ? newValue.every((item) => oldValue.includes(item)) : oldValue.every((item) => newValue.includes(item));
+      if (['enum', 'type'].includes(keyword)) return role === 'input' ? oldValue.every((item) => newValue.includes(item)) : newValue.every((item) => oldValue.includes(item));
+      return JSON.stringify(oldValue) === JSON.stringify(newValue);
+    }
+    return oldValue && typeof oldValue === 'object' ? newValue && typeof newValue === 'object' && Object.entries(oldValue).every(([key, value]) => key in newValue && compare(value, newValue[key], role, key)) : oldValue === newValue;
+  };
+  const oldInputs = new Map((required.contract?.inputs ?? []).map((item) => [String(item.name), item]));
+  const newInputs = new Map((available.contract?.inputs ?? []).map((item) => [String(item.name), item]));
+  if ([...oldInputs].some(([name]) => !newInputs.has(name))) return false;
+  for (const [name, oldInput] of oldInputs) {
+    const newInput = newInputs.get(name);
+    if (!oldInput.required && newInput.required) return false;
+    const oldRest = Object.fromEntries(Object.entries(oldInput).filter(([key]) => key !== 'required'));
+    const newRest = Object.fromEntries(Object.entries(newInput).filter(([key]) => key !== 'required'));
+    if (!compare(oldRest, newRest, 'input')) return false;
+  }
+  if ([...newInputs].some(([name, item]) => !oldInputs.has(name) && item.required)) return false;
+  const oldContract = Object.fromEntries(Object.entries(required.contract ?? {}).filter(([key]) => key !== 'inputs'));
+  const newContract = Object.fromEntries(Object.entries(available.contract ?? {}).filter(([key]) => key !== 'inputs'));
+  return compare(oldContract, newContract) && Object.entries(required.schemas ?? {}).every(([role, schemas]) => compare(schemas, available.schemas?.[role], role));
+}
 export function detectWorkspace(target) {
   const root = resolve(target); const path = join(root, '.agentic-workspace', 'config.toml');
   try { const text = readFileSync(path, 'utf8'); return { status: /enabled\s*=\s*false/.test(text) ? 'disabled' : 'enabled', target: root }; }

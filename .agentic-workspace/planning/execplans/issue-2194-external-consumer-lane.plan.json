@@ -30,7 +30,7 @@
     "hard_constraints": "Preserve command IR as semantic authority, introduce no adapter lifecycle in AW, keep each child independently reviewable, and do not claim #2194/#2200 complete before #2044 permits it.",
     "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
     "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
-    "next_action": "Implement and publish #2195's generated fail-closed external-consumer profile as the first stack slice.",
+    "next_action": "Extend operation conformance through the generated clients for #2198, then build the narrowed pre-#2044 independent-consumer proof for #2200.",
     "proof_expectations": [
       "Run contract schema/tooling and generated-package freshness checks for each slice.",
       "Run focused client, conformance, installed-boundary, and independent-consumer tests before publishing their owning slices."
@@ -155,7 +155,7 @@
     "optional_deps": "none"
   },
   "immediate_next_action": [
-    "Implement and publish #2195's generated fail-closed external-consumer profile as the first stack slice."
+    "Extend operation conformance through the generated clients for #2198, then build the narrowed pre-#2044 independent-consumer proof for #2200."
   ],
   "blockers": [
     "None."

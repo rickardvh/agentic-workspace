@@ -49,12 +49,14 @@
   },
   "exports": {
     ".": "./src/client.mjs",
+    "./contracts": "./external_contract_bundle.json",
     "./profile": "./external_consumer_profile.json"
   },
   "files": [
     "src",
     "resources",
-    "external_consumer_profile.json"
+    "external_consumer_profile.json",
+    "external_contract_bundle.json"
   ],
   "name": "@agentic-workspace/workspace-cli",
   "private": false,

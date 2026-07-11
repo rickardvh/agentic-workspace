@@ -223,3 +223,67 @@ def test_usable_generation_with_unusable_maturity_fails_closed() -> None:
             ]
         }
         assert module.build_profile(ir)["operations"][0]["external_consumption"]["status"] == "internal"
+
+
+def test_packed_typescript_artifact_resolves_profile_and_bundle(tmp_path: Path) -> None:
+    npm = shutil.which("npm") or shutil.which("npm.cmd") or "npm"
+    completed = subprocess.run(
+        [npm, "pack", "--json", "--pack-destination", str(tmp_path)],
+        cwd=ROOT / "generated/workspace/typescript",
+        text=True,
+        capture_output=True,
+    )
+    assert completed.returncode == 0, completed.stderr
+    unpacked = tmp_path / "unpacked"
+    shutil.unpack_archive(tmp_path / json.loads(completed.stdout)[0]["filename"], unpacked, "gztar")
+    client = unpacked / "package/src/client.mjs"
+    script = f"import {{ externalConsumerProfile, externalContractBundle }} from {json.dumps(client.as_uri())}; console.log(JSON.stringify([externalConsumerProfile().schema_version, externalContractBundle().schema_version]));"
+    result = subprocess.run(["node", "--input-type=module", "--eval", script], text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == ["agentic-workspace/external-consumer-profile/v1", "agentic-workspace/external-contract-bundle/v1"]
+
+
+def test_schema_resolution_is_provenance_safe_and_fragment_aware(tmp_path: Path) -> None:
+    module = _module()
+    schema = tmp_path / "src/owner/schemas/result.schema.json"
+    schema.parent.mkdir(parents=True)
+    schema.write_text('{"$defs":{"value":{"type":"string"}}}\n', encoding="utf-8")
+    assert module.resolve_schema_reference("owner/schemas/result.schema.json#/$defs/value", repo_root=tmp_path) == schema
+    with pytest.raises(ValueError, match="missing schema fragment"):
+        module.resolve_schema_reference("owner/schemas/result.schema.json#/$defs/missing", repo_root=tmp_path)
+    duplicate = tmp_path / "packages/other/result.schema.json"
+    duplicate.parent.mkdir(parents=True)
+    duplicate.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="ambiguous transitive schema reference"):
+        module.resolve_schema_reference("result.schema.json", repo_root=tmp_path)
+    with pytest.raises(ValueError, match="missing transitive schema"):
+        module.resolve_schema_reference("missing.schema.json", repo_root=tmp_path)
+
+
+def test_recursive_schema_graph_preserves_relative_context_and_fragments(tmp_path: Path) -> None:
+    module = _module()
+    root = tmp_path / "src/owner/root.schema.json"
+    child = tmp_path / "src/owner/nested/child.schema.json"
+    child.parent.mkdir(parents=True)
+    root.write_text('{"$ref":"nested/child.schema.json#/$defs/value"}\n', encoding="utf-8")
+    child.write_text('{"$defs":{"value":{"$ref":"#/$defs/leaf"},"leaf":{"type":"string"}}}\n', encoding="utf-8")
+    closure, graph = module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
+    assert "src/owner/nested/child.schema.json" in closure
+    assert graph["src/owner/nested/child.schema.json"]["source"] == "src/owner/nested/child.schema.json"
+    child.write_text('{"$id":"ignored.schema.json","$defs":{"value":{"$ref":"#/$defs/leaf"},"leaf":{"type":"string"}}}\n', encoding="utf-8")
+    closure, _ = module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
+    assert not any("ignored.schema.json" in name for name in closure)
+    child.write_text('{"$defs":{"value":{"$ref":"#/$defs/missing"}}}\n', encoding="utf-8")
+    with pytest.raises(ValueError, match="missing schema fragment"):
+        module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
+    root.write_text('{"$ref":"nested/child.schema.json#/$defs/missing"}\n', encoding="utf-8")
+    with pytest.raises(ValueError, match="missing schema fragment"):
+        module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
+
+
+def test_bundle_has_canonical_unique_schemas_and_failure_contract() -> None:
+    bundle = json.loads(_module().render_bundle(json.loads(_module().render())))
+    for operation in bundle["operations"].values():
+        assert "operation_failure.schema.json" in operation["schemas"]
+        sources = [bundle["schemas"][name]["source"] for name in operation["schemas"]]
+        assert len(sources) == len(set(sources))
