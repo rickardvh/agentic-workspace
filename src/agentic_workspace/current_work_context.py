@@ -50,12 +50,6 @@ def _thread_candidates(root: Path, branch: str) -> list[dict[str, Any]]:
     return candidates
 
 
-def _observation(record: dict[str, Any], key: str) -> str:
-    observations = record.get("observations", {}) if isinstance(record, dict) else {}
-    value = observations.get(key, "") if isinstance(observations, dict) else ""
-    return str(value.get("value", "") if isinstance(value, dict) else value or "")
-
-
 def resolve_current_work_context(*, root: Path, task: str = "", argv: Sequence[str] = (), explicit_pr: str = "") -> dict[str, Any]:
     """Resolve one binding; prefer unknown over carrying metadata across transitions."""
 
@@ -68,14 +62,13 @@ def resolve_current_work_context(*, root: Path, task: str = "", argv: Sequence[s
     refs = thread.get("refs", {}) if isinstance(thread, dict) else {}
     issue_refs = [str(value) for value in refs.get("issues", [])] if isinstance(refs, dict) else []
     pr_refs = [str(value) for value in refs.get("prs", [])] if isinstance(refs, dict) else []
-    task_refs = sorted({f"#{value}" for value in re.findall(r"#(\d+)", task)})
+    task_pr_refs = sorted({f"#{value}" for value in re.findall(r"\b(?:PR|pull request)\s*#(\d+)", task, flags=re.IGNORECASE)})
+    task_without_pr_refs = re.sub(r"\b(?:PR|pull request)\s*#\d+", "", task, flags=re.IGNORECASE)
+    task_refs = sorted({f"#{value}" for value in re.findall(r"#(\d+)", task_without_pr_refs)})
     plan_refs = sorted({f"#{value}" for value in re.findall(r"(?:^|\D)(\d{3,})(?:\D|$)", plan_id)})
     conflicts: list[str] = []
     thread_status = str(thread.get("status") or "").strip().lower() if thread else ""
-    observed_head = _observation(thread, "head") or _observation(thread, "head_commit")
-    stale_thread = bool(thread) and (
-        thread_status in {"stale", "closed", "completed", "superseded"} or bool(observed_head and head and observed_head != head)
-    )
+    stale_thread = bool(thread) and thread_status in {"stale", "closed", "completed", "superseded"}
     if stale_thread:
         conflicts.append("thread-stale")
     if task_refs and issue_refs and set(task_refs).isdisjoint(issue_refs):
@@ -89,7 +82,7 @@ def resolve_current_work_context(*, root: Path, task: str = "", argv: Sequence[s
         issue_refs = task_refs
     elif not thread_compatible:
         issue_refs = []
-    declared_pr = str(explicit_pr or "").strip().lstrip("#")
+    declared_pr = str(explicit_pr or (task_pr_refs[0] if len(task_pr_refs) == 1 else "")).strip().lstrip("#")
     pr_ref = f"#{declared_pr}" if declared_pr else pr_refs[0] if thread_compatible and len(pr_refs) == 1 else ""
     ambiguous = len(threads) > 1 or bool(conflicts)
     identity = {"root": root.as_posix(), "branch": branch, "head": head, "task": task, "plan_id": plan_id, "pr_ref": pr_ref}
@@ -112,7 +105,13 @@ def resolve_current_work_context(*, root: Path, task: str = "", argv: Sequence[s
             "task": "explicit-command" if task else "unknown",
             "plan_id": plan_source or "unknown",
             "issue_refs": "explicit-task" if task_refs else "branch-matched-local-thread" if issue_refs else "unknown",
-            "pr_ref": "explicit-environment" if declared_pr else "branch-matched-local-thread" if pr_ref else "unknown",
+            "pr_ref": "explicit-environment"
+            if explicit_pr
+            else "explicit-task"
+            if task_pr_refs
+            else "branch-matched-local-thread"
+            if pr_ref
+            else "unknown",
         },
         "freshness": {
             "resolved_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),

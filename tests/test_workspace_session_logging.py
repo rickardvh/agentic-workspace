@@ -914,6 +914,43 @@ def test_current_work_context_stale_thread_does_not_bind(tmp_path: Path, monkeyp
     assert "thread-stale" in binding["conflicts"]
 
 
+def test_current_work_context_explicit_pr_task_binds_pr_without_inventing_issue(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    monkeypatch.setattr(
+        current_work_context,
+        "_git",
+        lambda _root, *args: "main" if args == ("branch", "--show-current") else "new-head",
+    )
+
+    binding = current_work_context.resolve_current_work_context(root=target, task="Review PR #2182")
+
+    assert binding["issue_refs"] == []
+    assert binding["pr_ref"] == "#2182"
+    assert binding["provenance"]["pr_ref"] == "explicit-task"
+
+
+def test_current_work_context_head_advance_does_not_alone_stale_active_thread(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(
+        target / ".agentic-workspace/local/work-threads/active.json",
+        json.dumps(
+            {
+                "id": "active",
+                "status": "active",
+                "refs": {"issues": ["#2175"], "prs": ["#2182"]},
+                "observations": {"branch": {"value": "main"}, "head": {"value": "old-head"}},
+            }
+        ),
+    )
+    monkeypatch.setattr(current_work_context, "_git", lambda _root, *args: "main" if args == ("branch", "--show-current") else "new-head")
+
+    binding = current_work_context.resolve_current_work_context(root=target)
+
+    assert binding["status"] == "bound"
+    assert binding["thread_id"] == "active"
+    assert binding["pr_ref"] == "#2182"
+
+
 def test_session_log_segments_ignore_closeout_text_without_a_closeout_transition(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
