@@ -27,7 +27,16 @@ def _commands(command: dict[str, object], inherited: dict[str, object] | None = 
                 yield from _commands(child, current)
 
 
-def build_profile(ir: dict[str, object]) -> dict[str, object]:
+def _operation_resource_path(target_id: str, target: dict[str, object], operation_path: str) -> Path:
+    resource_root = "resources/operations" if target_id == "typescript" else "operations"
+    return Path(str(target.get("generated_root", ""))) / resource_root / Path(operation_path).name
+
+
+def build_profile(ir: dict[str, object], *, repo_root: Path | None = None) -> dict[str, object]:
+    conformance_by_id: dict[str, dict[str, object]] = {}
+    if repo_root is not None:
+        registry = json.loads((repo_root / "src/agentic_workspace/contracts/conformance_contracts.json").read_text(encoding="utf-8"))
+        conformance_by_id = {str(item["id"]): item for item in registry["contracts"]}
     operations: list[dict[str, object]] = []
     for package in ir.get("packages", []):
         if not isinstance(package, dict):
@@ -37,9 +46,15 @@ def build_profile(ir: dict[str, object]) -> dict[str, object]:
                 "package": target.get("package_name"),
                 "status": target.get("generation_status"),
                 "maturity": target.get("maturity_level_ref"),
+                "generated_root": target.get("generated_root"),
             }
             for target in package.get("targets", [])
             if isinstance(target, dict)
+        }
+        usable_targets = {
+            target_id
+            for target_id, target in targets.items()
+            if target.get("status") not in {"deferred", "unsupported", "metadata-proof-fixture", "parser-help-proof"}
         }
         for root in package.get("commands", []):
             if not isinstance(root, dict):
@@ -49,12 +64,56 @@ def build_profile(ir: dict[str, object]) -> dict[str, object]:
                 if not isinstance(ref, dict) or not ref.get("id") or not ref.get("path"):
                     continue
                 effects = command.get("effect_hints", {})
+                schemas = command.get("schemas", {"input": [], "output": []})
+                schema_refs = [
+                    str(value)
+                    for values in schemas.values()
+                    for value in values
+                    if isinstance(schemas, dict) and isinstance(values, list) and isinstance(value, str)
+                ]
                 conformance = [value for value in command.get("conformance_refs", []) if isinstance(value, str)]
+                contract_path = f"{package.get('operation_contract_root')}/{ref['path']}"
+                contract_exists = repo_root is None or (repo_root / contract_path).is_file()
+                resolved_conformance = [
+                    value
+                    for value in conformance
+                    if repo_root is None
+                    or (
+                        value in conformance_by_id
+                        and not str(conformance_by_id[value].get("id", "")).endswith(".help.process")
+                        and (repo_root / "src/agentic_workspace/contracts" / str(conformance_by_id[value]["path"])).is_file()
+                    )
+                ]
                 boundary = command.get("projection_boundary", {})
                 runtime_owned = boundary.get("runtime_owned", []) if isinstance(boundary, dict) else []
-                required = bool(effects) and bool(conformance) and {"python", "typescript"}.issubset(targets)
-                if command.get("status") != "generated" or not required:
+                resources_exist = repo_root is None or all(
+                    (repo_root / _operation_resource_path(target_id, targets[target_id], str(ref["path"]))).is_file()
+                    for target_id in usable_targets & {"python", "typescript"}
+                )
+                schemas_exist = repo_root is None or all(
+                    all(
+                        (
+                            repo_root
+                            / str(targets[target_id].get("generated_root", ""))
+                            / ("resources/_contracts" if target_id == "typescript" else "_contracts")
+                            / schema_ref
+                        ).is_file()
+                        for target_id in usable_targets & {"python", "typescript"}
+                    )
+                    for schema_ref in schema_refs
+                )
+                required = (
+                    bool(effects)
+                    and bool(conformance)
+                    and len(resolved_conformance) == len(conformance)
+                    and contract_exists
+                    and resources_exist
+                    and schemas_exist
+                )
+                if command.get("status") != "generated" or not required or not usable_targets:
                     maturity = "internal"
+                elif not {"python", "typescript"}.issubset(usable_targets):
+                    maturity = "target-specific"
                 elif runtime_owned:
                     maturity = "runtime-backed"
                 else:
@@ -62,14 +121,35 @@ def build_profile(ir: dict[str, object]) -> dict[str, object]:
                 entry = {
                     "id": ref["id"],
                     "owner": package.get("id"),
-                    "operation_contract": f"{package.get('operation_contract_root')}/{ref['path']}",
-                    "schemas": command.get("schemas", {"input": [], "output": []}),
+                    "operation_contract": contract_path,
+                    "operation_resources": {
+                        target_id: {
+                            "package": target["package"],
+                            "path": _operation_resource_path(target_id, target, str(ref["path"])).relative_to(
+                                Path(str(target.get("generated_root", "")))
+                            ).as_posix(),
+                            "exists": repo_root is None
+                            or (repo_root / _operation_resource_path(target_id, target, str(ref["path"]))).is_file(),
+                        }
+                        for target_id, target in targets.items()
+                        if target_id in {"python", "typescript"}
+                    },
+                    "schemas": schemas,
                     "effects": effects,
                     "targets": targets,
-                    "conformance": conformance,
+                    "conformance": resolved_conformance,
                     "external_consumption": {
                         "status": maturity,
-                        "runtime_exceptions": runtime_owned,
+                        "runtime_exceptions": [
+                                {
+                                    "owner": package.get("id"),
+                                    "scope": scope,
+                                    "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+                                    "proof": resolved_conformance,
+                                    "migration_dependency": "#2044",
+                                }
+                                for scope in runtime_owned
+                        ],
                         "dependency": "#2044" if runtime_owned else None,
                     },
                 }
@@ -97,7 +177,7 @@ def build_profile(ir: dict[str, object]) -> dict[str, object]:
 
 
 def render() -> str:
-    return json.dumps(build_profile(json.loads(IR_PATH.read_text(encoding="utf-8"))), indent=2) + "\n"
+    return json.dumps(build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")), repo_root=REPO_ROOT), indent=2) + "\n"
 
 
 def main() -> int:
