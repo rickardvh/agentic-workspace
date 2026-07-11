@@ -91,7 +91,7 @@
       "residual_after_slice": ""
     }
   ],
-  "current_slice": "reconcile-2188-rejected-latest-receipt",
+  "current_slice": "reconcile-2190-lane-reconciliation",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "For every child, run routed changed-path proof plus the issue's required regression cases. Aggregate merged PRs, exact validation commands, and any residual owner before closing the lane.",
   "proof_aggregation": {
@@ -102,11 +102,11 @@
       "PR #2185 CI and projection tests",
       "PR #2184 CI and actionability tests",
       "PR #2186 CI and session semantic tests",
-      "PR #2183 CI and decision-point continuity tests"
+      "PR #2183 CI and decision-point continuity tests",
+      "PR #2191 CI and damaged-latest receipt regressions",
+      "PR #2192 CI and carry lifecycle regressions"
     ],
     "known_gaps": [
-      "2188-rejected-latest-receipt remains unresolved or external state is unknown.",
-      "2189-intent-carry-lifecycle remains unresolved or external state is unknown.",
       "2190-lane-reconciliation remains unresolved or external state is unknown."
     ]
   },
@@ -303,7 +303,7 @@
       "id": "2188-rejected-latest-receipt",
       "issue_ref": "#2188",
       "pr_ref": "#2191",
-      "outcome": "unresolved",
+      "outcome": "landed",
       "reason": "",
       "proof_ref": "PR #2191 CI and damaged-latest receipt regressions",
       "new_owner": "",
@@ -313,7 +313,7 @@
       "id": "2189-intent-carry-lifecycle",
       "issue_ref": "#2189",
       "pr_ref": "#2192",
-      "outcome": "unresolved",
+      "outcome": "landed",
       "reason": "",
       "proof_ref": "PR #2192 CI and carry lifecycle regressions",
       "new_owner": "",
