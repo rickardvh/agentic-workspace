@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import shutil
@@ -157,6 +158,30 @@ console.log(JSON.stringify([negotiateRequirements({{{json.dumps(operation_id)}: 
     result = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == ["runtime-backed", "missing", True]
+
+
+def test_schema_compatibility_distinguishes_optional_addition_from_breaking_change(monkeypatch) -> None:
+    bundle = external_contract_bundle()
+    operation = next(iter(bundle["operations"].values()))
+    schema_name = operation["schemas"][0]
+    additive = copy.deepcopy(bundle)
+    schema = additive["schemas"][schema_name]["schema"]
+    schema.setdefault("properties", {})["future_optional"] = {"type": "string"}
+    monkeypatch.setattr(public_client, "external_contract_bundle", lambda: additive)
+    assert operation_compatibility_fingerprint(operation["contract"]) == operation["compatibility_fingerprint"]
+    breaking = copy.deepcopy(additive)
+    changed = breaking["schemas"][schema_name]["schema"]
+    changed["required"] = [*changed.get("required", []), "future_optional"]
+    monkeypatch.setattr(public_client, "external_contract_bundle", lambda: breaking)
+    assert operation_compatibility_fingerprint(operation["contract"]) != operation["compatibility_fingerprint"]
+
+
+def test_requirement_matrix_reports_unsupported(monkeypatch) -> None:
+    bundle = copy.deepcopy(external_contract_bundle())
+    operation_id, operation = next(iter(bundle["operations"].items()))
+    operation["external_consumption"]["status"] = "target-specific"
+    monkeypatch.setattr(public_client, "external_contract_bundle", lambda: bundle)
+    assert negotiate_requirements({operation_id: None})["requirements"][0]["status"] == "unsupported"
 
 
 def test_generated_operation_specific_wrapper_uses_public_contract() -> None:

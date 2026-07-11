@@ -52,11 +52,27 @@ def external_contract_bundle() -> dict[str, Any]:
 
 
 def operation_compatibility_fingerprint(contract: Mapping[str, Any]) -> str:
+    def normalize(value: Any) -> Any:
+        if isinstance(value, list):
+            return [normalize(item) for item in value]
+        if not isinstance(value, dict):
+            return value
+        required = set(value.get("required", [])) if isinstance(value.get("required"), list) else set()
+        return {
+            key: (
+                {name: normalize(schema) for name, schema in item.items() if name in required}
+                if key == "properties" and isinstance(item, dict)
+                else normalize(item)
+            )
+            for key, item in value.items()
+            if key not in {"description", "title", "$id", "$comment", "examples", "default"}
+        }
+
     normalized = {key: contract.get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")}
     bundle = external_contract_bundle()
     operation = bundle["operations"].get(str(contract.get("id")), {})
     schemas = {name: bundle["schemas"][name]["schema"] for name in operation.get("schemas", [])}
-    encoded = json.dumps({"contract": normalized, "schemas": schemas}, sort_keys=True, separators=(",", ":")).encode()
+    encoded = json.dumps({"contract": normalized, "schemas": normalize(schemas)}, sort_keys=True, separators=(",", ":")).encode()
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 

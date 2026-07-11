@@ -269,24 +269,66 @@ def resolve_schema_reference(name: str, *, repo_root: Path = REPO_ROOT, base_pat
     return selected_path
 
 
+def schema_references(value: object) -> set[str]:
+    refs: set[str] = set()
+    if isinstance(value, dict):
+        for item in value.values():
+            refs.update(schema_references(item))
+    elif isinstance(value, list):
+        for item in value:
+            refs.update(schema_references(item))
+    elif isinstance(value, str) and ".schema.json" in value and not any(character.isspace() for character in value):
+        if value.split("#", 1)[0].endswith(".schema.json"):
+            refs.add(value)
+    return refs
+
+
+def collect_schema_graph(initial: set[str], *, repo_root: Path = REPO_ROOT) -> tuple[set[str], dict[str, object]]:
+    closure: set[str] = set()
+    graph: dict[str, object] = {}
+    pending: list[tuple[str, Path | None, str | None]] = [(ref, None, None) for ref in sorted(initial)]
+    while pending:
+        reference, base_path, preferred_key = pending.pop()
+        schema_path = resolve_schema_reference(reference, repo_root=repo_root, base_path=base_path)
+        key = preferred_key or reference.split("#", 1)[0]
+        if key in closure:
+            continue
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        graph[key] = {"source": schema_path.relative_to(repo_root).as_posix(), "schema": schema}
+        closure.add(key)
+        for nested in schema_references(schema):
+            nested_path = resolve_schema_reference(nested, repo_root=repo_root, base_path=schema_path)
+            pending.append((nested, schema_path, nested_path.relative_to(repo_root).as_posix()))
+    return closure, graph
+
+
 def render_bundle(profile: dict[str, object]) -> str:
     def schema_refs(value: object) -> set[str]:
-        refs: set[str] = set()
-        if isinstance(value, dict):
-            for item in value.values():
-                refs.update(schema_refs(item))
-        elif isinstance(value, list):
-            for item in value:
-                refs.update(schema_refs(item))
-        elif isinstance(value, str) and ".schema.json" in value and not any(character.isspace() for character in value):
-            reference = value.split("#", 1)[0]
-            if reference.endswith(".schema.json"):
-                refs.add(reference)
-        return refs
+        return schema_references(value)
+
+    def compatibility_schema(value: object) -> object:
+        if isinstance(value, list):
+            return [compatibility_schema(item) for item in value]
+        if not isinstance(value, dict):
+            return value
+        required = set(value.get("required", [])) if isinstance(value.get("required"), list) else set()
+        normalized: dict[str, object] = {}
+        for key, item in value.items():
+            if key in {"description", "title", "$id", "$comment", "examples", "default"}:
+                continue
+            if key == "properties" and isinstance(item, dict):
+                normalized[key] = {name: compatibility_schema(schema) for name, schema in item.items() if name in required}
+            else:
+                normalized[key] = compatibility_schema(item)
+        return normalized
+
+    def schema_closure(initial: set[str]) -> set[str]:
+        closure, graph = collect_schema_graph(initial)
+        schemas.update(graph)
+        return closure
 
     operations: dict[str, object] = {}
     schemas: dict[str, object] = {}
-    pending_schemas: set[str] = set()
     for entry in profile["operations"]:
         if not isinstance(entry, dict) or entry.get("external_consumption", {}).get("status") == "internal":
             continue
@@ -296,7 +338,7 @@ def render_bundle(profile: dict[str, object]) -> str:
             for values in entry.get("schemas", {}).values()
             for item in values
         }
-        pending_schemas.update(declared_schemas | schema_refs(contract))
+        closure = schema_closure(declared_schemas | schema_refs(contract))
         compatibility_contract = {
             key: contract.get(key)
             for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")
@@ -307,22 +349,14 @@ def render_bundle(profile: dict[str, object]) -> str:
             "fingerprint": "pending",
             "compatibility_fingerprint": "pending",
             "contract": contract,
-            "schemas": sorted(declared_schemas | schema_refs(contract)),
+            "schemas": sorted(closure),
             "targets": entry["targets"],
             "external_consumption": entry["external_consumption"],
         }
-    while pending_schemas:
-        name = pending_schemas.pop()
-        if name in schemas:
-            continue
-        schema_path = resolve_schema_reference(name)
-        schema = json.loads(schema_path.read_text(encoding="utf-8"))
-        schemas[name] = {"source": schema_path.relative_to(REPO_ROOT).as_posix(), "schema": schema}
-        pending_schemas.update(schema_refs(schema) - set(schemas))
     for operation in operations.values():
         closure = {name: schemas[name]["schema"] for name in operation["schemas"]}
         exact = {"contract": operation["contract"], "schemas": closure}
-        compatible = {"contract": {key: operation["contract"].get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")}, "schemas": closure}
+        compatible = {"contract": {key: operation["contract"].get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")}, "schemas": compatibility_schema(closure)}
         operation["fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(exact, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         operation["compatibility_fingerprint"] = "sha256:" + hashlib.sha256(json.dumps(compatible, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     payload = {

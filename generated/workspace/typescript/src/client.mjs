@@ -16,7 +16,13 @@ export function operationCompatibilityFingerprint(contract) {
   const bundle = externalContractBundle(); const operation = bundle.operations[String(contract.id)] ?? {};
   const schemas = Object.fromEntries((operation.schemas ?? []).map((name) => [name, bundle.schemas[name].schema]));
   const sortValue = (value) => Array.isArray(value) ? value.map(sortValue) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortValue(value[key])])) : value;
-  const canonical = JSON.stringify(sortValue({ contract: normalized, schemas }));
+  const normalize = (value) => {
+    if (Array.isArray(value)) return value.map(normalize);
+    if (!value || typeof value !== 'object') return value;
+    const required = new Set(Array.isArray(value.required) ? value.required : []);
+    return Object.fromEntries(Object.entries(value).filter(([key]) => !['description', 'title', '$id', '$comment', 'examples', 'default'].includes(key)).map(([key, item]) => [key, key === 'properties' && item && typeof item === 'object' ? Object.fromEntries(Object.entries(item).filter(([name]) => required.has(name)).map(([name, schema]) => [name, normalize(schema)])) : normalize(item)]));
+  };
+  const canonical = JSON.stringify(sortValue({ contract: normalized, schemas: normalize(schemas) }));
   return `sha256:${createHash('sha256').update(canonical).digest('hex')}`;
 }
 export function negotiateRequirements(requirements, { allowRuntimeBacked = false } = {}) {

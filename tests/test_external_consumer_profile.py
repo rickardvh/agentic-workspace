@@ -258,3 +258,18 @@ def test_schema_resolution_is_provenance_safe_and_fragment_aware(tmp_path: Path)
         module.resolve_schema_reference("result.schema.json", repo_root=tmp_path)
     with pytest.raises(ValueError, match="missing transitive schema"):
         module.resolve_schema_reference("missing.schema.json", repo_root=tmp_path)
+
+
+def test_recursive_schema_graph_preserves_relative_context_and_fragments(tmp_path: Path) -> None:
+    module = _module()
+    root = tmp_path / "src/owner/root.schema.json"
+    child = tmp_path / "src/owner/nested/child.schema.json"
+    child.parent.mkdir(parents=True)
+    root.write_text('{"$ref":"nested/child.schema.json#/$defs/value"}\n', encoding="utf-8")
+    child.write_text('{"$defs":{"value":{"type":"string"}}}\n', encoding="utf-8")
+    closure, graph = module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
+    assert "src/owner/nested/child.schema.json" in closure
+    assert graph["src/owner/nested/child.schema.json"]["source"] == "src/owner/nested/child.schema.json"
+    root.write_text('{"$ref":"nested/child.schema.json#/$defs/missing"}\n', encoding="utf-8")
+    with pytest.raises(ValueError, match="missing schema fragment"):
+        module.collect_schema_graph({"owner/root.schema.json"}, repo_root=tmp_path)
