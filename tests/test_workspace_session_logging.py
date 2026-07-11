@@ -1111,6 +1111,13 @@ def test_session_log_share_safe_export_redacts_all_surfaces_and_preserves_origin
         manifest = json.loads(archive.read("manifest.json"))
         assert manifest["originals_mutated"] is False
         assert "arbitrary secrets" in manifest["limitations"]
+        assert manifest["disclosure_profile"] == "reviewer-with-artifacts"
+        promotion = manifest["promotion_contract"]
+        assert promotion["source_class"] == "raw-local-diagnostic"
+        assert promotion["output_class"] == "promoted-shareable-diagnostic"
+        assert promotion["transformation_summary"]["normalized_string_count"] > 0
+        assert promotion["residual_risks"]
+        assert promotion["component_manifests"][0]["field_classes"]["integrity-critical"]
     assert log_path.read_bytes() == original_log
     assert index_path.read_bytes() == original_index
 
@@ -1123,8 +1130,43 @@ def test_session_log_share_safe_export_redacts_all_surfaces_and_preserves_origin
     )
     by_id = json.loads(capsys.readouterr().out)
     assert by_id["artifact_count"] == 0
+    with zipfile.ZipFile(target / by_id["path"]) as archive:
+        minimal_manifest = json.loads(archive.read("manifest.json"))
+        assert minimal_manifest["disclosure_profile"] == "external-minimal"
+        omitted = minimal_manifest["promotion_contract"]["transformation_summary"]["omitted_fields"]
+        assert any(field.endswith((".python", ".python_executable")) for field in omitted)
     assert source_cli.main(["session-log", "--target", str(target), "export", "--path", pointer["log_path"], "--format", "json"]) == 0
     by_path = json.loads(capsys.readouterr().out)
     assert by_path["source_log_path"] == pointer["log_path"]
     assert log_path.read_bytes() == original_log
     assert index_path.read_bytes() == original_index
+
+
+def test_diagnostic_promotion_contract_supports_proof_failure_artifact_without_session_specific_scrubbing() -> None:
+    from agentic_workspace.diagnostic_promotion import promote_diagnostic_payload
+
+    checkout_root = "C:" + "/" + "Users/example/repo"
+    python_path = "C:" + "/" + "Users/example/.venv/python.exe"
+    raw = {
+        "kind": "agentic-workspace/proof-failure-summary/v1",
+        "failed_command": f"pytest {checkout_root}/tests/test_example.py",
+        "python_executable": python_path,
+        "recorded_at": "2026-07-11T10:00:00+00:00",
+        "changed_paths": ["tests/test_example.py"],
+        "cluster_relationships": [{"root": "tests/test_example.py", "occurrences": 2}],
+    }
+    promoted, manifest = promote_diagnostic_payload(
+        artifact_type="proof-failure-summary",
+        payload=raw,
+        profile="external-minimal",
+        normalize_text=lambda text: text.replace(checkout_root, "<target>"),
+    )
+
+    assert promoted["failed_command"] == "pytest <target>/tests/test_example.py"
+    assert "python_executable" not in promoted
+    assert promoted["recorded_at"] == raw["recorded_at"]
+    assert promoted["cluster_relationships"] == raw["cluster_relationships"]
+    assert manifest["artifact_type"] == "proof-failure-summary"
+    assert manifest["transformations"]["omitted_fields"] == ["$.python_executable"]
+    assert manifest["originals_mutated"] is False
+    assert raw["python_executable"] == python_path

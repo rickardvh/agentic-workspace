@@ -23,6 +23,7 @@ from typing import Any
 from agentic_workspace import __version__
 from agentic_workspace import config as config_lib
 from agentic_workspace.current_work_context import resolve_current_work_context
+from agentic_workspace.diagnostic_promotion import promote_diagnostic_payload
 from agentic_workspace.result_adapter import serialise_value
 
 SESSION_LOG_ROOT = Path(".agentic-workspace") / "local" / "logs"
@@ -1658,9 +1659,24 @@ def export_session_log(
     effective_session = _session_for_log(state=state, log_path=log_path, session=session)
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
     entries = _entries_from_index(index) if index is not None else _entries_from_markdown(log_path)
-    files: dict[str, bytes] = {"session.md": _share_safe_text(state=state, text=log_path.read_text(encoding="utf-8-sig")).encode("utf-8")}
+    disclosure_profile = "reviewer-with-artifacts" if include_artifacts else "external-minimal"
+    promotion_manifests: list[dict[str, Any]] = []
+    promoted_markdown, markdown_manifest = promote_diagnostic_payload(
+        artifact_type="session-log-markdown",
+        payload=log_path.read_text(encoding="utf-8-sig"),
+        profile=disclosure_profile,
+        normalize_text=lambda text: _share_safe_text(state=state, text=text),
+    )
+    promotion_manifests.append(markdown_manifest)
+    files: dict[str, bytes] = {"session.md": str(promoted_markdown).encode("utf-8")}
     if index is not None:
-        safe_index = _share_safe_value(state=state, value=index)
+        safe_index, index_manifest = promote_diagnostic_payload(
+            artifact_type="session-log-index",
+            payload=index,
+            profile=disclosure_profile,
+            normalize_text=lambda text: _share_safe_text(state=state, text=text),
+        )
+        promotion_manifests.append(index_manifest)
         files["index.json"] = (json.dumps(safe_index, indent=2, sort_keys=True) + "\n").encode("utf-8")
     included_artifacts: list[str] = []
     if include_artifacts:
@@ -1680,9 +1696,22 @@ def export_session_log(
             archive_name = f"artifacts/{candidate.name}"
             try:
                 artifact_payload = json.loads(raw)
-                safe_raw = json.dumps(_share_safe_value(state=state, value=artifact_payload), indent=2, sort_keys=True) + "\n"
+                promoted_artifact, artifact_manifest = promote_diagnostic_payload(
+                    artifact_type="session-log-output-artifact",
+                    payload=artifact_payload,
+                    profile=disclosure_profile,
+                    normalize_text=lambda text: _share_safe_text(state=state, text=text),
+                )
+                safe_raw = json.dumps(promoted_artifact, indent=2, sort_keys=True) + "\n"
             except json.JSONDecodeError:
-                safe_raw = _share_safe_text(state=state, text=raw)
+                promoted_artifact, artifact_manifest = promote_diagnostic_payload(
+                    artifact_type="session-log-output-artifact",
+                    payload=raw,
+                    profile=disclosure_profile,
+                    normalize_text=lambda text: _share_safe_text(state=state, text=text),
+                )
+                safe_raw = str(promoted_artifact)
+            promotion_manifests.append(artifact_manifest)
             files[archive_name] = safe_raw.encode("utf-8")
             included_artifacts.append(archive_name)
     source_hashes = {"session.md": hashlib.sha256(log_path.read_bytes()).hexdigest()}
@@ -1697,6 +1726,22 @@ def export_session_log(
         "source_log_path": effective_session["log_path"],
         "created_at": datetime.now(UTC).isoformat(),
         "redaction_mode": "share-safe-known-local-paths",
+        "disclosure_profile": disclosure_profile,
+        "promotion_contract": {
+            "kind": "agentic-workspace/diagnostic-promotion/v1",
+            "source_class": "raw-local-diagnostic",
+            "output_class": "promoted-shareable-diagnostic",
+            "component_manifests": promotion_manifests,
+            "transformation_summary": {
+                "normalized_string_count": sum(
+                    int(item.get("transformations", {}).get("normalized_string_count", 0)) for item in promotion_manifests
+                ),
+                "omitted_fields": [
+                    field for item in promotion_manifests for field in item.get("transformations", {}).get("omitted_fields", [])
+                ],
+            },
+            "residual_risks": sorted({risk for item in promotion_manifests for risk in item.get("residual_risks", [])}),
+        },
         "included_files": sorted(files),
         "included_artifacts": included_artifacts,
         "source_hashes": source_hashes,
