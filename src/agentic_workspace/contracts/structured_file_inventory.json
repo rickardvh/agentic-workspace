@@ -1749,7 +1749,7 @@
       "named_consumer": "released Python and TypeScript external operation clients",
       "checked_in_justification": "Package-owned operation support discovery is required outside a source checkout.",
       "freshness_check": "uv run python scripts/generate/generate_external_consumer_profile.py --check",
-      "ordinary_agent_route": "not an ordinary startup surface; consumed by external clients",
+      "ordinary_agent_route": "external-client contract drill-down only; not an ordinary startup surface",
       "removal_or_demotion_path": "remove only if released clients gain an equivalent package-owned discovery resource",
       "max_bytes": 2000000
     },
@@ -1759,7 +1759,7 @@
       "named_consumer": "released Python and TypeScript external operation clients",
       "checked_in_justification": "Self-contained operation validation must work outside a source checkout without host payload mirrors.",
       "freshness_check": "uv run python scripts/generate/generate_external_consumer_profile.py --check",
-      "ordinary_agent_route": "not an ordinary startup surface; consumed by external clients",
+      "ordinary_agent_route": "external-client contract drill-down only; not an ordinary startup surface",
       "removal_or_demotion_path": "remove only if released clients gain an equivalent self-contained contract transport",
       "max_bytes": 5000000
     },
@@ -1831,7 +1831,7 @@
       "freshness_check": "uv run python scripts/generate/generate_command_packages.py --check",
       "ordinary_agent_route": "generated-surface drill-down only: agentic-workspace defaults --section root_cli_authority --format json",
       "removal_or_demotion_path": "demote to generated-on-demand only after packaging no longer needs checked-in generated Python resource files",
-      "max_bytes": 250000
+      "max_bytes": 5000000
     },
     {
       "pattern": "generated/*/python/operations/*.json",
