@@ -211,6 +211,34 @@ def test_python_and_typescript_role_aware_compatibility(
     assert result.stdout.strip() == str(compatible).lower()
 
 
+@pytest.mark.parametrize(
+    "change,compatible", [("add_optional", True), ("add_required", False), ("make_required", False), ("remove_optional", False)]
+)
+def test_python_and_typescript_operation_input_evolution(change: str, compatible: bool) -> None:
+    old = {
+        "contract": {"inputs": [{"name": "a", "required": False, "type": "string"}]},
+        "schemas": {"input": {"fixture": {"type": "object", "properties": {"a": {"type": "string"}}, "required": []}}},
+    }
+    new = copy.deepcopy(old)
+    if change.startswith("add_"):
+        required = change == "add_required"
+        new["contract"]["inputs"].append({"name": "b", "required": required, "type": "string"})
+        new["schemas"]["input"]["fixture"]["properties"]["b"] = {"type": "string"}
+        if required:
+            new["schemas"]["input"]["fixture"]["required"].append("b")
+    elif change == "make_required":
+        new["contract"]["inputs"][0]["required"] = True
+        new["schemas"]["input"]["fixture"]["required"].append("a")
+    else:
+        new["contract"]["inputs"] = []
+        del new["schemas"]["input"]["fixture"]["properties"]["a"]
+    assert public_client.compatibility_surface_satisfied(old, new) is compatible
+    script = f"import {{compatibilitySurfaceSatisfied}} from './generated/workspace/typescript/src/client.mjs'; console.log(compatibilitySurfaceSatisfied({json.dumps(old)}, {json.dumps(new)}));"
+    result = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == str(compatible).lower()
+
+
 def test_generated_operation_specific_wrapper_uses_public_contract() -> None:
     payload = config_report(
         {},

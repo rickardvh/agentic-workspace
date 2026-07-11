@@ -8,7 +8,7 @@ import tomllib
 from dataclasses import dataclass
 from importlib.resources import files
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence, cast
 
 from jsonschema import Draft202012Validator
 
@@ -88,7 +88,29 @@ def _surface_compatible(required: Any, available: Any, *, role: str = "contract"
 
 
 def compatibility_surface_satisfied(required: Mapping[str, Any], available: Mapping[str, Any]) -> bool:
-    return _surface_compatible(required.get("contract"), available.get("contract")) and all(
+    old_contract = required.get("contract", {})
+    new_contract = available.get("contract", {})
+    if not isinstance(old_contract, Mapping) or not isinstance(new_contract, Mapping):
+        return False
+    old_inputs = {str(item.get("name")): item for item in old_contract.get("inputs", []) if isinstance(item, Mapping)}
+    new_inputs = {str(item.get("name")): item for item in new_contract.get("inputs", []) if isinstance(item, Mapping)}
+    if any(name not in new_inputs for name in old_inputs):
+        return False
+    for name, old_input in old_inputs.items():
+        new_input = new_inputs[name]
+        if not old_input.get("required", False) and new_input.get("required", False):
+            return False
+        if not _surface_compatible(
+            {key: value for key, value in old_input.items() if key != "required"},
+            {key: value for key, value in new_input.items() if key != "required"},
+            role="input",
+        ):
+            return False
+    if any(item.get("required", False) for name, item in new_inputs.items() if name not in old_inputs):
+        return False
+    old_contract_without_inputs = {key: value for key, value in old_contract.items() if key != "inputs"}
+    new_contract_without_inputs = {key: value for key, value in new_contract.items() if key != "inputs"}
+    return _surface_compatible(old_contract_without_inputs, new_contract_without_inputs) and all(
         _surface_compatible(schemas, available.get("schemas", {}).get(role), role=role)
         for role, schemas in required.get("schemas", {}).items()
     )
@@ -109,10 +131,21 @@ def negotiate_requirements(
             results.append({"operation": operation_id, "status": "runtime-backed", "reason": "explicit runtime-backed opt-in required"})
         elif support not in {"supported", "runtime-backed"}:
             results.append({"operation": operation_id, "status": "unsupported", "reason": f"support status is {support}"})
-        elif isinstance(requirement, Mapping) and not compatibility_surface_satisfied(
-            requirement.get("compatibility_surface", {}), operation.get("compatibility_surface", {})
-        ):
-            results.append({"operation": operation_id, "status": "incompatible", "reason": "operation compatibility surface is breaking"})
+        elif isinstance(requirement, Mapping):
+            required_surface = requirement.get("compatibility_surface")
+            available_surface = operation.get("compatibility_surface")
+            if (
+                not isinstance(required_surface, Mapping)
+                or not isinstance(available_surface, Mapping)
+                or not compatibility_surface_satisfied(
+                    cast(Mapping[str, Any], required_surface), cast(Mapping[str, Any], available_surface)
+                )
+            ):
+                results.append(
+                    {"operation": operation_id, "status": "incompatible", "reason": "operation compatibility surface is breaking"}
+                )
+                continue
+            results.append({"operation": operation_id, "status": "compatible", "reason": "requirement satisfied"})
         elif isinstance(requirement, str) and requirement != operation["compatibility_fingerprint"]:
             results.append({"operation": operation_id, "status": "incompatible", "reason": "operation fingerprint mismatch"})
         else:

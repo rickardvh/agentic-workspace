@@ -58,7 +58,20 @@ export function compatibilitySurfaceSatisfied(required, available) {
     }
     return oldValue && typeof oldValue === 'object' ? newValue && typeof newValue === 'object' && Object.entries(oldValue).every(([key, value]) => key in newValue && compare(value, newValue[key], role, key)) : oldValue === newValue;
   };
-  return compare(required.contract, available.contract) && Object.entries(required.schemas ?? {}).every(([role, schemas]) => compare(schemas, available.schemas?.[role], role));
+  const oldInputs = new Map((required.contract?.inputs ?? []).map((item) => [String(item.name), item]));
+  const newInputs = new Map((available.contract?.inputs ?? []).map((item) => [String(item.name), item]));
+  if ([...oldInputs].some(([name]) => !newInputs.has(name))) return false;
+  for (const [name, oldInput] of oldInputs) {
+    const newInput = newInputs.get(name);
+    if (!oldInput.required && newInput.required) return false;
+    const oldRest = Object.fromEntries(Object.entries(oldInput).filter(([key]) => key !== 'required'));
+    const newRest = Object.fromEntries(Object.entries(newInput).filter(([key]) => key !== 'required'));
+    if (!compare(oldRest, newRest, 'input')) return false;
+  }
+  if ([...newInputs].some(([name, item]) => !oldInputs.has(name) && item.required)) return false;
+  const oldContract = Object.fromEntries(Object.entries(required.contract ?? {}).filter(([key]) => key !== 'inputs'));
+  const newContract = Object.fromEntries(Object.entries(available.contract ?? {}).filter(([key]) => key !== 'inputs'));
+  return compare(oldContract, newContract) && Object.entries(required.schemas ?? {}).every(([role, schemas]) => compare(schemas, available.schemas?.[role], role));
 }
 export function detectWorkspace(target) {
   const root = resolve(target); const path = join(root, '.agentic-workspace', 'config.toml');
