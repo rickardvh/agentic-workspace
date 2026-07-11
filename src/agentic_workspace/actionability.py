@@ -25,9 +25,24 @@ def derive_actionability(
 ) -> dict[str, Any]:
     """Derive one coherent action decision and reject ordinary same-operation loops."""
 
+    def identity(item: Any) -> str:
+        if isinstance(item, dict):
+            return str(
+                item.get("id") or item.get("finding_id") or item.get("code") or item.get("message") or json.dumps(item, sort_keys=True)
+            )
+        return str(item)
+
     findings: list[dict[str, Any]] = []
+    repair_ids = {identity(item) for item in repair_actions}
     if repair_actions:
-        findings.append({"class": "required-repair", "count": len(repair_actions), "owner": "workspace-or-repo-maintainer"})
+        findings.append(
+            {
+                "class": "required-repair",
+                "count": len(repair_ids),
+                "owner": "workspace-or-repo-maintainer",
+                "finding_ids": sorted(repair_ids),
+            }
+        )
     required_reviews = [
         item
         for item in manual_review_actions
@@ -36,9 +51,23 @@ def derive_actionability(
     advisory_reviews = [item for item in manual_review_actions if item not in required_reviews]
     if required_reviews:
         findings.append({"class": "required-review", "count": len(required_reviews), "owner": "human-or-reviewer"})
-    advisory_count = len(advisory_reviews) + len(warnings)
+    required_ids = {identity(item) for item in required_reviews} - repair_ids
+    advisory_ids = ({identity(item) for item in advisory_reviews} | {identity(item) for item in warnings}) - repair_ids - required_ids
+    if required_reviews:
+        findings[-1]["count"] = len(required_ids)
+        findings[-1]["finding_ids"] = sorted(required_ids)
+        if not required_ids:
+            findings.pop()
+    advisory_count = len(advisory_ids)
     if advisory_count:
-        findings.append({"class": "optional-advisory", "count": advisory_count, "owner": "current-actor-or-reviewer"})
+        findings.append(
+            {
+                "class": "optional-advisory",
+                "count": advisory_count,
+                "owner": "current-actor-or-reviewer",
+                "finding_ids": sorted(advisory_ids),
+            }
+        )
     if not findings:
         findings.append({"class": "resolved-or-informational", "count": 1, "owner": "none"})
 
@@ -47,8 +76,20 @@ def derive_actionability(
     next_command = str(proposed.get("command") or proposed.get("run") or "").strip()
     same_operation = bool(next_command and _operation(next_command) == command_name)
     external_condition = str(proposed.get("external_change_condition") or "").strip()
-    self_loop_rejected = same_operation and not external_condition
-    if not action_required or self_loop_rejected:
+    expected_transition = str(proposed.get("expected_transition") or proposed.get("state_transition") or "").strip()
+    digest_input = {
+        "operation": command_name,
+        "health": health,
+        "finding_classes": [item["class"] for item in findings],
+        "finding_ids": sorted(repair_ids | required_ids | advisory_ids),
+        "action_required": action_required,
+        "claim_limits": list(claim_limits or []),
+    }
+    input_digest = hashlib.sha256(json.dumps(digest_input, sort_keys=True).encode()).hexdigest()[:16]
+    proposed_input_digest = str(proposed.get("input_digest") or "").strip()
+    same_state = proposed_input_digest == input_digest if proposed_input_digest else not expected_transition
+    self_loop_rejected = same_operation and same_state and not external_condition
+    if not action_required:
         next_action = {
             "action": "no-immediate-action",
             "summary": (
@@ -58,16 +99,16 @@ def derive_actionability(
             ),
             "commands": [],
         }
+    elif self_loop_rejected:
+        next_action = {
+            "action": "required-action-unavailable",
+            "summary": "Required work remains, but the proposed action repeats the same operation against unchanged state.",
+            "commands": [],
+            "owner": str(proposed.get("owner") or "workspace-or-repo-maintainer"),
+            "missing_precondition": str(proposed.get("missing_precondition") or "state change or a distinct transition-bearing action"),
+        }
     else:
         next_action = proposed
-
-    digest_input = {
-        "operation": command_name,
-        "health": health,
-        "finding_classes": [item["class"] for item in findings],
-        "action_required": action_required,
-        "claim_limits": list(claim_limits or []),
-    }
     return {
         "kind": "agentic-workspace/actionability/v1",
         "status": "action-required" if action_required else "advisory-only" if warnings or claim_limits else "resolved",
@@ -77,9 +118,11 @@ def derive_actionability(
         "claim_limits": list(claim_limits or []),
         "next_action": next_action,
         "progress_check": {
-            "input_digest": hashlib.sha256(json.dumps(digest_input, sort_keys=True).encode()).hexdigest()[:16],
+            "input_digest": input_digest,
             "proposed_operation": _operation(next_command),
             "same_operation": same_operation,
+            "same_state": same_state,
+            "expected_transition": expected_transition,
             "external_change_condition": external_condition,
             "result": "rejected-same-state-loop" if self_loop_rejected else "progress-making" if next_command else "terminal",
         },

@@ -995,6 +995,56 @@ def test_actionability_allows_same_operation_only_as_explicit_external_condition
     assert packet["progress_check"]["result"] == "progress-making"
 
 
+def test_actionability_allows_same_operation_with_explicit_state_transition() -> None:
+    from agentic_workspace.actionability import derive_actionability
+
+    packet = derive_actionability(
+        command_name="doctor",
+        health="broken",
+        warnings=[],
+        repair_actions=[{"id": "repair"}],
+        manual_review_actions=[],
+        proposed_next_action={
+            "action": "apply-repair",
+            "command": "agentic-workspace doctor --repair --format json",
+            "expected_transition": "repair applied then health rechecked",
+        },
+    )
+    assert packet["progress_check"]["same_operation"] is True
+    assert packet["progress_check"]["same_state"] is False
+    assert packet["next_action"]["action"] == "apply-repair"
+
+
+def test_actionability_keeps_required_work_visible_when_same_state_action_is_rejected() -> None:
+    from agentic_workspace.actionability import derive_actionability
+
+    packet = derive_actionability(
+        command_name="doctor",
+        health="broken",
+        warnings=[],
+        repair_actions=[{"id": "repair"}],
+        manual_review_actions=[],
+        proposed_next_action={"action": "retry", "command": "agentic-workspace doctor --format json"},
+    )
+    assert packet["status"] == "action-required"
+    assert packet["next_action"]["action"] == "required-action-unavailable"
+    assert packet["next_action"]["missing_precondition"]
+
+
+def test_actionability_deduplicates_one_fact_emitted_by_two_detectors() -> None:
+    from agentic_workspace.actionability import derive_actionability
+
+    packet = derive_actionability(
+        command_name="doctor",
+        health="attention",
+        warnings=[{"id": "same-fact"}],
+        repair_actions=[],
+        manual_review_actions=[{"id": "same-fact"}],
+        proposed_next_action=None,
+    )
+    assert packet["findings"][0]["count"] == 1
+
+
 def test_doctor_select_returns_requested_fields(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
