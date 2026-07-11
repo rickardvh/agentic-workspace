@@ -161,9 +161,7 @@
     "blocked": "none",
     "optional_deps": "none"
   },
-  "immediate_next_action": [
-    "Implement and test the shared proof-receipt admissibility validator."
-  ],
+  "immediate_next_action": [],
   "blockers": [
     "None."
   ],
@@ -333,27 +331,9 @@
       "closure_actions": [
         {
           "kind": "issue_closure",
-          "target": "#1237",
-          "authorized": true,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
-        },
-        {
-          "kind": "issue_closure",
-          "target": "#2030",
-          "authorized": true,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
-        },
-        {
-          "kind": "issue_closure",
-          "target": "#2173",
-          "authorized": true,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
-        },
-        {
-          "kind": "issue_closure",
           "target": "#2174",
           "authorized": true,
-          "reason": "issue closure requires full-intent completion authorization from the completion gate"
+          "reason": "This completed slice authorizes closure of child issue #2174 only; parent lane #2173 and related evidence issues remain open."
         }
       ],
       "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
