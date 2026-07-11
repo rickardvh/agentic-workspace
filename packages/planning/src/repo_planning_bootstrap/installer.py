@@ -2618,19 +2618,16 @@ def _reconcile_lane_children(*, target_root: Path, lane_id: str, apply: bool, dr
             previous_outcome in {"dismissed-not-planned", "superseded-or-rerouted"}
             and child.get("outcome_authority") == "human-reviewed"
             and bool(str(child.get("reason") or "").strip())
+            and (previous_outcome != "superseded-or-rerouted" or bool(str(child.get("new_owner") or "").strip()))
         )
-        if human_final and _external_status_is_closed(observed_status):
+        if human_final:
             child["outcome"] = previous_outcome
-        elif pr_status == "merged":
-            child["outcome"] = "landed"
-        elif pr_status == "closed":
-            child["outcome"] = "closed-without-merge"
-        elif pr_ref and pr_status != "merged":
-            child["outcome"] = "unresolved"
         elif _external_status_is_open(observed_status) or observed is None:
             child["outcome"] = "unresolved"
         elif _external_status_is_closed(observed_status):
-            child["outcome"] = "closed-without-merge"
+            child["outcome"] = (
+                "landed" if pr_status == "merged" else "closed-without-merge" if pr_status == "closed" or not pr_ref else "unresolved"
+            )
         children.append(child)
     unresolved = [child for child in children if child["outcome"] == "unresolved"]
     missing_proof = [child for child in children if child["outcome"] == "landed" and not child["proof_ref"]]
