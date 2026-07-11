@@ -18885,6 +18885,7 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
         carry_dir.mkdir(parents=True, exist_ok=True)
         target_path = carry_dir / f"{binding['key']}.json"
         active_paths = []
+        active_bindings = []
         for candidate_path in carry_dir.glob("*.json"):
             try:
                 candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
@@ -18896,6 +18897,7 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
                 and _as_dict(candidate.get("lifecycle")).get("state", "active") == "active"
             ):
                 active_paths.append(candidate_path)
+                active_bindings.append(candidate_binding)
         if target_path not in active_paths and len(active_paths) >= 8:
             capacity_path = carry_dir / f"capacity-{hashlib.sha256(str(binding.get('plan_id', '')).encode()).hexdigest()[:16]}.json"
             blocked = {
@@ -18907,7 +18909,12 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
                 "phase_confirmations": {},
                 "work_binding": binding,
                 "lifecycle": {"state": "capacity-blocked", "created_at": now, "updated_at": now, "retention_limit": 8},
-                "safe_recovery": "Close or explicitly prune a positively stale carry for this plan, then rerun start; the forecast was not silently discarded.",
+                "capacity_candidates": active_bindings,
+                "safe_recovery": (
+                    f"Run agentic-planning archive-plan {binding.get('plan_id')} --target . "
+                    "--prune-decision-point-carry-key <capacity_candidates.key> --apply-cleanup --format json, then rerun start; "
+                    "the command works while the plan is active and preserves every other active carry."
+                ),
             }
             capacity_path.write_text(json.dumps(blocked, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             return blocked

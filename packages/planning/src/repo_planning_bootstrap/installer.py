@@ -14155,6 +14155,54 @@ def close_planning_item(
     return result
 
 
+def _prune_decision_point_carry_for_plan(*, plan_path: Path, target_root: Path, result: InstallResult, key: str, dry_run: bool) -> bool:
+    carry_dir = target_root / ".agentic-workspace/local/decision-point-intent"
+    record = _load_execplan_record(plan_path) or {}
+    active_milestone = _record_section_dict(record, "active_milestone") or {}
+    plan_ids = {plan_path.stem.removesuffix(".plan"), str(active_milestone.get("id") or "")}
+    matches: list[tuple[Path, dict[str, Any]]] = []
+    capacity_records: list[tuple[Path, dict[str, Any]]] = []
+    for carry_path in sorted(carry_dir.glob("*.json")) if carry_dir.is_dir() else []:
+        try:
+            candidate = json.loads(carry_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        binding = candidate.get("work_binding", {}) if isinstance(candidate, dict) else {}
+        lifecycle = candidate.get("lifecycle", {}) if isinstance(candidate, dict) else {}
+        if not isinstance(binding, dict) or str(binding.get("plan_id") or "") not in plan_ids:
+            continue
+        state = str(lifecycle.get("state") or "active") if isinstance(lifecycle, dict) else "active"
+        if state == "capacity-blocked":
+            capacity_records.append((carry_path, candidate))
+        elif state == "active" and str(binding.get("key") or "") == key:
+            matches.append((carry_path, candidate))
+    if len(matches) != 1:
+        result.add(
+            "blocked-with-reason",
+            carry_dir,
+            f"exact decision-point carry key {key!r} matched {len(matches)} active records for this plan; no carry was changed",
+        )
+        return False
+    selected_path, selected = matches[0]
+    affected = [(selected_path, selected), *capacity_records]
+    if dry_run:
+        for carry_path, _candidate in affected:
+            result.add("would prune local carry", carry_path, "exact-key active-plan recovery; other active carries are preserved")
+        return True
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    for carry_path, candidate in affected:
+        lifecycle = candidate.get("lifecycle", {}) if isinstance(candidate.get("lifecycle"), dict) else {}
+        candidate["lifecycle"] = {
+            **lifecycle,
+            "state": "stale",
+            "updated_at": now,
+            "stale_reason": "explicit archive-plan exact-key active-plan recovery",
+        }
+        carry_path.write_text(json.dumps(candidate, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result.add("pruned local carry", carry_path, "marked stale by exact-key recovery; other active carries were preserved")
+    return True
+
+
 def archive_execplan(
     plan: str,
     *,
@@ -14207,6 +14255,18 @@ def archive_execplan(
         return result
 
     status = _execplan_status(plan_path)
+    prune_key = str(prune_decision_point_carry_key or "").strip()
+    if prune_key:
+        if not _prune_decision_point_carry_for_plan(
+            plan_path=plan_path,
+            target_root=target_root,
+            result=result,
+            key=prune_key,
+            dry_run=dry_run,
+        ):
+            return result
+        if status not in {"completed", "done", "closed"} or dry_run:
+            return result
     if status not in {"completed", "done", "closed"}:
         result.add("manual review", plan_path, "archive requires the active milestone status to be completed/done/closed")
         return result
@@ -14226,7 +14286,7 @@ def archive_execplan(
             discard_summary=discard_summary,
             continuation_summary=continuation_summary,
             decision_point_carry_key=decision_point_carry_key,
-            prune_decision_point_carry_key=prune_decision_point_carry_key,
+            prune_decision_point_carry_key="",
         )
         if not prepared or dry_run:
             return result

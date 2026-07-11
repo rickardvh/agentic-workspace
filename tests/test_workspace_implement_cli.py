@@ -5464,6 +5464,8 @@ def test_repeated_start_preserves_concurrent_active_carries_for_same_plan(tmp_pa
     assert states.count("active") == 8
     assert states.count("capacity-blocked") == 1
     assert blocked_payload["decision_point_intent_carry"]["status"] == "capacity-blocked"
+    assert len(blocked_payload["decision_point_intent_carry"]["capacity_candidates"]) == 8
+    assert "--prune-decision-point-carry-key" in blocked_payload["decision_point_intent_carry"]["safe_recovery"]
 
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
     state_path.write_text(state_path.read_text(encoding="utf-8").replace('id = "forecast"', 'id = "other-plan"'), encoding="utf-8")

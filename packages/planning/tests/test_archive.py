@@ -629,6 +629,67 @@ def test_exact_stale_prune_preserves_other_active_carries(tmp_path: Path, capsys
     assert json.loads(active.read_text(encoding="utf-8"))["lifecycle"]["state"] == "consumed"
 
 
+def test_exact_stale_prune_recovers_capacity_while_plan_is_active(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="active")
+    abandoned = _write_decision_point_carry(tmp_path, key="abandoned")
+    preserved = _write_decision_point_carry(tmp_path, key="preserved")
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prune-decision-point-carry-key",
+                "abandoned",
+                "--apply-cleanup",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert any(action["kind"] == "pruned local carry" for action in payload["actions"])
+    assert json.loads(abandoned.read_text(encoding="utf-8"))["lifecycle"]["state"] == "stale"
+    assert json.loads(preserved.read_text(encoding="utf-8"))["lifecycle"]["state"] == "active"
+    assert record_path.exists()
+
+
+def test_unknown_stale_prune_key_blocks_without_changing_any_carry(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    first = _write_decision_point_carry(tmp_path, key="first")
+    second = _write_decision_point_carry(tmp_path, key="second")
+    before = {path: path.read_text(encoding="utf-8") for path in (first, second)}
+
+    assert (
+        planning_cli.main(
+            [
+                "archive-plan",
+                "plan-alpha",
+                "--target",
+                str(tmp_path),
+                "--prepare-closeout",
+                "--apply-cleanup",
+                "--prune-decision-point-carry-key",
+                "unknown",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert any(action["kind"] == "blocked-with-reason" and "matched 0" in action["detail"] for action in payload["actions"])
+    assert all(path.read_text(encoding="utf-8") == content for path, content in before.items())
+    assert record_path.exists()
+
+
 def test_failed_closeout_record_write_keeps_unique_carry_active(tmp_path: Path, monkeypatch, capsys) -> None:
     _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
     record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
