@@ -18879,6 +18879,39 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
         path = target_root / str(relative)
         if path.is_file():
             source_revisions[str(relative)] = hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    carry_dir = target_root / _DECISION_POINT_FORECAST_DIR
+    try:
+        carry_dir.mkdir(parents=True, exist_ok=True)
+        for existing_path in carry_dir.glob("*.json"):
+            try:
+                existing = json.loads(existing_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            existing_binding = _as_dict(existing.get("work_binding"))
+            lifecycle = _as_dict(existing.get("lifecycle"))
+            if (
+                existing_binding.get("plan_id") == binding.get("plan_id")
+                and existing_binding.get("key") != binding.get("key")
+                and lifecycle.get("state", "active") == "active"
+            ):
+                existing["lifecycle"] = {
+                    **lifecycle,
+                    "state": "superseded",
+                    "updated_at": now,
+                    "superseded_by": binding["key"],
+                }
+                existing_path.write_text(json.dumps(existing, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        superseded = sorted(carry_dir.glob("*.json"), key=lambda candidate: candidate.stat().st_mtime, reverse=True)
+        for old_path in superseded[8:]:
+            try:
+                old = json.loads(old_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if _as_dict(old.get("lifecycle")).get("state") in {"superseded", "consumed", "stale"}:
+                old_path.unlink(missing_ok=True)
+    except OSError:
+        return {}
     record = {
         "kind": "agentic-workspace/decision-point-intent-carry/v1",
         "forecast_identity": identity,
@@ -18887,8 +18920,9 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
         "emitted_forecast": forecast,
         "phase_confirmations": {},
         "work_binding": binding,
+        "lifecycle": {"state": "active", "created_at": now, "updated_at": now, "retention_limit": 8},
     }
-    path = target_root / _DECISION_POINT_FORECAST_DIR / f"{binding['key']}.json"
+    path = carry_dir / f"{binding['key']}.json"
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")

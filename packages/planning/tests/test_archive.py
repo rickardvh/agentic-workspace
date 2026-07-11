@@ -480,6 +480,68 @@ def test_archive_plan_prepare_closeout_preserves_specific_closure_evidence(tmp_p
     assert archived["closure_check"]["reopen trigger"] == "Agents need disconnected posture reads again."
 
 
+def _write_decision_point_carry(root: Path, *, key: str, plan_id: str = "plan-alpha") -> Path:
+    path = root / ".agentic-workspace/local/decision-point-intent" / f"{key}.json"
+    _write(
+        path,
+        json.dumps(
+            {
+                "kind": "agentic-workspace/decision-point-intent-carry/v1",
+                "forecast_digest": "forecast-1",
+                "source_revisions": {},
+                "work_binding": {"key": key, "plan_id": plan_id, "branch": f"branch-{key}", "task": f"task-{key}"},
+                "lifecycle": {"state": "active", "created_at": "2026-07-11T08:00:00+00:00"},
+                "phase_confirmations": {
+                    "implementation": {"forecast_digest": "forecast-1"},
+                    "proof": {"forecast_digest": "forecast-1", "status": "preserved"},
+                },
+            }
+        ),
+    )
+    return path
+
+
+def test_prepare_closeout_reports_ambiguous_carry_candidates_and_safe_recovery(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    first = _write_decision_point_carry(tmp_path, key="first")
+    second = _write_decision_point_carry(tmp_path, key="second")
+
+    assert (
+        planning_cli.main(["archive-plan", "plan-alpha", "--target", str(tmp_path), "--prepare-closeout", "--dry-run", "--format", "json"])
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    detail = next(action["detail"] for action in payload["actions"] if action["kind"] == "would update")
+
+    assert "ambiguous-plan-binding" in detail
+    assert first.relative_to(tmp_path).as_posix() in detail
+    assert second.relative_to(tmp_path).as_posix() in detail
+    assert "Run the ordinary start command again" in detail
+    assert first.exists() and second.exists()
+
+
+def test_successful_closeout_consumes_only_unique_plan_carry(tmp_path: Path, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    selected = _write_decision_point_carry(tmp_path, key="selected")
+    other = _write_decision_point_carry(tmp_path, key="other", plan_id="other-plan")
+
+    assert (
+        planning_cli.main(
+            ["archive-plan", "plan-alpha", "--target", str(tmp_path), "--prepare-closeout", "--apply-cleanup", "--format", "json"]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert any(action["kind"] == "consumed local carry" for action in payload["actions"])
+    assert not selected.exists()
+    assert other.exists()
+
+
 def test_archive_plan_prepare_closeout_archives_without_manual_json_repair(tmp_path: Path, capsys) -> None:
     _write(
         tmp_path / ".agentic-workspace/planning/state.toml",

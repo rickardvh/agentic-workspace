@@ -5421,6 +5421,38 @@ def test_implement_corrects_pre_edit_forecast_when_scope_changes(tmp_path: Path,
     assert unrelated.get("forecast_digest", "") == ""
 
 
+def test_repeated_start_supersedes_prior_carry_for_same_plan_without_unbounded_active_state(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_architecture_principles(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        'schema_version = 1\n[todo]\nactive_items = [{ id = "forecast", status = "active", surface = ".agentic-workspace/planning/execplans/forecast.plan.json" }]\n',
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/execplans/forecast.plan.json",
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "canonical_core": {"touched_scope": ["src/agentic_workspace/workspace_runtime_core.py"]},
+            }
+        ),
+    )
+
+    for task in ("Implement forecast task A", "Implement forecast task B"):
+        assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--format", "json"]) == 0
+        capsys.readouterr()
+
+    records = [
+        json.loads(path.read_text(encoding="utf-8"))
+        for path in (tmp_path / ".agentic-workspace/local/decision-point-intent").glob("*.json")
+    ]
+    assert len(records) == 2
+    assert [record["lifecycle"]["state"] for record in records].count("active") == 1
+    assert [record["lifecycle"]["state"] for record in records].count("superseded") == 1
+    active = next(record for record in records if record["lifecycle"]["state"] == "active")
+    assert active["work_binding"]["task"] == "Implement forecast task B"
+
+
 def test_implement_architecture_principle_uses_structured_path_not_task_keywords(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
