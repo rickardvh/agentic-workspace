@@ -5421,7 +5421,7 @@ def test_implement_corrects_pre_edit_forecast_when_scope_changes(tmp_path: Path,
     assert unrelated.get("forecast_digest", "") == ""
 
 
-def test_repeated_start_supersedes_prior_carry_for_same_plan_without_unbounded_active_state(tmp_path: Path, capsys) -> None:
+def test_repeated_start_preserves_concurrent_active_carries_for_same_plan(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_architecture_principles(tmp_path)
     _write(
@@ -5447,10 +5447,11 @@ def test_repeated_start_supersedes_prior_carry_for_same_plan_without_unbounded_a
         for path in (tmp_path / ".agentic-workspace/local/decision-point-intent").glob("*.json")
     ]
     assert len(records) == 2
-    assert [record["lifecycle"]["state"] for record in records].count("active") == 1
-    assert [record["lifecycle"]["state"] for record in records].count("superseded") == 1
-    active = next(record for record in records if record["lifecycle"]["state"] == "active")
-    assert active["work_binding"]["task"] == "Implement forecast task B"
+    assert [record["lifecycle"]["state"] for record in records].count("active") == 2
+    assert {record["work_binding"]["task"] for record in records} == {
+        "Implement forecast task A",
+        "Implement forecast task B",
+    }
 
 
 def test_implement_architecture_principle_uses_structured_path_not_task_keywords(tmp_path: Path, capsys) -> None:

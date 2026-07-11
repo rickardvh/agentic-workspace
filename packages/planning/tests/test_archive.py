@@ -518,7 +518,7 @@ def test_prepare_closeout_reports_ambiguous_carry_candidates_and_safe_recovery(t
     assert "ambiguous-plan-binding" in detail
     assert first.relative_to(tmp_path).as_posix() in detail
     assert second.relative_to(tmp_path).as_posix() in detail
-    assert "Run the ordinary start command again" in detail
+    assert "positive stale/closed-owner evidence" in detail
     assert first.exists() and second.exists()
 
 
@@ -538,8 +538,25 @@ def test_successful_closeout_consumes_only_unique_plan_carry(tmp_path: Path, cap
     payload = json.loads(capsys.readouterr().out)
 
     assert any(action["kind"] == "consumed local carry" for action in payload["actions"])
-    assert not selected.exists()
+    assert json.loads(selected.read_text(encoding="utf-8"))["lifecycle"]["state"] == "consumed"
     assert other.exists()
+
+
+def test_failed_closeout_record_write_keeps_unique_carry_active(tmp_path: Path, monkeypatch, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    selected = _write_decision_point_carry(tmp_path, key="selected")
+
+    def fail_write(**_kwargs) -> None:
+        raise OSError("injected durable record write failure")
+
+    monkeypatch.setattr(installer_mod, "_write_execplan_record", fail_write)
+    with pytest.raises(OSError, match="injected durable record write failure"):
+        planning_cli.main(["archive-plan", "plan-alpha", "--target", str(tmp_path), "--prepare-closeout", "--format", "json"])
+    capsys.readouterr()
+
+    assert json.loads(selected.read_text(encoding="utf-8"))["lifecycle"]["state"] == "active"
 
 
 def test_archive_plan_prepare_closeout_archives_without_manual_json_repair(tmp_path: Path, capsys) -> None:

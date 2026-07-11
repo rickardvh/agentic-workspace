@@ -12960,24 +12960,12 @@ def _prepare_execplan_closeout(
                 for path, candidate in carry_candidates
             ],
             "safe_recovery": (
-                "Run the ordinary start command again with the exact closing task and plan context; it supersedes other active carries for this plan, then retry closeout."
+                "Select the closing work binding explicitly in the plan's decision-point confirmation, or prune only a carry with positive stale/closed-owner evidence; do not choose newest."
                 if len(carry_candidates) > 1
                 else "none"
             ),
         }
     patch["completion_gate"] = _planning_completion_gate_payload(record=record, patch=patch)
-    if len(carry_candidates) == 1 and patch["completion_gate"].get("status") == "allowed" and not dry_run:
-        selected_path, selected_carry = carry_candidates[0]
-        lifecycle = selected_carry.get("lifecycle", {}) if isinstance(selected_carry.get("lifecycle"), dict) else {}
-        selected_carry["lifecycle"] = {
-            **lifecycle,
-            "state": "consumed",
-            "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-            "consumed_by": plan_path.stem.removesuffix(".plan"),
-        }
-        selected_path.write_text(json.dumps(selected_carry, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        selected_path.unlink(missing_ok=True)
-        result.add("consumed local carry", selected_path, "removed the uniquely selected decision-point intent carry")
     patch["generated_closeout"] = _generated_closeout_adapter(record=record, patch=patch)
 
     detail = json.dumps(patch, ensure_ascii=False, sort_keys=True)
@@ -12997,6 +12985,17 @@ def _prepare_execplan_closeout(
         return True
 
     _write_execplan_record(record_path=record_path, record=updated_record, render_markdown=plan_path != record_path)
+    if len(carry_candidates) == 1 and patch["completion_gate"].get("status") == "allowed":
+        selected_path, selected_carry = carry_candidates[0]
+        lifecycle = selected_carry.get("lifecycle", {}) if isinstance(selected_carry.get("lifecycle"), dict) else {}
+        selected_carry["lifecycle"] = {
+            **lifecycle,
+            "state": "consumed",
+            "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "consumed_by": plan_path.stem.removesuffix(".plan"),
+        }
+        selected_path.write_text(json.dumps(selected_carry, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result.add("consumed local carry", selected_path, "marked the uniquely selected carry consumed after durable closeout write")
     result.add("updated", record_path, "prepared normalized closeout fields before archive validation")
     return True
 

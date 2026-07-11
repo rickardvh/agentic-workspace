@@ -18883,25 +18883,6 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
     carry_dir = target_root / _DECISION_POINT_FORECAST_DIR
     try:
         carry_dir.mkdir(parents=True, exist_ok=True)
-        for existing_path in carry_dir.glob("*.json"):
-            try:
-                existing = json.loads(existing_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                continue
-            existing_binding = _as_dict(existing.get("work_binding"))
-            lifecycle = _as_dict(existing.get("lifecycle"))
-            if (
-                existing_binding.get("plan_id") == binding.get("plan_id")
-                and existing_binding.get("key") != binding.get("key")
-                and lifecycle.get("state", "active") == "active"
-            ):
-                existing["lifecycle"] = {
-                    **lifecycle,
-                    "state": "superseded",
-                    "updated_at": now,
-                    "superseded_by": binding["key"],
-                }
-                existing_path.write_text(json.dumps(existing, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         superseded = sorted(carry_dir.glob("*.json"), key=lambda candidate: candidate.stat().st_mtime, reverse=True)
         for old_path in superseded[8:]:
             try:
