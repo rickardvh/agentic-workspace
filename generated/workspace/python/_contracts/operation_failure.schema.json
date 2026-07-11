@@ -6,11 +6,11 @@
   "type": "object",
   "required": ["status"],
   "properties": {
-    "kind": {"type": "string", "minLength": 1},
-    "status": {"type": "string", "enum": ["rejected", "failed"]},
-    "message": {"type": "string"},
-    "command": {"type": "string"},
-    "exit_status": {"type": "integer", "minimum": 1}
+    "kind": {"type": "string", "minLength": 1, "description": "Optional versioned runtime error kind."},
+    "status": {"type": "string", "enum": ["rejected", "failed"], "description": "Stable external failure classification."},
+    "message": {"type": "string", "description": "Human-readable failure summary when supplied."},
+    "command": {"type": "string", "description": "Command surface that failed when supplied."},
+    "exit_status": {"type": "integer", "minimum": 1, "description": "Positive process exit status when supplied."}
   },
   "additionalProperties": true
 }
