@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 from typing import Any, Callable
 
 FIELD_CLASSES = {
@@ -32,14 +33,14 @@ FIELD_RULES = {
         "path",
         "root",
         "source_log_path",
-        "failed_command",
         "command_count",
         "occurrences",
         "exit_status",
         "exit_class",
         "packet_kinds",
+        "cluster_relationships",
     },
-    "opaque": {"stdout", "stderr", "output", "body", "message", "note", "notes", "command", "argv"},
+    "opaque": {"stdout", "stderr", "output", "body", "message", "note", "notes", "command", "failed_command", "argv"},
 }
 
 PROFILES = {
@@ -95,9 +96,10 @@ def promote_diagnostic_payload(
                     omitted.append(child_path)
                     continue
                 classification = field_class(str(key))
-                if profile == "external-minimal" and classification in {"opaque", "unknown"} and isinstance(child, str):
+                if profile == "external-minimal" and classification in {"opaque", "unknown"}:
                     omitted.append(child_path)
-                    result[key] = f"[opaque field omitted; sha256:{hashlib.sha256(child.encode()).hexdigest()[:12]}]"
+                    serialized = child if isinstance(child, str) else json.dumps(child, sort_keys=True, default=str)
+                    result[key] = f"[opaque field omitted; sha256:{hashlib.sha256(serialized.encode()).hexdigest()[:12]}]"
                     continue
                 result[key] = transform(child, child_path)
             return result

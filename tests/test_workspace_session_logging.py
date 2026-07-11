@@ -1134,8 +1134,8 @@ def test_session_log_share_safe_export_redacts_all_surfaces_and_preserves_origin
         minimal_manifest = json.loads(archive.read("manifest.json"))
         assert minimal_manifest["disclosure_profile"] == "external-minimal"
         assert "opaque content omitted" in archive.read("session.md").decode("utf-8")
-        omitted = minimal_manifest["promotion_contract"]["transformation_summary"]["omitted_fields"]
-        assert any(field.endswith((".python", ".python_executable")) for field in omitted)
+        minimal_combined = archive.read("session.md") + archive.read("index.json")
+        assert b"python_executable" not in minimal_combined
     assert source_cli.main(["session-log", "--target", str(target), "export", "--path", pointer["log_path"], "--format", "json"]) == 0
     by_path = json.loads(capsys.readouterr().out)
     assert by_path["source_log_path"] == pointer["log_path"]
@@ -1163,12 +1163,13 @@ def test_diagnostic_promotion_contract_supports_proof_failure_artifact_without_s
         normalize_text=lambda text: text.replace(checkout_root, "<target>"),
     )
 
-    assert promoted["failed_command"] == "pytest <target>/tests/test_example.py"
+    assert "opaque field omitted" in promoted["failed_command"]
+    assert "sha256:" in promoted["failed_command"]
     assert "python_executable" not in promoted
     assert promoted["recorded_at"] == raw["recorded_at"]
     assert promoted["cluster_relationships"] == raw["cluster_relationships"]
     assert manifest["artifact_type"] == "proof-failure-summary"
-    assert manifest["transformations"]["omitted_fields"] == ["$.python_executable"]
+    assert set(manifest["transformations"]["omitted_fields"]) == {"$.failed_command", "$.python_executable"}
     assert manifest["originals_mutated"] is False
     assert raw["python_executable"] == python_path
 
@@ -1189,3 +1190,29 @@ def test_external_minimal_omits_secret_like_opaque_text_but_preserves_integrity(
     assert "sha256:" in promoted["stdout"]
     assert manifest["transformations"]["pseudonymous_substitutions"] == []
     assert "stdout" in manifest["field_rules"]["opaque"]
+
+
+def test_external_minimal_recursively_omits_opaque_containers_and_secret_command_arguments() -> None:
+    from agentic_workspace.diagnostic_promotion import promote_diagnostic_payload
+
+    secret = "token=do-not-share"
+    promoted, _ = promote_diagnostic_payload(
+        artifact_type="session-log-index",
+        payload={
+            "id": "entry-2",
+            "created_at": "2026-07-11T10:00:00Z",
+            "changed_paths": ["tests/test_example.py"],
+            "stdout": [{"line": secret}],
+            "argv": ["pytest", "--header", secret],
+            "failed_command": f"pytest tests/test_example.py --header {secret}",
+            "unknown_container": [{"nested": secret}],
+        },
+        profile="external-minimal",
+        normalize_text=lambda text: text,
+    )
+
+    rendered = json.dumps(promoted)
+    assert secret not in rendered
+    assert promoted["changed_paths"] == ["tests/test_example.py"]
+    assert promoted["id"] == "entry-2"
+    assert all("sha256:" in promoted[key] for key in ("stdout", "argv", "failed_command", "unknown_container"))
