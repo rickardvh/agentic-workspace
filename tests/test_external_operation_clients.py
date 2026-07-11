@@ -212,7 +212,8 @@ def test_python_and_typescript_role_aware_compatibility(
 
 
 @pytest.mark.parametrize(
-    "change,compatible", [("add_optional", True), ("add_required", False), ("make_required", False), ("remove_optional", False)]
+    "change,compatible",
+    [("add_optional", True), ("add_required", False), ("make_required", False), ("remove_optional", False), ("tighten_type", False)],
 )
 def test_python_and_typescript_operation_input_evolution(change: str, compatible: bool) -> None:
     old = {
@@ -229,9 +230,12 @@ def test_python_and_typescript_operation_input_evolution(change: str, compatible
     elif change == "make_required":
         new["contract"]["inputs"][0]["required"] = True
         new["schemas"]["input"]["fixture"]["required"].append("a")
-    else:
+    elif change == "remove_optional":
         new["contract"]["inputs"] = []
         del new["schemas"]["input"]["fixture"]["properties"]["a"]
+    else:
+        new["contract"]["inputs"][0]["type"] = "integer"
+        new["schemas"]["input"]["fixture"]["properties"]["a"]["type"] = "integer"
     assert public_client.compatibility_surface_satisfied(old, new) is compatible
     script = f"import {{compatibilitySurfaceSatisfied}} from './generated/workspace/typescript/src/client.mjs'; console.log(compatibilitySurfaceSatisfied({json.dumps(old)}, {json.dumps(new)}));"
     result = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True)
