@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/config-report-input.schema.json",
+  "type": "object",
+  "properties": {
+    "target": {"type": ["string", "null"]},
+    "format": {"enum": ["text", "json", null]},
+    "select": {"type": ["string", "null"]},
+    "verbose": {"type": ["boolean", "null"]}
+  },
+  "additionalProperties": false
+}
