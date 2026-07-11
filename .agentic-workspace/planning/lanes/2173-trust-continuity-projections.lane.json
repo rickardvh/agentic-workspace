@@ -28,7 +28,7 @@
     "2178-invocation-intent",
     "2179-safe-diagnostic-promotion"
   ],
-  "current_slice": "review-merge-and-retarget",
+  "current_slice": "review-remaining-three-and-aggregate-proof",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "For every child, run routed changed-path proof plus the issue's required regression cases. Aggregate merged PRs, exact validation commands, and any residual owner before closing the lane.",
   "proof_aggregation": {
@@ -41,20 +41,20 @@
       "#2185: 230 projection/doctor/report tests plus measured doctor/report work and output reduction, lint, typecheck, and CI",
       "#2186: 32 session semantic tests after master rebase plus workspace CI",
       "#2187: 215 session/workspace tests, absolute-path hygiene, lint, typecheck, and CI"
+      ,"#2182, #2184, #2185, and #2186 are merged on master; their child issues are closed and their CI proof is landed."
     ],
     "known_gaps": [
-      "Child PRs remain unmerged; issue closure transitions are pending review and merge.",
-      "#2185 must land after #2184, then be retargeted to master and revalidated.",
+      "Only #2181, #2183, and #2187 remain under review.",
       "Parent #2173 must remain open until every child is closed or deliberately rerouted."
     ]
   },
-  "residual_lane_work": "Review and merge #2181-#2187; merge #2184 before #2185, retarget #2185 to master after its base lands, verify child issue closure, then aggregate landed proof and close #2173.",
+  "residual_lane_work": "Review and merge #2181, #2183, and #2187, verify their child issue closure, then aggregate final landed proof before closing #2173.",
   "lane_to_epic_contribution": "Provides the trust, continuity, projection, invocation, promotion, and intent-routing invariants named by #2173 without absorbing #2172 mutation-outcome scope.",
   "parent_close_permission": "blocked-until-child-prs-land",
   "closeout_state": {
     "status": "open",
-    "summary": "All child implementations are published and review-ready; lane closure remains merge-dependent.",
-    "residual_work": "Merge child PRs, retarget the one dependency stack, confirm child issue closure, and rerun final landed-state proof.",
+    "summary": "Four child PRs are landed and closed; three remaining child PRs are under review, so lane closure remains merge-dependent.",
+    "residual_work": "Review the remaining three PRs, confirm their child issue closure, and aggregate final landed-state proof.",
     "next_owner": "maintainer/reviewer"
   },
   "references": [
