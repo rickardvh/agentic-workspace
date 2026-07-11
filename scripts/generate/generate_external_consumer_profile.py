@@ -14,15 +14,28 @@ OUTPUTS = (
 )
 PYTHON_CLIENT = REPO_ROOT / "generated/workspace/python/client.py"
 TYPESCRIPT_CLIENT = REPO_ROOT / "generated/workspace/typescript/src/client.mjs"
+PYTHON_TYPED_OPERATIONS = REPO_ROOT / "src/agentic_workspace/generated_operations.py"
 SCHEMA_RESOURCE_OUTPUTS = {
+    REPO_ROOT / "generated/workspace/python/_contracts/delegation_outcome_append_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/delegation_outcome_append_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/delegation_outcome_append_result.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/config_report_input.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/config_report_input.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/workspace_config.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/config_report_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/config_report_result.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/config_report_input.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/config_report_input.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/workspace_config.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/workspace_config.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/config_report_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/config_report_result.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/delegation_outcome_append_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/delegation_outcome_append_input.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/delegation_outcome_append_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/delegation_outcome_append_result.schema.json",
 }
 
 
@@ -216,16 +229,43 @@ def render_typescript_client() -> str:
     return '''// Generated from command_package_ir.json. Do not edit.\nimport { readFileSync } from 'node:fs';\nimport { spawnSync } from 'node:child_process';\n\nconst profileUrl = new URL('../external_consumer_profile.json', import.meta.url);\nexport function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }\nexport function requireOperations(operationIds, { allowRuntimeBacked = false } = {}) {\n  const entries = new Map(externalConsumerProfile().operations.map((entry) => [entry.id, entry]));\n  const failures = operationIds.flatMap((id) => {\n    const status = entries.get(id)?.external_consumption?.status ?? 'unknown';\n    return status === 'internal' || status === 'unknown' || (status === 'runtime-backed' && !allowRuntimeBacked) ? [`${id}: ${status}`] : [];\n  });\n  if (failures.length) throw new Error(`incompatible operation requirements: ${failures.join(', ')}`);\n}\nexport function invokeJson(argv, { target, executable = 'agentic-workspace' } = {}) {\n  const args = [...argv];\n  if (target !== undefined && !args.includes('--target')) args.push('--target', String(target));\n  if (!args.includes('--format')) args.push('--format', 'json');\n  const result = spawnSync(executable, args, { encoding: 'utf8' });\n  const text = result.stdout || result.stderr;\n  let payload;\n  try { payload = JSON.parse(text); } catch (error) { throw new Error(`AW returned non-JSON output (exit ${result.status})`, { cause: error }); }\n  if (result.status !== 0) throw new Error(JSON.stringify({ exit_code: result.status, error: payload }));\n  return payload;\n}\n'''
 
 
+def render_python_typed_operations(profile: dict[str, object]) -> str:
+    lines = [
+        "# Generated from the external consumer profile. Do not edit.",
+        "from __future__ import annotations",
+        "",
+        "from pathlib import Path",
+        "from typing import Any, Mapping, Sequence",
+        "",
+        "from .client import invoke_operation",
+        "",
+    ]
+    for entry in profile["operations"]:
+        if entry["external_consumption"]["status"] == "internal":
+            continue
+        function_name = str(entry["id"]).replace(".", "_").replace("-", "_")
+        lines.extend(
+            [
+                f"def {function_name}(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:",
+                f'    return invoke_operation("{entry["id"]}", values, target=target, invocation=invocation, allow_runtime_backed=True)',
+                "",
+            ]
+        )
+    return "\n".join(lines)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    expected = render()
+    profile = build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")), repo_root=REPO_ROOT)
+    expected = json.dumps(profile, indent=2) + "\n"
     rendered = {
         **{path: expected for path in OUTPUTS},
         **{output: source.read_text(encoding="utf-8") for output, source in SCHEMA_RESOURCE_OUTPUTS.items()},
         PYTHON_CLIENT: render_python_client(),
         TYPESCRIPT_CLIENT: render_typescript_client(),
+        PYTHON_TYPED_OPERATIONS: render_python_typed_operations(profile),
     }
     stale = [path for path, content in rendered.items() if not path.is_file() or path.read_text(encoding="utf-8") != content]
     if args.check:

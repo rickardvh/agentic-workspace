@@ -12,6 +12,7 @@ dependencies = [
   "agentic-memory",
   "agentic-planning",
   "agentic-verification",
+  "jsonschema>=4.23",
 ]
 
 [project.scripts]

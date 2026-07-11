@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/config-report-result.schema.json",
+  "type": "object",
+  "required": ["kind", "profile", "target", "workspace"],
+  "properties": {
+    "kind": {"type": "string", "pattern": "^agentic-workspace/config-"},
+    "profile": {"enum": ["tiny", "full"]},
+    "target": {"type": "string"},
+    "workspace": {"type": "object"}
+  },
+  "additionalProperties": true
+}

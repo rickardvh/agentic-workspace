@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/delegation-outcome-append-input.schema.json",
+  "type": "object",
+  "required": ["delegation_target", "task_class", "outcome"],
+  "properties": {
+    "delegation_target": {"type": "string", "minLength": 1},
+    "task_class": {"type": "string", "minLength": 1},
+    "outcome": {"enum": ["success", "mixed", "failed"]},
+    "handoff_sufficiency": {"enum": ["sufficient", "borderline", "insufficient"]},
+    "review_burden": {"enum": ["light", "normal", "high"]},
+    "escalation_required": {"type": "boolean"}
+  },
+  "additionalProperties": false
+}

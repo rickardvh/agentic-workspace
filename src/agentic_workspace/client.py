@@ -9,6 +9,8 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from jsonschema import Draft202012Validator
+
 FAILURE_KINDS = {"absent", "disabled", "incompatible", "unsupported", "rejected", "failed", "malformed", "invocation-unavailable"}
 
 
@@ -89,6 +91,19 @@ def _operation_contract(entry: Mapping[str, Any]) -> dict[str, Any]:
     return json.loads(resource.read_text(encoding="utf-8"))
 
 
+def _validate_schema(entry: Mapping[str, Any], schema_name: str, value: Any, *, phase: str) -> None:
+    resource_ref = entry["operation_resources"]["python"]
+    schema_path = f"_contracts/{schema_name}"
+    schema = json.loads(_resource(schema_path, resource_ref["package"]).read_text(encoding="utf-8"))
+    errors = sorted(Draft202012Validator(schema).iter_errors(value), key=lambda error: list(error.path))
+    if errors:
+        raise AWClientError(
+            "malformed",
+            f"operation {phase} failed schema validation",
+            {"schema": schema_name, "errors": [error.message for error in errors]},
+        )
+
+
 def _argv(contract: Mapping[str, Any], values: Mapping[str, Any], target: Path) -> list[str]:
     surface = contract.get("command_surface", {})
     command = str(surface.get("command", "")).split()
@@ -136,6 +151,8 @@ def invoke_operation(
         raise AWClientError(state["status"], "workspace is not available", state)
     require_operations([operation_id], allow_runtime_backed=allow_runtime_backed)
     entry = next(item for item in external_consumer_profile()["operations"] if item["id"] == operation_id)
+    for schema_name in entry["schemas"]["input"]:
+        _validate_schema(entry, schema_name, dict(values), phase="input")
     argv = _argv(_operation_contract(entry), values, Path(target).resolve())
     command = [*resolve_invocation(target, invocation), *argv]
     try:
@@ -154,4 +171,6 @@ def invoke_operation(
         raise AWClientError(kind, "AW operation failed", {"exit_code": completed.returncode, "error": payload})
     if not isinstance(payload, dict):
         raise AWClientError("malformed", "AW result envelope must be an object", {"result": payload})
+    for schema_name in entry["schemas"]["output"]:
+        _validate_schema(entry, schema_name, payload, phase="result")
     return payload
