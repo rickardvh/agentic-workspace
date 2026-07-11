@@ -713,6 +713,71 @@ def test_session_log_origin_scopes_keep_synthetic_and_unknown_queryable(tmp_path
     assert session_logging.analyze_session_log(state=state, origin_scope="unknown")["summary"]["command_count"] == 1
 
 
+def test_session_log_preserves_producer_invocation_intent_and_matches_observed_outcomes(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "pytest")
+    monkeypatch.setenv("AW_SESSION_LOG_PURPOSE_ID", "proof-negative-path")
+    monkeypatch.setenv("AW_SESSION_LOG_SCENARIO_ID", "invalid-selector")
+    monkeypatch.setenv("AW_SESSION_LOG_INVOCATION_CLASS", "negative-fixture")
+    monkeypatch.setenv("AW_SESSION_LOG_EXPECTED_EXIT", "failure")
+    assert session_logging.run_with_session_logging(["config", "--target", str(target), "--select", "invalid"], lambda _: 2) == 2
+
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    monkeypatch.setenv("AW_SESSION_LOG_PURPOSE_ID", "ordinary-config-read")
+    monkeypatch.setenv("AW_SESSION_LOG_SCENARIO_ID", "config-success")
+    monkeypatch.setenv("AW_SESSION_LOG_INVOCATION_CLASS", "product-operation")
+    monkeypatch.setenv("AW_SESSION_LOG_EXPECTED_EXIT", "success")
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _: 2) == 2
+
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "validation")
+    monkeypatch.setenv("AW_SESSION_LOG_PURPOSE_ID", "validation-probe")
+    monkeypatch.setenv("AW_SESSION_LOG_SCENARIO_ID", "config-readable")
+    monkeypatch.setenv("AW_SESSION_LOG_INVOCATION_CLASS", "probe")
+    monkeypatch.setenv("AW_SESSION_LOG_EXPECTED_EXIT", "success")
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _: 0) == 0
+
+    for name in (
+        "AW_SESSION_LOG_PURPOSE_ID",
+        "AW_SESSION_LOG_SCENARIO_ID",
+        "AW_SESSION_LOG_INVOCATION_CLASS",
+        "AW_SESSION_LOG_EXPECTED_EXIT",
+    ):
+        monkeypatch.delenv(name)
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+    assert session_logging.run_with_session_logging(["summary", "--target", str(target)], lambda _: 0) == 0
+
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    analysis = session_logging.analyze_session_log(state=state, origin_scope="all")
+    assert analysis["summary"]["matched_expectation_count"] == 2
+    assert analysis["summary"]["unmatched_expectation_count"] == 1
+    assert analysis["summary"]["unknown_expectation_count"] == 1
+    assert analysis["summary"]["unexpected_failure_count"] == 1
+    assert analysis["summary"]["live_agent_failure_count"] == 1
+    assert analysis["matched_invocations"][0]["invocation_intent"]["invocation_class"] == "negative-fixture"
+    assert analysis["unmatched_invocations"][0]["invocation_outcome"]["observed"]["exit_class"] == "failure"
+    assert analysis["unknown_invocations"][0]["invocation_outcome"]["match"] == "unknown"
+    assert analysis["summary"]["failed_count"] == 1
+    assert len(analysis["failed_commands"]) == 1
+    assert len(analysis["observed_nonzero_exits"]) == 2
+    assert analysis["matched_invocations"][0] not in analysis["failed_commands"]
+
+    test_analysis = session_logging.analyze_session_log(state=state, origin_scope="test")
+    assert test_analysis["summary"]["failed_count"] == 0
+    assert test_analysis["failed_commands"] == []
+    assert len(test_analysis["observed_nonzero_exits"]) == 1
+    assert len(test_analysis["matched_invocations"]) == 1
+
+    index = json.loads(_current_index(target).read_text(encoding="utf-8"))
+    negative = index["entries"][0]
+    assert negative["exit_status"] == 2
+    assert negative["exit_class"] == "failure"
+    assert negative["invocation_outcome"]["match"] == "matched"
+    assert negative["invocation_outcome"]["expectation_provenance"]["source"] == "producer-environment"
+    assert negative["invocation_outcome"]["observed"] != negative["invocation_outcome"]["expected"]
+
+
 def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
