@@ -113,6 +113,7 @@ def _run_setup_steps(
             fixture_root=fixture_root,
             expectations={
                 "allowed_write_paths": list(step.get("allowed_write_paths", [])),
+                "allowed_write_directories": list(step.get("allowed_write_directories", [])),
                 "required_paths": [],
                 "forbidden_paths": [],
             },
@@ -173,12 +174,14 @@ def _assert_filesystem_effects(
     expectations: Mapping[str, Any],
     contract_id: str,
 ) -> None:
-    allowed = set(_strings(expectations["allowed_write_paths"]))
+    allowed_paths = set(_strings(expectations["allowed_write_paths"]))
+    allowed_directories = set(_strings(expectations.get("allowed_write_directories", [])))
     changed = {path for path in set(before) | set(after) if before.get(path) != after.get(path)}
     unexpected = sorted(
         path
         for path in changed
-        if not any(path == allowed_path or path.startswith(f"{allowed_path.rstrip('/')}/") for allowed_path in allowed)
+        if path not in allowed_paths
+        and not any(path == directory or path.startswith(f"{directory.rstrip('/')}/") for directory in allowed_directories)
     )
     if unexpected:
         raise AssertionError(f"{contract_id} changed forbidden fixture paths: {unexpected}")

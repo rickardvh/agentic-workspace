@@ -32,7 +32,8 @@ Conformance fixture contract for proving an operation adapter behaves as expecte
 | `expectations.stderr.allow_non_empty` | boolean | yes |  | Whether non-empty stderr is acceptable for this fixture. |  |  |
 | `expectations.stderr.contains` | array of string | no |  | Required stderr substrings for refusal or usage-error fixtures. |  |  |
 | `expectations.filesystem` | object | yes |  | Filesystem expectations after the adapter command runs. |  |  |
-| `expectations.filesystem.allowed_write_paths` | ref `#/$defs/path_list` | yes |  | Fixture or repo paths the command may write. |  |  |
+| `expectations.filesystem.allowed_write_paths` | ref `#/$defs/path_list` | yes |  | Exact fixture or repo paths the command may write. |  |  |
+| `expectations.filesystem.allowed_write_directories` | ref `#/$defs/path_list` | no |  | Fixture or repo directories below which the command may write recursively. |  |  |
 | `expectations.filesystem.required_paths` | ref `#/$defs/path_list` | yes |  | Paths that must exist after command execution. |  |  |
 | `expectations.filesystem.forbidden_paths` | ref `#/$defs/path_list` | yes |  | Paths that must not be created or modified. |  |  |
 | `expectations.idempotency` | object | yes |  | Repeated-run behavior expected from the adapter. |  |  |

@@ -26,7 +26,8 @@
     },
     "stderr": {"allow_non_empty": false},
     "filesystem": {
-      "allowed_write_paths": [".agentic-workspace", "AGENTS.md"],
+      "allowed_write_paths": ["AGENTS.md"],
+      "allowed_write_directories": [".agentic-workspace"],
       "required_paths": [".git/.keep", ".agentic-workspace/planning/agent-manifest.json"],
       "forbidden_paths": []
     },
