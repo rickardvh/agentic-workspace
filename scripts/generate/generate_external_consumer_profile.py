@@ -18,6 +18,8 @@ TYPESCRIPT_CLIENT = REPO_ROOT / "generated/workspace/typescript/src/client.mjs"
 
 def _commands(command: dict[str, object], inherited: dict[str, object] | None = None):
     current = dict(inherited or {})
+    if "operation_ref" not in command:
+        current.pop("operation_ref", None)
     current.update(command)
     yield current
     interface = command.get("interface", {})
@@ -74,7 +76,14 @@ def build_profile(ir: dict[str, object]) -> dict[str, object]:
                     },
                 }
                 operations.append(entry)
-    operations.sort(key=lambda item: str(item["id"]))
+    unique: dict[str, dict[str, object]] = {}
+    for entry in operations:
+        operation_id = str(entry["id"])
+        previous = unique.get(operation_id)
+        if previous is not None and previous["operation_contract"] != entry["operation_contract"]:
+            raise ValueError(f"conflicting explicit operation id: {operation_id}")
+        unique.setdefault(operation_id, entry)
+    operations = sorted(unique.values(), key=lambda item: str(item["id"]))
     fingerprint_input = json.dumps(operations, sort_keys=True, separators=(",", ":")).encode()
     return {
         "schema_version": "agentic-workspace/external-consumer-profile/v1",
