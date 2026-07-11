@@ -525,11 +525,14 @@ def _proof_receipt_identity(receipt: dict[str, Any]) -> str:
     return json.dumps(_proof_receipt_summary(receipt), sort_keys=True, ensure_ascii=True)
 
 
-def _read_proof_receipt_records(target_root: Path) -> tuple[list[dict[str, Any]] | None, dict[str, Any], str]:
+def _read_proof_receipt_records(
+    target_root: Path,
+) -> tuple[list[dict[str, Any]] | None, dict[str, Any], dict[str, Any], str]:
     receipt_path = target_root / PROOF_RECEIPT_RELATIVE_PATH
     history_path = target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH
     records: list[dict[str, Any]] = []
     latest_receipt: dict[str, Any] = {}
+    rejected_latest: dict[str, Any] = {}
     seen: set[str] = set()
 
     def add_record(receipt: Any) -> None:
@@ -547,31 +550,53 @@ def _read_proof_receipt_records(target_root: Path) -> tuple[list[dict[str, Any]]
         try:
             loaded = json.loads(receipt_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            return None, {}, f"latest receipt could not be read as JSON: {exc}"
+            loaded = None
+            rejected_latest = {
+                "status": "rejected-untrusted",
+                "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+                "admission_reason": "latest-receipt-unreadable",
+                "detail": str(exc),
+                "safe_recovery": "Remove or replace the damaged last.json cache; admitted history remains authoritative.",
+            }
         if isinstance(loaded, dict):
-            latest_receipt = loaded
-            add_record(loaded)
-        else:
-            return None, {}, "latest receipt is not a JSON object"
+            admission = proof_receipt_admission(loaded)
+            if admission["admitted"]:
+                latest_receipt = loaded
+                add_record(loaded)
+            else:
+                rejected_latest = {
+                    "status": "rejected-untrusted",
+                    "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+                    "admission_reason": admission["reason"],
+                    "safe_recovery": admission["safe_recovery"],
+                }
+        elif loaded is not None:
+            rejected_latest = {
+                "status": "rejected-untrusted",
+                "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+                "admission_reason": "latest-receipt-not-object",
+                "safe_recovery": "Remove or replace the non-object last.json cache; admitted history remains authoritative.",
+            }
 
     if history_path.is_file():
         try:
             lines = history_path.read_text(encoding="utf-8").splitlines()
         except OSError as exc:
-            return None, latest_receipt, f"receipt history could not be read: {exc}"
+            return None, latest_receipt, rejected_latest, f"receipt history could not be read: {exc}"
         for index, line in enumerate(lines, start=1):
             if not line.strip():
                 continue
             try:
                 loaded = json.loads(line)
             except json.JSONDecodeError as exc:
-                return None, latest_receipt, f"receipt history line {index} could not be read as JSON: {exc}"
+                return None, latest_receipt, rejected_latest, f"receipt history line {index} could not be read as JSON: {exc}"
             if not isinstance(loaded, dict):
-                return None, latest_receipt, f"receipt history line {index} is not a JSON object"
+                return None, latest_receipt, rejected_latest, f"receipt history line {index} is not a JSON object"
             add_record(loaded)
 
     records.sort(key=lambda item: str(item.get("recorded_at") or ""), reverse=True)
-    return records, latest_receipt, ""
+    latest_receipt = records[0] if records else {}
+    return records, latest_receipt, rejected_latest, ""
 
 
 def _proof_receipt_path_scope_matches(*, receipt: dict[str, Any], changed_paths: list[str]) -> bool:
@@ -744,7 +769,7 @@ def _proof_receipt_reconciliation_payload(
                 for command in blocking_commands
             ],
         }
-    receipt_records, latest_receipt, read_error = _read_proof_receipt_records(target_root)
+    receipt_records, latest_receipt, rejected_latest, read_error = _read_proof_receipt_records(target_root)
     if receipt_records is None:
         return {
             **base,
@@ -756,7 +781,7 @@ def _proof_receipt_reconciliation_payload(
             ],
         }
     if not receipt_records:
-        return {
+        payload = {
             **base,
             "status": "not-recorded",
             "commands": [
@@ -764,6 +789,9 @@ def _proof_receipt_reconciliation_payload(
                 for command in blocking_commands
             ],
         }
+        if rejected_latest:
+            payload["rejected_latest_receipt"] = rejected_latest
+        return payload
     aggregate_receipts = [
         receipt
         for receipt in receipt_records
@@ -842,7 +870,7 @@ def _proof_receipt_reconciliation_payload(
         state["proof_requirement_tier"] = "selected_required"
         command_states.append(state)
     accepted_count = sum(1 for state in command_states if state.get("evidence_state") == "accepted")
-    return {
+    payload = {
         **base,
         "status": "accepted" if command_states and accepted_count == len(command_states) else "attention",
         "accepted_count": accepted_count,
@@ -855,6 +883,9 @@ def _proof_receipt_reconciliation_payload(
         },
         "commands": command_states,
     }
+    if rejected_latest:
+        payload["rejected_latest_receipt"] = rejected_latest
+    return payload
 
 
 def _proof_receipt_bridge_payload(

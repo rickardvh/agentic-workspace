@@ -2961,6 +2961,76 @@ def test_proof_receipt_admission_rejects_missing_scope_and_consumers_ignore_it(t
     assert reconciliation["status"] == "not-recorded"
     assert "receipt" not in reconciliation
     assert reconciliation["commands"][0]["evidence_state"] == "not-run-or-not-recorded"
+    assert reconciliation["rejected_latest_receipt"]["admission_reason"] == "missing-changed-path-scope"
+
+
+def test_reconciliation_selects_newest_admitted_history_when_latest_file_is_rejected(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
+    receipt_dir.mkdir(parents=True)
+    admitted = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": "make test-workspace",
+        "result": "passed",
+        "recorded_at": "2026-07-11T08:00:00+00:00",
+        "changed_paths": ["src/agentic_workspace/workspace_runtime_proof.py"],
+    }
+    older = {**admitted, "result": "failed", "recorded_at": "2026-07-11T07:00:00+00:00"}
+    rejected = {**admitted, "command": "make <target>", "recorded_at": "2026-07-11T09:00:00+00:00"}
+    (receipt_dir / "history.jsonl").write_text("\n".join(json.dumps(item) for item in (older, admitted)) + "\n", encoding="utf-8")
+    (receipt_dir / "last.json").write_text(json.dumps(rejected), encoding="utf-8")
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+        required_commands=["make test-workspace"],
+        selected_commands=[],
+    )
+
+    assert reconciliation["status"] == "accepted"
+    assert reconciliation["receipt"]["recorded_at"] == admitted["recorded_at"]
+    assert reconciliation["receipt"]["command"] == "make test-workspace"
+    assert reconciliation["rejected_latest_receipt"]["status"] == "rejected-untrusted"
+    assert reconciliation["rejected_latest_receipt"]["admission_reason"] == "unresolved-command-template"
+    assert reconciliation["receipt_history"]["record_count"] == 2
+
+
+@pytest.mark.parametrize(
+    ("latest_text", "reason"),
+    [("{broken", "latest-receipt-unreadable"), (json.dumps(["not", "an", "object"]), "latest-receipt-not-object")],
+)
+@pytest.mark.parametrize("with_history", [True, False])
+def test_damaged_latest_receipt_does_not_poison_admitted_history(tmp_path: Path, latest_text: str, reason: str, with_history: bool) -> None:
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
+    receipt_dir.mkdir(parents=True)
+    admitted = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": "make test-workspace",
+        "result": "passed",
+        "recorded_at": "2026-07-11T08:00:00+00:00",
+        "changed_paths": ["src/agentic_workspace/workspace_runtime_proof.py"],
+    }
+    if with_history:
+        (receipt_dir / "history.jsonl").write_text(json.dumps(admitted) + "\n", encoding="utf-8")
+    (receipt_dir / "last.json").write_text(latest_text, encoding="utf-8")
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=["src/agentic_workspace/workspace_runtime_proof.py"],
+        required_commands=["make test-workspace"],
+        selected_commands=[],
+    )
+
+    assert reconciliation["rejected_latest_receipt"]["admission_reason"] == reason
+    if with_history:
+        assert reconciliation["status"] == "accepted"
+        assert reconciliation["receipt"]["command"] == "make test-workspace"
+    else:
+        assert reconciliation["status"] == "not-recorded"
+        assert "receipt" not in reconciliation
 
 
 def test_proof_failed_receipt_includes_repair_retry_ladder(tmp_path: Path, capsys) -> None:
