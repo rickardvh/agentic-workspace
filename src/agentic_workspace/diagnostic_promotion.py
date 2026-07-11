@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 from typing import Any, Callable
 
 FIELD_CLASSES = {
@@ -10,6 +11,35 @@ FIELD_CLASSES = {
     "repo-relative-evidence": ["repo-relative paths", "command chronology", "changed-path relationships"],
     "potentially-sensitive": ["command output", "environment-derived values", "free-form notes"],
     "integrity-critical": ["timestamps", "entry ids", "origin", "work-context ids", "hashes", "parent/artifact relationships"],
+}
+
+FIELD_RULES = {
+    "integrity-critical": {
+        "kind",
+        "id",
+        "entry_id",
+        "created_at",
+        "recorded_at",
+        "timestamp",
+        "origin",
+        "work_context_id",
+        "output_digest",
+        "artifact",
+        "relationships",
+    },
+    "repo-relative-evidence": {
+        "changed_paths",
+        "path",
+        "root",
+        "source_log_path",
+        "failed_command",
+        "command_count",
+        "occurrences",
+        "exit_status",
+        "exit_class",
+        "packet_kinds",
+    },
+    "opaque": {"stdout", "stderr", "output", "body", "message", "note", "notes", "command", "argv"},
 }
 
 PROFILES = {
@@ -36,13 +66,24 @@ def promote_diagnostic_payload(
     specification = PROFILES[profile]
     omitted: list[str] = []
     normalized_count = 0
+    substitutions: set[str] = set()
+
+    def field_class(key: str) -> str:
+        for class_name, keys in FIELD_RULES.items():
+            if key in keys:
+                return class_name
+        return "unknown"
 
     def transform(value: Any, path: str = "$") -> Any:
         nonlocal normalized_count
         if isinstance(value, str):
+            if profile == "external-minimal" and path == "$":
+                omitted.append(path)
+                return f"[opaque content omitted; sha256:{hashlib.sha256(value.encode()).hexdigest()[:12]}]"
             normalized = normalize_text(value)
             if normalized != value:
                 normalized_count += 1
+                substitutions.update(token for token in ("<target>", "<home>", "<python>") if token in normalized and token not in value)
             return normalized
         if isinstance(value, list):
             return [transform(child, f"{path}[{index}]") for index, child in enumerate(value)]
@@ -52,6 +93,11 @@ def promote_diagnostic_payload(
                 child_path = f"{path}.{key}"
                 if key in specification["omit_fields"]:
                     omitted.append(child_path)
+                    continue
+                classification = field_class(str(key))
+                if profile == "external-minimal" and classification in {"opaque", "unknown"} and isinstance(child, str):
+                    omitted.append(child_path)
+                    result[key] = f"[opaque field omitted; sha256:{hashlib.sha256(child.encode()).hexdigest()[:12]}]"
                     continue
                 result[key] = transform(child, child_path)
             return result
@@ -66,16 +112,14 @@ def promote_diagnostic_payload(
         "disclosure_profile": profile,
         "audience": specification["audience"],
         "field_classes": FIELD_CLASSES,
+        "field_rules": {key: sorted(value) for key, value in FIELD_RULES.items()},
         "transformations": {
             "normalized_string_count": normalized_count,
             "omitted_fields": omitted,
-            "pseudonymous_substitutions": ["<target>", "<home>", "<python>", "<local-path-N>"],
+            "pseudonymous_substitutions": sorted(substitutions),
         },
         "preserved_integrity": specification["retain"],
-        "residual_risks": [
-            "Free-form command output may contain secrets not recognizable as local paths.",
-            "The promoted artifact is analytically useful but is not proof of complete source capture.",
-        ],
+        "residual_risks": ["The promoted artifact is analytically useful but is not proof of complete source capture."],
         "omission_notes": omitted or ["No profile-defined structured fields omitted."],
         "originals_mutated": False,
         "authoritative": False,

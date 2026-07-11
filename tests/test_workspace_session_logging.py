@@ -1133,6 +1133,7 @@ def test_session_log_share_safe_export_redacts_all_surfaces_and_preserves_origin
     with zipfile.ZipFile(target / by_id["path"]) as archive:
         minimal_manifest = json.loads(archive.read("manifest.json"))
         assert minimal_manifest["disclosure_profile"] == "external-minimal"
+        assert "opaque content omitted" in archive.read("session.md").decode("utf-8")
         omitted = minimal_manifest["promotion_contract"]["transformation_summary"]["omitted_fields"]
         assert any(field.endswith((".python", ".python_executable")) for field in omitted)
     assert source_cli.main(["session-log", "--target", str(target), "export", "--path", pointer["log_path"], "--format", "json"]) == 0
@@ -1170,3 +1171,21 @@ def test_diagnostic_promotion_contract_supports_proof_failure_artifact_without_s
     assert manifest["transformations"]["omitted_fields"] == ["$.python_executable"]
     assert manifest["originals_mutated"] is False
     assert raw["python_executable"] == python_path
+
+
+def test_external_minimal_omits_secret_like_opaque_text_but_preserves_integrity() -> None:
+    from agentic_workspace.diagnostic_promotion import promote_diagnostic_payload
+
+    secret = "api_key=super-secret-value"
+    promoted, manifest = promote_diagnostic_payload(
+        artifact_type="session-log-index",
+        payload={"id": "entry-1", "created_at": "2026-07-11T10:00:00Z", "origin": "agent", "stdout": secret, "unknown_text": secret},
+        profile="external-minimal",
+        normalize_text=lambda text: text,
+    )
+    assert promoted["id"] == "entry-1"
+    assert promoted["created_at"] == "2026-07-11T10:00:00Z"
+    assert secret not in json.dumps(promoted)
+    assert "sha256:" in promoted["stdout"]
+    assert manifest["transformations"]["pseudonymous_substitutions"] == []
+    assert "stdout" in manifest["field_rules"]["opaque"]
