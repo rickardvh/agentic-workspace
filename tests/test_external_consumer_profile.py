@@ -21,6 +21,8 @@ def test_profile_is_fresh_and_fail_closed() -> None:
     expected = module.render()
     for output in module.OUTPUTS:
         assert output.read_text(encoding="utf-8") == expected
+    assert module.PYTHON_CLIENT.read_text(encoding="utf-8") == module.render_python_client()
+    assert module.TYPESCRIPT_CLIENT.read_text(encoding="utf-8") == module.render_typescript_client()
     profile = json.loads(expected)
     assert profile["authority"] == "command_package_ir.json"
     assert profile["compatibility"]["fingerprint"].startswith("sha256:")
