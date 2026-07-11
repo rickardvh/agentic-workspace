@@ -16,6 +16,8 @@ OUTPUTS = (
 
 def _commands(command: dict[str, object], inherited: dict[str, object] | None = None):
     current = dict(inherited or {})
+    if "operation_ref" not in command:
+        current.pop("operation_ref", None)
     current.update(command)
     yield current
     interface = command.get("interface", {})
@@ -73,6 +75,10 @@ def build_profile(ir: dict[str, object]) -> dict[str, object]:
                 }
                 operations.append(entry)
     operations.sort(key=lambda item: str(item["id"]))
+    operation_ids = [str(item["id"]) for item in operations]
+    duplicates = sorted({operation_id for operation_id in operation_ids if operation_ids.count(operation_id) > 1})
+    if duplicates:
+        raise ValueError(f"duplicate explicit operation ids: {', '.join(duplicates)}")
     fingerprint_input = json.dumps(operations, sort_keys=True, separators=(",", ":")).encode()
     return {
         "schema_version": "agentic-workspace/external-consumer-profile/v1",
