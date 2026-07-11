@@ -177,3 +177,41 @@ def test_typescript_packed_artifact_exports_profile() -> None:
     assert completed.returncode == 0, completed.stderr
     files = {item["path"] for item in json.loads(completed.stdout)[0]["files"]}
     assert "external_consumer_profile.json" in files
+
+
+def test_packed_typescript_artifact_resolves_profile_and_bundle(tmp_path: Path) -> None:
+    npm = shutil.which("npm") or shutil.which("npm.cmd") or "npm"
+    completed = subprocess.run(
+        [npm, "pack", "--json", "--pack-destination", str(tmp_path)],
+        cwd=ROOT / "generated/workspace/typescript",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    archive = tmp_path / json.loads(completed.stdout)[0]["filename"]
+    unpacked = tmp_path / "unpacked"
+    shutil.unpack_archive(archive, unpacked, "gztar")
+    client = unpacked / "package/src/client.mjs"
+    script = f"import {{ externalConsumerProfile, externalContractBundle }} from {json.dumps(client.as_uri())}; console.log(JSON.stringify([externalConsumerProfile().schema_version, externalContractBundle().schema_version]));"
+    result = subprocess.run(["node", "--input-type=module", "--eval", script], text=True, capture_output=True, check=False)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == [
+        "agentic-workspace/external-consumer-profile/v1",
+        "agentic-workspace/external-contract-bundle/v1",
+    ]
+
+
+def test_schema_resolution_is_provenance_safe_and_fragment_aware(tmp_path: Path) -> None:
+    module = _module()
+    schema = tmp_path / "src/owner/schemas/result.schema.json"
+    schema.parent.mkdir(parents=True)
+    schema.write_text("{}\n", encoding="utf-8")
+    assert module.resolve_schema_reference("owner/schemas/result.schema.json#/$defs/value", repo_root=tmp_path) == schema
+    duplicate = tmp_path / "packages/other/result.schema.json"
+    duplicate.parent.mkdir(parents=True)
+    duplicate.write_text("{}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="ambiguous transitive schema reference"):
+        module.resolve_schema_reference("result.schema.json", repo_root=tmp_path)
+    with pytest.raises(ValueError, match="missing transitive schema"):
+        module.resolve_schema_reference("missing.schema.json", repo_root=tmp_path)

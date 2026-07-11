@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
+import { createHash } from 'node:crypto';
 
 const profileUrl = new URL('../external_consumer_profile.json', import.meta.url);
 const bundleUrl = new URL('../external_contract_bundle.json', import.meta.url);
@@ -10,6 +11,12 @@ export class AWClientError extends Error {
 }
 export function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }
 export function externalContractBundle() { return JSON.parse(readFileSync(bundleUrl, 'utf8')); }
+export function operationCompatibilityFingerprint(contract) {
+  const normalized = Object.fromEntries(['schema_version', 'id', 'classification', 'inputs', 'output', 'effects', 'guards'].map((key) => [key, contract[key] ?? null]));
+  const sortValue = (value) => Array.isArray(value) ? value.map(sortValue) : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortValue(value[key])])) : value;
+  const canonical = JSON.stringify(sortValue(normalized));
+  return `sha256:${createHash('sha256').update(canonical).digest('hex')}`;
+}
 export function negotiateRequirements(requirements, { allowRuntimeBacked = false } = {}) {
   const bundle = externalContractBundle(); const results = [];
   for (const [operationId, fingerprint] of Object.entries(requirements)) {
@@ -18,7 +25,7 @@ export function negotiateRequirements(requirements, { allowRuntimeBacked = false
     const support = operation.external_consumption.status;
     if (support === 'runtime-backed' && !allowRuntimeBacked) results.push({ operation: operationId, status: 'runtime-backed', reason: 'explicit runtime-backed opt-in required' });
     else if (!['supported', 'runtime-backed'].includes(support)) results.push({ operation: operationId, status: 'unsupported', reason: `support status is ${support}` });
-    else if (fingerprint && fingerprint !== operation.fingerprint) results.push({ operation: operationId, status: 'incompatible', reason: 'operation fingerprint mismatch' });
+    else if (fingerprint && fingerprint !== operation.compatibility_fingerprint) results.push({ operation: operationId, status: 'incompatible', reason: 'operation compatibility fingerprint mismatch' });
     else results.push({ operation: operationId, status: 'compatible', reason: 'requirement satisfied' });
   }
   return { compatible: results.every((item) => item.status === 'compatible'), requirements: results };

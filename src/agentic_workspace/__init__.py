@@ -14,6 +14,7 @@ from .client import (
     external_contract_bundle,
     invoke_operation,
     negotiate_requirements,
+    operation_compatibility_fingerprint,
     require_operations,
     resolve_invocation,
 )
@@ -25,6 +26,7 @@ __all__ = [
     "external_contract_bundle",
     "invoke_operation",
     "negotiate_requirements",
+    "operation_compatibility_fingerprint",
     "require_operations",
     "resolve_invocation",
 ]

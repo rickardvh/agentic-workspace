@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shlex
 import subprocess
@@ -50,6 +51,12 @@ def external_contract_bundle() -> dict[str, Any]:
     return json.loads(_resource("external_contract_bundle.json").read_text(encoding="utf-8"))
 
 
+def operation_compatibility_fingerprint(contract: Mapping[str, Any]) -> str:
+    normalized = {key: contract.get(key) for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")}
+    encoded = json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode()
+    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
 def negotiate_requirements(requirements: Mapping[str, str | None], *, allow_runtime_backed: bool = False) -> dict[str, Any]:
     bundle = external_contract_bundle()
     results = []
@@ -63,7 +70,7 @@ def negotiate_requirements(requirements: Mapping[str, str | None], *, allow_runt
             results.append({"operation": operation_id, "status": "runtime-backed", "reason": "explicit runtime-backed opt-in required"})
         elif support not in {"supported", "runtime-backed"}:
             results.append({"operation": operation_id, "status": "unsupported", "reason": f"support status is {support}"})
-        elif fingerprint and fingerprint != operation["fingerprint"]:
+        elif fingerprint and fingerprint != operation["compatibility_fingerprint"]:
             results.append({"operation": operation_id, "status": "incompatible", "reason": "operation fingerprint mismatch"})
         else:
             results.append({"operation": operation_id, "status": "compatible", "reason": "requirement satisfied"})

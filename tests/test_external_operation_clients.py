@@ -16,6 +16,7 @@ from agentic_workspace import (
     external_contract_bundle,
     invoke_operation,
     negotiate_requirements,
+    operation_compatibility_fingerprint,
     require_operations,
     resolve_invocation,
 )
@@ -112,18 +113,32 @@ def test_public_operation_client_invokes_by_operation_identity() -> None:
 def test_contract_requirement_negotiation_distinguishes_change_classes() -> None:
     bundle = external_contract_bundle()
     operation_id, operation = next(iter(bundle["operations"].items()))
-    compatible = negotiate_requirements({operation_id: operation["fingerprint"]}, allow_runtime_backed=True)
+    compatible = negotiate_requirements({operation_id: operation["compatibility_fingerprint"]}, allow_runtime_backed=True)
     assert compatible["compatible"] is True
     additive = dict(operation["contract"])
     additive["future_additive_field"] = {"preserved": True}
-    assert additive["future_additive_field"]
-    breaking = negotiate_requirements({operation_id: "sha256:breaking"}, allow_runtime_backed=True)
+    assert operation_compatibility_fingerprint(additive) == operation["compatibility_fingerprint"]
+    breaking_contract = dict(operation["contract"])
+    breaking_contract["output"] = {"kind": "breaking"}
+    breaking_fingerprint = operation_compatibility_fingerprint(breaking_contract)
+    assert breaking_fingerprint != operation["compatibility_fingerprint"]
+    breaking = negotiate_requirements({operation_id: breaking_fingerprint}, allow_runtime_backed=True)
     assert breaking == {
         "compatible": False,
         "requirements": [{"operation": operation_id, "status": "incompatible", "reason": "operation fingerprint mismatch"}],
     }
     missing = negotiate_requirements({"does.not.exist": None})
     assert missing["requirements"][0]["status"] == "missing"
+    runtime_backed = negotiate_requirements({operation_id: None})
+    assert runtime_backed["requirements"][0]["status"] == "runtime-backed"
+    script = f"""
+import {{ negotiateRequirements, operationCompatibilityFingerprint, externalContractBundle }} from './generated/workspace/typescript/src/client.mjs';
+const operation = externalContractBundle().operations[{json.dumps(operation_id)}];
+console.log(JSON.stringify([negotiateRequirements({{{json.dumps(operation_id)}: null}}).requirements[0].status, negotiateRequirements({{'does.not.exist': null}}).requirements[0].status, operationCompatibilityFingerprint(operation.contract) === operation.compatibility_fingerprint]));
+"""
+    result = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
+    assert result.returncode == 0, result.stderr
+    assert json.loads(result.stdout) == ["runtime-backed", "missing", True]
 
 
 def test_generated_operation_specific_wrapper_uses_public_contract() -> None:

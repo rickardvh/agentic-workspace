@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import tomllib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -222,6 +223,24 @@ def render() -> str:
     return json.dumps(build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")), repo_root=REPO_ROOT), indent=2) + "\n"
 
 
+def resolve_schema_reference(name: str, *, repo_root: Path = REPO_ROOT) -> Path:
+    reference = name.split("#", 1)[0]
+    candidates = [
+        path
+        for root in (repo_root / "src", repo_root / "packages")
+        if root.exists()
+        for path in root.rglob(Path(reference).name)
+        if "generated" not in path.parts
+    ]
+    if not candidates:
+        raise ValueError(f"missing transitive schema: {name}")
+    suffix_matches = [path for path in candidates if path.as_posix().endswith(reference)]
+    selected = suffix_matches or candidates
+    if len(selected) != 1:
+        raise ValueError(f"ambiguous transitive schema reference: {name}: {[path.as_posix() for path in selected]}")
+    return selected[0]
+
+
 def render_bundle(profile: dict[str, object]) -> str:
     def schema_refs(value: object) -> set[str]:
         refs: set[str] = set()
@@ -231,20 +250,11 @@ def render_bundle(profile: dict[str, object]) -> str:
         elif isinstance(value, list):
             for item in value:
                 refs.update(schema_refs(item))
-        elif isinstance(value, str) and value.endswith(".schema.json") and not any(character.isspace() for character in value):
-            refs.add(Path(value).name)
+        elif isinstance(value, str) and ".schema.json" in value and not any(character.isspace() for character in value):
+            reference = value.split("#", 1)[0]
+            if reference.endswith(".schema.json"):
+                refs.add(reference)
         return refs
-
-    def resolve_schema(name: str) -> Path:
-        candidates = [
-            path
-            for root in (REPO_ROOT / "src", REPO_ROOT / "packages")
-            for path in root.rglob(name)
-            if "generated" not in path.parts
-        ]
-        if not candidates:
-            raise ValueError(f"missing transitive schema: {name}")
-        return sorted(candidates, key=lambda path: path.as_posix())[0]
 
     operations: dict[str, object] = {}
     schemas: dict[str, object] = {}
@@ -255,10 +265,16 @@ def render_bundle(profile: dict[str, object]) -> str:
         contract = json.loads((REPO_ROOT / str(entry["operation_contract"])).read_text(encoding="utf-8"))
         pending_schemas.update(schema_refs(contract))
         identity_input = json.dumps(contract, sort_keys=True, separators=(",", ":")).encode()
+        compatibility_contract = {
+            key: contract.get(key)
+            for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")
+        }
+        compatibility_input = json.dumps(compatibility_contract, sort_keys=True, separators=(",", ":")).encode()
         operations[str(entry["id"])] = {
             "identity": str(entry["id"]),
             "version": contract.get("schema_version"),
             "fingerprint": f"sha256:{hashlib.sha256(identity_input).hexdigest()}",
+            "compatibility_fingerprint": f"sha256:{hashlib.sha256(compatibility_input).hexdigest()}",
             "contract": contract,
             "schemas": sorted(schema_refs(contract)),
             "targets": entry["targets"],
@@ -268,14 +284,22 @@ def render_bundle(profile: dict[str, object]) -> str:
         name = pending_schemas.pop()
         if name in schemas:
             continue
-        schema = json.loads(resolve_schema(name).read_text(encoding="utf-8"))
-        schemas[name] = schema
+        schema_path = resolve_schema_reference(name)
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        schemas[name] = {"source": schema_path.relative_to(REPO_ROOT).as_posix(), "schema": schema}
         pending_schemas.update(schema_refs(schema) - set(schemas))
     payload = {
         "schema_version": "agentic-workspace/external-contract-bundle/v1",
         "protocol": profile["compatibility"]["protocol"],
         "profile_fingerprint": profile["compatibility"]["fingerprint"],
         "profile": "external_consumer_profile.json",
+        "versions": {
+            "command_ir_schema": json.loads(IR_PATH.read_text(encoding="utf-8"))["schema_version"],
+            "client_package": tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"],
+            "runtime_protocol": profile["compatibility"]["protocol"],
+            "python_package": "agentic-workspace",
+            "typescript_package": "@agentic-workspace/workspace-cli",
+        },
         "operations": operations,
         "schemas": dict(sorted(schemas.items())),
         "requirement_states": ["compatible", "incompatible", "missing", "runtime-backed", "unsupported"],
@@ -304,6 +328,7 @@ def render_python_typed_operations(profile: dict[str, object]) -> str:
         "from typing import Any, Mapping, Sequence",
         "",
         "from .client import invoke_operation",
+        "",
         "",
     ]
     for entry in profile["operations"]:
