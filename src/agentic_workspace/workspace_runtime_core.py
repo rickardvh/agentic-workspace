@@ -18812,6 +18812,35 @@ def _architecture_principles_forecast_payload(
                 },
                 "rule": "Surface only intent selected by structured scope at the phase where it changes the next decision.",
             }
+            identity_basis = {
+                "planned_paths": normalized_paths,
+                "system_principle_ids": [
+                    str(item.get("id", "")) for item in _list_payload(architecture_principles.get("matched_principles"))[:2]
+                ],
+                "subsystem_intent_ids": [str(item.get("id", "")) for item in subsystem_matches[:2]],
+                "authoritative_sources": payload["relevant_intent"]["authoritative_sources"],
+            }
+            payload["forecast_identity"] = {
+                "kind": "agentic-workspace/decision-point-intent-forecast-identity/v1",
+                **identity_basis,
+                "digest": hashlib.sha256(json.dumps(identity_basis, sort_keys=True).encode()).hexdigest()[:16],
+            }
+        if "forecast_identity" not in payload:
+            identity_basis = {
+                "planned_paths": normalized_paths,
+                "system_principle_ids": [],
+                "subsystem_intent_ids": [],
+                "authoritative_sources": [
+                    ".agentic-workspace/system-intent/intent.toml",
+                    ".agentic-workspace/system-intent/subsystems.toml",
+                    ".agentic-workspace/OWNERSHIP.toml",
+                ],
+            }
+            payload["forecast_identity"] = {
+                "kind": "agentic-workspace/decision-point-intent-forecast-identity/v1",
+                **identity_basis,
+                "digest": hashlib.sha256(json.dumps(identity_basis, sort_keys=True).encode()).hexdigest()[:16],
+            }
     return payload
 
 

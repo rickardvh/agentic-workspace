@@ -39,6 +39,7 @@ from agentic_workspace.workspace_runtime_core import (
     _adapt_make_proof_command_for_target,
     _applicable_intent_status_payload,
     _apply_learned_route_hints_to_capabilities,
+    _architecture_principles_forecast_payload,
     _architecture_principles_payload,
     _assurance_item_state,
     _assurance_requirements_report_payload,
@@ -4014,6 +4015,43 @@ def _proof_selection_for_changed_paths(
         local_overlay=local_overlay,
         local_high_risk_overlay=local_high_risk_overlay,
     )
+    canonical_core = _as_dict(active_planning_record_for_requirement.get("canonical_core"))
+    forecast_packet = _architecture_principles_forecast_payload(
+        target_root=target_root,
+        planned_paths=_list_payload(canonical_core.get("touched_scope")),
+        scope_source="active_planning_record.canonical_core.touched_scope",
+        cli_invoke=cli_invoke,
+    )
+    forecast_identity = _as_dict(forecast_packet.get("forecast_identity"))
+    actual_intent = _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
+    actual_subsystems = _list_payload(_as_dict(actual_intent.get("subsystem_intent")).get("matches"))[:2]
+    actual_basis = {
+        "actual_paths": changed_paths,
+        "system_principle_ids": [str(item.get("id", "")) for item in _list_payload(architecture_principles.get("matched_principles"))[:2]],
+        "subsystem_intent_ids": [str(item.get("id", "")) for item in actual_subsystems],
+    }
+    actual_intent_digest = hashlib.sha256(json.dumps(actual_basis, sort_keys=True).encode()).hexdigest()[:16]
+    corrected = bool(
+        forecast_identity
+        and (
+            set(forecast_identity.get("planned_paths", [])) != set(changed_paths)
+            or forecast_identity.get("system_principle_ids", []) != actual_basis["system_principle_ids"]
+            or forecast_identity.get("subsystem_intent_ids", []) != actual_basis["subsystem_intent_ids"]
+        )
+    )
+    decision_point_confirmation = {
+        "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
+        "phase": "proof",
+        "status": "corrected" if corrected else "preserved" if forecast_identity else "unresolved",
+        "forecast_identity": forecast_identity,
+        "forecast_digest": forecast_identity.get("digest", ""),
+        "actual_scope_digest": actual_intent_digest,
+        "changed_paths": changed_paths,
+        "system_principles": _list_payload(architecture_principles.get("matched_principles"))[:2],
+        "subsystem_intents": actual_subsystems,
+        "claim_boundary": "Closeout must consume this exact confirmation record and account for preserved, corrected, or unresolved intent.",
+        "closeout_required_claim": "preserved|corrected|unresolved",
+    }
     proof_selection = {
         "kind": "proof-selection/v1",
         "changed_paths": changed_paths,
@@ -4080,14 +4118,7 @@ def _proof_selection_for_changed_paths(
         "requirement_grounding": requirement_grounding,
         "test_strategy_check": test_strategy_check,
         "architecture_principles": architecture_principles,
-        "decision_point_intent_confirmation": {
-            "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
-            "phase": "proof",
-            "status": "confirmed-for-proof" if architecture_principles.get("matched_count") else "not-applicable",
-            "system_principles": _list_payload(architecture_principles.get("matched_principles"))[:2],
-            "claim_boundary": "Proof and closeout must account for preservation, correction, or unresolved intent.",
-            "closeout_required_claim": "preserved|corrected|unresolved",
-        },
+        "decision_point_intent_confirmation": decision_point_confirmation,
         "proof_route_selection": proof_route_decision,
         "proof_route_decision": proof_route_decision,
         "proof_route_explanation": proof_route_explanation,

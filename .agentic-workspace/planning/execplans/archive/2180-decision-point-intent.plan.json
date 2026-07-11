@@ -290,6 +290,15 @@
     "target": "none",
     "reason": "Derived from durable_residue during closeout preparation."
   },
+  "decision_point_intent_confirmation": {
+    "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
+    "phase": "closeout",
+    "status": "corrected",
+    "forecast_source": "startup architecture_principles_forecast.forecast_identity",
+    "implementation_and_proof_record": "The planned placeholder scope was corrected to the actual runtime, proof, and test paths; matched system and subsystem intent was carried through proof.",
+    "accounting": "corrected intent applicability was preserved through closeout",
+    "unresolved": false
+  },
   "completion_gate": {
     "kind": "agentic-workspace/completion-gate/v1",
     "status": "allowed",
@@ -305,12 +314,18 @@
         "slice_complete",
         "lane_complete",
         "parent_complete",
-        "full_intent_complete"
-      ],
-      "blocked_claim_classes": [
+        "full_intent_complete",
         "issue_closure"
       ],
-      "closure_actions": [],
+      "blocked_claim_classes": [],
+      "closure_actions": [
+        {
+          "kind": "issue_closure",
+          "target": "#2180",
+          "authorized": true,
+          "reason": "This completed slice authorizes closure of child issue #2180 only; parent lane #2173 remains open."
+        }
+      ],
       "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
       "diagnostics": {
         "unsafe_claim_examples": [],
