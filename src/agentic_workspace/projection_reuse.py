@@ -5,13 +5,17 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import subprocess
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
 
 _CACHE_KIND = "agentic-workspace/projection-reuse-record/v1"
+_CACHE_CONTRACT_VERSION = 2
+_MAX_CACHE_RECORDS = 32
 
 
-def _dependency_files(root: Path) -> list[Path]:
+def _dependency_files(root: Path, operation: str) -> list[Path]:
     candidates = [root / "AGENTS.md", root / "pyproject.toml", root / "Makefile", root / ".git" / "HEAD"]
     aw_root = root / ".agentic-workspace"
     if aw_root.is_dir():
@@ -20,7 +24,16 @@ def _dependency_files(root: Path) -> list[Path]:
             for path in aw_root.rglob("*")
             if path.is_file() and not {"projection-cache", "logs", "session-logging"}.intersection(path.relative_to(aw_root).parts)
         )
+    for relative_root in ("src/agentic_workspace", "generated/workspace", "scripts"):
+        folder = root / relative_root
+        if folder.is_dir():
+            candidates.extend(path for path in folder.rglob("*") if path.is_file())
     return sorted({path for path in candidates if path.is_file()}, key=lambda path: path.as_posix())
+
+
+def _git(root: Path, *args: str) -> str:
+    result = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False)
+    return result.stdout.strip() if result.returncode == 0 else ""
 
 
 def dependency_digest(*, root: Path, operation: str, query: dict[str, Any]) -> tuple[str, list[str]]:
@@ -28,8 +41,24 @@ def dependency_digest(*, root: Path, operation: str, query: dict[str, Any]) -> t
     digest = hashlib.sha256()
     digest.update(operation.encode())
     digest.update(json.dumps(query, sort_keys=True, ensure_ascii=True).encode())
+    digest.update(str(_CACHE_CONTRACT_VERSION).encode())
+    try:
+        package_version = version("agentic-workspace")
+    except PackageNotFoundError:
+        package_version = "source-checkout"
+    digest.update(package_version.encode())
+    resolved_head = _git(root, "rev-parse", "HEAD")
+    digest.update(resolved_head.encode())
     dependencies: list[str] = []
-    for path in _dependency_files(root):
+    relevant_files = _dependency_files(root, operation)
+    relevant_relatives = {path.relative_to(root).as_posix() for path in relevant_files}
+    worktree_state = "\n".join(
+        line
+        for line in _git(root, "status", "--porcelain=v1", "--untracked-files=all").splitlines()
+        if line[3:].replace("\\", "/") in relevant_relatives
+    )
+    digest.update(worktree_state.encode())
+    for path in relevant_files:
         try:
             relative = path.relative_to(root).as_posix()
             stat = path.stat()
@@ -56,8 +85,11 @@ def lookup_projection_reuse(
     digest, dependencies = dependency_digest(root=root, operation=operation, query=query)
     path = _cache_path(root, operation, query)
     forced = force_refresh or os.environ.get("AW_PROJECTION_FORCE_REFRESH", "").lower() in {"1", "true", "yes"}
-    context = {"digest": digest, "dependencies": dependencies, "path": path, "forced": forced}
-    if forced or not path.is_file():
+    volatile = bool(query.get("volatile") or query.get("external_freshness_required")) or os.environ.get(
+        "AW_PROJECTION_VOLATILE", ""
+    ).lower() in {"1", "true", "yes"}
+    context = {"digest": digest, "dependencies": dependencies, "path": path, "forced": forced, "volatile": volatile}
+    if forced or volatile or not path.is_file():
         return None, context
     try:
         record = json.loads(path.read_text(encoding="utf-8"))
@@ -94,11 +126,14 @@ def lookup_projection_reuse(
 
 
 def record_projection_reuse(*, root: Path, operation: str, query: dict[str, Any], context: dict[str, Any], payload: dict[str, Any]) -> None:
+    if context.get("volatile"):
+        return
     path = context["path"]
     actionability = payload.get("actionability", {}) if isinstance(payload.get("actionability"), dict) else {}
     next_action = payload.get("next_action", {}) if isinstance(payload.get("next_action"), dict) else {}
     record = {
         "kind": _CACHE_KIND,
+        "contract_version": _CACHE_CONTRACT_VERSION,
         "operation": operation,
         "query": query,
         "dependency_digest": context["digest"],
@@ -114,5 +149,8 @@ def record_projection_reuse(*, root: Path, operation: str, query: dict[str, Any]
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(record, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+        records = sorted(path.parent.glob("*.json"), key=lambda item: item.stat().st_mtime_ns, reverse=True)
+        for stale in records[_MAX_CACHE_RECORDS:]:
+            stale.unlink(missing_ok=True)
     except OSError:
         return

@@ -79,3 +79,34 @@ def test_report_reuses_equivalent_router_projection_and_verbose_forces_full_deta
     assert cli.main(["report", "--target", str(target), "--verbose", "--format", "json"]) == 0
     verbose = json.loads(capsys.readouterr().out)
     assert verbose["kind"] != "agentic-workspace/unchanged-projection/v1"
+
+
+def test_dependency_digest_tracks_commit_relevant_worktree_and_contract_but_ignores_irrelevant_file(tmp_path: Path, monkeypatch) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+    first, _ = projection_reuse.dependency_digest(root=target, operation="doctor", query={})
+    (target / "notes.txt").write_text("irrelevant\n", encoding="utf-8")
+    irrelevant, _ = projection_reuse.dependency_digest(root=target, operation="doctor", query={})
+    assert irrelevant == first
+    (target / "src/agentic_workspace/new_runtime.py").parent.mkdir(parents=True, exist_ok=True)
+    (target / "src/agentic_workspace/new_runtime.py").write_text("VALUE = 1\n", encoding="utf-8")
+    relevant, _ = projection_reuse.dependency_digest(root=target, operation="doctor", query={})
+    assert relevant != first
+    monkeypatch.setattr(projection_reuse, "_CACHE_CONTRACT_VERSION", 99)
+    contract, _ = projection_reuse.dependency_digest(root=target, operation="doctor", query={})
+    assert contract != relevant
+
+
+def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> None:
+    from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
+
+    target = _target(tmp_path)
+    cached, context = lookup_projection_reuse(
+        root=target, operation="report", query={"external_freshness_required": True}, full_detail_command="report"
+    )
+    assert cached is None and context["volatile"] is True
+    for index in range(40):
+        cached, context = lookup_projection_reuse(root=target, operation="doctor", query={"index": index}, full_detail_command="doctor")
+        record_projection_reuse(root=target, operation="doctor", query={"index": index}, context=context, payload={"status": "ok"})
+    assert len(list((target / ".agentic-workspace/local/projection-cache").glob("*.json"))) <= 32
