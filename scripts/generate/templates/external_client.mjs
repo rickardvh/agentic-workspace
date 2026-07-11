@@ -4,10 +4,25 @@ import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 
 const profileUrl = new URL('../external_consumer_profile.json', import.meta.url);
+const bundleUrl = new URL('../external_contract_bundle.json', import.meta.url);
 export class AWClientError extends Error {
   constructor(kind, message, details = {}) { super(message); this.name = 'AWClientError'; this.kind = kind; this.details = details; }
 }
 export function externalConsumerProfile() { return JSON.parse(readFileSync(profileUrl, 'utf8')); }
+export function externalContractBundle() { return JSON.parse(readFileSync(bundleUrl, 'utf8')); }
+export function negotiateRequirements(requirements, { allowRuntimeBacked = false } = {}) {
+  const bundle = externalContractBundle(); const results = [];
+  for (const [operationId, fingerprint] of Object.entries(requirements)) {
+    const operation = bundle.operations[operationId];
+    if (!operation) { results.push({ operation: operationId, status: 'missing', reason: 'operation is not packaged' }); continue; }
+    const support = operation.external_consumption.status;
+    if (support === 'runtime-backed' && !allowRuntimeBacked) results.push({ operation: operationId, status: 'runtime-backed', reason: 'explicit runtime-backed opt-in required' });
+    else if (!['supported', 'runtime-backed'].includes(support)) results.push({ operation: operationId, status: 'unsupported', reason: `support status is ${support}` });
+    else if (fingerprint && fingerprint !== operation.fingerprint) results.push({ operation: operationId, status: 'incompatible', reason: 'operation fingerprint mismatch' });
+    else results.push({ operation: operationId, status: 'compatible', reason: 'requirement satisfied' });
+  }
+  return { compatible: results.every((item) => item.status === 'compatible'), requirements: results };
+}
 export function detectWorkspace(target) {
   const root = resolve(target); const path = join(root, '.agentic-workspace', 'config.toml');
   try { const text = readFileSync(path, 'utf8'); return { status: /enabled\s*=\s*false/.test(text) ? 'disabled' : 'enabled', target: root }; }

@@ -187,19 +187,62 @@ def render() -> str:
 
 
 def render_bundle(profile: dict[str, object]) -> str:
-    resources = sorted(
-        {
-            str(entry["operation_contract"])
-            for entry in profile["operations"]
-            if isinstance(entry, dict) and entry.get("external_consumption", {}).get("status") != "internal"
+    def schema_refs(value: object) -> set[str]:
+        refs: set[str] = set()
+        if isinstance(value, dict):
+            for item in value.values():
+                refs.update(schema_refs(item))
+        elif isinstance(value, list):
+            for item in value:
+                refs.update(schema_refs(item))
+        elif isinstance(value, str) and value.endswith(".schema.json") and not any(character.isspace() for character in value):
+            refs.add(Path(value).name)
+        return refs
+
+    def resolve_schema(name: str) -> Path:
+        candidates = [
+            path
+            for root in (REPO_ROOT / "src", REPO_ROOT / "packages")
+            for path in root.rglob(name)
+            if "generated" not in path.parts
+        ]
+        if not candidates:
+            raise ValueError(f"missing transitive schema: {name}")
+        return sorted(candidates, key=lambda path: path.as_posix())[0]
+
+    operations: dict[str, object] = {}
+    schemas: dict[str, object] = {}
+    pending_schemas: set[str] = set()
+    for entry in profile["operations"]:
+        if not isinstance(entry, dict) or entry.get("external_consumption", {}).get("status") == "internal":
+            continue
+        contract = json.loads((REPO_ROOT / str(entry["operation_contract"])).read_text(encoding="utf-8"))
+        pending_schemas.update(schema_refs(contract))
+        identity_input = json.dumps(contract, sort_keys=True, separators=(",", ":")).encode()
+        operations[str(entry["id"])] = {
+            "identity": str(entry["id"]),
+            "version": contract.get("schema_version"),
+            "fingerprint": f"sha256:{hashlib.sha256(identity_input).hexdigest()}",
+            "contract": contract,
+            "schemas": sorted(schema_refs(contract)),
+            "targets": entry["targets"],
+            "external_consumption": entry["external_consumption"],
         }
-    )
+    while pending_schemas:
+        name = pending_schemas.pop()
+        if name in schemas:
+            continue
+        schema = json.loads(resolve_schema(name).read_text(encoding="utf-8"))
+        schemas[name] = schema
+        pending_schemas.update(schema_refs(schema) - set(schemas))
     payload = {
         "schema_version": "agentic-workspace/external-contract-bundle/v1",
         "protocol": profile["compatibility"]["protocol"],
         "profile_fingerprint": profile["compatibility"]["fingerprint"],
         "profile": "external_consumer_profile.json",
-        "operation_contracts": resources,
+        "operations": operations,
+        "schemas": dict(sorted(schemas.items())),
+        "requirement_states": ["compatible", "incompatible", "missing", "runtime-backed", "unsupported"],
         "compatibility_rule": "Protocol major versions must match; fingerprint changes require requirement negotiation.",
     }
     return json.dumps(payload, indent=2) + "\n"
@@ -220,7 +263,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
-    profile = build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")))
+    profile = build_profile(json.loads(IR_PATH.read_text(encoding="utf-8")), repo_root=REPO_ROOT)
     expected = json.dumps(profile, indent=2) + "\n"
     bundle = render_bundle(profile)
     rendered = {

@@ -8,7 +8,15 @@ from pathlib import Path
 
 import pytest
 
-from agentic_workspace import AWClientError, detect_workspace, invoke_operation, require_operations, resolve_invocation
+from agentic_workspace import (
+    AWClientError,
+    detect_workspace,
+    external_contract_bundle,
+    invoke_operation,
+    negotiate_requirements,
+    require_operations,
+    resolve_invocation,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -85,3 +93,20 @@ def test_public_operation_client_invokes_by_operation_identity() -> None:
         allow_runtime_backed=True,
     )
     assert payload["kind"] == "memory-module-report/v1"
+
+
+def test_contract_requirement_negotiation_distinguishes_change_classes() -> None:
+    bundle = external_contract_bundle()
+    operation_id, operation = next(iter(bundle["operations"].items()))
+    compatible = negotiate_requirements({operation_id: operation["fingerprint"]}, allow_runtime_backed=True)
+    assert compatible["compatible"] is True
+    additive = dict(operation["contract"])
+    additive["future_additive_field"] = {"preserved": True}
+    assert additive["future_additive_field"]
+    breaking = negotiate_requirements({operation_id: "sha256:breaking"}, allow_runtime_backed=True)
+    assert breaking == {
+        "compatible": False,
+        "requirements": [{"operation": operation_id, "status": "incompatible", "reason": "operation fingerprint mismatch"}],
+    }
+    missing = negotiate_requirements({"does.not.exist": None})
+    assert missing["requirements"][0]["status"] == "missing"

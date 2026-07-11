@@ -30,7 +30,10 @@ def test_profile_is_fresh_and_fail_closed() -> None:
     assert all(output.read_text(encoding="utf-8") == bundle for output in module.BUNDLE_OUTPUTS)
     bundle_payload = json.loads(bundle)
     assert bundle_payload["profile_fingerprint"] == profile["compatibility"]["fingerprint"]
-    assert bundle_payload["operation_contracts"]
+    assert bundle_payload["operations"]
+    assert all(item["contract"] for item in bundle_payload["operations"].values())
+    referenced = {name for item in bundle_payload["operations"].values() for name in item["schemas"]}
+    assert referenced.issubset(bundle_payload["schemas"])
     assert profile["authority"] == "command_package_ir.json"
     assert profile["compatibility"]["fingerprint"].startswith("sha256:")
     assert profile["operations"]

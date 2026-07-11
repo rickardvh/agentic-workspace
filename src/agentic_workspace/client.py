@@ -44,6 +44,30 @@ def external_consumer_profile() -> dict[str, Any]:
     return json.loads(resource.read_text(encoding="utf-8"))
 
 
+def external_contract_bundle() -> dict[str, Any]:
+    return json.loads(_resource("external_contract_bundle.json").read_text(encoding="utf-8"))
+
+
+def negotiate_requirements(requirements: Mapping[str, str | None], *, allow_runtime_backed: bool = False) -> dict[str, Any]:
+    bundle = external_contract_bundle()
+    results = []
+    for operation_id, fingerprint in requirements.items():
+        operation = bundle["operations"].get(operation_id)
+        if operation is None:
+            results.append({"operation": operation_id, "status": "missing", "reason": "operation is not packaged"})
+            continue
+        support = operation["external_consumption"]["status"]
+        if support == "runtime-backed" and not allow_runtime_backed:
+            results.append({"operation": operation_id, "status": "runtime-backed", "reason": "explicit runtime-backed opt-in required"})
+        elif support not in {"supported", "runtime-backed"}:
+            results.append({"operation": operation_id, "status": "unsupported", "reason": f"support status is {support}"})
+        elif fingerprint and fingerprint != operation["fingerprint"]:
+            results.append({"operation": operation_id, "status": "incompatible", "reason": "operation fingerprint mismatch"})
+        else:
+            results.append({"operation": operation_id, "status": "compatible", "reason": "requirement satisfied"})
+    return {"compatible": all(item["status"] == "compatible" for item in results), "requirements": results}
+
+
 def detect_workspace(target: str | Path) -> dict[str, Any]:
     root = Path(target).resolve()
     config = root / ".agentic-workspace/config.toml"
