@@ -4023,7 +4023,11 @@ def _proof_selection_for_changed_paths(
         cli_invoke=cli_invoke,
     )
     forecast_identity = _as_dict(forecast_packet.get("forecast_identity"))
-    actual_intent = _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
+    actual_intent = (
+        _intent_decision_projection(target_root=target_root, config=config, changed_paths=changed_paths, compact=True)
+        if target_root is not None and isinstance(config, WorkspaceConfig)
+        else {}
+    )
     actual_subsystems = _list_payload(_as_dict(actual_intent.get("subsystem_intent")).get("matches"))[:2]
     actual_basis = {
         "actual_paths": changed_paths,
