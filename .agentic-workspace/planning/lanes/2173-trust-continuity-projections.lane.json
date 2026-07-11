@@ -2,7 +2,7 @@
   "kind": "planning-lane/v1",
   "id": "2173-trust-continuity-projections",
   "title": "Harden AW trust continuity and projection boundaries",
-  "status": "ready",
+  "status": "active",
   "parent_decomposition_ref": "",
   "lane_outcome": "Make the seven #2173 child invariants true in ordinary product paths, each with issue-specific regression evidence and a separately reviewable PR.",
   "purpose_for_parent": "Close #2173 only after #2174 through #2180 are closed or deliberately rerouted with residual intent preserved.",
@@ -28,22 +28,34 @@
     "2178-invocation-intent",
     "2179-safe-diagnostic-promotion"
   ],
-  "current_slice": "2174-proof-evidence-admission",
+  "current_slice": "review-merge-and-retarget",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "For every child, run routed changed-path proof plus the issue's required regression cases. Aggregate merged PRs, exact validation commands, and any residual owner before closing the lane.",
   "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
-    "known_gaps": []
+    "status": "partial",
+    "evidence": [
+      "#2181: focused proof receipt tests, workspace suite, generated package checks, lint, typecheck, and CI",
+      "#2182: 318 session/startup/proof tests including three-context and branch round-trip replay, lint, typecheck, and CI",
+      "#2183: 339 startup/implement tests plus live pre-edit and post-edit intent replay, lint, typecheck, and CI",
+      "#2184: 228 doctor/status tests plus repeated-doctor stable digest replay, lint, typecheck, and CI",
+      "#2185: 230 projection/doctor/report tests plus measured doctor/report work and output reduction, lint, typecheck, and CI",
+      "#2186: 32 session semantic tests after master rebase plus workspace CI",
+      "#2187: 215 session/workspace tests, absolute-path hygiene, lint, typecheck, and CI"
+    ],
+    "known_gaps": [
+      "Child PRs remain unmerged; issue closure transitions are pending review and merge.",
+      "#2185 must land after #2184, then be retargeted to master and revalidated.",
+      "Parent #2173 must remain open until every child is closed or deliberately rerouted."
+    ]
   },
-  "residual_lane_work": "Children #2174 through #2180 remain open until their individual acceptance and evidence requirements are satisfied.",
+  "residual_lane_work": "Review and merge #2181-#2187; merge #2184 before #2185, retarget #2185 to master after its base lands, verify child issue closure, then aggregate landed proof and close #2173.",
   "lane_to_epic_contribution": "Provides the trust, continuity, projection, invocation, promotion, and intent-routing invariants named by #2173 without absorbing #2172 mutation-outcome scope.",
-  "parent_close_permission": "not-evaluated",
+  "parent_close_permission": "blocked-until-child-prs-land",
   "closeout_state": {
     "status": "open",
-    "summary": "",
-    "residual_work": "",
-    "next_owner": ""
+    "summary": "All child implementations are published and review-ready; lane closure remains merge-dependent.",
+    "residual_work": "Merge child PRs, retarget the one dependency stack, confirm child issue closure, and rerun final landed-state proof.",
+    "next_owner": "maintainer/reviewer"
   },
   "references": [
     "GitHub #2173",
@@ -53,7 +65,14 @@
     "GitHub #2177",
     "GitHub #2178",
     "GitHub #2179",
-    "GitHub #2180"
+    "GitHub #2180",
+    "PR #2181",
+    "PR #2182",
+    "PR #2183",
+    "PR #2184",
+    "PR #2185",
+    "PR #2186",
+    "PR #2187"
   ],
   "notes": "Implementation order follows the lane owner's recommendation. #2175 and #2180 may share scope/provenance concepts but remain separate review units; #2177 precedes #2176 so projection reuse does not cache unstable action semantics."
 }
