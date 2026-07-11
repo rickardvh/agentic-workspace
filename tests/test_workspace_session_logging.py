@@ -758,6 +758,16 @@ def test_session_log_preserves_producer_invocation_intent_and_matches_observed_o
     assert analysis["matched_invocations"][0]["invocation_intent"]["invocation_class"] == "negative-fixture"
     assert analysis["unmatched_invocations"][0]["invocation_outcome"]["observed"]["exit_class"] == "failure"
     assert analysis["unknown_invocations"][0]["invocation_outcome"]["match"] == "unknown"
+    assert analysis["summary"]["failed_count"] == 1
+    assert len(analysis["failed_commands"]) == 1
+    assert len(analysis["observed_nonzero_exits"]) == 2
+    assert analysis["matched_invocations"][0] not in analysis["failed_commands"]
+
+    test_analysis = session_logging.analyze_session_log(state=state, origin_scope="test")
+    assert test_analysis["summary"]["failed_count"] == 0
+    assert test_analysis["failed_commands"] == []
+    assert len(test_analysis["observed_nonzero_exits"]) == 1
+    assert len(test_analysis["matched_invocations"]) == 1
 
     index = json.loads(_current_index(target).read_text(encoding="utf-8"))
     negative = index["entries"][0]
