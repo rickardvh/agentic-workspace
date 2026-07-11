@@ -550,7 +550,14 @@ def _read_proof_receipt_records(
         try:
             loaded = json.loads(receipt_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            return None, {}, {}, f"latest receipt could not be read as JSON: {exc}"
+            loaded = None
+            rejected_latest = {
+                "status": "rejected-untrusted",
+                "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+                "admission_reason": "latest-receipt-unreadable",
+                "detail": str(exc),
+                "safe_recovery": "Remove or replace the damaged last.json cache; admitted history remains authoritative.",
+            }
         if isinstance(loaded, dict):
             admission = proof_receipt_admission(loaded)
             if admission["admitted"]:
@@ -563,8 +570,13 @@ def _read_proof_receipt_records(
                     "admission_reason": admission["reason"],
                     "safe_recovery": admission["safe_recovery"],
                 }
-        else:
-            return None, {}, {}, "latest receipt is not a JSON object"
+        elif loaded is not None:
+            rejected_latest = {
+                "status": "rejected-untrusted",
+                "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+                "admission_reason": "latest-receipt-not-object",
+                "safe_recovery": "Remove or replace the non-object last.json cache; admitted history remains authoritative.",
+            }
 
     if history_path.is_file():
         try:
