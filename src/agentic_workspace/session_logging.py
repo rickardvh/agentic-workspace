@@ -249,6 +249,7 @@ def append_command_entry(*, state: SessionLoggingState, argv: Sequence[str], cap
             prior_entries=prior_entries,
         )
         expected_failure = capture.exit_code != 0 and _expected_fixture_failure(origin)
+        invocation_intent = _invocation_intent(origin=origin)
         entry = _command_entry_markdown(
             state=state,
             session=session,
@@ -258,6 +259,7 @@ def append_command_entry(*, state: SessionLoggingState, argv: Sequence[str], cap
             capture=capture,
             origin=origin,
             expected_failure=expected_failure,
+            invocation_intent=invocation_intent,
             provenance=provenance,
             segment=segment,
         )
@@ -272,6 +274,7 @@ def append_command_entry(*, state: SessionLoggingState, argv: Sequence[str], cap
             capture=capture,
             origin=origin,
             expected_failure=expected_failure,
+            invocation_intent=invocation_intent,
             provenance=provenance,
             segment=segment,
         )
@@ -614,6 +617,84 @@ def _expected_fixture_failure(origin: dict[str, Any]) -> bool:
     return explicit in {"1", "true", "yes"}
 
 
+def _invocation_intent(*, origin: dict[str, Any]) -> dict[str, Any]:
+    expected_failure = _expected_fixture_failure(origin)
+    expected_exit = os.environ.get("AW_SESSION_LOG_EXPECTED_EXIT", "").strip().lower()
+    if not expected_exit and expected_failure:
+        expected_exit = "failure"
+    invocation_class = os.environ.get("AW_SESSION_LOG_INVOCATION_CLASS", "").strip().lower()
+    allowed_classes = {
+        "product-operation",
+        "probe",
+        "negative-fixture",
+        "recovery-attempt",
+        "analyzer-action",
+        "synthetic-check",
+    }
+    if invocation_class not in allowed_classes:
+        invocation_class = "unknown"
+    scenario_id = os.environ.get("AW_SESSION_LOG_SCENARIO_ID", "").strip()
+    if not scenario_id and expected_failure and os.environ.get("PYTEST_CURRENT_TEST"):
+        scenario_id = os.environ["PYTEST_CURRENT_TEST"].split(" ", 1)[0]
+    supplied = any(
+        (
+            os.environ.get("AW_SESSION_LOG_PURPOSE_ID"),
+            scenario_id,
+            expected_exit,
+            os.environ.get("AW_SESSION_LOG_EXPECTED_REASON_CLASS"),
+            invocation_class != "unknown",
+        )
+    )
+    return {
+        "kind": "agentic-workspace/invocation-intent/v1",
+        "status": "declared" if supplied else "unknown",
+        "purpose_id": os.environ.get("AW_SESSION_LOG_PURPOSE_ID", "").strip(),
+        "scenario_id": scenario_id,
+        "invocation_class": invocation_class,
+        "expected": {
+            "exit_class": expected_exit if expected_exit in {"success", "failure"} else "unknown",
+            "reason_class": os.environ.get("AW_SESSION_LOG_EXPECTED_REASON_CLASS", "").strip() or "unknown",
+        },
+        "provenance": {
+            "producer": str(origin.get("classification") or "unknown"),
+            "source": "producer-environment" if supplied else "not-supplied",
+            "fields": [
+                name
+                for name in (
+                    "AW_SESSION_LOG_PURPOSE_ID",
+                    "AW_SESSION_LOG_SCENARIO_ID",
+                    "AW_SESSION_LOG_INVOCATION_CLASS",
+                    "AW_SESSION_LOG_EXPECTED_EXIT",
+                    "AW_SESSION_LOG_EXPECTED_REASON_CLASS",
+                    "AW_SESSION_LOG_EXPECTED_FAILURE",
+                )
+                if os.environ.get(name)
+            ],
+        },
+        "rule": "Producer-declared expectation remains separate from observed execution and is never inferred from command text.",
+    }
+
+
+def _invocation_outcome(*, intent: dict[str, Any], exit_class: str, reason_class: str) -> dict[str, Any]:
+    expected = intent.get("expected", {}) if isinstance(intent.get("expected"), dict) else {}
+    expected_exit = str(expected.get("exit_class") or "unknown")
+    expected_reason = str(expected.get("reason_class") or "unknown")
+    if expected_exit == "unknown" and expected_reason == "unknown":
+        match = "unknown"
+    elif expected_exit not in {"unknown", exit_class} or expected_reason not in {"unknown", reason_class}:
+        match = "unmatched"
+    else:
+        match = "matched"
+    return {
+        "kind": "agentic-workspace/invocation-outcome/v1",
+        "match": match,
+        "expected": expected,
+        "observed": {"exit_class": exit_class, "reason_class": reason_class},
+        "expectation_provenance": intent.get("provenance", {}),
+        "rule": "Observed execution is immutable evidence; producer expectation only classifies whether it behaved as declared.",
+    }
+
+
 def _parent_context() -> dict[str, str]:
     return {
         "entry_id": os.environ.get("AW_SESSION_LOG_PARENT_ENTRY_ID", ""),
@@ -736,10 +817,17 @@ def _command_entry_markdown(
     capture: CommandCapture,
     origin: dict[str, Any],
     expected_failure: bool,
+    invocation_intent: dict[str, Any],
     provenance: dict[str, Any],
     segment: dict[str, Any],
 ) -> str:
     normalized_capture = _normalized_capture(state, capture)
+    failure_class = _failure_class(command_text=command_text, capture=normalized_capture)
+    invocation_outcome = _invocation_outcome(
+        intent=invocation_intent,
+        exit_class="success" if normalized_capture.exit_code == 0 else "failure",
+        reason_class=failure_class or "none",
+    )
     output_size = _output_size(normalized_capture)
     output_digest = _output_digest(normalized_capture)
     stdout_summary = _summarize_stream(stream="stdout", text=normalized_capture.stdout)
@@ -753,6 +841,8 @@ def _command_entry_markdown(
         f"- exit_status: `{normalized_capture.exit_code}`",
         f"- origin: `{origin['classification']}`",
         f"- expected_failure: `{'true' if expected_failure else 'false'}`",
+        f"- invocation_intent: `{json.dumps(serialise_value(invocation_intent), sort_keys=True)}`",
+        f"- invocation_outcome: `{json.dumps(serialise_value(invocation_outcome), sort_keys=True)}`",
         f"- segment_id: `{segment['id']}`",
         f"- provenance: `{json.dumps(serialise_value(provenance), sort_keys=True)}`",
         f"- segment: `{json.dumps(serialise_value(segment), sort_keys=True)}`",
@@ -914,6 +1004,7 @@ def _append_index_command(
     capture: CommandCapture,
     origin: dict[str, Any],
     expected_failure: bool,
+    invocation_intent: dict[str, Any],
     provenance: dict[str, Any],
     segment: dict[str, Any],
 ) -> None:
@@ -930,6 +1021,11 @@ def _append_index_command(
         if artifact is not None:
             artifact = {**artifact, "duplicate_of": str(artifact.get("entry_id", "")), "storage_mode": "reused-duplicate"}
     failure_class = _failure_class(command_text=command_text, capture=normalized_capture)
+    invocation_outcome = _invocation_outcome(
+        intent=invocation_intent,
+        exit_class="success" if normalized_capture.exit_code == 0 else "failure",
+        reason_class=failure_class or "none",
+    )
     entries.append(
         {
             "id": entry_id,
@@ -944,6 +1040,8 @@ def _append_index_command(
             "exit_class": "success" if normalized_capture.exit_code == 0 else "failure",
             "failure_class": failure_class,
             "expected_failure": expected_failure,
+            "invocation_intent": invocation_intent,
+            "invocation_outcome": invocation_outcome,
             "origin": origin,
             "parent_context": _parent_context(),
             "provenance": provenance,
@@ -1267,6 +1365,8 @@ def _entries_from_markdown(log_path: Path) -> list[dict[str, Any]]:
         top_level_kinds = sorted({value for value in (stdout_summary.top_level_kind, stderr_summary.top_level_kind) if value})
         provenance = _json_markdown_metadata(section, "provenance")
         segment = _json_markdown_metadata(section, "segment")
+        invocation_intent = _json_markdown_metadata(section, "invocation_intent")
+        invocation_outcome = _json_markdown_metadata(section, "invocation_outcome")
         origin = _regex_value(section, r"- origin: `([^`]+)`") or "unknown"
         expected_failure = _regex_value(section, r"- expected_failure: `([^`]+)`").lower() == "true"
         entries.append(
@@ -1278,6 +1378,8 @@ def _entries_from_markdown(log_path: Path) -> list[dict[str, Any]]:
                 "exit_class": "success" if exit_status == 0 else "failure",
                 "failure_class": _failure_class(command_text=command, capture=capture),
                 "expected_failure": expected_failure,
+                "invocation_intent": invocation_intent,
+                "invocation_outcome": invocation_outcome,
                 "origin": {"classification": origin, "source": "markdown", "detail": ""},
                 "provenance": provenance,
                 "segment": segment,
@@ -1334,6 +1436,8 @@ def _entry_brief(entry: dict[str, Any]) -> dict[str, Any]:
         "exit_class": entry.get("exit_class", ""),
         "failure_class": entry.get("failure_class", ""),
         "expected_failure": bool(entry.get("expected_failure", False)),
+        "invocation_intent": entry.get("invocation_intent", {}),
+        "invocation_outcome": entry.get("invocation_outcome", {}),
         "origin": entry.get("origin", {}),
         "parent": parent,
         "segment_id": entry.get("segment", {}).get("id", "") if isinstance(entry.get("segment"), dict) else "",
@@ -1692,7 +1796,25 @@ def analyze_session_log(
     command_counter = Counter(str(entry.get("command", "")) for entry in entries if entry.get("command"))
     digest_counter = Counter(str(entry.get("output_digest", "")) for entry in entries if entry.get("output_digest"))
     failures = [entry for entry in entries if int(entry.get("exit_status", 0) or 0) != 0]
-    live_failures = [entry for entry in failures if _origin_name(entry) == "agent" and not bool(entry.get("expected_failure", False))]
+    matched_expectations = [
+        entry
+        for entry in entries
+        if isinstance(entry.get("invocation_outcome"), dict) and entry["invocation_outcome"].get("match") == "matched"
+    ]
+    unmatched_expectations = [
+        entry
+        for entry in entries
+        if isinstance(entry.get("invocation_outcome"), dict) and entry["invocation_outcome"].get("match") == "unmatched"
+    ]
+    unknown_expectations = [
+        entry
+        for entry in entries
+        if not isinstance(entry.get("invocation_outcome"), dict) or entry["invocation_outcome"].get("match") in {None, "", "unknown"}
+    ]
+    unexpected_failures = [entry for entry in failures if entry not in matched_expectations]
+    live_failures = [
+        entry for entry in unexpected_failures if _origin_name(entry) == "agent" and not bool(entry.get("expected_failure", False))
+    ]
     repeated_failure_counter = Counter(str(entry.get("command", "")) for entry in live_failures if entry.get("command"))
     repeated_failures = [
         {"command": command, "count": count} for command, count in repeated_failure_counter.most_common() if count > 1 and command
@@ -1758,6 +1880,10 @@ def analyze_session_log(
             "failed_count": len(live_failures) if origin_scope == "agent" else len(failures),
             "live_agent_failure_count": len(live_failures),
             "expected_failure_count": sum(1 for entry in failures if bool(entry.get("expected_failure", False))),
+            "matched_expectation_count": len(matched_expectations),
+            "unmatched_expectation_count": len(unmatched_expectations),
+            "unknown_expectation_count": len(unknown_expectations),
+            "unexpected_failure_count": len(unexpected_failures),
             "usage_mistake_count": len(usage_mistakes),
             "repeated_command_count": len(repeated),
             "repeated_failure_count": len(repeated_failures),
@@ -1779,6 +1905,10 @@ def analyze_session_log(
             "rule": "session-log analyze traffic is classified separately and cannot become default product-friction evidence.",
         },
         "failed_commands": [_entry_brief(entry) for entry in (live_failures if origin_scope == "agent" else failures)],
+        "unexpected_failed_commands": [_entry_brief(entry) for entry in unexpected_failures],
+        "matched_invocations": [_entry_brief(entry) for entry in matched_expectations],
+        "unmatched_invocations": [_entry_brief(entry) for entry in unmatched_expectations],
+        "unknown_invocations": [_entry_brief(entry) for entry in unknown_expectations],
         "live_failed_commands": [_entry_brief(entry) for entry in live_failures],
         "failures_by_origin": dict(sorted(failures_by_origin.items())),
         "repeated_failures_by_origin": repeated_failures_by_origin,
