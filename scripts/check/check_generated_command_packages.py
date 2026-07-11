@@ -316,6 +316,7 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
     "tests/test_workspace_packaging.py": "installed private bridge compatibility proof",
     "tests/test_external_consumer_profile.py": "isolated wheel profile-resource compatibility proof",
+    "tests/fixtures/external_consumer/consumer.py": "isolated installed-consumer package-resource proof",
     "packages/planning/tests/test_packaging.py": "installed private bridge compatibility proof",
     "packages/memory/tests/test_packaging.py": "installed private bridge compatibility proof",
     "packages/verification/tests/test_packaging.py": "installed private bridge compatibility proof",

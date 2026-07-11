@@ -19,6 +19,14 @@ The package keeps `AGENTS.md` thin. Durable rules and structured state live unde
 
 Bootstrap uses the necessary-surface footprint by default. It creates shared config/startup, a compact adoption receipt, and selected module state anchors while preserving durable pre-existing local-mode Planning, Memory, and Verification state. Generic package payload remains package-owned and is read from the installed package, dev dependency, editable install, or source checkout at runtime. `--mirror-payload` is the explicit opt-in for checking in bundled docs, templates, schemas, skills, payload provenance, and upgrade-source provenance.
 
+## External Integration Boundary
+
+Agentic Workspace is an adapter-unaware operation provider. External ecosystems own adapter discovery, installation, enablement, trust, credentials, updates, and removal. AW does not maintain an adapter registry, plugin lockfile, vendor configuration, or reverse dependency on an integration package.
+
+Consumers detect the workspace through the documented root/config contract and consume released client and contract resources. They must not require mirrored `.agentic-workspace` docs, schemas, skills, templates, or package payload. Necessary-surface and full-mirror repositories therefore have the same external operation semantics.
+
+Optional repository-coupled scratch state belongs under `.agentic-workspace/local/integrations/<adapter-id>/`. It is ignored, non-authoritative, safe to delete, and cannot establish planning, proof, completion, configuration, or workflow state. Durable results enter shared state only through the existing owning AW operations or repo-native surfaces. Removing a consumer must leave checked-in AW state meaningful and ordinarily usable.
+
 ## Participation Boundary
 
 Installed surfaces should expose the operating loop, not every implementation
