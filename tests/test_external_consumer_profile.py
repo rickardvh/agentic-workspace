@@ -81,3 +81,60 @@ def test_conflicting_explicit_operation_ids_fail_closed() -> None:
     ir = {"packages": [{"id": "fixture", "operation_contract_root": "contracts", "targets": [], "commands": [first, second]}]}
     with pytest.raises(ValueError, match="conflicting explicit operation id"):
         module.build_profile(ir)
+
+
+def test_present_but_deferred_targets_fail_closed() -> None:
+    module = _module()
+    ir = {
+        "packages": [
+            {
+                "id": "fixture",
+                "operation_contract_root": "contracts",
+                "targets": [
+                    {"kind": "python", "generation_status": "deferred"},
+                    {"kind": "typescript", "generation_status": "deferred"},
+                ],
+                "commands": [
+                    {
+                        "status": "generated",
+                        "operation_ref": {"id": "fixture.read", "path": "read.json"},
+                        "effect_hints": {"read_only": True},
+                        "conformance_refs": ["fixture.read.process"],
+                    }
+                ],
+            }
+        ]
+    }
+    assert module.build_profile(ir)["operations"][0]["external_consumption"]["status"] == "internal"
+
+
+def test_single_usable_target_is_target_specific() -> None:
+    module = _module()
+    ir = {
+        "packages": [
+            {
+                "id": "fixture",
+                "operation_contract_root": "contracts",
+                "targets": [
+                    {"kind": "python", "generation_status": "mutation-capable-adapter"},
+                    {"kind": "typescript", "generation_status": "deferred"},
+                ],
+                "commands": [
+                    {
+                        "status": "generated",
+                        "operation_ref": {"id": "fixture.read", "path": "read.json"},
+                        "effect_hints": {"read_only": True},
+                        "conformance_refs": ["fixture.read.process"],
+                    }
+                ],
+            }
+        ]
+    }
+    assert module.build_profile(ir)["operations"][0]["external_consumption"]["status"] == "target-specific"
+
+
+def test_runtime_exception_provenance_is_structured() -> None:
+    profile = json.loads(_module().render())
+    runtime_backed = next(entry for entry in profile["operations"] if entry["external_consumption"]["status"] == "runtime-backed")
+    exception = runtime_backed["external_consumption"]["runtime_exceptions"][0]
+    assert {"owner", "scope", "reason", "proof", "migration_dependency"}.issubset(exception)

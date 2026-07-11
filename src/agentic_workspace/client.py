@@ -1,0 +1,157 @@
+from __future__ import annotations
+
+import json
+import shlex
+import subprocess
+import tomllib
+from dataclasses import dataclass
+from importlib.resources import files
+from pathlib import Path
+from typing import Any, Mapping, Sequence
+
+FAILURE_KINDS = {"absent", "disabled", "incompatible", "unsupported", "rejected", "failed", "malformed", "invocation-unavailable"}
+
+
+@dataclass
+class AWClientError(RuntimeError):
+    kind: str
+    message: str
+    details: Mapping[str, Any]
+
+    def __str__(self) -> str:
+        return f"{self.kind}: {self.message}"
+
+
+def _resource(path: str, package_name: str = "agentic-workspace"):
+    package_modules = {
+        "agentic-workspace": "agentic_workspace._generated_cli_package_impl",
+        "agentic-memory": "repo_memory_bootstrap._generated_cli_package_impl",
+        "agentic-planning": "repo_planning_bootstrap._generated_cli_package_impl",
+        "agentic-verification": "repo_verification_bootstrap._generated_cli_package_impl",
+    }
+    try:
+        resource = files(package_modules[package_name]).joinpath(path)
+        if resource.is_file():
+            return resource
+    except ModuleNotFoundError:
+        pass
+    target = package_name.removeprefix("agentic-")
+    return Path(__file__).resolve().parents[2] / f"generated/{target}/python" / path
+
+
+def external_consumer_profile() -> dict[str, Any]:
+    resource = _resource("external_consumer_profile.json")
+    return json.loads(resource.read_text(encoding="utf-8"))
+
+
+def detect_workspace(target: str | Path) -> dict[str, Any]:
+    root = Path(target).resolve()
+    config = root / ".agentic-workspace/config.toml"
+    if not config.is_file():
+        return {"status": "absent", "target": root.as_posix()}
+    payload = tomllib.loads(config.read_text(encoding="utf-8"))
+    workspace = payload.get("workspace", {})
+    if workspace.get("enabled") is False:
+        return {"status": "disabled", "target": root.as_posix()}
+    return {"status": "enabled", "target": root.as_posix()}
+
+
+def resolve_invocation(target: str | Path, override: Sequence[str] | None = None) -> list[str]:
+    if override:
+        return list(override)
+    root = Path(target).resolve()
+    for name in ("config.local.toml", "config.toml"):
+        path = root / ".agentic-workspace" / name
+        if not path.is_file():
+            continue
+        workspace = tomllib.loads(path.read_text(encoding="utf-8")).get("workspace", {})
+        command = workspace.get("cli_invoke")
+        if isinstance(command, str) and command.strip():
+            return shlex.split(command, posix=False)
+    return ["agentic-workspace"]
+
+
+def require_operations(operation_ids: Sequence[str], *, allow_runtime_backed: bool = False) -> None:
+    entries = {entry["id"]: entry for entry in external_consumer_profile()["operations"]}
+    allowed = {"supported"} | ({"runtime-backed"} if allow_runtime_backed else set())
+    failures = []
+    for operation_id in operation_ids:
+        status = entries.get(operation_id, {}).get("external_consumption", {}).get("status", "unknown")
+        if status not in allowed:
+            failures.append({"operation": operation_id, "status": status})
+    if failures:
+        raise AWClientError("incompatible", "operation requirements are not satisfied", {"requirements": failures})
+
+
+def _operation_contract(entry: Mapping[str, Any]) -> dict[str, Any]:
+    resource_ref = entry["operation_resources"]["python"]
+    resource = _resource(resource_ref["path"], resource_ref["package"])
+    return json.loads(resource.read_text(encoding="utf-8"))
+
+
+def _argv(contract: Mapping[str, Any], values: Mapping[str, Any], target: Path) -> list[str]:
+    surface = contract.get("command_surface", {})
+    command = str(surface.get("command", "")).split()
+    program = str(surface.get("program", "agentic-workspace"))
+    if program.startswith("agentic-") and program != "agentic-workspace":
+        command.insert(0, program.removeprefix("agentic-"))
+    if not command:
+        raise AWClientError("malformed", "operation contract has no command surface", {"operation": contract.get("id")})
+    declared = {str(item.get("name")): item for item in contract.get("inputs", []) if isinstance(item, dict)}
+    unknown = sorted(set(values) - set(declared))
+    if unknown:
+        raise AWClientError("malformed", "operation input contains unknown fields", {"fields": unknown})
+    missing = sorted(name for name, item in declared.items() if item.get("required") and name not in values)
+    if missing:
+        raise AWClientError("malformed", "operation input is missing required fields", {"fields": missing})
+    argv = list(command)
+    for name, value in values.items():
+        if name == "target":
+            continue
+        flag = f"--{name.replace('_', '-')}"
+        if isinstance(value, bool):
+            if value:
+                argv.append(flag)
+        elif isinstance(value, list):
+            argv.extend([flag, ",".join(str(item) for item in value)])
+        else:
+            argv.extend([flag, str(value)])
+    if "target" in declared:
+        argv.extend(["--target", str(target)])
+    if "format" in declared:
+        argv.extend(["--format", "json"])
+    return argv
+
+
+def invoke_operation(
+    operation_id: str,
+    values: Mapping[str, Any],
+    *,
+    target: str | Path,
+    invocation: Sequence[str] | None = None,
+    allow_runtime_backed: bool = False,
+) -> dict[str, Any]:
+    state = detect_workspace(target)
+    if state["status"] != "enabled":
+        raise AWClientError(state["status"], "workspace is not available", state)
+    require_operations([operation_id], allow_runtime_backed=allow_runtime_backed)
+    entry = next(item for item in external_consumer_profile()["operations"] if item["id"] == operation_id)
+    argv = _argv(_operation_contract(entry), values, Path(target).resolve())
+    command = [*resolve_invocation(target, invocation), *argv]
+    try:
+        completed = subprocess.run(command, text=True, capture_output=True, check=False)
+    except OSError as exc:
+        raise AWClientError("invocation-unavailable", str(exc), {"command": command}) from exc
+    stream = completed.stdout or completed.stderr
+    try:
+        payload = json.loads(stream)
+    except json.JSONDecodeError as exc:
+        raise AWClientError("malformed", "AW returned non-JSON output", {"exit_code": completed.returncode}) from exc
+    if completed.returncode:
+        kind = str(payload.get("status", "failed")) if isinstance(payload, dict) else "failed"
+        if kind not in FAILURE_KINDS:
+            kind = "rejected" if completed.returncode == 2 else "failed"
+        raise AWClientError(kind, "AW operation failed", {"exit_code": completed.returncode, "error": payload})
+    if not isinstance(payload, dict):
+        raise AWClientError("malformed", "AW result envelope must be an object", {"result": payload})
+    return payload
