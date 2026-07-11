@@ -518,7 +518,7 @@ def test_prepare_closeout_reports_ambiguous_carry_candidates_and_safe_recovery(t
     assert "ambiguous-plan-binding" in detail
     assert first.relative_to(tmp_path).as_posix() in detail
     assert second.relative_to(tmp_path).as_posix() in detail
-    assert "positive stale/closed-owner evidence" in detail
+    assert "AW_DECISION_POINT_CARRY_KEY" in detail
     assert first.exists() and second.exists()
 
 
@@ -540,6 +540,26 @@ def test_successful_closeout_consumes_only_unique_plan_carry(tmp_path: Path, cap
     assert any(action["kind"] == "consumed local carry" for action in payload["actions"])
     assert json.loads(selected.read_text(encoding="utf-8"))["lifecycle"]["state"] == "consumed"
     assert other.exists()
+
+
+def test_exact_environment_selection_resolves_ambiguity_without_mutating_other_context(tmp_path: Path, monkeypatch, capsys) -> None:
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "# TODO\n")
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    _write_execplan_record(record_path, status="completed")
+    selected = _write_decision_point_carry(tmp_path, key="selected")
+    other = _write_decision_point_carry(tmp_path, key="other")
+    monkeypatch.setenv("AW_DECISION_POINT_CARRY_KEY", "selected")
+
+    assert (
+        planning_cli.main(
+            ["archive-plan", "plan-alpha", "--target", str(tmp_path), "--prepare-closeout", "--apply-cleanup", "--format", "json"]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert json.loads(selected.read_text(encoding="utf-8"))["lifecycle"]["state"] == "consumed"
+    assert json.loads(other.read_text(encoding="utf-8"))["lifecycle"]["state"] == "active"
 
 
 def test_failed_closeout_record_write_keeps_unique_carry_active(tmp_path: Path, monkeypatch, capsys) -> None:

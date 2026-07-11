@@ -18883,6 +18883,17 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
     carry_dir = target_root / _DECISION_POINT_FORECAST_DIR
     try:
         carry_dir.mkdir(parents=True, exist_ok=True)
+        target_path = carry_dir / f"{binding['key']}.json"
+        active_paths = []
+        for candidate_path in carry_dir.glob("*.json"):
+            try:
+                candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if _as_dict(candidate.get("lifecycle")).get("state", "active") == "active":
+                active_paths.append(candidate_path)
+        if target_path not in active_paths and len(active_paths) >= 8:
+            return {}
         superseded = sorted(carry_dir.glob("*.json"), key=lambda candidate: candidate.stat().st_mtime, reverse=True)
         for old_path in superseded[8:]:
             try:

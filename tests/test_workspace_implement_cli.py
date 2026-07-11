@@ -5452,6 +5452,12 @@ def test_repeated_start_preserves_concurrent_active_carries_for_same_plan(tmp_pa
         "Implement forecast task A",
         "Implement forecast task B",
     }
+    for index in range(2, 12):
+        assert cli.main(["start", "--target", str(tmp_path), "--task", f"Implement forecast task {index}", "--format", "json"]) == 0
+        capsys.readouterr()
+    bounded = list((tmp_path / ".agentic-workspace/local/decision-point-intent").glob("*.json"))
+    assert len(bounded) == 8
+    assert all(json.loads(path.read_text(encoding="utf-8"))["lifecycle"]["state"] == "active" for path in bounded)
 
 
 def test_implement_architecture_principle_uses_structured_path_not_task_keywords(tmp_path: Path, capsys) -> None:

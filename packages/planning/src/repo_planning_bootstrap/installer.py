@@ -4,6 +4,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -12925,6 +12926,15 @@ def _prepare_execplan_closeout(
             and (not isinstance(lifecycle, dict) or str(lifecycle.get("state") or "active") == "active")
         ):
             carry_candidates.append((carry_path, candidate))
+    selected_key = str(os.environ.get("AW_DECISION_POINT_CARRY_KEY") or "").strip()
+    if selected_key and carry_candidates:
+        selected_candidates = [
+            (path, candidate)
+            for path, candidate in carry_candidates
+            if str((candidate.get("work_binding") or {}).get("key") or "") == selected_key
+        ]
+        if selected_candidates:
+            carry_candidates = selected_candidates
     if carry_candidates:
         carry = carry_candidates[0][1] if len(carry_candidates) == 1 else {}
         phases = carry.get("phase_confirmations", {}) if isinstance(carry, dict) else {}
@@ -12960,7 +12970,7 @@ def _prepare_execplan_closeout(
                 for path, candidate in carry_candidates
             ],
             "safe_recovery": (
-                "Select the closing work binding explicitly in the plan's decision-point confirmation, or prune only a carry with positive stale/closed-owner evidence; do not choose newest."
+                "Set AW_DECISION_POINT_CARRY_KEY to one listed work_binding.key and rerun the same closeout command; selection is exact and does not mutate other active carries."
                 if len(carry_candidates) > 1
                 else "none"
             ),
