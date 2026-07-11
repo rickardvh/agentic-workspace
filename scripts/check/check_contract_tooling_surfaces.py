@@ -2688,7 +2688,21 @@ def _validate_workspace_runtime_core_boundary(payload: dict[str, object]) -> lis
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    profile_script = REPO_ROOT / "scripts/generate/generate_external_consumer_profile.py"
+    profile_spec = importlib.util.spec_from_file_location("external_consumer_profile_generator", profile_script)
+    profile_module = importlib.util.module_from_spec(profile_spec) if profile_spec and profile_spec.loader else None
+    if profile_module is not None and profile_spec is not None and profile_spec.loader is not None:
+        profile_spec.loader.exec_module(profile_module)
+        expected_profile = profile_module.render()
+        profile_errors = [
+            f"{path.relative_to(REPO_ROOT).as_posix()} is stale"
+            for path in profile_module.OUTPUTS
+            if not path.is_file() or path.read_text(encoding="utf-8") != expected_profile
+        ]
+    else:
+        profile_errors = ["external consumer profile generator could not be loaded"]
     checks: list[tuple[str, list[str]]] = [
+        ("external consumer profile freshness", profile_errors),
         ("compact_contract_profile.json", _validate(compact_contract_manifest(), "selector_contracts_manifest.schema.json")),
         ("proof_routes.json", _validate(proof_routes_manifest(), "proof_routes_manifest.schema.json")),
         ("proof_selection_rules.json", _validate(proof_selection_rules_manifest(), "proof_selection_rules.schema.json")),

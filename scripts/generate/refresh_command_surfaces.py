@@ -7,6 +7,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SEQUENCE = (
     ("uv", "run", "python", "scripts/generate/generate_command_packages.py"),
+    ("uv", "run", "python", "scripts/generate/generate_external_consumer_profile.py"),
     ("uv", "run", "python", "scripts/generate/generate_command_adapters.py"),
     ("uv", "run", "python", "scripts/generate/generate_command_packages.py"),
 )

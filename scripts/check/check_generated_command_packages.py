@@ -315,6 +315,7 @@ GENERATED_CLI_COMPATIBILITY_VOCABULARY_ALLOWLIST = {
     "src/agentic_workspace/workspace_runtime_primitives.py": "legacy parser helper compatibility wrapper",
     "scripts/check/check_generated_command_packages.py": "static compatibility allowlist and obsolete-layout guards",
     "tests/test_workspace_packaging.py": "installed private bridge compatibility proof",
+    "tests/test_external_consumer_profile.py": "isolated wheel profile-resource compatibility proof",
     "packages/planning/tests/test_packaging.py": "installed private bridge compatibility proof",
     "packages/memory/tests/test_packaging.py": "installed private bridge compatibility proof",
     "packages/verification/tests/test_packaging.py": "installed private bridge compatibility proof",
@@ -5277,7 +5278,8 @@ def _validate_static_surfaces() -> list[str]:
             expected_resource = _target_scoped_command_package_resource(expected_package, target)
             if command_package_resource is not None and expected_package is not None and command_package_resource != expected_resource:
                 errors.append(f"{package_label}/resources/command_package.json drifted from command_package_ir.json")
-            if payload.get("files") != ["src", "resources"]:
+            files = payload.get("files", [])
+            if not isinstance(files, list) or not {"src", "resources"}.issubset(files):
                 errors.append(f"{package_label}/package.json does not include generated resources")
             is_runnable = maturity.get("id") in {
                 "runnable-read-only-adapter",
