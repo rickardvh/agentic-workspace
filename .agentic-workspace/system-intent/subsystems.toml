@@ -25,3 +25,15 @@ decision_tests = ["Would this knowledge be expensive to reconstruct and useful b
 confidence = "high"
 needs_review = false
 source_records = [{ source_type = "issue", ref = "#748", summary = "Task-to-durable promotion should distinguish Memory from system/subsystem intent." }]
+
+[[subsystems]]
+id = "workspace-cli-runtime"
+scope = "Workspace host-facing CLI runtime and generated command boundary"
+status = "active"
+summary = "Ordinary host-facing behavior belongs through the Workspace CLI front door; package-local module CLIs remain internal or debug compatibility surfaces unless an authoritative contract explicitly promotes them."
+governing_intents = ["Implement ordinary behavior at the Workspace operation/runtime boundary.", "Shape proof around the intended host-facing path and its generated contract.", "Use module CLIs only for internal, debug, or compatibility access unless their authority is explicitly widened."]
+anti_intents = ["Do not expand ordinary host-facing behavior across every technically reachable module CLI.", "Do not treat package-local module CLIs as equal user-facing fronts by default."]
+decision_tests = ["Is this behavior owned by the Workspace front door and generated operation contract rather than package-local compatibility CLIs?", "Does the proof exercise the ordinary host-facing path?"]
+confidence = "high"
+needs_review = false
+source_records = [{ source_type = "issue", ref = "#2044", summary = "Ordinary command runtime ownership should move behind IR/codegen." }, { source_type = "issue", ref = "#2180", summary = "The #2172 regression showed front-door intent was available but not surfaced before implementation." }]

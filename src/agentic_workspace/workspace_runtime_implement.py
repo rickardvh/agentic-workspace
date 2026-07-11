@@ -119,6 +119,7 @@ from agentic_workspace.workspace_runtime_generated_surface import (
     _authority_marker_for_path,
     _command_with_cli_invoke,
     _generated_surface_trust_payload,
+    _list_payload,
     _normalize_changed_paths,
     _selector_requests_generated_surface_trust,
 )
@@ -195,6 +196,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["requirement_grounding"] = full_payload["requirement_grounding"]
         if architecture_principles_selected:
             payload["architecture_principles"] = full_payload["architecture_principles"]
+        if _selector_requests(getattr(args, "select", None), "decision_point_intent_confirmation"):
+            payload["decision_point_intent_confirmation"] = full_payload.get("decision_point_intent_confirmation", {})
         if plan_delegation_packet_selected:
             payload["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
         if test_strategy_check_selected:
@@ -857,6 +860,19 @@ def _implement_payload(
         if attention_paths
         else implementer_template["next_allowed_action"]["default"],
     }
+    subsystem_intents = _list_payload(_as_dict(payload["durable_intent"].get("subsystem_intent")).get("matches"))
+    principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
+    if subsystem_intents or principles:
+        payload["decision_point_intent_confirmation"] = {
+            "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
+            "status": "confirmed-from-changed-paths",
+            "phase": "implementation",
+            "changed_paths": normalized_paths,
+            "system_principles": principles[:2],
+            "subsystem_intents": subsystem_intents[:2],
+            "correction_required": False,
+            "rule": "Actual changed paths confirm or correct the pre-edit intent forecast; proof and closeout must preserve the confirmed owning boundary.",
+        }
     if not planning_safety_gate["workflow_sufficient"]:
         payload["next_allowed_action"] = "Create or promote an active execplan before continuing implementation."
         payload["handoff_requirements"]["stop_when"] = [

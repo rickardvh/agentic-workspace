@@ -18761,6 +18761,57 @@ def _architecture_principles_forecast_payload(
             ],
             rule="AW forecasts only from structured path evidence; agent judgment owns semantic application.",
         )
+    if target_root is not None:
+        config = _load_workspace_config(target_root=target_root)
+        durable_intent = _intent_decision_projection(
+            target_root=target_root,
+            config=config,
+            changed_paths=normalized_paths,
+            compact=True,
+        )
+        subsystem_matches = _list_payload(_as_dict(durable_intent.get("subsystem_intent")).get("matches"))
+        if not subsystem_matches:
+            ownership = _subsystem_matches_for_changed_paths(target_root=target_root, changed_paths=normalized_paths)
+            matched_ids = {
+                str(item.get("id") or "") for item in _list_payload(ownership.get("matched_subsystems")) if isinstance(item, dict)
+            }
+            subsystem_set = _load_subsystem_intent(target_root=target_root)
+            subsystem_matches = [
+                {
+                    "id": item.get("id", ""),
+                    "summary": item.get("summary", ""),
+                    "decision_tests": _list_payload(item.get("decision_tests"))[:1],
+                    "confidence": item.get("confidence", "low"),
+                    "needs_review": item.get("needs_review", True),
+                    "match_source": "ownership-path",
+                }
+                for item in _list_payload(subsystem_set.get("subsystems"))
+                if isinstance(item, dict) and str(item.get("id") or "") in matched_ids
+            ]
+        if subsystem_matches or matched_count:
+            payload["relevant_intent"] = {
+                "kind": "agentic-workspace/decision-point-intent/v1",
+                "status": "provisional",
+                "phase": "pre-implementation",
+                "scope": {"source": scope_source, "paths": normalized_paths},
+                "authoritative_sources": [
+                    ".agentic-workspace/system-intent/intent.toml",
+                    ".agentic-workspace/system-intent/subsystems.toml",
+                    ".agentic-workspace/OWNERSHIP.toml",
+                ],
+                "relevance_basis": ["structured planned paths", "declared ownership path patterns"],
+                "affected_decision": "Choose the ordinary owning subsystem and implementation/proof surface before editing.",
+                "applicability_maturity": "provisional-until-changed-path-confirmation",
+                "system_principles": _list_payload(architecture_principles.get("matched_principles"))[:2],
+                "subsystem_intents": subsystem_matches[:2],
+                "safe_probe": command,
+                "confirmation": {
+                    "required_at": ["implementation", "proof", "closeout"],
+                    "command": command,
+                    "rule": "Confirm or correct this forecast against actual changed paths; do not preserve a provisional match as authority after scope changes.",
+                },
+                "rule": "Surface only intent selected by structured scope at the phase where it changes the next decision.",
+            }
     return payload
 
 
@@ -39442,9 +39493,12 @@ def _intent_decision_projection(
                 "matches": [
                     {
                         "id": match.get("id", ""),
+                        "summary": match.get("summary", ""),
                         "decision_tests": list(match.get("decision_tests", []))[:1],
+                        "confidence": match.get("confidence", "low"),
                         "needs_review": match.get("needs_review", True),
                         "match_source": match.get("match_source", ""),
+                        "ownership": match.get("ownership", {}),
                     }
                     for match in projection["subsystem_intent"]["matches"][:2]
                     if isinstance(match, dict)

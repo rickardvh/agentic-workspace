@@ -203,8 +203,69 @@ summary = "AW provides infrastructure for agent judgment instead of package-owne
 allowed_sources = ["explicit structured facts", "AW-owned enum labels", "configuration"]
 forbidden_sources = ["package-owned assumptions about prose keywords", "package-owned assumptions about file names"]
 affected_decisions = ["routing", "ownership", "proof-selection"]
-path_globs = ["src/agentic_workspace/workspace_runtime*.py"]
+path_globs = ["src/agentic_workspace/workspace_runtime*.py", "src/agentic_workspace/config.py"]
 proof_expectation = "Closeout must state whether the principle was preserved or re-scoped."
+""",
+    )
+
+
+def _write_decision_point_subsystem_intent(target_root: Path) -> None:
+    _write(
+        target_root / ".agentic-workspace" / "OWNERSHIP.toml",
+        """
+schema_version = 1
+
+[[subsystems]]
+id = "workspace-cli-runtime"
+paths = ["src/agentic_workspace/workspace_runtime*.py"]
+owns = ["Workspace host-facing runtime"]
+
+[[subsystems]]
+id = "planning"
+paths = ["packages/planning/src/example.py", "packages/planning/**", ".agentic-workspace/planning/**"]
+owns = ["Planning state"]
+
+[[subsystems]]
+id = "configuration"
+paths = ["src/agentic_workspace/config.py"]
+owns = ["Workspace configuration contract"]
+""",
+    )
+    _write(
+        target_root / ".agentic-workspace" / "system-intent" / "subsystems.toml",
+        """
+schema_version = 1
+kind = "agentic-workspace/subsystem-intent-set/v1"
+
+[[subsystems]]
+id = "workspace-cli-runtime"
+scope = "Workspace host-facing CLI runtime"
+status = "active"
+summary = "Ordinary host-facing behavior belongs through the Workspace CLI; module CLIs remain internal/debug compatibility surfaces."
+decision_tests = ["Is this implemented and proved through the ordinary Workspace front door?"]
+confidence = "high"
+needs_review = false
+source_records = [{ source_type = "issue", ref = "#2180", summary = "Front-door regression." }]
+
+[[subsystems]]
+id = "planning"
+scope = "Planning module"
+status = "active"
+summary = "Planning owns checked-in execution state and honest continuation."
+decision_tests = ["Does the change preserve current execution intent?"]
+confidence = "high"
+needs_review = false
+source_records = [{ source_type = "issue", ref = "#746", summary = "Planning intent." }]
+
+[[subsystems]]
+id = "configuration"
+scope = "Workspace configuration contract"
+status = "active"
+summary = "Configuration changes preserve explicit precedence and source provenance."
+decision_tests = ["Does the change preserve declared precedence and provenance?"]
+confidence = "high"
+needs_review = false
+source_records = [{ source_type = "docs", ref = ".agentic-workspace/docs/lifecycle-and-config-contract.md", summary = "Configuration authority." }]
 """,
     )
 
@@ -4072,6 +4133,7 @@ def test_start_forecasts_architecture_principle_for_path_scoped_task_before_edit
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
     _write_cli_architecture_principles(tmp_path)
+    _write_decision_point_subsystem_intent(tmp_path)
     _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_startup.py", "VALUE = 1\n")
 
     assert (
@@ -4103,6 +4165,44 @@ def test_start_forecasts_architecture_principle_for_path_scoped_task_before_edit
     assert "implement --changed src/agentic_workspace/workspace_runtime_startup.py" in forecast["verification"]["command"]
     assert "--select architecture_principles" in forecast["verification"]["command"]
     assert forecast["decision_maturity"]["level"] == "evidence_seeking"
+    intent = forecast["relevant_intent"]
+    assert intent["phase"] == "pre-implementation"
+    assert intent["subsystem_intents"][0]["id"] == "workspace-cli-runtime"
+    assert "Workspace CLI" in intent["subsystem_intents"][0]["summary"]
+    assert intent["relevance_basis"] == ["structured planned paths", "declared ownership path patterns"]
+    assert intent["applicability_maturity"] == "provisional-until-changed-path-confirmation"
+    assert "--select architecture_principles" in intent["confirmation"]["command"]
+
+
+def test_start_surfaces_distinct_configuration_subsystem_intent(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_cli_architecture_principles(tmp_path)
+    _write_decision_point_subsystem_intent(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "config.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Update src/agentic_workspace/config.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    forecast = payload["context"]["architecture_principles_forecast"]
+    assert forecast["status"] == "provisional-match"
+    intent = forecast["relevant_intent"]
+    assert intent["subsystem_intents"][0]["id"] == "configuration"
+    assert "precedence" in intent["subsystem_intents"][0]["summary"]
 
 
 def test_start_surfaces_architecture_principle_scope_probe_when_planned_scope_missing(tmp_path: Path, capsys) -> None:

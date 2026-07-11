@@ -843,7 +843,9 @@ def _start_payload(
             scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
-        if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"}:
+        if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"} or architecture_forecast.get(
+            "relevant_intent"
+        ):
             payload["architecture_principles_forecast"] = architecture_forecast
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
     if vague_orientation["applies_to_current_task"]:
