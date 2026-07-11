@@ -116,6 +116,7 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
+from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.reporting_support import (
     closeout_claim_boundary_payload,
     communication_contract_payload,
@@ -39642,6 +39643,27 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)
     if profile == "router" and section is None and (args.format == "json"):
+        reuse_query = {
+            "profile": profile,
+            "modules": selected_modules,
+            "preset": resolved_preset or "",
+            "task": str(task_text or ""),
+            "changed": changed_paths,
+            "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
+        }
+        full_detail_command = _command_with_cli_invoke(
+            command=f"agentic-workspace report --target {target_root.as_posix()} --verbose --format json",
+            cli_invoke=config.cli_invoke,
+        )
+        reused, reuse_context = lookup_projection_reuse(
+            root=target_root,
+            operation="report",
+            query=reuse_query,
+            full_detail_command=full_detail_command,
+        )
+        if reused is not None and not select:
+            _emit_payload(payload=reused, format_name=args.format)
+            return 0
         payload = _run_report_router_command(
             target_root=target_root,
             selected_modules=selected_modules,
@@ -39649,6 +39671,8 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             descriptors=descriptors,
             config=config,
         )
+        if not select:
+            record_projection_reuse(root=target_root, operation="report", query=reuse_query, context=reuse_context, payload=payload)
         if select:
             payload = _select_payload_fields(payload, select=select, source_command="report")
         payload = _rewrite_module_cli_commands(payload)
@@ -40055,6 +40079,29 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         for selector in ("installed_state_compatibility", "payload_closure_plan")
         if select is not None
     )
+    profile = _diagnostic_profile(args, default="tiny")
+    reuse_query = {
+        "profile": profile,
+        "modules": selected_modules,
+        "preset": resolved_preset or "",
+        "format": str(args.format),
+        "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
+    }
+    reuse_context: dict[str, Any] | None = None
+    if command_name == "doctor" and args.format == "json" and not select and profile == "tiny":
+        full_detail_command = _command_with_cli_invoke(
+            command=f"agentic-workspace doctor --target {target_root.as_posix()} --verbose --format json",
+            cli_invoke=config.cli_invoke,
+        )
+        reused, reuse_context = lookup_projection_reuse(
+            root=target_root,
+            operation="doctor",
+            query=reuse_query,
+            full_detail_command=full_detail_command,
+        )
+        if reused is not None:
+            _emit_payload(payload=reused, format_name=args.format)
+            return 0
     payload = _run_lifecycle_command(
         command_name=command_name,
         target_root=target_root,
@@ -40065,9 +40112,11 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         dry_run=False,
         non_interactive=bool(getattr(args, "non_interactive", False)),
         config=config,
-        compact_status=_diagnostic_profile(args, default="tiny") == "tiny" and not detail_selector_requested,
+        compact_status=profile == "tiny" and not detail_selector_requested,
         module_scope_explicit=bool(getattr(args, "modules", None)),
     )
+    if reuse_context is not None:
+        record_projection_reuse(root=target_root, operation="doctor", query=reuse_query, context=reuse_context, payload=payload)
     if select:
         payload = _select_payload_fields(payload, select=select, source_command=command_name)
     _emit_payload(payload=payload, format_name=args.format)
