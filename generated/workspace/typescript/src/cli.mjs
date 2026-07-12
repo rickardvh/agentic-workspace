@@ -4388,6 +4388,8 @@ function authoritativeInterface(path) {
 }
 
 function canonicalRecovery(path, unknown, replacement) {
+  const candidatePath = [...path, replacement];
+  if (interfaceRequiresHelp(authoritativeInterface(candidatePath))) return [generatedProgram, ...candidatePath, '--help'].map(shellQuote).join(' ');
   let remaining = argv.slice(path.length);
   while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
   remaining = remaining.map((token) => token === unknown ? replacement : token);
@@ -4403,6 +4405,13 @@ function normalizedCommandTokens(tokens, path) {
   let remaining = [...tokens];
   while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
   return remaining;
+}
+
+function interfaceRequiresHelp(iface) {
+  if (!iface) return false;
+  if (interfaceSubcommands(iface).length && iface.subcommands_required !== false) return true;
+  if (interfaceArguments(iface).some((argument) => argument.nargs !== '?' && !Object.prototype.hasOwnProperty.call(argument, 'default'))) return true;
+  return interfaceOptions(iface).some((option) => option.required === true);
 }
 
 function closestAuthoritativeChoice(token, choices) {

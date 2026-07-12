@@ -171,6 +171,33 @@ def _authoritative_command_choices(authority: list[str]) -> list[str]:
     return [str(item.get('name', '')) for item in choices if isinstance(item, dict) and str(item.get('name', '')).strip()]
 
 
+def _authoritative_command_interface(authority: list[str]) -> dict[str, Any] | None:
+    interfaces = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS]
+    current: dict[str, Any] | None = None
+    for token in authority:
+        choices = interfaces if current is None else current.get('subcommands', [])
+        current = next(
+            (item for item in choices if isinstance(item, dict) and str(item.get('name', '')) == token),
+            None,
+        )
+        if current is None:
+            return None
+    return current
+
+
+def _interface_requires_help(interface: dict[str, Any] | None) -> bool:
+    if not isinstance(interface, dict):
+        return False
+    subcommands = interface.get('subcommands', [])
+    if isinstance(subcommands, list) and subcommands and interface.get('subcommands_required') is not False:
+        return True
+    arguments = interface.get('arguments', [])
+    if isinstance(arguments, list) and any(isinstance(argument, dict) and argument.get('nargs') != '?' and 'default' not in argument for argument in arguments):
+        return True
+    options = interface.get('options', [])
+    return isinstance(options, list) and any(isinstance(option, dict) and option.get('required') is True for option in options)
+
+
 def _closest_authoritative_choice(token: str, choices: list[str]) -> str:
     if not token or not choices:
         return ''
@@ -195,6 +222,9 @@ def _closest_authoritative_choice(token: str, choices: list[str]) -> str:
 
 def _canonical_recovery_command(argv: list[str], authority: list[str], old: str, new: str) -> str:
     root = str(GENERATED_COMMAND_PACKAGE.get('program') or 'agentic-workspace')
+    candidate_authority = [*authority, new]
+    if _interface_requires_help(_authoritative_command_interface(candidate_authority)):
+        return shlex.join([root, *candidate_authority, '--help'])
     remaining = list(argv)
     while authority and remaining[:len(authority)] == authority:
         remaining = remaining[len(authority):]

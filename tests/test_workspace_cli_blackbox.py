@@ -158,6 +158,27 @@ def test_generated_typescript_root_recovery_round_trips() -> None:
     assert rerun.returncode == 0, rerun.stdout + rerun.stderr
 
 
+def test_generated_recovery_routes_required_root_structure_to_help() -> None:
+    argv = ["checkpoin", "--format", "json"]
+    python_result = _run_cli(*argv, cwd=Path.cwd())
+    typescript_result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", *argv],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    python_payload = json.loads(python_result.stdout)
+    typescript_payload = json.loads(typescript_result.stdout)
+    assert python_payload["suggested_command"] == typescript_payload["suggested_command"] == "agentic-workspace checkpoint --help"
+    assert python_payload["safe_to_retry"] is typescript_payload["safe_to_retry"] is True
+    rerun = subprocess.run(
+        shlex.split(python_payload["suggested_command"]), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False
+    )
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
+
+
 def test_generated_typescript_unrelated_root_typo_has_no_unsafe_recovery() -> None:
     result = subprocess.run(
         ["node", "generated/workspace/typescript/src/cli.mjs", "zzzzzz", "--format", "json"],
