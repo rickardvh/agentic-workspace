@@ -6285,7 +6285,8 @@ def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: di
             warnings.append(_planning_state_v1_warning(bucket_path, f"ready item {item_id} requires handoff_ready = true."))
     if maturity == "active":
         surface = str(item.get("execplan") or item.get("surface") or item.get("path") or "").strip()
-        if not surface or not _surface_execplan_reference(surface):
+        is_active_lane_owner = bucket_path == "roadmap.lanes" and surface.endswith(".lane.json")
+        if not surface or (not _surface_execplan_reference(surface) and not is_active_lane_owner):
             warnings.append(
                 _planning_state_v1_warning(
                     bucket_path,
@@ -10349,11 +10350,12 @@ def _lane_state_projection(record: dict[str, Any], *, target_root: Path, lane_re
                 immediate_next_action = execplan_record.get("immediate_next_action")
                 if isinstance(immediate_next_action, list) and immediate_next_action:
                     next_action = str(immediate_next_action[0] or "").strip()
-    projection = {
+    is_executable = record.get("status") == "active"
+    projection: dict[str, Any] = {
         "id": str(record.get("id", "")).strip(),
         "title": str(record.get("title", "")).strip(),
-        "maturity": "active" if record.get("status") == "active" else "ready",
-        "status": str(record.get("status", "")).strip() or "ready",
+        "maturity": "active" if is_executable else "ready",
+        "status": "active" if is_executable else "next",
         "surface": lane_relative,
         "owner_surface": lane_relative,
         "outcome": str(record.get("lane_outcome", "")).strip(),
@@ -10373,6 +10375,12 @@ def _lane_state_projection(record: dict[str, Any], *, target_root: Path, lane_re
         projection["next_action"] = next_action
     if done_when:
         projection["done_when"] = done_when
+    if projection["status"] == "next":
+        projection.setdefault("next_action", "Create or select the next slice execplan from the lane's slice_sequence.")
+        projection.setdefault("done_when", "The lane is ready to promote a bounded slice.")
+        projection["proof"] = str(record.get("proof_strategy", "")).strip() or "Run the lane proof strategy for its selected slice."
+        projection["review_role"] = "validation"
+        projection["handoff_ready"] = True
     return projection
 
 
