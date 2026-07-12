@@ -61,6 +61,7 @@ from agentic_workspace.contract_tooling import (  # noqa: E402
     load_contract_json,
     operation_manifest,
     python_runtime_projection_inventory_manifest,
+    runtime_semantic_exceptions_manifest,
     workspace_runtime_primitive_families_manifest,
 )
 
@@ -2151,6 +2152,119 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
         if operation_id not in set(accepted_entry.get("operation_ids", [])):
             errors.append(f"{location} remaining runtime boundary must name operation_id {operation_id!r}")
     return errors
+
+
+def _source_symbols_for_path(relative_path: str) -> set[str]:
+    path = REPO_ROOT / relative_path
+    if not path.is_file():
+        return set()
+    try:
+        module = ast.parse(path.read_text(encoding="utf-8"))
+    except SyntaxError:
+        return set()
+    return {
+        node.name
+        for node in module.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+    }
+
+
+def _validate_runtime_semantic_exceptions() -> list[str]:
+    errors: list[str] = []
+    try:
+        registry = runtime_semantic_exceptions_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return [f"runtime_semantic_exceptions.json is missing or invalid: {exc}"]
+    try:
+        inventory = python_runtime_projection_inventory_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return [f"python_runtime_projection_inventory.json is missing or invalid for runtime semantic exceptions: {exc}"]
+
+    exceptions = registry.get("exceptions", [])
+    if not isinstance(exceptions, list):
+        return ["runtime_semantic_exceptions.json exceptions must be a list"]
+
+    ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+    accepted = inventory.get("accepted_runtime_boundaries", {})
+    boundary_entries = accepted.get("entries", []) if isinstance(accepted, dict) else []
+    boundary_index = {
+        (str(entry.get("source_module", "")), str(entry.get("source_symbol", ""))): entry
+        for entry in boundary_entries
+        if isinstance(entry, dict)
+    }
+
+    for index, exception in enumerate(exceptions):
+        if not isinstance(exception, dict):
+            errors.append(f"runtime_semantic_exceptions.json exceptions[{index}] must be an object")
+            continue
+        exception_id = str(exception.get("id") or f"exceptions[{index}]")
+        location = f"runtime_semantic_exceptions.json {exception_id}"
+        operation_id = str(exception.get("operation_id", ""))
+        adapter_id = str(exception.get("adapter_id", ""))
+        adapter = _find_command_adapter(ir, adapter_id=adapter_id)
+        if adapter is None:
+            errors.append(f"{location} adapter_id {adapter_id!r} is not present in command_package_ir.json")
+        else:
+            operation_ref = adapter.get("operation_ref", {})
+            if not isinstance(operation_ref, dict) or operation_ref.get("id") != operation_id:
+                errors.append(f"{location} adapter {adapter_id!r} must reference operation_id {operation_id!r}")
+            command = adapter.get("command", {})
+            command_name = str(command.get("name", "")) if isinstance(command, dict) else ""
+            command_id = str(exception.get("command_id", ""))
+            if command_id and command_name and not command_id.endswith(command_name):
+                errors.append(f"{location} command_id {command_id!r} must end with adapter command name {command_name!r}")
+
+        boundary = exception.get("accepted_runtime_boundary", {})
+        if not isinstance(boundary, dict):
+            errors.append(f"{location} accepted_runtime_boundary must be an object")
+            continue
+        boundary_key = (str(boundary.get("source_module", "")), str(boundary.get("source_symbol", "")))
+        accepted_entry = boundary_index.get(boundary_key)
+        if accepted_entry is None:
+            errors.append(f"{location} accepted_runtime_boundary {boundary_key!r} is not accepted at source-symbol granularity")
+        else:
+            if accepted_entry.get("runtime_boundary_class") != boundary.get("runtime_boundary_class"):
+                errors.append(f"{location} accepted_runtime_boundary runtime_boundary_class must match python_runtime_projection_inventory.json")
+            if operation_id not in set(accepted_entry.get("operation_ids", [])):
+                errors.append(f"{location} accepted_runtime_boundary must name operation_id {operation_id!r}")
+
+        runtime_path = str(exception.get("runtime_path", ""))
+        path = REPO_ROOT / runtime_path
+        if not path.is_file():
+            errors.append(f"{location} runtime_path {runtime_path!r} does not exist")
+            available_symbols: set[str] = set()
+        else:
+            available_symbols = _source_symbols_for_path(runtime_path)
+        for symbol in exception.get("source_symbols", []) if isinstance(exception.get("source_symbols"), list) else []:
+            if str(symbol) not in available_symbols:
+                errors.append(f"{location} source_symbol {symbol!r} is not defined in {runtime_path}")
+
+        for field in ("reason", "scope", "migration_path"):
+            text = str(exception.get(field, "")).strip().lower()
+            if any(vague in text for vague in ("whole file", "entire file", "misc", "various")):
+                errors.append(f"{location} {field} is too vague for a runtime semantic exception")
+        for conformance_ref in exception.get("conformance_refs", []) if isinstance(exception.get("conformance_refs"), list) else []:
+            conformance_path = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "conformance" / f"{conformance_ref}.json"
+            if not conformance_path.is_file():
+                errors.append(f"{location} conformance_ref {conformance_ref!r} does not exist")
+    return errors
+
+
+def _runtime_semantic_exceptions_report() -> dict[str, object]:
+    try:
+        registry = runtime_semantic_exceptions_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "unavailable", "error": str(exc), "exception_count": 0, "exception_ids": []}
+    exceptions = registry.get("exceptions", [])
+    if not isinstance(exceptions, list):
+        return {"status": "unavailable", "error": "exceptions is not a list", "exception_count": 0, "exception_ids": []}
+    exception_ids = [str(item.get("id", "")).strip() for item in exceptions if isinstance(item, dict) and str(item.get("id", "")).strip()]
+    return {
+        "status": "available",
+        "exception_count": len(exception_ids),
+        "exception_ids": exception_ids,
+        "rule": "Runtime semantic exceptions are temporary exact-symbol allowances and must pass generated-command fail-closed validation.",
+    }
 
 
 def _validate_python_completion_output_boundary_audit(entry: dict[str, object], *, location: str) -> list[str]:
@@ -5053,6 +5167,7 @@ def _validate_static_surfaces() -> list[str]:
                 )
             )
             errors.extend(_validate_ordinary_command_migration_inventory())
+            errors.extend(_validate_runtime_semantic_exceptions())
         errors.extend(_validate_python_operation_execution_inventory(ir))
         errors.extend(_validate_retired_command_generation_primitive_usage_inventory())
         errors.extend(_validate_generated_command_check_inventory_removals())
@@ -5438,6 +5553,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     blockers.extend(_validate_full_python_completion_executable_ownership(forced_full_ir))
     blockers.extend(_validate_python_runtime_projection_inventory(full_completion=True))
     blockers.extend(_validate_ordinary_command_migration_inventory())
+    blockers.extend(_validate_runtime_semantic_exceptions())
     blockers.extend(_validate_python_operation_execution_inventory(forced_full_ir))
     blockers.extend(_validate_lifecycle_dry_run_generation())
     blockers.extend(_validate_declarative_view_specs())
@@ -5453,6 +5569,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     retired_primitive_usage = _retired_primitive_usage_inventory()
     aw_primitive_ownership = _aw_primitive_ownership_report(ir)
     generated_command_check_inventory = _generated_command_check_inventory_report()
+    runtime_semantic_exceptions = _runtime_semantic_exceptions_report()
     extraction_readiness_errors = _validate_command_generation_extraction_readiness(ir)
     generated_command_migration_completion = _generated_command_migration_completion_report(
         blockers=blockers,
@@ -5478,6 +5595,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "retired_command_generation_primitive_usage": retired_primitive_usage,
         "aw_primitive_ownership": aw_primitive_ownership,
         "generated_command_check_inventory": generated_command_check_inventory,
+        "runtime_semantic_exceptions": runtime_semantic_exceptions,
         "generated_command_migration_completion": generated_command_migration_completion,
         "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
         "next_owner": ("#892 / tier-6-final-python-completion-promotion" if blockers else "none"),
@@ -5637,6 +5755,9 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
         print(f"Remaining hand-owned runtime symbols: {minimization.get('remaining_hand_owned_symbol_count')}")
         print(f"Move-to-command-generation candidate symbols: {minimization.get('move_to_command_generation_candidate_count')}")
         print(f"Runtime minimization claim rule: {minimization.get('claim_rule')}")
+    exceptions = report.get("runtime_semantic_exceptions", {})
+    if isinstance(exceptions, dict) and exceptions.get("status") == "available":
+        print(f"Runtime semantic exceptions: {exceptions.get('exception_count')} ({exceptions.get('exception_ids')})")
     target_freshness = report.get("generated_target_freshness", {})
     if isinstance(target_freshness, dict) and target_freshness.get("status"):
         print(f"Generated target freshness: {target_freshness.get('status')}")
