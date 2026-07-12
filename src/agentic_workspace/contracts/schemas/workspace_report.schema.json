@@ -946,7 +946,8 @@
             "blocked",
             "continue-required",
             "clarification-required",
-            "human-accepted-partial"
+            "human-accepted-partial",
+            "no-relevant-evidence"
           ],
           "description": "State-machine result for the requested completion claim."
         },
@@ -967,13 +968,21 @@
           "description": "Highest claim level supported by the gate."
         },
         "required_next_action": {
-          "enum": [
-            "continue-current-work",
-            "create-follow-on-plan",
-            "activate-next-slice",
-            "ask-human",
-            "close-complete",
-            "close-human-accepted-partial"
+          "anyOf": [
+            {
+              "enum": [
+                "continue-current-work",
+                "create-follow-on-plan",
+                "activate-next-slice",
+                "ask-human",
+                "close-complete",
+                "close-human-accepted-partial"
+              ]
+            },
+            {
+              "type": "string",
+              "pattern": "^agentic-workspace report --target .+ --section closeout_trust"
+            }
           ],
           "description": "Required transition before the workflow can stop or claim completion."
         },

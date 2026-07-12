@@ -209,11 +209,25 @@ def test_lane_promotion_rejects_incompatible_owner_without_mutating_it(tmp_path:
     assert [action.kind for action in result.actions] == ["manual review"]
     assert result.conflict_owner == ".agentic-workspace/planning/lanes/lane-artifacts.lane.json"
     assert result.reason_code == "incompatible-parent-provenance"
-    assert result.recovery_command == ""
+    assert "--alternate-lane-id lane-artifacts-from-parent" in result.recovery_command
     assert lane_path.read_bytes() == before_lane
     candidate = json.loads(decomposition_path.read_text(encoding="utf-8"))["candidate_lanes"][0]
     assert candidate["readiness"] == "ready"
     assert candidate["owner_surface"] == ""
+
+    recovered = promote_decomposition_lane_to_lane_record(
+        "lane-artifacts",
+        alternate_lane_id="lane-artifacts-from-parent",
+        target=tmp_path,
+    )
+
+    assert [action.kind for action in recovered.actions] == ["created", "updated", "updated", "proof", "proof"]
+    alternate_path = tmp_path / ".agentic-workspace/planning/lanes/lane-artifacts-from-parent.lane.json"
+    assert alternate_path.exists()
+    assert lane_path.read_bytes() == before_lane
+    recovered_candidate = json.loads(decomposition_path.read_text(encoding="utf-8"))["candidate_lanes"][0]
+    assert recovered_candidate["readiness"] == "promoted"
+    assert recovered_candidate["owner_surface"] == ".agentic-workspace/planning/lanes/lane-artifacts-from-parent.lane.json"
 
 
 def test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_clean(tmp_path: Path) -> None:

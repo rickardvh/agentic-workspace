@@ -1,19 +1,19 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:5de026fc4119e81ce529fdbe3961e269bc56ca066164d3e9b5b0c110a06c591b",
+  "profile_fingerprint": "sha256:a64199423f794ff81c0a12790c18d58f3009d3ae88bf5b931bcbb38c701f4662",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.33.5",
+    "client_package": "0.33.7",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.33.5"
+      "version": "0.33.7"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.33.5"
+      "version": "0.33.7"
     }
   },
   "operations": {

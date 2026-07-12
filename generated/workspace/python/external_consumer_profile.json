@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:5de026fc4119e81ce529fdbe3961e269bc56ca066164d3e9b5b0c110a06c591b",
+    "fingerprint": "sha256:a64199423f794ff81c0a12790c18d58f3009d3ae88bf5b931bcbb38c701f4662",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -4490,7 +4490,7 @@
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-promote.lifecycle.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:d0c745651d601ed3b40d39a4b871b61f9dbc0299052ad6807391ae774398f5e1"
+        "fingerprint": "sha256:41e03158cba3700a67c37283292fe7f174978b80e9b05ed5e5460db929367d20"
       },
       "operation_resources": {
         "python": {

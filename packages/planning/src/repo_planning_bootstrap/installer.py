@@ -10524,6 +10524,7 @@ def create_lane_record(
 def promote_decomposition_lane_to_lane_record(
     lane_id: str,
     *,
+    alternate_lane_id: str = "",
     target: str | Path | None = None,
     expected_planning_revision: str = "",
     dry_run: bool = False,
@@ -10555,7 +10556,8 @@ def promote_decomposition_lane_to_lane_record(
     if matched_path is None or matched_record is None or matched_lane is None:
         result.add("manual review", target_root / PLANNING_STATE_PATH, f"decomposition lane '{lane_id}' was not found")
         return result
-    slug = _slugify(lane_id)
+    alternate_slug = _slugify(alternate_lane_id) if alternate_lane_id.strip() else ""
+    slug = alternate_slug or _slugify(lane_id)
     record_path = _lane_record_path(target_root, slug)
     source_relative = matched_path.relative_to(target_root).as_posix()
     if record_path.exists():
@@ -10568,6 +10570,10 @@ def promote_decomposition_lane_to_lane_record(
             )
             result.conflict_owner = record_path.relative_to(target_root).as_posix()
             result.reason_code = "incompatible-parent-provenance"
+            result.recovery_command = (
+                f"{_workspace_cli_invoke(target_root)} planning lane-promote {lane_id} "
+                f"--alternate-lane-id {slug}-from-parent --target . --format json"
+            )
             return result
         lane_relative = record_path.relative_to(target_root).as_posix()
         updated_record = copy.deepcopy(matched_record)

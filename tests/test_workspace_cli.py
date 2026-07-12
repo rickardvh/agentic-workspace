@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import re
+import shlex
 import shutil
 import tomllib
 from datetime import date, datetime, timedelta, timezone
@@ -1648,6 +1649,28 @@ def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tm
         cli.main(
             [
                 "planning",
+                "lane-promote",
+                "lane-artifacts",
+                "--alternate-lane-id",
+                "lane-artifacts-from-parent",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    forwarded_promote = json.loads(capsys.readouterr().out)["argv"]
+    assert forwarded_promote[:2] == ["lane-promote", "lane-artifacts"]
+    assert option_value(forwarded_promote, "--alternate-lane-id") == "lane-artifacts-from-parent"
+    assert option_value(forwarded_promote, "--target") == str(tmp_path)
+    assert option_value(forwarded_promote, "--format") == "json"
+
+    assert (
+        cli.main(
+            [
+                "planning",
                 "lane-activate",
                 "lane-alpha",
                 "--current-slice",
@@ -1681,7 +1704,7 @@ def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tm
     assert json.loads(capsys.readouterr().out)["argv"] == ["lane-archive", "lane-alpha", "--format", "json"]
 
 
-def test_planning_front_door_new_plan_binds_explicit_active_lane(tmp_path: Path, capsys) -> None:
+def test_planning_front_door_new_plan_binds_explicit_active_lane(tmp_path: Path, capsys, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
@@ -1704,37 +1727,36 @@ def test_planning_front_door_new_plan_binds_explicit_active_lane(tmp_path: Path,
     )
     capsys.readouterr()
     assert cli.main(["planning", "lane-activate", "lane-alpha", "--target", str(tmp_path), "--format", "json"]) == 0
-    capsys.readouterr()
+    activation = json.loads(capsys.readouterr().out)
+    assert activation["reason_code"] == "lane-execplan-required"
+    recovery_args = shlex.split(activation["recovery_command"])
+    planning_index = recovery_args.index("planning")
+    monkeypatch.chdir(tmp_path)
 
-    assert (
-        cli.main(
-            [
-                "planning",
-                "new-plan",
-                "--id",
-                "slice-one",
-                "--title",
-                "Slice One",
-                "--target",
-                str(tmp_path),
-                "--activate",
-                "--lane",
-                "lane-alpha",
-                "--format",
-                "json",
-            ]
-        )
-        == 0
-    )
+    assert cli.main(recovery_args[planning_index:]) == 0
     payload = json.loads(capsys.readouterr().out)
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
 
-    assert any("attached execplan 'slice-one' to active lane 'lane-alpha'" in action["detail"] for action in payload["actions"])
-    assert state["roadmap"]["lanes"][0]["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
+    assert any("attached execplan 'lane-alpha-slice' to active lane 'lane-alpha'" in action["detail"] for action in payload["actions"])
+    assert state["roadmap"]["lanes"][0]["execplan"] == ".agentic-workspace/planning/execplans/lane-alpha-slice.plan.json"
     lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/lane-alpha.lane.json").read_text(encoding="utf-8"))
     assert lane["status"] == "active"
-    assert lane["current_slice"] == "slice-one"
+    assert lane["current_slice"] == "lane-alpha-slice"
     assert lane["slice_sequence"][0]["execplan_ref"] == state["roadmap"]["lanes"][0]["execplan"]
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["lanes"]["record_count"] == 1
+
+    assert cli.main(["doctor", "--target", str(tmp_path), "--format", "json"]) == 0
+    doctor = json.loads(capsys.readouterr().out)
+    doctor_text = json.dumps(doctor)
+    assert "execplan_unregistered" not in doctor_text
+    assert "planning_lane_schema_invalid" not in doctor_text
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "fresh lane startup", "--format", "json"]) == 0
+    startup = json.loads(capsys.readouterr().out)
+    assert startup["action_signals"]["hard_blockers"] == []
 
 
 def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys) -> None:
