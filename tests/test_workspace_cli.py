@@ -1287,6 +1287,10 @@ def test_closeout_claim_boundary_returns_fast_claim_packet(tmp_path: Path, capsy
     assert payload["proof_dependency"]["status"] == "satisfied"
     assert payload["proof_dependency"]["proof_status"] == "sufficient_for_claim"
     assert payload["proof_dependency"]["claim_boundary"] == "full-intent"
+    terminal = payload["terminal_outcome_contract"]
+    assert terminal["state"] == "DELIVERED"
+    assert terminal["final_response_authorized"] is True
+    assert terminal["safe_continuation_available"] is False
     assert payload["source_surface"] == "closeout_claim_boundary.direct"
     assert payload["computation"]["avoids_full_closeout_trust"] is True
     assert "--section closeout_trust" in payload["source_detail_command"]
@@ -1325,11 +1329,20 @@ def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missi
 
     assert payload["completion_gate"]["status"] in {"blocked", "continue-required"}
     assert payload["completion_gate"]["active_intent_satisfied"] is False
+    terminal = payload["terminal_outcome_contract"]
+    assert terminal["state"] == "CONTINUE"
+    assert terminal["final_response_authorized"] is False
+    assert "run-proof" in terminal["safe_continuation_option_ids"]
     assert payload["checks"]["intent_proof"]["status"] == "not_recorded"
     claim_work = next(option for option in payload["completion_options"] if option["id"] == "claim-work-complete")
     assert claim_work["allowed"] is False
     assert "planning.active.planning_record.proof_report.intent_proof.status" in claim_work["blocking_fields"]
     assert "intent_proof" not in claim_work["blocking_fields"]
+    rendering = payload["final_response_rendering"]
+    assert rendering["status"] == "continue-not-finalizable"
+    assert rendering["terminal_outcome_contract"]["state"] == "CONTINUE"
+    assert rendering["plain_done_allowed"] is False
+    assert any("terminal final response" in item for item in rendering["must_not_claim"])
 
 
 def test_closeout_trust_names_external_intent_evidence_blocker_for_open_issue(tmp_path: Path, capsys) -> None:

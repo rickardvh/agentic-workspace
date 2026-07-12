@@ -1459,6 +1459,11 @@ def _closeout_report_payload(
         completion_gate=completion_gate,
         review_mode=selected_review_mode,
     )
+    terminal_outcome_contract = _as_dict(
+        final_response_rendering.get("terminal_outcome_contract")
+        or closeout_trust.get("terminal_outcome_contract")
+        or _as_dict(closeout_trust.get("closeout_protocol")).get("terminal_outcome_contract")
+    )
     detail_commands = {
         "closeout_report": str(profile_policy.get("next_command", "")),
         "closeout_trust": _command_with_cli_invoke(
@@ -1593,12 +1598,14 @@ def _closeout_report_payload(
         },
         "workflow_obligation_contract": workflow_obligation_contract,
         "completion_gate": completion_gate,
+        "terminal_outcome_contract": terminal_outcome_contract,
         "task_posture_followthrough": task_posture_followthrough,
         "closure_boundary": {
             "completion_decision": completion_contract.get("completion_decision", "unknown"),
             "decision_reasons": completion_contract.get("decision_reasons", []),
             "completion_boundary": completion_boundary,
             "terminal_action": closeout_trust.get("terminal_action", {}),
+            "terminal_outcome_contract": terminal_outcome_contract,
             "completion_options": completion_options,
         },
         "traceability": {

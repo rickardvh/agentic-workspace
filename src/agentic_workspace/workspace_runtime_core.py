@@ -14473,6 +14473,7 @@ def _closeout_report_final_response_rendering_payload(
             "applicable intent status": ("applicable intent:",),
             "workflow obligation status": ("workflow obligations:",),
             "completion gate": ("completion gate:",),
+            "terminal outcome": ("terminal outcome:",),
         }
         for fact in must_include:
             markers = fact_markers.get(fact, (fact,))
@@ -14548,6 +14549,7 @@ def _closeout_report_final_response_rendering_payload(
                     "Parent intent:",
                     "Applicable intent:",
                     "Workflow obligations:",
+                    "Terminal outcome:",
                 )
             ):
                 caveat_lines.append(line)
@@ -14664,6 +14666,13 @@ def _closeout_report_final_response_rendering_payload(
     gate_blocks_issue_closure = bool(_list_payload(gate_claim_authorization.get("closure_actions"))) and not claim_authorized(
         "issue_closure"
     )
+    terminal_outcome_contract = _terminal_outcome_contract_payload(
+        completion_gate=completion_gate,
+        completion_options=completion_options,
+        recommended_next_action=next_action,
+        source_surface="final_response_rendering",
+    )
+    terminal_state = str(terminal_outcome_contract.get("state") or "")
 
     if guidance_only and not has_material_guidance_signal:
         rendering_mode = "terse"
@@ -14698,6 +14707,7 @@ def _closeout_report_final_response_rendering_payload(
                 plain_done_allowed=plain_done_allowed,
             ),
             "chat_report_template": chat_report_template,
+            "terminal_outcome_contract": terminal_outcome_contract,
             "must_include": must_include,
             "must_not_claim": must_not_claim,
             "plain_done_allowed": plain_done_allowed,
@@ -14819,6 +14829,24 @@ def _closeout_report_final_response_rendering_payload(
             + (f"; reason: {gate_reason}" if gate_reason else "")
         )
 
+    if terminal_state == "CONTINUE":
+        must_include.append("terminal outcome")
+        terminal_next = str(
+            terminal_outcome_contract.get("required_next_action") or completion_gate.get("required_next_action") or "continue"
+        ).strip()
+        summary_lines.append(
+            "Terminal outcome: CONTINUE; final response unauthorized while safe in-scope work remains; next: " + terminal_next
+        )
+        must_not_claim.append(
+            "Do not send a terminal final response in CONTINUE state; progress updates may be emitted only while execution custody remains with the agent."
+        )
+    elif terminal_state:
+        summary_lines.append(
+            "Terminal outcome: "
+            + terminal_state
+            + f"; final response authorized: {str(bool(terminal_outcome_contract.get('final_response_authorized'))).lower()}"
+        )
+
     durable_outcomes = [item for item in _list_payload(applicable_intent_status.get("durable_outcomes")) if isinstance(item, dict)]
     if durable_outcomes:
         must_include.append("applicable intent outcome")
@@ -14904,9 +14932,12 @@ def _closeout_report_final_response_rendering_payload(
             or gate_partial
             or gate_blocks_full_claim_class
             or gate_blocks_issue_closure
+            or terminal_state == "CONTINUE"
         )
         else "available"
     )
+    if terminal_state == "CONTINUE":
+        status_value = "continue-not-finalizable"
     plain_done_allowed = not (
         lower_trust
         or incomplete_or_partial
@@ -14918,6 +14949,7 @@ def _closeout_report_final_response_rendering_payload(
         or gate_partial
         or gate_blocks_full_claim_class
         or gate_blocks_issue_closure
+        or terminal_state == "CONTINUE"
     )
     summary_lines = summary_lines[:10]
     unique_must_include = list(dict.fromkeys(must_include))
@@ -14952,6 +14984,7 @@ def _closeout_report_final_response_rendering_payload(
             plain_done_allowed=plain_done_allowed,
         ),
         "chat_report_template": chat_report_template,
+        "terminal_outcome_contract": terminal_outcome_contract,
         "must_include": unique_must_include,
         "must_not_claim": must_not_claim,
         "plain_done_allowed": plain_done_allowed,
@@ -19957,6 +19990,12 @@ def _closeout_protocol_payload(
     task_posture_followthrough = _as_dict(task_posture_followthrough)
     options_by_id = {str(option.get("id")): option for option in completion_options if isinstance(option, dict)}
     claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
+    terminal_outcome_contract = _terminal_outcome_contract_payload(
+        completion_gate=completion_gate,
+        completion_options=completion_options,
+        recommended_next_action=recommended_next_action,
+        source_surface="closeout_protocol",
+    )
     route_residue = _as_dict(options_by_id.get("route-residue"))
     run_proof = _as_dict(options_by_id.get("run-proof"))
     close_parent = _as_dict(options_by_id.get("close-parent-lane"))
@@ -20002,6 +20041,7 @@ def _closeout_protocol_payload(
             "blocked_claim_classes": claim_authorization.get("blocked_claim_classes", []),
             "rule": "Proof success, issue closure, and parent intent satisfaction are separate closeout decisions.",
         },
+        "terminal_outcome_contract": terminal_outcome_contract,
         "proof_dependency": {
             "run_proof_allowed": run_proof.get("allowed"),
             "proof_confidence": proof_confidence.get("confidence") or proof_confidence.get("status"),
@@ -20049,6 +20089,97 @@ def _closeout_protocol_payload(
         },
         "detail_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=cli_invoke
+        ),
+    }
+
+
+def _terminal_outcome_contract_payload(
+    *,
+    completion_gate: dict[str, Any],
+    completion_options: list[Any] | None = None,
+    recommended_next_action: str = "",
+    source_surface: str = "completion_gate",
+) -> dict[str, Any]:
+    completion_gate = _as_dict(completion_gate)
+    claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
+    allowed_claim_classes = {
+        str(item).strip() for item in _list_payload(claim_authorization.get("allowed_claim_classes")) if str(item).strip()
+    }
+    options = [option for option in _list_payload(completion_options) if isinstance(option, dict)]
+    allowed_option_ids = [str(option.get("id")) for option in options if option.get("allowed") is True and str(option.get("id") or "")]
+    progress_option_ids = [
+        option_id
+        for option_id in allowed_option_ids
+        if option_id not in {"stop-with-status", "request-review", "claim-work-complete", "close-parent-lane"}
+    ]
+    blocked_options = [
+        str(option.get("id"))
+        for option in options
+        if option.get("allowed") is False and _list_payload(option.get("blocking_fields")) and str(option.get("id") or "")
+    ]
+    status = str(completion_gate.get("status") or "unknown").strip()
+    required_next_action = str(completion_gate.get("required_next_action") or recommended_next_action or "").strip()
+    active_intent_satisfied = bool(completion_gate.get("active_intent_satisfied"))
+    human_accepted_partial = bool(completion_gate.get("human_accepted_partial"))
+    full_claim_authorized = "full_intent_complete" in allowed_claim_classes
+    issue_closure_authorized = "issue_closure" in allowed_claim_classes
+    safe_continuation_available = bool(progress_option_ids or status == "continue-required")
+
+    if active_intent_satisfied and full_claim_authorized:
+        state = "DELIVERED"
+        final_response_authorized = True
+        custody_owner = "completed-outcome"
+        reason = "Completion gate authorizes the requested full-intent claim."
+        safe_continuation_available = False
+        progress_option_ids = []
+    elif human_accepted_partial:
+        state = "USER_PAUSED"
+        final_response_authorized = True
+        custody_owner = "user"
+        reason = "The human accepted a narrower or partial outcome."
+    elif safe_continuation_available:
+        state = "CONTINUE"
+        final_response_authorized = False
+        custody_owner = "agent"
+        reason = "Safe in-scope continuation remains; a progress summary must not transfer execution custody to the user."
+    elif status in {"clarification-required", "blocked", "unavailable", "invalid"}:
+        state = "BLOCKED"
+        final_response_authorized = True
+        custody_owner = "external-or-human-action"
+        reason = "No safe in-scope continuation is visible without user or external action."
+    else:
+        state = "CONTINUE"
+        final_response_authorized = False
+        custody_owner = "agent"
+        reason = "The terminal outcome is not delivered, blocked, or user-paused, so execution custody remains with the agent."
+
+    return {
+        "kind": "agentic-workspace/terminal-outcome-contract/v1",
+        "state": state,
+        "source_surface": source_surface,
+        "completion_gate_status": status,
+        "final_response_authorized": final_response_authorized,
+        "custody_owner": custody_owner,
+        "safe_continuation_available": safe_continuation_available,
+        "safe_continuation_option_ids": progress_option_ids,
+        "blocked_option_ids": blocked_options,
+        "required_next_action": required_next_action or ("continue-current-work" if state == "CONTINUE" else ""),
+        "allowed_terminal_states": ["DELIVERED", "BLOCKED", "USER_PAUSED", "CONTINUE"],
+        "allowed_claim_classes": sorted(allowed_claim_classes),
+        "issue_closure_authorized": issue_closure_authorized,
+        "reason": reason,
+        "invalid_pseudo_blockers": [
+            "task-size",
+            "elapsed-time",
+            "architectural-breadth",
+            "context-pressure",
+            "successful-compaction",
+            "one-slice-complete",
+            "work-remains",
+        ],
+        "terminal_response_rule": (
+            "A terminal final response is authorized only for DELIVERED, BLOCKED, or USER_PAUSED. "
+            "CONTINUE permits progress updates but requires selecting the next safe in-scope action."
         ),
     }
 
@@ -20779,6 +20910,12 @@ def _fast_closeout_claim_boundary_payload(
         recommended_next_action=recommended_next_action,
         cli_invoke=cli_invoke,
     )
+    terminal_outcome_contract = _terminal_outcome_contract_payload(
+        completion_gate=completion_gate,
+        completion_options=completion_options,
+        recommended_next_action=recommended_next_action,
+        source_surface="closeout_claim_boundary.direct",
+    )
     source_payload = {
         "kind": "agentic-workspace/closeout-claim-boundary-source/v1",
         "source_surface": "closeout_claim_boundary.direct",
@@ -20799,6 +20936,7 @@ def _fast_closeout_claim_boundary_payload(
             trust=trust, recommended_next_action=recommended_next_action, cli_invoke=cli_invoke
         ),
         "completion_options": completion_options,
+        "terminal_outcome_contract": terminal_outcome_contract,
         "closeout_protocol": closeout_protocol,
         "recommended_next_action": recommended_next_action,
         "computation": {
@@ -21586,6 +21724,35 @@ def _report_closeout_trust_payload(
         cli_invoke=cli_invoke,
     )
     completion_options = allow_archived_slice_claim(completion_options, slice_closeout_evidence)
+    terminal_outcome_contract = _terminal_outcome_contract_payload(
+        completion_gate=completion_gate,
+        completion_options=completion_options,
+        recommended_next_action=recommended_next_action,
+        source_surface="closeout_trust",
+    )
+    final_response_rendering = _closeout_report_final_response_rendering_payload(
+        status="present",
+        profile_policy={"selected_profile": "compact", "reason": "closeout_trust terminal outcome projection"},
+        trust=trust,
+        work_completed="",
+        requested_outcome="",
+        changed_surfaces="",
+        validation_proof=str(proof_confidence.get("summary") or proof_confidence.get("confidence") or ""),
+        completion_decision="",
+        completion_boundary=_as_dict(intent_satisfaction_check.get("completion_boundary")),
+        completion_options=completion_options,
+        completeness={"status": "complete" if completion_gate.get("active_intent_satisfied") else "incomplete"},
+        residual_risk=str(completion_gate.get("residual_intent") or ""),
+        blockers=[],
+        next_action=recommended_next_action,
+        decision_review={},
+        behavior_preservation={},
+        parent_intent_status=parent_intent_status,
+        applicable_intent_status=applicable_intent_status,
+        workflow_obligation_contract={},
+        completion_gate=completion_gate,
+        review_mode="small-direct-edit",
+    )
     current_task_closeout: dict[str, Any] = {"status": "not-applicable"}
     if current_bounded_scope.get("status") == "active":
         relationship = str(current_bounded_scope.get("relationship") or "bounded-task")
@@ -21766,6 +21933,8 @@ def _report_closeout_trust_payload(
         "durable_residue_action": residue_action,
         "terminal_action": terminal_action(trust=trust, recommended_next_action=recommended_next_action),
         "completion_options": completion_options,
+        "terminal_outcome_contract": terminal_outcome_contract,
+        "final_response_rendering": final_response_rendering,
         "closeout_protocol": _closeout_protocol_payload(
             status="present",
             trust=trust,

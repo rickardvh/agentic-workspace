@@ -1038,6 +1038,10 @@ def closeout_claim_boundary_payload(
     terminal_action = terminal_action if isinstance(terminal_action, dict) else {}
     closeout_protocol = closeout_trust.get("closeout_protocol", {})
     closeout_protocol = closeout_protocol if isinstance(closeout_protocol, dict) else {}
+    terminal_outcome_contract = closeout_trust.get("terminal_outcome_contract", {})
+    if not isinstance(terminal_outcome_contract, dict):
+        terminal_outcome_contract = closeout_protocol.get("terminal_outcome_contract", {})
+    terminal_outcome_contract = terminal_outcome_contract if isinstance(terminal_outcome_contract, dict) else {}
     readiness = closeout_protocol.get("readiness", {})
     readiness = readiness if isinstance(readiness, dict) else {}
     residue_routing = closeout_protocol.get("residue_routing", {})
@@ -1093,6 +1097,21 @@ def closeout_claim_boundary_payload(
                 )
                 if key in claim_authorization
             },
+            "terminal_outcome_contract": compact(
+                terminal_outcome_contract,
+                (
+                    "kind",
+                    "state",
+                    "final_response_authorized",
+                    "custody_owner",
+                    "safe_continuation_available",
+                    "safe_continuation_option_ids",
+                    "required_next_action",
+                    "allowed_terminal_states",
+                    "invalid_pseudo_blockers",
+                    "terminal_response_rule",
+                ),
+            ),
             "blocking_fields": blocking_fields,
             "strict_closeout": compact(strict_gate, ("status", "blocking", "required_for_broad_work", "recommended_next_action")),
             "readiness": compact(readiness, ("status", "can_close", "blocking_fields", "warning_fields", "rule")),
@@ -1586,6 +1605,10 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
         architecture_candidate = architecture_candidate if isinstance(architecture_candidate, dict) else {}
         terminal_action = answer.get("terminal_action", {})
         terminal_action = terminal_action if isinstance(terminal_action, dict) else {}
+        terminal_outcome_contract = answer.get("terminal_outcome_contract", {})
+        terminal_outcome_contract = terminal_outcome_contract if isinstance(terminal_outcome_contract, dict) else {}
+        final_response_rendering = answer.get("final_response_rendering", {})
+        final_response_rendering = final_response_rendering if isinstance(final_response_rendering, dict) else {}
         archived_slice = answer.get("archived_slice_closeout_evidence", {})
         archived_slice = archived_slice if isinstance(archived_slice, dict) else {}
         durable_action = answer.get("durable_residue_action", {})
@@ -1665,6 +1688,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             "lower_trust_closeout_count": answer.get("lower_trust_closeout_count", 0),
             "summary": answer.get("summary", ""),
             "terminal_action": terminal_action,
+            "terminal_outcome_contract": terminal_outcome_contract,
+            "final_response_rendering": final_response_rendering,
             "completion_options": completion_options,
             "memory_decision_packet": memory_decision_packet,
             "operating_loop": operating_loop,
@@ -1678,6 +1703,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                     "source_surface",
                     "readiness",
                     "claim_boundary",
+                    "terminal_outcome_contract",
                     "residue_routing",
                     "knowledge_route_states",
                     "closure_permission",

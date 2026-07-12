@@ -704,6 +704,40 @@ def test_completion_gate_claim_authorization_surfaces_closure_keyword_guard() ->
     assert "Closes #2113" in guard["targets"][0]["unsafe_examples"]
 
 
+def test_terminal_outcome_contract_distinguishes_continue_blocked_and_user_paused() -> None:
+    from agentic_workspace.workspace_runtime_primitives import _terminal_outcome_contract_payload
+
+    continue_contract = _terminal_outcome_contract_payload(
+        completion_gate={
+            "status": "blocked",
+            "active_intent_satisfied": False,
+            "claim_authorization": {"allowed_claim_classes": ["partial_progress"]},
+        },
+        completion_options=[
+            {"id": "run-proof", "allowed": True},
+            {"id": "stop-with-status", "allowed": True},
+        ],
+    )
+    assert continue_contract["state"] == "CONTINUE"
+    assert continue_contract["final_response_authorized"] is False
+    assert continue_contract["custody_owner"] == "agent"
+    assert "context-pressure" in continue_contract["invalid_pseudo_blockers"]
+
+    blocked_contract = _terminal_outcome_contract_payload(
+        completion_gate={"status": "clarification-required", "required_next_action": "ask-human"},
+        completion_options=[{"id": "request-review", "allowed": True}],
+    )
+    assert blocked_contract["state"] == "BLOCKED"
+    assert blocked_contract["final_response_authorized"] is True
+
+    paused_contract = _terminal_outcome_contract_payload(
+        completion_gate={"status": "human-accepted-partial", "human_accepted_partial": True},
+        completion_options=[],
+    )
+    assert paused_contract["state"] == "USER_PAUSED"
+    assert paused_contract["custody_owner"] == "user"
+
+
 def test_memory_decision_packet_pull_statuses_distinguish_route_inspection() -> None:
     baseline_only = _memory_decision_packet_payload(
         stage="implement",

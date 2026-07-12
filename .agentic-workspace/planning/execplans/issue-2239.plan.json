@@ -1,0 +1,350 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Issue 2239 terminal outcome custody",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
+    "hard_constraints": "Do not treat progress, context pressure, task size, successful compaction, or one completed slice as terminal blockers; BLOCKED requires an external or human-action blocker with no safe in-scope continuation.",
+    "agent_may_decide": "Exact projection shape, compact report fields, and focused regression coverage for closeout_trust, closeout_claim_boundary, closeout_report, and final-response rendering.",
+    "escalate_when": "The fix would require redesigning Planning autopilot or changing issue closure semantics beyond terminal outcome custody.",
+    "next_action": "Run AW implement proof and publish the #2239 PR after validation.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_summary_cli.py -k \"terminal_outcome_contract or completion_gate_claim_authorization\" -q",
+      "uv run pytest tests/test_workspace_cli.py -k \"closeout_trust or closeout_claim_boundary\" -q",
+      "uv run pytest tests/test_workspace_cli.py::test_start_treats_shared_issue_ref_as_active_plan_continuation -q",
+      "make test-workspace",
+      "make lint-workspace",
+      "make typecheck",
+      "uv run pytest tests/test_workspace_cli.py -q",
+      "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+      "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+      "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
+      "uv run python scripts/generate/generate_command_packages.py --check"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/workspace_runtime_planning.py",
+      "src/agentic_workspace/reporting_support.py",
+      "src/agentic_workspace/workspace_runtime_proof.py",
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_summary_cli.py",
+      ".agentic-workspace/planning/execplans/issue-2239.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "completion_criteria": [
+      "Completion gates expose a terminal_outcome_contract with DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE states.",
+      "CONTINUE is selected whenever safe in-scope continuation remains and final_response_authorized is false.",
+      "Pseudo blockers such as context pressure, task size, one-slice-complete, successful compaction, and work-remains are named invalid blockers.",
+      "Closeout compact reports and final-response rendering expose the contract so terminal final responses are blocked in CONTINUE.",
+      "Focused CLI, summary, lint, and generated-package freshness checks pass."
+    ],
+    "continuation_owner": "none for #2239 after PR publication; remaining P0 issues continue in their own stacked branches.",
+    "closeout_decision": "ready-for-pr-after-aw-implement-proof"
+  },
+  "goal": [
+    "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains."
+  ],
+  "non_goals": [
+    "Do not rewrite Planning autopilot end to end in this slice.",
+    "Do not close unrelated P0 issues from the #2239 PR."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
+      "constraints": "Do not treat progress, context pressure, task size, successful compaction, or one completed slice as terminal blockers; BLOCKED requires an external or human-action blocker with no safe in-scope continuation.",
+      "latitude": "Exact projection shape, compact report fields, and focused regression coverage for closeout_trust, closeout_claim_boundary, closeout_report, and final-response rendering.",
+      "escalation": "The fix would require redesigning Planning autopilot or changing issue closure semantics beyond terminal outcome custody."
+    },
+    "execution": {
+      "milestone": "issue-2239",
+      "status": "active",
+      "next_step": "Run AW implement proof and publish the #2239 PR after validation.",
+      "proof": "uv run pytest tests/test_workspace_summary_cli.py -k \"terminal_outcome_contract or completion_gate_claim_authorization\" -q; uv run pytest tests/test_workspace_cli.py -k \"closeout_trust or closeout_claim_boundary\" -q; uv run pytest tests/test_workspace_cli.py::test_start_treats_shared_issue_ref_as_active_plan_continuation -q; make test-workspace; make lint-workspace; make typecheck; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; uv run python scripts/generate/generate_command_packages.py --check"
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_planning.py",
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/workspace_runtime_proof.py",
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_summary_cli.py",
+        ".agentic-workspace/planning/execplans/issue-2239.plan.json",
+        ".agentic-workspace/planning/state.toml"
+      ],
+      "invariants": [
+        "CONTINUE never authorizes a terminal final response.",
+        "BLOCKED requires a typed external/human blocker and no safe continuation.",
+        "Progress updates do not transfer execution custody to the user."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "remaining open P0 issues are separate issue/PR slices"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none for #2239",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "AW closeout packets can distinguish delivered, blocked, user-paused, and continue custody instead of allowing progress to look terminal.",
+    "intentionally deferred": "Broader autopilot wording cleanup outside the terminal custody enforcement path.",
+    "discovered implications": "The lazy report route imports closeout logic from workspace_runtime_core, so runtime closeout semantics must stay mirrored with primitives until that duplication is retired.",
+    "proof achieved now": "focused tests, full workspace suite, lint, typecheck, summary/doctor, runtime mirror, and generated freshness passed",
+    "validation still needed": "AW implement proof and PR checks",
+    "next likely slice": "continue remaining open P0 issues after #2239 PR"
+  },
+  "intent_interpretation": {
+    "literal request": "Keep working as before until done with all P0 issues; implement #2239 as the next P0 bug.",
+    "inferred intended outcome": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
+    "chosen concrete what": "Project terminal outcome custody through closeout_trust, closeout_claim_boundary, closeout_report, and final response rendering.",
+    "interpretation distance": "low",
+    "review guidance": "Check that CONTINUE cannot be rendered as final completion and that delivered outcomes do not advertise further safe continuation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/workspace_runtime_core.py, src/agentic_workspace/workspace_runtime_primitives.py, src/agentic_workspace/reporting_support.py, src/agentic_workspace/workspace_runtime_proof.py, tests/test_workspace_cli.py, tests/test_workspace_summary_cli.py, .agentic-workspace/planning/execplans/issue-2239.plan.json, .agentic-workspace/planning/state.toml",
+    "max changed files": "Approximately 12 files including AW payload sync metadata and the execplan/state records.",
+    "required validation commands": "uv run pytest tests/test_workspace_summary_cli.py -k \"terminal_outcome_contract or completion_gate_claim_authorization\" -q; uv run pytest tests/test_workspace_cli.py -k \"closeout_trust or closeout_claim_boundary\" -q; uv run pytest tests/test_workspace_cli.py::test_start_treats_shared_issue_ref_as_active_plan_continuation -q; make test-workspace; make lint-workspace; make typecheck; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; uv run python scripts/generate/generate_command_packages.py --check",
+    "ask-before-refactor threshold": "Ask before deleting duplicated core/primitives runtime surfaces or changing Planning autopilot architecture.",
+    "stop before touching": "Unrelated open P0 implementations, command-generation sibling repo, or broad Planning skill rewrites."
+  },
+  "stop_conditions": {
+    "stop when": "Terminal custody states are available on closeout surfaces and focused proof passes.",
+    "escalate when boundary reached": "A correct fix requires changing the Planning autopilot state machine beyond closeout/finalization custody.",
+    "escalate on scope drift": "Implementation requires unrelated modules or issue closure automation changes.",
+    "escalate on proof failure": "Focused closeout report tests or lint fail after the runtime/core projections are updated."
+  },
+  "context_budget": {
+    "live working set": "Issue #2239, closeout runtime/report projection files, and focused closeout tests.",
+    "recoverable later": "Historical P0 context and remaining open P0 issues after this PR is published.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Run AW implement proof, publish #2239 PR, then continue remaining open P0 issues.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
+    "hard constraints": "Do not treat progress, context pressure, task size, successful compaction, or one completed slice as terminal blockers; BLOCKED requires an external or human-action blocker with no safe in-scope continuation.",
+    "agent may decide locally": "Exact projection shape, compact report fields, and focused regression coverage for closeout_trust, closeout_claim_boundary, closeout_report, and final-response rendering.",
+    "escalate when": "The fix would require redesigning Planning autopilot or changing issue closure semantics beyond terminal outcome custody."
+  },
+  "post_decomposition_delegation": {
+    "status": "kept-local",
+    "decision rule": "The work is a narrow runtime/reporting projection with focused tests; local implementation is lower friction than delegation.",
+    "route candidates": "keep-local",
+    "required evidence": "Focused tests and lint listed in proof_report."
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [
+    "GitHub #2239"
+  ],
+  "active_milestone": {
+    "id": "issue-2239",
+    "status": "validation-ready",
+    "scope": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Run AW implement proof and publish the #2239 PR."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/workspace_runtime_planning.py",
+    "src/agentic_workspace/reporting_support.py",
+    "src/agentic_workspace/workspace_runtime_proof.py",
+    "tests/test_workspace_cli.py",
+    "tests/test_workspace_summary_cli.py",
+    ".agentic-workspace/planning/execplans/issue-2239.plan.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "CONTINUE never authorizes a terminal final response.",
+    "BLOCKED requires a typed external/human blocker and no safe continuation.",
+    "Progress updates do not transfer execution custody to the user."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_summary_cli.py -k \"terminal_outcome_contract or completion_gate_claim_authorization\" -q",
+    "uv run pytest tests/test_workspace_cli.py -k \"closeout_trust or closeout_claim_boundary\" -q",
+    "uv run pytest tests/test_workspace_cli.py::test_start_treats_shared_issue_ref_as_active_plan_continuation -q",
+    "make test-workspace",
+    "make lint-workspace",
+    "make typecheck",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
+    "uv run python scripts/generate/generate_command_packages.py --check"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Completion gates expose a terminal_outcome_contract with DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE states.",
+    "CONTINUE is selected whenever safe in-scope continuation remains and final_response_authorized is false.",
+    "Pseudo blockers such as context pressure, task size, one-slice-complete, successful compaction, and work-remains are named invalid blockers.",
+    "Closeout compact reports and final-response rendering expose the contract so terminal final responses are blocked in CONTINUE.",
+    "Focused CLI, summary, lint, and generated-package freshness checks pass."
+  ],
+  "execution_run": {
+    "run status": "implemented",
+    "executor": "Codex",
+    "handoff source": "local implementation for GitHub #2239",
+    "what happened": "Added terminal outcome contract projection, propagated it through closeout trust/boundary/report/rendering, and added focused regressions.",
+    "scope touched": "src/agentic_workspace/workspace_runtime_core.py, src/agentic_workspace/workspace_runtime_primitives.py, src/agentic_workspace/workspace_runtime_planning.py, src/agentic_workspace/reporting_support.py, src/agentic_workspace/workspace_runtime_proof.py, tests/test_workspace_cli.py, tests/test_workspace_summary_cli.py, .agentic-workspace/planning/execplans/issue-2239.plan.json, .agentic-workspace/planning/state.toml",
+    "changed surfaces": "workspace runtime closeout projections, compact report projection, closeout proof boundary, and tests",
+    "validations run": "uv run pytest tests/test_workspace_summary_cli.py -k \"terminal_outcome_contract or completion_gate_claim_authorization\" -q; uv run pytest tests/test_workspace_cli.py -k \"closeout_trust or closeout_claim_boundary\" -q; uv run pytest tests/test_workspace_cli.py::test_start_treats_shared_issue_ref_as_active_plan_continuation -q; make test-workspace; make lint-workspace; make typecheck; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; uv run python scripts/generate/generate_command_packages.py --check",
+    "result for continuation": "run AW implement proof and open PR, then continue remaining P0 queue",
+    "next step": "Publish #2239 PR."
+  },
+  "finished_run_review": {
+    "review status": "self-reviewed",
+    "scope respected": "yes",
+    "proof status": "focused proof passed",
+    "intent served": "yes",
+    "config compliance": "AW startup and plan route used; payload sync applied before implementation",
+    "misinterpretation risk": "low",
+    "follow-on decision": "continue remaining P0 issues separately"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "keep-local",
+    "route skipped reason": "narrow runtime/reporting change with immediate focused tests",
+    "expected savings": "low",
+    "actual friction": "Core/primitives duplicate closeout path required mirrored wiring",
+    "proof result": "focused and broad proof passed",
+    "quality concern": "Duplicated runtime closeout logic remains a maintenance risk",
+    "decomposition adjustment": "recorded duplicated core/primitives implication as residue/follow-up issue candidate"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_summary_cli.py -k \"terminal_outcome_contract or completion_gate_claim_authorization\" -q; uv run pytest tests/test_workspace_cli.py -k \"closeout_trust or closeout_claim_boundary\" -q; uv run pytest tests/test_workspace_cli.py::test_start_treats_shared_issue_ref_as_active_plan_continuation -q; make test-workspace; make lint-workspace; make typecheck; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; uv run python scripts/generate/generate_command_packages.py --check",
+    "proof achieved now": "yes",
+    "evidence for \"proof achieved\" state": "2 summary tests, 18 closeout CLI tests, shared-ref task-switch regression, full workspace suite, ruff touched files, typecheck, doctor/summary, runtime mirror, and generated package freshness passed locally."
+  },
+  "intent_satisfaction": {
+    "original intent": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Terminal outcome contract is present on closeout_trust, closeout_claim_boundary, closeout_report/proof boundary, and final_response_rendering; CONTINUE sets final_response_authorized=false.",
+    "unsolved intent passed to": "none for #2239"
+  },
+  "execution_summary": {
+    "outcome delivered": "terminal outcome custody implemented for #2239",
+    "validation confirmed": "focused tests, full workspace suite, lint, typecheck, summary/doctor, runtime mirror, and generated freshness passed",
+    "follow-on routed to": "remaining P0 queue after PR",
+    "post-work posterity capture": "execplan updated; duplicate core/primitives risk noted",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "publish #2239 PR then continue P0 queue"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Lazy report sections currently use workspace_runtime_core while direct helpers also exist in workspace_runtime_primitives; closeout semantics must be mirrored until that duplicate path is retired.",
+    "motivation worth preserving": "Avoid future projection drift where direct unit tests pass but CLI lazy sections use stale core behavior.",
+    "canonical owner now": "issue follow-up",
+    "promotion trigger": "When runtime duplication cleanup is selected.",
+    "retention after promotion": "retain until follow-up exists or duplication is removed"
+  },
+  "task_intent_promotion": {
+    "decision": "do-not-promote",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "GitHub #2239 implementation",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "medium",
+    "needs review": false,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close-after-pr",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "The issue-scoped behavior is implemented and focused proof passed; PR publication and CI remain the release step.",
+    "evidence carried forward": "uv run pytest tests/test_workspace_summary_cli.py -k \"terminal_outcome_contract or completion_gate_claim_authorization\" -q; uv run pytest tests/test_workspace_cli.py -k \"closeout_trust or closeout_claim_boundary\" -q; uv run ruff check src\\agentic_workspace\\workspace_runtime_core.py src\\agentic_workspace\\workspace_runtime_primitives.py src\\agentic_workspace\\workspace_runtime_proof.py src\\agentic_workspace\\reporting_support.py tests\\test_workspace_cli.py tests\\test_workspace_summary_cli.py; uv run python scripts\\generate\\generate_command_packages.py --check",
+    "reopen trigger": "Review or CI shows CONTINUE can still authorize terminal final responses or BLOCKED is used for pseudo blockers."
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [
+      "workspace_runtime_core/workspace_runtime_primitives duplicate closeout path caused initial CLI projection drift"
+    ],
+    "signals fixed": [
+      "Mirrored #2239 terminal outcome wiring into both runtime copies for this issue"
+    ],
+    "signals routed": [
+      "Durable cleanup candidate: retire or generate-check the duplicated closeout runtime path"
+    ],
+    "signals dismissed": [],
+    "next owner": "issue follow-up after P0 queue if not already tracked"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        "debugging one-liners and temporary fixture probes"
+      ],
+      "continuation": [
+        "Publish #2239 PR, then continue remaining P0 issues"
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": [
+        "Runtime duplicate closeout path drift between workspace_runtime_core and workspace_runtime_primitives"
+      ]
+    }
+  },
+  "drift_log": [
+    "2026-07-13: Scaffolded by agentic-planning new-plan.",
+    "2026-07-13: Implemented #2239 terminal outcome custody and updated plan/proof fields.",
+    "2026-07-13: Fixed task-switch shared-ref continuation ordering exposed by make test-workspace."
+  ]
+}
