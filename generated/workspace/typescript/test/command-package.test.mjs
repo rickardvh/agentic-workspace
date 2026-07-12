@@ -13,7 +13,7 @@ test('generated package resource exposes expected commands', () => {
   assert.deepEqual(commandPackage.commands.map((command) => command.command.name).sort(), expected);
   assert.match(source, /resources\/command_package\.json/);
   assert.doesNotMatch(source, /adapter_id/);
-  assert.deepEqual(packageJson.files, ['src', 'resources']);
+  assert.deepEqual(packageJson.files, ['src', 'resources', 'external_consumer_profile.json', 'external_contract_bundle.json']);
 });
 
 test('generated package metadata exposes maturity and weak-agent routing status', () => {
