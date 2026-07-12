@@ -324,6 +324,10 @@ def _patch_workspace_typescript_sample_command_test(
     rendered_root_path = json.dumps([sample_command])
     content = output.content
     content = content.replace(
+        "assert.deepEqual(packageJson.files, ['src', 'resources']);",
+        "assert.deepEqual(packageJson.files, ['src', 'resources', 'external_consumer_profile.json', 'external_contract_bundle.json']);",
+    )
+    content = content.replace(
         f'[{json.dumps(sample_command)}, "--format", "json"]',
         f"[...{rendered_sample_path}, \"--format\", \"json\"]",
     )
