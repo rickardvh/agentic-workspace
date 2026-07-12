@@ -113,7 +113,7 @@
     {
       "surface": ".agentic-workspace/local/logs/exports/",
       "required": false,
-      "when": "create an explicit share-safe export bundle"
+      "when": "create an explicit local diagnostic export bundle"
     }
   ],
   "steps": [
@@ -125,7 +125,7 @@
     {
       "id": "manage_session_log",
       "uses": "workspace.session-log.manage",
-      "description": "Read status, create a new session, append a note, analyze or repair an index, or export a share-safe bundle."
+      "description": "Read status, create a new session, append a note, analyze or repair an index, or export a local diagnostic bundle."
     },
     {
       "id": "emit_output",
@@ -137,9 +137,9 @@
     "Write only under .agentic-workspace/local/session-logging/ and .agentic-workspace/local/logs/.",
     "Do not capture non-AW shell output.",
     "Do not treat local session logs as proof, Planning state, Memory, or closeout authority.",
-    "Session-log analysis is local dogfooding evidence until promoted intentionally.",
+    "Session-log analysis is local diagnostic evidence only and never Planning, Memory, proof, or closeout authority.",
     "Repair preserves existing indexed entries and artifacts; export never mutates originals.",
-    "Share-safe export redacts known local paths but does not claim arbitrary secret detection."
+    "Export normalizes known local paths but is not a secret scan or transfer approval."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",

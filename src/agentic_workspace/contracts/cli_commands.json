@@ -2015,7 +2015,7 @@
         },
         {
           "name": "export",
-          "help": "Export an existing local session log as a share-safe redacted bundle.",
+          "help": "Export an existing local session log as a local diagnostic bundle with known local paths normalized.",
           "uses_option_groups": [
             "format"
           ],
@@ -2044,7 +2044,7 @@
           ],
           "role": "reusable_host_repo_diagnostics",
           "audience": "local_only",
-          "classification_note": "explicit local share-safe export; not durable proof",
+          "classification_note": "explicit local session log export; not durable proof",
           "mutates_state": true
         }
       ],

@@ -197,6 +197,12 @@ def test_session_logging_enabled_reuses_one_session_log_and_records_config_prelu
     assert len(index["entries"]) == 2
     assert index["entries"][0]["stdout"]["kind"] == "json"
     assert index["entries"][0]["artifact"]["path"].startswith(str(first_log.parent.relative_to(target)).replace("\\", "/") + "/artifacts/")
+    snapshot = json.loads(text.split("```json\n", 1)[1].split("\n```", 1)[0])
+    boundary = snapshot["logging_policy"]["local_diagnostic_boundary"]
+    assert boundary["scope"] == "package-owned local diagnostic state"
+    assert boundary["manual_handoff"] == "outside-aw-logger-responsibility"
+    assert "promotion_boundary" not in snapshot["logging_policy"]
+    assert "share_safe" not in text
 
 
 def test_session_logging_reuses_identity_across_interleaved_sessions(tmp_path: Path, monkeypatch) -> None:
@@ -289,6 +295,9 @@ def test_session_logging_identity_is_private_and_caller_drilldowns_resolve_it(tm
     status = session_logging.status_payload(state=state)
     analysis = session_logging.analyze_session_log(state=state)
     exported = session_logging.export_session_log(state=state, include_artifacts=False)
+    assert status["local_diagnostic_boundary"]["non_authoritative_for"] == ["Planning", "Memory", "proof", "closeout"]
+    assert analysis["local_diagnostic_boundary"]["manual_handoff"] == "outside-aw-logger-responsibility"
+    assert exported["manifest"]["local_diagnostic_boundary"]["scope"] == "package-owned local diagnostic state"
 
     assert status["logical_session_resolution"] == "identity-registry"
     assert analysis["path"] == status["path"]
@@ -591,7 +600,7 @@ def test_session_logging_redacts_target_root_when_configured(tmp_path: Path, cap
     assert str(target) not in log_text
     assert target.as_posix() not in log_text
     assert "<target>" in log_text
-    assert index["path_redaction"]["mode"] == "redacted"
+    assert index["path_normalization"]["mode"] == "redacted"
     assert index["entries"][0]["target"] == "<target>"
 
 
@@ -616,7 +625,7 @@ def test_session_logging_path_mode_redacts_home_and_python_but_keeps_raw_artifac
     assert sys.executable not in log_text
     assert "<home>" in log_text
     assert "<python>" in log_text
-    assert index["path_redaction"]["raw_artifact_recoverability"].startswith("raw output may remain")
+    assert index["path_normalization"]["raw_artifact_recoverability"].startswith("raw output may remain")
     artifact_path = target / index["entries"][0]["artifact"]["path"]
     assert str(Path.home()).replace("\\", "\\\\") in artifact_path.read_text(encoding="utf-8")
 
@@ -1298,7 +1307,7 @@ def test_session_log_classifies_structured_runtime_exception() -> None:
     assert session_logging._failure_class(command_text="summary --format json", capture=capture) == "unexpected-runtime-exception"
 
 
-def test_session_log_share_safe_export_redacts_all_surfaces_and_preserves_originals(tmp_path: Path, capsys, monkeypatch) -> None:
+def test_session_log_export_normalizes_local_paths_and_preserves_originals(tmp_path: Path, capsys, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
     monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
@@ -1327,9 +1336,14 @@ def test_session_log_share_safe_export_redacts_all_surfaces_and_preserves_origin
         assert str(Path.home()) not in combined
         assert sys.executable not in combined
         assert "<target>" in combined
+        assert "share-safe" not in combined
+        assert "promotion_boundary" not in combined
+        assert "share_safe" not in combined
         manifest = json.loads(archive.read("manifest.json"))
         assert manifest["originals_mutated"] is False
-        assert "arbitrary secrets" in manifest["limitations"]
+        assert manifest["path_normalization_mode"] == "known-local-paths"
+        assert "transfer approval" in manifest["limitations"]
+        assert manifest["local_diagnostic_boundary"]["manual_handoff"] == "outside-aw-logger-responsibility"
     assert log_path.read_bytes() == original_log
     assert index_path.read_bytes() == original_index
 
