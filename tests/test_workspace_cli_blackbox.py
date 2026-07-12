@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import shlex
 import subprocess
 from pathlib import Path
+
+import pytest
 
 from agentic_workspace import cli as source_cli
 
@@ -101,6 +104,19 @@ def test_blackbox_module_cli_retryable_error_kind_uses_module_namespace() -> Non
     assert result.returncode == 2
     payload = json.loads(result.stdout)
     assert payload["kind"] == "agentic-memory/retryable-cli-error/v1"
+
+
+@pytest.mark.parametrize(("module", "misspelled", "expected"), [("memory", "rout", "route"), ("planning", "repor", "report")])
+def test_nested_module_recovery_is_canonical_and_executable(module: str, misspelled: str, expected: str) -> None:
+    result = _run_cli(module, module, misspelled, "--target", ".", "--format", "json", cwd=Path.cwd())
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    suggested = payload["suggested_command"]
+    assert suggested.startswith(f"agentic-workspace {module} {expected}")
+    assert f"{module} {module}" not in suggested
+
+    rerun = subprocess.run(shlex.split(suggested), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False)
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
     assert payload["failure_class"] == "invalid-command"
 
 

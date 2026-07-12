@@ -80,10 +80,13 @@ class GeneratedArgumentParser(argparse.ArgumentParser):
                     message = f"{message}\n{hint_text}"
         if 'invalid choice' in message and 'command' in message:
             unknown = _extract_unknown_command(message)
-            suggestions = difflib.get_close_matches(unknown, generated_command_names(), n=1, cutoff=0.55)
+            recovery_token = _recovery_token(self.prog, argv, unknown)
+            suggestions = difflib.get_close_matches(recovery_token, _extract_command_choices(message) or generated_command_names(), n=1, cutoff=0.55)
             if suggestions:
                 message = f"{message}\nDid you mean: {', '.join(suggestions)}?"
-                suggested_command = _command_with_replaced_token(self.prog, argv, unknown, suggestions[0])
+                suggested_command = _canonical_recovery_command(self.prog, argv, recovery_token, suggestions[0])
+            elif unknown in self.prog.split()[1:]:
+                suggested_command = _canonical_recovery_command(self.prog, argv, unknown, unknown)
             if 'start' in _GENERATED_COMMANDS_BY_NAME and 'preflight' in _GENERATED_COMMANDS_BY_NAME:
                 message = (
                     f"{message}\nStartup tip: run '{self.prog} start --task \"<task>\" --format json' "
@@ -125,6 +128,34 @@ def _json_requested(argv: list[str]) -> bool:
 def _command_with_replaced_token(prog: str, argv: list[str], old: str, new: str) -> str:
     replaced = [new if token == old else token for token in argv]
     return f"{prog} {shlex.join(replaced)}"
+
+
+def _extract_command_choices(message: str) -> list[str]:
+    marker = '(choose from '
+    if marker not in message:
+        return []
+    raw = message.split(marker, 1)[1].split(')', 1)[0]
+    return [item.strip() for item in raw.split(',') if item.strip()]
+
+
+def _recovery_token(prog: str, argv: list[str], unknown: str) -> str:
+    authority = prog.split()[1:]
+    remaining = list(argv)
+    while authority and remaining[:len(authority)] == authority:
+        remaining = remaining[len(authority):]
+    if unknown in authority and remaining:
+        return remaining[0]
+    return unknown
+
+
+def _canonical_recovery_command(prog: str, argv: list[str], old: str, new: str) -> str:
+    prog_tokens = prog.split()
+    root, authority = prog_tokens[0], prog_tokens[1:]
+    remaining = list(argv)
+    while authority and remaining[:len(authority)] == authority:
+        remaining = remaining[len(authority):]
+    replaced = [new if token == old else token for token in remaining]
+    return shlex.join([root, *authority, *replaced])
 
 
 def _is_selector_conflict(argv: list[str], message: str) -> bool:
@@ -169,7 +200,8 @@ def _retryable_cli_error_payload(
 
 
 def _retryable_cli_error_kind(prog: str) -> str:
-    namespace = prog if prog.startswith('agentic-') else 'agentic-workspace'
+    root_prog = prog.split()[0]
+    namespace = root_prog if root_prog.startswith('agentic-') else 'agentic-workspace'
     return f"{namespace}/retryable-cli-error/v1"
 
 
