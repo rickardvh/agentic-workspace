@@ -10,6 +10,7 @@ from repo_planning_bootstrap.installer import (
     activate_lane_record,
     archive_lane_record,
     close_lane_record,
+    create_decomposition_record,
     create_execplan_scaffold,
     create_lane_record,
     doctor_bootstrap,
@@ -19,6 +20,19 @@ from repo_planning_bootstrap.installer import (
     planning_summary,
     promote_decomposition_lane_to_lane_record,
 )
+
+
+def test_create_decomposition_record_writes_schema_valid_owner(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    result = create_decomposition_record(
+        decomposition_id="epic-alpha", title="Epic Alpha", outcome="Deliver the whole epic", target=tmp_path
+    )
+    assert not result.warnings
+    path = tmp_path / ".agentic-workspace/planning/decompositions/epic-alpha.decomposition.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert payload["kind"] == "planning-decomposition/v1"
+    assert payload["larger_intended_outcome"] == "Deliver the whole epic"
+    assert payload["candidate_lanes"] == []
 
 
 def _write_execplan_fixture(path: Path, *, item_id: str, status: str) -> None:

@@ -3,6 +3,29 @@ from __future__ import annotations
 from repo_planning_bootstrap import runtime_projection
 
 
+def test_decomposition_create_operation_declares_value_defaults_and_coercions(monkeypatch) -> None:
+    captured = {}
+
+    def fake_create_decomposition_record(**kwargs):
+        captured.update(kwargs)
+        return {"ok": True}
+
+    monkeypatch.setattr(runtime_projection, "create_decomposition_record", fake_create_decomposition_record)
+    result = runtime_projection.apply_planning_decomposition_create_operation(
+        {"id": "epic-alpha", "title": "Epic Alpha", "outcome": "Ship it", "target": "repo", "dry_run": "yes"}, {}, None
+    )
+    assert result == {"ok": True}
+    assert captured == {
+        "decomposition_id": "epic-alpha",
+        "title": "Epic Alpha",
+        "outcome": "Ship it",
+        "target": "repo",
+        "promotion_rule": "Promote a candidate lane only after its scope, owner surface, and proof are ready.",
+        "expected_planning_revision": "",
+        "dry_run": True,
+    }
+
+
 def test_lane_create_operation_declares_value_defaults_and_coercions(monkeypatch) -> None:
     captured = {}
 

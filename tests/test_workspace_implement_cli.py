@@ -4716,6 +4716,91 @@ def test_start_routes_parent_lane_evidence_before_shape_specific_plan_creation(t
     assert lanes["record_count"] == 1
 
 
+def test_start_epic_route_creates_and_recognizes_decomposition_owner(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [{"id": "#2300", "system": "github", "status": "open", "kind": "epic", "title": "Migration epic"}],
+            }
+        ),
+    )
+    capsys.readouterr()
+    assert (
+        cli.main(
+            ["start", "--target", str(tmp_path), "--task", "Implement epic #2300", "--select", "planning_safety_gate", "--format", "json"]
+        )
+        == 0
+    )
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
+    study = gate["work_shape_study"]
+    assert study["decision"]["work_shape"] == "epic"
+    writer = study["decision"]["owner_writer"]
+    assert writer["required_artifact_kind"] == "planning-decomposition-record"
+    assert writer["canonical_operation"] == "planning.decomposition-create.lifecycle"
+    assert "planning decomposition-create --id issue-2300" in writer["command"]
+    command_argv = shlex.split(writer["command"])
+    assert cli.main(command_argv[1:]) == 0
+    capsys.readouterr()
+    assert (tmp_path / writer["postcondition"]["owner_path"]).is_file()
+    from repo_planning_bootstrap.installer import planning_summary
+
+    decomposition = planning_summary(target=tmp_path, profile="full")["decomposition"]
+    assert decomposition["status"] == "present"
+    assert decomposition["records"][0]["path"] == writer["postcondition"]["owner_path"]
+
+
+def test_start_lane_route_can_promote_existing_decomposition_candidate(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace/planning/decompositions/parent.decomposition.json",
+        json.dumps(
+            {
+                "kind": "planning-decomposition/v1",
+                "title": "Parent",
+                "status": "ready-for-lane-promotion",
+                "larger_intended_outcome": "Deliver parent",
+                "non_goals": [],
+                "candidate_lanes": [
+                    {
+                        "id": "issue-2200",
+                        "title": "API migration lane",
+                        "readiness": "ready",
+                        "outcome": "Complete migration",
+                        "owner_surface": ".agentic-workspace/planning/lanes/issue-2200.lane.json",
+                    }
+                ],
+                "proof_expectations": [],
+                "promotion_rule": "Promote ready lanes.",
+            }
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [{"id": "#2200", "system": "github", "status": "open", "kind": "parent-lane", "title": "API migration"}],
+            }
+        ),
+    )
+    capsys.readouterr()
+    assert (
+        cli.main(["start", "--target", str(tmp_path), "--task", "Implement #2200", "--select", "planning_safety_gate", "--format", "json"])
+        == 0
+    )
+    writer = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["work_shape_study"]["decision"]["owner_writer"]
+    assert writer["promotion_operation"] == "planning.lane-promote.lifecycle"
+    argv = shlex.split(writer["promotion_command"])
+    assert cli.main(argv[1:]) == 0
+    capsys.readouterr()
+    assert (tmp_path / ".agentic-workspace/planning/lanes/issue-2200.lane.json").is_file()
+
+
 def test_start_replays_2143_unknown_to_lane_before_plan_creation(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -4828,6 +4913,67 @@ def test_start_direct_shape_emits_no_planning_writer(tmp_path: Path, capsys) -> 
             "readiness_requirements": [],
             "postcondition": {"expected_owner_kind": "none"},
         }
+
+
+def test_start_zero_study_direct_work_does_not_emit_owner_writer(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(["start", "--target", str(tmp_path), "--task", "Fix a local typo", "--select", "planning_safety_gate", "--format", "json"])
+        == 0
+    )
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
+    study = gate["work_shape_study"]
+    assert study["status"] == "not-applicable"
+    assert "owner_writer" not in study.get("decision", {})
+    assert gate["implementation_allowed"] is True
+
+
+def test_start_custody_required_bounded_route_creates_selectable_execplan(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "existing-owner",
+                "--title",
+                "Existing owner",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [{"id": "#2204", "system": "github", "status": "open", "kind": "bug", "title": "Bounded bug"}],
+            }
+        ),
+    )
+    capsys.readouterr()
+    assert (
+        cli.main(["start", "--target", str(tmp_path), "--task", "Fix issue #2204", "--select", "planning_safety_gate", "--format", "json"])
+        == 0
+    )
+    study = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["work_shape_study"]
+    assert study["decision"]["work_shape"] == "bounded"
+    writer = study["decision"]["owner_writer"]
+    assert writer["canonical_operation"] == "planning.new-plan.lifecycle"
+    assert writer["command"]
+    command_argv = shlex.split(writer["command"])
+    assert cli.main(command_argv[1:]) == 0
+    capsys.readouterr()
+    assert (tmp_path / writer["postcondition"]["owner_path"]).is_file()
 
 
 def test_start_default_output_surfaces_parent_lane_shape_study(tmp_path: Path, capsys) -> None:

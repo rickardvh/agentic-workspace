@@ -1,0 +1,128 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "decomposition-create",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Respect dry-run mode by avoiding writes.",
+    "Create an actual decomposition owner rather than substituting an execplan or lane."
+  ],
+  "id": "planning.decomposition-create.lifecycle",
+  "inputs": [
+    {
+      "name": "id",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "title",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "outcome",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "promotion_rule",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Create the decomposition owner.",
+        "id": "apply_lifecycle_operation",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.decomposition-create.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Planning decomposition-create executes generated operation IR while Planning owns decomposition mutation policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "generated decomposition-create process conformance passes"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "target repository Planning schemas"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Create a schema-valid decomposition owner record.",
+      "id": "apply_lifecycle_operation",
+      "uses": "planning.decomposition-create.apply"
+    },
+    {
+      "description": "Emit planning lifecycle result in the requested format.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Create a first-class Planning decomposition record for epic-shaped work.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/decompositions/",
+      "when": "not a dry run"
+    }
+  ]
+}

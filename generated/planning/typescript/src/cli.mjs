@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
-const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.lane-activate.lifecycle", "planning.lane-archive.lifecycle", "planning.lane-close.lifecycle", "planning.lane-create.lifecycle", "planning.lane-promote.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
+const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
+const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.decomposition-create.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.lane-activate.lifecycle", "planning.lane-archive.lifecycle", "planning.lane-close.lifecycle", "planning.lane-create.lifecycle", "planning.lane-promote.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -886,6 +886,86 @@ const commandDefinitions = [
     "operation_ref": {
       "id": "planning.list-files.report",
       "path": "operations/planning.list-files.report.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Create a first-class Planning decomposition record.",
+      "name": "decomposition-create",
+      "options": [
+        {
+          "flags": [
+            "--id"
+          ],
+          "help": "Stable decomposition id.",
+          "name": "id",
+          "required": true
+        },
+        {
+          "flags": [
+            "--title"
+          ],
+          "help": "Human-readable decomposition title.",
+          "name": "title",
+          "required": true
+        },
+        {
+          "flags": [
+            "--outcome"
+          ],
+          "help": "Larger intended outcome.",
+          "name": "outcome",
+          "required": true
+        },
+        {
+          "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.",
+          "flags": [
+            "--promotion-rule"
+          ],
+          "help": "Candidate-lane promotion rule.",
+          "name": "promotion_rule"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "decomposition-create",
+    "operation_ref": {
+      "id": "planning.decomposition-create.lifecycle",
+      "path": "operations/planning.decomposition-create.lifecycle.json"
     }
   },
   {

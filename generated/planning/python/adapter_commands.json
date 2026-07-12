@@ -855,6 +855,84 @@
     "operation_path": "operations/planning.list-files.report.json"
   },
   {
+    "adapter_id": "planning.decomposition-create.cli",
+    "interface": {
+      "help": "Create a first-class Planning decomposition record.",
+      "name": "decomposition-create",
+      "options": [
+        {
+          "flags": [
+            "--id"
+          ],
+          "help": "Stable decomposition id.",
+          "name": "id",
+          "required": true
+        },
+        {
+          "flags": [
+            "--title"
+          ],
+          "help": "Human-readable decomposition title.",
+          "name": "title",
+          "required": true
+        },
+        {
+          "flags": [
+            "--outcome"
+          ],
+          "help": "Larger intended outcome.",
+          "name": "outcome",
+          "required": true
+        },
+        {
+          "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.",
+          "flags": [
+            "--promotion-rule"
+          ],
+          "help": "Candidate-lane promotion rule.",
+          "name": "promotion_rule"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview changes without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "operation_id": "planning.decomposition-create.lifecycle",
+    "operation_path": "operations/planning.decomposition-create.lifecycle.json"
+  },
+  {
     "adapter_id": "planning.lane-create.cli",
     "interface": {
       "help": "Create a first-class Planning lane record.",

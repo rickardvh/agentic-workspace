@@ -526,6 +526,14 @@ def _work_shape_study_payload(
             "required_artifact_kind": "planning-lane-record",
             "canonical_operation": "planning.lane-create.lifecycle",
             "command": command,
+            "promotion_operation": "planning.lane-promote.lifecycle",
+            "promotion_command": _command_with_cli_invoke(
+                command=_command_with_expected_planning_revision(
+                    f'agentic-workspace planning lane-promote issue-{lane_id} --target "{target_root.as_posix()}" --format json',
+                    planning_revision=planning_revision,
+                ),
+                cli_invoke=config.cli_invoke,
+            ),
             "readiness_requirements": ["referenced intent resolved to lane", "planning revision remains current"],
             "postcondition": {
                 "owner_path": f".agentic-workspace/planning/lanes/issue-{lane_id}.lane.json",
@@ -537,20 +545,52 @@ def _work_shape_study_payload(
             },
         }
     elif selected_shape == "epic":
+        source_ref = next((str(item.get("id") or "") for item in raw_evidence if str(item.get("id") or "").strip()), "epic")
+        epic_id = re.sub(r"[^a-z0-9]+", "-", source_ref.lower()).strip("-") or "epic"
+        command = _command_with_cli_invoke(
+            command=_command_with_expected_planning_revision(
+                f'agentic-workspace planning decomposition-create --id issue-{epic_id} --title "Epic for {source_ref}" --outcome "Deliver the larger intended outcome for {source_ref}" --target "{target_root.as_posix()}" --format json',
+                planning_revision=planning_revision,
+            ),
+            cli_invoke=config.cli_invoke,
+        )
         owner_writer = {
             "required_artifact_kind": "planning-decomposition-record",
-            "canonical_operation": "planning.decomposition.create-or-update",
-            "command": "",
-            "readiness_requirements": ["decomposition scope and ordered lanes are defined"],
-            "postcondition": {"expected_owner_kind": "planning-decomposition-record"},
+            "canonical_operation": "planning.decomposition-create.lifecycle",
+            "command": command,
+            "readiness_requirements": ["larger intended outcome is named"],
+            "postcondition": {
+                "owner_path": f".agentic-workspace/planning/decompositions/issue-{epic_id}.decomposition.json",
+                "selector_command": _command_with_cli_invoke(
+                    command=f'agentic-workspace planning report --target "{target_root.as_posix()}" --verbose --format json',
+                    cli_invoke=config.cli_invoke,
+                ),
+                "expected_owner_kind": "planning-decomposition-record",
+            },
         }
     elif selected_shape == "bounded" and custody_required:
+        source_ref = next((str(item.get("id") or "") for item in raw_evidence if str(item.get("id") or "").strip()), "bounded-plan")
+        plan_id = re.sub(r"[^a-z0-9]+", "-", source_ref.lower()).strip("-") or "bounded-plan"
+        command = _command_with_cli_invoke(
+            command=_command_with_expected_planning_revision(
+                f'agentic-workspace planning new-plan --id issue-{plan_id} --title "Bounded plan for {source_ref}" --target "{target_root.as_posix()}" --activate --switch-active --format json',
+                planning_revision=planning_revision,
+            ),
+            cli_invoke=config.cli_invoke,
+        )
         owner_writer = {
             "required_artifact_kind": "planning-execplan",
             "canonical_operation": "planning.new-plan.lifecycle",
-            "command": "",
+            "command": command,
             "readiness_requirements": ["bounded scope is named"],
-            "postcondition": {"expected_owner_kind": "planning-execplan"},
+            "postcondition": {
+                "owner_path": f".agentic-workspace/planning/execplans/issue-{plan_id}.plan.json",
+                "selector_command": _command_with_cli_invoke(
+                    command=f'agentic-workspace summary --target "{target_root.as_posix()}" --select execplans --format json',
+                    cli_invoke=config.cli_invoke,
+                ),
+                "expected_owner_kind": "planning-execplan",
+            },
         }
     else:
         owner_writer = {

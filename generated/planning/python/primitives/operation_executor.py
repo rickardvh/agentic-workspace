@@ -69,6 +69,7 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'lane': getattr(args, 'lane', ''),
                 'parent_decomposition': getattr(args, 'parent_decomposition', ''),
                 'outcome': getattr(args, 'outcome', ''),
+                'promotion_rule': getattr(args, 'promotion_rule', ''),
                 'purpose': getattr(args, 'purpose', ''),
                 'proof_strategy': getattr(args, 'proof_strategy', ''),
                 'current_slice': getattr(args, 'current_slice', ''),
@@ -163,6 +164,7 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'lane': values.get('lane', ''),
                 'parent_decomposition': values.get('parent_decomposition', ''),
                 'outcome': values.get('outcome', ''),
+                'promotion_rule': values.get('promotion_rule', ''),
                 'purpose': values.get('purpose', ''),
                 'proof_strategy': values.get('proof_strategy', ''),
                 'current_slice': values.get('current_slice', ''),
@@ -220,6 +222,7 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
         'planning.close-item.lifecycle',
         'planning.closeout.lifecycle',
         'planning.create-review.lifecycle',
+        'planning.decomposition-create.lifecycle',
         'planning.delegation-decision.lifecycle',
         'planning.doctor.report',
         'planning.handoff.report',
@@ -264,6 +267,7 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
                 'planning.intake-artifact.apply': _handle_planning_intake_artifact_apply,
                 'planning.promote-to-plan.apply': _handle_planning_promote_to_plan_apply,
                 'planning.lane-create.apply': _handle_planning_lane_create_apply,
+                'planning.decomposition-create.apply': _handle_planning_decomposition_create_apply,
                 'planning.lane-promote.apply': _handle_planning_lane_promote_apply,
                 'planning.lane-activate.apply': _handle_planning_lane_activate_apply,
                 'planning.lane-close.apply': _handle_planning_lane_close_apply,
@@ -346,6 +350,12 @@ def _handle_planning_lane_create_apply(values: dict[str, Any], arguments: dict[s
     from .planning_runtime import apply_planning_lane_create_operation
 
     return apply_planning_lane_create_operation(values, arguments, context)
+
+
+def _handle_planning_decomposition_create_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_decomposition_create_operation
+
+    return apply_planning_decomposition_create_operation(values, arguments, context)
 
 
 def _handle_planning_lane_promote_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

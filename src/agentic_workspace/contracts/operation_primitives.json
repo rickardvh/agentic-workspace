@@ -910,6 +910,18 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; lane lifecycle mutation is explicit package-domain runtime behavior."
     },
     {
+      "id": "planning.decomposition-create.apply",
+      "summary": "Create a first-class Planning decomposition owner record.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning decomposition lifecycle mutation remains package-domain behavior.",
+      "conformance_ref": "planning package tests plus generated command package checks",
+      "migration_path": "Extract deterministic record/file/schema behavior into Tier 1 primitives when the Planning policy boundary is explicit.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; decomposition lifecycle mutation is explicit package-domain runtime behavior."
+    },
+    {
       "id": "planning.lane-promote.apply",
       "summary": "Promote a decomposition candidate lane into a first-class lane record.",
       "kind": "planning-runtime",

@@ -28,6 +28,12 @@ def apply_planning_closeout_operation(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
+def apply_planning_decomposition_create_operation(*args: Any, **kwargs: Any) -> Any:
+    from repo_planning_bootstrap.runtime_projection import apply_planning_decomposition_create_operation as source_function
+
+    return source_function(*args, **kwargs)
+
+
 def apply_planning_delegation_decision_operation(*args: Any, **kwargs: Any) -> Any:
     from repo_planning_bootstrap.runtime_projection import apply_planning_delegation_decision_operation as source_function
 
@@ -109,6 +115,7 @@ def render_planning_prompt_operation(*args: Any, **kwargs: Any) -> Any:
 __all__ = [
     'apply_planning_archive_plan_operation',
     'apply_planning_closeout_operation',
+    'apply_planning_decomposition_create_operation',
     'apply_planning_delegation_decision_operation',
     'apply_planning_intake_artifact_operation',
     'apply_planning_lane_activate_operation',

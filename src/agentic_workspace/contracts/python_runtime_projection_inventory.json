@@ -32,6 +32,7 @@
       "operation-function-call|generated/planning/python/operations/planning.create-review.lifecycle.json|planning.create-review.lifecycle|repo_planning_bootstrap.installer|create_review_record",
       "operation-function-call|generated/planning/python/operations/planning.doctor.report.json|planning.doctor.report|repo_planning_bootstrap.installer|doctor_bootstrap",
       "operation-function-call|generated/planning/python/operations/planning.handoff.report.json|planning.handoff.report|repo_planning_bootstrap.installer|planning_handoff",
+      "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|apply_planning_decomposition_create_operation|repo_planning_bootstrap.runtime_projection|apply_planning_decomposition_create_operation",
       "operation-function-call|generated/planning/python/operations/planning.init.lifecycle.json|planning.init.lifecycle|repo_planning_bootstrap.installer|install_bootstrap",
       "operation-function-call|generated/planning/python/operations/planning.install.lifecycle.json|planning.install.lifecycle|repo_planning_bootstrap.installer|install_bootstrap",
       "operation-function-call|generated/planning/python/operations/planning.status.report.json|planning.status.report|repo_planning_bootstrap.installer|collect_status",
@@ -1472,6 +1473,27 @@
           "existing-primitive-bugfix",
           "new-primitive-implementation"
         ]
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "apply_planning_decomposition_create_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "apply_planning_decomposition_create_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": ["planning.decomposition-create.lifecycle"],
+        "primitive_refs": ["planning.decomposition-create.apply"],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "The symbol owns Planning decomposition lifecycle mutation policy, validation, conflict handling, and provenance.",
+        "conformance_ref": "planning.decomposition-create.lifecycle.dry-run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Value mapping is declared through _call_planning_operation while the package semantic function owns mutation, validation, safety, and provenance.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
+        "minimization_tracking_issue": "#1657",
+        "stale_when": "Stale when portable generation can render and prove the call adapter while preserving package semantic ownership.",
+        "direct_edit_reasons_allowed": ["existing-primitive-bugfix", "new-primitive-implementation"]
       },
       {
         "binding_kind": "runtime-facade-call",

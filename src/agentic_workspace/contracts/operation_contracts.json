@@ -364,6 +364,12 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "planning.decomposition-create.lifecycle",
+      "path": "operations/planning.decomposition-create.lifecycle.json",
+      "command": "decomposition-create",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "planning.lane-promote.lifecycle",
       "path": "operations/planning.lane-promote.lifecycle.json",
       "command": "lane-promote",
