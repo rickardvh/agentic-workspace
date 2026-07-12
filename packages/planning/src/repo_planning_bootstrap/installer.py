@@ -11,7 +11,7 @@ import tomllib
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping, cast
+from typing import Any, Callable, Iterable, Mapping, cast
 
 from jsonschema import Draft202012Validator
 
@@ -6285,8 +6285,7 @@ def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: di
             warnings.append(_planning_state_v1_warning(bucket_path, f"ready item {item_id} requires handoff_ready = true."))
     if maturity == "active":
         surface = str(item.get("execplan") or item.get("surface") or item.get("path") or "").strip()
-        is_active_lane_owner = bucket_path == "roadmap.lanes" and surface.endswith(".lane.json")
-        if not surface or (not _surface_execplan_reference(surface) and not is_active_lane_owner):
+        if not surface or not _surface_execplan_reference(surface):
             warnings.append(
                 _planning_state_v1_warning(
                     bucket_path,
@@ -10481,8 +10480,19 @@ def create_lane_record(
         result.add("would update", target_root / PLANNING_STATE_PATH, f"index lane '{slug}' in roadmap.lanes")
         _add_planning_mutation_proof_actions(result)
         return result
-    _write_lane_record(record_path=record_path, record=record)
-    _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+
+    def write_lane_and_state() -> None:
+        _write_lane_record(record_path=record_path, record=record)
+        _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+
+    try:
+        _apply_planning_writes_atomically(
+            [record_path, target_root / PLANNING_STATE_PATH],
+            write_lane_and_state,
+        )
+    except OSError as exc:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, f"lane creation rolled back after write failure: {exc}")
+        return result
     result.add("created", record_path, "schema-valid lane record")
     result.add("updated", target_root / PLANNING_STATE_PATH, f"indexed lane '{slug}' in roadmap.lanes")
     _add_planning_mutation_proof_actions(result)
@@ -10543,10 +10553,22 @@ def promote_decomposition_lane_to_lane_record(
         updated_record["candidate_lanes"] = updated_lanes
         if dry_run:
             result.add("would update", matched_path, f"link decomposition lane '{lane_id}' to existing compatible owner")
+            result.add("would update", target_root / PLANNING_STATE_PATH, f"reconciled lane '{slug}' in roadmap.lanes")
             _add_planning_mutation_proof_actions(result)
             return result
-        matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8", newline="\n")
-        _upsert_roadmap_lane_state(target_root, existing_record, lane_relative=lane_relative)
+
+        def link_owner_and_state() -> None:
+            matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8", newline="\n")
+            _upsert_roadmap_lane_state(target_root, existing_record, lane_relative=lane_relative)
+
+        try:
+            _apply_planning_writes_atomically(
+                [matched_path, target_root / PLANNING_STATE_PATH],
+                link_owner_and_state,
+            )
+        except OSError as exc:
+            result.add("manual review", target_root / PLANNING_STATE_PATH, f"lane promotion rolled back after write failure: {exc}")
+            return result
         result.add("updated", matched_path, f"linked decomposition lane '{lane_id}' to existing compatible owner")
         result.add("updated", target_root / PLANNING_STATE_PATH, f"reconciled lane '{slug}' in roadmap.lanes")
         _add_planning_mutation_proof_actions(result)
@@ -10589,9 +10611,20 @@ def promote_decomposition_lane_to_lane_record(
         result.add("would update", target_root / PLANNING_STATE_PATH, f"index lane '{slug}' in roadmap.lanes")
         _add_planning_mutation_proof_actions(result)
         return result
-    _write_lane_record(record_path=record_path, record=record)
-    matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8", newline="\n")
-    _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+
+    def write_lane_promotion_and_state() -> None:
+        _write_lane_record(record_path=record_path, record=record)
+        matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8", newline="\n")
+        _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+
+    try:
+        _apply_planning_writes_atomically(
+            [record_path, matched_path, target_root / PLANNING_STATE_PATH],
+            write_lane_promotion_and_state,
+        )
+    except OSError as exc:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, f"lane promotion rolled back after write failure: {exc}")
+        return result
     result.add("created", record_path, "schema-valid lane record from decomposition lane")
     result.add("updated", matched_path, f"marked decomposition lane '{lane_id}' as promoted")
     result.add("updated", target_root / PLANNING_STATE_PATH, f"indexed lane '{slug}' in roadmap.lanes")
@@ -18308,6 +18341,22 @@ def _write_state_to_toml(target_root: Path, state: dict[str, Any]) -> None:
     state_path = target_root / PLANNING_STATE_PATH
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text("\n".join(_state_to_toml_lines(state)), encoding="utf-8", newline="\n")
+
+
+def _apply_planning_writes_atomically(paths: list[Path], apply: Callable[[], None]) -> None:
+    """Restore every affected Planning surface when a multi-file mutation fails."""
+    snapshots = {path: path.read_bytes() if path.exists() else None for path in paths}
+    try:
+        apply()
+    except Exception:
+        for path, original in snapshots.items():
+            if original is None:
+                if path.exists():
+                    path.unlink()
+            else:
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(original)
+        raise
 
 
 def _merge_todo_state_from_toml_lines(state: dict[str, Any], lines: list[str]) -> dict[str, Any]:

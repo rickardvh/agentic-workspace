@@ -144,12 +144,75 @@ def test_promote_decomposition_lane_reuses_matching_owner(tmp_path: Path) -> Non
     decomposition_path = tmp_path / ".agentic-workspace/planning/decompositions/parent.decomposition.json"
     _write_decomposition(decomposition_path)
     promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    before_decomposition = decomposition_path.read_bytes()
+    before_state = state_path.read_bytes()
+
+    dry_run = promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path, dry_run=True)
+
+    assert [action.kind for action in dry_run.actions] == ["would update", "would update", "proof", "proof"]
+    assert decomposition_path.read_bytes() == before_decomposition
+    assert state_path.read_bytes() == before_state
 
     result = promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
 
     assert [action.kind for action in result.actions] == ["updated", "updated", "proof", "proof"]
     warnings = planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"]
     assert not [warning for warning in warnings if warning["warning_class"] == "planning_state_v1_schema"]
+
+
+def test_lane_create_rolls_back_when_state_write_fails(tmp_path: Path, monkeypatch) -> None:
+    install_bootstrap(target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    before_state = state_path.read_bytes()
+
+    def fail_state_write(*_args, **_kwargs) -> None:
+        raise OSError("injected state write failure")
+
+    monkeypatch.setattr("repo_planning_bootstrap.installer._write_state_to_toml", fail_state_write)
+    result = create_lane_record(lane_id="atomic-lane", title="Atomic Lane", target=tmp_path)
+
+    assert [action.kind for action in result.actions] == ["manual review"]
+    assert not (tmp_path / ".agentic-workspace/planning/lanes/atomic-lane.lane.json").exists()
+    assert state_path.read_bytes() == before_state
+
+
+def test_lane_promotion_rolls_back_every_surface_when_state_write_fails(tmp_path: Path, monkeypatch) -> None:
+    decomposition_path = tmp_path / ".agentic-workspace/planning/decompositions/parent.decomposition.json"
+    _write_decomposition(decomposition_path)
+    install_bootstrap(target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    before_decomposition = decomposition_path.read_bytes()
+    before_state = state_path.read_bytes()
+
+    def fail_state_write(*_args, **_kwargs) -> None:
+        raise OSError("injected state write failure")
+
+    monkeypatch.setattr("repo_planning_bootstrap.installer._write_state_to_toml", fail_state_write)
+    result = promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
+
+    assert [action.kind for action in result.actions] == ["manual review"]
+    assert not (tmp_path / ".agentic-workspace/planning/lanes/lane-artifacts.lane.json").exists()
+    assert decomposition_path.read_bytes() == before_decomposition
+    assert state_path.read_bytes() == before_state
+
+
+def test_lane_promotion_rejects_incompatible_owner_without_mutating_it(tmp_path: Path) -> None:
+    decomposition_path = tmp_path / ".agentic-workspace/planning/decompositions/parent.decomposition.json"
+    _write_decomposition(decomposition_path)
+    create_lane_record(lane_id="lane-artifacts", title="Different Owner", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/lane-artifacts.lane.json"
+    before_lane = lane_path.read_bytes()
+
+    result = promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
+
+    assert [action.kind for action in result.actions] == ["manual review"]
+    assert result.conflict_owner == ".agentic-workspace/planning/lanes/lane-artifacts.lane.json"
+    assert "lane-activate lane-artifacts" in result.recovery_command
+    assert lane_path.read_bytes() == before_lane
+    candidate = json.loads(decomposition_path.read_text(encoding="utf-8"))["candidate_lanes"][0]
+    assert candidate["readiness"] == "ready"
+    assert candidate["owner_surface"] == ""
 
 
 def test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_clean(tmp_path: Path) -> None:
