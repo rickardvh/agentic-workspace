@@ -328,6 +328,10 @@ def _patch_workspace_typescript_sample_command_test(
         "assert.deepEqual(packageJson.files, ['src', 'resources', 'external_consumer_profile.json', 'external_contract_bundle.json']);",
     )
     content = content.replace(
+        "assert.match(result.stderr, /Unsupported generated command: __unsupported__/);",
+        "assert.match(result.stderr, /TypeScript CLI validation failed: unknown command __unsupported__/);",
+    )
+    content = content.replace(
         f'[{json.dumps(sample_command)}, "--format", "json"]',
         f"[...{rendered_sample_path}, \"--format\", \"json\"]",
     )
@@ -376,23 +380,22 @@ def _patch_typescript_strict_preflight_gate(output: GeneratedOutput, *, repo_roo
         return output
     if "Strict preflight gate is enabled." in output.content:
         return output
+    invocation = "  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);\n"
+    normalized_invocation = (
+        "  const invocation = parseInvocation(commandDefinitionByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);\n"
+    )
+    selected_invocation = normalized_invocation if normalized_invocation in output.content else invocation
     anchor = (
-        "function maybeRunNativeOperation() {\n"
-        "  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);\n"
-        "  const operationId = invocation.operationRef?.id;\n"
-        "  const operationPath = invocation.operationRef?.path;\n"
-        "  try {\n"
+        selected_invocation
+        + "  const operationId = invocation.operationRef?.id;\n"
+        + "  const operationPath = invocation.operationRef?.path;\n"
     )
     inserted = (
-        "function maybeRunNativeOperation() {\n"
-        "  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);\n"
-        "  const operationId = invocation.operationRef?.id;\n"
-        "  const operationPath = invocation.operationRef?.path;\n"
-        "  if (invocation.values.strict_preflight && !invocation.values.preflight_token) {\n"
+        anchor
+        + "  if (invocation.values.strict_preflight && !invocation.values.preflight_token) {\n"
         "    console.error(\"Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.\");\n"
         "    process.exit(2);\n"
         "  }\n"
-        "  try {\n"
     )
     if anchor not in output.content:
         return output
@@ -699,17 +702,29 @@ function normalizedCommandTokens(tokens, path) {{
   return remaining;
 }}
 
+function closestAuthoritativeChoice(token, choices) {{
+  if (!token || !choices.length) return '';
+  const distance = (left, right) => {{
+    const rows = Array.from({{ length: left.length + 1 }}, (_, index) => [index]);
+    for (let column = 0; column <= right.length; column += 1) rows[0][column] = column;
+    for (let row = 1; row <= left.length; row += 1) {{
+      for (let column = 1; column <= right.length; column += 1) {{
+        rows[row][column] = left[row - 1] === right[column - 1]
+          ? rows[row - 1][column - 1]
+          : 1 + Math.min(rows[row - 1][column], rows[row][column - 1], rows[row - 1][column - 1]);
+      }}
+    }}
+    return rows[left.length][right.length];
+  }};
+  return choices.reduce((best, candidate) => distance(token, candidate) < distance(token, best) ? candidate : best, choices[0]);
+}}
+
 function failValidation(message, path = []) {{
   const unknown = /^unknown command ([^ ]+)/.exec(message)?.[1] ?? '';
-  if (!path.length && unknown) {{
-    console.error(`Unsupported generated command: ${{unknown}}`);
-    console.error(`Recovery: run ${{generatedProgram}} --help and choose a supported generated command or valid option.`);
-    process.exit(2);
-  }}
   const choices = path.length
     ? interfaceSubcommands(authoritativeInterface(path)).map((candidate) => candidate.name)
     : commandDefinitions.map((definition) => definition.name);
-  const suggestion = unknown ? choices.find((candidate) => candidate.startsWith(unknown)) ?? choices.find((candidate) => candidate[0] === unknown[0]) : '';
+  const suggestion = unknown ? closestAuthoritativeChoice(unknown, choices) : '';
   const suggestedCommand = suggestion ? canonicalRecovery(path, unknown, suggestion) : '';
   const payload = {{
     kind: `${{generatedProgram}}/retryable-cli-error/v1`,

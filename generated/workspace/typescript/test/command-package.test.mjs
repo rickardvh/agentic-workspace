@@ -96,6 +96,6 @@ test('generated runnable adapter rejects unsupported commands with recovery guid
   const result = spawnSync(process.execPath, [cli, '__unsupported__'], { encoding: 'utf8' });
   assert.equal(result.status, 2);
   assert.equal(result.stdout, '');
-  assert.match(result.stderr, /Unsupported generated command: __unsupported__/);
+  assert.match(result.stderr, /TypeScript CLI validation failed: unknown command __unsupported__/);
   assert.match(result.stderr, /Recovery:/);
 });

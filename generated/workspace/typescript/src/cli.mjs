@@ -4400,17 +4400,29 @@ function normalizedCommandTokens(tokens, path) {
   return remaining;
 }
 
+function closestAuthoritativeChoice(token, choices) {
+  if (!token || !choices.length) return '';
+  const distance = (left, right) => {
+    const rows = Array.from({ length: left.length + 1 }, (_, index) => [index]);
+    for (let column = 0; column <= right.length; column += 1) rows[0][column] = column;
+    for (let row = 1; row <= left.length; row += 1) {
+      for (let column = 1; column <= right.length; column += 1) {
+        rows[row][column] = left[row - 1] === right[column - 1]
+          ? rows[row - 1][column - 1]
+          : 1 + Math.min(rows[row - 1][column], rows[row][column - 1], rows[row - 1][column - 1]);
+      }
+    }
+    return rows[left.length][right.length];
+  };
+  return choices.reduce((best, candidate) => distance(token, candidate) < distance(token, best) ? candidate : best, choices[0]);
+}
+
 function failValidation(message, path = []) {
   const unknown = /^unknown command ([^ ]+)/.exec(message)?.[1] ?? '';
-  if (!path.length && unknown) {
-    console.error(`Unsupported generated command: ${unknown}`);
-    console.error(`Recovery: run ${generatedProgram} --help and choose a supported generated command or valid option.`);
-    process.exit(2);
-  }
   const choices = path.length
     ? interfaceSubcommands(authoritativeInterface(path)).map((candidate) => candidate.name)
     : commandDefinitions.map((definition) => definition.name);
-  const suggestion = unknown ? choices.find((candidate) => candidate.startsWith(unknown)) ?? choices.find((candidate) => candidate[0] === unknown[0]) : '';
+  const suggestion = unknown ? closestAuthoritativeChoice(unknown, choices) : '';
   const suggestedCommand = suggestion ? canonicalRecovery(path, unknown, suggestion) : '';
   const payload = {
     kind: `${generatedProgram}/retryable-cli-error/v1`,
@@ -4613,6 +4625,10 @@ function maybeRunNativeOperation() {
   const invocation = parseInvocation(commandDefinitionByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);
   const operationId = invocation.operationRef?.id;
   const operationPath = invocation.operationRef?.path;
+  if (invocation.values.strict_preflight && !invocation.values.preflight_token) {
+    console.error("Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.");
+    process.exit(2);
+  }
   try {
     const nativeStatus = runNativeOperation(operationId, operationPath, invocation.values);
     process.exit(nativeStatus);

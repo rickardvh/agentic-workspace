@@ -142,6 +142,35 @@ def test_generated_typescript_recovery_is_ir_derived_and_round_trips(module: str
     assert rerun.returncode == 0, rerun.stdout + rerun.stderr
 
 
+def test_generated_typescript_root_recovery_round_trips() -> None:
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", "statuz", "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 2
+    suggested = json.loads(result.stdout)["suggested_command"]
+    assert suggested.startswith("agentic-workspace status")
+    rerun = subprocess.run(shlex.split(suggested), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False)
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
+
+
+def test_generated_typescript_strict_preflight_refuses_without_token() -> None:
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", "upgrade", "--dry-run", "--strict-preflight", "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 2
+    assert "Strict preflight gate is enabled" in result.stderr
+
+
 def test_generated_python_recovery_uses_command_ir_not_parser_error_choices() -> None:
     generated_cli = (Path.cwd() / "generated/workspace/python/cli.py").read_text(encoding="utf-8")
     assert "_extract_command_choices" not in generated_cli
