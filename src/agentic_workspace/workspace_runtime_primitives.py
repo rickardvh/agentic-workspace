@@ -39648,6 +39648,8 @@ def _selected_runtime_context(
 
 
 def _run_report_combined_adapter(args: argparse.Namespace) -> int:
+    if getattr(args, "verbose", False) and getattr(args, "section", None):
+        raise WorkspaceUsageError("report detail selectors are mutually exclusive; use either --verbose or --section.")
     target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="report")
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="report", config=config):
         _emit_payload(payload=disabled_payload, format_name=args.format)

@@ -69,6 +69,20 @@ def test_json_payload_budget_failure_reports_largest_contributors() -> None:
     assert "context.large" in message
 
 
+def test_report_selector_conflict_fails_before_runtime_context(monkeypatch, capsys) -> None:
+    def fail_if_called(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("report runtime context must not be assembled for invalid selectors")
+
+    monkeypatch.setattr(cli, "_selected_runtime_context", fail_if_called)
+
+    with pytest.raises(SystemExit, match="2"):
+        cli.main(["report", "--verbose", "--section", "agent_aids", "--format", "json"])
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["failure_class"] == "selector-conflict"
+    assert "report detail selectors are mutually exclusive" in payload["message"]
+
+
 def test_state_delta_packet_views_derive_from_shared_core() -> None:
     from agentic_workspace.reporting_support import (
         continuation_capsule_payload,
