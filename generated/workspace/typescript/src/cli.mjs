@@ -4377,9 +4377,100 @@ function printInterfaceHelp(path, iface) {
   }
 }
 
-function failValidation(message) {
-  console.error(`TypeScript CLI validation failed: ${message}`);
-  console.error('Recovery: run agentic-workspace --help and choose a supported generated command or valid option.');
+const generatedProgram = "agentic-workspace";
+
+function authoritativeInterface(path) {
+  let current = commandDefinitionByName.get(path[0])?.interface;
+  for (const token of path.slice(1)) {
+    current = interfaceSubcommands(current).find((candidate) => candidate.name === token);
+  }
+  return current;
+}
+
+function canonicalRecovery(path, unknown, replacement) {
+  const candidatePath = [...path, replacement];
+  if (interfaceRequiresHelp(authoritativeInterface(candidatePath))) return [generatedProgram, ...candidatePath, '--help'].map(shellQuote).join(' ');
+  let remaining = argv.slice(path.length);
+  while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
+  remaining = remaining.map((token) => token === unknown ? replacement : token);
+  return [generatedProgram, ...path, ...remaining].map(shellQuote).join(' ');
+}
+
+function shellQuote(token) {
+  const value = String(token);
+  return /^[A-Za-z0-9_@%+=:,./-]+$/.test(value) ? value : `'${value.replace(/'/g, `'"'"'`)}'`;
+}
+
+function normalizedCommandTokens(tokens, path) {
+  let remaining = [...tokens];
+  while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
+  return remaining;
+}
+
+function interfaceRequiresHelp(iface) {
+  if (!iface) return false;
+  if (interfaceSubcommands(iface).length && iface.subcommands_required !== false) return true;
+  if (interfaceArguments(iface).some((argument) => argument.nargs !== '?' && !Object.prototype.hasOwnProperty.call(argument, 'default'))) return true;
+  return interfaceOptions(iface).some((option) => option.required === true);
+}
+
+function closestAuthoritativeChoice(token, choices) {
+  if (!token || !choices.length) return '';
+  const distance = (left, right) => {
+    const rows = Array.from({ length: left.length + 1 }, (_, index) => [index]);
+    for (let column = 0; column <= right.length; column += 1) rows[0][column] = column;
+    for (let row = 1; row <= left.length; row += 1) {
+      for (let column = 1; column <= right.length; column += 1) {
+        rows[row][column] = left[row - 1] === right[column - 1]
+          ? rows[row - 1][column - 1]
+          : 1 + Math.min(rows[row - 1][column], rows[row][column - 1], rows[row - 1][column - 1]);
+      }
+    }
+    return rows[left.length][right.length];
+  };
+  const subsequence = (left, right) => {
+    const rows = Array.from({ length: left.length + 1 }, () => Array(right.length + 1).fill(0));
+    for (let row = 1; row <= left.length; row += 1) {
+      for (let column = 1; column <= right.length; column += 1) {
+        rows[row][column] = left[row - 1] === right[column - 1]
+          ? rows[row - 1][column - 1] + 1
+          : Math.max(rows[row - 1][column], rows[row][column - 1]);
+      }
+    }
+    return rows[left.length][right.length];
+  };
+  const best = choices.reduce((current, candidate) => {
+    const candidateDistance = distance(token, candidate);
+    const currentDistance = distance(token, current);
+    return candidateDistance < currentDistance || (candidateDistance === currentDistance && subsequence(token, candidate) > subsequence(token, current)) ? candidate : current;
+  }, choices[0]);
+  const similarity = 1 - distance(token, best) / Math.max(token.length, best.length, 1);
+  return similarity >= 0.55 ? best : '';
+}
+
+function failValidation(message, path = []) {
+  const unknown = /^unknown command ([^ ]+)/.exec(message)?.[1] ?? '';
+  const choices = path.length
+    ? interfaceSubcommands(authoritativeInterface(path)).map((candidate) => candidate.name)
+    : commandDefinitions.map((definition) => definition.name);
+  const suggestion = unknown ? closestAuthoritativeChoice(unknown, choices) : '';
+  const suggestedCommand = suggestion ? canonicalRecovery(path, unknown, suggestion) : '';
+  const payload = {
+    kind: `${generatedProgram}/retryable-cli-error/v1`,
+    exit_status: 2,
+    failure_class: unknown ? 'invalid-command' : 'usage-error',
+    safe_to_retry: Boolean(suggestedCommand) || !unknown,
+    message,
+    suggested_command: suggestedCommand,
+    alternatives: [],
+  };
+  if (argv.includes('--format') && argv[argv.indexOf('--format') + 1] === 'json') {
+    console.log(JSON.stringify(payload, null, 2));
+  } else {
+    console.error(`TypeScript CLI validation failed: ${message}`);
+    if (suggestedCommand) console.error(`Did you mean: ${suggestedCommand}`);
+    console.error(`Recovery: run ${generatedProgram} --help and choose a supported generated command or valid option.`);
+  }
   process.exit(2);
 }
 
@@ -4445,6 +4536,7 @@ function validateInterface(iface, tokens, path) {
       validateInterface(subcommand, tokens.slice(index + 1), [...path, token]);
       return;
     }
+    if (interfaceSubcommands(iface).length) failValidation(`unknown command ${token} for ${path.join(' ')}`, path);
     positional.push(token);
     index += 1;
   }
@@ -4540,6 +4632,7 @@ function parseInvocation(definition, tokens, path) {
       if (iface.subcommand_dest) nested.values[iface.subcommand_dest] = token;
       return nested;
     }
+    if (interfaceSubcommands(iface).length) failValidation(`unknown command ${token} for ${path.join(' ')}`, path);
     positional.push(token);
     index += 1;
   }
@@ -4560,7 +4653,7 @@ function runNativeOperation(operationId, operationPath, values) {
 }
 
 function maybeRunNativeOperation() {
-  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);
+  const invocation = parseInvocation(commandDefinitionByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);
   const operationId = invocation.operationRef?.id;
   const operationPath = invocation.operationRef?.path;
   if (invocation.values.strict_preflight && !invocation.values.preflight_token) {
@@ -4583,11 +4676,9 @@ if (!command || command === '--help' || command === '-h') {
 }
 
 if (!supportedCommands.has(command)) {
-  console.error(`Unsupported generated command: ${command}`);
-  console.error('Recovery: run agentic-workspace --help and choose one of the supported generated commands.');
-  process.exit(2);
+  failValidation(`unknown command ${command}`, []);
 }
 
-validateInterface(commandByName.get(command), argv.slice(1), [command]);
+validateInterface(commandByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);
 
 maybeRunNativeOperation();

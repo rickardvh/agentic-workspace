@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+import shlex
+import shutil
 import subprocess
 from pathlib import Path
+
+import pytest
 
 from agentic_workspace import cli as source_cli
 
@@ -101,7 +105,160 @@ def test_blackbox_module_cli_retryable_error_kind_uses_module_namespace() -> Non
     assert result.returncode == 2
     payload = json.loads(result.stdout)
     assert payload["kind"] == "agentic-memory/retryable-cli-error/v1"
+
+
+@pytest.mark.parametrize(("module", "misspelled", "expected"), [("memory", "rout", "route"), ("planning", "repor", "report")])
+def test_nested_module_recovery_is_canonical_and_executable(module: str, misspelled: str, expected: str) -> None:
+    result = _run_cli(module, module, misspelled, "--target", ".", "--format", "json", cwd=Path.cwd())
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    suggested = payload["suggested_command"]
+    assert suggested.startswith(f"agentic-workspace {module} {expected}")
+    assert f"{module} {module}" not in suggested
+
+    rerun = subprocess.run(shlex.split(suggested), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False)
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
     assert payload["failure_class"] == "invalid-command"
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for generated TypeScript recovery proof")
+@pytest.mark.parametrize(("module", "misspelled", "expected"), [("memory", "rout", "route"), ("planning", "repor", "report")])
+def test_generated_typescript_recovery_is_ir_derived_and_round_trips(module: str, misspelled: str, expected: str) -> None:
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", module, module, misspelled, "--target", ".", "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    suggested = payload["suggested_command"]
+    assert suggested.startswith(f"agentic-workspace {module} {expected}")
+    assert f"{module} {module}" not in suggested
+
+    rerun = subprocess.run(shlex.split(suggested), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False)
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
+
+
+def test_generated_typescript_root_recovery_round_trips() -> None:
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", "statuz", "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 2
+    suggested = json.loads(result.stdout)["suggested_command"]
+    assert suggested.startswith("agentic-workspace status")
+    rerun = subprocess.run(shlex.split(suggested), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False)
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
+
+
+def test_generated_recovery_routes_required_root_structure_to_help() -> None:
+    argv = ["checkpoin", "--format", "json"]
+    python_result = _run_cli(*argv, cwd=Path.cwd())
+    typescript_result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", *argv],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    python_payload = json.loads(python_result.stdout)
+    typescript_payload = json.loads(typescript_result.stdout)
+    assert python_payload["suggested_command"] == typescript_payload["suggested_command"] == "agentic-workspace checkpoint --help"
+    assert python_payload["safe_to_retry"] is typescript_payload["safe_to_retry"] is True
+    rerun = subprocess.run(
+        shlex.split(python_payload["suggested_command"]), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False
+    )
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
+
+
+def test_generated_typescript_unrelated_root_typo_has_no_unsafe_recovery() -> None:
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", "zzzzzz", "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    assert payload["suggested_command"] == ""
+    assert payload["safe_to_retry"] is False
+
+
+def test_generated_typescript_nested_recovery_preserves_spaced_argument(tmp_path: Path) -> None:
+    target = tmp_path / "target with spaces"
+    target.mkdir()
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", "memory", "memory", "rout", "--target", str(target), "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 2
+    suggested = json.loads(result.stdout)["suggested_command"]
+    assert str(target) in suggested
+    rerun = subprocess.run(shlex.split(suggested), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False)
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["statuz", "--format", "json"],
+        ["stauts", "--format", "json"],
+        ["zzzzzz", "--format", "json"],
+        ["memory", "memory", "rout", "--target", ".", "--format", "json"],
+        ["planning", "planning", "repor", "--target", ".", "--format", "json"],
+    ],
+)
+def test_generated_python_and_typescript_recovery_match(argv: list[str]) -> None:
+    python_result = _run_cli(*argv, cwd=Path.cwd())
+    typescript_result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", *argv],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert python_result.returncode == typescript_result.returncode == 2
+    python_payload = json.loads(python_result.stdout)
+    typescript_payload = json.loads(typescript_result.stdout)
+    for field in ("suggested_command", "safe_to_retry", "failure_class"):
+        assert python_payload[field] == typescript_payload[field]
+    if argv[0] == "stauts":
+        assert python_payload["suggested_command"].startswith("agentic-workspace status")
+
+
+def test_generated_typescript_strict_preflight_refuses_without_token() -> None:
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", "upgrade", "--dry-run", "--strict-preflight", "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 2
+    assert "Strict preflight gate is enabled" in result.stderr
+
+
+def test_generated_python_recovery_uses_command_ir_not_parser_error_choices() -> None:
+    generated_cli = (Path.cwd() / "generated/workspace/python/cli.py").read_text(encoding="utf-8")
+    assert "_extract_command_choices" not in generated_cli
+    assert "_authoritative_command_authority(argv)" in generated_cli
+    assert "_authoritative_command_choices(authority)" in generated_cli
 
 
 def test_blackbox_memory_route_task_misuse_guides_to_memory_consult() -> None:

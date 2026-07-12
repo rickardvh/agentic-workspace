@@ -328,6 +328,10 @@ def _patch_workspace_typescript_sample_command_test(
         "assert.deepEqual(packageJson.files, ['src', 'resources', 'external_consumer_profile.json', 'external_contract_bundle.json']);",
     )
     content = content.replace(
+        "assert.match(result.stderr, /Unsupported generated command: __unsupported__/);",
+        "assert.match(result.stderr, /TypeScript CLI validation failed: unknown command __unsupported__/);",
+    )
+    content = content.replace(
         f'[{json.dumps(sample_command)}, "--format", "json"]',
         f"[...{rendered_sample_path}, \"--format\", \"json\"]",
     )
@@ -376,23 +380,22 @@ def _patch_typescript_strict_preflight_gate(output: GeneratedOutput, *, repo_roo
         return output
     if "Strict preflight gate is enabled." in output.content:
         return output
+    invocation = "  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);\n"
+    normalized_invocation = (
+        "  const invocation = parseInvocation(commandDefinitionByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);\n"
+    )
+    selected_invocation = normalized_invocation if normalized_invocation in output.content else invocation
     anchor = (
-        "function maybeRunNativeOperation() {\n"
-        "  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);\n"
-        "  const operationId = invocation.operationRef?.id;\n"
-        "  const operationPath = invocation.operationRef?.path;\n"
-        "  try {\n"
+        selected_invocation
+        + "  const operationId = invocation.operationRef?.id;\n"
+        + "  const operationPath = invocation.operationRef?.path;\n"
     )
     inserted = (
-        "function maybeRunNativeOperation() {\n"
-        "  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);\n"
-        "  const operationId = invocation.operationRef?.id;\n"
-        "  const operationPath = invocation.operationRef?.path;\n"
-        "  if (invocation.values.strict_preflight && !invocation.values.preflight_token) {\n"
+        anchor
+        + "  if (invocation.values.strict_preflight && !invocation.values.preflight_token) {\n"
         "    console.error(\"Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.\");\n"
         "    process.exit(2);\n"
         "  }\n"
-        "  try {\n"
     )
     if anchor not in output.content:
         return output
@@ -460,6 +463,7 @@ def _patch_python_structured_usage_errors(output: GeneratedOutput, *, repo_root:
     if not relative.startswith("generated/") or not relative.endswith("/python/cli.py"):
         return output
     content = output.content
+    content = content.replace("import difflib\n", "", 1)
     content = content.replace("import json\n", "import json\nimport shlex\n", 1)
     old_error = """    def error(self, message: str) -> None:
         for hint in getattr(self, '_generated_usage_error_hints', []):
@@ -495,10 +499,14 @@ def _patch_python_structured_usage_errors(output: GeneratedOutput, *, repo_root:
                     message = f"{message}\\n{hint_text}"
         if 'invalid choice' in message and 'command' in message:
             unknown = _extract_unknown_command(message)
-            suggestions = difflib.get_close_matches(unknown, generated_command_names(), n=1, cutoff=0.55)
-            if suggestions:
-                message = f"{message}\\nDid you mean: {', '.join(suggestions)}?"
-                suggested_command = _command_with_replaced_token(self.prog, argv, unknown, suggestions[0])
+            authority = _authoritative_command_authority(argv)
+            recovery_token = _recovery_token(argv, authority, unknown)
+            suggestion = _closest_authoritative_choice(recovery_token, _authoritative_command_choices(authority))
+            if suggestion:
+                message = f"{message}\\nDid you mean: {suggestion}?"
+                suggested_command = _canonical_recovery_command(argv, authority, recovery_token, suggestion)
+            elif unknown in authority:
+                suggested_command = _canonical_recovery_command(argv, authority, unknown, unknown)
             if 'start' in _GENERATED_COMMANDS_BY_NAME and 'preflight' in _GENERATED_COMMANDS_BY_NAME:
                 message = (
                     f"{message}\\nStartup tip: run '{self.prog} start --task \\"<task>\\" --format json' "
@@ -553,6 +561,108 @@ def _command_with_replaced_token(prog: str, argv: list[str], old: str, new: str)
     return f"{prog} {shlex.join(replaced)}"
 
 
+def _recovery_token(argv: list[str], authority: list[str], unknown: str) -> str:
+    remaining = list(argv)
+    while authority and remaining[:len(authority)] == authority:
+        remaining = remaining[len(authority):]
+    if unknown in authority and remaining:
+        return remaining[0]
+    return unknown
+
+
+def _authoritative_command_authority(argv: list[str]) -> list[str]:
+    current: dict[str, Any] | None = None
+    authority: list[str] = []
+    for token in argv:
+        choices = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS] if current is None else current.get('subcommands', [])
+        next_interface = next(
+            (item for item in choices if isinstance(item, dict) and str(item.get('name', '')) == token),
+            None,
+        )
+        if next_interface is None:
+            break
+        authority.append(token)
+        current = next_interface
+    return authority
+
+
+def _authoritative_command_choices(authority: list[str]) -> list[str]:
+    # Read the active command surface from generated command IR, never parser prose.
+    interfaces = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS]
+    current: dict[str, Any] | None = None
+    for token in authority:
+        choices = interfaces if current is None else current.get('subcommands', [])
+        current = next(
+            (item for item in choices if isinstance(item, dict) and str(item.get('name', '')) == token),
+            None,
+        )
+        if current is None:
+            return []
+    choices = interfaces if current is None else current.get('subcommands', [])
+    return [str(item.get('name', '')) for item in choices if isinstance(item, dict) and str(item.get('name', '')).strip()]
+
+
+def _authoritative_command_interface(authority: list[str]) -> dict[str, Any] | None:
+    interfaces = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS]
+    current: dict[str, Any] | None = None
+    for token in authority:
+        choices = interfaces if current is None else current.get('subcommands', [])
+        current = next(
+            (item for item in choices if isinstance(item, dict) and str(item.get('name', '')) == token),
+            None,
+        )
+        if current is None:
+            return None
+    return current
+
+
+def _interface_requires_help(interface: dict[str, Any] | None) -> bool:
+    if not isinstance(interface, dict):
+        return False
+    subcommands = interface.get('subcommands', [])
+    if isinstance(subcommands, list) and subcommands and interface.get('subcommands_required') is not False:
+        return True
+    arguments = interface.get('arguments', [])
+    if isinstance(arguments, list) and any(isinstance(argument, dict) and argument.get('nargs') != '?' and 'default' not in argument for argument in arguments):
+        return True
+    options = interface.get('options', [])
+    return isinstance(options, list) and any(isinstance(option, dict) and option.get('required') is True for option in options)
+
+
+def _closest_authoritative_choice(token: str, choices: list[str]) -> str:
+    if not token or not choices:
+        return ''
+    def distance(left: str, right: str) -> int:
+        rows = list(range(len(right) + 1))
+        for left_index, left_character in enumerate(left, start=1):
+            next_rows = [left_index]
+            for right_index, right_character in enumerate(right, start=1):
+                next_rows.append(min(rows[right_index] + 1, next_rows[right_index - 1] + 1, rows[right_index - 1] + (left_character != right_character)))
+            rows = next_rows
+        return rows[-1]
+    def subsequence(left: str, right: str) -> int:
+        rows = [[0] * (len(right) + 1) for _ in range(len(left) + 1)]
+        for left_index, left_character in enumerate(left, start=1):
+            for right_index, right_character in enumerate(right, start=1):
+                rows[left_index][right_index] = rows[left_index - 1][right_index - 1] + 1 if left_character == right_character else max(rows[left_index - 1][right_index], rows[left_index][right_index - 1])
+        return rows[-1][-1]
+    best = min(choices, key=lambda candidate: (distance(token, candidate), -subsequence(token, candidate)))
+    similarity = 1 - distance(token, best) / max(len(token), len(best), 1)
+    return best if similarity >= 0.55 else ''
+
+
+def _canonical_recovery_command(argv: list[str], authority: list[str], old: str, new: str) -> str:
+    root = str(GENERATED_COMMAND_PACKAGE.get('program') or 'agentic-workspace')
+    candidate_authority = [*authority, new]
+    if _interface_requires_help(_authoritative_command_interface(candidate_authority)):
+        return shlex.join([root, *candidate_authority, '--help'])
+    remaining = list(argv)
+    while authority and remaining[:len(authority)] == authority:
+        remaining = remaining[len(authority):]
+    replaced = [new if token == old else token for token in remaining]
+    return shlex.join([root, *authority, *replaced])
+
+
 def _is_selector_conflict(argv: list[str], message: str) -> bool:
     return (
         ('--verbose' in argv and '--section' in argv)
@@ -587,7 +697,7 @@ def _retryable_cli_error_payload(
         'exit_status': 2,
         'input_command': f"{prog} {shlex.join(argv)}",
         'failure_class': failure_class,
-        'safe_to_retry': True,
+        'safe_to_retry': bool(suggested_command) or failure_class != 'invalid-command',
         'message': message,
         'suggested_command': suggested_command,
         'alternatives': alternatives,
@@ -595,7 +705,8 @@ def _retryable_cli_error_payload(
 
 
 def _retryable_cli_error_kind(prog: str) -> str:
-    namespace = prog if prog.startswith('agentic-') else 'agentic-workspace'
+    root_prog = prog.split()[0]
+    namespace = root_prog if root_prog.startswith('agentic-') else 'agentic-workspace'
     return f"{namespace}/retryable-cli-error/v1"
 
 
@@ -604,6 +715,140 @@ def _argv_contains_sequence(argv: list[str], sequence: Any) -> bool:
     if old_helpers not in content:
         return output
     return GeneratedOutput(output.path, content.replace(old_helpers, new_helpers))
+
+
+def _patch_typescript_structured_usage_errors(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    relative = path.relative_to(repo_root).as_posix()
+    if not relative.startswith("generated/") or not relative.endswith("/typescript/src/cli.mjs"):
+        return output
+    program_marker = "// Program: "
+    if program_marker not in output.content:
+        return output
+    program = output.content.split(program_marker, 1)[1].split("\n", 1)[0].strip()
+    old_validation = """function failValidation(message) {
+  console.error(`TypeScript CLI validation failed: ${message}`);
+  console.error('Recovery: run agentic-workspace --help and choose a supported generated command or valid option.');
+  process.exit(2);
+}
+"""
+    new_validation = f"""const generatedProgram = {json.dumps(program)};
+
+function authoritativeInterface(path) {{
+  let current = commandDefinitionByName.get(path[0])?.interface;
+  for (const token of path.slice(1)) {{
+    current = interfaceSubcommands(current).find((candidate) => candidate.name === token);
+  }}
+  return current;
+}}
+
+function canonicalRecovery(path, unknown, replacement) {{
+  const candidatePath = [...path, replacement];
+  if (interfaceRequiresHelp(authoritativeInterface(candidatePath))) return [generatedProgram, ...candidatePath, '--help'].map(shellQuote).join(' ');
+  let remaining = argv.slice(path.length);
+  while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
+  remaining = remaining.map((token) => token === unknown ? replacement : token);
+  return [generatedProgram, ...path, ...remaining].map(shellQuote).join(' ');
+}}
+
+function shellQuote(token) {{
+  const value = String(token);
+  return /^[A-Za-z0-9_@%+=:,./-]+$/.test(value) ? value : `'${{value.replace(/'/g, `'"'"'`)}}'`;
+}}
+
+function normalizedCommandTokens(tokens, path) {{
+  let remaining = [...tokens];
+  while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
+  return remaining;
+}}
+
+function interfaceRequiresHelp(iface) {{
+  if (!iface) return false;
+  if (interfaceSubcommands(iface).length && iface.subcommands_required !== false) return true;
+  if (interfaceArguments(iface).some((argument) => argument.nargs !== '?' && !Object.prototype.hasOwnProperty.call(argument, 'default'))) return true;
+  return interfaceOptions(iface).some((option) => option.required === true);
+}}
+
+function closestAuthoritativeChoice(token, choices) {{
+  if (!token || !choices.length) return '';
+  const distance = (left, right) => {{
+    const rows = Array.from({{ length: left.length + 1 }}, (_, index) => [index]);
+    for (let column = 0; column <= right.length; column += 1) rows[0][column] = column;
+    for (let row = 1; row <= left.length; row += 1) {{
+      for (let column = 1; column <= right.length; column += 1) {{
+        rows[row][column] = left[row - 1] === right[column - 1]
+          ? rows[row - 1][column - 1]
+          : 1 + Math.min(rows[row - 1][column], rows[row][column - 1], rows[row - 1][column - 1]);
+      }}
+    }}
+    return rows[left.length][right.length];
+  }};
+  const subsequence = (left, right) => {{
+    const rows = Array.from({{ length: left.length + 1 }}, () => Array(right.length + 1).fill(0));
+    for (let row = 1; row <= left.length; row += 1) {{
+      for (let column = 1; column <= right.length; column += 1) {{
+        rows[row][column] = left[row - 1] === right[column - 1]
+          ? rows[row - 1][column - 1] + 1
+          : Math.max(rows[row - 1][column], rows[row][column - 1]);
+      }}
+    }}
+    return rows[left.length][right.length];
+  }};
+  const best = choices.reduce((current, candidate) => {{
+    const candidateDistance = distance(token, candidate);
+    const currentDistance = distance(token, current);
+    return candidateDistance < currentDistance || (candidateDistance === currentDistance && subsequence(token, candidate) > subsequence(token, current)) ? candidate : current;
+  }}, choices[0]);
+  const similarity = 1 - distance(token, best) / Math.max(token.length, best.length, 1);
+  return similarity >= 0.55 ? best : '';
+}}
+
+function failValidation(message, path = []) {{
+  const unknown = /^unknown command ([^ ]+)/.exec(message)?.[1] ?? '';
+  const choices = path.length
+    ? interfaceSubcommands(authoritativeInterface(path)).map((candidate) => candidate.name)
+    : commandDefinitions.map((definition) => definition.name);
+  const suggestion = unknown ? closestAuthoritativeChoice(unknown, choices) : '';
+  const suggestedCommand = suggestion ? canonicalRecovery(path, unknown, suggestion) : '';
+  const payload = {{
+    kind: `${{generatedProgram}}/retryable-cli-error/v1`,
+    exit_status: 2,
+    failure_class: unknown ? 'invalid-command' : 'usage-error',
+    safe_to_retry: Boolean(suggestedCommand) || !unknown,
+    message,
+    suggested_command: suggestedCommand,
+    alternatives: [],
+  }};
+  if (argv.includes('--format') && argv[argv.indexOf('--format') + 1] === 'json') {{
+    console.log(JSON.stringify(payload, null, 2));
+  }} else {{
+    console.error(`TypeScript CLI validation failed: ${{message}}`);
+    if (suggestedCommand) console.error(`Did you mean: ${{suggestedCommand}}`);
+    console.error(`Recovery: run ${{generatedProgram}} --help and choose a supported generated command or valid option.`);
+  }}
+  process.exit(2);
+}}
+"""
+    if old_validation not in output.content:
+        return output
+    content = output.content.replace(old_validation, new_validation)
+    content = content.replace(
+        "    positional.push(token);\n    index += 1;",
+        "    if (interfaceSubcommands(iface).length) failValidation(`unknown command ${token} for ${path.join(' ')}`, path);\n    positional.push(token);\n    index += 1;",
+    )
+    content = content.replace(
+        "  console.error(`Unsupported generated command: ${command}`);\n  console.error('Recovery: run agentic-workspace --help and choose one of the supported generated commands.');\n  process.exit(2);",
+        "  failValidation(`unknown command ${command}`, []);",
+    )
+    content = content.replace(
+        "parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command])",
+        "parseInvocation(commandDefinitionByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command])",
+    )
+    content = content.replace(
+        "validateInterface(commandByName.get(command), argv.slice(1), [command]);",
+        "validateInterface(commandByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);",
+    )
+    return GeneratedOutput(output.path, content)
 
 
 def render_workspace_command_package_outputs(
@@ -626,7 +871,10 @@ def render_workspace_command_package_outputs(
             _patch_typescript_strict_preflight_gate(
                 _patch_workspace_typescript_sample_command_test(
                     _patch_python_structured_usage_errors(
-                        _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root),
+                        _patch_typescript_structured_usage_errors(
+                            _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root),
+                            repo_root=repo_root,
+                        ),
                         repo_root=repo_root,
                     ),
                     repo_root=repo_root,

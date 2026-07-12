@@ -8,7 +8,6 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from __future__ import annotations
 
 import argparse
-import difflib
 import json
 import shlex
 from collections.abc import Callable
@@ -80,10 +79,14 @@ class GeneratedArgumentParser(argparse.ArgumentParser):
                     message = f"{message}\n{hint_text}"
         if 'invalid choice' in message and 'command' in message:
             unknown = _extract_unknown_command(message)
-            suggestions = difflib.get_close_matches(unknown, generated_command_names(), n=1, cutoff=0.55)
-            if suggestions:
-                message = f"{message}\nDid you mean: {', '.join(suggestions)}?"
-                suggested_command = _command_with_replaced_token(self.prog, argv, unknown, suggestions[0])
+            authority = _authoritative_command_authority(argv)
+            recovery_token = _recovery_token(argv, authority, unknown)
+            suggestion = _closest_authoritative_choice(recovery_token, _authoritative_command_choices(authority))
+            if suggestion:
+                message = f"{message}\nDid you mean: {suggestion}?"
+                suggested_command = _canonical_recovery_command(argv, authority, recovery_token, suggestion)
+            elif unknown in authority:
+                suggested_command = _canonical_recovery_command(argv, authority, unknown, unknown)
             if 'start' in _GENERATED_COMMANDS_BY_NAME and 'preflight' in _GENERATED_COMMANDS_BY_NAME:
                 message = (
                     f"{message}\nStartup tip: run '{self.prog} start --task \"<task>\" --format json' "
@@ -127,6 +130,108 @@ def _command_with_replaced_token(prog: str, argv: list[str], old: str, new: str)
     return f"{prog} {shlex.join(replaced)}"
 
 
+def _recovery_token(argv: list[str], authority: list[str], unknown: str) -> str:
+    remaining = list(argv)
+    while authority and remaining[:len(authority)] == authority:
+        remaining = remaining[len(authority):]
+    if unknown in authority and remaining:
+        return remaining[0]
+    return unknown
+
+
+def _authoritative_command_authority(argv: list[str]) -> list[str]:
+    current: dict[str, Any] | None = None
+    authority: list[str] = []
+    for token in argv:
+        choices = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS] if current is None else current.get('subcommands', [])
+        next_interface = next(
+            (item for item in choices if isinstance(item, dict) and str(item.get('name', '')) == token),
+            None,
+        )
+        if next_interface is None:
+            break
+        authority.append(token)
+        current = next_interface
+    return authority
+
+
+def _authoritative_command_choices(authority: list[str]) -> list[str]:
+    # Read the active command surface from generated command IR, never parser prose.
+    interfaces = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS]
+    current: dict[str, Any] | None = None
+    for token in authority:
+        choices = interfaces if current is None else current.get('subcommands', [])
+        current = next(
+            (item for item in choices if isinstance(item, dict) and str(item.get('name', '')) == token),
+            None,
+        )
+        if current is None:
+            return []
+    choices = interfaces if current is None else current.get('subcommands', [])
+    return [str(item.get('name', '')) for item in choices if isinstance(item, dict) and str(item.get('name', '')).strip()]
+
+
+def _authoritative_command_interface(authority: list[str]) -> dict[str, Any] | None:
+    interfaces = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS]
+    current: dict[str, Any] | None = None
+    for token in authority:
+        choices = interfaces if current is None else current.get('subcommands', [])
+        current = next(
+            (item for item in choices if isinstance(item, dict) and str(item.get('name', '')) == token),
+            None,
+        )
+        if current is None:
+            return None
+    return current
+
+
+def _interface_requires_help(interface: dict[str, Any] | None) -> bool:
+    if not isinstance(interface, dict):
+        return False
+    subcommands = interface.get('subcommands', [])
+    if isinstance(subcommands, list) and subcommands and interface.get('subcommands_required') is not False:
+        return True
+    arguments = interface.get('arguments', [])
+    if isinstance(arguments, list) and any(isinstance(argument, dict) and argument.get('nargs') != '?' and 'default' not in argument for argument in arguments):
+        return True
+    options = interface.get('options', [])
+    return isinstance(options, list) and any(isinstance(option, dict) and option.get('required') is True for option in options)
+
+
+def _closest_authoritative_choice(token: str, choices: list[str]) -> str:
+    if not token or not choices:
+        return ''
+    def distance(left: str, right: str) -> int:
+        rows = list(range(len(right) + 1))
+        for left_index, left_character in enumerate(left, start=1):
+            next_rows = [left_index]
+            for right_index, right_character in enumerate(right, start=1):
+                next_rows.append(min(rows[right_index] + 1, next_rows[right_index - 1] + 1, rows[right_index - 1] + (left_character != right_character)))
+            rows = next_rows
+        return rows[-1]
+    def subsequence(left: str, right: str) -> int:
+        rows = [[0] * (len(right) + 1) for _ in range(len(left) + 1)]
+        for left_index, left_character in enumerate(left, start=1):
+            for right_index, right_character in enumerate(right, start=1):
+                rows[left_index][right_index] = rows[left_index - 1][right_index - 1] + 1 if left_character == right_character else max(rows[left_index - 1][right_index], rows[left_index][right_index - 1])
+        return rows[-1][-1]
+    best = min(choices, key=lambda candidate: (distance(token, candidate), -subsequence(token, candidate)))
+    similarity = 1 - distance(token, best) / max(len(token), len(best), 1)
+    return best if similarity >= 0.55 else ''
+
+
+def _canonical_recovery_command(argv: list[str], authority: list[str], old: str, new: str) -> str:
+    root = str(GENERATED_COMMAND_PACKAGE.get('program') or 'agentic-workspace')
+    candidate_authority = [*authority, new]
+    if _interface_requires_help(_authoritative_command_interface(candidate_authority)):
+        return shlex.join([root, *candidate_authority, '--help'])
+    remaining = list(argv)
+    while authority and remaining[:len(authority)] == authority:
+        remaining = remaining[len(authority):]
+    replaced = [new if token == old else token for token in remaining]
+    return shlex.join([root, *authority, *replaced])
+
+
 def _is_selector_conflict(argv: list[str], message: str) -> bool:
     return (
         ('--verbose' in argv and '--section' in argv)
@@ -161,7 +266,7 @@ def _retryable_cli_error_payload(
         'exit_status': 2,
         'input_command': f"{prog} {shlex.join(argv)}",
         'failure_class': failure_class,
-        'safe_to_retry': True,
+        'safe_to_retry': bool(suggested_command) or failure_class != 'invalid-command',
         'message': message,
         'suggested_command': suggested_command,
         'alternatives': alternatives,
@@ -169,7 +274,8 @@ def _retryable_cli_error_payload(
 
 
 def _retryable_cli_error_kind(prog: str) -> str:
-    namespace = prog if prog.startswith('agentic-') else 'agentic-workspace'
+    root_prog = prog.split()[0]
+    namespace = root_prog if root_prog.startswith('agentic-') else 'agentic-workspace'
     return f"{namespace}/retryable-cli-error/v1"
 
 
