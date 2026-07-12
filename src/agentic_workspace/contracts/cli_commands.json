@@ -245,6 +245,23 @@
           "mutates_state": true
         },
         {
+          "name": "decomposition-create",
+          "help": "Create a first-class Planning decomposition record.",
+          "uses_option_groups": ["format"],
+          "options": [
+            {"name": "id", "flags": ["--id"], "required": true, "help": "Stable decomposition id."},
+            {"name": "title", "flags": ["--title"], "required": true, "help": "Human-readable decomposition title."},
+            {"name": "outcome", "flags": ["--outcome"], "required": true, "help": "Larger intended outcome."},
+            {"name": "promotion_rule", "flags": ["--promotion-rule"], "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.", "help": "Candidate-lane promotion rule."},
+            {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
+            {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Show planned changes without mutating files."}
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "Planning decomposition artifact mutation front door",
+          "mutates_state": true
+        },
+        {
           "name": "lane-create",
           "help": "Create a first-class Planning lane record.",
           "uses_option_groups": [

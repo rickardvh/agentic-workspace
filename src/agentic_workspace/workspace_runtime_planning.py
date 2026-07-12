@@ -441,6 +441,7 @@ def _work_shape_study_payload(
     issue_scope_evidence: dict[str, Any],
     active_planning_present: bool,
     planning_revision: dict[str, Any],
+    candidate_pressure: dict[str, Any],
     work_shape: str | None,
     proof_burden: str | None,
 ) -> dict[str, Any]:
@@ -511,6 +512,154 @@ def _work_shape_study_payload(
             "bounded": "create-bounded-execplan" if custody_required else "continue-direct",
         }.get(selected_shape, "needs-human-decision")
 
+    owner_writer: dict[str, Any]
+    if selected_shape == "lane":
+        source_ref = next((str(item.get("id") or "") for item in raw_evidence if str(item.get("id") or "").strip()), "lane")
+        lane_id = re.sub(r"[^a-z0-9]+", "-", source_ref.lower()).strip("-") or "lane"
+        owner_id = f"issue-{lane_id}"
+        existing_owner_path = target_root / ".agentic-workspace" / "planning" / "lanes" / f"{owner_id}.lane.json"
+        existing_owner: dict[str, Any] | None = None
+        if existing_owner_path.is_file():
+            try:
+                loaded_owner = json.loads(existing_owner_path.read_text(encoding="utf-8-sig"))
+                existing_owner = loaded_owner if isinstance(loaded_owner, dict) else None
+            except (OSError, json.JSONDecodeError):
+                existing_owner = None
+        promotion_route = next(
+            (
+                route
+                for route in candidate_pressure.get("route_options", [])
+                if isinstance(route, dict) and route.get("kind") == "decomposition-lane" and route.get("id") == owner_id
+            ),
+            None,
+        )
+        if promotion_route is None:
+            decomposition_root = target_root / ".agentic-workspace" / "planning" / "decompositions"
+            for decomposition_path in sorted(decomposition_root.glob("*.decomposition.json")) if decomposition_root.exists() else []:
+                try:
+                    decomposition_record = json.loads(decomposition_path.read_text(encoding="utf-8-sig"))
+                except (OSError, json.JSONDecodeError):
+                    continue
+                candidates = decomposition_record.get("candidate_lanes", []) if isinstance(decomposition_record, dict) else []
+                if any(
+                    isinstance(candidate, dict)
+                    and str(candidate.get("id") or "").strip() == owner_id
+                    and str(candidate.get("readiness") or "").strip() != "promoted"
+                    for candidate in candidates
+                ):
+                    promotion_route = {
+                        "kind": "decomposition-lane",
+                        "id": owner_id,
+                        "decomposition": decomposition_path.relative_to(target_root).as_posix(),
+                    }
+                    break
+        selected_operation = (
+            "" if existing_owner else "planning.lane-promote.lifecycle" if promotion_route else "planning.lane-create.lifecycle"
+        )
+        selected_route = (
+            "reuse-existing-lane-owner"
+            if existing_owner
+            else "promote-existing-decomposition-candidate"
+            if promotion_route
+            else "create-new-lane-owner"
+        )
+        if existing_owner:
+            command = _command_with_cli_invoke(
+                command=f'agentic-workspace summary --target "{target_root.as_posix()}" --select lanes --format json',
+                cli_invoke=config.cli_invoke,
+            )
+        else:
+            command = _command_with_cli_invoke(
+                command=_command_with_expected_planning_revision(
+                    (
+                        f'agentic-workspace planning lane-promote {owner_id} --target "{target_root.as_posix()}" --format json'
+                        if promotion_route
+                        else f'agentic-workspace planning lane-create --id {owner_id} --target "{target_root.as_posix()}" --format json'
+                    ),
+                    planning_revision=planning_revision,
+                ),
+                cli_invoke=config.cli_invoke,
+            )
+        owner_writer = {
+            "required_artifact_kind": "planning-lane-record",
+            "canonical_operation": selected_operation,
+            "selected_route": selected_route,
+            "mutation_required": existing_owner is None,
+            "command": command,
+            "readiness_requirements": ["referenced intent resolved to lane", "planning revision remains current"],
+            "postcondition": {
+                "owner_path": f".agentic-workspace/planning/lanes/{owner_id}.lane.json",
+                "parent_decomposition": (
+                    str(existing_owner.get("parent_decomposition_ref") or "")
+                    if existing_owner
+                    else str(promotion_route.get("decomposition") or "")
+                    if promotion_route
+                    else ""
+                ),
+                "selector_command": _command_with_cli_invoke(
+                    command=f'agentic-workspace summary --target "{target_root.as_posix()}" --select lanes --format json',
+                    cli_invoke=config.cli_invoke,
+                ),
+                "expected_owner_kind": "planning-lane-record",
+            },
+        }
+    elif selected_shape == "epic":
+        source_ref = next((str(item.get("id") or "") for item in raw_evidence if str(item.get("id") or "").strip()), "epic")
+        epic_id = re.sub(r"[^a-z0-9]+", "-", source_ref.lower()).strip("-") or "epic"
+        command = _command_with_cli_invoke(
+            command=_command_with_expected_planning_revision(
+                f'agentic-workspace planning decomposition-create --id issue-{epic_id} --title "Epic for {source_ref}" --outcome "Deliver the larger intended outcome for {source_ref}" --target "{target_root.as_posix()}" --format json',
+                planning_revision=planning_revision,
+            ),
+            cli_invoke=config.cli_invoke,
+        )
+        owner_writer = {
+            "required_artifact_kind": "planning-decomposition-record",
+            "canonical_operation": "planning.decomposition-create.lifecycle",
+            "command": command,
+            "readiness_requirements": ["larger intended outcome is named"],
+            "postcondition": {
+                "owner_path": f".agentic-workspace/planning/decompositions/issue-{epic_id}.decomposition.json",
+                "selector_command": _command_with_cli_invoke(
+                    command=f'agentic-workspace planning report --target "{target_root.as_posix()}" --verbose --format json',
+                    cli_invoke=config.cli_invoke,
+                ),
+                "expected_owner_kind": "planning-decomposition-record",
+            },
+        }
+    elif selected_shape == "bounded" and custody_required:
+        source_ref = next((str(item.get("id") or "") for item in raw_evidence if str(item.get("id") or "").strip()), "bounded-plan")
+        plan_id = re.sub(r"[^a-z0-9]+", "-", source_ref.lower()).strip("-") or "bounded-plan"
+        command = _command_with_cli_invoke(
+            command=_command_with_expected_planning_revision(
+                f'agentic-workspace planning new-plan --id issue-{plan_id} --title "Bounded plan for {source_ref}" --target "{target_root.as_posix()}" --activate --switch-active --format json',
+                planning_revision=planning_revision,
+            ),
+            cli_invoke=config.cli_invoke,
+        )
+        owner_writer = {
+            "required_artifact_kind": "planning-execplan",
+            "canonical_operation": "planning.new-plan.lifecycle",
+            "command": command,
+            "readiness_requirements": ["bounded scope is named"],
+            "postcondition": {
+                "owner_path": f".agentic-workspace/planning/execplans/issue-{plan_id}.plan.json",
+                "selector_command": _command_with_cli_invoke(
+                    command=f'agentic-workspace summary --target "{target_root.as_posix()}" --select execplans --format json',
+                    cli_invoke=config.cli_invoke,
+                ),
+                "expected_owner_kind": "planning-execplan",
+            },
+        }
+    else:
+        owner_writer = {
+            "required_artifact_kind": "none",
+            "canonical_operation": "none",
+            "command": "",
+            "readiness_requirements": [],
+            "postcondition": {"expected_owner_kind": "none"},
+        }
+
     refresh_command = str(issue_scope_evidence.get("refresh_command") or "")
     source_path = str(issue_scope_evidence.get("source_path") or "")
     source_mtime = ""
@@ -529,6 +678,7 @@ def _work_shape_study_payload(
             "work_shape": selected_shape,
             "planning_artifact_route": artifact_route,
             "next_safe_action": next_action,
+            "owner_writer": owner_writer,
         },
         "evidence": {
             "observed": observed,
@@ -1247,6 +1397,7 @@ def _planning_safety_gate_payload(
         issue_scope_evidence=issue_scope_evidence,
         active_planning_present=active_planning_present,
         planning_revision=planning_revision,
+        candidate_pressure=candidate_pressure,
         work_shape=work_shape,
         proof_burden=proof_burden,
     )

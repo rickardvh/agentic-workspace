@@ -15,6 +15,7 @@ from repo_planning_bootstrap.installer import (
     archive_parent_lane_closeout,
     close_lane_record,
     closeout_execplan,
+    create_decomposition_record,
     create_execplan_scaffold,
     create_lane_record,
     format_actions,
@@ -175,6 +176,27 @@ def apply_planning_lane_create_operation(values: dict, _arguments: dict, _contex
             ("outcome", "outcome", "str", ""),
             ("purpose", "purpose", "str", ""),
             ("proof_strategy", "proof_strategy", "str", ""),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
+    )
+
+
+def apply_planning_decomposition_create_operation(values: dict, _arguments: dict, _context):
+    return _call_planning_operation(
+        create_decomposition_record,
+        values,
+        keywords=(
+            ("decomposition_id", "id", "str", ""),
+            ("title", "title", "str", ""),
+            ("outcome", "outcome", "str", ""),
+            ("target", "target", "raw", None),
+            (
+                "promotion_rule",
+                "promotion_rule",
+                "str",
+                "Promote a candidate lane only after its scope, owner surface, and proof are ready.",
+            ),
             ("expected_planning_revision", "expect_planning_revision", "str", ""),
             ("dry_run", "dry_run", "bool", None),
         ),

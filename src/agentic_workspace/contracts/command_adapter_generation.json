@@ -150,9 +150,11 @@
         ]
       },
       "schemas": {
-        "input": [],
+        "input": [
+          "config_report_input.schema.json"
+        ],
         "output": [
-          "workspace_config.schema.json"
+          "config_report_result.schema.json"
         ]
       },
       "effect_hints": {
@@ -320,8 +322,12 @@
         ]
       },
       "schemas": {
-        "input": [],
-        "output": []
+        "input": [
+          "delegation_outcome_append_input.schema.json"
+        ],
+        "output": [
+          "delegation_outcome_append_result.schema.json"
+        ]
       },
       "effect_hints": {
         "read_only": false,
@@ -3687,6 +3693,25 @@
       "conformance_refs": [
         "planning.list-files.process"
       ]
+    },
+    {
+      "id": "planning.decomposition-create.cli",
+      "status": "generated",
+      "command": {"program": "agentic-planning", "name": "decomposition-create", "command_manifest": "package:planning:cli", "option_group_manifest": "cli_option_groups.json"},
+      "operation_ref": {"id": "planning.decomposition-create.lifecycle", "registry": "operation_contracts.json", "path": "operations/planning.decomposition-create.lifecycle.json"},
+      "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["planning.decomposition-create.apply", "output.emit"]},
+      "schemas": {"input": [], "output": []},
+      "effect_hints": {"read_only": false, "destructive": false, "idempotent": false, "writes_repo_state": true, "requires_preflight_gate": false},
+      "projection_hints": {
+        "universal_fields": ["command.name", "command.options", "operation_ref.id", "runtime_binding.primitive_refs", "effect_hints", "conformance_refs"],
+        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "help rendering", "exit-code rendering"]}]
+      },
+      "generation_boundary": {
+        "contract_owns": ["visible command name", "option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
+        "generated_adapter_owns": ["parser and usage wiring", "argument normalization into the operation input shape", "dispatch wiring from command id to runtime binding"],
+        "runtime_owns": ["planning decomposition mutation policy", "module result assembly"]
+      },
+      "conformance_refs": ["planning.decomposition-create.lifecycle.dry-run.process"]
     },
     {
       "id": "planning.lane-create.cli",

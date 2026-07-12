@@ -1132,6 +1132,22 @@
       "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
     },
     {
+      "operation_id": "planning.decomposition-create.lifecycle",
+      "program": "agentic-planning",
+      "command": "decomposition-create",
+      "generated_transport": "generated/planning/python/cli.py",
+      "operation_contract": "operations/planning.decomposition-create.lifecycle.json",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": ["planning.decomposition-create.apply", "module-result text/json compatibility formatting"],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.decomposition-create.lifecycle.dry-run.process",
+      "domain_runtime_primitive_refs": ["planning.decomposition-create.apply"],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Operation dataflow is generated while Planning decomposition mutation policy and validation remain package-specific runtime behavior.",
+      "what_would_make_portable_later": "Render and prove the operation-call adapter while retaining the semantic mutation primitive.",
+      "generic_behavior_audit": "Generated operation IR owns dataflow; Planning runtime_projection declares call mapping while the domain primitive owns mutation, safety, and provenance."
+    },
+    {
       "operation_id": "planning.lane-promote.lifecycle",
       "program": "agentic-planning",
       "command": "lane-promote",

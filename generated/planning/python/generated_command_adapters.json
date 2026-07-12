@@ -160,6 +160,38 @@
       },
       "status": "generated"
     },
+    "decomposition-create": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "decomposition-create",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.decomposition-create.lifecycle.dry-run.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.decomposition-create.cli",
+      "operation_id": "planning.decomposition-create.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.decomposition-create.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": []
+      },
+      "status": "generated"
+    },
     "delegation-decision": {
       "command": {
         "command_manifest": "package:planning:cli",

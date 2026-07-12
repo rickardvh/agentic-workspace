@@ -11503,6 +11503,56 @@ def _canonical_decomposition_path(target_root: Path, artifact_path: Path, artifa
     return target_root / PLANNING_MANAGED_ROOT / "decompositions" / f"{slug}.decomposition.json"
 
 
+def create_decomposition_record(
+    *,
+    decomposition_id: str,
+    title: str,
+    outcome: str,
+    target: str | Path | None = None,
+    promotion_rule: str = "Promote a candidate lane only after its scope, owner surface, and proof are ready.",
+    expected_planning_revision: str = "",
+    dry_run: bool = False,
+) -> InstallResult:
+    """Create the first-class owner for epic-shaped Planning work."""
+    target_root = resolve_target_root(target)
+    slug = _slugify(decomposition_id)
+    result = InstallResult(target_root=target_root, message=f"Create decomposition record '{slug}'", dry_run=dry_run)
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
+    if not slug:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, "--id must contain at least one alphanumeric character")
+        return result
+    record_path = target_root / PLANNING_MANAGED_ROOT / "decompositions" / f"{slug}.decomposition.json"
+    if record_path.exists():
+        result.add("manual review", record_path, "target decomposition record already exists")
+        return result
+    record = {
+        "kind": "planning-decomposition/v1",
+        "title": title.strip() or _title_from_slug(slug),
+        "status": "shaping",
+        "larger_intended_outcome": outcome.strip() or title.strip() or _title_from_slug(slug),
+        "non_goals": [],
+        "candidate_lanes": [],
+        "proof_expectations": [],
+        "promotion_rule": promotion_rule.strip(),
+        "references": [],
+        "notes": "",
+    }
+    findings = _json_schema_findings(payload=record, schema_path=DECOMPOSITION_RECORD_SCHEMA_PATH)
+    if findings:
+        result.add("manual review", record_path, f"decomposition record did not validate: {'; '.join(findings)}")
+        return result
+    if dry_run:
+        result.add("would create", record_path, "schema-valid planning-decomposition/v1 record")
+        _add_planning_mutation_proof_actions(result)
+        return result
+    record_path.parent.mkdir(parents=True, exist_ok=True)
+    record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    result.add("created", record_path, "schema-valid planning-decomposition/v1 record")
+    _add_planning_mutation_proof_actions(result)
+    return result
+
+
 def _looks_like_decomposition_record(path: Path) -> bool:
     try:
         payload = json.loads(path.read_text(encoding="utf-8-sig"))

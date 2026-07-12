@@ -423,6 +423,79 @@
             ]
           },
           {
+            "help": "Create a first-class Planning decomposition record.",
+            "name": "decomposition-create",
+            "options": [
+              {
+                "flags": [
+                  "--id"
+                ],
+                "help": "Stable decomposition id; used as the .decomposition.json filename.",
+                "name": "id",
+                "required": true
+              },
+              {
+                "flags": [
+                  "--title"
+                ],
+                "help": "Human-readable decomposition title.",
+                "name": "title",
+                "required": true
+              },
+              {
+                "flags": [
+                  "--outcome"
+                ],
+                "help": "Larger intended outcome owned by the decomposition.",
+                "name": "outcome",
+                "required": true
+              },
+              {
+                "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.",
+                "flags": [
+                  "--promotion-rule"
+                ],
+                "help": "Rule for promoting candidate lanes.",
+                "name": "promotion_rule"
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "default": "",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",
+                "name": "expect_planning_revision"
+              },
+              {
+                "action": "store_true",
+                "flags": [
+                  "--dry-run"
+                ],
+                "help": "Show planned changes without mutating files.",
+                "name": "dry_run"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
+          {
             "help": "Create a first-class Planning lane record.",
             "name": "lane-create",
             "options": [
@@ -6263,6 +6336,26 @@
           {
             "attr": "artifact",
             "option": "--artifact"
+          },
+          {
+            "attr": "outcome",
+            "option": "--outcome"
+          },
+          {
+            "attr": "promotion_rule",
+            "option": "--promotion-rule"
+          },
+          {
+            "attr": "parent_decomposition",
+            "option": "--parent-decomposition"
+          },
+          {
+            "attr": "purpose",
+            "option": "--purpose"
+          },
+          {
+            "attr": "proof_strategy",
+            "option": "--proof-strategy"
           },
           {
             "attr": "target",

@@ -836,6 +836,26 @@
                 "attr": "artifact"
               },
               {
+                "option": "--outcome",
+                "attr": "outcome"
+              },
+              {
+                "option": "--promotion-rule",
+                "attr": "promotion_rule"
+              },
+              {
+                "option": "--parent-decomposition",
+                "attr": "parent_decomposition"
+              },
+              {
+                "option": "--purpose",
+                "attr": "purpose"
+              },
+              {
+                "option": "--proof-strategy",
+                "attr": "proof_strategy"
+              },
+              {
                 "option": "--target",
                 "attr": "target"
               },
@@ -1790,6 +1810,20 @@
                     "default": "text",
                     "help": "Output format."
                   }
+                ]
+              },
+              {
+                "name": "decomposition-create",
+                "help": "Create a first-class Planning decomposition record.",
+                "options": [
+                  {"name": "id", "flags": ["--id"], "required": true, "help": "Stable decomposition id; used as the .decomposition.json filename."},
+                  {"name": "title", "flags": ["--title"], "required": true, "help": "Human-readable decomposition title."},
+                  {"name": "outcome", "flags": ["--outcome"], "required": true, "help": "Larger intended outcome owned by the decomposition."},
+                  {"name": "promotion_rule", "flags": ["--promotion-rule"], "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.", "help": "Rule for promoting candidate lanes."},
+                  {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
+                  {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
+                  {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Show planned changes without mutating files."},
+                  {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
                 ]
               },
               {
@@ -7042,6 +7076,7 @@
             "planning.init.lifecycle",
             "planning.install.lifecycle",
             "planning.intake-artifact.lifecycle",
+            "planning.decomposition-create.lifecycle",
             "planning.lane-activate.lifecycle",
             "planning.lane-archive.lifecycle",
             "planning.lane-close.lifecycle",
@@ -7233,6 +7268,11 @@
             {
               "name": "outcome",
               "arg": "outcome",
+              "default": ""
+            },
+            {
+              "name": "promotion_rule",
+              "arg": "promotion_rule",
               "default": ""
             },
             {
@@ -7508,6 +7548,12 @@
               "primitive": "planning.lane-create.apply",
               "handler": "runtime_handler",
               "function": "apply_planning_lane_create_operation",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
+            },
+            {
+              "primitive": "planning.decomposition-create.apply",
+              "handler": "runtime_handler",
+              "function": "apply_planning_decomposition_create_operation",
               "import_module": "repo_planning_bootstrap.runtime_projection"
             },
             {
@@ -9171,6 +9217,35 @@
           "conformance_refs": [
             "planning.list-files.process"
           ]
+        },
+        {
+          "adapter_id": "planning.decomposition-create.cli",
+          "status": "generated",
+          "command": {"manifest_ref": "package:planning:cli", "name": "decomposition-create"},
+          "operation_ref": {"id": "planning.decomposition-create.lifecycle", "path": "operations/planning.decomposition-create.lifecycle.json"},
+          "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["planning.decomposition-create.apply", "output.emit"]},
+          "schemas": {"input": [], "output": []},
+          "effect_hints": {"read_only": false, "destructive": false, "idempotent": false, "writes_repo_state": true, "requires_preflight_gate": false},
+          "interface": {
+            "name": "decomposition-create",
+            "help": "Create a first-class Planning decomposition record.",
+            "options": [
+              {"name": "id", "flags": ["--id"], "required": true, "help": "Stable decomposition id."},
+              {"name": "title", "flags": ["--title"], "required": true, "help": "Human-readable decomposition title."},
+              {"name": "outcome", "flags": ["--outcome"], "required": true, "help": "Larger intended outcome."},
+              {"name": "promotion_rule", "flags": ["--promotion-rule"], "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.", "help": "Candidate-lane promotion rule."},
+              {"name": "target", "flags": ["--target"], "help": "Target repository path."},
+              {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id."},
+              {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Preview changes without writing files."},
+              {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+            ]
+          },
+          "projection_boundary": {
+            "universal": ["command identity", "operation reference", "runtime primitive reference", "effect hints", "conformance refs"],
+            "target_specific": ["parser library", "package entrypoint wiring", "help text layout", "test container image"],
+            "runtime_owned": ["planning decomposition mutation policy", "module result assembly"]
+          },
+          "conformance_refs": ["planning.decomposition-create.lifecycle.dry-run.process"]
         },
         {
           "adapter_id": "planning.lane-create.cli",
