@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import tomllib
+from datetime import UTC, datetime
 from pathlib import Path
 
 from repo_planning_bootstrap.installer import (
@@ -547,12 +548,13 @@ def test_lane_child_reconciliation_dry_run_apply_and_unknown_fail_closed(tmp_pat
     lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
     cache_path = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
     cache_path.parent.mkdir(parents=True)
+    refreshed_at = datetime.now(UTC).isoformat()
     cache_path.write_text(
         json.dumps(
             {
                 "kind": "planning-external-intent-evidence/v1",
-                "refreshed_at": "2026-07-11T12:00:00+00:00",
-                "refresh_metadata": {"adapter": "github-gh-cli", "state": "all", "refreshed_at": "2026-07-11T12:00:00+00:00"},
+                "refreshed_at": refreshed_at,
+                "refresh_metadata": {"adapter": "github-gh-cli", "state": "all", "refreshed_at": refreshed_at},
                 "items": [
                     {"system": "github", "id": "#1", "title": "one", "kind": "issue", "status": "closed"},
                     {"system": "github", "id": "#2", "title": "two", "kind": "issue", "status": "closed"},
