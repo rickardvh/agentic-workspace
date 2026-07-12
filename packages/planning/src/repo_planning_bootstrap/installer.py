@@ -10561,13 +10561,13 @@ def promote_decomposition_lane_to_lane_record(
     if record_path.exists():
         existing_record = _load_lane_record(record_path)
         if not isinstance(existing_record, dict) or str(existing_record.get("parent_decomposition_ref") or "").strip() != source_relative:
-            result.add("manual review", record_path, "target lane record already exists with incompatible parent provenance")
-            result.conflict_owner = record_path.relative_to(target_root).as_posix()
-            result.recovery_command = (
-                f"{_workspace_cli_invoke(target_root)} planning lane-create --id {slug} "
-                f"--title {json.dumps(str(matched_lane.get('title') or _title_from_slug(slug)))} "
-                f"--parent-decomposition {json.dumps(source_relative)} --target . --format json"
+            result.add(
+                "manual review",
+                record_path,
+                "target lane record already exists with incompatible parent provenance; choose a different lane id or reconcile the existing owner before promotion",
             )
+            result.conflict_owner = record_path.relative_to(target_root).as_posix()
+            result.reason_code = "incompatible-parent-provenance"
             return result
         lane_relative = record_path.relative_to(target_root).as_posix()
         updated_record = copy.deepcopy(matched_record)
@@ -10737,9 +10737,25 @@ def activate_lane_record(
     record["status"] = "active"
     if selected_slice:
         record["current_slice"] = selected_slice
+        selected_slice_found = False
         for slice_record in record.get("slice_sequence", []):
             if isinstance(slice_record, dict) and str(slice_record.get("id", "")).strip() == selected_slice:
                 slice_record["status"] = "active"
+                slice_record["execplan_ref"] = execplan_ref
+                selected_slice_found = True
+        if not selected_slice_found:
+            slices = list(record.get("slice_sequence", []))
+            slices.append(
+                {
+                    "id": selected_slice,
+                    "title": _title_from_slug(selected_slice),
+                    "status": "active",
+                    "execplan_ref": execplan_ref,
+                    "depends_on": [],
+                    "purpose_for_lane": str(record.get("purpose_for_parent") or record.get("lane_outcome") or "advance the lane").strip(),
+                }
+            )
+            record["slice_sequence"] = slices
     lane_relative = record_path.relative_to(target_root).as_posix()
     record_findings = _json_schema_findings(payload=record, schema_path=LANE_RECORD_SCHEMA_PATH)
     proposed_state = _roadmap_state_with_lane(target_root, record, lane_relative=lane_relative)

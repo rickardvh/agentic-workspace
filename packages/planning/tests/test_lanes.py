@@ -208,7 +208,8 @@ def test_lane_promotion_rejects_incompatible_owner_without_mutating_it(tmp_path:
 
     assert [action.kind for action in result.actions] == ["manual review"]
     assert result.conflict_owner == ".agentic-workspace/planning/lanes/lane-artifacts.lane.json"
-    assert "lane-create --id lane-artifacts" in result.recovery_command
+    assert result.reason_code == "incompatible-parent-provenance"
+    assert result.recovery_command == ""
     assert lane_path.read_bytes() == before_lane
     candidate = json.loads(decomposition_path.read_text(encoding="utf-8"))["candidate_lanes"][0]
     assert candidate["readiness"] == "ready"
@@ -248,6 +249,9 @@ def test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_cle
     assert active_lane["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
     assert active_lane["next_action"] == "execute the slice."
     assert active_lane["done_when"] == "slice proof passes."
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert lane["current_slice"] == "slice-one"
+    assert lane["slice_sequence"][0]["execplan_ref"] == active_lane["execplan"]
 
     summary = planning_summary(target=tmp_path, profile="compact")
     warnings = summary["planning_surface_health"]["warnings"]
@@ -276,6 +280,18 @@ def test_lane_activate_infers_current_slice_execplan_when_slice_sequence_is_mini
     assert active_lane["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
     assert active_lane["next_action"] == "execute the slice."
     assert active_lane["done_when"] == "slice proof passes."
+    lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json").read_text(encoding="utf-8"))
+    assert lane["current_slice"] == "slice-one"
+    assert lane["slice_sequence"] == [
+        {
+            "id": "slice-one",
+            "title": "Slice One",
+            "status": "active",
+            "execplan_ref": active_lane["execplan"],
+            "depends_on": [],
+            "purpose_for_lane": lane["purpose_for_parent"],
+        }
+    ]
 
     summary = planning_summary(target=tmp_path, profile="compact")
     warnings = summary["planning_surface_health"]["warnings"]
