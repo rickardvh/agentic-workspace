@@ -1,0 +1,299 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Issue 2230 pytest invocation intent",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Implement GitHub #2230 by adopting producer-declared invocation semantics in pytest AW subprocesses.",
+    "hard_constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent_may_decide": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate_when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story.",
+    "next_action": "Open a draft PR for the implemented #2230 slice, then continue the next P0 lane.",
+    "proof_expectations": [
+      "uv run pytest tests/test_workspace_session_logging.py::test_pytest_subprocess_helper_declares_invocation_intent_without_inference tests/test_workspace_session_logging.py::test_session_log_preserves_producer_invocation_intent_and_matches_observed_outcomes tests/test_workspace_cli_blackbox.py::test_blackbox_near_miss_command_guides_to_startup tests/test_workspace_cli_blackbox.py::test_blackbox_memory_route_task_misuse_guides_to_memory_consult -q",
+      "uv run ruff check src/agentic_workspace/session_logging.py tests/workspace_cli_support.py tests/test_workspace_session_logging.py tests/test_workspace_cli_blackbox.py",
+      "make test-workspace",
+      "make lint-workspace",
+      "make typecheck"
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/session_logging.py",
+      "tests/workspace_cli_support.py",
+      "tests/test_workspace_session_logging.py",
+      "tests/test_workspace_cli_blackbox.py"
+    ],
+    "completion_criteria": [
+      "Shared pytest subprocess helper supplies AW invocation intent fields.",
+      "Session-log analysis keeps observed result and declared expectation separately inspectable, including expected-failure success mismatches.",
+      "Focused and workspace proof passes."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Create a bounded plan for Issue 2230 pytest invocation intent."
+  ],
+  "non_goals": [
+    "Leave adjacent backlog or follow-on work out of this plan."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Implement GitHub #2230 by adopting producer-declared invocation semantics in pytest AW subprocesses.",
+      "constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+      "latitude": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+      "escalation": "Escalate when a better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+    },
+    "execution": {
+      "milestone": "issue-2230-pytest-invocation-intent",
+      "status": "active",
+      "next_step": "Open a draft PR for the implemented #2230 slice, then continue the next P0 lane.",
+      "proof": "Focused pytest/ruff plus make test-workspace, make lint-workspace, and make typecheck passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/session_logging.py",
+        "tests/workspace_cli_support.py",
+        "tests/test_workspace_session_logging.py",
+        "tests/test_workspace_cli_blackbox.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Create a bounded plan for Issue 2230 pytest invocation intent.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "Pytest AW subprocess producers can declare purpose, scenario, invocation class, expected exit, expected reason, and parent test context without command-text inference.",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "focused subprocess/session-log tests, ruff, make test-workspace, make lint-workspace, and make typecheck passed",
+    "validation still needed": "none before PR creation",
+    "next likely slice": "open draft PR and continue the next P0 issue"
+  },
+  "intent_interpretation": {
+    "literal request": "Issue 2230 pytest invocation intent",
+    "inferred intended outcome": "Create a bounded plan for Issue 2230 pytest invocation intent.",
+    "chosen concrete what": "Add a shared pytest AW subprocess env helper, adopt it in blackbox subprocess tests, and expose mismatch direction in session-log analysis.",
+    "interpretation distance": "low",
+    "review guidance": "Confirm the scaffolded plan still matches the promoted item before broad implementation."
+  },
+  "execution_bounds": {
+    "allowed paths": "src/agentic_workspace/session_logging.py; tests/workspace_cli_support.py; tests/test_workspace_session_logging.py; tests/test_workspace_cli_blackbox.py; AW active-plan/payload state.",
+    "max changed files": "bounded to session logging, pytest helper/tests, and AW plan/payload state",
+    "required validation commands": "focused pytest/ruff plus make test-workspace, make lint-workspace, and make typecheck",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Unrelated backlog, adjacent modules, or canonical contracts not named by this plan."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Implementation and proof are complete; open draft PR, then move to the next P0 issue.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Issue 2230 pytest invocation intent.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-2230-pytest-invocation-intent",
+    "status": "active",
+    "scope": "Keep this execution thread bounded to the promoted TODO item.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Open a draft PR for the implemented #2230 slice, then continue the next P0 lane."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/session_logging.py",
+    "tests/workspace_cli_support.py",
+    "tests/test_workspace_session_logging.py",
+    "tests/test_workspace_cli_blackbox.py"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_session_logging.py::test_pytest_subprocess_helper_declares_invocation_intent_without_inference tests/test_workspace_session_logging.py::test_session_log_preserves_producer_invocation_intent_and_matches_observed_outcomes tests/test_workspace_cli_blackbox.py::test_blackbox_near_miss_command_guides_to_startup tests/test_workspace_cli_blackbox.py::test_blackbox_memory_route_task_misuse_guides_to_memory_consult -q",
+    "uv run ruff check src/agentic_workspace/session_logging.py tests/workspace_cli_support.py tests/test_workspace_session_logging.py tests/test_workspace_cli_blackbox.py",
+    "make test-workspace",
+    "make lint-workspace",
+    "make typecheck"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Issue 2230 pytest invocation intent is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "complete",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added a shared pytest AW subprocess env helper, used it from blackbox AW subprocess tests, added subprocess-level session-log coverage, and split unmatched expectations by mismatch direction.",
+    "scope touched": "session logging analysis plus pytest helper/regression tests",
+    "changed surfaces": "src/agentic_workspace/session_logging.py; tests/workspace_cli_support.py; tests/test_workspace_session_logging.py; tests/test_workspace_cli_blackbox.py; AW active-plan/payload state",
+    "validations run": "focused pytest, focused ruff, make test-workspace, make lint-workspace, make typecheck",
+    "result for continuation": "implementation proof complete; draft PR creation remains",
+    "next step": "Open a draft PR for #2230, then continue the next P0 issue."
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "yes; changes stayed within session logging analysis, pytest subprocess helpers/tests, and AW state",
+    "proof status": "passed",
+    "intent served": "yes; producer-declared invocation fields now come from a shared pytest helper and are exercised by subprocess tests",
+    "config compliance": "AW start/implement were used and required proof passed",
+    "misinterpretation risk": "low",
+    "follow-on decision": "open draft PR, then continue next P0"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "passed",
+    "proof achieved now": "focused pytest/ruff, make test-workspace, make lint-workspace, make typecheck",
+    "evidence for \"proof achieved\" state": "Focused pytest: 4 passed. Ruff: all checks passed. make test-workspace: [ok] workspace tests (164.89s). make lint-workspace: [ok] workspace lint and prompt semantic markers. make typecheck: [ok] sync-all, workspace, memory, planning, verification."
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement GitHub #2230 by adopting producer-declared invocation semantics in pytest AW subprocesses.",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Shared helper writes AW_SESSION_LOG_PURPOSE_ID, AW_SESSION_LOG_SCENARIO_ID, AW_SESSION_LOG_INVOCATION_CLASS, AW_SESSION_LOG_EXPECTED_EXIT, AW_SESSION_LOG_EXPECTED_REASON_CLASS, and parent context fields; blackbox AW subprocess tests use it for negative-fixture and product-operation classes; session-log regression verifies matched negative exits, unexpected failures, expected-failure successes, unknown undeclared expectations, parent context, and separate expected/observed values.",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "Implemented #2230 producer-declared pytest subprocess invocation intent.",
+    "validation confirmed": "focused pytest/ruff plus make test-workspace, make lint-workspace, and make typecheck passed",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "plan updated; no durable Memory capture needed",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "draft PR creation for #2230"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "complete",
+    "larger-intent status": "complete",
+    "closure decision": "archive-but-keep-lane-open",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "Implementation and proof are complete, but the branch still needs PR creation before the lane can be forgotten.",
+    "evidence carried forward": "Focused pytest/ruff, make test-workspace, make lint-workspace, make typecheck",
+    "reopen trigger": "Review finds missing producer adoption, missing subprocess intent coverage, or mismatch direction reporting is insufficient."
+  },
+  "improvement_signal_review": {
+    "status": "no_signal_found",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [
+        "Open draft PR for #2230, then continue next P0."
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-13: Scaffolded by agentic-planning new-plan.",
+    "2026-07-13: Implemented #2230 pytest subprocess invocation intent and recorded proof."
+  ]
+}

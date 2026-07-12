@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 import sys
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
+from tests.workspace_cli_support import aw_subprocess_env
 
 from agentic_workspace import cli as source_cli
 from agentic_workspace import current_work_context, session_logging
@@ -871,6 +874,127 @@ def test_session_log_preserves_producer_invocation_intent_and_matches_observed_o
     assert negative["invocation_outcome"]["match"] == "matched"
     assert negative["invocation_outcome"]["expectation_provenance"]["source"] == "producer-environment"
     assert negative["invocation_outcome"]["observed"] != negative["invocation_outcome"]["expected"]
+
+
+def _run_logged_subprocess(target: Path, *, env: dict[str, str], return_code: int) -> subprocess.CompletedProcess[str]:
+    child_env = dict(env)
+    child_env["AW_TEST_RETURN_CODE"] = str(return_code)
+    script = (
+        "import os, sys\n"
+        "from agentic_workspace import session_logging\n"
+        "def runner(_argv):\n"
+        "    return int(os.environ['AW_TEST_RETURN_CODE'])\n"
+        "sys.exit(session_logging.run_with_session_logging(sys.argv[1:], runner))\n"
+    )
+    return subprocess.run(
+        [sys.executable, "-c", script, "config", "--target", str(target), "--format", "json"],
+        cwd=Path.cwd(),
+        env=child_env,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+
+
+def test_pytest_subprocess_helper_declares_invocation_intent_without_inference(tmp_path: Path) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    base_env = {key: value for key, value in os.environ.items() if not key.startswith("AW_SESSION_LOG_")}
+    parent = {
+        "parent_entry_id": "pytest-parent-entry",
+        "parent_command": "pytest tests/test_workspace_session_logging.py",
+        "parent_context": "test_pytest_subprocess_helper_declares_invocation_intent_without_inference",
+    }
+
+    assert _run_logged_subprocess(target, env=base_env, return_code=0).returncode == 0
+    assert not (target / session_logging.SESSION_POINTER_PATH).exists()
+
+    negative_env = aw_subprocess_env(
+        purpose_id="proof-negative-path",
+        scenario_id="invalid-selector",
+        invocation_class="negative-fixture",
+        expected_exit="failure",
+        base_env=base_env,
+        **parent,
+    )
+    assert negative_env["AW_SESSION_LOG_CAPTURE_DETAIL"] == "1"
+    assert _run_logged_subprocess(target, env=negative_env, return_code=2).returncode == 2
+
+    product_env = aw_subprocess_env(
+        purpose_id="ordinary-product-operation",
+        scenario_id="status-success",
+        invocation_class="product-operation",
+        expected_exit="success",
+        base_env=base_env,
+        **parent,
+    )
+    assert product_env["AW_SESSION_LOG_CAPTURE_DETAIL"] == "1"
+    assert _run_logged_subprocess(target, env=product_env, return_code=0).returncode == 0
+
+    failing_probe_env = aw_subprocess_env(
+        purpose_id="probe-expected-success",
+        scenario_id="probe-failed",
+        invocation_class="probe",
+        expected_exit="success",
+        base_env=base_env,
+        **parent,
+    )
+    assert _run_logged_subprocess(target, env=failing_probe_env, return_code=2).returncode == 2
+
+    unexpected_success_env = aw_subprocess_env(
+        purpose_id="synthetic-expected-failure",
+        scenario_id="synthetic-succeeded",
+        invocation_class="synthetic-check",
+        expected_exit="failure",
+        base_env=base_env,
+        **parent,
+    )
+    assert _run_logged_subprocess(target, env=unexpected_success_env, return_code=0).returncode == 0
+
+    undeclared_env = aw_subprocess_env(base_env=base_env, **parent)
+    assert _run_logged_subprocess(target, env=undeclared_env, return_code=0).returncode == 0
+
+    state = session_logging.load_state_for_argv(["--target", str(target)])
+    analysis = session_logging.analyze_session_log(state=state, origin_scope="all")
+    assert analysis["summary"]["matched_expectation_count"] == 2
+    assert analysis["summary"]["unmatched_expectation_count"] == 2
+    assert analysis["summary"]["expected_success_failure_count"] == 1
+    assert analysis["summary"]["expected_failure_success_count"] == 1
+    assert analysis["summary"]["unknown_expectation_count"] == 1
+    assert analysis["summary"]["unexpected_failure_count"] == 1
+    assert len(analysis["observed_nonzero_exits"]) == 2
+    assert len(analysis["failed_commands"]) == 1
+
+    expected_success_failure = analysis["expected_success_failed_invocations"][0]
+    assert expected_success_failure["invocation_intent"]["scenario_id"] == "probe-failed"
+    assert expected_success_failure["invocation_intent"]["invocation_class"] == "probe"
+    assert expected_success_failure["invocation_outcome"]["expected"]["exit_class"] == "success"
+    assert expected_success_failure["invocation_outcome"]["observed"]["exit_class"] == "failure"
+    assert expected_success_failure["parent"]["entry_id"] == "pytest-parent-entry"
+    assert expected_success_failure in analysis["failed_commands"]
+
+    product_operation = [
+        entry
+        for entry in analysis["origin_partitions"]["test"]["entries"]
+        if entry["invocation_intent"]["scenario_id"] == "status-success"
+    ][0]
+    assert product_operation["origin"]["classification"] == "pytest"
+    assert product_operation["invocation_intent"]["invocation_class"] == "product-operation"
+    assert product_operation["invocation_outcome"]["match"] == "matched"
+    assert product_operation["parent"]["context"] == parent["parent_context"]
+
+    expected_failure_success = analysis["expected_failure_succeeded_invocations"][0]
+    assert expected_failure_success["invocation_intent"]["scenario_id"] == "synthetic-succeeded"
+    assert expected_failure_success["invocation_intent"]["invocation_class"] == "synthetic-check"
+    assert expected_failure_success["invocation_outcome"]["expected"]["exit_class"] == "failure"
+    assert expected_failure_success["invocation_outcome"]["observed"]["exit_class"] == "success"
+    assert expected_failure_success not in analysis["failed_commands"]
+
+    unknown = analysis["unknown_invocations"][0]
+    assert unknown["invocation_intent"]["status"] == "unknown"
+    assert unknown["invocation_intent"]["expected"] == {"exit_class": "unknown", "reason_class": "unknown"}
+    assert unknown["invocation_outcome"]["observed"]["exit_class"] == "success"
 
 
 def test_session_log_reports_and_repairs_partial_index_without_losing_entries(tmp_path: Path, capsys, monkeypatch) -> None:
