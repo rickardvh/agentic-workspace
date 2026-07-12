@@ -1833,6 +1833,41 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 context["pr_comment_attention"]["comment_addressing"]["closeout"] = {
                     key: closeout.get(key) for key in ("status", "rule") if closeout.get(key) not in (None, "", [], {})
                 }
+        review_stack_continuity = _as_dict(pr_comment_attention.get("review_stack_continuity"))
+        if review_stack_continuity:
+            affected_slice = _as_dict(review_stack_continuity.get("affected_slice"))
+            proof_manifest = _as_dict(review_stack_continuity.get("incremental_proof_manifest"))
+            next_action = _as_dict(review_stack_continuity.get("next_action"))
+            closeout_route = _as_dict(review_stack_continuity.get("closeout_route"))
+            context["pr_comment_attention"]["review_stack_continuity"] = {
+                "kind": review_stack_continuity.get("kind"),
+                "status": review_stack_continuity.get("status"),
+                "phase": review_stack_continuity.get("phase"),
+                "current_pr_number": review_stack_continuity.get("current_pr_number"),
+                "dependency_order": review_stack_continuity.get("dependency_order", []),
+                "affected_slice": {
+                    key: affected_slice.get(key)
+                    for key in ("status", "pr_number", "branch", "actionable_count", "paths", "proof_hints")
+                    if affected_slice.get(key) not in (None, "", [], {})
+                },
+                "review_findings": review_stack_continuity.get("review_findings", {}),
+                "incremental_proof_manifest": {
+                    key: proof_manifest.get(key)
+                    for key in (
+                        "status",
+                        "changed_effect_paths",
+                        "proof_hints",
+                        "proof_reuse_status",
+                        "reusable_groups",
+                        "proof_selection_command_template",
+                    )
+                    if proof_manifest.get(key) not in (None, "", [], {})
+                },
+                "next_action": {key: next_action.get(key) for key in ("id", "phase", "command") if next_action.get(key)},
+                "closeout_route": {
+                    key: closeout_route.get(key) for key in ("status", "command", "parent_boundary") if closeout_route.get(key)
+                },
+            }
         context["pr_comment_attention"]["detail_route"] = pr_comment_attention.get(
             "recommended_command", "agentic-workspace report --target . --section pr_comment_attention --format json"
         )
@@ -1952,6 +1987,9 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         startup_changed_signals.append("pre_test_evidence=advisory")
     if isinstance(pr_comment_attention, dict) and pr_comment_attention.get("status") not in {None, "", "not_applicable"}:
         startup_changed_signals.append(f"pr_comment_attention={pr_comment_attention.get('status')}")
+        review_stack_continuity = pr_comment_attention.get("review_stack_continuity")
+        if isinstance(review_stack_continuity, dict) and review_stack_continuity.get("phase"):
+            startup_changed_signals.append(f"review_stack_phase={review_stack_continuity.get('phase')}")
     if isinstance(dogfooding_signal_status, dict) and dogfooding_signal_status.get("status") not in {None, "", "not_applicable"}:
         startup_changed_signals.append(f"dogfooding_signal_status={dogfooding_signal_status.get('status')}")
     startup_proof = payload.get("proof", {})

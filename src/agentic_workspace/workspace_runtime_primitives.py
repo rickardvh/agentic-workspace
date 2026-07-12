@@ -25486,6 +25486,146 @@ def _pr_comment_addressing_unavailable_packet(
     }
 
 
+def _review_stack_continuity_payload(
+    *,
+    stack: dict[str, Any],
+    branch: str,
+    proof_reuse: dict[str, Any],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    members = [item for item in _list_payload(stack.get("stack_members")) if isinstance(item, dict)]
+    current_pr_number = str(stack.get("stack_discovery", {}).get("current_branch_pr_number") or _pr_number_from_stack(stack, branch=branch))
+    dependency_order = [
+        {
+            "pr_number": str(member.get("pr_number") or ""),
+            "branch": str(member.get("branch") or ""),
+            "head_sha": str(member.get("head_sha") or ""),
+            "comment_status": str(member.get("comment_status") or ""),
+            "actionable_count": _as_int(member.get("actionable_count")),
+        }
+        for member in members
+    ]
+    actionable_members = [member for member in members if _as_int(member.get("actionable_count")) > 0]
+    stale_members = [
+        member
+        for member in members
+        if str(member.get("comment_status") or "") in {"pr_comment_status_unavailable", "stack_comment_status_unavailable"}
+    ]
+    current_member = next((member for member in members if str(member.get("pr_number") or "") == current_pr_number), {})
+    affected_member = actionable_members[0] if actionable_members else current_member if current_member else members[-1] if members else {}
+    affected_samples: list[dict[str, Any]] = []
+    affected_paths: list[str] = []
+    proof_hints: list[str] = []
+    for member in actionable_members:
+        for sample in [entry for entry in _list_payload(member.get("sample")) if isinstance(entry, dict)]:
+            affected_samples.append(
+                {
+                    key: sample.get(key)
+                    for key in ("kind", "category", "path", "line", "url", "author", "created_at", "proof_hint")
+                    if sample.get(key) not in (None, "")
+                }
+            )
+            path = str(sample.get("path") or "").strip()
+            hint = str(sample.get("proof_hint") or "").strip()
+            if path:
+                affected_paths.append(path)
+            if hint:
+                proof_hints.append(hint)
+    affected_paths = _dedupe(affected_paths)
+    proof_hints = _dedupe(proof_hints)
+    proof_status = str(proof_reuse.get("status") or "reuse_unknown")
+    reusable_groups = [
+        {
+            "command": str(group.get("command") or ""),
+            "classification": str(group.get("classification") or ""),
+            "rationale": str(group.get("rationale") or ""),
+        }
+        for group in [item for item in _list_payload(proof_reuse.get("proof_groups")) if isinstance(item, dict)]
+        if str(group.get("classification") or "") == "reuse_safe_with_evidence"
+    ]
+    if str(stack.get("status") or "") == "stack_comment_status_unavailable" or stale_members:
+        phase = "review-state-refresh"
+        next_action = "refresh-stack-review-state"
+        proof_manifest_status = "blocked_until_stack_state_current"
+        closeout_status = "blocked"
+    elif actionable_members:
+        phase = "review-correction"
+        next_action = "address-review-findings"
+        proof_manifest_status = "pending_after_correction"
+        closeout_status = "blocked"
+    elif proof_status == "reuse_safe_with_evidence":
+        phase = "review-closeout-ready"
+        next_action = "closeout-with-reused-proof-receipt"
+        proof_manifest_status = "reuse_safe_with_evidence"
+        closeout_status = "ready_after_recording_reuse_rationale"
+    else:
+        phase = "review-proof"
+        next_action = "run-focused-proof"
+        proof_manifest_status = "focused_proof_required"
+        closeout_status = "blocked"
+    proof_command = _command_with_cli_invoke(
+        command="agentic-workspace proof --changed <paths> --format json",
+        cli_invoke=cli_invoke,
+    )
+    closeout_command = _command_with_cli_invoke(
+        command="agentic-workspace report --target . --section closeout_report --format json",
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "kind": "agentic-workspace/review-stack-continuity/v1",
+        "status": phase,
+        "phase": phase,
+        "current_branch": branch,
+        "current_pr_number": current_pr_number,
+        "stack_status": str(stack.get("status") or ""),
+        "stack_comment_state": str(stack.get("comment_state") or ""),
+        "stack_member_count": len(members),
+        "dependency_order": dependency_order,
+        "affected_slice": {
+            "status": "review_findings_present" if actionable_members else "current_branch_pr" if current_pr_number else "unresolved",
+            "pr_number": str(affected_member.get("pr_number") or current_pr_number),
+            "branch": str(affected_member.get("branch") or branch),
+            "actionable_count": _as_int(affected_member.get("actionable_count")),
+            "paths": affected_paths,
+            "proof_hints": proof_hints,
+            "sample": affected_samples[:3],
+        },
+        "review_findings": {
+            "actionable_pr_numbers": [str(member.get("pr_number") or "") for member in actionable_members],
+            "stale_or_unverified_pr_numbers": [str(member.get("pr_number") or "") for member in stale_members],
+            "route_rule": "Bind each review finding to its stack member before changing proof or closeout phase.",
+        },
+        "incremental_proof_manifest": {
+            "status": proof_manifest_status,
+            "changed_effect_paths": affected_paths,
+            "proof_hints": proof_hints,
+            "proof_selection_command_template": proof_command,
+            "proof_reuse_status": proof_status,
+            "reusable_groups": reusable_groups,
+            "reuse_detail_command": proof_reuse.get("detail_command"),
+            "rule": "Use focused proof for the affected review slice; reuse cached proof groups only when the receipt is explicit and current.",
+        },
+        "next_action": {
+            "id": next_action,
+            "phase": phase,
+            "command": str(stack.get("recommended_command") or _pr_comment_report_command(cli_invoke=cli_invoke))
+            if next_action == "refresh-stack-review-state"
+            else proof_command
+            if next_action == "run-focused-proof"
+            else closeout_command
+            if next_action == "closeout-with-reused-proof-receipt"
+            else "",
+            "rule": "Review correction, focused proof, and closeout are separate phases; do not replace unresolved review work with broad readiness prose.",
+        },
+        "closeout_route": {
+            "status": closeout_status,
+            "command": closeout_command,
+            "parent_boundary": "Do not close a parent issue solely because a stack member is locally ready.",
+        },
+        "compact_continuation_rule": "Resume from phase, affected_slice, incremental_proof_manifest, and next_action before rereading raw stack cache.",
+    }
+
+
 def _pr_comment_addressing_packet_from_delta(
     *, cache: dict[str, Any], repo: str, pr_number: str, cache_path: str, cli_invoke: str
 ) -> dict[str, Any]:
@@ -25780,6 +25920,13 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
         stack = _pr_stack_comment_unavailable_payload(repo=repo, branch=branch, pr_number=pr_number, cli_invoke=cli_invoke)
     if stack:
         status = str(stack.get("status") or "stack_comment_status_unavailable")
+        proof_reuse = _proof_reuse_guidance_payload(target_root=target_root, cli_invoke=cli_invoke)
+        review_stack_continuity = _review_stack_continuity_payload(
+            stack=stack,
+            branch=branch,
+            proof_reuse=proof_reuse,
+            cli_invoke=cli_invoke,
+        )
         return {
             "kind": "agentic-workspace/pr-comment-attention/v1",
             "status": status,
@@ -25799,6 +25946,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             else str(stack.get("recommended_command") or _pr_comment_report_command(cli_invoke=cli_invoke)),
             "live_inspection": stack.get("live_inspection", {}),
             "pr_resolution": stack.get("pr_resolution", {}),
+            "review_stack_continuity": review_stack_continuity,
             "selector": "pr_comment_attention",
             "degraded_explicitly": status == "stack_comment_status_unavailable",
             "claim_boundary": stack.get("claim_boundary"),

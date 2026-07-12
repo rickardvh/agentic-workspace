@@ -6356,6 +6356,10 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     capsys.readouterr()
     cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "pr-comment-stack.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
+    changed_path = tmp_path / "src" / "app.py"
+    changed_path.parent.mkdir(parents=True, exist_ok=True)
+    changed_path.write_text("VALUE = 1\n", encoding="utf-8")
+    proof_reuse_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "proof-reuse.json"
 
     assert (
         cli.main(
@@ -6434,6 +6438,57 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert current["context"]["pr_comment_attention"]["pr_number"] == "1841"
     assert current["context"]["pr_comment_attention"]["stack_member_count"] == 2
     assert current["context"]["pr_comment_attention"]["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
+    current_continuity = current["context"]["pr_comment_attention"]["review_stack_continuity"]
+    assert current_continuity["phase"] == "review-proof"
+    assert current_continuity["current_pr_number"] == "1841"
+    assert [member["pr_number"] for member in current_continuity["dependency_order"]] == ["1840", "1841"]
+    assert current_continuity["affected_slice"]["pr_number"] == "1841"
+    assert current_continuity["incremental_proof_manifest"]["status"] == "focused_proof_required"
+    assert current_continuity["next_action"]["id"] == "run-focused-proof"
+
+    proof_reuse_path.write_text(
+        json.dumps(
+            {
+                "prior_head": "bbb222",
+                "prior_base": "base111",
+                "changed_paths": ["src/app.py"],
+                "path_fingerprints": {"src/app.py": hashlib.sha256(changed_path.read_bytes()).hexdigest()},
+                "parent_proof_reference": "proof-receipt:bbb222",
+                "proof_selection_fingerprint": "selection:stack-review",
+                "dependency_config_fingerprint": "deps:locked",
+                "generated_surface_freshness": {"status": "verified"},
+                "proof_groups": [
+                    {
+                        "command": "uv run pytest tests/test_app.py -q",
+                        "command_fingerprint": "cmd:test-app",
+                        "status": "passed",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue stacked PR review fixes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    reusable = json.loads(capsys.readouterr().out)
+    reusable_continuity = reusable["context"]["pr_comment_attention"]["review_stack_continuity"]
+    assert reusable_continuity["phase"] == "review-closeout-ready"
+    assert reusable_continuity["incremental_proof_manifest"]["proof_reuse_status"] == "reuse_safe_with_evidence"
+    assert reusable_continuity["incremental_proof_manifest"]["reusable_groups"][0]["command"] == "uv run pytest tests/test_app.py -q"
+    assert reusable_continuity["next_action"]["id"] == "closeout-with-reused-proof-receipt"
+    assert reusable_continuity["closeout_route"]["status"] == "ready_after_recording_reuse_rationale"
 
     actionable_stack = copy.deepcopy(fresh_stack)
     actionable_stack["stack_members"][1]["delta"]["category_counts"]["actionable_code_doc_body_change"] = 1
@@ -6478,7 +6533,18 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert attention["comment_addressing"]["status"] == "open_feedback_present"
     assert "--section pr_comment_attention --format json" in attention["detail_route"]
     assert attention["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
+    continuity = attention["review_stack_continuity"]
+    assert continuity["phase"] == "review-correction"
+    assert continuity["affected_slice"]["status"] == "review_findings_present"
+    assert continuity["affected_slice"]["pr_number"] == "1841"
+    assert continuity["affected_slice"]["paths"] == ["src/app.py"]
+    assert continuity["affected_slice"]["proof_hints"] == ["Run focused tests."]
+    assert continuity["review_findings"]["actionable_pr_numbers"] == ["1841"]
+    assert continuity["incremental_proof_manifest"]["status"] == "pending_after_correction"
+    assert continuity["next_action"]["id"] == "address-review-findings"
+    assert continuity["closeout_route"]["status"] == "blocked"
     assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
+    assert "review_stack_phase=review-correction" in payload["action_signals"]["changed_signals"]
 
     stale_stack = copy.deepcopy(fresh_stack)
     stale_stack["stack_members"][0]["delta"].pop("freshness")
@@ -6502,6 +6568,10 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert stale["context"]["pr_comment_attention"]["comment_state"] == "stack_stale_or_unknown"
     assert stale["context"]["pr_comment_attention"]["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
     assert "--section pr_comment_attention --format json" in stale["context"]["pr_comment_attention"]["detail_route"]
+    stale_continuity = stale["context"]["pr_comment_attention"]["review_stack_continuity"]
+    assert stale_continuity["phase"] == "review-state-refresh"
+    assert stale_continuity["review_findings"]["stale_or_unverified_pr_numbers"] == ["1840"]
+    assert stale_continuity["next_action"]["id"] == "refresh-stack-review-state"
 
 
 def test_report_proof_reuse_guidance_classifies_safe_and_stale_receipts(tmp_path: Path, capsys) -> None:
