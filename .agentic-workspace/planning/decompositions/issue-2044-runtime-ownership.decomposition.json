@@ -1,0 +1,12 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "Issue 2044 runtime ownership behind IR/codegen",
+  "status": "shaping",
+  "larger_intended_outcome": "Move ordinary-command packet, gate, routing, error, and output semantics behind contracts/IR and generated projections, while enforcing a narrow explicit runtime-primitive and exception boundary across generated targets.",
+  "non_goals": [],
+  "candidate_lanes": [],
+  "proof_expectations": [],
+  "promotion_rule": "Promote one bounded lane at a time, beginning with the ownership inventory and boundary contract; require the inventory before migrating a representative command path.",
+  "references": [],
+  "notes": ""
+}

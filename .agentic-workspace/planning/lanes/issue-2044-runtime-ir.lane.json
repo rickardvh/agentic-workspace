@@ -1,0 +1,39 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "issue-2044-runtime-ir",
+  "title": "Issue 2044 runtime semantics IR and projections",
+  "status": "ready",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/issue-2044-runtime-ownership.decomposition.json",
+  "lane_outcome": "Extend source contracts or IR so ordinary command packet, gate, routing, error, and output semantics can be represented and projected without target-runtime hand edits.",
+  "purpose_for_parent": "Supplies the portable semantic model for generated targets.",
+  "subsystems": [],
+  "technical_strategy": "Tighten the lane strategy before the first slice starts.",
+  "technology_choices": [],
+  "slice_sequence": [],
+  "current_slice": "",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Run contract validation, regenerate target outputs, and prove generated artifacts are fresh and structurally equivalent.",
+  "proof_aggregation": {
+    "status": "not-started",
+    "evidence": [],
+    "known_gaps": []
+  },
+  "residual_lane_work": "not evaluated",
+  "lane_to_epic_contribution": "not evaluated",
+  "parent_close_permission": "not-evaluated",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/issue-2044-runtime-ownership.decomposition.json",
+      "label": ".agentic-workspace/planning/decompositions/issue-2044-runtime-ownership.decomposition.json",
+      "role": "parent"
+    }
+  ],
+  "notes": ""
+}
