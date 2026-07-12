@@ -10379,6 +10379,7 @@ def _lane_state_projection(record: dict[str, Any], *, target_root: Path, lane_re
         projection.setdefault("next_action", "Create or select the next slice execplan from the lane's slice_sequence.")
         projection.setdefault("done_when", "The lane is ready to promote a bounded slice.")
         projection["proof"] = str(record.get("proof_strategy", "")).strip() or "Run the lane proof strategy for its selected slice."
+        projection["owner_role"] = "planning"
         projection["review_role"] = "validation"
         projection["handoff_ready"] = True
     return projection
@@ -10524,10 +10525,32 @@ def promote_decomposition_lane_to_lane_record(
         return result
     slug = _slugify(lane_id)
     record_path = _lane_record_path(target_root, slug)
-    if record_path.exists():
-        result.add("manual review", record_path, "target lane record already exists")
-        return result
     source_relative = matched_path.relative_to(target_root).as_posix()
+    if record_path.exists():
+        existing_record = _load_lane_record(record_path)
+        if not isinstance(existing_record, dict) or str(existing_record.get("parent_decomposition_ref") or "").strip() != source_relative:
+            result.add("manual review", record_path, "target lane record already exists with incompatible parent provenance")
+            result.conflict_owner = record_path.relative_to(target_root).as_posix()
+            result.recovery_command = f"{_workspace_cli_invoke(target_root)} planning lane-activate {slug} --target . --format json"
+            return result
+        lane_relative = record_path.relative_to(target_root).as_posix()
+        updated_record = copy.deepcopy(matched_record)
+        updated_lanes = list(updated_record.get("candidate_lanes", []))
+        updated_lane = copy.deepcopy(matched_lane)
+        updated_lane["readiness"] = "promoted"
+        updated_lane["owner_surface"] = lane_relative
+        updated_lanes[matched_index] = updated_lane
+        updated_record["candidate_lanes"] = updated_lanes
+        if dry_run:
+            result.add("would update", matched_path, f"link decomposition lane '{lane_id}' to existing compatible owner")
+            _add_planning_mutation_proof_actions(result)
+            return result
+        matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8", newline="\n")
+        _upsert_roadmap_lane_state(target_root, existing_record, lane_relative=lane_relative)
+        result.add("updated", matched_path, f"linked decomposition lane '{lane_id}' to existing compatible owner")
+        result.add("updated", target_root / PLANNING_STATE_PATH, f"reconciled lane '{slug}' in roadmap.lanes")
+        _add_planning_mutation_proof_actions(result)
+        return result
     record = _default_lane_record(
         lane_id=slug,
         title=str(matched_lane.get("title") or _title_from_slug(slug)),
@@ -10606,11 +10629,29 @@ def activate_lane_record(
         result.add("manual review", record_path, f"lane record '{slug}' was not found")
         return result
     record = copy.deepcopy(record)
-    record["status"] = "active"
-    if current_slice.strip():
-        record["current_slice"] = current_slice.strip()
+    selected_slice = current_slice.strip() or str(record.get("current_slice", "")).strip()
+    execplan_ref = ""
+    if selected_slice:
         for slice_record in record.get("slice_sequence", []):
-            if isinstance(slice_record, dict) and str(slice_record.get("id", "")).strip() == current_slice.strip():
+            if isinstance(slice_record, dict) and str(slice_record.get("id", "")).strip() == selected_slice:
+                execplan_ref = str(slice_record.get("execplan_ref") or slice_record.get("execplan") or "").strip()
+                break
+        if not execplan_ref:
+            inferred = (Path(".agentic-workspace") / "planning" / "execplans" / f"{_slugify(selected_slice)}.plan.json").as_posix()
+            if (target_root / inferred).exists():
+                execplan_ref = inferred
+    if not execplan_ref or not (target_root / execplan_ref).exists():
+        result.add(
+            "manual review",
+            record_path,
+            "lane activation requires --current-slice with an existing execplan; create it first with `planning new-plan --lane <lane-id> --activate`",
+        )
+        return result
+    record["status"] = "active"
+    if selected_slice:
+        record["current_slice"] = selected_slice
+        for slice_record in record.get("slice_sequence", []):
+            if isinstance(slice_record, dict) and str(slice_record.get("id", "")).strip() == selected_slice:
                 slice_record["status"] = "active"
     lane_relative = record_path.relative_to(target_root).as_posix()
     if dry_run:
@@ -11392,12 +11433,12 @@ def _attach_execplan_to_active_lane(state: dict[str, Any], *, lane_id: str, exec
         if not isinstance(item, dict) or str(item.get("id") or "").strip() != lane_id:
             continue
         lane_item: dict[str, Any] = {str(key): value for key, value in item.items()}
-        if str(lane_item.get("status") or "").strip() != "active":
-            return ""
         existing_execplan = str(lane_item.get("execplan") or "").strip()
         if existing_execplan and existing_execplan != execplan_ref:
             return ""
         lane_item["execplan"] = execplan_ref
+        lane_item["status"] = "active"
+        lane_item["maturity"] = "active"
         lanes[index] = lane_item
         roadmap["lanes"] = lanes
         state["roadmap"] = roadmap

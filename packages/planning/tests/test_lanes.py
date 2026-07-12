@@ -140,6 +140,18 @@ def test_promote_decomposition_lane_creates_lane_owner_without_execplan(tmp_path
     assert candidate["owner_surface"] == ".agentic-workspace/planning/lanes/lane-artifacts.lane.json"
 
 
+def test_promote_decomposition_lane_reuses_matching_owner(tmp_path: Path) -> None:
+    decomposition_path = tmp_path / ".agentic-workspace/planning/decompositions/parent.decomposition.json"
+    _write_decomposition(decomposition_path)
+    promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
+
+    result = promote_decomposition_lane_to_lane_record("lane-artifacts", target=tmp_path)
+
+    assert [action.kind for action in result.actions] == ["updated", "updated", "proof", "proof"]
+    warnings = planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"]
+    assert not [warning for warning in warnings if warning["warning_class"] == "planning_state_v1_schema"]
+
+
 def test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_clean(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
@@ -212,7 +224,6 @@ def test_lane_activate_infers_current_slice_execplan_when_slice_sequence_is_mini
 def test_new_plan_attaches_first_execplan_to_already_active_lane(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
-    activate_lane_record("activation-lane", target=tmp_path)
 
     result = create_execplan_scaffold(
         plan_id="slice-one",
@@ -236,14 +247,25 @@ def test_new_plan_attaches_first_execplan_to_already_active_lane(tmp_path: Path)
 def test_new_plan_does_not_attach_unrelated_plan_to_single_active_lane(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
-    activate_lane_record("activation-lane", target=tmp_path)
 
     result = create_execplan_scaffold(plan_id="unrelated", title="Unrelated", target=tmp_path, activate=True)
 
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
     active_lane = state["roadmap"]["lanes"][0]
     assert "execplan" not in active_lane
-    assert any("link only with relationship evidence" in action.detail for action in result.actions)
+    assert not any("attached execplan" in action.detail for action in result.actions)
+
+
+def test_lane_activate_without_execplan_is_a_noop(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
+
+    result = activate_lane_record("activation-lane", target=tmp_path)
+
+    assert [action.kind for action in result.actions] == ["manual review"]
+    lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json").read_text(encoding="utf-8"))
+    assert lane["status"] == "ready"
+    assert planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"] == []
 
 
 def test_new_plan_does_not_guess_when_multiple_lanes_are_active(tmp_path: Path) -> None:
