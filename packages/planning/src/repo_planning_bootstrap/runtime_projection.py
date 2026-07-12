@@ -209,6 +209,7 @@ def apply_planning_lane_promote_operation(values: dict, _arguments: dict, _conte
         values,
         positional=(("lane", "str", ""),),
         keywords=(
+            ("alternate_lane_id", "alternate_lane_id", "str", ""),
             ("target", "target", "raw", None),
             ("expected_planning_revision", "expect_planning_revision", "str", ""),
             ("dry_run", "dry_run", "bool", None),

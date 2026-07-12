@@ -10,6 +10,7 @@
   "classification": "lifecycle-mutation",
   "inputs": [
     {"name": "lane", "source": "derived", "required": true},
+    {"name": "alternate_lane_id", "source": "cli-option", "required": false},
     {"name": "target", "source": "cli-option", "required": false},
     {"name": "expect_planning_revision", "source": "cli-option", "required": false},
     {"name": "dry_run", "source": "cli-option", "required": false},

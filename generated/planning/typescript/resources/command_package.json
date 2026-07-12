@@ -1685,6 +1685,14 @@
           {
             "default": "",
             "flags": [
+              "--alternate-lane-id"
+            ],
+            "help": "Use this lane record id when the default owner surface is already owned by incompatible provenance.",
+            "name": "alternate_lane_id"
+          },
+          {
+            "default": "",
+            "flags": [
               "--expect-planning-revision"
             ],
             "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation.",

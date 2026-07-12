@@ -360,6 +360,14 @@
               "help": "Optional repository path."
             },
             {
+              "name": "alternate_lane_id",
+              "flags": [
+                "--alternate-lane-id"
+              ],
+              "default": "",
+              "help": "Use this lane record id when the default owner surface is already owned by incompatible provenance."
+            },
+            {
               "name": "dry_run",
               "flags": [
                 "--dry-run"
