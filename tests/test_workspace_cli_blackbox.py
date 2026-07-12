@@ -142,6 +142,13 @@ def test_generated_typescript_recovery_is_ir_derived_and_round_trips(module: str
     assert rerun.returncode == 0, rerun.stdout + rerun.stderr
 
 
+def test_generated_python_recovery_uses_command_ir_not_parser_error_choices() -> None:
+    generated_cli = (Path.cwd() / "generated/workspace/python/cli.py").read_text(encoding="utf-8")
+    assert "_extract_command_choices" not in generated_cli
+    assert "_authoritative_command_authority(argv)" in generated_cli
+    assert "_authoritative_command_choices(authority)" in generated_cli
+
+
 def test_blackbox_memory_route_task_misuse_guides_to_memory_consult() -> None:
     result = _run_cli(
         "memory",

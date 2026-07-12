@@ -80,13 +80,14 @@ class GeneratedArgumentParser(argparse.ArgumentParser):
                     message = f"{message}\n{hint_text}"
         if 'invalid choice' in message and 'command' in message:
             unknown = _extract_unknown_command(message)
-            recovery_token = _recovery_token(self.prog, argv, unknown)
-            suggestions = difflib.get_close_matches(recovery_token, _authoritative_command_choices(self.prog), n=1, cutoff=0.55)
+            authority = _authoritative_command_authority(argv)
+            recovery_token = _recovery_token(argv, authority, unknown)
+            suggestions = difflib.get_close_matches(recovery_token, _authoritative_command_choices(authority), n=1, cutoff=0.55)
             if suggestions:
                 message = f"{message}\nDid you mean: {', '.join(suggestions)}?"
-                suggested_command = _canonical_recovery_command(self.prog, argv, recovery_token, suggestions[0])
-            elif unknown in self.prog.split()[1:]:
-                suggested_command = _canonical_recovery_command(self.prog, argv, unknown, unknown)
+                suggested_command = _canonical_recovery_command(argv, authority, recovery_token, suggestions[0])
+            elif unknown in authority:
+                suggested_command = _canonical_recovery_command(argv, authority, unknown, unknown)
             if 'start' in _GENERATED_COMMANDS_BY_NAME and 'preflight' in _GENERATED_COMMANDS_BY_NAME:
                 message = (
                     f"{message}\nStartup tip: run '{self.prog} start --task \"<task>\" --format json' "
@@ -130,8 +131,7 @@ def _command_with_replaced_token(prog: str, argv: list[str], old: str, new: str)
     return f"{prog} {shlex.join(replaced)}"
 
 
-def _recovery_token(prog: str, argv: list[str], unknown: str) -> str:
-    authority = prog.split()[1:]
+def _recovery_token(argv: list[str], authority: list[str], unknown: str) -> str:
     remaining = list(argv)
     while authority and remaining[:len(authority)] == authority:
         remaining = remaining[len(authority):]
@@ -140,9 +140,24 @@ def _recovery_token(prog: str, argv: list[str], unknown: str) -> str:
     return unknown
 
 
-def _authoritative_command_choices(prog: str) -> list[str]:
+def _authoritative_command_authority(argv: list[str]) -> list[str]:
+    current: dict[str, Any] | None = None
+    authority: list[str] = []
+    for token in argv:
+        choices = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS] if current is None else current.get('subcommands', [])
+        next_interface = next(
+            (item for item in choices if isinstance(item, dict) and str(item.get('name', '')) == token),
+            None,
+        )
+        if next_interface is None:
+            break
+        authority.append(token)
+        current = next_interface
+    return authority
+
+
+def _authoritative_command_choices(authority: list[str]) -> list[str]:
     # Read the active command surface from generated command IR, never parser prose.
-    authority = prog.split()[1:]
     interfaces = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS]
     current: dict[str, Any] | None = None
     for token in authority:
@@ -157,9 +172,8 @@ def _authoritative_command_choices(prog: str) -> list[str]:
     return [str(item.get('name', '')) for item in choices if isinstance(item, dict) and str(item.get('name', '')).strip()]
 
 
-def _canonical_recovery_command(prog: str, argv: list[str], old: str, new: str) -> str:
-    prog_tokens = prog.split()
-    root, authority = prog_tokens[0], prog_tokens[1:]
+def _canonical_recovery_command(argv: list[str], authority: list[str], old: str, new: str) -> str:
+    root = str(GENERATED_COMMAND_PACKAGE.get('program') or 'agentic-workspace')
     remaining = list(argv)
     while authority and remaining[:len(authority)] == authority:
         remaining = remaining[len(authority):]
