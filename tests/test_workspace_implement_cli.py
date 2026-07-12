@@ -4816,6 +4816,11 @@ def test_start_lane_route_can_promote_existing_decomposition_candidate(tmp_path:
     assert recognized["selected_route"] == "reuse-existing-lane-owner"
     assert recognized["mutation_required"] is False
     assert recognized["postcondition"]["parent_decomposition"] == ".agentic-workspace/planning/decompositions/parent.decomposition.json"
+    assert "--expect-planning-revision" not in recognized["command"]
+    recognized_argv = shlex.split(recognized["command"])
+    assert cli.main(recognized_argv[1:]) == 0
+    recognized_lanes = json.loads(capsys.readouterr().out)["values"]["lanes"]
+    assert recognized_lanes["record_count"] == 1
 
 
 def test_start_replays_2143_unknown_to_lane_before_plan_creation(tmp_path: Path, capsys) -> None:

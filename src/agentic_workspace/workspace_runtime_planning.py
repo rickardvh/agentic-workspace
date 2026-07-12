@@ -563,19 +563,23 @@ def _work_shape_study_payload(
             if promotion_route
             else "create-new-lane-owner"
         )
-        command = _command_with_cli_invoke(
-            command=_command_with_expected_planning_revision(
-                (
-                    f'agentic-workspace summary --target "{target_root.as_posix()}" --select lanes --format json'
-                    if existing_owner
-                    else f'agentic-workspace planning lane-promote {owner_id} --target "{target_root.as_posix()}" --format json'
-                    if promotion_route
-                    else f'agentic-workspace planning lane-create --id {owner_id} --target "{target_root.as_posix()}" --format json'
+        if existing_owner:
+            command = _command_with_cli_invoke(
+                command=f'agentic-workspace summary --target "{target_root.as_posix()}" --select lanes --format json',
+                cli_invoke=config.cli_invoke,
+            )
+        else:
+            command = _command_with_cli_invoke(
+                command=_command_with_expected_planning_revision(
+                    (
+                        f'agentic-workspace planning lane-promote {owner_id} --target "{target_root.as_posix()}" --format json'
+                        if promotion_route
+                        else f'agentic-workspace planning lane-create --id {owner_id} --target "{target_root.as_posix()}" --format json'
+                    ),
+                    planning_revision=planning_revision,
                 ),
-                planning_revision=planning_revision,
-            ),
-            cli_invoke=config.cli_invoke,
-        )
+                cli_invoke=config.cli_invoke,
+            )
         owner_writer = {
             "required_artifact_kind": "planning-lane-record",
             "canonical_operation": selected_operation,
