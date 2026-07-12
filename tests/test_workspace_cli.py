@@ -1731,6 +1731,10 @@ def test_planning_front_door_new_plan_binds_explicit_active_lane(tmp_path: Path,
 
     assert any("attached execplan 'slice-one' to active lane 'lane-alpha'" in action["detail"] for action in payload["actions"])
     assert state["roadmap"]["lanes"][0]["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
+    lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/lane-alpha.lane.json").read_text(encoding="utf-8"))
+    assert lane["status"] == "active"
+    assert lane["current_slice"] == "slice-one"
+    assert lane["slice_sequence"][0]["execplan_ref"] == state["roadmap"]["lanes"][0]["execplan"]
 
 
 def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys) -> None:

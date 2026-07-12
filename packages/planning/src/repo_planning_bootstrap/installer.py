@@ -10384,15 +10384,21 @@ def _lane_state_projection(record: dict[str, Any], *, target_root: Path, lane_re
     return projection
 
 
-def _upsert_roadmap_lane_state(target_root: Path, record: dict[str, Any], *, lane_relative: str) -> None:
-    state = _read_state_from_toml(target_root) or {
-        "kind": PLANNING_STATE_KIND,
-        "schema_version": PLANNING_STATE_SCHEMA_VERSION,
-        "work_items": [],
-        "active": {"execplans": []},
-        "todo": {"active_items": [], "queued_items": []},
-        "roadmap": {"lanes": [], "candidates": []},
-    }
+def _roadmap_state_with_lane(
+    target_root: Path, record: dict[str, Any], *, lane_relative: str, state: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    state = (
+        state
+        or _read_state_from_toml(target_root)
+        or {
+            "kind": PLANNING_STATE_KIND,
+            "schema_version": PLANNING_STATE_SCHEMA_VERSION,
+            "work_items": [],
+            "active": {"execplans": []},
+            "todo": {"active_items": [], "queued_items": []},
+            "roadmap": {"lanes": [], "candidates": []},
+        }
+    )
     next_state = copy.deepcopy(state)
     roadmap = next_state.get("roadmap")
     if not isinstance(roadmap, dict):
@@ -10415,7 +10421,18 @@ def _upsert_roadmap_lane_state(target_root: Path, record: dict[str, Any], *, lan
     roadmap["lanes"] = next_lanes
     roadmap.setdefault("candidates", [])
     next_state["roadmap"] = roadmap
-    _write_state_to_toml(target_root, next_state)
+    return next_state
+
+
+def _proposed_planning_state_findings(target_root: Path, state: dict[str, Any]) -> list[str]:
+    return [
+        str(warning.get("message") or "invalid planning state")
+        for warning in _planning_state_v1_warnings(target_root=target_root, state=state)
+    ]
+
+
+def _upsert_roadmap_lane_state(target_root: Path, record: dict[str, Any], *, lane_relative: str) -> None:
+    _write_state_to_toml(target_root, _roadmap_state_with_lane(target_root, record, lane_relative=lane_relative))
 
 
 def _remove_roadmap_lane_state(target_root: Path, lane_id: str) -> None:
@@ -10475,6 +10492,11 @@ def create_lane_record(
         result.add("manual review", record_path, f"lane record did not validate against planning-lane.schema.json: {'; '.join(findings)}")
         return result
     lane_relative = record_path.relative_to(target_root).as_posix()
+    proposed_state = _roadmap_state_with_lane(target_root, record, lane_relative=lane_relative)
+    state_findings = _proposed_planning_state_findings(target_root, proposed_state)
+    if state_findings:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, f"proposed lane state did not validate: {'; '.join(state_findings)}")
+        return result
     if dry_run:
         result.add("would create", record_path, "schema-valid lane record")
         result.add("would update", target_root / PLANNING_STATE_PATH, f"index lane '{slug}' in roadmap.lanes")
@@ -10483,7 +10505,7 @@ def create_lane_record(
 
     def write_lane_and_state() -> None:
         _write_lane_record(record_path=record_path, record=record)
-        _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+        _write_state_to_toml(target_root, proposed_state)
 
     try:
         _apply_planning_writes_atomically(
@@ -10541,7 +10563,11 @@ def promote_decomposition_lane_to_lane_record(
         if not isinstance(existing_record, dict) or str(existing_record.get("parent_decomposition_ref") or "").strip() != source_relative:
             result.add("manual review", record_path, "target lane record already exists with incompatible parent provenance")
             result.conflict_owner = record_path.relative_to(target_root).as_posix()
-            result.recovery_command = f"{_workspace_cli_invoke(target_root)} planning lane-activate {slug} --target . --format json"
+            result.recovery_command = (
+                f"{_workspace_cli_invoke(target_root)} planning lane-create --id {slug} "
+                f"--title {json.dumps(str(matched_lane.get('title') or _title_from_slug(slug)))} "
+                f"--parent-decomposition {json.dumps(source_relative)} --target . --format json"
+            )
             return result
         lane_relative = record_path.relative_to(target_root).as_posix()
         updated_record = copy.deepcopy(matched_record)
@@ -10551,6 +10577,16 @@ def promote_decomposition_lane_to_lane_record(
         updated_lane["owner_surface"] = lane_relative
         updated_lanes[matched_index] = updated_lane
         updated_record["candidate_lanes"] = updated_lanes
+        decomposition_findings = _json_schema_findings(payload=updated_record, schema_path=DECOMPOSITION_RECORD_SCHEMA_PATH)
+        proposed_state = _roadmap_state_with_lane(target_root, existing_record, lane_relative=lane_relative)
+        state_findings = _proposed_planning_state_findings(target_root, proposed_state)
+        if decomposition_findings or state_findings:
+            result.add(
+                "manual review",
+                matched_path,
+                f"proposed promotion did not validate: {'; '.join([*decomposition_findings, *state_findings])}",
+            )
+            return result
         if dry_run:
             result.add("would update", matched_path, f"link decomposition lane '{lane_id}' to existing compatible owner")
             result.add("would update", target_root / PLANNING_STATE_PATH, f"reconciled lane '{slug}' in roadmap.lanes")
@@ -10559,7 +10595,7 @@ def promote_decomposition_lane_to_lane_record(
 
         def link_owner_and_state() -> None:
             matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8", newline="\n")
-            _upsert_roadmap_lane_state(target_root, existing_record, lane_relative=lane_relative)
+            _write_state_to_toml(target_root, proposed_state)
 
         try:
             _apply_planning_writes_atomically(
@@ -10605,6 +10641,17 @@ def promote_decomposition_lane_to_lane_record(
     updated_lane["owner_surface"] = lane_relative
     updated_lanes[matched_index] = updated_lane
     updated_record["candidate_lanes"] = updated_lanes
+    record_findings = _json_schema_findings(payload=record, schema_path=LANE_RECORD_SCHEMA_PATH)
+    decomposition_findings = _json_schema_findings(payload=updated_record, schema_path=DECOMPOSITION_RECORD_SCHEMA_PATH)
+    proposed_state = _roadmap_state_with_lane(target_root, record, lane_relative=lane_relative)
+    state_findings = _proposed_planning_state_findings(target_root, proposed_state)
+    if record_findings or decomposition_findings or state_findings:
+        result.add(
+            "manual review",
+            record_path,
+            f"proposed promotion did not validate: {'; '.join([*record_findings, *decomposition_findings, *state_findings])}",
+        )
+        return result
     if dry_run:
         result.add("would create", record_path, "schema-valid lane record from decomposition lane")
         result.add("would update", matched_path, f"mark decomposition lane '{lane_id}' as promoted")
@@ -10615,7 +10662,7 @@ def promote_decomposition_lane_to_lane_record(
     def write_lane_promotion_and_state() -> None:
         _write_lane_record(record_path=record_path, record=record)
         matched_path.write_text(json.dumps(updated_record, indent=2) + "\n", encoding="utf-8", newline="\n")
-        _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+        _write_state_to_toml(target_root, proposed_state)
 
     try:
         _apply_planning_writes_atomically(
@@ -10674,10 +10721,17 @@ def activate_lane_record(
             if (target_root / inferred).exists():
                 execplan_ref = inferred
     if not execplan_ref or not (target_root / execplan_ref).exists():
+        recovery_slice = selected_slice or f"{slug}-slice"
+        recovery_title = f"{str(record.get('title') or _title_from_slug(slug)).strip()} Slice"
         result.add(
             "manual review",
             record_path,
-            "lane activation requires --current-slice with an existing execplan; create it first with `planning new-plan --lane <lane-id> --activate`",
+            f"lane activation requires current slice '{recovery_slice}' with an existing execplan",
+        )
+        result.reason_code = "lane-execplan-required"
+        result.recovery_command = (
+            f"{_workspace_cli_invoke(target_root)} planning new-plan --id {recovery_slice} "
+            f"--title {json.dumps(recovery_title)} --activate --lane {slug} --target . --format json"
         )
         return result
     record["status"] = "active"
@@ -10687,13 +10741,27 @@ def activate_lane_record(
             if isinstance(slice_record, dict) and str(slice_record.get("id", "")).strip() == selected_slice:
                 slice_record["status"] = "active"
     lane_relative = record_path.relative_to(target_root).as_posix()
+    record_findings = _json_schema_findings(payload=record, schema_path=LANE_RECORD_SCHEMA_PATH)
+    proposed_state = _roadmap_state_with_lane(target_root, record, lane_relative=lane_relative)
+    state_findings = _proposed_planning_state_findings(target_root, proposed_state)
+    if record_findings or state_findings:
+        result.add("manual review", record_path, f"proposed activation did not validate: {'; '.join([*record_findings, *state_findings])}")
+        return result
     if dry_run:
         result.add("would update", record_path, "mark lane active and record current slice")
         result.add("would update", target_root / PLANNING_STATE_PATH, f"project active lane '{slug}'")
         _add_planning_mutation_proof_actions(result)
         return result
-    _write_lane_record(record_path=record_path, record=record)
-    _upsert_roadmap_lane_state(target_root, record, lane_relative=lane_relative)
+
+    def write_lane_and_state() -> None:
+        _write_lane_record(record_path=record_path, record=record)
+        _write_state_to_toml(target_root, proposed_state)
+
+    try:
+        _apply_planning_writes_atomically([record_path, target_root / PLANNING_STATE_PATH], write_lane_and_state)
+    except OSError as exc:
+        result.add("manual review", target_root / PLANNING_STATE_PATH, f"lane activation rolled back after write failure: {exc}")
+        return result
     result.add("updated", record_path, "marked lane active and recorded current slice")
     result.add("updated", target_root / PLANNING_STATE_PATH, f"projected active lane '{slug}'")
     _add_planning_mutation_proof_actions(result)
@@ -11298,6 +11366,7 @@ def create_execplan_scaffold(
     }
     updated_state = copy.deepcopy(state)
     attached_active_lane_id = ""
+    lane_record_update: tuple[Path, dict[str, Any]] | None = None
     if activate or queue:
         if _compact_todo_item_from_state(updated_state, slug) is not None:
             result.add("manual review", state_path, f"planning item '{slug}' already exists in state.toml")
@@ -11364,18 +11433,51 @@ def create_execplan_scaffold(
         todo.setdefault("queued_items", [])
         updated_state["todo"] = todo
         if activate and lane_id:
-            attached_active_lane_id = _attach_execplan_to_active_lane(
-                updated_state,
-                lane_id=lane_id,
-                execplan_ref=record_relative,
-            )
-            if not attached_active_lane_id:
+            lane_record_path = _lane_record_path(target_root, lane_id)
+            lane_record = _load_lane_record(lane_record_path)
+            if lane_record is None:
                 result.add(
                     "manual review",
                     state_path,
-                    f"lane '{lane_id}' is not active or already belongs to a different execplan; no plan was created",
+                    f"lane '{lane_id}' was not found; no plan was created",
                 )
                 return result
+            updated_lane_record = copy.deepcopy(lane_record)
+            slices = list(updated_lane_record.get("slice_sequence", []))
+            matching_slice = next((item for item in slices if isinstance(item, dict) and str(item.get("id") or "").strip() == slug), None)
+            if isinstance(matching_slice, dict):
+                matching_slice["status"] = "active"
+                matching_slice["execplan_ref"] = record_relative
+            else:
+                slices.append(
+                    {
+                        "id": slug,
+                        "title": plan_title,
+                        "status": "active",
+                        "execplan_ref": record_relative,
+                        "depends_on": [],
+                        "purpose_for_lane": str(updated_lane_record.get("purpose_for_parent") or plan_title).strip(),
+                    }
+                )
+            updated_lane_record["slice_sequence"] = slices
+            updated_lane_record["current_slice"] = slug
+            updated_lane_record["status"] = "active"
+            lane_findings = _json_schema_findings(payload=updated_lane_record, schema_path=LANE_RECORD_SCHEMA_PATH)
+            if lane_findings:
+                result.add("manual review", lane_record_path, f"proposed active lane did not validate: {'; '.join(lane_findings)}")
+                return result
+            updated_state = _roadmap_state_with_lane(
+                target_root,
+                updated_lane_record,
+                lane_relative=lane_record_path.relative_to(target_root).as_posix(),
+                state=updated_state,
+            )
+            state_findings = _proposed_planning_state_findings(target_root, updated_state)
+            if state_findings:
+                result.add("manual review", state_path, f"proposed active lane state did not validate: {'; '.join(state_findings)}")
+                return result
+            lane_record_update = (lane_record_path, updated_lane_record)
+            attached_active_lane_id = lane_id
 
     for demoted_path, demoted_record in demoted_record_updates:
         try:
@@ -11403,23 +11505,38 @@ def create_execplan_scaffold(
             result.add("would update", demoted_path, "demote displaced active execplan milestone to planned")
         if activate or queue:
             result.add("would update", state_path, f"register '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
-        if attached_active_lane_id:
+        if lane_record_update is not None:
+            result.add("would update", lane_record_update[0], f"record active slice '{slug}' for lane '{attached_active_lane_id}'")
             result.add("would update", state_path, f"attach execplan '{slug}' to active lane '{attached_active_lane_id}'")
         result.add("next", target_root / PLANNING_STATE_PATH, "run `agentic-workspace summary --target . --verbose --format json`")
         result.add("next", record_path, _new_plan_tightening_checklist(prep_only=prep_only))
         return result
 
-    _write_execplan_record(record_path=record_path, record=plan_record)
-    for demoted_path, demoted_record in demoted_record_updates:
-        _write_execplan_record(record_path=demoted_path, record=demoted_record)
+    def write_execplan_and_lane_state() -> None:
+        _write_execplan_record(record_path=record_path, record=plan_record)
+        for demoted_path, demoted_record in demoted_record_updates:
+            _write_execplan_record(record_path=demoted_path, record=demoted_record)
+        if lane_record_update is not None:
+            _write_lane_record(record_path=lane_record_update[0], record=lane_record_update[1])
+        if activate or queue:
+            _write_state_to_toml(target_root, updated_state)
+
+    mutation_paths = [record_path, *(path for path, _record in demoted_record_updates), state_path]
+    if lane_record_update is not None:
+        mutation_paths.append(lane_record_update[0])
+    try:
+        _apply_planning_writes_atomically(mutation_paths, write_execplan_and_lane_state)
+    except OSError as exc:
+        result.add("manual review", state_path, f"execplan scaffold rolled back after write failure: {exc}")
+        return result
     detail = "schema-valid prep-only execplan scaffold" if prep_only else "schema-valid execplan scaffold"
     result.add("created" if not overwrite else "updated", record_path, detail)
     for demoted_path, _demoted_record in demoted_record_updates:
         result.add("updated", demoted_path, "demoted displaced active execplan milestone to planned")
     if activate or queue:
-        _write_state_to_toml(target_root, updated_state)
         result.add("updated", state_path, f"registered '{slug}' in todo.{'active_items' if activate else 'queued_items'}")
-    if attached_active_lane_id:
+    if lane_record_update is not None:
+        result.add("updated", lane_record_update[0], f"recorded active slice '{slug}' for lane '{attached_active_lane_id}'")
         result.add("updated", state_path, f"attached execplan '{slug}' to active lane '{attached_active_lane_id}'")
     elif activate:
         active_lane_ids = _active_roadmap_lane_ids(updated_state)

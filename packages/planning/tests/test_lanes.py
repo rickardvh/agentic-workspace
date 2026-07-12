@@ -208,7 +208,7 @@ def test_lane_promotion_rejects_incompatible_owner_without_mutating_it(tmp_path:
 
     assert [action.kind for action in result.actions] == ["manual review"]
     assert result.conflict_owner == ".agentic-workspace/planning/lanes/lane-artifacts.lane.json"
-    assert "lane-activate lane-artifacts" in result.recovery_command
+    assert "lane-create --id lane-artifacts" in result.recovery_command
     assert lane_path.read_bytes() == before_lane
     candidate = json.loads(decomposition_path.read_text(encoding="utf-8"))["candidate_lanes"][0]
     assert candidate["readiness"] == "ready"
@@ -296,12 +296,16 @@ def test_new_plan_attaches_first_execplan_to_already_active_lane(tmp_path: Path)
         lane="activation-lane",
     )
 
-    assert [action.kind for action in result.actions] == ["created", "updated", "updated", "next", "next"]
-    assert "attached execplan 'slice-one' to active lane 'activation-lane'" in result.actions[2].detail
+    assert [action.kind for action in result.actions] == ["created", "updated", "updated", "updated", "next", "next"]
+    assert any("attached execplan 'slice-one' to active lane 'activation-lane'" in action.detail for action in result.actions)
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
     active_lane = state["roadmap"]["lanes"][0]
     assert active_lane["owner_surface"] == ".agentic-workspace/planning/lanes/activation-lane.lane.json"
     assert active_lane["execplan"] == ".agentic-workspace/planning/execplans/slice-one.plan.json"
+    lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json").read_text(encoding="utf-8"))
+    assert lane["status"] == "active"
+    assert lane["current_slice"] == "slice-one"
+    assert lane["slice_sequence"][0]["execplan_ref"] == active_lane["execplan"]
 
     summary = planning_summary(target=tmp_path, profile="compact")
     assert summary["planning_surface_health"]["warnings"] == []
