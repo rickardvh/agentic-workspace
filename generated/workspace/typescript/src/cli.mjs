@@ -4419,7 +4419,22 @@ function closestAuthoritativeChoice(token, choices) {
     }
     return rows[left.length][right.length];
   };
-  const best = choices.reduce((current, candidate) => distance(token, candidate) < distance(token, current) ? candidate : current, choices[0]);
+  const subsequence = (left, right) => {
+    const rows = Array.from({ length: left.length + 1 }, () => Array(right.length + 1).fill(0));
+    for (let row = 1; row <= left.length; row += 1) {
+      for (let column = 1; column <= right.length; column += 1) {
+        rows[row][column] = left[row - 1] === right[column - 1]
+          ? rows[row - 1][column - 1] + 1
+          : Math.max(rows[row - 1][column], rows[row][column - 1]);
+      }
+    }
+    return rows[left.length][right.length];
+  };
+  const best = choices.reduce((current, candidate) => {
+    const candidateDistance = distance(token, candidate);
+    const currentDistance = distance(token, current);
+    return candidateDistance < currentDistance || (candidateDistance === currentDistance && subsequence(token, candidate) > subsequence(token, current)) ? candidate : current;
+  }, choices[0]);
   const similarity = 1 - distance(token, best) / Math.max(token.length, best.length, 1);
   return similarity >= 0.55 ? best : '';
 }

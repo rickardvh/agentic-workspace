@@ -191,6 +191,35 @@ def test_generated_typescript_nested_recovery_preserves_spaced_argument(tmp_path
     assert rerun.returncode == 0, rerun.stdout + rerun.stderr
 
 
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["statuz", "--format", "json"],
+        ["stauts", "--format", "json"],
+        ["zzzzzz", "--format", "json"],
+        ["memory", "memory", "rout", "--target", ".", "--format", "json"],
+        ["planning", "planning", "repor", "--target", ".", "--format", "json"],
+    ],
+)
+def test_generated_python_and_typescript_recovery_match(argv: list[str]) -> None:
+    python_result = _run_cli(*argv, cwd=Path.cwd())
+    typescript_result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", *argv],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert python_result.returncode == typescript_result.returncode == 2
+    python_payload = json.loads(python_result.stdout)
+    typescript_payload = json.loads(typescript_result.stdout)
+    for field in ("suggested_command", "safe_to_retry", "failure_class"):
+        assert python_payload[field] == typescript_payload[field]
+    if argv[0] == "stauts":
+        assert python_payload["suggested_command"].startswith("agentic-workspace status")
+
+
 def test_generated_typescript_strict_preflight_refuses_without_token() -> None:
     result = subprocess.run(
         ["node", "generated/workspace/typescript/src/cli.mjs", "upgrade", "--dry-run", "--strict-preflight", "--format", "json"],

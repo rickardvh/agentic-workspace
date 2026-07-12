@@ -8,7 +8,6 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 from __future__ import annotations
 
 import argparse
-import difflib
 import json
 import shlex
 from collections.abc import Callable
@@ -82,10 +81,10 @@ class GeneratedArgumentParser(argparse.ArgumentParser):
             unknown = _extract_unknown_command(message)
             authority = _authoritative_command_authority(argv)
             recovery_token = _recovery_token(argv, authority, unknown)
-            suggestions = difflib.get_close_matches(recovery_token, _authoritative_command_choices(authority), n=1, cutoff=0.55)
-            if suggestions:
-                message = f"{message}\nDid you mean: {', '.join(suggestions)}?"
-                suggested_command = _canonical_recovery_command(argv, authority, recovery_token, suggestions[0])
+            suggestion = _closest_authoritative_choice(recovery_token, _authoritative_command_choices(authority))
+            if suggestion:
+                message = f"{message}\nDid you mean: {suggestion}?"
+                suggested_command = _canonical_recovery_command(argv, authority, recovery_token, suggestion)
             elif unknown in authority:
                 suggested_command = _canonical_recovery_command(argv, authority, unknown, unknown)
             if 'start' in _GENERATED_COMMANDS_BY_NAME and 'preflight' in _GENERATED_COMMANDS_BY_NAME:
@@ -170,6 +169,28 @@ def _authoritative_command_choices(authority: list[str]) -> list[str]:
             return []
     choices = interfaces if current is None else current.get('subcommands', [])
     return [str(item.get('name', '')) for item in choices if isinstance(item, dict) and str(item.get('name', '')).strip()]
+
+
+def _closest_authoritative_choice(token: str, choices: list[str]) -> str:
+    if not token or not choices:
+        return ''
+    def distance(left: str, right: str) -> int:
+        rows = list(range(len(right) + 1))
+        for left_index, left_character in enumerate(left, start=1):
+            next_rows = [left_index]
+            for right_index, right_character in enumerate(right, start=1):
+                next_rows.append(min(rows[right_index] + 1, next_rows[right_index - 1] + 1, rows[right_index - 1] + (left_character != right_character)))
+            rows = next_rows
+        return rows[-1]
+    def subsequence(left: str, right: str) -> int:
+        rows = [[0] * (len(right) + 1) for _ in range(len(left) + 1)]
+        for left_index, left_character in enumerate(left, start=1):
+            for right_index, right_character in enumerate(right, start=1):
+                rows[left_index][right_index] = rows[left_index - 1][right_index - 1] + 1 if left_character == right_character else max(rows[left_index - 1][right_index], rows[left_index][right_index - 1])
+        return rows[-1][-1]
+    best = min(choices, key=lambda candidate: (distance(token, candidate), -subsequence(token, candidate)))
+    similarity = 1 - distance(token, best) / max(len(token), len(best), 1)
+    return best if similarity >= 0.55 else ''
 
 
 def _canonical_recovery_command(argv: list[str], authority: list[str], old: str, new: str) -> str:

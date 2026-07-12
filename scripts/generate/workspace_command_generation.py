@@ -463,6 +463,7 @@ def _patch_python_structured_usage_errors(output: GeneratedOutput, *, repo_root:
     if not relative.startswith("generated/") or not relative.endswith("/python/cli.py"):
         return output
     content = output.content
+    content = content.replace("import difflib\n", "", 1)
     content = content.replace("import json\n", "import json\nimport shlex\n", 1)
     old_error = """    def error(self, message: str) -> None:
         for hint in getattr(self, '_generated_usage_error_hints', []):
@@ -500,10 +501,10 @@ def _patch_python_structured_usage_errors(output: GeneratedOutput, *, repo_root:
             unknown = _extract_unknown_command(message)
             authority = _authoritative_command_authority(argv)
             recovery_token = _recovery_token(argv, authority, unknown)
-            suggestions = difflib.get_close_matches(recovery_token, _authoritative_command_choices(authority), n=1, cutoff=0.55)
-            if suggestions:
-                message = f"{message}\\nDid you mean: {', '.join(suggestions)}?"
-                suggested_command = _canonical_recovery_command(argv, authority, recovery_token, suggestions[0])
+            suggestion = _closest_authoritative_choice(recovery_token, _authoritative_command_choices(authority))
+            if suggestion:
+                message = f"{message}\\nDid you mean: {suggestion}?"
+                suggested_command = _canonical_recovery_command(argv, authority, recovery_token, suggestion)
             elif unknown in authority:
                 suggested_command = _canonical_recovery_command(argv, authority, unknown, unknown)
             if 'start' in _GENERATED_COMMANDS_BY_NAME and 'preflight' in _GENERATED_COMMANDS_BY_NAME:
@@ -599,6 +600,28 @@ def _authoritative_command_choices(authority: list[str]) -> list[str]:
             return []
     choices = interfaces if current is None else current.get('subcommands', [])
     return [str(item.get('name', '')) for item in choices if isinstance(item, dict) and str(item.get('name', '')).strip()]
+
+
+def _closest_authoritative_choice(token: str, choices: list[str]) -> str:
+    if not token or not choices:
+        return ''
+    def distance(left: str, right: str) -> int:
+        rows = list(range(len(right) + 1))
+        for left_index, left_character in enumerate(left, start=1):
+            next_rows = [left_index]
+            for right_index, right_character in enumerate(right, start=1):
+                next_rows.append(min(rows[right_index] + 1, next_rows[right_index - 1] + 1, rows[right_index - 1] + (left_character != right_character)))
+            rows = next_rows
+        return rows[-1]
+    def subsequence(left: str, right: str) -> int:
+        rows = [[0] * (len(right) + 1) for _ in range(len(left) + 1)]
+        for left_index, left_character in enumerate(left, start=1):
+            for right_index, right_character in enumerate(right, start=1):
+                rows[left_index][right_index] = rows[left_index - 1][right_index - 1] + 1 if left_character == right_character else max(rows[left_index - 1][right_index], rows[left_index][right_index - 1])
+        return rows[-1][-1]
+    best = min(choices, key=lambda candidate: (distance(token, candidate), -subsequence(token, candidate)))
+    similarity = 1 - distance(token, best) / max(len(token), len(best), 1)
+    return best if similarity >= 0.55 else ''
 
 
 def _canonical_recovery_command(argv: list[str], authority: list[str], old: str, new: str) -> str:
@@ -721,7 +744,22 @@ function closestAuthoritativeChoice(token, choices) {{
     }}
     return rows[left.length][right.length];
   }};
-  const best = choices.reduce((current, candidate) => distance(token, candidate) < distance(token, current) ? candidate : current, choices[0]);
+  const subsequence = (left, right) => {{
+    const rows = Array.from({{ length: left.length + 1 }}, () => Array(right.length + 1).fill(0));
+    for (let row = 1; row <= left.length; row += 1) {{
+      for (let column = 1; column <= right.length; column += 1) {{
+        rows[row][column] = left[row - 1] === right[column - 1]
+          ? rows[row - 1][column - 1] + 1
+          : Math.max(rows[row - 1][column], rows[row][column - 1]);
+      }}
+    }}
+    return rows[left.length][right.length];
+  }};
+  const best = choices.reduce((current, candidate) => {{
+    const candidateDistance = distance(token, candidate);
+    const currentDistance = distance(token, current);
+    return candidateDistance < currentDistance || (candidateDistance === currentDistance && subsequence(token, candidate) > subsequence(token, current)) ? candidate : current;
+  }}, choices[0]);
   const similarity = 1 - distance(token, best) / Math.max(token.length, best.length, 1);
   return similarity >= 0.55 ? best : '';
 }}
