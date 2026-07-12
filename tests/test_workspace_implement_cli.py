@@ -4699,6 +4699,7 @@ def test_start_routes_parent_lane_evidence_before_shape_specific_plan_creation(t
     writer = study["decision"]["owner_writer"]
     assert writer["required_artifact_kind"] == "planning-lane-record"
     assert writer["canonical_operation"] == "planning.lane-create.lifecycle"
+    assert writer["selected_route"] == "create-new-lane-owner"
     assert "planning lane-create --id issue-2200" in writer["command"]
     assert "new-plan" not in writer["command"]
     assert writer["postcondition"]["owner_path"] == ".agentic-workspace/planning/lanes/issue-2200.lane.json"
@@ -4794,11 +4795,27 @@ def test_start_lane_route_can_promote_existing_decomposition_candidate(tmp_path:
         == 0
     )
     writer = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["work_shape_study"]["decision"]["owner_writer"]
-    assert writer["promotion_operation"] == "planning.lane-promote.lifecycle"
-    argv = shlex.split(writer["promotion_command"])
+    assert writer["canonical_operation"] == "planning.lane-promote.lifecycle"
+    assert writer["selected_route"] == "promote-existing-decomposition-candidate"
+    assert "planning lane-promote issue-2200" in writer["command"]
+    assert writer["postcondition"]["parent_decomposition"] == ".agentic-workspace/planning/decompositions/parent.decomposition.json"
+    argv = shlex.split(writer["command"])
     assert cli.main(argv[1:]) == 0
     capsys.readouterr()
-    assert (tmp_path / ".agentic-workspace/planning/lanes/issue-2200.lane.json").is_file()
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/issue-2200.lane.json"
+    assert lane_path.is_file()
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert lane["parent_decomposition_ref"] == ".agentic-workspace/planning/decompositions/parent.decomposition.json"
+
+    assert (
+        cli.main(["start", "--target", str(tmp_path), "--task", "Implement #2200", "--select", "planning_safety_gate", "--format", "json"])
+        == 0
+    )
+    restarted = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
+    recognized = restarted["work_shape_study"]["decision"]["owner_writer"]
+    assert recognized["selected_route"] == "reuse-existing-lane-owner"
+    assert recognized["mutation_required"] is False
+    assert recognized["postcondition"]["parent_decomposition"] == ".agentic-workspace/planning/decompositions/parent.decomposition.json"
 
 
 def test_start_replays_2143_unknown_to_lane_before_plan_creation(tmp_path: Path, capsys) -> None:
