@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 # ruff: noqa: F403,F405
+import shlex
+
 from tests.workspace_cli_support import *
 
 
@@ -4694,8 +4696,24 @@ def test_start_routes_parent_lane_evidence_before_shape_specific_plan_creation(t
     assert study["planning_custody_required"] is True
     assert study["decision"]["work_shape"] == "lane"
     assert study["decision"]["planning_artifact_route"] == "lane-planning"
+    writer = study["decision"]["owner_writer"]
+    assert writer["required_artifact_kind"] == "planning-lane-record"
+    assert writer["canonical_operation"] == "planning.lane-create.lifecycle"
+    assert "planning lane-create --id issue-2200" in writer["command"]
+    assert "new-plan" not in writer["command"]
+    assert writer["postcondition"]["owner_path"] == ".agentic-workspace/planning/lanes/issue-2200.lane.json"
     assert study["evidence"]["observed"] == ["#2200:kind=parent-lane"]
     assert study["consumption"]["retain_after_consumption"] is False
+
+    command_argv = shlex.split(writer["command"])
+    assert command_argv[0] == "agentic-workspace"
+    assert cli.main(command_argv[1:]) == 0
+    capsys.readouterr()
+    assert (tmp_path / writer["postcondition"]["owner_path"]).is_file()
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--select", "lanes", "--format", "json"]) == 0
+    lanes = json.loads(capsys.readouterr().out)["values"]["lanes"]
+    assert lanes["record_count"] == 1
 
 
 def test_start_replays_2143_unknown_to_lane_before_plan_creation(tmp_path: Path, capsys) -> None:
@@ -4768,6 +4786,48 @@ def test_start_asks_for_shape_decision_when_bounded_evidence_stays_ambiguous(tmp
     assert study["decision"]["planning_artifact_route"] == ""
     assert payload["next_safe_action"]["next_safe_action"] == "ask-work-shape-clarification"
     assert "begin implementation" in payload["next_safe_action"]["forbidden_actions"]
+
+
+def test_start_direct_shape_emits_no_planning_writer(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [{"id": "#2203", "system": "github", "status": "open", "kind": "bug", "title": "Small typo"}],
+            }
+        ),
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Fix typo in issue #2203",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    study = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["work_shape_study"]
+    assert study["decision"]["work_shape"] in {"direct", "bounded"}
+    if study["decision"]["work_shape"] == "direct":
+        assert study["decision"]["owner_writer"] == {
+            "required_artifact_kind": "none",
+            "canonical_operation": "none",
+            "command": "",
+            "readiness_requirements": [],
+            "postcondition": {"expected_owner_kind": "none"},
+        }
 
 
 def test_start_default_output_surfaces_parent_lane_shape_study(tmp_path: Path, capsys) -> None:

@@ -511,6 +511,56 @@ def _work_shape_study_payload(
             "bounded": "create-bounded-execplan" if custody_required else "continue-direct",
         }.get(selected_shape, "needs-human-decision")
 
+    owner_writer: dict[str, Any]
+    if selected_shape == "lane":
+        source_ref = next((str(item.get("id") or "") for item in raw_evidence if str(item.get("id") or "").strip()), "lane")
+        lane_id = re.sub(r"[^a-z0-9]+", "-", source_ref.lower()).strip("-") or "lane"
+        command = _command_with_cli_invoke(
+            command=_command_with_expected_planning_revision(
+                f'agentic-workspace planning lane-create --id issue-{lane_id} --target "{target_root.as_posix()}" --format json',
+                planning_revision=planning_revision,
+            ),
+            cli_invoke=config.cli_invoke,
+        )
+        owner_writer = {
+            "required_artifact_kind": "planning-lane-record",
+            "canonical_operation": "planning.lane-create.lifecycle",
+            "command": command,
+            "readiness_requirements": ["referenced intent resolved to lane", "planning revision remains current"],
+            "postcondition": {
+                "owner_path": f".agentic-workspace/planning/lanes/issue-{lane_id}.lane.json",
+                "selector_command": _command_with_cli_invoke(
+                    command=f'agentic-workspace summary --target "{target_root.as_posix()}" --select lanes --format json',
+                    cli_invoke=config.cli_invoke,
+                ),
+                "expected_owner_kind": "planning-lane-record",
+            },
+        }
+    elif selected_shape == "epic":
+        owner_writer = {
+            "required_artifact_kind": "planning-decomposition-record",
+            "canonical_operation": "planning.decomposition.create-or-update",
+            "command": "",
+            "readiness_requirements": ["decomposition scope and ordered lanes are defined"],
+            "postcondition": {"expected_owner_kind": "planning-decomposition-record"},
+        }
+    elif selected_shape == "bounded" and custody_required:
+        owner_writer = {
+            "required_artifact_kind": "planning-execplan",
+            "canonical_operation": "planning.new-plan.lifecycle",
+            "command": "",
+            "readiness_requirements": ["bounded scope is named"],
+            "postcondition": {"expected_owner_kind": "planning-execplan"},
+        }
+    else:
+        owner_writer = {
+            "required_artifact_kind": "none",
+            "canonical_operation": "none",
+            "command": "",
+            "readiness_requirements": [],
+            "postcondition": {"expected_owner_kind": "none"},
+        }
+
     refresh_command = str(issue_scope_evidence.get("refresh_command") or "")
     source_path = str(issue_scope_evidence.get("source_path") or "")
     source_mtime = ""
@@ -529,6 +579,7 @@ def _work_shape_study_payload(
             "work_shape": selected_shape,
             "planning_artifact_route": artifact_route,
             "next_safe_action": next_action,
+            "owner_writer": owner_writer,
         },
         "evidence": {
             "observed": observed,
