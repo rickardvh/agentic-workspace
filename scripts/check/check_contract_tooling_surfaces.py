@@ -1542,6 +1542,7 @@ def _validate_generated_command_check_inventory(payload: dict[str, object]) -> l
         "aw-host-behavior",
         "release-pinning",
         "generated-freshness",
+        "transitional-host-boundary",
         "retired-primitive-boundary",
         "obsolete-duplicate",
     }
@@ -1567,7 +1568,13 @@ def _validate_generated_command_check_inventory(payload: dict[str, object]) -> l
                 errors.append(f"generic target baseline check {check_id} must be owned by command-generation")
             if disposition == "keep-in-aw":
                 errors.append(f"generic target baseline check {check_id} must not be kept as an AW-owned check")
-        if classification in {"aw-host-behavior", "release-pinning", "generated-freshness", "retired-primitive-boundary"}:
+        if classification in {
+            "aw-host-behavior",
+            "release-pinning",
+            "generated-freshness",
+            "transitional-host-boundary",
+            "retired-primitive-boundary",
+        }:
             if owner != "agentic-workspace":
                 errors.append(f"AW-specific check {check_id} must be owned by agentic-workspace")
             if disposition != "keep-in-aw":
@@ -1609,6 +1616,7 @@ def _validate_generated_command_check_inventory(payload: dict[str, object]) -> l
         "generated-output-freshness",
         "operation-contract-and-cli-inputs",
         "host-runtime-boundaries",
+        "runtime-semantic-exception-registry",
         "retired-command-generation-primitive-usage",
         "release-and-generator-provenance",
         "operation-conformance-parity",

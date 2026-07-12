@@ -2,13 +2,13 @@
 
 The checked source is `src/agentic_workspace/contracts/generated_command_check_inventory.json`.
 
-This inventory complements the `command-generation` target matrix. It does not redefine generic Python or TypeScript target behavior. AW keeps checks for AW-owned operation contracts, host runtime boundaries, generated artifact freshness, release/pinning posture, and transitional host semantics.
+This inventory complements the `command-generation` target matrix. It does not redefine generic Python or TypeScript target behavior. AW keeps checks for AW-owned operation contracts, host runtime boundaries, temporary runtime semantic exceptions, generated artifact freshness, release/pinning posture, and transitional host semantics.
 
 ## Owner Split
 
 | Owner | Keep in AW | Delegate or demote |
 | --- | --- | --- |
-| Agentic Workspace | Operation input projection, host runtime inventory, generated artifact freshness, release provenance, operation conformance parity, transitional host primitive usage | None |
+| Agentic Workspace | Operation input projection, host runtime inventory, runtime semantic exception registry, generated artifact freshness, release provenance, operation conformance parity, transitional host primitive usage | None |
 | command-generation | None | Generic target-extension contracts, primitive executor baseline, generic TypeScript target baseline, retired AW duplicate target regressions |
 
 ## Required Guardrails
