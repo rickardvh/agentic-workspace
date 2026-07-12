@@ -158,6 +158,39 @@ def test_generated_typescript_root_recovery_round_trips() -> None:
     assert rerun.returncode == 0, rerun.stdout + rerun.stderr
 
 
+def test_generated_typescript_unrelated_root_typo_has_no_unsafe_recovery() -> None:
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", "zzzzzz", "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    assert payload["suggested_command"] == ""
+    assert payload["safe_to_retry"] is False
+
+
+def test_generated_typescript_nested_recovery_preserves_spaced_argument(tmp_path: Path) -> None:
+    target = tmp_path / "target with spaces"
+    target.mkdir()
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", "memory", "memory", "rout", "--target", str(target), "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 2
+    suggested = json.loads(result.stdout)["suggested_command"]
+    assert str(target) in suggested
+    rerun = subprocess.run(shlex.split(suggested), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False)
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
+
+
 def test_generated_typescript_strict_preflight_refuses_without_token() -> None:
     result = subprocess.run(
         ["node", "generated/workspace/typescript/src/cli.mjs", "upgrade", "--dry-run", "--strict-preflight", "--format", "json"],

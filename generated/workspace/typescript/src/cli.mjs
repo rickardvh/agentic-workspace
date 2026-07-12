@@ -4391,7 +4391,12 @@ function canonicalRecovery(path, unknown, replacement) {
   let remaining = argv.slice(path.length);
   while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
   remaining = remaining.map((token) => token === unknown ? replacement : token);
-  return [generatedProgram, ...path, ...remaining].join(' ');
+  return [generatedProgram, ...path, ...remaining].map(shellQuote).join(' ');
+}
+
+function shellQuote(token) {
+  const value = String(token);
+  return /^[A-Za-z0-9_@%+=:,./-]+$/.test(value) ? value : `'${value.replace(/'/g, `'"'"'`)}'`;
 }
 
 function normalizedCommandTokens(tokens, path) {
@@ -4414,7 +4419,9 @@ function closestAuthoritativeChoice(token, choices) {
     }
     return rows[left.length][right.length];
   };
-  return choices.reduce((best, candidate) => distance(token, candidate) < distance(token, best) ? candidate : best, choices[0]);
+  const best = choices.reduce((current, candidate) => distance(token, candidate) < distance(token, current) ? candidate : current, choices[0]);
+  const similarity = 1 - distance(token, best) / Math.max(token.length, best.length, 1);
+  return similarity >= 0.55 ? best : '';
 }
 
 function failValidation(message, path = []) {
@@ -4428,7 +4435,7 @@ function failValidation(message, path = []) {
     kind: `${generatedProgram}/retryable-cli-error/v1`,
     exit_status: 2,
     failure_class: unknown ? 'invalid-command' : 'usage-error',
-    safe_to_retry: true,
+    safe_to_retry: Boolean(suggestedCommand) || !unknown,
     message,
     suggested_command: suggestedCommand,
     alternatives: [],

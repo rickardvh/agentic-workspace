@@ -215,7 +215,7 @@ def _retryable_cli_error_payload(
         'exit_status': 2,
         'input_command': f"{prog} {shlex.join(argv)}",
         'failure_class': failure_class,
-        'safe_to_retry': True,
+        'safe_to_retry': bool(suggested_command) or failure_class != 'invalid-command',
         'message': message,
         'suggested_command': suggested_command,
         'alternatives': alternatives,
