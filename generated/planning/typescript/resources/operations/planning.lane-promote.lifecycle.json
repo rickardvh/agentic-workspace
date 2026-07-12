@@ -24,6 +24,11 @@
       "source": "derived"
     },
     {
+      "name": "alternate_lane_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "target",
       "required": false,
       "source": "cli-option"

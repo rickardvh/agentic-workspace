@@ -260,12 +260,12 @@ Combined workspace report payload for installed modules, config posture, diagnos
 | `closeout_report.closeout_adoption` | object | no |  | Derived closeout quality rubric, representative examples, and current rendering adoption status for human-useful final reports. |  |  |
 | `closeout_report.completion_gate` | ref `#/$defs/completion_gate` | no |  | Closeout transition gate that blocks full completion or closure-language claims when active human intent is unsatisfied and no explicit human-accepted partial scope exists. |  |  |
 | `closeout_report.completion_gate.kind` | const `"agentic-workspace/completion-gate/v1"` | yes |  | Discriminator for the closeout completion gate. |  |  |
-| `closeout_report.completion_gate.status` | enum `"allowed"`, `"blocked"`, `"continue-required"`, `"clarification-required"`, `"human-accepted-partial"` | yes |  | State-machine result for the requested completion claim. |  |  |
+| `closeout_report.completion_gate.status` | enum `"allowed"`, `"blocked"`, `"continue-required"`, `"clarification-required"`, `"human-accepted-partial"`, `"no-relevant-evidence"` | yes |  | State-machine result for the requested completion claim. |  |  |
 | `closeout_report.completion_gate.active_intent_satisfied` | boolean | yes |  | Agent-recorded answer to whether delivered work satisfies the active human intent. |  |  |
 | `closeout_report.completion_gate.human_accepted_partial` | boolean | yes |  | Whether the human explicitly accepted a partial or narrower completion claim. |  |  |
 | `closeout_report.completion_gate.claim_level_requested` | string | yes |  | Requested claim level being evaluated. |  |  |
 | `closeout_report.completion_gate.claim_level_allowed` | string | yes |  | Highest claim level supported by the gate. |  |  |
-| `closeout_report.completion_gate.required_next_action` | enum `"continue-current-work"`, `"create-follow-on-plan"`, `"activate-next-slice"`, `"ask-human"`, `"close-complete"`, `"close-human-accepted-partial"` | yes |  | Required transition before the workflow can stop or claim completion. |  |  |
+| `closeout_report.completion_gate.required_next_action` | anyOf | yes |  | Required transition before the workflow can stop or claim completion. |  |  |
 | `closeout_report.completion_gate.claim_authorization` | ref `#/$defs/claim_authorization` | yes |  | Structured claim classes and closure actions authorized or blocked by the gate. |  |  |
 | `closeout_report.completion_gate.claim_authorization.kind` | const `"agentic-workspace/claim-authorization/v1"` | yes |  | Discriminator for structured completion claim authorization. |  |  |
 | `closeout_report.completion_gate.claim_authorization.allowed_claim_classes` | array of enum `"partial_progress"`, `"local_pr_complete"`, `"slice_complete"`, `"leaf_issue_complete"`, `"lane_complete"`, `"parent_issue_complete"`, `"parent_complete"`, `"full_intent_complete"`, `"issue_closure"` | yes |  | Claim classes renderers may use. |  |  |
