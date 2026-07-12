@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shlex
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -118,6 +119,27 @@ def test_nested_module_recovery_is_canonical_and_executable(module: str, misspel
     rerun = subprocess.run(shlex.split(suggested), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False)
     assert rerun.returncode == 0, rerun.stdout + rerun.stderr
     assert payload["failure_class"] == "invalid-command"
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="Node is required for generated TypeScript recovery proof")
+@pytest.mark.parametrize(("module", "misspelled", "expected"), [("memory", "rout", "route"), ("planning", "repor", "report")])
+def test_generated_typescript_recovery_is_ir_derived_and_round_trips(module: str, misspelled: str, expected: str) -> None:
+    result = subprocess.run(
+        ["node", "generated/workspace/typescript/src/cli.mjs", module, module, misspelled, "--target", ".", "--format", "json"],
+        cwd=Path.cwd(),
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    suggested = payload["suggested_command"]
+    assert suggested.startswith(f"agentic-workspace {module} {expected}")
+    assert f"{module} {module}" not in suggested
+
+    rerun = subprocess.run(shlex.split(suggested), cwd=Path.cwd(), capture_output=True, text=True, encoding="utf-8", check=False)
+    assert rerun.returncode == 0, rerun.stdout + rerun.stderr
 
 
 def test_blackbox_memory_route_task_misuse_guides_to_memory_consult() -> None:

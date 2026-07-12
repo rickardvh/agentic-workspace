@@ -496,7 +496,7 @@ def _patch_python_structured_usage_errors(output: GeneratedOutput, *, repo_root:
         if 'invalid choice' in message and 'command' in message:
             unknown = _extract_unknown_command(message)
             recovery_token = _recovery_token(self.prog, argv, unknown)
-            suggestions = difflib.get_close_matches(recovery_token, _extract_command_choices(message) or generated_command_names(), n=1, cutoff=0.55)
+            suggestions = difflib.get_close_matches(recovery_token, _authoritative_command_choices(self.prog), n=1, cutoff=0.55)
             if suggestions:
                 message = f"{message}\\nDid you mean: {', '.join(suggestions)}?"
                 suggested_command = _canonical_recovery_command(self.prog, argv, recovery_token, suggestions[0])
@@ -556,14 +556,6 @@ def _command_with_replaced_token(prog: str, argv: list[str], old: str, new: str)
     return f"{prog} {shlex.join(replaced)}"
 
 
-def _extract_command_choices(message: str) -> list[str]:
-    marker = '(choose from '
-    if marker not in message:
-        return []
-    raw = message.split(marker, 1)[1].split(')', 1)[0]
-    return [item.strip() for item in raw.split(',') if item.strip()]
-
-
 def _recovery_token(prog: str, argv: list[str], unknown: str) -> str:
     authority = prog.split()[1:]
     remaining = list(argv)
@@ -572,6 +564,23 @@ def _recovery_token(prog: str, argv: list[str], unknown: str) -> str:
     if unknown in authority and remaining:
         return remaining[0]
     return unknown
+
+
+def _authoritative_command_choices(prog: str) -> list[str]:
+    # Read the active command surface from generated command IR, never parser prose.
+    authority = prog.split()[1:]
+    interfaces = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS]
+    current: dict[str, Any] | None = None
+    for token in authority:
+        choices = interfaces if current is None else current.get('subcommands', [])
+        current = next(
+            (item for item in choices if isinstance(item, dict) and str(item.get('name', '')) == token),
+            None,
+        )
+        if current is None:
+            return []
+    choices = interfaces if current is None else current.get('subcommands', [])
+    return [str(item.get('name', '')) for item in choices if isinstance(item, dict) and str(item.get('name', '')).strip()]
 
 
 def _canonical_recovery_command(prog: str, argv: list[str], old: str, new: str) -> str:
@@ -638,6 +647,97 @@ def _argv_contains_sequence(argv: list[str], sequence: Any) -> bool:
     return GeneratedOutput(output.path, content.replace(old_helpers, new_helpers))
 
 
+def _patch_typescript_structured_usage_errors(output: GeneratedOutput, *, repo_root: Path) -> GeneratedOutput:
+    path = output.path if output.path.is_absolute() else repo_root / output.path
+    relative = path.relative_to(repo_root).as_posix()
+    if not relative.startswith("generated/") or not relative.endswith("/typescript/src/cli.mjs"):
+        return output
+    program_marker = "// Program: "
+    if program_marker not in output.content:
+        return output
+    program = output.content.split(program_marker, 1)[1].split("\n", 1)[0].strip()
+    old_validation = """function failValidation(message) {
+  console.error(`TypeScript CLI validation failed: ${message}`);
+  console.error('Recovery: run agentic-workspace --help and choose a supported generated command or valid option.');
+  process.exit(2);
+}
+"""
+    new_validation = f"""const generatedProgram = {json.dumps(program)};
+
+function authoritativeInterface(path) {{
+  let current = commandDefinitionByName.get(path[0])?.interface;
+  for (const token of path.slice(1)) {{
+    current = interfaceSubcommands(current).find((candidate) => candidate.name === token);
+  }}
+  return current;
+}}
+
+function canonicalRecovery(path, unknown, replacement) {{
+  let remaining = argv.slice(path.length);
+  while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
+  remaining = remaining.map((token) => token === unknown ? replacement : token);
+  return [generatedProgram, ...path, ...remaining].join(' ');
+}}
+
+function normalizedCommandTokens(tokens, path) {{
+  let remaining = [...tokens];
+  while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
+  return remaining;
+}}
+
+function failValidation(message, path = []) {{
+  const unknown = /^unknown command ([^ ]+)/.exec(message)?.[1] ?? '';
+  if (!path.length && unknown) {{
+    console.error(`Unsupported generated command: ${{unknown}}`);
+    console.error(`Recovery: run ${{generatedProgram}} --help and choose a supported generated command or valid option.`);
+    process.exit(2);
+  }}
+  const choices = path.length
+    ? interfaceSubcommands(authoritativeInterface(path)).map((candidate) => candidate.name)
+    : commandDefinitions.map((definition) => definition.name);
+  const suggestion = unknown ? choices.find((candidate) => candidate.startsWith(unknown)) ?? choices.find((candidate) => candidate[0] === unknown[0]) : '';
+  const suggestedCommand = suggestion ? canonicalRecovery(path, unknown, suggestion) : '';
+  const payload = {{
+    kind: `${{generatedProgram}}/retryable-cli-error/v1`,
+    exit_status: 2,
+    failure_class: unknown ? 'invalid-command' : 'usage-error',
+    safe_to_retry: true,
+    message,
+    suggested_command: suggestedCommand,
+    alternatives: [],
+  }};
+  if (argv.includes('--format') && argv[argv.indexOf('--format') + 1] === 'json') {{
+    console.log(JSON.stringify(payload, null, 2));
+  }} else {{
+    console.error(`TypeScript CLI validation failed: ${{message}}`);
+    if (suggestedCommand) console.error(`Did you mean: ${{suggestedCommand}}`);
+    console.error(`Recovery: run ${{generatedProgram}} --help and choose a supported generated command or valid option.`);
+  }}
+  process.exit(2);
+}}
+"""
+    if old_validation not in output.content:
+        return output
+    content = output.content.replace(old_validation, new_validation)
+    content = content.replace(
+        "    positional.push(token);\n    index += 1;",
+        "    if (interfaceSubcommands(iface).length) failValidation(`unknown command ${token} for ${path.join(' ')}`, path);\n    positional.push(token);\n    index += 1;",
+    )
+    content = content.replace(
+        "  console.error(`Unsupported generated command: ${command}`);\n  console.error('Recovery: run agentic-workspace --help and choose one of the supported generated commands.');\n  process.exit(2);",
+        "  failValidation(`unknown command ${command}`, []);",
+    )
+    content = content.replace(
+        "parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command])",
+        "parseInvocation(commandDefinitionByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command])",
+    )
+    content = content.replace(
+        "validateInterface(commandByName.get(command), argv.slice(1), [command]);",
+        "validateInterface(commandByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);",
+    )
+    return GeneratedOutput(output.path, content)
+
+
 def render_workspace_command_package_outputs(
     manifest: dict[str, object] | None = None,
     *,
@@ -658,7 +758,10 @@ def render_workspace_command_package_outputs(
             _patch_typescript_strict_preflight_gate(
                 _patch_workspace_typescript_sample_command_test(
                     _patch_python_structured_usage_errors(
-                        _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root),
+                        _patch_typescript_structured_usage_errors(
+                            _normalize_releaseable_typescript_package_json(output, release_metadata=release_metadata, repo_root=repo_root),
+                            repo_root=repo_root,
+                        ),
                         repo_root=repo_root,
                     ),
                     repo_root=repo_root,

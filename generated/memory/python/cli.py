@@ -81,7 +81,7 @@ class GeneratedArgumentParser(argparse.ArgumentParser):
         if 'invalid choice' in message and 'command' in message:
             unknown = _extract_unknown_command(message)
             recovery_token = _recovery_token(self.prog, argv, unknown)
-            suggestions = difflib.get_close_matches(recovery_token, _extract_command_choices(message) or generated_command_names(), n=1, cutoff=0.55)
+            suggestions = difflib.get_close_matches(recovery_token, _authoritative_command_choices(self.prog), n=1, cutoff=0.55)
             if suggestions:
                 message = f"{message}\nDid you mean: {', '.join(suggestions)}?"
                 suggested_command = _canonical_recovery_command(self.prog, argv, recovery_token, suggestions[0])
@@ -130,14 +130,6 @@ def _command_with_replaced_token(prog: str, argv: list[str], old: str, new: str)
     return f"{prog} {shlex.join(replaced)}"
 
 
-def _extract_command_choices(message: str) -> list[str]:
-    marker = '(choose from '
-    if marker not in message:
-        return []
-    raw = message.split(marker, 1)[1].split(')', 1)[0]
-    return [item.strip() for item in raw.split(',') if item.strip()]
-
-
 def _recovery_token(prog: str, argv: list[str], unknown: str) -> str:
     authority = prog.split()[1:]
     remaining = list(argv)
@@ -146,6 +138,23 @@ def _recovery_token(prog: str, argv: list[str], unknown: str) -> str:
     if unknown in authority and remaining:
         return remaining[0]
     return unknown
+
+
+def _authoritative_command_choices(prog: str) -> list[str]:
+    # Read the active command surface from generated command IR, never parser prose.
+    authority = prog.split()[1:]
+    interfaces = [command.get('interface', {}) for command in _GENERATED_ADAPTER_COMMANDS]
+    current: dict[str, Any] | None = None
+    for token in authority:
+        choices = interfaces if current is None else current.get('subcommands', [])
+        current = next(
+            (item for item in choices if isinstance(item, dict) and str(item.get('name', '')) == token),
+            None,
+        )
+        if current is None:
+            return []
+    choices = interfaces if current is None else current.get('subcommands', [])
+    return [str(item.get('name', '')) for item in choices if isinstance(item, dict) and str(item.get('name', '')).strip()]
 
 
 def _canonical_recovery_command(prog: str, argv: list[str], old: str, new: str) -> str:

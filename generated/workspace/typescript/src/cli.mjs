@@ -4377,9 +4377,57 @@ function printInterfaceHelp(path, iface) {
   }
 }
 
-function failValidation(message) {
-  console.error(`TypeScript CLI validation failed: ${message}`);
-  console.error('Recovery: run agentic-workspace --help and choose a supported generated command or valid option.');
+const generatedProgram = "agentic-workspace";
+
+function authoritativeInterface(path) {
+  let current = commandDefinitionByName.get(path[0])?.interface;
+  for (const token of path.slice(1)) {
+    current = interfaceSubcommands(current).find((candidate) => candidate.name === token);
+  }
+  return current;
+}
+
+function canonicalRecovery(path, unknown, replacement) {
+  let remaining = argv.slice(path.length);
+  while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
+  remaining = remaining.map((token) => token === unknown ? replacement : token);
+  return [generatedProgram, ...path, ...remaining].join(' ');
+}
+
+function normalizedCommandTokens(tokens, path) {
+  let remaining = [...tokens];
+  while (path.length && path.every((token, index) => remaining[index] === token)) remaining = remaining.slice(path.length);
+  return remaining;
+}
+
+function failValidation(message, path = []) {
+  const unknown = /^unknown command ([^ ]+)/.exec(message)?.[1] ?? '';
+  if (!path.length && unknown) {
+    console.error(`Unsupported generated command: ${unknown}`);
+    console.error(`Recovery: run ${generatedProgram} --help and choose a supported generated command or valid option.`);
+    process.exit(2);
+  }
+  const choices = path.length
+    ? interfaceSubcommands(authoritativeInterface(path)).map((candidate) => candidate.name)
+    : commandDefinitions.map((definition) => definition.name);
+  const suggestion = unknown ? choices.find((candidate) => candidate.startsWith(unknown)) ?? choices.find((candidate) => candidate[0] === unknown[0]) : '';
+  const suggestedCommand = suggestion ? canonicalRecovery(path, unknown, suggestion) : '';
+  const payload = {
+    kind: `${generatedProgram}/retryable-cli-error/v1`,
+    exit_status: 2,
+    failure_class: unknown ? 'invalid-command' : 'usage-error',
+    safe_to_retry: true,
+    message,
+    suggested_command: suggestedCommand,
+    alternatives: [],
+  };
+  if (argv.includes('--format') && argv[argv.indexOf('--format') + 1] === 'json') {
+    console.log(JSON.stringify(payload, null, 2));
+  } else {
+    console.error(`TypeScript CLI validation failed: ${message}`);
+    if (suggestedCommand) console.error(`Did you mean: ${suggestedCommand}`);
+    console.error(`Recovery: run ${generatedProgram} --help and choose a supported generated command or valid option.`);
+  }
   process.exit(2);
 }
 
@@ -4445,6 +4493,7 @@ function validateInterface(iface, tokens, path) {
       validateInterface(subcommand, tokens.slice(index + 1), [...path, token]);
       return;
     }
+    if (interfaceSubcommands(iface).length) failValidation(`unknown command ${token} for ${path.join(' ')}`, path);
     positional.push(token);
     index += 1;
   }
@@ -4540,6 +4589,7 @@ function parseInvocation(definition, tokens, path) {
       if (iface.subcommand_dest) nested.values[iface.subcommand_dest] = token;
       return nested;
     }
+    if (interfaceSubcommands(iface).length) failValidation(`unknown command ${token} for ${path.join(' ')}`, path);
     positional.push(token);
     index += 1;
   }
@@ -4560,13 +4610,9 @@ function runNativeOperation(operationId, operationPath, values) {
 }
 
 function maybeRunNativeOperation() {
-  const invocation = parseInvocation(commandDefinitionByName.get(command), argv.slice(1), [command]);
+  const invocation = parseInvocation(commandDefinitionByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);
   const operationId = invocation.operationRef?.id;
   const operationPath = invocation.operationRef?.path;
-  if (invocation.values.strict_preflight && !invocation.values.preflight_token) {
-    console.error("Strict preflight gate is enabled. Provide --preflight-token from 'agentic-workspace preflight --format json'.");
-    process.exit(2);
-  }
   try {
     const nativeStatus = runNativeOperation(operationId, operationPath, invocation.values);
     process.exit(nativeStatus);
@@ -4583,11 +4629,9 @@ if (!command || command === '--help' || command === '-h') {
 }
 
 if (!supportedCommands.has(command)) {
-  console.error(`Unsupported generated command: ${command}`);
-  console.error('Recovery: run agentic-workspace --help and choose one of the supported generated commands.');
-  process.exit(2);
+  failValidation(`unknown command ${command}`, []);
 }
 
-validateInterface(commandByName.get(command), argv.slice(1), [command]);
+validateInterface(commandByName.get(command), normalizedCommandTokens(argv.slice(1), [command]), [command]);
 
 maybeRunNativeOperation();
