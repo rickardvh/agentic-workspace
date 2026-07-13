@@ -15,7 +15,7 @@ Planning Autopilot is a bounded execution skill for the planning contract. It ex
 4. Run the narrowest validation that proves the milestone.
 5. Update `.agentic-workspace/planning/state.toml` and the active execplan when the milestone completes or blocks.
 6. Capture improvement signals that matter to future execution, but do not expand scope just because an adjacent issue is visible.
-7. Stop only on an authorized terminal outcome: completed objective, qualified external blocker with no safe continuation, user pause, ambiguity, or plan/code drift.
+7. Stop only on an authorized terminal outcome: completed objective, qualified external blocker with no safe continuation, or user pause. Ambiguity, plan drift, and code drift must route to reconciliation or to a typed BLOCKED outcome that proves no safe continuation remains.
 
 ## Suitability Check
 
@@ -27,7 +27,7 @@ Stop and report instead of editing when:
 - multiple competing threads are active
 - the milestone is too vague to execute safely
 - validation scope is unknown
-- the plan and code materially diverge
+- the plan and code materially diverge and reconciliation cannot produce a safe next slice
 - broader redesign is needed before implementation can continue
 
 ## Execution Loop

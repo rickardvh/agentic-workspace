@@ -123,7 +123,8 @@ Recommended shape:
 - execute one bounded planning slice at a time
 - keep the active plan current and re-read it after each slice
 - continue the same explicit objective while planning state shows a safe continuation
-- stop only when the objective is complete, a qualified blocker leaves no safe continuation, the user pauses, or plan/code drift makes continuation unsafe
+- stop only when the objective is complete, a qualified blocker leaves no safe continuation, or the user pauses
+- route plan/code drift through reconciliation first; treat it as BLOCKED only when typed blocker evidence proves no safe continuation remains
 
 ### Delegation-Friendly
 

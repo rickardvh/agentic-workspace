@@ -172,7 +172,9 @@ def _windows_command_length_error(command: list[str], *, prompt_file: str | None
     )
 
 
-def _continuation_prompt(*, original_prompt: str, sandbox_prompt_path: str | None, admission_payload: dict[str, Any], slice_index: int) -> str:
+def _continuation_prompt(
+    *, original_prompt: str, sandbox_prompt_path: str | None, admission_payload: dict[str, Any], slice_index: int
+) -> str:
     original_prompt_hint = (
         original_prompt
         if original_prompt.strip()
@@ -190,7 +192,9 @@ def _continuation_prompt(*, original_prompt: str, sandbox_prompt_path: str | Non
     )
 
 
-def _copy_continuation_prompt_to_sandbox(*, args: argparse.Namespace, prompt_text: str, share_path: str, slice_index: int) -> tuple[int, str]:
+def _copy_continuation_prompt_to_sandbox(
+    *, args: argparse.Namespace, prompt_text: str, share_path: str, slice_index: int
+) -> tuple[int, str]:
     host_prompt = Path(f"{share_path}.continuation-{slice_index}.txt")
     host_prompt.write_text(prompt_text, encoding="utf-8", newline="\n")
     sandbox_prompt_path = posixpath.join(
@@ -215,14 +219,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--keep-sandbox", action="store_true", help="Leave the named sandbox running for debugging.")
     parser.add_argument("--prompt")
     parser.add_argument("--prompt-file")
-    parser.add_argument("--max-admission-slices", type=int, default=3)
+    parser.add_argument(
+        "--max-admission-slices",
+        type=int,
+        default=0,
+        help=(
+            "Deprecated compatibility flag. Admission slices are not capped by the adapter because a fixed slice "
+            "budget is not an authorized terminal outcome while final-response admission remains CONTINUE."
+        ),
+    )
     args = parser.parse_args(argv)
 
     prompt = _prompt_from_args(args)
     sandbox_repo = _sandbox_path(args.repo)
     sandbox_share_path = _sandbox_path(args.share_path)
     sandbox_prompt_path = _sandbox_prompt_path(args.prompt_file)
-    max_admission_slices = max(1, int(args.max_admission_slices or 1))
+    max_admission_slices = max(0, int(args.max_admission_slices or 0))
 
     create_command = [args.sbx, "create", "--name", args.sandbox_name]
     if args.template:
@@ -266,7 +278,8 @@ def main(argv: list[str] | None = None) -> int:
 
         current_prompt = prompt
         current_sandbox_prompt_path = sandbox_prompt_path
-        for slice_index in range(1, max_admission_slices + 1):
+        slice_index = 1
+        while True:
             exec_command = _codex_exec_command(
                 args=args,
                 prompt=current_prompt,
@@ -292,15 +305,13 @@ def main(argv: list[str] | None = None) -> int:
             admission_payload = admission["payload"] if isinstance(admission["payload"], dict) else {}
             if admission_payload.get("status") != "rejected_auto_resumed":
                 break
-            if slice_index >= max_admission_slices:
+            if max_admission_slices and slice_index == max_admission_slices:
                 print(
-                    "Codex final-response admission stopped after max rejected continuation slices; "
-                    "admission metadata was preserved beside the final-message artifact.",
+                    "Codex final-response admission reached the configured compatibility slice budget; "
+                    "continuing because a slice cap is not an authorized terminal outcome.",
                     file=sys.stderr,
                     flush=True,
                 )
-                return_code = 3
-                break
             continuation_prompt = _continuation_prompt(
                 original_prompt=prompt,
                 sandbox_prompt_path=sandbox_prompt_path,
@@ -317,6 +328,7 @@ def main(argv: list[str] | None = None) -> int:
                 return_code = copy_code
                 break
             current_prompt = ""
+            slice_index += 1
     finally:
         if not args.keep_sandbox:
             cleanup = _returncode([args.sbx, "rm", "--force", args.sandbox_name])
