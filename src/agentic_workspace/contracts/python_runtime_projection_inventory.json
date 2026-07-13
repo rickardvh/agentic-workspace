@@ -80,6 +80,7 @@
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_resolve_workspace_operation_selection|agentic_workspace.workspace_runtime_primitives|_resolve_workspace_operation_selection",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_checkpoint_write_adapter|agentic_workspace.workspace_runtime_primitives|_run_checkpoint_write_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_external_intent_refresh_github_adapter|agentic_workspace.workspace_runtime_primitives|_run_external_intent_refresh_github_adapter",
+      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_autopilot_adapter|agentic_workspace.workspace_runtime_primitives|_run_autopilot_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_final_response_admit_adapter|agentic_workspace.workspace_runtime_primitives|_run_final_response_admit_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_implement_runtime.py|_run_implement_context_adapter|agentic_workspace.workspace_runtime_implement|_run_implement_context_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_init_lifecycle_adapter|agentic_workspace.workspace_runtime_primitives|_run_init_lifecycle_adapter",

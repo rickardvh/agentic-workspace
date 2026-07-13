@@ -1589,20 +1589,22 @@ else:
         encoding="utf-8",
     )
 
-    assert (
-        cli.main(
-            [
-                "autopilot",
-                "--target",
-                str(tmp_path),
-                "--executor-command",
-                subprocess.list2cmdline([sys.executable, str(executor_script)]),
-                "--format",
-                "json",
-            ]
+    registry = json.loads((tmp_path / ".agentic-workspace/planning/skills/REGISTRY.json").read_text(encoding="utf-8"))
+    autopilot_skill = next(entry for entry in registry["skills"] if entry["id"] == "planning-autopilot")
+    host_entrypoint = autopilot_skill["host_entrypoint"]
+    assert host_entrypoint["operation_id"] == "autopilot.run"
+    assert host_entrypoint["required"] is True
+    assert host_entrypoint["ordinary_path_unavoidable"] is True
+    command = [
+        (
+            str(value)
+            .replace("{target}", str(tmp_path))
+            .replace("{executor_command}", subprocess.list2cmdline([sys.executable, str(executor_script)]))
         )
-        == 0
-    )
+        for value in host_entrypoint["argv_template"]
+    ]
+
+    assert cli.main(command) == 0
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["kind"] == "agentic-workspace/final-response-admission-result/v1"

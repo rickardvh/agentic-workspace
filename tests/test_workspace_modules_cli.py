@@ -221,6 +221,7 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
         "start",
         "implement",
         "checkpoint",
+        "autopilot",
         "final-response",
         "work-thread",
         "session-log",
@@ -248,6 +249,7 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
     assert command_roles["upgrade"] == "core_lifecycle"
     assert command_roles["start"] == "core_context_router"
     assert command_roles["checkpoint"] == "core_context_router"
+    assert command_roles["autopilot"] == "core_context_router"
     assert command_roles["final-response"] == "core_context_router"
     assert command_roles["work-thread"] == "core_context_router"
     assert command_roles["session-log"] == "reusable_host_repo_diagnostics"
@@ -262,6 +264,7 @@ def test_root_command_manifest_classifies_host_repo_command_surface() -> None:
     assert command_audiences["doctor"] == "advanced_host_repo"
     assert command_audiences["note-delegation-outcome"] == "local_only"
     assert command_audiences["checkpoint"] == "ordinary_host_repo"
+    assert command_audiences["autopilot"] == "ordinary_host_repo"
     assert command_audiences["final-response"] == "ordinary_host_repo"
     assert command_audiences["work-thread"] == "ordinary_host_repo"
     assert command_audiences["session-log"] == "local_only"

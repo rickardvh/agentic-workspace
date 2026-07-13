@@ -5,17 +5,18 @@ description: Execute bounded planning slices from the checked-in planning surfac
 
 # Planning Autopilot
 
-Planning Autopilot is a bounded execution skill for the planning contract. It executes the current active planning slice, validates the result, updates task state, and re-reads planning state before deciding whether the same explicit objective has another safe continuation slice.
+Planning Autopilot is a bounded execution skill for the planning contract. Its ordinary host entrypoint is `agentic-workspace autopilot --target <repo> --executor-command <agent-command> --format json`; do not run the slice loop directly outside that host boundary. The host entrypoint delegates each executor attempt through `autopilot.run` / `final-response admit`, admits model-authored final responses before output, and re-enters execution while the same explicit objective has safe continuation state.
 
 ## Operating Rules
 
 1. Read `AGENTS.md`, `.agentic-workspace/planning/state.toml`, and the active execplan before making changes.
 2. Treat the checked-in planning surfaces as the execution contract. Do not invent new scope from chat context alone.
-3. Execute one bounded slice at a time, then re-read the active planning surfaces before continuing.
-4. Run the narrowest validation that proves the milestone.
-5. Update `.agentic-workspace/planning/state.toml` and the active execplan when the milestone completes or blocks.
-6. Capture improvement signals that matter to future execution, but do not expand scope just because an adjacent issue is visible.
-7. Stop only on an authorized terminal outcome: completed objective, qualified external blocker with no safe continuation, or user pause. Ambiguity, plan drift, and code drift must route to reconciliation or to a typed BLOCKED outcome that proves no safe continuation remains.
+3. Enter ordinary Autopilot through `autopilot.run`; if a host cannot supply an executor command, report that the host boundary is unavailable instead of running a direct skill-owned loop.
+4. Execute one bounded slice per executor invocation, then let the host entrypoint admit the attempted final response and decide whether continuation is required.
+5. Run the narrowest validation that proves the milestone.
+6. Update `.agentic-workspace/planning/state.toml` and the active execplan when the milestone completes or blocks.
+7. Capture improvement signals that matter to future execution, but do not expand scope just because an adjacent issue is visible.
+8. Stop only on an authorized terminal outcome: completed objective, qualified external blocker with no safe continuation, or user pause. Ambiguity, plan drift, and code drift must route to reconciliation or to a typed BLOCKED outcome that proves no safe continuation remains.
 
 ## Suitability Check
 
@@ -30,7 +31,19 @@ Reconcile before editing when:
 - the plan and code materially diverge: reconcile the plan/code boundary before continuing, or block only with evidence that reconciliation cannot produce a safe next slice
 - broader redesign appears necessary: route to decomposition or high-assurance planning before implementation, or block only when no bounded continuation exists
 
-## Execution Loop
+## Host Entry
+
+Launch the ordinary route with the package-owned host boundary:
+
+```text
+agentic-workspace autopilot --target <repo> --executor-command <agent-command> --format json
+```
+
+The executor command is the agent implementation slice. The host entrypoint is responsible for admitting its stdout as the attempted final response, running the selected continuation operation when CONTINUE remains, preserving continuation state, and re-invoking the executor until an authorized terminal outcome is reached.
+
+## Executor Slice Contract
+
+Inside each executor invocation:
 
 1. Read the repo operating contract and planning surfaces.
 2. Identify the current active milestone.
@@ -38,7 +51,7 @@ Reconcile before editing when:
 4. Implement the milestone without broadening scope.
 5. Run the narrowest proving validation.
 6. Update planning state and record any blocker or improvement signal.
-7. If the same explicit objective still has safe continuation state, repeat from step 2; otherwise stop with a structured summary.
+7. Emit only the attempted final response for the host entrypoint to admit; do not bypass admission with a direct user-facing final.
 
 ## Output Contract
 
@@ -64,6 +77,7 @@ Outcome values:
 ## Boundaries
 
 - This skill executes planning work; it does not replace planning itself.
+- Its ordinary route is the `autopilot.run` host boundary, not a parallel direct loop owned only by skill prose.
 - It must not become a general project manager.
 - It must not use improvement signals to justify unconstrained cleanup.
 - It must not treat one milestone completion as permission to yield while the same explicit objective remains safely continuable.
