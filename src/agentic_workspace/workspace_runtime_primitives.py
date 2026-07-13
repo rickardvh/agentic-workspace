@@ -25537,14 +25537,69 @@ def _review_stack_implement_command(*, paths: list[str], pr_number: str, cli_inv
     )
 
 
+def _review_stack_planning_transition_payloads(*, target_root: Path, current_pr_number: str) -> list[dict[str, Any]]:
+    review_root = target_root / ".agentic-workspace" / "planning" / "reviews"
+    if not review_root.is_dir():
+        return []
+    transitions: list[dict[str, Any]] = []
+    for path in sorted(review_root.glob("*.review.json")):
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if str(record.get("classification") or "") != "review-stack-transition":
+            continue
+        for raw_scope in _list_payload(record.get("scope")):
+            scope_text = str(raw_scope or "").strip()
+            if not scope_text.startswith("{"):
+                continue
+            try:
+                payload = json.loads(scope_text)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            pr_number = str(payload.get("pr_number") or "").strip()
+            if current_pr_number and pr_number and pr_number != current_pr_number:
+                continue
+            payload["planning_surface"] = path.relative_to(target_root).as_posix()
+            payload["planning_title"] = str(record.get("title") or "")
+            transitions.append(payload)
+    return transitions
+
+
+def _review_stack_planning_transition_events(*, transitions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for item in transitions:
+        phase = str(item.get("phase") or "").strip()
+        phase_after = str(item.get("phase_after") or "").strip()
+        command = str(item.get("command") or item.get("next_action_command") or "").strip()
+        outcome = str(item.get("outcome") or "").strip() or "executed"
+        if not (phase or phase_after or command):
+            continue
+        events.append(
+            {
+                "phase": phase,
+                "phase_after": phase_after,
+                "command": command,
+                "outcome": outcome,
+                "planning_surface": str(item.get("planning_surface") or ""),
+                "next_action_id": str(item.get("next_action_id") or ""),
+            }
+        )
+    return events
+
+
 def _review_stack_workflow_trace_payload(
     *,
     stack: dict[str, Any],
     phase: str,
     commands: dict[str, str],
     proof_reuse: dict[str, Any],
+    planning_events: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    raw_events = [item for item in _list_payload(stack.get("workflow_events")) if isinstance(item, dict)]
+    raw_events = planning_events if planning_events else [item for item in _list_payload(stack.get("workflow_events")) if isinstance(item, dict)]
+    transition_source = "planning_lifecycle_transition" if planning_events else "workflow_events" if raw_events else "derived_projection"
     events: list[dict[str, Any]] = []
     for raw_event in raw_events:
         command = str(raw_event.get("command") or "").strip()
@@ -25559,6 +25614,8 @@ def _review_stack_workflow_trace_payload(
                 "phase_after": phase_after,
                 "command": command,
                 "outcome": outcome,
+                "planning_surface": str(raw_event.get("planning_surface") or ""),
+                "next_action_id": str(raw_event.get("next_action_id") or ""),
             }
         )
     executed_events = [event for event in events if event.get("outcome") in {"executed", "passed", "reused"}]
@@ -25576,14 +25633,14 @@ def _review_stack_workflow_trace_payload(
         "current_phase": phase,
         "commands": commands,
         "executed_events": events,
-        "transition_source": "workflow_events" if events else "derived_projection",
+        "transition_source": transition_source,
         "proof_reuse_status": str(proof_reuse.get("status") or "reuse_unknown"),
         "reuse_or_invalidation_evidence": proof_reuse.get("rationale") or proof_reuse.get("reason") or proof_reuse.get("status"),
         "interaction_cost": {
-            "resume_inputs_before_packet": ["stack cache", "comment samples", "proof reuse receipt", "active Planning owner"],
+            "resume_inputs_before_packet": ["stack cache", "comment samples", "proof reuse receipt", "Planning transition record"],
             "resume_inputs_after_packet": ["review_stack_continuity.next_action.command"],
             "ordinary_rerun_count": len(executed_events) if events else 1,
-            "evidence_source": "workflow_events" if events else "projection_fallback",
+            "evidence_source": transition_source if events else "projection_fallback",
         },
     }
 
@@ -25689,6 +25746,11 @@ def _review_stack_continuity_payload(
     active_plan = _active_planning_record_for_report_section(target_root=target_root)
     active_plan_id = str(active_plan.get("id") or active_plan.get("plan_id") or active_plan.get("title") or "").strip()
     active_plan_surface = str(active_plan.get("_record_surface") or active_plan.get("surface") or active_plan.get("path") or "").strip()
+    planning_transitions = _review_stack_planning_transition_payloads(
+        target_root=target_root,
+        current_pr_number=current_pr_number,
+    )
+    planning_events = _review_stack_planning_transition_events(transitions=planning_transitions)
     workflow_trace = _review_stack_workflow_trace_payload(
         stack=stack,
         phase=phase,
@@ -25698,8 +25760,15 @@ def _review_stack_continuity_payload(
             "closeout": closeout_command,
         },
         proof_reuse=proof_reuse,
+        planning_events=planning_events,
     )
-    planning_phase_source = "executed_transition_event" if workflow_trace.get("transition_source") == "workflow_events" else "derived_projection"
+    planning_phase_source = (
+        "planning_lifecycle_transition"
+        if workflow_trace.get("transition_source") == "planning_lifecycle_transition"
+        else "executed_transition_event"
+        if workflow_trace.get("transition_source") == "workflow_events"
+        else "derived_projection"
+    )
     return {
         "kind": "agentic-workspace/review-stack-continuity/v1",
         "status": phase,
@@ -25768,6 +25837,7 @@ def _review_stack_continuity_payload(
             "id": active_plan_id,
             "phase": phase,
             "phase_source": planning_phase_source,
+            "transition_records": [item.get("planning_surface") for item in planning_transitions if item.get("planning_surface")],
         },
         "workflow_trace": {
             **workflow_trace,

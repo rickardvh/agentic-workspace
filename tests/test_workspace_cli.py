@@ -6531,20 +6531,53 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         ),
         encoding="utf-8",
     )
-    fresh_stack["workflow_events"] = [
-        {
-            "phase": "review-correction",
-            "phase_after": "review-proof",
-            "command": "uv run python scripts/run_agentic_workspace.py implement --changed src/app.py tests/test_app.py --task 'Address review findings for PR #1841' --format json",
-            "outcome": "executed",
-        },
-        {
-            "phase": "review-proof",
-            "phase_after": "review-closeout-ready",
-            "command": "uv run pytest tests/test_app.py -q",
-            "outcome": "passed",
-        },
+    transition_payloads = [
+        (
+            "stack-review-correction-proof",
+            {
+                "pr_number": "1841",
+                "phase": "review-correction",
+                "phase_after": "review-proof",
+                "command": "uv run python scripts/run_agentic_workspace.py implement --changed src/app.py tests/test_app.py --task 'Address review findings for PR #1841' --format json",
+                "outcome": "executed",
+                "next_action_id": "run-focused-proof",
+            },
+        ),
+        (
+            "stack-review-proof-closeout",
+            {
+                "pr_number": "1841",
+                "phase": "review-proof",
+                "phase_after": "review-closeout-ready",
+                "command": "uv run pytest tests/test_app.py -q",
+                "outcome": "passed",
+                "next_action_id": "closeout-with-reused-proof-receipt",
+            },
+        ),
     ]
+    for slug, transition_payload in transition_payloads:
+        assert (
+            cli.main(
+                [
+                    "planning",
+                    "create-review",
+                    "--slug",
+                    slug,
+                    "--title",
+                    slug.replace("-", " ").title(),
+                    "--target",
+                    str(tmp_path),
+                    "--classification",
+                    "review-stack-transition",
+                    "--scope",
+                    json.dumps(transition_payload, separators=(",", ":")),
+                    "--format",
+                    "json",
+                ]
+            )
+            == 0
+        )
+        capsys.readouterr()
     cache_path.write_text(json.dumps(fresh_stack), encoding="utf-8")
     assert (
         cli.main(
@@ -6567,11 +6600,12 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert reusable_continuity["incremental_proof_manifest"]["reusable_groups"][0]["command"] == "uv run pytest tests/test_app.py -q"
     assert reusable_continuity["next_action"]["id"] == "closeout-with-reused-proof-receipt"
     assert reusable_continuity["closeout_route"]["status"] == "ready_after_recording_reuse_rationale"
-    assert reusable_continuity["planning_owner"]["phase_source"] == "executed_transition_event"
+    assert reusable_continuity["planning_owner"]["phase_source"] == "planning_lifecycle_transition"
+    assert len(reusable_continuity["planning_owner"]["transition_records"]) == 2
     assert reusable_continuity["workflow_trace"]["status"] == "executed_transition_trace"
-    assert reusable_continuity["workflow_trace"]["transition_source"] == "workflow_events"
+    assert reusable_continuity["workflow_trace"]["transition_source"] == "planning_lifecycle_transition"
     assert reusable_continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 2
-    assert reusable_continuity["workflow_trace"]["interaction_cost"]["evidence_source"] == "workflow_events"
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["evidence_source"] == "planning_lifecycle_transition"
     assert [event["phase_after"] for event in reusable_continuity["workflow_trace"]["executed_events"]] == [
         "review-proof",
         "review-closeout-ready",
@@ -6641,9 +6675,9 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert continuity["closeout_route"]["status"] == "blocked"
     assert continuity["planning_owner"]["status"] == "bound_to_active_planning_owner"
     assert continuity["workflow_trace"]["status"] == "executed_transition_trace"
-    assert continuity["workflow_trace"]["transition_source"] == "workflow_events"
+    assert continuity["workflow_trace"]["transition_source"] == "planning_lifecycle_transition"
     assert continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 2
-    assert continuity["workflow_trace"]["interaction_cost"]["evidence_source"] == "workflow_events"
+    assert continuity["workflow_trace"]["interaction_cost"]["evidence_source"] == "planning_lifecycle_transition"
     assert "review_stack_continuity.next_action.command" in continuity["workflow_trace"]["interaction_cost"]["resume_inputs_after_packet"]
     assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
     assert "review_stack_phase=review-correction" in payload["action_signals"]["changed_signals"]

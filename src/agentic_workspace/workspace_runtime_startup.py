@@ -1893,7 +1893,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 },
                 "planning_owner": {
                     key: planning_owner.get(key)
-                    for key in ("status", "surface", "id", "phase", "phase_source")
+                    for key in ("status", "surface", "id", "phase", "phase_source", "transition_records")
                     if planning_owner.get(key)
                 },
                 "workflow_trace": {
