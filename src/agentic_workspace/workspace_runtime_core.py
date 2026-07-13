@@ -136,6 +136,7 @@ from agentic_workspace.reporting_support import (
 )
 from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
+from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.workspace_output import (
     _display_path,
     _emit_init_text,
@@ -28006,8 +28007,19 @@ def _review_stack_planning_transition_events(*, transitions: list[dict[str, Any]
                 "outcome": outcome,
                 "planning_surface": str(item.get("planning_surface") or ""),
                 "next_action_id": str(item.get("next_action_id") or ""),
+                "command_exit_code": item.get("command_exit_code"),
+                "proof_receipt_path": str(item.get("proof_receipt_path") or ""),
+                "proof_receipt_result": str(item.get("proof_receipt_result") or ""),
             }
         )
+    phase_order = {"review-correction": 0, "review-proof": 1, "review-closeout-ready": 2, "review-closed": 3}
+    events.sort(
+        key=lambda event: (
+            phase_order.get(str(event.get("phase") or ""), 99),
+            phase_order.get(str(event.get("phase_after") or ""), 99),
+            str(event.get("planning_surface") or ""),
+        )
+    )
     return events
 
 
@@ -28019,7 +28031,9 @@ def _review_stack_workflow_trace_payload(
     proof_reuse: dict[str, Any],
     planning_events: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    raw_events = planning_events if planning_events else [item for item in _list_payload(stack.get("workflow_events")) if isinstance(item, dict)]
+    raw_events = (
+        planning_events if planning_events else [item for item in _list_payload(stack.get("workflow_events")) if isinstance(item, dict)]
+    )
     transition_source = "planning_lifecycle_transition" if planning_events else "workflow_events" if raw_events else "derived_projection"
     events: list[dict[str, Any]] = []
     for raw_event in raw_events:
@@ -28037,6 +28051,9 @@ def _review_stack_workflow_trace_payload(
                 "outcome": outcome,
                 "planning_surface": str(raw_event.get("planning_surface") or ""),
                 "next_action_id": str(raw_event.get("next_action_id") or ""),
+                "command_exit_code": raw_event.get("command_exit_code"),
+                "proof_receipt_path": str(raw_event.get("proof_receipt_path") or ""),
+                "proof_receipt_result": str(raw_event.get("proof_receipt_result") or ""),
             }
         )
     executed_events = [event for event in events if event.get("outcome") in {"executed", "passed", "reused"}]
@@ -43129,6 +43146,32 @@ def _record_proof_receipt_payload(
         history_path = target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH
         with history_path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(receipt, sort_keys=True, ensure_ascii=True) + "\n")
+    review_stack_transition = record_review_stack_transition(
+        target_root=target_root,
+        phase="review-proof",
+        phase_after="review-closeout-ready" if admission.get("proof_sufficient") else "review-proof",
+        command=command_text(
+            "agentic-workspace",
+            [
+                "proof",
+                *sum((["--changed", path] for path in _normalize_changed_paths(changed_paths)), []),
+                "--record-receipt",
+                "--receipt-command",
+                command,
+                "--receipt-result",
+                result,
+                "--format",
+                "json",
+            ],
+        ),
+        outcome=result,
+        next_action_id="closeout-with-reused-proof-receipt" if admission.get("proof_sufficient") else "rerun-focused-proof",
+        changed_paths=_normalize_changed_paths(changed_paths),
+        command_exit_code=0 if admission.get("proof_sufficient") else 1,
+        proof_receipt_path=PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+        proof_receipt_result=result,
+        dry_run=dry_run,
+    )
     payload = {
         "kind": "agentic-workspace/proof-receipt-write/v1",
         "status": "dry-run" if dry_run else "written",
@@ -43137,6 +43180,8 @@ def _record_proof_receipt_payload(
         "receipt": receipt,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
     }
+    if review_stack_transition.get("status") != "skipped":
+        payload["review_stack_transition"] = review_stack_transition
     if repair_retry_ladder is not None:
         payload["repair_retry_ladder"] = repair_retry_ladder
     if failure_summary is not None:
