@@ -20272,6 +20272,7 @@ def _terminal_final_response_admission(
     terminal_outcome_contract: dict[str, Any],
     final_response_attempt: dict[str, Any],
     resume_state: dict[str, Any] | None = None,
+    resume_executor: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     terminal = _as_dict(terminal_outcome_contract)
     attempt = _as_dict(final_response_attempt)
@@ -20288,10 +20289,37 @@ def _terminal_final_response_admission(
         "safe_continuation_option_ids": _list_payload(terminal.get("safe_continuation_option_ids")),
         "blocker_qualification": terminal.get("blocker_qualification", {}),
     }
+    compaction_boundary_crossed = bool(attempt.get("after_compaction"))
+    resume_request = {
+        "kind": "agentic-workspace/final-response-resume-request/v1",
+        "source": "host-final-response-admission",
+        "terminal_state": state,
+        "terminal_final_rejected": not final_authorized,
+        "auto_resume_action": "" if final_authorized else auto_resume_action,
+        "before_state": before_state,
+        "after_compaction": compaction_boundary_crossed,
+        "final_response_attempt": {
+            "source": str(attempt.get("source") or "model-authored-final-response"),
+            "claim": str(attempt.get("claim") or attempt.get("text") or "").strip(),
+        },
+        "multi_slice_continuation": enforcement.get("multi_slice_continuation", {}),
+    }
+    executor_result: dict[str, Any] = {"status": "not_required"}
+    if not final_authorized:
+        executor = resume_executor or _terminal_final_response_default_resume_executor
+        executor_result = _as_dict(executor(resume_request))
+        after_state.update(_as_dict(executor_result.get("after_state_patch")))
     return {
         "kind": "agentic-workspace/final-response-admission/v1",
         "status": "accepted_terminal_final" if final_authorized else "rejected_auto_resumed",
         "terminal_final_rejected": not final_authorized,
+        "host_admission_boundary": {
+            "status": "accepted" if final_authorized else "rejected-and-resumed",
+            "source": "host-final-response-admission",
+            "invoked_resume_executor": not final_authorized,
+            "rejects_model_obedience_only": not final_authorized,
+            "rule": "The host admission boundary receives the model-authored final response and owns custody transfer.",
+        },
         "attempt": {
             "source": str(attempt.get("source") or "model-authored-final-response"),
             "claim": str(attempt.get("claim") or attempt.get("text") or "").strip(),
@@ -20301,11 +20329,29 @@ def _terminal_final_response_admission(
             "auto_resume_action": "" if final_authorized else auto_resume_action,
             "before_state": before_state,
             "after_state": after_state,
-            "compaction_boundary_crossed": bool(attempt.get("after_compaction")),
+            "compaction_boundary_crossed": compaction_boundary_crossed,
             "multi_slice_continuation": enforcement.get("multi_slice_continuation", {}),
+            "resume_request": resume_request,
+            "executor_result": executor_result,
         },
         "progress_without_yield": bool(enforcement.get("progress_without_yield")) and not final_authorized,
         "rule": "A model-authored terminal final is admitted only after the terminal outcome contract authorizes final-response custody transfer.",
+    }
+
+
+def _terminal_final_response_default_resume_executor(request: dict[str, Any]) -> dict[str, Any]:
+    action = str(request.get("auto_resume_action") or "continue-current-work")
+    return {
+        "kind": "agentic-workspace/final-response-resume-result/v1",
+        "status": "executed",
+        "invoked_action": action,
+        "custody": "agent",
+        "after_state_patch": {
+            "required_next_action": action,
+            "custody_owner": "agent",
+            "continuation_slice": "post-admission-resume",
+        },
+        "rule": "Default host executor records the deterministic resume action when no embedding host supplies a runner.",
     }
 
 

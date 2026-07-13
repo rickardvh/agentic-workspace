@@ -1349,9 +1349,13 @@ def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missi
     admission = rendering["final_response_admission"]
     assert admission["status"] == "rejected_auto_resumed"
     assert admission["terminal_final_rejected"] is True
+    assert admission["host_admission_boundary"]["status"] == "rejected-and-resumed"
+    assert admission["host_admission_boundary"]["invoked_resume_executor"] is True
     assert admission["resume_transition"]["status"] == "executed"
     assert admission["resume_transition"]["auto_resume_action"] == terminal["required_next_action"]
     assert admission["resume_transition"]["compaction_boundary_crossed"] is True
+    assert admission["resume_transition"]["executor_result"]["status"] == "executed"
+    assert admission["resume_transition"]["executor_result"]["invoked_action"] == terminal["required_next_action"]
     assert admission["resume_transition"]["multi_slice_continuation"]["status"] == "preserved"
     assert admission["progress_without_yield"] is True
     assert rendering["plain_done_allowed"] is False

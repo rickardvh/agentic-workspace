@@ -787,6 +787,67 @@ def test_terminal_outcome_contract_distinguishes_continue_blocked_and_user_pause
     assert paused_contract["custody_owner"] == "user"
 
 
+def test_final_response_admission_rejects_non_compliant_final_and_resumes_through_compaction() -> None:
+    from agentic_workspace.workspace_runtime_primitives import (
+        _terminal_final_response_admission,
+        _terminal_outcome_contract_payload,
+    )
+
+    contract = _terminal_outcome_contract_payload(
+        completion_gate={
+            "status": "continue-required",
+            "required_next_action": "run-focused-proof",
+            "active_intent_satisfied": False,
+            "claim_authorization": {"allowed_claim_classes": ["partial_progress"]},
+        },
+        completion_options=[{"id": "run-proof", "allowed": True}],
+    )
+    invoked_requests = []
+
+    def execute_resume(request: dict[str, object]) -> dict[str, object]:
+        invoked_requests.append(request)
+        assert request["auto_resume_action"] == "run-focused-proof"
+        assert request["terminal_final_rejected"] is True
+        assert request["after_compaction"] is True
+        return {
+            "kind": "agentic-workspace/final-response-resume-result/v1",
+            "status": "executed",
+            "invoked_action": request["auto_resume_action"],
+            "after_state_patch": {
+                "continuation_slice": "slice-2-post-compaction",
+                "required_next_action": request["auto_resume_action"],
+                "custody_owner": "agent",
+                "resume_count": 1,
+            },
+        }
+
+    admission = _terminal_final_response_admission(
+        terminal_outcome_contract=contract,
+        final_response_attempt={
+            "source": "simulated-2236-2237-non-compliance",
+            "claim": "Done.",
+            "after_compaction": True,
+        },
+        resume_state={"continuation_slice": "slice-1-pre-compaction", "resume_count": 0},
+        resume_executor=execute_resume,
+    )
+
+    assert len(invoked_requests) == 1
+    assert admission["status"] == "rejected_auto_resumed"
+    assert admission["host_admission_boundary"]["status"] == "rejected-and-resumed"
+    assert admission["host_admission_boundary"]["invoked_resume_executor"] is True
+    assert admission["host_admission_boundary"]["rejects_model_obedience_only"] is True
+    transition = admission["resume_transition"]
+    assert transition["status"] == "executed"
+    assert transition["auto_resume_action"] == "run-focused-proof"
+    assert transition["compaction_boundary_crossed"] is True
+    assert transition["executor_result"]["status"] == "executed"
+    assert transition["executor_result"]["invoked_action"] == "run-focused-proof"
+    assert transition["after_state"]["continuation_slice"] == "slice-2-post-compaction"
+    assert transition["after_state"]["custody_owner"] == "agent"
+    assert admission["progress_without_yield"] is True
+
+
 def test_memory_decision_packet_pull_statuses_distinguish_route_inspection() -> None:
     baseline_only = _memory_decision_packet_payload(
         stage="implement",

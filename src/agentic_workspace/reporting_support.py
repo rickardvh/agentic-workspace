@@ -2579,9 +2579,6 @@ def _compact_ordinary_lane_completion_model(*, cli_invoke: str = DEFAULT_CLI_INV
         ],
         "affordance_first_rule_count": 7,
         "detail_section": "report_profile",
-        "detail_command": _command_with_cli_invoke(
-            "agentic-workspace report --target ./repo --section report_profile --format json", cli_invoke=cli_invoke
-        ),
         "absence_state": "full_model_hidden_behind_detail_route",
     }
 
