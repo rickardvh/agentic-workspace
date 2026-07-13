@@ -705,7 +705,10 @@ def test_completion_gate_claim_authorization_surfaces_closure_keyword_guard() ->
 
 
 def test_terminal_outcome_contract_distinguishes_continue_blocked_and_user_paused() -> None:
-    from agentic_workspace.workspace_runtime_primitives import _terminal_outcome_contract_payload
+    from agentic_workspace.workspace_runtime_primitives import (
+        _terminal_final_response_admission,
+        _terminal_outcome_contract_payload,
+    )
 
     continue_contract = _terminal_outcome_contract_payload(
         completion_gate={
@@ -738,6 +741,22 @@ def test_terminal_outcome_contract_distinguishes_continue_blocked_and_user_pause
     assert (
         weak_final_contract["final_response_enforcement"]["weak_model_regression"] == "terminal-final-rejected-while-continuation-remains"
     )
+    admission = _terminal_final_response_admission(
+        terminal_outcome_contract=weak_final_contract,
+        final_response_attempt={
+            "source": "weak-model-fixture",
+            "claim": "Done.",
+            "after_compaction": True,
+        },
+        resume_state={"slice": "pre-compaction"},
+    )
+    assert admission["status"] == "rejected_auto_resumed"
+    assert admission["terminal_final_rejected"] is True
+    assert admission["resume_transition"]["status"] == "executed"
+    assert admission["resume_transition"]["auto_resume_action"] == "ask-human"
+    assert admission["resume_transition"]["compaction_boundary_crossed"] is True
+    assert admission["resume_transition"]["after_state"]["required_next_action"] == "ask-human"
+    assert admission["progress_without_yield"] is True
 
     blocked_contract = _terminal_outcome_contract_payload(
         completion_gate={

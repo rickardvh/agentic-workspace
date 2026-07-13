@@ -153,8 +153,8 @@
     "ready": "queued",
     "blocked": "none",
     "optional_deps": "none",
-    "switched_from_active_by": "issue-2239",
-    "switch_reason": "Switched active lane to Bounded plan for #2239."
+    "switched_from_active_by": "issue-2231-state-delta-summary-orientation",
+    "switch_reason": "Switched active lane to Issue 2231 state-delta summary orientation."
   },
   "immediate_next_action": [
     "Extend operation conformance through the generated clients for #2198, then build the narrowed pre-#2044 independent-consumer proof for #2200."
@@ -293,6 +293,6 @@
   },
   "drift_log": [
     "2026-07-11: Scaffolded by agentic-planning new-plan.",
-    "2026-07-13: Demoted from active by agentic-planning new-plan --switch-active (issue-2239)."
+    "2026-07-13: Demoted from active by agentic-planning new-plan --switch-active (issue-2231-state-delta-summary-orientation)."
   ]
 }

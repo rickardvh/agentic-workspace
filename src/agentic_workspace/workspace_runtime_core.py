@@ -14960,6 +14960,18 @@ def _closeout_report_final_response_rendering_payload(
         must_include=unique_must_include,
         plain_done_allowed=plain_done_allowed,
     )
+    final_response_admission = _terminal_final_response_admission(
+        terminal_outcome_contract=terminal_outcome_contract,
+        final_response_attempt={
+            "source": "closeout-final-rendering-boundary",
+            "claim": "Done.",
+            "after_compaction": terminal_state == "CONTINUE",
+        },
+        resume_state={
+            "phase": "final-response-rendering",
+            "status": status_value,
+        },
+    )
     return {
         "kind": "agentic-workspace/final-closeout-rendering/v1",
         "status": status_value,
@@ -14985,6 +14997,7 @@ def _closeout_report_final_response_rendering_payload(
         ),
         "chat_report_template": chat_report_template,
         "terminal_outcome_contract": terminal_outcome_contract,
+        "final_response_admission": final_response_admission,
         "must_include": unique_must_include,
         "must_not_claim": must_not_claim,
         "plain_done_allowed": plain_done_allowed,
@@ -20251,6 +20264,48 @@ def _terminal_outcome_contract_payload(
             "A terminal final response is authorized only for DELIVERED, BLOCKED, or USER_PAUSED. "
             "CONTINUE permits progress updates but requires selecting the next safe in-scope action."
         ),
+    }
+
+
+def _terminal_final_response_admission(
+    *,
+    terminal_outcome_contract: dict[str, Any],
+    final_response_attempt: dict[str, Any],
+    resume_state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    terminal = _as_dict(terminal_outcome_contract)
+    attempt = _as_dict(final_response_attempt)
+    enforcement = _as_dict(terminal.get("final_response_enforcement"))
+    state = str(terminal.get("state") or "CONTINUE")
+    final_authorized = bool(terminal.get("final_response_authorized"))
+    auto_resume_action = str(
+        enforcement.get("auto_resume_action") or terminal.get("required_next_action") or "continue-current-work"
+    )
+    before_state = _as_dict(resume_state)
+    after_state = {
+        "terminal_state": state,
+        "required_next_action": auto_resume_action if not final_authorized else "",
+        "safe_continuation_option_ids": _list_payload(terminal.get("safe_continuation_option_ids")),
+        "blocker_qualification": terminal.get("blocker_qualification", {}),
+    }
+    return {
+        "kind": "agentic-workspace/final-response-admission/v1",
+        "status": "accepted_terminal_final" if final_authorized else "rejected_auto_resumed",
+        "terminal_final_rejected": not final_authorized,
+        "attempt": {
+            "source": str(attempt.get("source") or "model-authored-final-response"),
+            "claim": str(attempt.get("claim") or attempt.get("text") or "").strip(),
+        },
+        "resume_transition": {
+            "status": "not_required" if final_authorized else "executed",
+            "auto_resume_action": "" if final_authorized else auto_resume_action,
+            "before_state": before_state,
+            "after_state": after_state,
+            "compaction_boundary_crossed": bool(attempt.get("after_compaction")),
+            "multi_slice_continuation": enforcement.get("multi_slice_continuation", {}),
+        },
+        "progress_without_yield": bool(enforcement.get("progress_without_yield")) and not final_authorized,
+        "rule": "A model-authored terminal final is admitted only after the terminal outcome contract authorizes final-response custody transfer.",
     }
 
 
