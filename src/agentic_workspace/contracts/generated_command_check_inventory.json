@@ -67,6 +67,26 @@
       "rationale": "Generated targets may call host runtime primitives, but AW owns the exact accepted host symbols, owners, minimization posture, and generic-debt rejection."
     },
     {
+      "id": "runtime-semantic-exception-registry",
+      "title": "Temporary AW runtime semantic exception registry",
+      "classification": "transitional-host-boundary",
+      "owner": "agentic-workspace",
+      "disposition": "keep-in-aw",
+      "source_refs": [
+        "src/agentic_workspace/contracts/runtime_semantic_exceptions.json",
+        "src/agentic_workspace/contracts/schemas/runtime_semantic_exceptions.schema.json",
+        "src/agentic_workspace/contracts/python_runtime_projection_inventory.json",
+        "scripts/check/check_generated_command_packages.py",
+        "docs/reference/runtime-semantic-exceptions.md"
+      ],
+      "proof_refs": [
+        "_validate_runtime_semantic_exceptions",
+        "_runtime_semantic_exceptions_report",
+        "uv run python scripts/check/check_generated_command_packages.py --python-completion-blockers --format json"
+      ],
+      "rationale": "AW owns any temporary runtime-only command semantics that are not yet expressible in operation IR; each allowance must name the exact command adapter, operation, runtime path, source symbols, accepted runtime boundary, migration path, and conformance proof."
+    },
+    {
       "id": "retired-command-generation-primitive-usage",
       "title": "Retired command-generation primitive absence",
       "classification": "retired-primitive-boundary",

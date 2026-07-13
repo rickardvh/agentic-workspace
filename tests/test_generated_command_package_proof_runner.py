@@ -1322,6 +1322,7 @@ def test_python_completion_blocker_report_has_json_cli_mode(capsys) -> None:
     check_inventory = payload["generated_command_check_inventory"]
     assert check_inventory["generic_baseline_owner"] == "command-generation"
     assert "generated-output-freshness" in check_inventory["aw_kept_checks"]
+    assert "runtime-semantic-exception-registry" in check_inventory["aw_kept_checks"]
     assert "primitive-executor-baseline" in check_inventory["delegated_or_removed_checks"]
     assert (
         "tests/test_workspace_defaults_cli.py::test_defaults_tiny_text_uses_generated_output" in check_inventory["removed_aw_owned_checks"]
