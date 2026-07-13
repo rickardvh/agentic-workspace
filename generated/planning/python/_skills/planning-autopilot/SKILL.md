@@ -21,14 +21,14 @@ Planning Autopilot is a bounded execution skill for the planning contract. It ex
 
 Use autopilot only when the active work is clearly bounded, the touched paths are narrow, and the validation story is obvious enough to prove the change.
 
-Stop and report instead of editing when:
+Reconcile before editing when:
 
-- no active milestone is clear
-- multiple competing threads are active
-- the milestone is too vague to execute safely
-- validation scope is unknown
-- the plan and code materially diverge and reconciliation cannot produce a safe next slice
-- broader redesign is needed before implementation can continue
+- no active milestone is clear: select or create the smallest planning-owned next slice before implementation
+- multiple competing threads are active: choose the current objective owner or record a typed BLOCKED state only when no safe selection exists
+- the milestone is too vague to execute safely: tighten the milestone until it yields one safe slice or a typed blocker
+- validation scope is unknown: derive the narrowest proof lane before implementation or block with evidence that no proof path is available
+- the plan and code materially diverge: reconcile the plan/code boundary before continuing, or block only with evidence that reconciliation cannot produce a safe next slice
+- broader redesign appears necessary: route to decomposition or high-assurance planning before implementation, or block only when no bounded continuation exists
 
 ## Execution Loop
 

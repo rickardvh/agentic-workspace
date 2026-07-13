@@ -42,6 +42,9 @@ def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
     autopilot_text = autopilot_skill.read_text(encoding="utf-8")
     assert "same explicit objective still has safe continuation state" in autopilot_text
     assert "must not treat one milestone completion as permission to yield" in autopilot_text
+    assert "Reconcile before editing when:" in autopilot_text
+    assert "record a typed BLOCKED state only when no safe selection exists" in autopilot_text
+    assert "Stop and report instead of editing when:" not in autopilot_text
     assert "planning-review-pass" in registry_text
     assert "planning-reporting" in registry_text
     assert "planning-high-assurance-lifecycle" in registry_text
