@@ -723,12 +723,42 @@ def test_terminal_outcome_contract_distinguishes_continue_blocked_and_user_pause
     assert continue_contract["custody_owner"] == "agent"
     assert "context-pressure" in continue_contract["invalid_pseudo_blockers"]
 
-    blocked_contract = _terminal_outcome_contract_payload(
+    weak_final_contract = _terminal_outcome_contract_payload(
         completion_gate={"status": "clarification-required", "required_next_action": "ask-human"},
+        completion_options=[{"id": "request-review", "allowed": True}],
+    )
+    assert weak_final_contract["state"] == "CONTINUE"
+    assert weak_final_contract["final_response_authorized"] is False
+    assert weak_final_contract["blocker_qualification"]["status"] == "missing_typed_external_blocker"
+    assert "qualify-terminal-blocker" in weak_final_contract["safe_continuation_option_ids"]
+    assert weak_final_contract["final_response_enforcement"]["status"] == "rejected_auto_resume"
+    assert weak_final_contract["final_response_enforcement"]["terminal_final_rejected"] is True
+    assert weak_final_contract["final_response_enforcement"]["progress_without_yield"] is True
+    assert weak_final_contract["final_response_enforcement"]["multi_slice_continuation"]["status"] == "preserved"
+    assert (
+        weak_final_contract["final_response_enforcement"]["weak_model_regression"] == "terminal-final-rejected-while-continuation-remains"
+    )
+
+    blocked_contract = _terminal_outcome_contract_payload(
+        completion_gate={
+            "status": "clarification-required",
+            "required_next_action": "ask-human",
+            "external_blockers": [
+                {
+                    "id": "missing-user-secret",
+                    "type": "human_action",
+                    "evidence": "The required secret is unavailable to the agent.",
+                    "recovery": "Ask the user to provide the secret or approve a different path.",
+                    "no_safe_continuation": True,
+                }
+            ],
+        },
         completion_options=[{"id": "request-review", "allowed": True}],
     )
     assert blocked_contract["state"] == "BLOCKED"
     assert blocked_contract["final_response_authorized"] is True
+    assert blocked_contract["blocker_qualification"]["status"] == "qualified_external_blocker"
+    assert blocked_contract["blocker_qualification"]["qualified_blockers"][0]["id"] == "missing-user-secret"
 
     paused_contract = _terminal_outcome_contract_payload(
         completion_gate={"status": "human-accepted-partial", "human_accepted_partial": True},

@@ -1333,6 +1333,11 @@ def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missi
     assert terminal["state"] == "CONTINUE"
     assert terminal["final_response_authorized"] is False
     assert "run-proof" in terminal["safe_continuation_option_ids"]
+    enforcement = terminal["final_response_enforcement"]
+    assert enforcement["status"] == "rejected_auto_resume"
+    assert enforcement["terminal_final_rejected"] is True
+    assert enforcement["progress_without_yield"] is True
+    assert enforcement["multi_slice_continuation"]["status"] == "preserved"
     assert payload["checks"]["intent_proof"]["status"] == "not_recorded"
     claim_work = next(option for option in payload["completion_options"] if option["id"] == "claim-work-complete")
     assert claim_work["allowed"] is False

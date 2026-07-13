@@ -18387,6 +18387,49 @@ def _closeout_protocol_payload(
     }
 
 
+def _terminal_outcome_blocker_qualification(*, completion_gate: dict[str, Any]) -> dict[str, Any]:
+    typed_external_blockers: list[dict[str, Any]] = []
+    missing_requirements: list[str] = []
+    for key in ("external_blockers", "terminal_blockers", "blocker_evidence"):
+        for item in _list_payload(completion_gate.get(key)):
+            if not isinstance(item, dict):
+                continue
+            blocker_type = str(item.get("type") or item.get("kind") or item.get("category") or "").strip()
+            if blocker_type not in {"external", "external_action", "human_action", "user_action"}:
+                continue
+            evidence = str(item.get("evidence") or item.get("proof") or item.get("source") or "").strip()
+            recovery = str(item.get("recovery") or item.get("recovery_action") or item.get("required_action") or "").strip()
+            no_safe_continuation = bool(item.get("no_safe_continuation"))
+            item_missing = []
+            if not evidence:
+                item_missing.append("evidence")
+            if not recovery:
+                item_missing.append("recovery")
+            if not no_safe_continuation:
+                item_missing.append("no_safe_continuation")
+            if item_missing:
+                missing_requirements.extend(item_missing)
+                continue
+            typed_external_blockers.append(
+                {
+                    "id": str(item.get("id") or blocker_type).strip(),
+                    "type": blocker_type,
+                    "evidence": evidence,
+                    "recovery": recovery,
+                    "no_safe_continuation": True,
+                }
+            )
+    status = "qualified_external_blocker" if typed_external_blockers else "missing_typed_external_blocker"
+    if not typed_external_blockers and not missing_requirements:
+        missing_requirements = ["typed_external_blocker", "evidence", "recovery", "no_safe_continuation"]
+    return {
+        "status": status,
+        "qualified_blockers": typed_external_blockers,
+        "missing_requirements": _dedupe(missing_requirements),
+        "rule": "BLOCKED requires a typed external or human-action blocker with evidence, recovery path, and proof that no safe in-scope continuation exists.",
+    }
+
+
 def _terminal_outcome_contract_payload(
     *,
     completion_gate: dict[str, Any],
@@ -18418,6 +18461,10 @@ def _terminal_outcome_contract_payload(
     full_claim_authorized = "full_intent_complete" in allowed_claim_classes
     issue_closure_authorized = "issue_closure" in allowed_claim_classes
     safe_continuation_available = bool(progress_option_ids or status == "continue-required")
+    blocked_like_status = status in {"clarification-required", "blocked", "unavailable", "invalid"}
+    blocker_qualification = _terminal_outcome_blocker_qualification(completion_gate=completion_gate)
+    qualified_external_blocker = bool(blocker_qualification.get("qualified_blockers"))
+    auto_resume_action = required_next_action or "qualify-terminal-blocker-or-continue-current-work"
 
     if active_intent_satisfied and full_claim_authorized:
         state = "DELIVERED"
@@ -18436,11 +18483,19 @@ def _terminal_outcome_contract_payload(
         final_response_authorized = False
         custody_owner = "agent"
         reason = "Safe in-scope continuation remains; a progress summary must not transfer execution custody to the user."
-    elif status in {"clarification-required", "blocked", "unavailable", "invalid"}:
+    elif blocked_like_status and qualified_external_blocker and not safe_continuation_available:
         state = "BLOCKED"
         final_response_authorized = True
         custody_owner = "external-or-human-action"
-        reason = "No safe in-scope continuation is visible without user or external action."
+        reason = "A typed external or human-action blocker is qualified and no safe in-scope continuation is available."
+    elif blocked_like_status:
+        state = "CONTINUE"
+        final_response_authorized = False
+        custody_owner = "agent"
+        reason = "Blocked-like status lacks typed blocker qualification, so a terminal final is rejected and execution custody remains with the agent."
+        safe_continuation_available = True
+        progress_option_ids = _dedupe([*progress_option_ids, "qualify-terminal-blocker"])
+        required_next_action = auto_resume_action
     else:
         state = "CONTINUE"
         final_response_authorized = False
@@ -18458,6 +18513,21 @@ def _terminal_outcome_contract_payload(
         "safe_continuation_option_ids": progress_option_ids,
         "blocked_option_ids": blocked_options,
         "required_next_action": required_next_action or ("continue-current-work" if state == "CONTINUE" else ""),
+        "blocker_qualification": blocker_qualification if blocked_like_status else {"status": "not_required"},
+        "final_response_enforcement": {
+            "status": "authorized" if final_response_authorized else "rejected_auto_resume",
+            "terminal_final_rejected": not final_response_authorized,
+            "auto_resume_action": required_next_action or ("continue-current-work" if state == "CONTINUE" else ""),
+            "progress_without_yield": state == "CONTINUE",
+            "compaction_resume_safe": state == "CONTINUE",
+            "multi_slice_continuation": {
+                "status": "preserved" if state == "CONTINUE" else "not_required",
+                "resume_fields": ["state", "required_next_action", "safe_continuation_option_ids", "blocker_qualification"],
+            },
+            "weak_model_regression": "terminal-final-rejected-while-continuation-remains"
+            if not final_response_authorized
+            else "terminal-final-authorized",
+        },
         "allowed_terminal_states": ["DELIVERED", "BLOCKED", "USER_PAUSED", "CONTINUE"],
         "allowed_claim_classes": sorted(allowed_claim_classes),
         "issue_closure_authorized": issue_closure_authorized,

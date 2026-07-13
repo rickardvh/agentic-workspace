@@ -1107,6 +1107,8 @@ def closeout_claim_boundary_payload(
                     "safe_continuation_available",
                     "safe_continuation_option_ids",
                     "required_next_action",
+                    "blocker_qualification",
+                    "final_response_enforcement",
                     "allowed_terminal_states",
                     "invalid_pseudo_blockers",
                     "terminal_response_rule",
