@@ -1839,6 +1839,8 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             proof_manifest = _as_dict(review_stack_continuity.get("incremental_proof_manifest"))
             next_action = _as_dict(review_stack_continuity.get("next_action"))
             closeout_route = _as_dict(review_stack_continuity.get("closeout_route"))
+            planning_owner = _as_dict(review_stack_continuity.get("planning_owner"))
+            workflow_trace = _as_dict(review_stack_continuity.get("workflow_trace"))
             context["pr_comment_attention"]["review_stack_continuity"] = {
                 "kind": review_stack_continuity.get("kind"),
                 "status": review_stack_continuity.get("status"),
@@ -1847,7 +1849,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                 "dependency_order": review_stack_continuity.get("dependency_order", []),
                 "affected_slice": {
                     key: affected_slice.get(key)
-                    for key in ("status", "pr_number", "branch", "actionable_count", "paths", "proof_hints")
+                    for key in ("status", "pr_number", "branch", "actionable_count", "paths", "proof_hints", "path_source")
                     if affected_slice.get(key) not in (None, "", [], {})
                 },
                 "review_findings": review_stack_continuity.get("review_findings", {}),
@@ -1860,12 +1862,27 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
                         "proof_reuse_status",
                         "reusable_groups",
                         "proof_selection_command_template",
+                        "path_source",
                     )
                     if proof_manifest.get(key) not in (None, "", [], {})
                 },
                 "next_action": {key: next_action.get(key) for key in ("id", "phase", "command") if next_action.get(key)},
                 "closeout_route": {
                     key: closeout_route.get(key) for key in ("status", "command", "parent_boundary") if closeout_route.get(key)
+                },
+                "planning_owner": {key: planning_owner.get(key) for key in ("status", "surface", "id", "phase") if planning_owner.get(key)},
+                "workflow_trace": {
+                    key: workflow_trace.get(key)
+                    for key in (
+                        "status",
+                        "member_count",
+                        "phase_sequence",
+                        "current_phase",
+                        "commands",
+                        "proof_reuse_status",
+                        "interaction_cost",
+                    )
+                    if workflow_trace.get(key) not in (None, "", [], {})
                 },
             }
         context["pr_comment_attention"]["detail_route"] = pr_comment_attention.get(

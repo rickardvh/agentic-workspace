@@ -27907,8 +27907,60 @@ def _pr_comment_addressing_unavailable_packet(
     }
 
 
+def _review_stack_string_list(value: Any) -> list[str]:
+    values = value if isinstance(value, list) else [value] if value not in (None, "") else []
+    return [str(item).strip().replace("\\", "/") for item in values if str(item).strip()]
+
+
+def _review_stack_changed_effect_paths(*, member: dict[str, Any], member_cache: dict[str, Any]) -> list[str]:
+    paths: list[str] = []
+    for key in ("changed_effect_paths", "changed_paths", "files_changed", "changed_files"):
+        paths.extend(_review_stack_string_list(member.get(key)))
+        paths.extend(_review_stack_string_list(member_cache.get(key)))
+    for source in (member.get("files"), member_cache.get("files")):
+        if isinstance(source, list):
+            for item in source:
+                if isinstance(item, dict):
+                    paths.extend(_review_stack_string_list(item.get("path") or item.get("filename")))
+                else:
+                    paths.extend(_review_stack_string_list([item]))
+    return _dedupe(paths)
+
+
+def _review_stack_member_proof_hints(*, member: dict[str, Any], member_cache: dict[str, Any]) -> list[str]:
+    hints: list[str] = []
+    for key in ("proof_hints", "focused_proof_hints", "validation_hints"):
+        hints.extend(_review_stack_string_list(member.get(key)))
+        hints.extend(_review_stack_string_list(member_cache.get(key)))
+    return _dedupe(hints)
+
+
+def _review_stack_proof_command(*, paths: list[str], cli_invoke: str) -> str:
+    if paths:
+        changed_args = " ".join(shlex.quote(path) for path in paths)
+        command = f"agentic-workspace proof --changed {changed_args} --format json"
+    else:
+        command = "agentic-workspace proof --changed <paths> --format json"
+    return _command_with_cli_invoke(command=command, cli_invoke=cli_invoke)
+
+
+def _review_stack_implement_command(*, paths: list[str], pr_number: str, cli_invoke: str) -> str:
+    if not paths:
+        return _command_with_cli_invoke(
+            command="agentic-workspace report --target . --section pr_comment_attention --format json",
+            cli_invoke=cli_invoke,
+        )
+    changed_args = " ".join(shlex.quote(path) for path in paths)
+    task = f"Address review findings for PR #{pr_number}" if pr_number else "Address review findings for the affected stack slice"
+    return _command_with_cli_invoke(
+        command=f"agentic-workspace implement --changed {changed_args} --task {shlex.quote(task)} --format json",
+        cli_invoke=cli_invoke,
+    )
+
+
 def _review_stack_continuity_payload(
     *,
+    target_root: Path,
     stack: dict[str, Any],
     branch: str,
     proof_reuse: dict[str, Any],
@@ -27935,8 +27987,8 @@ def _review_stack_continuity_payload(
     current_member = next((member for member in members if str(member.get("pr_number") or "") == current_pr_number), {})
     affected_member = actionable_members[0] if actionable_members else current_member if current_member else members[-1] if members else {}
     affected_samples: list[dict[str, Any]] = []
-    affected_paths: list[str] = []
-    proof_hints: list[str] = []
+    comment_sample_paths: list[str] = []
+    comment_proof_hints: list[str] = []
     for member in actionable_members:
         for sample in [entry for entry in _list_payload(member.get("sample")) if isinstance(entry, dict)]:
             affected_samples.append(
@@ -27949,11 +28001,21 @@ def _review_stack_continuity_payload(
             path = str(sample.get("path") or "").strip()
             hint = str(sample.get("proof_hint") or "").strip()
             if path:
-                affected_paths.append(path)
+                comment_sample_paths.append(path)
             if hint:
-                proof_hints.append(hint)
-    affected_paths = _dedupe(affected_paths)
-    proof_hints = _dedupe(proof_hints)
+                comment_proof_hints.append(hint)
+    affected_members = actionable_members or ([affected_member] if affected_member else [])
+    affected_paths = _dedupe(
+        [
+            path
+            for member in affected_members
+            for path in _review_stack_string_list(member.get("changed_effect_paths") or member.get("changed_paths"))
+        ]
+    )
+    proof_hints = _dedupe([hint for member in affected_members for hint in _review_stack_string_list(member.get("proof_hints"))])
+    comment_sample_paths = _dedupe(comment_sample_paths)
+    comment_proof_hints = _dedupe(comment_proof_hints)
+    changed_effect_path_source = "stack_member_changed_effect_paths" if affected_paths else "missing_changed_effect_paths"
     proof_status = str(proof_reuse.get("status") or "reuse_unknown")
     reusable_groups = [
         {
@@ -27971,8 +28033,8 @@ def _review_stack_continuity_payload(
         closeout_status = "blocked"
     elif actionable_members:
         phase = "review-correction"
-        next_action = "address-review-findings"
-        proof_manifest_status = "pending_after_correction"
+        next_action = "run-review-correction-workflow"
+        proof_manifest_status = "pending_after_correction" if affected_paths else "blocked_until_changed_effects_known"
         closeout_status = "blocked"
     elif proof_status == "reuse_safe_with_evidence":
         phase = "review-closeout-ready"
@@ -27984,14 +28046,19 @@ def _review_stack_continuity_payload(
         next_action = "run-focused-proof"
         proof_manifest_status = "focused_proof_required"
         closeout_status = "blocked"
-    proof_command = _command_with_cli_invoke(
-        command="agentic-workspace proof --changed <paths> --format json",
+    proof_command = _review_stack_proof_command(paths=affected_paths, cli_invoke=cli_invoke)
+    correction_command = _review_stack_implement_command(
+        paths=affected_paths,
+        pr_number=str(affected_member.get("pr_number") or current_pr_number),
         cli_invoke=cli_invoke,
     )
     closeout_command = _command_with_cli_invoke(
         command="agentic-workspace report --target . --section closeout_report --format json",
         cli_invoke=cli_invoke,
     )
+    active_plan = _active_planning_record_for_report_section(target_root=target_root)
+    active_plan_id = str(active_plan.get("id") or active_plan.get("plan_id") or active_plan.get("title") or "").strip()
+    active_plan_surface = str(active_plan.get("_record_surface") or active_plan.get("surface") or active_plan.get("path") or "").strip()
     return {
         "kind": "agentic-workspace/review-stack-continuity/v1",
         "status": phase,
@@ -28009,17 +28076,27 @@ def _review_stack_continuity_payload(
             "actionable_count": _as_int(affected_member.get("actionable_count")),
             "paths": affected_paths,
             "proof_hints": proof_hints,
+            "comment_sample_paths": comment_sample_paths,
+            "comment_proof_hints": comment_proof_hints,
             "sample": affected_samples[:3],
+            "path_source": changed_effect_path_source,
         },
         "review_findings": {
             "actionable_pr_numbers": [str(member.get("pr_number") or "") for member in actionable_members],
             "stale_or_unverified_pr_numbers": [str(member.get("pr_number") or "") for member in stale_members],
+            "owner": {
+                "status": "bound_to_active_planning_owner" if active_plan_surface else "active_planning_owner_unavailable",
+                "surface": active_plan_surface,
+                "id": active_plan_id,
+                "phase": phase,
+            },
             "route_rule": "Bind each review finding to its stack member before changing proof or closeout phase.",
         },
         "incremental_proof_manifest": {
             "status": proof_manifest_status,
             "changed_effect_paths": affected_paths,
             "proof_hints": proof_hints,
+            "path_source": changed_effect_path_source,
             "proof_selection_command_template": proof_command,
             "proof_reuse_status": proof_status,
             "reusable_groups": reusable_groups,
@@ -28035,13 +28112,37 @@ def _review_stack_continuity_payload(
             if next_action == "run-focused-proof"
             else closeout_command
             if next_action == "closeout-with-reused-proof-receipt"
-            else "",
+            else correction_command,
             "rule": "Review correction, focused proof, and closeout are separate phases; do not replace unresolved review work with broad readiness prose.",
         },
         "closeout_route": {
             "status": closeout_status,
             "command": closeout_command,
             "parent_boundary": "Do not close a parent issue solely because a stack member is locally ready.",
+        },
+        "planning_owner": {
+            "status": "bound_to_active_planning_owner" if active_plan_surface else "active_planning_owner_unavailable",
+            "surface": active_plan_surface,
+            "id": active_plan_id,
+            "phase": phase,
+        },
+        "workflow_trace": {
+            "status": "representative_multi_pr_trace" if len(members) > 1 else "single_pr_trace",
+            "member_count": len(members),
+            "phase_sequence": ["review-correction", "review-proof", "review-closeout-ready"],
+            "current_phase": phase,
+            "commands": {
+                "correct": correction_command,
+                "prove": proof_command,
+                "closeout": closeout_command,
+            },
+            "proof_reuse_status": proof_status,
+            "reuse_or_invalidation_evidence": proof_reuse.get("rationale") or proof_reuse.get("reason") or proof_reuse.get("status"),
+            "interaction_cost": {
+                "resume_inputs_before_packet": ["stack cache", "comment samples", "proof reuse receipt", "active Planning owner"],
+                "resume_inputs_after_packet": ["review_stack_continuity.next_action.command"],
+                "ordinary_rerun_count": 1,
+            },
         },
         "compact_continuation_rule": "Resume from phase, affected_slice, incremental_proof_manifest, and next_action before rereading raw stack cache.",
     }
@@ -28185,6 +28286,8 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
             cache_path=cache_path,
             cli_invoke=cli_invoke,
         )
+        changed_effect_paths = _review_stack_changed_effect_paths(member=item, member_cache=member_cache)
+        proof_hints = _review_stack_member_proof_hints(member=item, member_cache=member_cache)
         members.append(
             {
                 "pr_number": pr_number,
@@ -28194,6 +28297,8 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
                 "freshness": freshness or {"status": "missing"},
                 "new_comment_count": _as_int(member_cache.get("new_comment_count")),
                 "actionable_count": actionable_count,
+                "changed_effect_paths": changed_effect_paths,
+                "proof_hints": proof_hints,
                 "sample": [
                     {
                         key: entry.get(key)
@@ -28343,6 +28448,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
         status = str(stack.get("status") or "stack_comment_status_unavailable")
         proof_reuse = _proof_reuse_guidance_payload(target_root=target_root, cli_invoke=cli_invoke)
         review_stack_continuity = _review_stack_continuity_payload(
+            target_root=target_root,
             stack=stack,
             branch=branch,
             proof_reuse=proof_reuse,

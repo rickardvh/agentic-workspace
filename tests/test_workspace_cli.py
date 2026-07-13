@@ -6354,6 +6354,25 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     _set_git_branch(tmp_path, current="codex/stack-comments", default="main")
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "stack-review-plan",
+                "--title",
+                "Stack review plan",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
     cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "pr-comment-stack.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     changed_path = tmp_path / "src" / "app.py"
@@ -6404,6 +6423,8 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
                 "pr_number": 1841,
                 "branch": "codex/stack-comments",
                 "head_sha": "bbb222",
+                "changed_paths": ["src/app.py", "tests/test_app.py"],
+                "proof_hints": ["Run changed-effect proof."],
                 "delta": {
                     "category_counts": {
                         "actionable_code_doc_body_change": 0,
@@ -6443,8 +6464,11 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert current_continuity["current_pr_number"] == "1841"
     assert [member["pr_number"] for member in current_continuity["dependency_order"]] == ["1840", "1841"]
     assert current_continuity["affected_slice"]["pr_number"] == "1841"
+    assert current_continuity["affected_slice"]["paths"] == ["src/app.py", "tests/test_app.py"]
     assert current_continuity["incremental_proof_manifest"]["status"] == "focused_proof_required"
+    assert current_continuity["incremental_proof_manifest"]["path_source"] == "stack_member_changed_effect_paths"
     assert current_continuity["next_action"]["id"] == "run-focused-proof"
+    assert "proof --changed src/app.py tests/test_app.py --format json" in current_continuity["next_action"]["command"]
 
     proof_reuse_path.write_text(
         json.dumps(
@@ -6497,11 +6521,11 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         {
             "kind": "review_thread_comment",
             "category": "actionable_code_doc_body_change",
-            "path": "src/app.py",
+            "path": "docs/comment-anchor.md",
             "line": 12,
             "url": "https://example.test/pr#thread",
             "author": "reviewer",
-            "proof_hint": "Run focused tests.",
+            "proof_hint": "Comment-local hint should not replace changed-effect proof.",
         }
     ]
     cache_path.write_text(
@@ -6537,12 +6561,25 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert continuity["phase"] == "review-correction"
     assert continuity["affected_slice"]["status"] == "review_findings_present"
     assert continuity["affected_slice"]["pr_number"] == "1841"
-    assert continuity["affected_slice"]["paths"] == ["src/app.py"]
-    assert continuity["affected_slice"]["proof_hints"] == ["Run focused tests."]
+    assert continuity["affected_slice"]["paths"] == ["src/app.py", "tests/test_app.py"]
+    assert continuity["affected_slice"]["proof_hints"] == ["Run changed-effect proof."]
+    assert continuity["affected_slice"]["path_source"] == "stack_member_changed_effect_paths"
     assert continuity["review_findings"]["actionable_pr_numbers"] == ["1841"]
+    assert continuity["review_findings"]["owner"]["status"] == "bound_to_active_planning_owner"
+    assert continuity["review_findings"]["owner"]["surface"].endswith("stack-review-plan.plan.json")
     assert continuity["incremental_proof_manifest"]["status"] == "pending_after_correction"
-    assert continuity["next_action"]["id"] == "address-review-findings"
+    assert continuity["incremental_proof_manifest"]["changed_effect_paths"] == ["src/app.py", "tests/test_app.py"]
+    assert (
+        "proof --changed src/app.py tests/test_app.py --format json"
+        in continuity["incremental_proof_manifest"]["proof_selection_command_template"]
+    )
+    assert continuity["next_action"]["id"] == "run-review-correction-workflow"
+    assert "implement --changed src/app.py tests/test_app.py" in continuity["next_action"]["command"]
     assert continuity["closeout_route"]["status"] == "blocked"
+    assert continuity["planning_owner"]["status"] == "bound_to_active_planning_owner"
+    assert continuity["workflow_trace"]["status"] == "representative_multi_pr_trace"
+    assert continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 1
+    assert "review_stack_continuity.next_action.command" in continuity["workflow_trace"]["interaction_cost"]["resume_inputs_after_packet"]
     assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
     assert "review_stack_phase=review-correction" in payload["action_signals"]["changed_signals"]
 
