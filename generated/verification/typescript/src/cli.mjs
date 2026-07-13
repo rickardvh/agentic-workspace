@@ -234,6 +234,11 @@ function optionValue(option, token) {
   return option.type === 'integer' ? Number(value) : value;
 }
 
+function argumentValue(argument, token) {
+  const value = String(token);
+  return argument.type === 'integer' ? Number(value) : value;
+}
+
 function parseInvocation(definition, tokens, path) {
   const iface = definition.interface;
   const values = initialValues(iface);
@@ -286,7 +291,7 @@ function parseInvocation(definition, tokens, path) {
     index += 1;
   }
   interfaceArguments(iface).forEach((argument, position) => {
-    if (position < positional.length) values[argument.name] = positional[position];
+    if (position < positional.length) values[argument.name] = argumentValue(argument, positional[position]);
     else if (Object.prototype.hasOwnProperty.call(argument, 'default')) values[argument.name] = argument.default;
   });
   values._command_path = path;

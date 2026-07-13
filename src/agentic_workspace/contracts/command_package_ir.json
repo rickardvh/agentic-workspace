@@ -19,7 +19,7 @@
     "shell_adapter_policy": "Issue #909 evaluation selects Bash as the first additional generated command transport candidate and keeps it deferred. Promotion may start only with parser/help projection from canonical command artifacts, then black-box conformance for runtime handoff; PowerShell remains deferred until the Bash boundary and proof route are proven. Shell-family targets are downstream projections for thin wrappers, help, argument validation, completion metadata, and runtime handoff only; they must not own runtime primitive behavior.",
     "direct_cli_edit_policy": "Interface shape, generated package metadata, adapter wiring, and shipped CLI behavior must move through contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files; direct cli.py edits or other direct edits to package-local executable Python are transitional debt unless they are explicitly classified package-unique primitive implementations outside the generated CLI behavior surface.",
     "extraction_readiness": {
-      "status": "ready-with-inventoried-product-coupling",
+      "status": "ready",
       "owner": "#1100",
       "rule": "Reusable command-generation source must not import Agentic Workspace product modules. Product-specific literals in command-generation source require explicit accepted-coupling inventory with owner, reason, and migration path.",
       "accepted_couplings": [
@@ -459,12 +459,6 @@
             },
             {
               "primitive": "output.emit",
-              "handler": "runtime_handler",
-              "function": "_emit_workspace_operation_output",
-              "import_module": "agentic_workspace.workspace_runtime_primitives"
-            },
-            {
-              "primitive": "workspace.config.emit",
               "handler": "runtime_handler",
               "function": "_emit_workspace_operation_output",
               "import_module": "agentic_workspace.workspace_runtime_primitives"
@@ -4999,7 +4993,7 @@
               "workspace.target-root.resolve",
               "workspace.config.load",
               "payload.project",
-              "workspace.config.emit"
+              "output.emit"
             ]
           },
           "schemas": {

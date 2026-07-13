@@ -14,10 +14,12 @@ from __future__ import annotations
 
 import importlib
 import json
+import math
 import tomllib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, is_dataclass
-from pathlib import Path
+from numbers import Real
+from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
 from .operation_composition import expand_operation_steps, operation_fragments
@@ -25,6 +27,9 @@ from .operation_composition import expand_operation_steps, operation_fragments
 
 class PrimitiveExecutionError(RuntimeError):
     pass
+
+
+_DECLARED_TEXT_MAX_SAFE_INTEGER = 9_007_199_254_740_991
 
 
 PrimitiveHandler = Callable[[dict[str, Any], dict[str, Any], "PrimitiveContext"], Any]
@@ -113,12 +118,20 @@ def execute_primitive(
         return _toml_table_counts(values=values, arguments=arguments, context=context)
     if primitive == "payload.assemble":
         return _assemble_payload(values=values, arguments=arguments)
+    if primitive == "payload.view":
+        return _view_payload(values=values, arguments=arguments)
     if primitive == "payload.project":
         return _project_payload(values=values, arguments=arguments)
     if primitive == "output.emit":
         return _emit_output(values=values, arguments=arguments)
+    if primitive == "transaction.plan":
+        return _transaction_plan(values=values, arguments=arguments)
     if primitive == "python.function.call":
         return _call_python_function(values=values, arguments=arguments)
+    if primitive == "operation.call":
+        return _call_operation(values=values, arguments=arguments)
+    if primitive == "operation.dispatch":
+        return _dispatch_operation(values=values, arguments=arguments)
     return execute_host_primitive(
         primitive, values=values, arguments=arguments, context=context
     )
@@ -305,6 +318,8 @@ def _assemble_payload(
         return _resolve_template(fields["template"], values=values)
     if fields.get("payload_kind") == "package-file-list":
         return _assemble_package_file_list(values=values, fields=fields)
+    if fields.get("payload_kind") == "package-resource-manifest":
+        return _assemble_package_resource_manifest(values=values, fields=fields)
     actions_from = str(fields.get("actions_from", ""))
     payload: dict[str, Any] = {
         "dry_run": bool(fields.get("dry_run", True)),
@@ -387,6 +402,59 @@ def _assemble_package_file_list(
     }
 
 
+def _assemble_package_resource_manifest(
+    *, values: dict[str, Any], fields: Mapping[str, Any]
+) -> dict[str, Any]:
+    manifest_from = str(fields.get("manifest_from", "manifest"))
+    manifest = values.get(manifest_from, {})
+    if not isinstance(manifest, Mapping):
+        raise PrimitiveExecutionError(f"{manifest_from} must be an object")
+    files_path = str(fields.get("files_path", "files"))
+    bundled_skills_path = str(
+        fields.get("bundled_skill_files_path", "bundled_skill_files")
+    )
+    files = _resolve_dotted_value(manifest, files_path)
+    bundled_skill_files = _resolve_dotted_value(manifest, bundled_skills_path)
+    return {
+        "files": _manifest_path_list(files or [], source=f"{manifest_from}.{files_path}"),
+        "default_files": _string_list(
+            fields.get("default_files", []),
+            source="payload.assemble fields.default_files",
+        ),
+        "optional_files": _string_list(
+            fields.get("optional_files", []),
+            source="payload.assemble fields.optional_files",
+        ),
+        "bundled_skill_files": _manifest_path_list(
+            bundled_skill_files or [],
+            source=f"{manifest_from}.{bundled_skills_path}",
+        ),
+        "optional_enable_commands": _string_list(
+            fields.get("optional_enable_commands", []),
+            source="payload.assemble fields.optional_enable_commands",
+        ),
+    }
+
+
+def _manifest_path_list(value: Any, *, source: str) -> list[str]:
+    if not isinstance(value, list):
+        raise PrimitiveExecutionError(f"{source} must be a list")
+    paths: list[str] = []
+    for item in value:
+        if isinstance(item, str):
+            paths.append(item)
+            continue
+        if isinstance(item, Mapping):
+            raw_path = item.get("relative_path", item.get("path"))
+            if isinstance(raw_path, str):
+                paths.append(raw_path)
+                continue
+        raise PrimitiveExecutionError(
+            f"{source} entries must be strings or objects with path"
+        )
+    return paths
+
+
 def _string_list(value: Any, *, source: str) -> list[str]:
     if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
         raise PrimitiveExecutionError(f"{source} must be a list of strings")
@@ -441,6 +509,29 @@ def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
                 )
             value = value[part]
         return value
+    if "$select_by_value" in template:
+        spec = template["$select_by_value"]
+        if not isinstance(spec, dict):
+            raise PrimitiveExecutionError("template $select_by_value must be an object")
+        choices = spec.get("choices", {})
+        if not isinstance(choices, Mapping):
+            raise PrimitiveExecutionError(
+                "template $select_by_value choices must be an object"
+            )
+        value_name = str(spec.get("value", ""))
+        selected_value = values.get(value_name)
+        selected_key = (
+            _template_choice_key(selected_value)
+            if value_name in values and selected_value is not None
+            else _template_choice_key(spec.get("default", ""))
+        )
+        if selected_key not in choices:
+            selected_key = _template_choice_key(spec.get("default", ""))
+        if selected_key not in choices:
+            raise PrimitiveExecutionError(
+                f"template $select_by_value cannot resolve choice for {value_name!r}"
+            )
+        return _resolve_template(choices[selected_key], values=values)
     if set(template) == {"$count"}:
         counted = values.get(str(template["$count"]), [])
         if not isinstance(counted, Sequence) or isinstance(counted, (str, bytes)):
@@ -482,6 +573,12 @@ def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
     }
 
 
+def _template_choice_key(value: Any) -> str:
+    if isinstance(value, bool):
+        return str(value).lower()
+    return str(value)
+
+
 def _emit_output(
     *, values: dict[str, Any], arguments: dict[str, Any] | None = None
 ) -> str:
@@ -490,6 +587,10 @@ def _emit_output(
     output_format = str(values.get("format") or "text")
     if output_format == "json":
         return json.dumps(result, indent=2, sort_keys=True) + "\n"
+    if isinstance(result, dict):
+        declared_view = _emit_declared_text_view(result, arguments.get("text_views", []))
+        if declared_view is not None:
+            return declared_view
     if str(arguments.get("text_style", "")) == "current-memory" and isinstance(
         result, dict
     ):
@@ -521,6 +622,423 @@ def _emit_output(
         label = action.get("path") or action.get("id") or action.get("kind")
         lines.append(f"- {label}")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _emit_declared_text_view(result: dict[str, Any], views: Any) -> str | None:
+    if views is None:
+        return None
+    if not isinstance(views, Sequence) or isinstance(views, (str, bytes, bytearray)):
+        raise PrimitiveExecutionError("output.emit text_views must be a list")
+    declared_views: list[Mapping[str, Any]] = []
+    for view in views:
+        if not isinstance(view, Mapping):
+            raise PrimitiveExecutionError("output.emit text_views entries must be objects")
+        _validate_declared_text_view(view)
+        declared_views.append(view)
+    default_view: Mapping[str, Any] | None = None
+    for view in declared_views:
+        if view.get("default") is True:
+            default_view = view
+        if _declared_text_view_matches(result, view):
+            return _render_declared_text_view(result, view)
+    if default_view is not None:
+        return _render_declared_text_view(result, default_view)
+    return None
+
+
+def _declared_text_view_matches(result: dict[str, Any], view: Mapping[str, Any]) -> bool:
+    match = view.get("match", {})
+    if not isinstance(match, Mapping) or not match:
+        return False
+    for path, expected in match.items():
+        if not _is_declared_text_scalar(expected):
+            raise PrimitiveExecutionError("output.emit text view match values must be JSON scalars")
+        found, actual = _field_by_path(result, str(path))
+        if not found or not _declared_text_scalar_equal(actual, expected):
+            return False
+    return True
+
+
+def _validate_declared_text_view(view: Mapping[str, Any]) -> None:
+    if not set(view).issubset({"id", "match", "default", "lines"}):
+        raise PrimitiveExecutionError("output.emit text view has unsupported fields")
+    if "default" in view and not isinstance(view["default"], bool):
+        raise PrimitiveExecutionError("output.emit text view default must be a boolean")
+    match = view.get("match", {})
+    if "match" in view and not isinstance(match, Mapping):
+        raise PrimitiveExecutionError("output.emit text view match must be an object")
+    if isinstance(match, Mapping):
+        for expected in match.values():
+            if not _is_declared_text_scalar(expected):
+                raise PrimitiveExecutionError("output.emit text view match values must be JSON scalars")
+    if "lines" in view:
+        _validate_declared_text_lines(view["lines"])
+
+
+def _validate_declared_text_lines(lines: Any) -> None:
+    if not isinstance(lines, Sequence) or isinstance(lines, (str, bytes, bytearray)):
+        raise PrimitiveExecutionError("output.emit text view lines must be a list")
+    for line in lines:
+        _validate_declared_text_line(line)
+
+
+def _validate_declared_text_line(line: Any) -> None:
+    if isinstance(line, str):
+        return
+    if not isinstance(line, Mapping):
+        raise PrimitiveExecutionError("output.emit text view lines must be strings or objects")
+    discriminators = {"when", "for_each", "json", "template", "literal"}
+    present = [key for key in discriminators if key in line]
+    if len(present) != 1:
+        raise PrimitiveExecutionError(
+            "output.emit text view line object must declare exactly one of when, for_each, json, template, or literal"
+        )
+    key = present[0]
+    if key == "literal":
+        if set(line) != {"literal"}:
+            raise PrimitiveExecutionError("output.emit literal line must only declare literal")
+        _validate_declared_text_string(line["literal"], "output.emit literal line value must be a string")
+        return
+    if key == "template":
+        if set(line) != {"template"}:
+            raise PrimitiveExecutionError("output.emit template line must only declare template")
+        _validate_declared_text_string(line["template"], "output.emit template line value must be a string")
+        return
+    if key == "json":
+        if set(line) != {"json"}:
+            raise PrimitiveExecutionError("output.emit json line must only declare json")
+        _validate_declared_text_string(line["json"], "output.emit json line path must be a string")
+        return
+    if key == "when":
+        if set(line) != {"when", "lines"}:
+            raise PrimitiveExecutionError("output.emit when line must declare when and lines")
+        _validate_declared_text_string(line["when"], "output.emit when line path must be a string")
+        _validate_declared_text_lines(line["lines"])
+        return
+    spec = line["for_each"]
+    if not isinstance(spec, Mapping):
+        raise PrimitiveExecutionError("output.emit for_each line must be an object")
+    if "path" not in spec:
+        raise PrimitiveExecutionError("output.emit for_each line must declare path")
+    _validate_declared_text_string(spec["path"], "output.emit for_each path must be a string")
+    nested_forms = [name for name in ("lines", "template") if name in spec]
+    if len(nested_forms) != 1:
+        raise PrimitiveExecutionError("output.emit for_each line must declare exactly one of lines or template")
+    expected_keys = {"path", nested_forms[0]}
+    if set(spec) != expected_keys:
+        raise PrimitiveExecutionError("output.emit for_each line has unsupported fields")
+    if "lines" in spec:
+        _validate_declared_text_lines(spec["lines"])
+    else:
+        _validate_declared_text_string(spec["template"], "output.emit for_each template must be a string")
+
+
+def _validate_declared_text_string(value: Any, message: str) -> None:
+    if not isinstance(value, str):
+        raise PrimitiveExecutionError(message)
+
+
+def _render_declared_text_view(result: dict[str, Any], view: Mapping[str, Any]) -> str:
+    rendered = _render_declared_text_lines(view.get("lines", []), current=result, root=result)
+    return "\n".join(rendered).rstrip() + "\n"
+
+
+def _render_declared_text_lines(lines: Any, *, current: Any, root: dict[str, Any]) -> list[str]:
+    if not isinstance(lines, Sequence) or isinstance(lines, (str, bytes, bytearray)):
+        raise PrimitiveExecutionError("output.emit text view lines must be a list")
+    rendered: list[str] = []
+    for line in lines:
+        rendered.extend(_render_declared_text_line(line, current=current, root=root))
+    return rendered
+
+
+def _render_declared_text_line(line: Any, *, current: Any, root: dict[str, Any]) -> list[str]:
+    if isinstance(line, str):
+        return [_render_declared_text_template(line, current=current, root=root)]
+    if not isinstance(line, Mapping):
+        raise PrimitiveExecutionError("output.emit text view lines must be strings or objects")
+    if "when" in line:
+        found, value = _declared_text_value(line["when"], current=current, root=root)
+        if not found or not _declared_text_truthy(value):
+            return []
+        return _render_declared_text_lines(line.get("lines", []), current=current, root=root)
+    if "for_each" in line:
+        spec = line["for_each"]
+        if not isinstance(spec, Mapping):
+            raise PrimitiveExecutionError("output.emit for_each line must be an object")
+        found, value = _declared_text_value(spec.get("path", ""), current=current, root=root)
+        if not found or value in (None, ""):
+            return []
+        if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+            raise PrimitiveExecutionError("output.emit for_each path must resolve to a list")
+        nested_lines = spec.get("lines")
+        if nested_lines is None:
+            nested_lines = [str(spec.get("template", "{}"))]
+        return [
+            nested
+            for item in value
+            for nested in _render_declared_text_lines(nested_lines, current=item, root=root)
+        ]
+    if "json" in line:
+        found, value = _declared_text_value(line["json"], current=current, root=root)
+        if not found:
+            value = None
+        return json.dumps(
+            _declared_text_canonical_json_value(_plain_output_result(value)),
+            indent=2,
+            ensure_ascii=False,
+        ).splitlines()
+    if "template" in line:
+        return [_render_declared_text_template(str(line["template"]), current=current, root=root)]
+    if "literal" in line:
+        return [str(line["literal"])]
+    raise PrimitiveExecutionError("output.emit text view line object must declare when, for_each, json, template, or literal")
+
+
+def _render_declared_text_template(template: str, *, current: Any, root: dict[str, Any]) -> str:
+    rendered = template
+    for token in _declared_text_template_tokens(template):
+        found, value = _declared_text_placeholder_value(token, current=current, root=root)
+        rendered = rendered.replace("{" + token + "}", _declared_text_format(value if found else ""))
+    return rendered
+
+
+def _declared_text_template_tokens(template: str) -> list[str]:
+    tokens: list[str] = []
+    index = 0
+    while index < len(template):
+        start = template.find("{", index)
+        if start == -1:
+            break
+        end = template.find("}", start + 1)
+        if end == -1:
+            break
+        tokens.append(template[start + 1 : end])
+        index = end + 1
+    return tokens
+
+
+def _declared_text_placeholder_value(token: str, *, current: Any, root: dict[str, Any]) -> tuple[bool, Any]:
+    parts = token.split("|")
+    found, value = _declared_text_value(parts[0], current=current, root=root)
+    for raw_filter in parts[1:]:
+        name, _, argument = raw_filter.partition(":")
+        if name == "len":
+            value = len(value) if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)) else 0
+            found = True
+        elif name == "join":
+            separator = argument
+            if not found or value is None:
+                value = ""
+            elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+                if not all(_is_declared_text_scalar(item) for item in value):
+                    raise PrimitiveExecutionError("output.emit join filter requires a list of JSON scalars")
+                value = separator.join(_declared_text_format_scalar(item) for item in value)
+            else:
+                raise PrimitiveExecutionError("output.emit join filter requires a list")
+            found = True
+        elif name == "empty":
+            if not _declared_text_truthy(value):
+                value = argument
+                found = True
+        else:
+            raise PrimitiveExecutionError(f"unsupported output.emit text view filter: {name!r}")
+    return found, value
+
+
+def _declared_text_value(path: Any, *, current: Any, root: dict[str, Any]) -> tuple[bool, Any]:
+    path_text = str(path or "")
+    if path_text in {"", "."}:
+        return True, current
+    if path_text.startswith("root."):
+        return _field_by_path(root, path_text.removeprefix("root."))
+    if isinstance(current, Mapping):
+        found, value = _field_by_path(current, path_text)
+        if found:
+            return True, value
+    return _field_by_path(root, path_text)
+
+
+def _declared_text_truthy(value: Any) -> bool:
+    return bool(value)
+
+
+def _declared_text_format(value: Any) -> str:
+    if not _is_declared_text_scalar(value):
+        raise PrimitiveExecutionError("output.emit text view placeholders require JSON scalars; use json lines for arrays or objects")
+    return _declared_text_format_scalar(value)
+
+
+def _is_declared_text_scalar(value: Any) -> bool:
+    return (
+        value is None
+        or isinstance(value, str | bool)
+        or _is_declared_text_safe_integer(value)
+    )
+
+
+def _is_declared_text_safe_integer(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        return False
+    try:
+        numeric = float(value)
+    except OverflowError:
+        return False
+    return (
+        math.isfinite(numeric)
+        and numeric.is_integer()
+        and abs(int(numeric)) <= _DECLARED_TEXT_MAX_SAFE_INTEGER
+    )
+
+
+def _declared_text_scalar_equal(actual: Any, expected: Any) -> bool:
+    if expected is None:
+        return actual is None
+    if isinstance(expected, bool):
+        return isinstance(actual, bool) and actual is expected
+    if isinstance(expected, str):
+        return isinstance(actual, str) and actual == expected
+    if _is_declared_text_safe_integer(expected):
+        return _is_declared_text_safe_integer(actual) and int(actual) == int(expected)
+    return False
+
+
+def _declared_text_format_scalar(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return ""
+    if _is_declared_text_safe_integer(value):
+        return str(int(value))
+    return str(value)
+
+
+def _declared_text_canonical_json_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {
+            str(key): _declared_text_canonical_json_value(value[key])
+            for key in sorted(value, key=lambda item: str(item))
+        }
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_declared_text_canonical_json_value(item) for item in value]
+    if isinstance(value, bool) or value is None or isinstance(value, str):
+        return value
+    if _is_declared_text_safe_integer(value):
+        return int(value)
+    if isinstance(value, Real):
+        raise PrimitiveExecutionError(
+            "output.emit text view JSON numbers must be finite safe integers"
+        )
+    return value
+
+
+def _view_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+    source_name = str(arguments.get("source") or "result")
+    if source_name not in values:
+        raise PrimitiveExecutionError(f"payload.view source value is missing: {source_name!r}")
+    fields = _string_list(arguments.get("fields", []), source="payload.view fields")
+    limits = arguments.get("limits", {})
+    if not isinstance(limits, Mapping):
+        raise PrimitiveExecutionError("payload.view limits must be an object")
+    payload = values[source_name]
+    viewed: dict[str, Any] = {
+        "kind": str(arguments.get("view_kind") or "command-generation/payload-view/v1"),
+        "source_command": str(arguments.get("source_command") or values.get("operation_id") or ""),
+        "values": {},
+    }
+    missing: list[str] = []
+    for field_name in fields:
+        found, value = _field_by_path(payload, field_name)
+        if not found:
+            missing.append(field_name)
+            continue
+        cast(dict[str, Any], viewed["values"])[field_name] = _limited_view_value(
+            _plain_output_result(value), limit=limits.get(field_name)
+        )
+    if missing:
+        viewed["missing"] = missing
+    return viewed
+
+
+def _limited_view_value(value: Any, *, limit: Any) -> Any:
+    if not isinstance(limit, int) or isinstance(value, (str, bytes, bytearray)):
+        return value
+    if isinstance(value, Sequence):
+        return list(value[: max(limit, 0)])
+    return value
+
+
+def _transaction_plan(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+    resources_from = str(arguments.get("resources_from", "resources"))
+    raw_resources = values.get(resources_from, arguments.get("resources", []))
+    if not isinstance(raw_resources, list):
+        raise PrimitiveExecutionError("transaction.plan resources must be a list")
+    actions: list[dict[str, Any]] = []
+    default_action = str(arguments.get("default_action", "write"))
+    default_kind = str(arguments.get("default_kind", "file"))
+    for item in raw_resources:
+        if isinstance(item, str):
+            actions.append(
+                {
+                    "action": default_action,
+                    "kind": default_kind,
+                    "path": _validate_resource_path(item),
+                }
+            )
+            continue
+        if not isinstance(item, Mapping):
+            raise PrimitiveExecutionError(
+                "transaction.plan resources must be strings or objects"
+            )
+        raw_path = item.get("path", item.get("relative_path"))
+        if not isinstance(raw_path, str) or not raw_path:
+            raise PrimitiveExecutionError("transaction.plan resource path is required")
+        resource_path = _validate_resource_path(raw_path)
+        actions.append(
+            {
+                "action": str(item.get("action", default_action)),
+                "kind": str(item.get("kind", default_kind)),
+                "path": resource_path,
+            }
+        )
+    target_root_value = str(arguments.get("target_root_value", "target_root"))
+    plan: dict[str, Any] = {
+        "kind": str(arguments.get("plan_kind", "command-generation/transaction-plan/v1")),
+        "dry_run": True,
+        "target_root": str(values.get(target_root_value, "")),
+        "schema_ref": str(arguments.get("schema_ref", "")),
+        "actions": actions,
+        "mutation_safety": {
+            "apply_status": "package-owned",
+            "apply_primitive": str(arguments.get("apply_primitive", "")),
+            "conflict_hooks": _string_list(
+                arguments.get("conflict_hooks", []),
+                source="transaction.plan conflict_hooks",
+            ),
+            "provenance_hooks": _string_list(
+                arguments.get("provenance_hooks", []),
+                source="transaction.plan provenance_hooks",
+            ),
+            "rule": "Generic transaction planning is dry-run only; mutating apply remains an explicit package-domain primitive.",
+        },
+    }
+    return plan
+
+
+def _validate_resource_path(path: str) -> str:
+    resource_path = path.replace("\\", "/")
+    pure_path = PurePosixPath(resource_path)
+    raw_parts = resource_path.split("/")
+    if (
+        not resource_path
+        or pure_path.is_absolute()
+        or ":" in raw_parts[0]
+        or any(part in {"", ".", ".."} for part in raw_parts)
+    ):
+        raise PrimitiveExecutionError(
+            f"transaction.plan resource path must be relative and stay inside resources: {path!r}"
+        )
+    return resource_path
 
 
 def _project_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
@@ -705,44 +1223,91 @@ def _emit_planning_module_report_text(result: dict[str, Any]) -> str:
 
 
 def _call_python_function(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
+    return _call_operation(values=values, arguments=arguments)
+
+
+def _call_operation(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
     import_module = str(arguments.get("import_module", "")).strip()
     function_name = str(arguments.get("function", "")).strip()
     if not import_module or not function_name:
         raise PrimitiveExecutionError(
-            "python.function.call requires import_module and function"
+            "operation.call requires import_module and function"
         )
     try:
         function = getattr(importlib.import_module(import_module), function_name)
     except (ImportError, AttributeError) as exc:
         raise PrimitiveExecutionError(
-            f"python.function.call cannot resolve {import_module}.{function_name}"
+            f"operation.call cannot resolve {import_module}.{function_name}"
         ) from exc
+    positional = _resolve_call_args(values=values, raw_args=arguments.get("args", []))
     kwargs = _resolve_call_kwargs(values=values, raw_kwargs=arguments.get("kwargs", {}))
-    return function(**kwargs)
+    return function(*positional, **kwargs)
+
+
+def _dispatch_operation(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
+    raw_branches = arguments.get("branches", [])
+    if not isinstance(raw_branches, Sequence) or isinstance(raw_branches, (str, bytes)):
+        raise PrimitiveExecutionError("operation.dispatch branches must be a sequence")
+    if not raw_branches:
+        raise PrimitiveExecutionError("operation.dispatch requires at least one branch")
+    for index, raw_branch in enumerate(raw_branches):
+        if not isinstance(raw_branch, Mapping):
+            raise PrimitiveExecutionError("operation.dispatch branch must be an object")
+        branch = dict(raw_branch)
+        if not _condition_matches(branch.get("when"), values=values):
+            continue
+        branch.pop("when", None)
+        return _call_operation(values=values, arguments=branch)
+    raise PrimitiveExecutionError("operation.dispatch no branch matched")
+
+
+def _resolve_call_args(*, values: dict[str, Any], raw_args: Any) -> list[Any]:
+    if not isinstance(raw_args, Sequence) or isinstance(raw_args, (str, bytes)):
+        raise PrimitiveExecutionError("operation.call args must be a sequence")
+    return [
+        _resolve_call_argument(values=values, source=source, label=f"arg {index}")
+        for index, source in enumerate(raw_args)
+    ]
 
 
 def _resolve_call_kwargs(*, values: dict[str, Any], raw_kwargs: Any) -> dict[str, Any]:
-    if not isinstance(raw_kwargs, dict):
-        raise PrimitiveExecutionError("python.function.call kwargs must be an object")
+    if not isinstance(raw_kwargs, Mapping):
+        raise PrimitiveExecutionError("operation.call kwargs must be an object")
     kwargs: dict[str, Any] = {}
     for name, source in raw_kwargs.items():
-        if not isinstance(source, dict):
-            kwargs[str(name)] = source
-            continue
-        if "value" in source:
-            value_name = str(source["value"])
-            if value_name not in values:
-                raise PrimitiveExecutionError(
-                    f"python.function.call cannot resolve value {value_name!r}"
-                )
-            kwargs[str(name)] = values[value_name]
-        elif "literal" in source:
-            kwargs[str(name)] = source["literal"]
-        else:
-            raise PrimitiveExecutionError(
-                f"python.function.call kwarg {name!r} must declare value or literal"
-            )
+        kwargs[str(name)] = _resolve_call_argument(
+            values=values, source=source, label=f"kwarg {name!r}"
+        )
     return kwargs
+
+
+def _resolve_call_argument(*, values: dict[str, Any], source: Any, label: str) -> Any:
+    if not isinstance(source, Mapping):
+        return source
+    if "value" in source:
+        return _require_call_value(values, str(source["value"]))
+    if "literal" in source:
+        return source["literal"]
+    if "raw_value" in source:
+        return _require_call_value(values, str(source["raw_value"]))
+    if "string_value" in source or "str_value" in source:
+        value_name = str(source.get("string_value", source.get("str_value", "")))
+        return str(values.get(value_name) or source.get("default", ""))
+    if "bool_value" in source:
+        return bool(values.get(str(source["bool_value"])))
+    if "not_bool_value" in source:
+        return not bool(values.get(str(source["not_bool_value"])))
+    raise PrimitiveExecutionError(
+        f"operation.call {label} must declare value, raw_value, literal, string_value, bool_value, or not_bool_value"
+    )
+
+
+def _require_call_value(values: dict[str, Any], value_name: str) -> Any:
+    if value_name not in values:
+        raise PrimitiveExecutionError(
+            f"operation.call cannot resolve value {value_name!r}"
+        )
+    return values[value_name]
 
 
 def _resolve_dotted_value(payload: Mapping[str, Any], dotted_path: str) -> Any:

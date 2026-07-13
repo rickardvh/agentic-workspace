@@ -121,7 +121,6 @@ def _host_primitive_definitions(manifest: dict[str, object], *, repo_root: Path)
     }
     primitive_ids: set[str] = {
         "workspace.config.load",
-        "workspace.config.emit",
         "workspace.defaults.load",
         "workspace.defaults.select",
         "output.fields.select",

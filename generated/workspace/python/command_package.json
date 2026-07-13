@@ -3754,7 +3754,7 @@
           "workspace.target-root.resolve",
           "workspace.config.load",
           "payload.project",
-          "workspace.config.emit"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -5773,7 +5773,7 @@
   "generation_metadata": {
     "generator": {
       "package": "command-generation",
-      "version": "1.1.0"
+      "version": "1.2.1"
     },
     "schema_version": "command-generation/generated-artifact-metadata/v1",
     "source_ir": {
@@ -5924,12 +5924,6 @@
           "handler": "runtime_handler",
           "import_module": "agentic_workspace.workspace_runtime_primitives",
           "primitive": "output.emit"
-        },
-        {
-          "function": "_emit_workspace_operation_output",
-          "handler": "runtime_handler",
-          "import_module": "agentic_workspace.workspace_runtime_primitives",
-          "primitive": "workspace.config.emit"
         }
       ],
       "initial_values": [

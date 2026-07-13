@@ -64,7 +64,7 @@
           "workspace.target-root.resolve",
           "workspace.config.load",
           "payload.project",
-          "workspace.config.emit"
+          "output.emit"
         ]
       },
       "schemas": {
