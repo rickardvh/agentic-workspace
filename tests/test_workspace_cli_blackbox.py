@@ -7,14 +7,31 @@ import subprocess
 from pathlib import Path
 
 import pytest
+from tests.workspace_cli_support import aw_subprocess_env
 
 from agentic_workspace import cli as source_cli
 
 
-def _run_cli(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
+def _run_cli(
+    *args: str,
+    cwd: Path,
+    purpose_id: str | None = None,
+    scenario_id: str | None = None,
+    invocation_class: str | None = None,
+    expected_exit: str | None = None,
+) -> subprocess.CompletedProcess[str]:
+    env = None
+    if any((purpose_id, scenario_id, invocation_class, expected_exit)):
+        env = aw_subprocess_env(
+            purpose_id=purpose_id,
+            scenario_id=scenario_id,
+            invocation_class=invocation_class,
+            expected_exit=expected_exit,
+        )
     return subprocess.run(
         ["uv", "run", "agentic-workspace", *args],
         cwd=cwd,
+        env=env,
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -49,7 +66,16 @@ def test_blackbox_invalid_targets_report_usage_errors_without_tracebacks(tmp_pat
 
 
 def test_blackbox_near_miss_command_guides_to_startup() -> None:
-    result = _run_cli("summry", "--format", "json", cwd=Path.cwd())
+    result = _run_cli(
+        "summry",
+        "--format",
+        "json",
+        cwd=Path.cwd(),
+        purpose_id="blackbox-recovery",
+        scenario_id="near-miss-summary",
+        invocation_class="negative-fixture",
+        expected_exit="failure",
+    )
 
     combined = f"{result.stdout}\n{result.stderr}"
     assert result.returncode == 2
@@ -272,6 +298,10 @@ def test_blackbox_memory_route_task_misuse_guides_to_memory_consult() -> None:
         "--format",
         "json",
         cwd=Path.cwd(),
+        purpose_id="blackbox-memory-route",
+        scenario_id="task-misuse-guides-consult",
+        invocation_class="product-operation",
+        expected_exit="success",
     )
 
     assert result.returncode == 0

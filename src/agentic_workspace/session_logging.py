@@ -1861,6 +1861,24 @@ def analyze_session_log(
         for entry in entries
         if isinstance(entry.get("invocation_outcome"), dict) and entry["invocation_outcome"].get("match") == "unmatched"
     ]
+    expected_success_failures = [
+        entry
+        for entry in unmatched_expectations
+        if isinstance(entry.get("invocation_outcome"), dict)
+        and isinstance(entry["invocation_outcome"].get("expected"), dict)
+        and isinstance(entry["invocation_outcome"].get("observed"), dict)
+        and entry["invocation_outcome"]["expected"].get("exit_class") == "success"
+        and entry["invocation_outcome"]["observed"].get("exit_class") == "failure"
+    ]
+    expected_failure_successes = [
+        entry
+        for entry in unmatched_expectations
+        if isinstance(entry.get("invocation_outcome"), dict)
+        and isinstance(entry["invocation_outcome"].get("expected"), dict)
+        and isinstance(entry["invocation_outcome"].get("observed"), dict)
+        and entry["invocation_outcome"]["expected"].get("exit_class") == "failure"
+        and entry["invocation_outcome"]["observed"].get("exit_class") == "success"
+    ]
     unknown_expectations = [
         entry
         for entry in entries
@@ -1938,6 +1956,8 @@ def analyze_session_log(
             "expected_failure_count": sum(1 for entry in failures if bool(entry.get("expected_failure", False))),
             "matched_expectation_count": len(matched_expectations),
             "unmatched_expectation_count": len(unmatched_expectations),
+            "expected_success_failure_count": len(expected_success_failures),
+            "expected_failure_success_count": len(expected_failure_successes),
             "unknown_expectation_count": len(unknown_expectations),
             "unexpected_failure_count": len(unexpected_failures),
             "usage_mistake_count": len(usage_mistakes),
@@ -1965,6 +1985,8 @@ def analyze_session_log(
         "unexpected_failed_commands": [_entry_brief(entry) for entry in unexpected_failures],
         "matched_invocations": [_entry_brief(entry) for entry in matched_expectations],
         "unmatched_invocations": [_entry_brief(entry) for entry in unmatched_expectations],
+        "expected_success_failed_invocations": [_entry_brief(entry) for entry in expected_success_failures],
+        "expected_failure_succeeded_invocations": [_entry_brief(entry) for entry in expected_failure_successes],
         "unknown_invocations": [_entry_brief(entry) for entry in unknown_expectations],
         "unknown_expectation_effect": "inconclusive; raw exit remains observed and a non-zero exit remains in the primary unexpected-failure set",
         "live_failed_commands": [_entry_brief(entry) for entry in live_failures],

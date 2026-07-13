@@ -874,13 +874,22 @@ def _task_switch_reconciliation_payload(
         completed_route_target_root = Path(configured_target_root)
     else:
         completed_route_target_root = Path.cwd()
+    text = " ".join((task_text or "").lower().split())
+    maintenance_markers = ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status")
+    matched_maintenance_markers = [marker for marker in maintenance_markers if marker in text]
+    maintenance_like = bool(matched_maintenance_markers)
+    bounded_reflection = _bounded_reflection_reporting_payload(task_text=task_text)
+    classification_basis = "bounded-maintenance-marker-hint" if maintenance_like else "no-maintenance-marker-hint"
+    recommended = "proceed-bounded-repo-maintenance" if maintenance_like else "choose-between-new-task-and-active-plan"
+    mismatch_evidence = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
+    shared_refs = [str(ref) for ref in mismatch_evidence.get("shared_refs", []) if str(ref).strip()]
     completed_plan_route = _completed_active_plan_route_payload(
         target_root=completed_route_target_root,
         active_summary=active_summary,
         config=config,
         planning_revision=planning_revision,
     )
-    if completed_plan_route.get("status") == "archive-or-retire-recommended":
+    if completed_plan_route.get("status") == "archive-or-retire-recommended" and not shared_refs:
         return {
             "kind": "agentic-workspace/task-switch-reconciliation/v1",
             "status": "completed-active-plan-route",
@@ -922,15 +931,6 @@ def _task_switch_reconciliation_payload(
             },
             "rule": "Completed active-plan cleanup is command-routed; startup never silently archives or closes planning state.",
         }
-    text = " ".join((task_text or "").lower().split())
-    maintenance_markers = ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status")
-    matched_maintenance_markers = [marker for marker in maintenance_markers if marker in text]
-    maintenance_like = bool(matched_maintenance_markers)
-    bounded_reflection = _bounded_reflection_reporting_payload(task_text=task_text)
-    classification_basis = "bounded-maintenance-marker-hint" if maintenance_like else "no-maintenance-marker-hint"
-    recommended = "proceed-bounded-repo-maintenance" if maintenance_like else "choose-between-new-task-and-active-plan"
-    mismatch_evidence = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
-    shared_refs = [str(ref) for ref in mismatch_evidence.get("shared_refs", []) if str(ref).strip()]
     if shared_refs:
         return {
             "kind": "agentic-workspace/task-switch-reconciliation/v1",
