@@ -2752,7 +2752,7 @@ const commandDefinitions = [
           ]
         },
         {
-          "help": "Export an existing local session log as a share-safe redacted bundle.",
+          "help": "Export an existing local session log as a local diagnostic bundle with known local paths normalized.",
           "name": "export",
           "operation_ref": {
             "id": "session-log.manage",
