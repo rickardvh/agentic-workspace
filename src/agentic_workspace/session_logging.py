@@ -38,6 +38,19 @@ SESSION_LOG_KIND = "agentic-workspace/session-log/v1"
 SESSION_LOG_INDEX_KIND = "agentic-workspace/session-log-index/v1"
 DEFAULT_MAX_INLINE_OUTPUT_BYTES = 64 * 1024
 LARGE_OUTPUT_SUMMARY_LIMIT = 5
+SESSION_LOG_NON_AUTHORITATIVE_FOR = ("Planning", "Memory", "proof", "closeout")
+SESSION_LOG_LOCAL_BOUNDARY = {
+    "scope": "package-owned local diagnostic state",
+    "local_only": True,
+    "authoritative": False,
+    "non_authoritative_for": SESSION_LOG_NON_AUTHORITATIVE_FOR,
+    "manual_handoff": "outside-aw-logger-responsibility",
+    "raw_capture_policy": "raw local capture remains unchanged unless the user runs an explicit local export",
+    "rule": (
+        "Session logs are local diagnostic evidence only; durable workflow facts must be recorded in their owning "
+        "Planning, Memory, proof, closeout, docs, issue, or PR surface."
+    ),
+}
 
 
 @dataclass(frozen=True)
@@ -385,10 +398,11 @@ def status_payload(*, state: SessionLoggingState) -> dict[str, Any]:
         "logical_session_resolution": "identity-registry" if logical_identity else "legacy-default-bucket",
         "logical_session_identity_source": LOGICAL_SESSION_IDENTITY_ENV if logical_identity else "",
         "raw_logical_session_identity_stored": False,
-        "path_redaction": _path_redaction_payload(state),
+        "path_normalization": _path_normalization_payload(state),
+        "local_diagnostic_boundary": _session_log_local_boundary(),
         "local_only": True,
         "authoritative": False,
-        "rule": "Session logs are local dogfooding evidence, not Planning state, Memory, proof receipts, or closeout authorization.",
+        "rule": SESSION_LOG_LOCAL_BOUNDARY["rule"],
     }
 
 
@@ -584,9 +598,9 @@ def _session_prelude(*, state: SessionLoggingState, session: dict[str, str]) -> 
             "root": SESSION_LOG_ROOT.as_posix(),
             "local_only": True,
             "authoritative": False,
-            "redaction": _path_redaction_payload(state),
+            "path_normalization": _path_normalization_payload(state),
+            "local_diagnostic_boundary": _session_log_local_boundary(),
             "failure_behavior": "Logging failures are warning-only and must not block ordinary AW operation, proof, or closeout claims.",
-            "promotion_boundary": "Logs are dogfooding evidence only until explicitly promoted into checked-in Planning, Memory, docs, or proof receipts.",
             "logical_session": {
                 "resolution": "identity-registry" if _logical_session_identity() else "legacy-default-bucket",
                 "identity_source": LOGICAL_SESSION_IDENTITY_ENV if _logical_session_identity() else "",
@@ -966,7 +980,7 @@ def _write_output_artifact(
         "kind": "agentic-workspace/session-log-output-artifact/v1",
         "entry_id": entry_id,
         "storage_mode": "raw-local-artifact",
-        "share_safe": False,
+        "local_diagnostic_boundary": _session_log_local_boundary(),
         "rule": "Raw command output is recoverable locally from ignored session-log artifacts; markdown and indexes use the configured path mode.",
         "stdout": output["stdout"],
         "stderr": output["stderr"],
@@ -1016,7 +1030,8 @@ def _write_index(
         "path": index_path.as_posix(),
         "created_at": session.get("created_at", ""),
         "updated_at": datetime.now(UTC).isoformat(),
-        "path_redaction": _path_redaction_payload(state),
+        "path_normalization": _path_normalization_payload(state),
+        "local_diagnostic_boundary": _session_log_local_boundary(),
         "entries": list(entries),
         "notes": list(notes),
         "local_only": True,
@@ -1189,7 +1204,19 @@ def _normalize_for_log(state: SessionLoggingState, text: str) -> str:
     return normalized
 
 
-def _path_redaction_payload(state: SessionLoggingState) -> dict[str, Any]:
+def _session_log_local_boundary() -> dict[str, Any]:
+    return {
+        "scope": SESSION_LOG_LOCAL_BOUNDARY["scope"],
+        "local_only": True,
+        "authoritative": False,
+        "non_authoritative_for": list(SESSION_LOG_NON_AUTHORITATIVE_FOR),
+        "manual_handoff": SESSION_LOG_LOCAL_BOUNDARY["manual_handoff"],
+        "raw_capture_policy": SESSION_LOG_LOCAL_BOUNDARY["raw_capture_policy"],
+        "rule": SESSION_LOG_LOCAL_BOUNDARY["rule"],
+    }
+
+
+def _path_normalization_payload(state: SessionLoggingState) -> dict[str, Any]:
     mode = state.config.local_override.session_logging.path_mode if state.config else "absolute"
     placeholders = {
         "absolute": [],
@@ -1200,7 +1227,7 @@ def _path_redaction_payload(state: SessionLoggingState) -> dict[str, Any]:
         "mode": mode,
         "local_paths": "absolute" if mode == "absolute" else "normalized",
         "placeholders": placeholders,
-        "raw_artifact_recoverability": "raw output may remain in ignored local artifacts; do not share .agentic-workspace/local artifacts without review",
+        "raw_artifact_recoverability": "raw output may remain unchanged in ignored local artifacts",
         "limitations": "Only known AW command text, target-root, user-home, and Python executable path strings are normalized.",
         "rule": "Logs capture AW command argv and AW stdout/stderr only; environment variables and secrets are not logged by default.",
     }
@@ -1665,7 +1692,7 @@ def repair_session_log_index(*, state: SessionLoggingState, path: str = "", sess
     }
 
 
-def _share_safe_text(*, state: SessionLoggingState, text: str) -> str:
+def _normalized_export_text(*, state: SessionLoggingState, text: str) -> str:
     configured = [item for item in os.environ.get("AW_SESSION_LOG_REDACT_PATHS", "").split(os.pathsep) if item]
     replacements = [
         (state.target_root.as_posix(), "<target>"),
@@ -1686,13 +1713,13 @@ def _share_safe_text(*, state: SessionLoggingState, text: str) -> str:
     return normalized
 
 
-def _share_safe_value(*, state: SessionLoggingState, value: Any) -> Any:
+def _normalized_export_value(*, state: SessionLoggingState, value: Any) -> Any:
     if isinstance(value, str):
-        return _share_safe_text(state=state, text=value)
+        return _normalized_export_text(state=state, text=value)
     if isinstance(value, dict):
-        return {key: _share_safe_value(state=state, value=child) for key, child in value.items()}
+        return {key: _normalized_export_value(state=state, value=child) for key, child in value.items()}
     if isinstance(value, list):
-        return [_share_safe_value(state=state, value=child) for child in value]
+        return [_normalized_export_value(state=state, value=child) for child in value]
     return value
 
 
@@ -1706,10 +1733,12 @@ def export_session_log(
     effective_session = _session_for_log(state=state, log_path=log_path, session=session)
     index = _read_index_for_log(state=state, log_path=log_path, session=session)
     entries = _entries_from_index(index) if index is not None else _entries_from_markdown(log_path)
-    files: dict[str, bytes] = {"session.md": _share_safe_text(state=state, text=log_path.read_text(encoding="utf-8-sig")).encode("utf-8")}
+    files: dict[str, bytes] = {
+        "session.md": _normalized_export_text(state=state, text=log_path.read_text(encoding="utf-8-sig")).encode("utf-8")
+    }
     if index is not None:
-        safe_index = _share_safe_value(state=state, value=index)
-        files["index.json"] = (json.dumps(safe_index, indent=2, sort_keys=True) + "\n").encode("utf-8")
+        normalized_index = _normalized_export_value(state=state, value=index)
+        files["index.json"] = (json.dumps(normalized_index, indent=2, sort_keys=True) + "\n").encode("utf-8")
     included_artifacts: list[str] = []
     if include_artifacts:
         artifact_paths = {
@@ -1728,9 +1757,9 @@ def export_session_log(
             archive_name = f"artifacts/{candidate.name}"
             try:
                 artifact_payload = json.loads(raw)
-                safe_raw = json.dumps(_share_safe_value(state=state, value=artifact_payload), indent=2, sort_keys=True) + "\n"
+                safe_raw = json.dumps(_normalized_export_value(state=state, value=artifact_payload), indent=2, sort_keys=True) + "\n"
             except json.JSONDecodeError:
-                safe_raw = _share_safe_text(state=state, text=raw)
+                safe_raw = _normalized_export_text(state=state, text=raw)
             files[archive_name] = safe_raw.encode("utf-8")
             included_artifacts.append(archive_name)
     source_hashes = {"session.md": hashlib.sha256(log_path.read_bytes()).hexdigest()}
@@ -1744,7 +1773,7 @@ def export_session_log(
         "source_session_id": effective_session["session_id"],
         "source_log_path": effective_session["log_path"],
         "created_at": datetime.now(UTC).isoformat(),
-        "redaction_mode": "share-safe-known-local-paths",
+        "path_normalization_mode": "known-local-paths",
         "included_files": sorted(files),
         "included_artifacts": included_artifacts,
         "source_hashes": source_hashes,
@@ -1752,15 +1781,14 @@ def export_session_log(
         "originals_mutated": False,
         "local_only": True,
         "authoritative": False,
-        "limitations": "Known target, home, Python executable, and configured local paths are redacted; arbitrary secrets in command output are not detected.",
+        "local_diagnostic_boundary": _session_log_local_boundary(),
+        "limitations": "Known target, home, Python executable, and configured local paths are normalized; export is not a secret scan or transfer approval.",
     }
     files["manifest.json"] = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")
     export_path = (
         SESSION_LOG_ROOT
         / "exports"
-        / (
-            f"aw-session-{effective_session['session_id']}-share-safe-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}.zip"
-        )
+        / (f"aw-session-{effective_session['session_id']}-local-{datetime.now(UTC).strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}.zip")
     )
     absolute_export = state.target_root / export_path
     absolute_export.parent.mkdir(parents=True, exist_ok=True)
@@ -1776,6 +1804,7 @@ def export_session_log(
         "artifact_count": len(included_artifacts),
         "sha256": hashlib.sha256(absolute_export.read_bytes()).hexdigest(),
         "manifest": manifest,
+        "local_diagnostic_boundary": _session_log_local_boundary(),
         "local_only": True,
         "authoritative": False,
     }
@@ -2004,9 +2033,10 @@ def analyze_session_log(
         "segments": segment_summaries,
         "selected_segment": segment_id,
         "friction_candidates": friction_candidates,
+        "local_diagnostic_boundary": _session_log_local_boundary(),
         "local_only": True,
         "authoritative": False,
-        "rule": "Session-log analysis is dogfooding evidence only; promote durable facts into Planning, Memory, docs, proof, or issues intentionally.",
+        "rule": SESSION_LOG_LOCAL_BOUNDARY["rule"],
     }
 
 

@@ -156,7 +156,7 @@
         }
       },
       "additionalProperties": false,
-      "description": "Machine-local session logging and share-safety preferences."
+      "description": "Machine-local session logging and path-normalization preferences."
     },
     "local_overlay": {
       "type": "object",
