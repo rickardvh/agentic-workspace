@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import json
 import posixpath
 import re
 import shlex
@@ -31,6 +33,55 @@ def _run(command: list[str], *, capture: bool = False) -> subprocess.CompletedPr
 def _returncode(command: list[str]) -> int:
     process = _run(command)
     return int(process.returncode)
+
+
+def _admit_final_response(*, repo: str, share_path: str) -> int:
+    host_share_path = Path(share_path)
+    if not host_share_path.is_file():
+        print(
+            "Codex final-response admission skipped: --output-last-message artifact was not written.",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 1
+    command = [
+        sys.executable,
+        "-c",
+        "from agentic_workspace.cli import main; raise SystemExit(main())",
+        "final-response",
+        "admit",
+        "--target",
+        repo,
+        "--attempt-file",
+        str(host_share_path),
+        "--source",
+        "codex-sbx-output-last-message",
+        "--after-compaction",
+        "--format",
+        "json",
+    ]
+    completed = subprocess.run(command, text=True, capture_output=True, check=False)  # noqa: S603
+    stdout_text = completed.stdout.strip()
+    stderr_text = completed.stderr.strip()
+    if stdout_text:
+        with host_share_path.open("w", encoding="utf-8", newline="\n") as handle:
+            handle.write(stdout_text)
+            handle.write("\n")
+    if completed.returncode != 0:
+        if stdout_text:
+            print(stdout_text, file=sys.stdout, flush=True)
+        if stderr_text:
+            print(stderr_text, file=sys.stderr, flush=True)
+        return int(completed.returncode)
+    with contextlib.suppress(json.JSONDecodeError):
+        payload = json.loads(stdout_text)
+        if isinstance(payload, dict) and payload.get("status") == "rejected_auto_resumed":
+            print(
+                "Codex final-response admission rejected terminal output and executed AW continuation.",
+                file=sys.stderr,
+                flush=True,
+            )
+    return 0
 
 
 def _prompt_from_args(args: argparse.Namespace) -> str:
@@ -181,6 +232,8 @@ def main(argv: list[str] | None = None) -> int:
                 return_code = _returncode(exec_command)
         else:
             return_code = _returncode(exec_command)
+        if return_code == 0:
+            return_code = _admit_final_response(repo=args.repo, share_path=args.share_path)
     finally:
         if not args.keep_sandbox:
             cleanup = _returncode([args.sbx, "rm", "--force", args.sandbox_name])

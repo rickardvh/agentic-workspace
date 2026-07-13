@@ -1815,6 +1815,14 @@
               "help": "The model-authored final response text submitted for host admission."
             },
             {
+              "name": "attempt_file",
+              "flags": [
+                "--attempt-file"
+              ],
+              "default": "",
+              "help": "Path to a file containing the model-authored final response text submitted for host admission."
+            },
+            {
               "name": "source",
               "flags": [
                 "--source"

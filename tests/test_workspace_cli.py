@@ -1348,13 +1348,13 @@ def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missi
     assert rendering["terminal_outcome_contract"]["state"] == "CONTINUE"
     admission = rendering["final_response_admission"]
     assert admission["kind"] == "agentic-workspace/final-response-admission-route/v1"
-    assert admission["status"] == "host_integration_required"
+    assert admission["status"] == "host_integrated_admission_required"
     assert admission["host_operation"] == "final-response.admit"
     assert '--attempt "<model-authored final response>"' in admission["command_template"]
-    assert admission["host_boundary_integrated"] is False
-    assert admission["ordinary_host_path_unavoidable"] is False
-    assert admission["issue_2239_closure_ready"] is False
-    assert "No in-repo Codex/agent host wrapper" in admission["integration_gap"]
+    assert admission["host_boundary_integrated"] is True
+    assert admission["ordinary_host_path_unavoidable"] is True
+    assert admission["issue_2239_closure_ready"] is True
+    assert admission["integrated_host_boundaries"][0]["entrypoint"] == "scripts/model_cli_harness/run_sbx_codex_adapter.py"
     assert rendering["plain_done_allowed"] is False
     assert any("terminal final response" in item for item in rendering["must_not_claim"])
 

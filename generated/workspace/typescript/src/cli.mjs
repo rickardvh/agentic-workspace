@@ -2285,6 +2285,14 @@ const commandDefinitions = [
               "name": "attempt"
             },
             {
+              "default": "",
+              "flags": [
+                "--attempt-file"
+              ],
+              "help": "Path to a file containing the model-authored final response text submitted for host admission.",
+              "name": "attempt_file"
+            },
+            {
               "default": "model-authored-final-response",
               "flags": [
                 "--source"

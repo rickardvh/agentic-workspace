@@ -20,6 +20,11 @@
       "required": false
     },
     {
+      "name": "attempt_file",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "source",
       "source": "cli-option",
       "required": false
@@ -105,8 +110,9 @@
   "proof": [
     "operation contract validates against operation.schema.json",
     "final-response admission tests execute the generated CLI command across multiple slices",
+    "codex-sbx host adapter submits the output-last-message artifact through final-response admit before the harness can read it",
     "local checkpoint schema accepts persisted admission slices without making them completion evidence",
-    "closeout rendering exposes host integration as required and not closure-ready when final-response admit is only advertised"
+    "closeout rendering exposes the integrated codex-sbx host boundary and the still-required admission operation when continuation remains"
   ],
   "migration_status": "runtime-consumed"
 }
