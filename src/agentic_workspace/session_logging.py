@@ -38,11 +38,12 @@ SESSION_LOG_KIND = "agentic-workspace/session-log/v1"
 SESSION_LOG_INDEX_KIND = "agentic-workspace/session-log-index/v1"
 DEFAULT_MAX_INLINE_OUTPUT_BYTES = 64 * 1024
 LARGE_OUTPUT_SUMMARY_LIMIT = 5
+SESSION_LOG_NON_AUTHORITATIVE_FOR = ("Planning", "Memory", "proof", "closeout")
 SESSION_LOG_LOCAL_BOUNDARY = {
     "scope": "package-owned local diagnostic state",
     "local_only": True,
     "authoritative": False,
-    "non_authoritative_for": ["Planning", "Memory", "proof", "closeout"],
+    "non_authoritative_for": SESSION_LOG_NON_AUTHORITATIVE_FOR,
     "manual_handoff": "outside-aw-logger-responsibility",
     "raw_capture_policy": "raw local capture remains unchanged unless the user runs an explicit local export",
     "rule": (
@@ -1208,7 +1209,7 @@ def _session_log_local_boundary() -> dict[str, Any]:
         "scope": SESSION_LOG_LOCAL_BOUNDARY["scope"],
         "local_only": True,
         "authoritative": False,
-        "non_authoritative_for": list(SESSION_LOG_LOCAL_BOUNDARY["non_authoritative_for"]),
+        "non_authoritative_for": list(SESSION_LOG_NON_AUTHORITATIVE_FOR),
         "manual_handoff": SESSION_LOG_LOCAL_BOUNDARY["manual_handoff"],
         "raw_capture_policy": SESSION_LOG_LOCAL_BOUNDARY["raw_capture_policy"],
         "rule": SESSION_LOG_LOCAL_BOUNDARY["rule"],
