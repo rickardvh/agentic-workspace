@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import math
 import tomllib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, is_dataclass
@@ -26,6 +27,9 @@ from .operation_composition import expand_operation_steps, operation_fragments
 
 class PrimitiveExecutionError(RuntimeError):
     pass
+
+
+_DECLARED_TEXT_MAX_SAFE_INTEGER = 9_007_199_254_740_991
 
 
 PrimitiveHandler = Callable[[dict[str, Any], dict[str, Any], "PrimitiveContext"], Any]
@@ -625,10 +629,14 @@ def _emit_declared_text_view(result: dict[str, Any], views: Any) -> str | None:
         return None
     if not isinstance(views, Sequence) or isinstance(views, (str, bytes, bytearray)):
         raise PrimitiveExecutionError("output.emit text_views must be a list")
-    default_view: Mapping[str, Any] | None = None
+    declared_views: list[Mapping[str, Any]] = []
     for view in views:
         if not isinstance(view, Mapping):
             raise PrimitiveExecutionError("output.emit text_views entries must be objects")
+        _validate_declared_text_view(view)
+        declared_views.append(view)
+    default_view: Mapping[str, Any] | None = None
+    for view in declared_views:
         if bool(view.get("default")):
             default_view = view
         if _declared_text_view_matches(result, view):
@@ -646,9 +654,72 @@ def _declared_text_view_matches(result: dict[str, Any], view: Mapping[str, Any])
         if not _is_declared_text_scalar(expected):
             raise PrimitiveExecutionError("output.emit text view match values must be JSON scalars")
         found, actual = _field_by_path(result, str(path))
-        if not found or actual != expected:
+        if not found or not _declared_text_scalar_equal(actual, expected):
             return False
     return True
+
+
+def _validate_declared_text_view(view: Mapping[str, Any]) -> None:
+    match = view.get("match", {})
+    if "match" in view and not isinstance(match, Mapping):
+        raise PrimitiveExecutionError("output.emit text view match must be an object")
+    if isinstance(match, Mapping):
+        for expected in match.values():
+            if not _is_declared_text_scalar(expected):
+                raise PrimitiveExecutionError("output.emit text view match values must be JSON scalars")
+    if "lines" in view:
+        _validate_declared_text_lines(view["lines"])
+
+
+def _validate_declared_text_lines(lines: Any) -> None:
+    if not isinstance(lines, Sequence) or isinstance(lines, (str, bytes, bytearray)):
+        raise PrimitiveExecutionError("output.emit text view lines must be a list")
+    for line in lines:
+        _validate_declared_text_line(line)
+
+
+def _validate_declared_text_line(line: Any) -> None:
+    if isinstance(line, str):
+        return
+    if not isinstance(line, Mapping):
+        raise PrimitiveExecutionError("output.emit text view lines must be strings or objects")
+    discriminators = {"when", "for_each", "json", "template", "literal"}
+    present = [key for key in discriminators if key in line]
+    if len(present) != 1:
+        raise PrimitiveExecutionError(
+            "output.emit text view line object must declare exactly one of when, for_each, json, template, or literal"
+        )
+    key = present[0]
+    if key == "literal":
+        if set(line) != {"literal"}:
+            raise PrimitiveExecutionError("output.emit literal line must only declare literal")
+        return
+    if key == "template":
+        if set(line) != {"template"}:
+            raise PrimitiveExecutionError("output.emit template line must only declare template")
+        return
+    if key == "json":
+        if set(line) != {"json"}:
+            raise PrimitiveExecutionError("output.emit json line must only declare json")
+        return
+    if key == "when":
+        if set(line) != {"when", "lines"}:
+            raise PrimitiveExecutionError("output.emit when line must declare when and lines")
+        _validate_declared_text_lines(line["lines"])
+        return
+    spec = line["for_each"]
+    if not isinstance(spec, Mapping):
+        raise PrimitiveExecutionError("output.emit for_each line must be an object")
+    if "path" not in spec:
+        raise PrimitiveExecutionError("output.emit for_each line must declare path")
+    nested_forms = [name for name in ("lines", "template") if name in spec]
+    if len(nested_forms) != 1:
+        raise PrimitiveExecutionError("output.emit for_each line must declare exactly one of lines or template")
+    expected_keys = {"path", nested_forms[0]}
+    if set(spec) != expected_keys:
+        raise PrimitiveExecutionError("output.emit for_each line has unsupported fields")
+    if "lines" in spec:
+        _validate_declared_text_lines(spec["lines"])
 
 
 def _render_declared_text_view(result: dict[str, Any], view: Mapping[str, Any]) -> str:
@@ -696,7 +767,11 @@ def _render_declared_text_line(line: Any, *, current: Any, root: dict[str, Any])
         found, value = _declared_text_value(line["json"], current=current, root=root)
         if not found:
             value = None
-        return json.dumps(_plain_output_result(value), indent=2, ensure_ascii=False).splitlines()
+        return json.dumps(
+            _declared_text_canonical_json_value(_plain_output_result(value)),
+            indent=2,
+            ensure_ascii=False,
+        ).splitlines()
     if "template" in line:
         return [_render_declared_text_template(str(line["template"]), current=current, root=root)]
     if "literal" in line:
@@ -779,7 +854,37 @@ def _declared_text_format(value: Any) -> str:
 
 
 def _is_declared_text_scalar(value: Any) -> bool:
-    return value is None or isinstance(value, str | bool | int | float)
+    return (
+        value is None
+        or isinstance(value, str | bool)
+        or _is_declared_text_safe_integer(value)
+    )
+
+
+def _is_declared_text_safe_integer(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        return False
+    try:
+        numeric = float(value)
+    except OverflowError:
+        return False
+    return (
+        math.isfinite(numeric)
+        and numeric.is_integer()
+        and abs(int(numeric)) <= _DECLARED_TEXT_MAX_SAFE_INTEGER
+    )
+
+
+def _declared_text_scalar_equal(actual: Any, expected: Any) -> bool:
+    if expected is None:
+        return actual is None
+    if isinstance(expected, bool):
+        return isinstance(actual, bool) and actual is expected
+    if isinstance(expected, str):
+        return isinstance(actual, str) and actual == expected
+    if _is_declared_text_safe_integer(expected):
+        return _is_declared_text_safe_integer(actual) and int(actual) == int(expected)
+    return False
 
 
 def _declared_text_format_scalar(value: Any) -> str:
@@ -787,11 +892,28 @@ def _declared_text_format_scalar(value: Any) -> str:
         return "true" if value else "false"
     if value is None:
         return ""
-    if isinstance(value, Real) and not isinstance(value, bool):
-        if isinstance(value, float) and value.is_integer():
-            return str(int(value))
-        return json.dumps(value, ensure_ascii=False, allow_nan=False)
+    if _is_declared_text_safe_integer(value):
+        return str(int(value))
     return str(value)
+
+
+def _declared_text_canonical_json_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {
+            str(key): _declared_text_canonical_json_value(value[key])
+            for key in sorted(value, key=lambda item: str(item))
+        }
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+        return [_declared_text_canonical_json_value(item) for item in value]
+    if isinstance(value, bool) or value is None or isinstance(value, str):
+        return value
+    if _is_declared_text_safe_integer(value):
+        return int(value)
+    if isinstance(value, Real):
+        raise PrimitiveExecutionError(
+            "output.emit text view JSON numbers must be finite safe integers"
+        )
+    return value
 
 
 def _view_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:

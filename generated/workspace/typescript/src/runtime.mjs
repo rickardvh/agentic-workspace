@@ -293,9 +293,12 @@ function emitOutput(values, args = {}) {
 function emitDeclaredTextView(result, views) {
   if (views === null || views === undefined) return null;
   if (!Array.isArray(views)) throw new RuntimeError('output.emit text_views must be a list');
-  let defaultView = null;
   for (const view of views) {
     if (!isObject(view)) throw new RuntimeError('output.emit text_views entries must be objects');
+    validateDeclaredTextView(view);
+  }
+  let defaultView = null;
+  for (const view of views) {
     if (view.default) defaultView = view;
     if (declaredTextViewMatches(result, view)) return renderDeclaredTextView(result, view);
   }
@@ -308,9 +311,59 @@ function declaredTextViewMatches(result, view) {
   for (const [path, expected] of Object.entries(match)) {
     if (!declaredTextIsScalar(expected)) throw new RuntimeError('output.emit text view match values must be JSON scalars');
     const [found, actual] = fieldByPath(result, path);
-    if (!found || actual !== expected) return false;
+    if (!found || !declaredTextScalarEqual(actual, expected)) return false;
   }
   return true;
+}
+
+function validateDeclaredTextView(view) {
+  const match = view.match ?? {};
+  if (Object.prototype.hasOwnProperty.call(view, 'match') && !isObject(match)) throw new RuntimeError('output.emit text view match must be an object');
+  for (const expected of Object.values(match)) {
+    if (!declaredTextIsScalar(expected)) throw new RuntimeError('output.emit text view match values must be JSON scalars');
+  }
+  if (Object.prototype.hasOwnProperty.call(view, 'lines')) validateDeclaredTextLines(view.lines);
+}
+
+function validateDeclaredTextLines(lines) {
+  if (!Array.isArray(lines)) throw new RuntimeError('output.emit text view lines must be a list');
+  for (const line of lines) validateDeclaredTextLine(line);
+}
+
+function validateDeclaredTextLine(line) {
+  if (typeof line === 'string') return;
+  if (!isObject(line)) throw new RuntimeError('output.emit text view lines must be strings or objects');
+  const discriminators = ['when', 'for_each', 'json', 'template', 'literal'];
+  const present = discriminators.filter((key) => Object.prototype.hasOwnProperty.call(line, key));
+  if (present.length !== 1) throw new RuntimeError('output.emit text view line object must declare exactly one of when, for_each, json, template, or literal');
+  const key = present[0];
+  const keys = Object.keys(line).sort();
+  if (key === 'literal') {
+    if (keys.length !== 1 || keys[0] !== 'literal') throw new RuntimeError('output.emit literal line must only declare literal');
+    return;
+  }
+  if (key === 'template') {
+    if (keys.length !== 1 || keys[0] !== 'template') throw new RuntimeError('output.emit template line must only declare template');
+    return;
+  }
+  if (key === 'json') {
+    if (keys.length !== 1 || keys[0] !== 'json') throw new RuntimeError('output.emit json line must only declare json');
+    return;
+  }
+  if (key === 'when') {
+    if (keys.length !== 2 || keys[0] !== 'lines' || keys[1] !== 'when') throw new RuntimeError('output.emit when line must declare when and lines');
+    validateDeclaredTextLines(line.lines);
+    return;
+  }
+  const spec = line.for_each;
+  if (!isObject(spec)) throw new RuntimeError('output.emit for_each line must be an object');
+  if (!Object.prototype.hasOwnProperty.call(spec, 'path')) throw new RuntimeError('output.emit for_each line must declare path');
+  const nestedForms = ['lines', 'template'].filter((name) => Object.prototype.hasOwnProperty.call(spec, name));
+  if (nestedForms.length !== 1) throw new RuntimeError('output.emit for_each line must declare exactly one of lines or template');
+  const specKeys = Object.keys(spec).sort();
+  const expectedKeys = ['path', nestedForms[0]].sort();
+  if (specKeys.length !== 2 || specKeys[0] !== expectedKeys[0] || specKeys[1] !== expectedKeys[1]) throw new RuntimeError('output.emit for_each line has unsupported fields');
+  if (Object.prototype.hasOwnProperty.call(spec, 'lines')) validateDeclaredTextLines(spec.lines);
 }
 
 function renderDeclaredTextView(result, view) {
@@ -341,7 +394,7 @@ function renderDeclaredTextLine(line, current, root) {
   }
   if (Object.prototype.hasOwnProperty.call(line, 'json')) {
     const [found, value] = declaredTextValue(line.json, current, root);
-    return JSON.stringify(found ? value : null, null, 2).split('\n');
+    return JSON.stringify(declaredTextCanonicalJsonValue(found ? value : null), null, 2).split('\n');
   }
   if (Object.prototype.hasOwnProperty.call(line, 'template')) return [renderDeclaredTextTemplate(String(line.template), current, root)];
   if (Object.prototype.hasOwnProperty.call(line, 'literal')) return [String(line.literal)];
@@ -410,13 +463,39 @@ function declaredTextFormat(value) {
 }
 
 function declaredTextIsScalar(value) {
-  return value === null || value === undefined || ['string', 'number', 'boolean'].includes(typeof value);
+  return value === null || value === undefined || ['string', 'boolean'].includes(typeof value) || declaredTextIsSafeInteger(value);
+}
+
+function declaredTextIsSafeInteger(value) {
+  return typeof value === 'number' && Number.isSafeInteger(value);
+}
+
+function declaredTextScalarEqual(actual, expected) {
+  if (expected === null || expected === undefined) return actual === null || actual === undefined;
+  if (typeof expected === 'boolean') return typeof actual === 'boolean' && actual === expected;
+  if (typeof expected === 'string') return typeof actual === 'string' && actual === expected;
+  if (declaredTextIsSafeInteger(expected)) return declaredTextIsSafeInteger(actual) && actual === expected;
+  return false;
 }
 
 function declaredTextFormatScalar(value) {
   if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (value === null || value === undefined) return '';
+  if (declaredTextIsSafeInteger(value)) return String(value);
   return String(value);
+}
+
+function declaredTextCanonicalJsonValue(value) {
+  if (Array.isArray(value)) return value.map(declaredTextCanonicalJsonValue);
+  if (isObject(value)) {
+    const out = {};
+    for (const key of Object.keys(value).sort()) out[key] = declaredTextCanonicalJsonValue(value[key]);
+    return out;
+  }
+  if (value === null || value === undefined || ['string', 'boolean'].includes(typeof value)) return value;
+  if (declaredTextIsSafeInteger(value)) return value;
+  if (typeof value === 'number') throw new RuntimeError('output.emit text view JSON numbers must be finite safe integers');
+  return value;
 }
 
 function limitedViewValue(value, limit) {
