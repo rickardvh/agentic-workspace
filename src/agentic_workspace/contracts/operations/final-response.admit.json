@@ -1,0 +1,110 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "final-response.admit",
+  "command_surface": {
+    "command": "final-response",
+    "subcommand": "admit",
+    "format_option": "format"
+  },
+  "summary": "Admit or reject a model-authored final response at the host boundary.",
+  "classification": "local-record-append",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "attempt",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "source",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "after_compaction",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/final_response_admission_result.schema.json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": "report.closeout_trust",
+      "required": true
+    },
+    {
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "required": true,
+      "when": "persist the host admission and continuation slice"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "evaluate_terminal_contract",
+      "uses": "workspace.final-response.admission",
+      "description": "Evaluate the terminal outcome contract against the model-authored final response attempt."
+    },
+    {
+      "id": "run_continuation",
+      "uses": "workspace.final-response.continuation.execute",
+      "description": "Run the selected ordinary continuation operation when the final response is not authorized."
+    },
+    {
+      "id": "write_checkpoint",
+      "uses": "workspace.local-chat-checkpoint.write",
+      "description": "Persist the local admission and resume slice."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the admission result."
+    }
+  ],
+  "guards": [
+    "Rendering closeout_trust must not submit a fabricated final response.",
+    "Reject terminal finals while the terminal outcome contract state is CONTINUE.",
+    "Persist only ignored local checkpoint state under .agentic-workspace/local/.",
+    "Do not treat local admission slices as closure evidence."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "final-response admission tests execute the generated CLI command across multiple slices",
+    "local checkpoint schema accepts persisted admission slices without making them completion evidence"
+  ],
+  "migration_status": "draft-contract-only"
+}

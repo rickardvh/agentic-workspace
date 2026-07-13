@@ -80,6 +80,7 @@
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_resolve_workspace_operation_selection|agentic_workspace.workspace_runtime_primitives|_resolve_workspace_operation_selection",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_checkpoint_write_adapter|agentic_workspace.workspace_runtime_primitives|_run_checkpoint_write_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_external_intent_refresh_github_adapter|agentic_workspace.workspace_runtime_primitives|_run_external_intent_refresh_github_adapter",
+      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_final_response_admit_adapter|agentic_workspace.workspace_runtime_primitives|_run_final_response_admit_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_implement_runtime.py|_run_implement_context_adapter|agentic_workspace.workspace_runtime_implement|_run_implement_context_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_init_lifecycle_adapter|agentic_workspace.workspace_runtime_primitives|_run_init_lifecycle_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_lifecycle_mutation_adapter|agentic_workspace.workspace_runtime_primitives|_run_lifecycle_mutation_adapter",
@@ -1948,6 +1949,34 @@
         "minimization_owner": "package runtime primitive owner for semantic package judgment",
         "minimization_tracking_issue": "#1364",
         "stale_when": "Stale when local checkpoint merge/write behavior can be represented as stable declarative dataflow with equivalent local-only and non-evidence safeguards.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_final_response_admit_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_final_response_admit_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "final-response.admit"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:final-response.admit"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns terminal outcome custody, continuation command execution, and ignored-local admission checkpointing rather than generic deterministic target-executor logic.",
+        "conformance_ref": "final-response.admit.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated parser and facade wiring own command projection while the package runtime boundary owns final-response admission, continuation execution, and local-only checkpoint semantics.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when host final-response custody and continuation dispatch can be represented as stable declarative dataflow with equivalent terminal outcome safeguards.",
         "direct_edit_reasons_allowed": [
           "existing-primitive-bugfix",
           "new-primitive-implementation"

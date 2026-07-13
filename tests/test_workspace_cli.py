@@ -1347,19 +1347,54 @@ def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missi
     assert rendering["status"] == "continue-not-finalizable"
     assert rendering["terminal_outcome_contract"]["state"] == "CONTINUE"
     admission = rendering["final_response_admission"]
-    assert admission["status"] == "rejected_auto_resumed"
-    assert admission["terminal_final_rejected"] is True
-    assert admission["host_admission_boundary"]["status"] == "rejected-and-resumed"
-    assert admission["host_admission_boundary"]["invoked_resume_executor"] is True
-    assert admission["resume_transition"]["status"] == "executed"
-    assert admission["resume_transition"]["auto_resume_action"] == terminal["required_next_action"]
-    assert admission["resume_transition"]["compaction_boundary_crossed"] is True
-    assert admission["resume_transition"]["executor_result"]["status"] == "executed"
-    assert admission["resume_transition"]["executor_result"]["invoked_action"] == terminal["required_next_action"]
-    assert admission["resume_transition"]["multi_slice_continuation"]["status"] == "preserved"
-    assert admission["progress_without_yield"] is True
+    assert admission["kind"] == "agentic-workspace/final-response-admission-route/v1"
+    assert admission["status"] == "host_admission_required"
+    assert admission["host_operation"] == "final-response.admit"
+    assert '--attempt "<model-authored final response>"' in admission["command_template"]
     assert rendering["plain_done_allowed"] is False
     assert any("terminal final response" in item for item in rendering["must_not_claim"])
+
+
+def test_final_response_admit_rejects_final_runs_continuation_and_persists_resume_slices(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_issue_1981_closeout_fixture(tmp_path, include_proof=False)
+
+    command = [
+        "final-response",
+        "admit",
+        "--target",
+        str(tmp_path),
+        "--attempt",
+        "Done.",
+        "--after-compaction",
+        "--format",
+        "json",
+    ]
+    assert cli.main(command) == 0
+    first = json.loads(capsys.readouterr().out)
+    assert first["kind"] == "agentic-workspace/final-response-admission-result/v1"
+    assert first["status"] == "rejected_auto_resumed"
+    assert first["admission"]["terminal_final_rejected"] is True
+    assert first["admission"]["resume_transition"]["status"] == "executed"
+    assert first["continuation_operation"]["status"] == "executed"
+    assert first["continuation_operation"]["invoked_operation"] == "proof.report"
+    assert first["continuation_operation"]["exit_code"] == 0
+    assert first["checkpoint_before"]["slice_count"] == 0
+    assert first["checkpoint_after"]["slice_count"] == 1
+
+    assert cli.main(command) == 0
+    second = json.loads(capsys.readouterr().out)
+    assert second["checkpoint_before"]["slice_count"] == 1
+    assert second["checkpoint_after"]["slice_count"] == 2
+
+    checkpoint = json.loads((tmp_path / ".agentic-workspace" / "local" / "chat-checkpoint.json").read_text())
+    admission_checkpoint = checkpoint["final_response_admission"]
+    assert admission_checkpoint["slice_count"] == 2
+    assert len(admission_checkpoint["slices"]) == 2
+    assert {item["continuation_operation"] for item in admission_checkpoint["slices"]} == {"proof.report"}
+    assert admission_checkpoint["not_closure_evidence"] is True
 
 
 def test_closeout_trust_names_external_intent_evidence_blocker_for_open_issue(tmp_path: Path, capsys) -> None:

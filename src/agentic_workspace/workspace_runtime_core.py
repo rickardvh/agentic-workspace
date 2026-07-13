@@ -14960,17 +14960,10 @@ def _closeout_report_final_response_rendering_payload(
         must_include=unique_must_include,
         plain_done_allowed=plain_done_allowed,
     )
-    final_response_admission = _terminal_final_response_admission(
+    final_response_admission = _final_response_admission_route_payload(
         terminal_outcome_contract=terminal_outcome_contract,
-        final_response_attempt={
-            "source": "closeout-final-rendering-boundary",
-            "claim": "Done.",
-            "after_compaction": terminal_state == "CONTINUE",
-        },
-        resume_state={
-            "phase": "final-response-rendering",
-            "status": status_value,
-        },
+        status=status_value,
+        terminal_state=terminal_state,
     )
     return {
         "kind": "agentic-workspace/final-closeout-rendering/v1",
@@ -15003,6 +14996,33 @@ def _closeout_report_final_response_rendering_payload(
         "plain_done_allowed": plain_done_allowed,
         "raw_json_allowed": False,
         "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
+    }
+
+
+def _final_response_admission_route_payload(
+    *, terminal_outcome_contract: dict[str, Any], status: str, terminal_state: str
+) -> dict[str, Any]:
+    command = _command_with_cli_invoke(
+        command=(
+            "agentic-workspace final-response admit --target ./repo "
+            '--attempt "<model-authored final response>" --after-compaction --format json'
+        ),
+        cli_invoke=DEFAULT_CLI_INVOKE,
+    )
+    final_authorized = bool(_as_dict(terminal_outcome_contract).get("final_response_authorized"))
+    return {
+        "kind": "agentic-workspace/final-response-admission-route/v1",
+        "status": "not_required" if final_authorized else "host_admission_required",
+        "rendering_status": status,
+        "terminal_state": terminal_state,
+        "host_operation": "final-response.admit",
+        "command_template": command,
+        "attempt_source": "host-supplied-model-authored-final-response",
+        "checkpoint_path": LOCAL_CHAT_CHECKPOINT_PATH.as_posix(),
+        "rule": (
+            "Rendering only advertises the host admission boundary. The host must pass the actual "
+            "model-authored final response to final-response admit before final custody can transfer."
+        ),
     }
 
 
@@ -20279,9 +20299,7 @@ def _terminal_final_response_admission(
     enforcement = _as_dict(terminal.get("final_response_enforcement"))
     state = str(terminal.get("state") or "CONTINUE")
     final_authorized = bool(terminal.get("final_response_authorized"))
-    auto_resume_action = str(
-        enforcement.get("auto_resume_action") or terminal.get("required_next_action") or "continue-current-work"
-    )
+    auto_resume_action = str(enforcement.get("auto_resume_action") or terminal.get("required_next_action") or "continue-current-work")
     before_state = _as_dict(resume_state)
     after_state = {
         "terminal_state": state,

@@ -1775,6 +1775,74 @@
       "mutates_state": true
     },
     {
+      "name": "final-response",
+      "help": "Admit model-authored final responses at the host boundary.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path."
+        }
+      ],
+      "subcommand_dest": "final_response_command",
+      "subcommands_required": true,
+      "subcommands": [
+        {
+          "name": "admit",
+          "help": "Admit or reject a model-authored final response attempt.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "attempt",
+              "flags": [
+                "--attempt"
+              ],
+              "default": "",
+              "help": "The model-authored final response text submitted for host admission."
+            },
+            {
+              "name": "source",
+              "flags": [
+                "--source"
+              ],
+              "default": "model-authored-final-response",
+              "help": "Source label for the final response attempt."
+            },
+            {
+              "name": "after_compaction",
+              "flags": [
+                "--after-compaction"
+              ],
+              "action": "store_true",
+              "help": "Mark that the attempt happened after a compaction or resume boundary."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "host final-response admission and local continuation checkpointing",
+          "mutates_state": true
+        }
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "host final-response admission boundary",
+      "mutates_state": true
+    },
+    {
       "name": "work-thread",
       "help": "Manage ignored local work-thread continuation handles.",
       "uses_option_groups": [

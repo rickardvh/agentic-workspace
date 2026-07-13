@@ -28,6 +28,12 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "final-response.admit",
+      "path": "operations/final-response.admit.json",
+      "command": "final-response",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "work-thread.prune",
       "path": "operations/work-thread.prune.json",
       "command": "work-thread",

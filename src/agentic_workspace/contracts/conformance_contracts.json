@@ -10,6 +10,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "final-response.admit.process",
+      "operation_id": "final-response.admit",
+      "path": "conformance/final-response.admit.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "work-thread.prune.process",
       "operation_id": "work-thread.prune",
       "path": "conformance/work-thread.prune.process.json",

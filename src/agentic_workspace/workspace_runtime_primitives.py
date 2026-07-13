@@ -13700,17 +13700,10 @@ def _closeout_report_final_response_rendering_payload(
         must_include=unique_must_include,
         plain_done_allowed=plain_done_allowed,
     )
-    final_response_admission = _terminal_final_response_admission(
+    final_response_admission = _final_response_admission_route_payload(
         terminal_outcome_contract=terminal_outcome_contract,
-        final_response_attempt={
-            "source": "closeout-final-rendering-boundary",
-            "claim": "Done.",
-            "after_compaction": terminal_state == "CONTINUE",
-        },
-        resume_state={
-            "phase": "final-response-rendering",
-            "status": status_value,
-        },
+        status=status_value,
+        terminal_state=terminal_state,
     )
     return {
         "kind": "agentic-workspace/final-closeout-rendering/v1",
@@ -13743,6 +13736,33 @@ def _closeout_report_final_response_rendering_payload(
         "plain_done_allowed": plain_done_allowed,
         "raw_json_allowed": False,
         "boundary": "This packet renders closeout_report for chat; it is not canonical closeout state.",
+    }
+
+
+def _final_response_admission_route_payload(
+    *, terminal_outcome_contract: dict[str, Any], status: str, terminal_state: str
+) -> dict[str, Any]:
+    command = _command_with_cli_invoke(
+        command=(
+            "agentic-workspace final-response admit --target ./repo "
+            '--attempt "<model-authored final response>" --after-compaction --format json'
+        ),
+        cli_invoke=DEFAULT_CLI_INVOKE,
+    )
+    final_authorized = bool(_as_dict(terminal_outcome_contract).get("final_response_authorized"))
+    return {
+        "kind": "agentic-workspace/final-response-admission-route/v1",
+        "status": "not_required" if final_authorized else "host_admission_required",
+        "rendering_status": status,
+        "terminal_state": terminal_state,
+        "host_operation": "final-response.admit",
+        "command_template": command,
+        "attempt_source": "host-supplied-model-authored-final-response",
+        "checkpoint_path": LOCAL_CHAT_CHECKPOINT_PATH.as_posix(),
+        "rule": (
+            "Rendering only advertises the host admission boundary. The host must pass the actual "
+            "model-authored final response to final-response admit before final custody can transfer."
+        ),
     }
 
 
@@ -18573,9 +18593,7 @@ def _terminal_final_response_admission(
     enforcement = _as_dict(terminal.get("final_response_enforcement"))
     state = str(terminal.get("state") or "CONTINUE")
     final_authorized = bool(terminal.get("final_response_authorized"))
-    auto_resume_action = str(
-        enforcement.get("auto_resume_action") or terminal.get("required_next_action") or "continue-current-work"
-    )
+    auto_resume_action = str(enforcement.get("auto_resume_action") or terminal.get("required_next_action") or "continue-current-work")
     before_state = _as_dict(resume_state)
     after_state = {
         "terminal_state": state,
@@ -29876,6 +29894,7 @@ def _local_chat_checkpoint_record(
     open_blockers: list[str],
     dirty_state_summary: str | None,
     preserve_existing: bool,
+    final_response_admission: dict[str, Any] | None = None,
 ) -> tuple[dict[str, Any], list[str]]:
     path = _local_chat_checkpoint_path(target_root)
     existing: dict[str, Any] = {}
@@ -30018,6 +30037,23 @@ def _local_chat_checkpoint_record(
             "durable_decisions_require_durable_source": True,
         },
     }
+    if final_response_admission:
+        previous_admission = _as_dict(existing.get("final_response_admission"))
+        previous_slices = [item for item in _list_payload(previous_admission.get("slices")) if isinstance(item, dict)]
+        slice_record = _as_dict(final_response_admission)
+        record["final_response_admission"] = {
+            "kind": "agentic-workspace/local-final-response-admission-checkpoint/v1",
+            "status": "present",
+            "slice_count": len(previous_slices) + 1,
+            "slices": [*previous_slices[-9:], slice_record],
+            "latest_slice": slice_record,
+            "local_only": True,
+            "not_closure_evidence": True,
+            "rule": (
+                "Admission slices preserve host resume custody across compaction; durable completion claims "
+                "still require closeout_trust and proof receipts."
+            ),
+        }
     if record["current_pr"] in {None, ""}:
         record.pop("current_pr", None)
     return record, warnings
@@ -30035,6 +30071,7 @@ def _write_local_chat_checkpoint(
     open_blockers: list[str],
     dirty_state_summary: str | None,
     preserve_existing: bool,
+    final_response_admission: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path = _local_chat_checkpoint_path(target_root)
     try:
@@ -30055,6 +30092,7 @@ def _write_local_chat_checkpoint(
         open_blockers=open_blockers,
         dirty_state_summary=dirty_state_summary,
         preserve_existing=preserve_existing,
+        final_response_admission=final_response_admission,
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -30070,6 +30108,205 @@ def _write_local_chat_checkpoint(
         "resume_rule": record["resume_rule"],
         "rule": "This command writes only ignored local continuity state; durable claims still require durable AW sources and fresh local/remote truth checks.",
     }
+
+
+def _final_response_admission_checkpoint_state(*, target_root: Path) -> dict[str, Any]:
+    path = _local_chat_checkpoint_path(target_root)
+    if not path.exists():
+        return {"checkpoint_status": "absent", "slice_count": 0}
+    try:
+        checkpoint = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        return {"checkpoint_status": "unreadable", "reason": exc.__class__.__name__, "slice_count": 0}
+    admission = _as_dict(_as_dict(checkpoint).get("final_response_admission"))
+    return {
+        "checkpoint_status": "present",
+        "slice_count": int(admission.get("slice_count") or 0),
+        "latest_slice": _as_dict(admission.get("latest_slice")),
+    }
+
+
+def _final_response_continuation_argv(*, target_root: Path, terminal_outcome_contract: dict[str, Any]) -> tuple[str, list[str]]:
+    option_ids = {str(item) for item in _list_payload(terminal_outcome_contract.get("safe_continuation_option_ids"))}
+    if "run-proof" in option_ids:
+        return (
+            "proof.report",
+            ["proof", "--target", str(target_root), "--format", "json"],
+        )
+    return (
+        "report.closeout_claim_boundary",
+        ["report", "--target", str(target_root), "--section", "closeout_claim_boundary", "--format", "json"],
+    )
+
+
+def _run_final_response_continuation_operation(
+    *, target_root: Path, terminal_outcome_contract: dict[str, Any], request: dict[str, Any]
+) -> dict[str, Any]:
+    operation_id, cli_args = _final_response_continuation_argv(
+        target_root=target_root,
+        terminal_outcome_contract=terminal_outcome_contract,
+    )
+    command = [
+        sys.executable,
+        "-c",
+        "from agentic_workspace.cli import main; raise SystemExit(main())",
+        *cli_args,
+    ]
+    started_at = datetime.now(timezone.utc).isoformat()
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=target_root,
+            text=True,
+            capture_output=True,
+            timeout=90,
+            check=False,
+        )
+        stdout_text = completed.stdout.strip()
+        stderr_text = completed.stderr.strip()
+        stdout_payload: dict[str, Any] = {}
+        if stdout_text:
+            with contextlib.suppress(json.JSONDecodeError):
+                loaded = json.loads(stdout_text)
+                if isinstance(loaded, dict):
+                    stdout_payload = loaded
+        exit_code = int(completed.returncode)
+        status = "executed" if exit_code == 0 else "failed"
+    except (OSError, subprocess.SubprocessError) as exc:
+        stdout_text = ""
+        stderr_text = str(exc)
+        stdout_payload = {}
+        exit_code = 1
+        status = "failed"
+    completed_at = datetime.now(timezone.utc).isoformat()
+    invoked_action = str(request.get("auto_resume_action") or terminal_outcome_contract.get("required_next_action") or operation_id)
+    return {
+        "kind": "agentic-workspace/final-response-resume-result/v1",
+        "status": status,
+        "invoked_action": invoked_action,
+        "invoked_operation": operation_id,
+        "command": " ".join(shlex.quote(part) for part in cli_args),
+        "exit_code": exit_code,
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "stdout_kind": str(stdout_payload.get("kind") or ""),
+        "stdout_status": str(stdout_payload.get("status") or ""),
+        "stderr_excerpt": stderr_text[:500],
+        "custody": "agent",
+        "after_state_patch": {
+            "required_next_action": invoked_action,
+            "custody_owner": "agent",
+            "continuation_slice": "post-admission-resume",
+            "continuation_operation": operation_id,
+            "continuation_exit_code": exit_code,
+        },
+        "rule": "The host admission command executed an ordinary AW continuation operation instead of recording a simulated resume.",
+    }
+
+
+def _final_response_closeout_trust_for_admission(*, target_root: Path) -> tuple[dict[str, Any], WorkspaceConfig]:
+    descriptors = _module_operations()
+    _validate_descriptor_contract(descriptors)
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(descriptors))
+    selected_modules, _resolved_preset = _selected_modules(
+        command_name="report",
+        preset_name=None,
+        module_arg=None,
+        target_root=target_root,
+        descriptors=descriptors,
+        config=config,
+    )
+    module_reports = _selected_module_reports(target_root=target_root, selected_modules=selected_modules)
+    return (
+        _report_closeout_trust_payload(
+            module_reports=module_reports,
+            target_root=target_root,
+            config=config,
+            cli_invoke=config.cli_invoke,
+        ),
+        config,
+    )
+
+
+def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
+    _validate_target_root(command_name="final-response", target_root=target_root)
+    if getattr(args, "final_response_command", None) != "admit":
+        raise WorkspaceUsageError(f"Unsupported final-response command: {getattr(args, 'final_response_command', None)}")
+    closeout_trust, _config = _final_response_closeout_trust_for_admission(target_root=target_root)
+    terminal_outcome_contract = _as_dict(
+        closeout_trust.get("terminal_outcome_contract")
+        or _as_dict(closeout_trust.get("closeout_protocol")).get("terminal_outcome_contract")
+    )
+    before_state = _final_response_admission_checkpoint_state(target_root=target_root)
+    attempt_text = str(getattr(args, "attempt", "") or "").strip()
+    attempt_source = str(getattr(args, "source", "") or "model-authored-final-response").strip()
+
+    def execute_resume(request: dict[str, Any]) -> dict[str, Any]:
+        return _run_final_response_continuation_operation(
+            target_root=target_root,
+            terminal_outcome_contract=terminal_outcome_contract,
+            request=request,
+        )
+
+    admission = _terminal_final_response_admission(
+        terminal_outcome_contract=terminal_outcome_contract,
+        final_response_attempt={
+            "source": attempt_source,
+            "claim": attempt_text,
+            "after_compaction": bool(getattr(args, "after_compaction", False)),
+        },
+        resume_state={
+            "phase": "host-final-response-admission",
+            "checkpoint": before_state,
+        },
+        resume_executor=execute_resume,
+    )
+    executor_result = _as_dict(_as_dict(admission.get("resume_transition")).get("executor_result"))
+    continuation_summary = (
+        f"{executor_result.get('invoked_operation', 'none')} exit={executor_result.get('exit_code', 'n/a')}"
+        if executor_result
+        else "no continuation required"
+    )
+    slice_record = {
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+        "terminal_state": terminal_outcome_contract.get("state"),
+        "attempt_source": attempt_source,
+        "attempt_present": bool(attempt_text),
+        "admission_status": admission.get("status"),
+        "continuation_operation": executor_result.get("invoked_operation", ""),
+        "continuation_exit_code": executor_result.get("exit_code"),
+        "after_compaction": bool(getattr(args, "after_compaction", False)),
+    }
+    checkpoint_write = _write_local_chat_checkpoint(
+        target_root=target_root,
+        task="final-response admission resume checkpoint",
+        issue_refs=[],
+        pr=None,
+        durable_sources=["agentic-workspace report --section closeout_trust"],
+        last_proof=[continuation_summary],
+        next_safe_command=str(executor_result.get("command") or terminal_outcome_contract.get("required_next_action") or ""),
+        open_blockers=[]
+        if terminal_outcome_contract.get("final_response_authorized")
+        else ["terminal final rejected while CONTINUE remains"],
+        dirty_state_summary="final-response admission boundary persisted after host continuation",
+        preserve_existing=True,
+        final_response_admission=slice_record,
+    )
+    after_state = _final_response_admission_checkpoint_state(target_root=target_root)
+    payload = {
+        "kind": "agentic-workspace/final-response-admission-result/v1",
+        "status": admission.get("status"),
+        "terminal_outcome_contract": terminal_outcome_contract,
+        "admission": admission,
+        "continuation_operation": executor_result,
+        "checkpoint_write": checkpoint_write,
+        "checkpoint_before": before_state,
+        "checkpoint_after": after_state,
+        "rule": "This command is the host admission boundary for model-authored final responses.",
+    }
+    _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
+    return 0
 
 
 def _read_changed_surface_text(*, target_root: Path, changed_paths: list[str], max_bytes: int = 200000) -> str:
