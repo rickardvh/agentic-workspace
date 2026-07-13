@@ -2745,7 +2745,8 @@
         "name": "work-thread"
       },
       "conformance_refs": [
-        "work-thread.prune.process"
+        "work-thread.prune.process",
+        "work-thread.select.process"
       ],
       "effect_hints": {
         "destructive": true,
@@ -2780,6 +2781,42 @@
         ],
         "subcommand_dest": "work_thread_command",
         "subcommands": [
+          {
+            "help": "Select an ignored local work-thread continuation handle.",
+            "name": "select",
+            "operation_ref": {
+              "id": "work-thread.select",
+              "path": "operations/work-thread.select.json"
+            },
+            "options": [
+              {
+                "flags": [
+                  "--thread-id"
+                ],
+                "help": "Local work-thread id to select.",
+                "name": "thread_id"
+              },
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path.",
+                "name": "target"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              }
+            ]
+          },
           {
             "help": "Prune ignored local work-thread records already classified as safe candidates.",
             "name": "prune",
@@ -6324,6 +6361,11 @@
         "function": "_run_work_thread_prune_adapter",
         "import_module": "agentic_workspace.workspace_runtime_core",
         "operation_id": "work-thread.prune"
+      },
+      {
+        "function": "_run_work_thread_prune_adapter",
+        "import_module": "agentic_workspace.workspace_runtime_core",
+        "operation_id": "work-thread.select"
       },
       {
         "function": "_run_session_log_adapter",

@@ -492,6 +492,11 @@
             "function": "_run_work_thread_prune_adapter"
           },
           {
+            "operation_id": "work-thread.select",
+            "import_module": "agentic_workspace.workspace_runtime_core",
+            "function": "_run_work_thread_prune_adapter"
+          },
+          {
             "operation_id": "session-log.manage",
             "import_module": "agentic_workspace.session_logging",
             "function": "_run_session_log_adapter"
@@ -4120,6 +4125,42 @@
             "subcommands_required": true,
             "subcommands": [
               {
+                "name": "select",
+                "help": "Select an ignored local work-thread continuation handle.",
+                "operation_ref": {
+                  "id": "work-thread.select",
+                  "path": "operations/work-thread.select.json"
+                },
+                "options": [
+                  {
+                    "name": "thread_id",
+                    "flags": [
+                      "--thread-id"
+                    ],
+                    "help": "Local work-thread id to select."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
                 "name": "prune",
                 "help": "Prune ignored local work-thread records already classified as safe candidates.",
                 "operation_ref": {
@@ -4201,7 +4242,8 @@
             "requires_preflight_gate": false
           },
           "conformance_refs": [
-            "work-thread.prune.process"
+            "work-thread.prune.process",
+            "work-thread.select.process"
           ],
           "projection_boundary": {
             "universal": [

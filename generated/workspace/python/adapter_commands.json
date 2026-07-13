@@ -2398,6 +2398,42 @@
       "subcommand_dest": "work_thread_command",
       "subcommands": [
         {
+          "help": "Select an ignored local work-thread continuation handle.",
+          "name": "select",
+          "operation_ref": {
+            "id": "work-thread.select",
+            "path": "operations/work-thread.select.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--thread-id"
+              ],
+              "help": "Local work-thread id to select.",
+              "name": "thread_id"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
           "help": "Prune ignored local work-thread records already classified as safe candidates.",
           "name": "prune",
           "operation_ref": {

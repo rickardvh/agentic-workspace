@@ -953,7 +953,7 @@ def _task_switch_reconciliation_payload(
             "summary": "The active execplan has explicit slice completion evidence; route it to archive or retire before treating it as current work.",
             "active_execplan": active_summary.get("active_execplan", ""),
             "intent_conflict_state": "completed-active-plan-residue",
-            "mismatch_evidence": _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text),
+            "mismatch_evidence": mismatch_evidence,
             "current_task_class": "completed-active-plan-cleanup",
             "classification_basis": "active-execplan-closeout-evidence",
             "recommended_next_action": "archive-or-retire-completed-plan",

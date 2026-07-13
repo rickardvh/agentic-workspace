@@ -43,6 +43,7 @@ from . import system_intent_sync as _command_system_intent_sync
 from . import uninstall_lifecycle as _command_uninstall_lifecycle
 from . import upgrade_lifecycle as _command_upgrade_lifecycle
 from . import work_thread_prune as _command_work_thread_prune
+from . import work_thread_select as _command_work_thread_select
 
 
 GENERATED_COMMAND_HANDLERS = {
@@ -78,4 +79,5 @@ GENERATED_COMMAND_HANDLERS = {
     'uninstall.lifecycle': _command_uninstall_lifecycle.run,
     'upgrade.lifecycle': _command_upgrade_lifecycle.run,
     'work-thread.prune': _command_work_thread_prune.run,
+    'work-thread.select': _command_work_thread_select.run,
 }

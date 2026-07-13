@@ -1921,6 +1921,33 @@
       "subcommands_required": true,
       "subcommands": [
         {
+          "name": "select",
+          "help": "Select an ignored local work-thread continuation handle.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "thread_id",
+              "flags": [
+                "--thread-id"
+              ],
+              "help": "Local work-thread id to select."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "ignored local work-thread selection; not durable closure evidence",
+          "mutates_state": true
+        },
+        {
           "name": "prune",
           "help": "Prune ignored local work-thread records already classified as safe candidates.",
           "uses_option_groups": [

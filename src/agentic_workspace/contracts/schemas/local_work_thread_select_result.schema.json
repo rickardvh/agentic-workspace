@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/local_work_thread_select_result.schema.json",
+  "title": "Agentic Workspace local work-thread select result",
+  "description": "Stdout payload emitted after selecting an ignored local work-thread record.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "status",
+    "thread_id",
+    "previous_thread_id",
+    "path",
+    "preserved_keys",
+    "postcondition",
+    "rule"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/local-work-thread-select/v1",
+      "description": "Discriminator for local work-thread select results."
+    },
+    "status": {
+      "const": "selected",
+      "description": "Outcome of the select attempt."
+    },
+    "thread_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "description": "Local work-thread id selected by the caller."
+    },
+    "previous_thread_id": {
+      "type": "string",
+      "maxLength": 160,
+      "description": "Previously selected local work-thread id, when one existed."
+    },
+    "path": {
+      "const": ".agentic-workspace/local/work-threads/index.json",
+      "description": "Ignored local work-thread selection index."
+    },
+    "preserved_keys": {
+      "type": "array",
+      "description": "Existing index keys preserved while replacing selected_thread_id.",
+      "items": {"type": "string", "maxLength": 160}
+    },
+    "postcondition": {
+      "type": "string",
+      "pattern": "selected_thread_id",
+      "description": "Postcondition written to the ignored local index."
+    },
+    "rule": {
+      "type": "string",
+      "pattern": "local advisory.*never.*Planning|local advisory.*never.*durable",
+      "description": "Safety rule proving select is only local advisory state."
+    }
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

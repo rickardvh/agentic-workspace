@@ -1109,6 +1109,7 @@ def test_session_log_work_context_does_not_carry_stale_pr_across_task_transition
     assert binding["issue_refs"] == ["#2145"]
     assert binding["provenance"]["issue_refs"] == "explicit-task"
     assert "task changes" in binding["freshness"]["invalidate_when"]
+    assert "HEAD changes" in binding["freshness"]["revision_changes"]
     assert binding["authority"] == "local-advisory-binding"
 
 
@@ -1177,6 +1178,35 @@ def test_current_work_context_same_branch_task_transition_drops_incompatible_thr
     assert task_b["conflicts"] == ["task-thread-issue-conflict"]
 
 
+def test_current_work_context_selected_thread_disambiguates_branch_matches(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    for thread_id, issue, pr in (("alpha", "#2175", "#2182"), ("beta", "#2180", "#2183")):
+        _write(
+            target / ".agentic-workspace/local/work-threads" / f"{thread_id}.json",
+            json.dumps(
+                {
+                    "id": thread_id,
+                    "refs": {"issues": [issue], "prs": [pr]},
+                    "observations": {"branch": {"value": "main"}},
+                }
+            ),
+        )
+    _write(target / ".agentic-workspace/local/work-threads/index.json", json.dumps({"selected_thread_id": "beta"}))
+    monkeypatch.setattr(
+        current_work_context,
+        "_git",
+        lambda _root, *args: "main" if args == ("branch", "--show-current") else "head-a",
+    )
+
+    binding = current_work_context.resolve_current_work_context(root=target)
+
+    assert binding["status"] == "bound"
+    assert binding["selected_thread_id"] == "beta"
+    assert binding["thread_id"] == "beta"
+    assert binding["issue_refs"] == ["#2180"]
+    assert binding["pr_refs"] == ["#2183"]
+
+
 def test_current_work_context_stale_thread_does_not_bind(tmp_path: Path, monkeypatch) -> None:
     target = _target(tmp_path)
     _write(
@@ -1216,8 +1246,25 @@ def test_current_work_context_explicit_pr_task_binds_pr_without_inventing_issue(
     binding = current_work_context.resolve_current_work_context(root=target, task="Review PR #2182")
 
     assert binding["issue_refs"] == []
+    assert binding["pr_refs"] == ["#2182"]
     assert binding["pr_ref"] == "#2182"
     assert binding["provenance"]["pr_ref"] == "explicit-task"
+
+
+def test_current_work_context_explicit_pr_stack_preserves_ordered_refs(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    monkeypatch.setattr(
+        current_work_context,
+        "_git",
+        lambda _root, *args: "review-stack" if args == ("branch", "--show-current") else "stack-head",
+    )
+
+    binding = current_work_context.resolve_current_work_context(root=target, task="Review PR #2203, PR #2204, and pull request #2206")
+
+    assert binding["issue_refs"] == []
+    assert binding["pr_refs"] == ["#2203", "#2204", "#2206"]
+    assert binding["pr_ref"] == "#2203"
+    assert binding["provenance"]["pr_refs"] == "explicit-task"
 
 
 def test_current_work_context_head_advance_does_not_alone_stale_active_thread(tmp_path: Path, monkeypatch) -> None:
@@ -1233,13 +1280,20 @@ def test_current_work_context_head_advance_does_not_alone_stale_active_thread(tm
             }
         ),
     )
-    monkeypatch.setattr(current_work_context, "_git", lambda _root, *args: "main" if args == ("branch", "--show-current") else "new-head")
+    live = {"head": "new-head"}
+    monkeypatch.setattr(current_work_context, "_git", lambda _root, *args: "main" if args == ("branch", "--show-current") else live["head"])
 
     binding = current_work_context.resolve_current_work_context(root=target)
+    first_id = binding["id"]
+    live["head"] = "newer-head"
+    advanced = current_work_context.resolve_current_work_context(root=target)
 
     assert binding["status"] == "bound"
     assert binding["thread_id"] == "active"
     assert binding["pr_ref"] == "#2182"
+    assert binding["revision"]["head"] == "new-head"
+    assert advanced["revision"]["head"] == "newer-head"
+    assert advanced["id"] == first_id
 
 
 def test_session_log_segments_ignore_closeout_text_without_a_closeout_transition(tmp_path: Path, monkeypatch) -> None:

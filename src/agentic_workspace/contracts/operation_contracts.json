@@ -46,6 +46,12 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "work-thread.select",
+      "path": "operations/work-thread.select.json",
+      "command": "work-thread",
+      "migration_status": "draft-contract-only"
+    },
+    {
       "id": "session-log.manage",
       "path": "operations/session-log.manage.json",
       "command": "session-log",

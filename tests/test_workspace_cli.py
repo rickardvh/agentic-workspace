@@ -5350,6 +5350,45 @@ def test_local_work_threads_report_ambiguity_and_checkpoint_bridge(tmp_path: Pat
     assert packet["checkpoint_bridge"]["source_selector"] == "local_chat_checkpoint"
     forbidden_task_fields = {"priority", "assignee", "assignment", "canonical_status", "estimate", "dependencies"}
     assert all(not forbidden_task_fields.intersection(thread) for thread in packet["current_matches"])
+    alpha = next(thread for thread in packet["current_matches"] if thread["id"] == "issue-1987-alpha")
+    beta = next(thread for thread in packet["current_matches"] if thread["id"] == "issue-1987-beta")
+    assert alpha["selection_actions"]["select"]["operation"] == "work-thread.select"
+    assert alpha["selection_actions"]["select"]["command"].endswith(
+        "work-thread select --thread-id issue-1987-alpha --target . --format json"
+    )
+    assert alpha["selection_actions"]["restore"]["status"] == "not-needed"
+    assert alpha["selection_actions"]["proceed"]["selector"] == "work_threads"
+
+    _write_json(
+        tmp_path / ".agentic-workspace" / "local" / "work-threads" / "index.json",
+        {"kind": "agentic-workspace/local-work-thread-index/v1", "note": "preserve-me"},
+    )
+    assert cli.main(["work-thread", "select", "--thread-id", "issue-1987-alpha", "--target", str(tmp_path), "--format", "json"]) == 0
+    selected_payload = json.loads(capsys.readouterr().out)
+    assert selected_payload["kind"] == "agentic-workspace/local-work-thread-select/v1"
+    assert selected_payload["thread_id"] == "issue-1987-alpha"
+    assert selected_payload["previous_thread_id"] == ""
+    assert selected_payload["preserved_keys"] == ["kind", "note"]
+    assert cli.main(["work-thread", "select", "--thread-id", "issue-1987-beta", "--target", str(tmp_path), "--format", "json"]) == 0
+    beta_payload = json.loads(capsys.readouterr().out)
+    assert beta_payload["thread_id"] == "issue-1987-beta"
+    assert beta_payload["previous_thread_id"] == "issue-1987-alpha"
+    assert beta["selection_actions"]["select"]["command"].endswith(
+        "work-thread select --thread-id issue-1987-beta --target . --format json"
+    )
+    assert cli.main(["work-thread", "select", "--thread-id", "issue-1987-alpha", "--target", str(tmp_path), "--format", "json"]) == 0
+    alpha_again_payload = json.loads(capsys.readouterr().out)
+    assert alpha_again_payload["thread_id"] == "issue-1987-alpha"
+    assert alpha_again_payload["previous_thread_id"] == "issue-1987-beta"
+    index_payload = json.loads((tmp_path / ".agentic-workspace" / "local" / "work-threads" / "index.json").read_text(encoding="utf-8"))
+    assert index_payload["note"] == "preserve-me"
+    assert index_payload["selected_thread_id"] == "issue-1987-alpha"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987", "--select", "work_threads", "--format", "json"]) == 0
+    selected = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+    assert selected["status"] == "clear-match"
+    assert selected["index"]["selected_thread_id"] == "issue-1987-alpha"
+    assert selected["selected_thread"]["id"] == "issue-1987-alpha"
+    assert selected["selection_routes"]["selected_index_path"] == ".agentic-workspace/local/work-threads/index.json"
 
 
 def test_local_work_threads_checkpoint_fallback_does_not_compete_with_registry_match(tmp_path: Path, capsys) -> None:
