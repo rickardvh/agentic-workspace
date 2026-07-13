@@ -660,6 +660,8 @@ def _declared_text_view_matches(result: dict[str, Any], view: Mapping[str, Any])
 
 
 def _validate_declared_text_view(view: Mapping[str, Any]) -> None:
+    if not set(view).issubset({"id", "match", "default", "lines"}):
+        raise PrimitiveExecutionError("output.emit text view has unsupported fields")
     match = view.get("match", {})
     if "match" in view and not isinstance(match, Mapping):
         raise PrimitiveExecutionError("output.emit text view match must be an object")
@@ -693,18 +695,22 @@ def _validate_declared_text_line(line: Any) -> None:
     if key == "literal":
         if set(line) != {"literal"}:
             raise PrimitiveExecutionError("output.emit literal line must only declare literal")
+        _validate_declared_text_string(line["literal"], "output.emit literal line value must be a string")
         return
     if key == "template":
         if set(line) != {"template"}:
             raise PrimitiveExecutionError("output.emit template line must only declare template")
+        _validate_declared_text_string(line["template"], "output.emit template line value must be a string")
         return
     if key == "json":
         if set(line) != {"json"}:
             raise PrimitiveExecutionError("output.emit json line must only declare json")
+        _validate_declared_text_string(line["json"], "output.emit json line path must be a string")
         return
     if key == "when":
         if set(line) != {"when", "lines"}:
             raise PrimitiveExecutionError("output.emit when line must declare when and lines")
+        _validate_declared_text_string(line["when"], "output.emit when line path must be a string")
         _validate_declared_text_lines(line["lines"])
         return
     spec = line["for_each"]
@@ -712,6 +718,7 @@ def _validate_declared_text_line(line: Any) -> None:
         raise PrimitiveExecutionError("output.emit for_each line must be an object")
     if "path" not in spec:
         raise PrimitiveExecutionError("output.emit for_each line must declare path")
+    _validate_declared_text_string(spec["path"], "output.emit for_each path must be a string")
     nested_forms = [name for name in ("lines", "template") if name in spec]
     if len(nested_forms) != 1:
         raise PrimitiveExecutionError("output.emit for_each line must declare exactly one of lines or template")
@@ -720,6 +727,13 @@ def _validate_declared_text_line(line: Any) -> None:
         raise PrimitiveExecutionError("output.emit for_each line has unsupported fields")
     if "lines" in spec:
         _validate_declared_text_lines(spec["lines"])
+    else:
+        _validate_declared_text_string(spec["template"], "output.emit for_each template must be a string")
+
+
+def _validate_declared_text_string(value: Any, message: str) -> None:
+    if not isinstance(value, str):
+        raise PrimitiveExecutionError(message)
 
 
 def _render_declared_text_view(result: dict[str, Any], view: Mapping[str, Any]) -> str:

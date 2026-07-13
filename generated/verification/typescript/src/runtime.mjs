@@ -317,6 +317,8 @@ function declaredTextViewMatches(result, view) {
 }
 
 function validateDeclaredTextView(view) {
+  const allowedViewKeys = new Set(['id', 'match', 'default', 'lines']);
+  if (Object.keys(view).some((key) => !allowedViewKeys.has(key))) throw new RuntimeError('output.emit text view has unsupported fields');
   const match = view.match ?? {};
   if (Object.prototype.hasOwnProperty.call(view, 'match') && !isObject(match)) throw new RuntimeError('output.emit text view match must be an object');
   for (const expected of Object.values(match)) {
@@ -340,30 +342,40 @@ function validateDeclaredTextLine(line) {
   const keys = Object.keys(line).sort();
   if (key === 'literal') {
     if (keys.length !== 1 || keys[0] !== 'literal') throw new RuntimeError('output.emit literal line must only declare literal');
+    requireDeclaredTextString(line.literal, 'output.emit literal line value must be a string');
     return;
   }
   if (key === 'template') {
     if (keys.length !== 1 || keys[0] !== 'template') throw new RuntimeError('output.emit template line must only declare template');
+    requireDeclaredTextString(line.template, 'output.emit template line value must be a string');
     return;
   }
   if (key === 'json') {
     if (keys.length !== 1 || keys[0] !== 'json') throw new RuntimeError('output.emit json line must only declare json');
+    requireDeclaredTextString(line.json, 'output.emit json line path must be a string');
     return;
   }
   if (key === 'when') {
     if (keys.length !== 2 || keys[0] !== 'lines' || keys[1] !== 'when') throw new RuntimeError('output.emit when line must declare when and lines');
+    requireDeclaredTextString(line.when, 'output.emit when line path must be a string');
     validateDeclaredTextLines(line.lines);
     return;
   }
   const spec = line.for_each;
   if (!isObject(spec)) throw new RuntimeError('output.emit for_each line must be an object');
   if (!Object.prototype.hasOwnProperty.call(spec, 'path')) throw new RuntimeError('output.emit for_each line must declare path');
+  requireDeclaredTextString(spec.path, 'output.emit for_each path must be a string');
   const nestedForms = ['lines', 'template'].filter((name) => Object.prototype.hasOwnProperty.call(spec, name));
   if (nestedForms.length !== 1) throw new RuntimeError('output.emit for_each line must declare exactly one of lines or template');
   const specKeys = Object.keys(spec).sort();
   const expectedKeys = ['path', nestedForms[0]].sort();
   if (specKeys.length !== 2 || specKeys[0] !== expectedKeys[0] || specKeys[1] !== expectedKeys[1]) throw new RuntimeError('output.emit for_each line has unsupported fields');
   if (Object.prototype.hasOwnProperty.call(spec, 'lines')) validateDeclaredTextLines(spec.lines);
+  else requireDeclaredTextString(spec.template, 'output.emit for_each template must be a string');
+}
+
+function requireDeclaredTextString(value, message) {
+  if (typeof value !== 'string') throw new RuntimeError(message);
 }
 
 function renderDeclaredTextView(result, view) {
@@ -394,7 +406,7 @@ function renderDeclaredTextLine(line, current, root) {
   }
   if (Object.prototype.hasOwnProperty.call(line, 'json')) {
     const [found, value] = declaredTextValue(line.json, current, root);
-    return JSON.stringify(declaredTextCanonicalJsonValue(found ? value : null), null, 2).split('\n');
+    return declaredTextCanonicalJsonString(declaredTextCanonicalJsonValue(found ? value : null)).split('\n');
   }
   if (Object.prototype.hasOwnProperty.call(line, 'template')) return [renderDeclaredTextTemplate(String(line.template), current, root)];
   if (Object.prototype.hasOwnProperty.call(line, 'literal')) return [String(line.literal)];
@@ -496,6 +508,22 @@ function declaredTextCanonicalJsonValue(value) {
   if (declaredTextIsSafeInteger(value)) return value;
   if (typeof value === 'number') throw new RuntimeError('output.emit text view JSON numbers must be finite safe integers');
   return value;
+}
+
+function declaredTextCanonicalJsonString(value, level = 0) {
+  const indent = '  '.repeat(level);
+  const childIndent = '  '.repeat(level + 1);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    return '[\n' + value.map((item) => `${childIndent}${declaredTextCanonicalJsonString(item, level + 1)}`).join(',\n') + '\n' + indent + ']';
+  }
+  if (isObject(value)) {
+    const keys = Object.keys(value).sort();
+    if (keys.length === 0) return '{}';
+    return '{\n' + keys.map((key) => `${childIndent}${JSON.stringify(key)}: ${declaredTextCanonicalJsonString(value[key], level + 1)}`).join(',\n') + '\n' + indent + '}';
+  }
+  if (value === undefined) return 'null';
+  return JSON.stringify(value);
 }
 
 function limitedViewValue(value, limit) {
