@@ -319,6 +319,56 @@
           },
           "description": "Generated runtime primitive handlers that are part of the representative migration and must fail closed on drift."
         },
+        "generated_text_views": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "primitive",
+              "view_ids",
+              "generated_operation_paths"
+            ],
+            "properties": {
+              "primitive": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Portable output primitive that consumes the declared text views."
+              },
+              "view_ids": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "description": "Declared text view identifiers that must be present in generated operation arguments."
+              },
+              "generated_operation_paths": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "pattern": "^generated/(workspace|planning|memory|verification)/(python/operations|typescript/resources/operations)/[A-Za-z0-9_.-]+\\.json$"
+                },
+                "uniqueItems": true,
+                "description": "Generated operation resources that must consume the same declared text views."
+              },
+              "forbidden_primitives": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "description": "Superseded primitive ids that must not remain in these generated operation resources."
+              }
+            }
+          },
+          "description": "Generated portable output views that are part of the representative migration and must fail closed on drift."
+        },
         "remaining_runtime_boundary": {
           "type": "object",
           "additionalProperties": false,

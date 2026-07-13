@@ -582,6 +582,10 @@ def _emit_output(
     output_format = str(values.get("format") or "text")
     if output_format == "json":
         return json.dumps(result, indent=2, sort_keys=True) + "\n"
+    if isinstance(result, dict):
+        declared_view = _emit_declared_text_view(result, arguments.get("text_views", []))
+        if declared_view is not None:
+            return declared_view
     if str(arguments.get("text_style", "")) == "current-memory" and isinstance(
         result, dict
     ):
@@ -613,6 +617,158 @@ def _emit_output(
         label = action.get("path") or action.get("id") or action.get("kind")
         lines.append(f"- {label}")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _emit_declared_text_view(result: dict[str, Any], views: Any) -> str | None:
+    if views is None:
+        return None
+    if not isinstance(views, Sequence) or isinstance(views, (str, bytes, bytearray)):
+        raise PrimitiveExecutionError("output.emit text_views must be a list")
+    default_view: Mapping[str, Any] | None = None
+    for view in views:
+        if not isinstance(view, Mapping):
+            raise PrimitiveExecutionError("output.emit text_views entries must be objects")
+        if bool(view.get("default")):
+            default_view = view
+        if _declared_text_view_matches(result, view):
+            return _render_declared_text_view(result, view)
+    if default_view is not None:
+        return _render_declared_text_view(result, default_view)
+    return None
+
+
+def _declared_text_view_matches(result: dict[str, Any], view: Mapping[str, Any]) -> bool:
+    match = view.get("match", {})
+    if not isinstance(match, Mapping) or not match:
+        return False
+    for path, expected in match.items():
+        found, actual = _field_by_path(result, str(path))
+        if not found or actual != expected:
+            return False
+    return True
+
+
+def _render_declared_text_view(result: dict[str, Any], view: Mapping[str, Any]) -> str:
+    rendered = _render_declared_text_lines(view.get("lines", []), current=result, root=result)
+    return "\n".join(rendered).rstrip() + "\n"
+
+
+def _render_declared_text_lines(lines: Any, *, current: Any, root: dict[str, Any]) -> list[str]:
+    if not isinstance(lines, Sequence) or isinstance(lines, (str, bytes, bytearray)):
+        raise PrimitiveExecutionError("output.emit text view lines must be a list")
+    rendered: list[str] = []
+    for line in lines:
+        rendered.extend(_render_declared_text_line(line, current=current, root=root))
+    return rendered
+
+
+def _render_declared_text_line(line: Any, *, current: Any, root: dict[str, Any]) -> list[str]:
+    if isinstance(line, str):
+        return [_render_declared_text_template(line, current=current, root=root)]
+    if not isinstance(line, Mapping):
+        raise PrimitiveExecutionError("output.emit text view lines must be strings or objects")
+    if "when" in line:
+        found, value = _declared_text_value(line["when"], current=current, root=root)
+        if not found or not _declared_text_truthy(value):
+            return []
+        return _render_declared_text_lines(line.get("lines", []), current=current, root=root)
+    if "for_each" in line:
+        spec = line["for_each"]
+        if not isinstance(spec, Mapping):
+            raise PrimitiveExecutionError("output.emit for_each line must be an object")
+        found, value = _declared_text_value(spec.get("path", ""), current=current, root=root)
+        if not found or value in (None, ""):
+            return []
+        if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
+            raise PrimitiveExecutionError("output.emit for_each path must resolve to a list")
+        nested_lines = spec.get("lines")
+        if nested_lines is None:
+            nested_lines = [str(spec.get("template", "{}"))]
+        return [
+            nested
+            for item in value
+            for nested in _render_declared_text_lines(nested_lines, current=item, root=root)
+        ]
+    if "json" in line:
+        found, value = _declared_text_value(line["json"], current=current, root=root)
+        if not found:
+            value = None
+        return json.dumps(_plain_output_result(value), indent=2).splitlines()
+    if "template" in line:
+        return [_render_declared_text_template(str(line["template"]), current=current, root=root)]
+    if "literal" in line:
+        return [str(line["literal"])]
+    raise PrimitiveExecutionError("output.emit text view line object must declare when, for_each, json, template, or literal")
+
+
+def _render_declared_text_template(template: str, *, current: Any, root: dict[str, Any]) -> str:
+    rendered = template
+    for token in _declared_text_template_tokens(template):
+        found, value = _declared_text_placeholder_value(token, current=current, root=root)
+        rendered = rendered.replace("{" + token + "}", _declared_text_format(value if found else ""))
+    return rendered
+
+
+def _declared_text_template_tokens(template: str) -> list[str]:
+    tokens: list[str] = []
+    index = 0
+    while index < len(template):
+        start = template.find("{", index)
+        if start == -1:
+            break
+        end = template.find("}", start + 1)
+        if end == -1:
+            break
+        tokens.append(template[start + 1 : end])
+        index = end + 1
+    return tokens
+
+
+def _declared_text_placeholder_value(token: str, *, current: Any, root: dict[str, Any]) -> tuple[bool, Any]:
+    parts = token.split("|")
+    found, value = _declared_text_value(parts[0], current=current, root=root)
+    for raw_filter in parts[1:]:
+        name, _, argument = raw_filter.partition(":")
+        if name == "len":
+            value = len(value) if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)) else 0
+            found = True
+        elif name == "join":
+            separator = argument
+            if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+                value = separator.join(str(item) for item in value)
+            found = True
+        elif name == "empty":
+            if not _declared_text_truthy(value):
+                value = argument
+                found = True
+        else:
+            raise PrimitiveExecutionError(f"unsupported output.emit text view filter: {name!r}")
+    return found, value
+
+
+def _declared_text_value(path: Any, *, current: Any, root: dict[str, Any]) -> tuple[bool, Any]:
+    path_text = str(path or "")
+    if path_text in {"", "."}:
+        return True, current
+    if path_text.startswith("root."):
+        return _field_by_path(root, path_text.removeprefix("root."))
+    if isinstance(current, Mapping):
+        found, value = _field_by_path(current, path_text)
+        if found:
+            return True, value
+    return _field_by_path(root, path_text)
+
+
+def _declared_text_truthy(value: Any) -> bool:
+    return bool(value)
+
+
+def _declared_text_format(value: Any) -> str:
+    if isinstance(value, bool):
+        return "True" if value else "False"
+    if value is None:
+        return ""
+    return str(value)
 
 
 def _view_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:

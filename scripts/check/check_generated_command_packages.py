@@ -1325,7 +1325,6 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "workspace.defaults.select",
     "workspace.config.load",
     "output.fields.select",
-    "workspace.config.emit",
     "workspace.output.emit",
     "python.function.call",
     "planning.adopt.apply",
@@ -2088,6 +2087,77 @@ def _package_for_adapter(ir: dict[str, object], *, adapter_id: str) -> dict[str,
     return None
 
 
+def _operation_ir_steps_for_text_view_check(operation: dict[str, object]) -> list[dict[str, object]]:
+    ir_plan = operation.get("ir_plan", {})
+    if not isinstance(ir_plan, dict):
+        return []
+    steps: list[dict[str, object]] = []
+    for step in ir_plan.get("steps", []):
+        if isinstance(step, dict):
+            steps.append(step)
+    for fragment in ir_plan.get("fragments", []):
+        if not isinstance(fragment, dict):
+            continue
+        for step in fragment.get("steps", []):
+            if isinstance(step, dict):
+                steps.append(step)
+    return steps
+
+
+def _validate_generated_text_view_expectation(
+    expectation: object,
+    *,
+    location: str,
+    primitive_refs: list[object],
+) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(expectation, dict):
+        return [f"{location} must be an object"]
+    primitive = str(expectation.get("primitive", ""))
+    if primitive not in {str(ref) for ref in primitive_refs}:
+        errors.append(f"{location} primitive {primitive!r} is not present in command_package_ir adapter primitive_refs")
+    expected_view_ids = {str(view_id) for view_id in expectation.get("view_ids", []) if str(view_id)}
+    if not expected_view_ids:
+        errors.append(f"{location} view_ids must be non-empty")
+    generated_paths = expectation.get("generated_operation_paths", [])
+    if not isinstance(generated_paths, list) or not generated_paths:
+        return [*errors, f"{location} generated_operation_paths must be a non-empty list"]
+    forbidden_primitives = {str(item) for item in expectation.get("forbidden_primitives", []) if str(item)}
+    for path_index, generated_path_value in enumerate(generated_paths):
+        generated_path = REPO_ROOT / str(generated_path_value)
+        path_location = f"{location}.generated_operation_paths[{path_index}]"
+        if not generated_path.is_file():
+            errors.append(f"{path_location} does not exist: {generated_path_value!r}")
+            continue
+        generated_text = generated_path.read_text(encoding="utf-8")
+        for forbidden in sorted(forbidden_primitives):
+            if forbidden in generated_text:
+                errors.append(f"{path_location} must not contain superseded primitive {forbidden!r}")
+        try:
+            operation = json.loads(generated_text)
+        except json.JSONDecodeError as exc:
+            errors.append(f"{path_location} generated operation JSON is invalid: {exc}")
+            continue
+        view_ids: set[str] = set()
+        primitive_step_count = 0
+        for step in _operation_ir_steps_for_text_view_check(operation):
+            if step.get("uses") != primitive:
+                continue
+            primitive_step_count += 1
+            arguments = step.get("arguments", {})
+            text_views = arguments.get("text_views", []) if isinstance(arguments, dict) else []
+            if not isinstance(text_views, list):
+                errors.append(f"{path_location} {primitive} arguments.text_views must be a list")
+                continue
+            view_ids.update(str(view.get("id", "")) for view in text_views if isinstance(view, dict))
+        if primitive_step_count == 0:
+            errors.append(f"{path_location} must contain a generated {primitive!r} step")
+        missing = sorted(expected_view_ids - view_ids)
+        if missing:
+            errors.append(f"{path_location} {primitive} text_views missing id(s): {', '.join(missing)}")
+    return errors
+
+
 def _validate_ordinary_command_migration_inventory() -> list[str]:
     errors: list[str] = []
     try:
@@ -2203,6 +2273,19 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
                         errors.append(
                             f"{handler_location} function {expected_function!r} must use implementation {expected_implementation!r}, found {override.get('implementation')!r}"
                         )
+        generated_text_views = record.get("generated_text_views", [])
+        if generated_text_views is not None:
+            if not isinstance(generated_text_views, list):
+                errors.append(f"{location} generated_text_views must be a list when present")
+            else:
+                for text_view_index, expectation in enumerate(generated_text_views):
+                    errors.extend(
+                        _validate_generated_text_view_expectation(
+                            expectation,
+                            location=f"{location}.generated_text_views[{text_view_index}]",
+                            primitive_refs=primitive_refs,
+                        )
+                    )
         boundary = record.get("remaining_runtime_boundary", {})
         if not isinstance(boundary, dict):
             errors.append(f"{location} remaining_runtime_boundary must be an object")

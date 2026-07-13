@@ -1,26 +1,26 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:a64199423f794ff81c0a12790c18d58f3009d3ae88bf5b931bcbb38c701f4662",
+  "profile_fingerprint": "sha256:ba53957260ce65766d73af50ccc244d1f4cfb5ab626cde921e9df07ef8af3434",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.33.7",
+    "client_package": "0.33.8",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.33.7"
+      "version": "0.33.8"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.33.7"
+      "version": "0.33.8"
     }
   },
   "operations": {
     "config.report": {
       "identity": "config.report",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:653712108ea4757a7f337741adc1c68d758a6db1bf581afe3a9c7fcd43b5ec08",
+      "fingerprint": "sha256:543545ead6fbec5c4391afcf49a3c291aaf2a8562cffda199ab35e93b62cf4e5",
       "compatibility_fingerprint": "sha256:8cb4d804dd32bdd6cb940e96426f6d18fe830e7aa054d45dbec471a3607649d1",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
@@ -109,8 +109,8 @@
           },
           {
             "id": "emit_config",
-            "uses": "workspace.config.emit",
-            "description": "Emit resolved config in the requested format."
+            "uses": "output.emit",
+            "description": "Emit resolved config with contract-declared text views or JSON."
           }
         ],
         "guards": [
@@ -121,7 +121,7 @@
         "proof": [
           "operation contract validates against operation.schema.json",
           "json output remains compatible with existing config command tests",
-          "config.report uses command-generation-owned payload.project for exact field projection"
+          "config.report uses command-generation-owned payload.project and output.emit text_views for exact field projection"
         ],
         "projections": {
           "cli": {
@@ -144,7 +144,7 @@
         "migration_status": "runtime-consumed",
         "ir_plan": {
           "status": "representative",
-          "summary": "Config report executes generated operation IR through codegen-owned primitive dataflow, using payload.project for exact selected-output projection while workspace runtime supplies config loading and text compatibility formatting.",
+          "summary": "Config report executes generated operation IR through codegen-owned primitive dataflow; payload.project owns exact selected-output projection and output.emit consumes contract-declared config text views.",
           "steps": [
             {
               "id": "resolve_root",
@@ -202,9 +202,130 @@
                 },
                 {
                   "id": "emit_config",
-                  "uses": "workspace.config.emit",
-                  "description": "Emit config output in the requested format.",
-                  "arguments": {},
+                  "uses": "output.emit",
+                  "description": "Emit config output through portable output.emit using declared config text views.",
+                  "arguments": {
+                    "text_views": [
+                      {
+                        "id": "config.selected-output.text",
+                        "match": {
+                          "kind": "agentic-workspace/selected-output/v1"
+                        },
+                        "lines": [
+                          "Kind: {kind}",
+                          "Source command: {source_command}",
+                          "Values:",
+                          {
+                            "json": "values"
+                          },
+                          {
+                            "when": "missing",
+                            "lines": [
+                              "Missing:",
+                              {
+                                "for_each": {
+                                  "path": "missing",
+                                  "template": "- {}"
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "id": "config.tiny.text",
+                        "match": {
+                          "kind": "agentic-workspace/config-tiny/v1"
+                        },
+                        "lines": [
+                          "Target: {target}",
+                          "Config path: {config_path}",
+                          "AW enabled: {workspace.enabled} ({workspace.enabled_source})",
+                          "Enabled modules: {workspace.enabled_modules|join:, |empty:(none)}",
+                          "Improvement latitude: {workspace.improvement_latitude}",
+                          "Optimization bias: {workspace.optimization_bias}",
+                          "Delegation mode: {local_runtime.delegation_mode.value}",
+                          "Safe to auto-run commands: {local_runtime.safe_to_auto_run_commands.value}",
+                          "Select fields: {next_detail.select}",
+                          "Verbose diagnostics: {next_detail.verbose}"
+                        ]
+                      },
+                      {
+                        "id": "config.compact.text",
+                        "match": {
+                          "profile": "compact"
+                        },
+                        "lines": [
+                          "Target: {target}",
+                          "Config path: {config_path}",
+                          "Exists: {exists}",
+                          "AW enabled: {workspace.enabled} ({workspace.enabled_source})",
+                          "Enabled modules: {workspace.enabled_modules|join:, |empty:(none)}",
+                          "Improvement latitude: {workspace.improvement_latitude}",
+                          "Optimization bias: {workspace.optimization_bias}",
+                          "Workflow obligations: {workspace.workflow_obligations|len} configured",
+                          "Delegation mode: {local_runtime.delegation_mode.value}",
+                          "Safe to auto-run commands: {local_runtime.safe_to_auto_run_commands.value}",
+                          "Full profile: {full_profile_command}"
+                        ]
+                      },
+                      {
+                        "id": "config.full.text",
+                        "default": true,
+                        "lines": [
+                          "Target: {target}",
+                          "Config path: {config_path}",
+                          "Exists: {exists}",
+                          "AW enabled: {workspace.enabled} ({workspace.enabled_source})",
+                          "Reference: {edit_reference.reference_doc}",
+                          "Schema: {edit_reference.source_schema}",
+                          "Check command: {edit_reference.check_command}",
+                          {
+                            "when": "warnings",
+                            "lines": [
+                              "Warnings:",
+                              {
+                                "for_each": {
+                                  "path": "warnings",
+                                  "template": "- {}"
+                                }
+                              }
+                            ]
+                          },
+                          "Enabled modules: {workspace.enabled_modules|join:, |empty:(none)}",
+                          "Agent instructions file: {workspace.agent_instructions_file} ({workspace.agent_instructions_file_source})",
+                          "Workflow artifact profile: {workspace.workflow_artifact_profile} ({workspace.workflow_artifact_profile_source})",
+                          "Agent configuration substrate: {workspace.agent_configuration_substrate.canonical_doc} ({workspace.agent_configuration_substrate.owner_surface})",
+                          "System-intent sources: {workspace.system_intent.sources|join:, |empty:none} ({workspace.system_intent.sources_source})",
+                          "Workflow obligations: {workspace.workflow_obligations|len} configured",
+                          "Improvement latitude: {workspace.improvement_latitude} ({workspace.improvement_latitude_source})",
+                          "Optimization bias: {workspace.optimization_bias} ({workspace.optimization_bias_source})",
+                          "Advanced features: {workspace.advanced_features|join:, |empty:none} ({workspace.advanced_features_source})",
+                          "CLI invoke: {workspace.cli_invoke} ({workspace.cli_invoke_source})",
+                          "Wrapper rule: {update.wrapper_rule}",
+                          "Update modules:",
+                          {
+                            "for_each": {
+                              "path": "update.modules",
+                              "lines": [
+                                "- {module}: {source_type} {source_ref}",
+                                "  label: {source_label}",
+                                "  metadata: {metadata_path} ({sync_status})"
+                              ]
+                            }
+                          },
+                          "Mixed-agent:",
+                          "- rule: {mixed_agent.rule}",
+                          "- repo policy: {mixed_agent.repo_policy.path} ({mixed_agent.repo_policy.source})",
+                          "- local override: {mixed_agent.local_override.path} ({mixed_agent.local_override.status})",
+                          "- local integration area: {mixed_agent.local_integration_area.root} ({mixed_agent.local_integration_area.status})",
+                          "- effective posture: internal delegation={mixed_agent.effective_posture.supports_internal_delegation.value}, strong planner={mixed_agent.effective_posture.strong_planner_available.value}, cheap bounded executor={mixed_agent.effective_posture.cheap_bounded_executor_available.value}",
+                          "- delegation targets: {mixed_agent.delegation_targets.profiles|len} configured",
+                          "- delegation outcome evidence: {mixed_agent.delegation_targets.outcome_artifact.path} ({mixed_agent.delegation_targets.outcome_artifact.status})"
+                        ]
+                      }
+                    ]
+                  },
                   "outputs": [
                     "emitted"
                   ]

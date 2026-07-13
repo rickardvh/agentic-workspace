@@ -19,7 +19,7 @@
     "shell_adapter_policy": "Issue #909 evaluation selects Bash as the first additional generated command transport candidate and keeps it deferred. Promotion may start only with parser/help projection from canonical command artifacts, then black-box conformance for runtime handoff; PowerShell remains deferred until the Bash boundary and proof route are proven. Shell-family targets are downstream projections for thin wrappers, help, argument validation, completion metadata, and runtime handoff only; they must not own runtime primitive behavior.",
     "direct_cli_edit_policy": "Interface shape, generated package metadata, adapter wiring, and shipped CLI behavior must move through contracts, IR, generators, and regenerated outputs instead of package-local executable cli.py files; direct cli.py edits or other direct edits to package-local executable Python are transitional debt unless they are explicitly classified package-unique primitive implementations outside the generated CLI behavior surface.",
     "extraction_readiness": {
-      "status": "ready-with-inventoried-product-coupling",
+      "status": "ready",
       "owner": "#1100",
       "rule": "Reusable command-generation source must not import Agentic Workspace product modules. Product-specific literals in command-generation source require explicit accepted-coupling inventory with owner, reason, and migration path.",
       "accepted_couplings": [
@@ -32,16 +32,6 @@
           "owner": "#1626 generated artifact provenance",
           "reason": "The package-owned IR loader accepts the historical Agentic Workspace schema identity and canonicalizes it to command-generation/command-package-ir/v1 before validation and rendering.",
           "migration_path": "Keep host-side proof asserting the canonical command-generation schema after loading; remove this coupling once checked-in AW command-package IR no longer uses the legacy schema identity."
-        },
-        {
-          "id": "workspace-config-output-renderer",
-          "kind": "accepted-target-renderer-boundary",
-          "paths": [
-            "command_generation/targets/python.py"
-          ],
-          "owner": "#2044 representative command semantic migration",
-          "reason": "The Python target renderer owns a generated config_output override so AW can migrate config.report emission out of the source output dispatcher while the config text profiles are still AW-specific payload shapes.",
-          "migration_path": "Replace the AW-specific config_output override with a host-neutral output/view contract once config tiny, compact, full, and selected text profiles are declared as reusable command-generation view specs across targets."
         }
       ]
     },
@@ -471,12 +461,6 @@
               "primitive": "output.emit",
               "handler": "runtime_handler",
               "function": "_emit_workspace_operation_output",
-              "import_module": "agentic_workspace.workspace_runtime_primitives"
-            },
-            {
-              "primitive": "workspace.config.emit",
-              "handler": "runtime_handler",
-              "function": "_emit_workspace_config_output",
               "import_module": "agentic_workspace.workspace_runtime_primitives"
             }
           ]
@@ -1350,12 +1334,6 @@
                 "selected_output_kind": "agentic-workspace/selected-output/v1",
                 "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
                 "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
-              },
-              {
-                "function": "_emit_workspace_config_output",
-                "implementation": "config_output",
-                "selected_output_kind": "agentic-workspace/selected-output/v1",
-                "tiny_config_kind": "agentic-workspace/config-tiny/v1"
               }
             ]
           },
@@ -5015,7 +4993,7 @@
               "workspace.target-root.resolve",
               "workspace.config.load",
               "payload.project",
-              "workspace.config.emit"
+              "output.emit"
             ]
           },
           "schemas": {

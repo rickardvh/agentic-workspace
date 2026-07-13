@@ -176,119 +176,10 @@ def _emit_delegation_outcomes_text(payload: dict[str, Any]) -> str:
 
 
 
-def _emit_config_tiny_text(payload: dict[str, Any]) -> str:
-    workspace = payload['workspace']
-    local_runtime = payload['local_runtime']
-    next_detail = payload['next_detail']
-    lines = [
-        f"Target: {payload['target']}",
-        f"Config path: {payload['config_path']}",
-        f"AW enabled: {workspace['enabled']} ({workspace['enabled_source']})",
-        f"Enabled modules: {', '.join(workspace['enabled_modules']) or '(none)'}",
-        f"Improvement latitude: {workspace['improvement_latitude']}",
-        f"Optimization bias: {workspace['optimization_bias']}",
-        f"Delegation mode: {local_runtime['delegation_mode']['value']}",
-        f"Safe to auto-run commands: {local_runtime['safe_to_auto_run_commands']['value']}",
-        f"Select fields: {next_detail['select']}",
-        f"Verbose diagnostics: {next_detail['verbose']}",
-    ]
-    return '\n'.join(lines) + '\n'
-
-
-def _emit_config_compact_text(payload: dict[str, Any]) -> str:
-    workspace = payload['workspace']
-    local_runtime = payload['local_runtime']
-    lines = [
-        f"Target: {payload['target']}",
-        f"Config path: {payload['config_path']}",
-        f"Exists: {payload['exists']}",
-        f"AW enabled: {workspace['enabled']} ({workspace['enabled_source']})",
-        f"Enabled modules: {', '.join(workspace['enabled_modules']) or '(none)'}",
-        f"Improvement latitude: {workspace['improvement_latitude']}",
-        f"Optimization bias: {workspace['optimization_bias']}",
-        f"Workflow obligations: {len(workspace['workflow_obligations'])} configured",
-        f"Delegation mode: {local_runtime['delegation_mode']['value']}",
-        f"Safe to auto-run commands: {local_runtime['safe_to_auto_run_commands']['value']}",
-        f"Full profile: {payload['full_profile_command']}",
-    ]
-    return '\n'.join(lines) + '\n'
-
-
-def _emit_config_full_text(payload: dict[str, Any]) -> str:
-    workspace = payload['workspace']
-    edit_reference = payload['edit_reference']
-    mixed_agent = payload['mixed_agent']
-    lines = [
-        f"Target: {payload['target']}",
-        f"Config path: {payload['config_path']}",
-        f"Exists: {payload['exists']}",
-        f"AW enabled: {workspace['enabled']} ({workspace['enabled_source']})",
-        f"Reference: {edit_reference['reference_doc']}",
-        f"Schema: {edit_reference['source_schema']}",
-        f"Check command: {edit_reference['check_command']}",
-    ]
-    warnings = payload['warnings']
-    if warnings:
-        lines.append('Warnings:')
-        lines.extend(f'- {warning}' for warning in warnings)
-    lines.extend([
-        f"Enabled modules: {', '.join(workspace['enabled_modules']) or '(none)'}",
-        f"Agent instructions file: {workspace['agent_instructions_file']} ({workspace['agent_instructions_file_source']})",
-        f"Workflow artifact profile: {workspace['workflow_artifact_profile']} ({workspace['workflow_artifact_profile_source']})",
-        f"Agent configuration substrate: {workspace['agent_configuration_substrate']['canonical_doc']} ({workspace['agent_configuration_substrate']['owner_surface']})",
-        f"System-intent sources: {', '.join(workspace['system_intent']['sources']) or 'none'} ({workspace['system_intent']['sources_source']})",
-        f"Workflow obligations: {len(workspace['workflow_obligations'])} configured",
-        f"Improvement latitude: {workspace['improvement_latitude']} ({workspace['improvement_latitude_source']})",
-        f"Optimization bias: {workspace['optimization_bias']} ({workspace['optimization_bias_source']})",
-        f"Advanced features: {', '.join(workspace['advanced_features']) or 'none'} ({workspace['advanced_features_source']})",
-        f"CLI invoke: {workspace['cli_invoke']} ({workspace['cli_invoke_source']})",
-        f"Wrapper rule: {payload['update']['wrapper_rule']}",
-        'Update modules:',
-    ])
-    for module in payload['update']['modules']:
-        lines.append(f"- {module['module']}: {module['source_type']} {module['source_ref']}")
-        lines.append(f"  label: {module['source_label']}")
-        lines.append(f"  metadata: {module['metadata_path']} ({module['sync_status']})")
-    lines.extend([
-        'Mixed-agent:',
-        f"- rule: {mixed_agent['rule']}",
-        f"- repo policy: {mixed_agent['repo_policy']['path']} ({mixed_agent['repo_policy']['source']})",
-        f"- local override: {mixed_agent['local_override']['path']} ({mixed_agent['local_override']['status']})",
-        f"- local integration area: {mixed_agent['local_integration_area']['root']} ({mixed_agent['local_integration_area']['status']})",
-        f"- effective posture: internal delegation={mixed_agent['effective_posture']['supports_internal_delegation']['value']}, strong planner={mixed_agent['effective_posture']['strong_planner_available']['value']}, cheap bounded executor={mixed_agent['effective_posture']['cheap_bounded_executor_available']['value']}",
-        f"- delegation targets: {len(mixed_agent['delegation_targets']['profiles'])} configured",
-        f"- delegation outcome evidence: {mixed_agent['delegation_targets']['outcome_artifact']['path']} ({mixed_agent['delegation_targets']['outcome_artifact']['status']})",
-    ])
-    return '\n'.join(lines) + '\n'
-
-
-
-
 def _append_workspace_operation_delegation_outcome(*args: Any, **kwargs: Any) -> Any:
     from agentic_workspace.workspace_runtime_primitives import _append_workspace_operation_delegation_outcome as source_function
 
     return source_function(*args, **kwargs)
-
-
-def _emit_workspace_config_output(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> Any:
-    result = values['result']
-    output_format = str(values.get('format') or 'text')
-    if not isinstance(result, dict):
-        raise ValueError('workspace config output requires an object result payload')
-    if output_format == 'json':
-        print(json.dumps(_serialise_value(result), indent=2))
-        return None
-    if result.get('kind') == 'agentic-workspace/selected-output/v1':
-        print(_emit_selected_output_text(result), end='')
-        return None
-    if result.get('kind') == 'agentic-workspace/config-tiny/v1':
-        print(_emit_config_tiny_text(result), end='')
-        return None
-    if result.get('profile') == 'compact':
-        print(_emit_config_compact_text(result), end='')
-        return None
-    print(_emit_config_full_text(result), end='')
-    return None
 
 
 def _emit_workspace_operation_output(values: dict[str, Any], arguments: dict[str, Any], context: Any) -> Any:
@@ -298,6 +189,11 @@ def _emit_workspace_operation_output(values: dict[str, Any], arguments: dict[str
     delegation_outcomes_kind = 'agentic-workspace/delegation-outcomes/v1'
     if str(values.get('format') or 'text') == 'json' and isinstance(result, dict):
         print(json.dumps(_serialise_value(values['result']), indent=2))
+        return None
+    if isinstance(result, dict) and arguments.get('text_views'):
+        from .primitive_executor import _emit_output
+
+        print(_emit_output(values=values, arguments=arguments), end='')
         return None
     if isinstance(result, dict) and (isinstance(result.get('route_report_summary'), dict) or result.get('kind') == 'memory-module-report/v1' or (result.get('kind') == 'planning-module-report/v1' and result.get('profile') == 'tiny')):
         from .primitive_executor import _emit_output
@@ -443,7 +339,6 @@ def _select_workspace_operation_defaults(values: dict[str, Any], _arguments: dic
 
 __all__ = [
     '_append_workspace_operation_delegation_outcome',
-    '_emit_workspace_config_output',
     '_emit_workspace_operation_output',
     '_load_workspace_operation_config',
     '_load_workspace_operation_defaults',

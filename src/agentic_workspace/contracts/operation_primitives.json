@@ -569,10 +569,10 @@
     },
     {
       "id": "output.emit",
-      "summary": "Render text or JSON output according to the operation format option.",
+      "summary": "Emit JSON or contract-declared compact text from a result payload.",
       "kind": "output",
       "portability": "target-executor",
-      "semantics": "Emit either stable JSON or declared text from an already assembled structured payload.",
+      "semantics": "Emit JSON with deterministic formatting, or render text with portable fallback rules and optional schema-backed text_views whose match predicates, templates, conditionals, loops, and JSON blocks are declared in operation IR.",
       "input_schema_ref": "schemas/primitives/output_emit.input.schema.json",
       "output_schema_ref": "schemas/primitives/output_emit.output.schema.json",
       "taxonomy_tier": "tier-1-portable-codegen"
@@ -1286,13 +1286,13 @@
     },
     {
       "id": "workspace.config.emit",
-      "summary": "Emit the resolved workspace config payload in the requested output format.",
+      "summary": "Deprecated config-output compatibility primitive retained only for stale-boundary accounting.",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "workspace package runtime boundary",
-      "tier_reason": "Python config output rendering is now generated from command_package_ir.json through _emit_workspace_config_output, but the primitive remains workspace-package-specific until the output contract is host-neutral and shared across targets.",
-      "conformance_ref": "workspace tests plus generated command package checks",
-      "migration_path": "Promote this primitive to a schema-backed Tier 1 output/view primitive only after the config text profiles are expressed as host-neutral view contracts across command-generation targets.",
-      "generic_behavior_audit": "Representative migration completed for Python config.report emission: command_package_ir.json binds workspace.config.emit to generated _emit_workspace_config_output, and the regenerated facade renders JSON/tiny/compact/full/selected text from values['result'] without the source output dispatcher. This is not counted as portable Tier 1 codegen until the same semantics are host-neutral and target-shared."
+      "tier_reason": "config.report now emits through portable output.emit with contract-declared text_views; this package-domain primitive is retained only as an explicit superseded boundary until downstream references age out.",
+      "conformance_ref": "scripts/check/check_generated_command_packages.py rejects command_package_ir and generated config.report operations that still use workspace.config.emit.",
+      "migration_path": "Do not add new operation references. Remove this primitive declaration after generated packages and compatibility inventories no longer need the stale-boundary audit marker.",
+      "generic_behavior_audit": "Superseded by config.report operation IR text_views consumed by command-generation Python and TypeScript output.emit. It is not counted as portable codegen coverage, and checks fail if the representative generated operation uses this primitive again."
     },
     {
       "id": "workspace.output.emit",

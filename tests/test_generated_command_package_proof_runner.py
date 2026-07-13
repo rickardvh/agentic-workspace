@@ -725,12 +725,20 @@ def test_ordinary_command_migration_inventory_is_current() -> None:
     config_migration = next(
         item for item in inventory["ordinary_command_migration"]["representative_migrations"] if item["id"] == "root-config-selected-output"
     )
-    assert config_migration["generated_runtime_handlers"] == [
+    assert config_migration["generated_text_views"] == [
         {
-            "primitive": "workspace.config.emit",
-            "function": "_emit_workspace_config_output",
-            "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-            "implementation": "config_output",
+            "primitive": "output.emit",
+            "view_ids": [
+                "config.selected-output.text",
+                "config.tiny.text",
+                "config.compact.text",
+                "config.full.text",
+            ],
+            "generated_operation_paths": [
+                "generated/workspace/python/operations/config.report.json",
+                "generated/workspace/typescript/resources/operations/config.report.json",
+            ],
+            "forbidden_primitives": ["workspace.config.emit"],
         }
     ]
 
@@ -750,7 +758,7 @@ def test_ordinary_command_migration_inventory_fails_closed_when_generated_comman
     assert len(missing_errors) >= 2
 
 
-def test_ordinary_command_migration_inventory_fails_closed_when_generated_handler_drifts() -> None:
+def test_ordinary_command_migration_inventory_fails_closed_when_generated_text_view_drifts() -> None:
     errors = _checker_case_errors(
         """
         inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
@@ -759,13 +767,13 @@ def test_ordinary_command_migration_inventory_fails_closed_when_generated_handle
             for item in inventory["ordinary_command_migration"]["representative_migrations"]
             if item["id"] == "root-config-selected-output"
         )
-        migration["generated_runtime_handlers"][0]["function"] = "_emit_workspace_operation_output"
+        migration["generated_text_views"][0]["view_ids"].append("config.missing.text")
         checker.python_runtime_projection_inventory_manifest = lambda: inventory
         _emit({"errors": checker._validate_ordinary_command_migration_inventory()})
         """
     )
 
-    assert any("workspace.config.emit" in error and "_emit_workspace_config_output" in error for error in errors)
+    assert any("output.emit text_views missing id(s): config.missing.text" in error for error in errors)
 
 
 def test_runtime_semantic_exceptions_registry_is_current() -> None:

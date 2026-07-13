@@ -3754,7 +3754,7 @@
           "workspace.target-root.resolve",
           "workspace.config.load",
           "payload.project",
-          "workspace.config.emit"
+          "output.emit"
         ]
       },
       "schemas": {
@@ -5835,12 +5835,6 @@
             "implementation": "json_output_with_source_fallback",
             "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
             "selected_output_kind": "agentic-workspace/selected-output/v1"
-          },
-          {
-            "function": "_emit_workspace_config_output",
-            "implementation": "config_output",
-            "selected_output_kind": "agentic-workspace/selected-output/v1",
-            "tiny_config_kind": "agentic-workspace/config-tiny/v1"
           }
         ],
         "module_file": "primitives.workspace_runtime",
@@ -5930,12 +5924,6 @@
           "handler": "runtime_handler",
           "import_module": "agentic_workspace.workspace_runtime_primitives",
           "primitive": "output.emit"
-        },
-        {
-          "function": "_emit_workspace_config_output",
-          "handler": "runtime_handler",
-          "import_module": "agentic_workspace.workspace_runtime_primitives",
-          "primitive": "workspace.config.emit"
         }
       ],
       "initial_values": [

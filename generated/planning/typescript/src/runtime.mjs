@@ -272,10 +272,14 @@ function manifestPathList(value, source) {
   });
 }
 
-function emitOutput(values) {
+function emitOutput(values, args = {}) {
   const result = values.result;
   if (String(values.format ?? 'text') === 'json') return `${JSON.stringify(result, null, 2)}
 `;
+  if (isObject(result)) {
+    const declaredView = emitDeclaredTextView(result, args.text_views ?? []);
+    if (declaredView !== null) return declaredView;
+  }
   if (!isObject(result)) return `${result}
 `;
   if (Array.isArray(result.files) && result.files.every((item) => typeof item === 'string')) return `${result.files.join('\n')}
@@ -284,6 +288,114 @@ function emitOutput(values) {
   for (const action of (Array.isArray(result.actions) ? result.actions : [])) lines.push(`- ${action.path ?? action.id ?? action.kind}`);
   return `${lines.join('\n').trimEnd()}
 `;
+}
+
+function emitDeclaredTextView(result, views) {
+  if (views === null || views === undefined) return null;
+  if (!Array.isArray(views)) throw new RuntimeError('output.emit text_views must be a list');
+  let defaultView = null;
+  for (const view of views) {
+    if (!isObject(view)) throw new RuntimeError('output.emit text_views entries must be objects');
+    if (view.default) defaultView = view;
+    if (declaredTextViewMatches(result, view)) return renderDeclaredTextView(result, view);
+  }
+  return defaultView ? renderDeclaredTextView(result, defaultView) : null;
+}
+
+function declaredTextViewMatches(result, view) {
+  const match = view.match ?? {};
+  if (!isObject(match) || Object.keys(match).length === 0) return false;
+  for (const [path, expected] of Object.entries(match)) {
+    const [found, actual] = fieldByPath(result, path);
+    if (!found || actual !== expected) return false;
+  }
+  return true;
+}
+
+function renderDeclaredTextView(result, view) {
+  return `${renderDeclaredTextLines(view.lines ?? [], result, result).join('\n').trimEnd()}
+`;
+}
+
+function renderDeclaredTextLines(lines, current, root) {
+  if (!Array.isArray(lines)) throw new RuntimeError('output.emit text view lines must be a list');
+  return lines.flatMap((line) => renderDeclaredTextLine(line, current, root));
+}
+
+function renderDeclaredTextLine(line, current, root) {
+  if (typeof line === 'string') return [renderDeclaredTextTemplate(line, current, root)];
+  if (!isObject(line)) throw new RuntimeError('output.emit text view lines must be strings or objects');
+  if (Object.prototype.hasOwnProperty.call(line, 'when')) {
+    const [found, value] = declaredTextValue(line.when, current, root);
+    return found && declaredTextTruthy(value) ? renderDeclaredTextLines(line.lines ?? [], current, root) : [];
+  }
+  if (Object.prototype.hasOwnProperty.call(line, 'for_each')) {
+    const spec = line.for_each;
+    if (!isObject(spec)) throw new RuntimeError('output.emit for_each line must be an object');
+    const [found, value] = declaredTextValue(spec.path ?? '', current, root);
+    if (!found || value === null || value === undefined || value === '') return [];
+    if (!Array.isArray(value)) throw new RuntimeError('output.emit for_each path must resolve to a list');
+    const nestedLines = spec.lines ?? [String(spec.template ?? '{}')];
+    return value.flatMap((item) => renderDeclaredTextLines(nestedLines, item, root));
+  }
+  if (Object.prototype.hasOwnProperty.call(line, 'json')) {
+    const [found, value] = declaredTextValue(line.json, current, root);
+    return JSON.stringify(found ? value : null, null, 2).split('\n');
+  }
+  if (Object.prototype.hasOwnProperty.call(line, 'template')) return [renderDeclaredTextTemplate(String(line.template), current, root)];
+  if (Object.prototype.hasOwnProperty.call(line, 'literal')) return [String(line.literal)];
+  throw new RuntimeError('output.emit text view line object must declare when, for_each, json, template, or literal');
+}
+
+function renderDeclaredTextTemplate(template, current, root) {
+  return String(template).replace(/\{([^}]+)\}/g, (_match, token) => {
+    const [found, value] = declaredTextPlaceholderValue(String(token), current, root);
+    return declaredTextFormat(found ? value : '');
+  });
+}
+
+function declaredTextPlaceholderValue(token, current, root) {
+  const parts = String(token).split('|');
+  let [found, value] = declaredTextValue(parts[0], current, root);
+  for (const rawFilter of parts.slice(1)) {
+    const separatorIndex = rawFilter.indexOf(':');
+    const name = separatorIndex === -1 ? rawFilter : rawFilter.slice(0, separatorIndex);
+    const argument = separatorIndex === -1 ? '' : rawFilter.slice(separatorIndex + 1);
+    if (name === 'len') {
+      value = Array.isArray(value) ? value.length : 0;
+      found = true;
+    } else if (name === 'join') {
+      if (Array.isArray(value)) value = value.map(String).join(argument);
+      found = true;
+    } else if (name === 'empty') {
+      if (!declaredTextTruthy(value)) value = argument;
+      found = true;
+    } else {
+      throw new RuntimeError(`unsupported output.emit text view filter: ${name}`);
+    }
+  }
+  return [found, value];
+}
+
+function declaredTextValue(path, current, root) {
+  const pathText = String(path ?? '');
+  if (pathText === '' || pathText === '.') return [true, current];
+  if (pathText.startsWith('root.')) return fieldByPath(root, pathText.slice('root.'.length));
+  if (isObject(current)) {
+    const [found, value] = fieldByPath(current, pathText);
+    if (found) return [true, value];
+  }
+  return fieldByPath(root, pathText);
+}
+
+function declaredTextTruthy(value) {
+  return Boolean(value);
+}
+
+function declaredTextFormat(value) {
+  if (typeof value === 'boolean') return value ? 'True' : 'False';
+  if (value === null || value === undefined) return '';
+  return String(value);
 }
 
 function limitedViewValue(value, limit) {
@@ -394,7 +506,7 @@ function executePrimitive(primitive, values, args, operationId) {
   if (primitive === 'payload.assemble') return assemblePayload(values, args);
   if (primitive === 'payload.view') return viewPayload(values, args);
   if (primitive === 'payload.project') return projectPayload(values, args);
-  if (primitive === 'output.emit') return emitOutput(values);
+  if (primitive === 'output.emit') return emitOutput(values, args);
   if (primitive === 'transaction.plan') return transactionPlan(values, args);
   return executeHostPrimitive(primitive, values, args, operationId);
 }

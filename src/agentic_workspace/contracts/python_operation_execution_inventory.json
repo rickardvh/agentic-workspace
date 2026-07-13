@@ -26,9 +26,9 @@
         "workspace.config.load"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow, exact selected-output projection, config JSON/tiny/compact/full/selected output emission, and direct generated callable conformance for config.selected-output.success are generated; the package-domain primitive step still owns config loading, local override state, module descriptor validation, and payload assembly.",
+      "runtime_boundary_reason": "Operation dataflow, exact selected-output projection, config JSON/tiny/compact/full/selected output emission through output.emit text_views, and direct generated callable conformance for config.selected-output.success are generated; the package-domain primitive step still owns config loading, local override state, module descriptor validation, and payload assembly.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, payload.project owns exact selector projection, and _emit_workspace_config_output owns config JSON/tiny/compact/full/selected text rendering from values['result']. config.selected-output.success proves selected-output behavior through generated Python and TypeScript operation callables instead of wrapper-smoke CLI execution, and Python generated command conformance proves the regenerated config emitter at the CLI boundary. workspace.config.load remains the explicit package-boundary call for config layering and payload assembly. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, payload.project owns exact selector projection, and output.emit consumes schema-backed config text_views declared in operation IR for JSON/tiny/compact/full/selected text. config.selected-output.success proves selected-output behavior through generated Python and TypeScript operation callables instead of wrapper-smoke CLI execution, and Python generated command conformance proves the regenerated config emitter at the CLI boundary. workspace.config.load remains the explicit package-boundary call for config layering and payload assembly. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt."
     },
     {
       "operation_id": "checkpoint.write",
@@ -1135,10 +1135,15 @@
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.decomposition-create.lifecycle.json",
       "primitive_executor": "command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": ["planning.decomposition-create.apply", "module-result text/json compatibility formatting"],
+      "hand_owned_runtime_code": [
+        "planning.decomposition-create.apply",
+        "module-result text/json compatibility formatting"
+      ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "planning.decomposition-create.lifecycle.dry-run.process",
-      "domain_runtime_primitive_refs": ["planning.decomposition-create.apply"],
+      "domain_runtime_primitive_refs": [
+        "planning.decomposition-create.apply"
+      ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Operation dataflow is generated while Planning decomposition mutation policy and validation remain package-specific runtime behavior.",
       "what_would_make_portable_later": "Render and prove the operation-call adapter while retaining the semantic mutation primitive.",

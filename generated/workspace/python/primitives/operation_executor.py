@@ -119,7 +119,6 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
                 'system_intent.mirror.read_or_create': _handle_system_intent_mirror_read_or_create,
                 'system_intent.result.emit': _handle_system_intent_result_emit,
                 'output.emit': _handle_output_emit,
-                'workspace.config.emit': _handle_workspace_config_emit,
             },
         )
     except PrimitiveExecutionError as exc:
@@ -196,9 +195,3 @@ def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], conte
     from .workspace_runtime import _emit_workspace_operation_output
 
     return _emit_workspace_operation_output(values, arguments, context)
-
-
-def _handle_workspace_config_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .workspace_runtime import _emit_workspace_config_output
-
-    return _emit_workspace_config_output(values, arguments, context)
