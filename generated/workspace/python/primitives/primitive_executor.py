@@ -637,7 +637,7 @@ def _emit_declared_text_view(result: dict[str, Any], views: Any) -> str | None:
         declared_views.append(view)
     default_view: Mapping[str, Any] | None = None
     for view in declared_views:
-        if bool(view.get("default")):
+        if view.get("default") is True:
             default_view = view
         if _declared_text_view_matches(result, view):
             return _render_declared_text_view(result, view)
@@ -662,6 +662,8 @@ def _declared_text_view_matches(result: dict[str, Any], view: Mapping[str, Any])
 def _validate_declared_text_view(view: Mapping[str, Any]) -> None:
     if not set(view).issubset({"id", "match", "default", "lines"}):
         raise PrimitiveExecutionError("output.emit text view has unsupported fields")
+    if "default" in view and not isinstance(view["default"], bool):
+        raise PrimitiveExecutionError("output.emit text view default must be a boolean")
     match = view.get("match", {})
     if "match" in view and not isinstance(match, Mapping):
         raise PrimitiveExecutionError("output.emit text view match must be an object")

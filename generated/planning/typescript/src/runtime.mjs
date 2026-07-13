@@ -299,7 +299,7 @@ function emitDeclaredTextView(result, views) {
   }
   let defaultView = null;
   for (const view of views) {
-    if (view.default) defaultView = view;
+    if (view.default === true) defaultView = view;
     if (declaredTextViewMatches(result, view)) return renderDeclaredTextView(result, view);
   }
   return defaultView ? renderDeclaredTextView(result, defaultView) : null;
@@ -319,6 +319,7 @@ function declaredTextViewMatches(result, view) {
 function validateDeclaredTextView(view) {
   const allowedViewKeys = new Set(['id', 'match', 'default', 'lines']);
   if (Object.keys(view).some((key) => !allowedViewKeys.has(key))) throw new RuntimeError('output.emit text view has unsupported fields');
+  if (Object.prototype.hasOwnProperty.call(view, 'default') && typeof view.default !== 'boolean') throw new RuntimeError('output.emit text view default must be a boolean');
   const match = view.match ?? {};
   if (Object.prototype.hasOwnProperty.call(view, 'match') && !isObject(match)) throw new RuntimeError('output.emit text view match must be an object');
   for (const expected of Object.values(match)) {
