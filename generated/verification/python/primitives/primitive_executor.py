@@ -17,6 +17,7 @@ import json
 import tomllib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, is_dataclass
+from numbers import Real
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
@@ -642,6 +643,8 @@ def _declared_text_view_matches(result: dict[str, Any], view: Mapping[str, Any])
     if not isinstance(match, Mapping) or not match:
         return False
     for path, expected in match.items():
+        if not _is_declared_text_scalar(expected):
+            raise PrimitiveExecutionError("output.emit text view match values must be JSON scalars")
         found, actual = _field_by_path(result, str(path))
         if not found or actual != expected:
             return False
@@ -693,7 +696,7 @@ def _render_declared_text_line(line: Any, *, current: Any, root: dict[str, Any])
         found, value = _declared_text_value(line["json"], current=current, root=root)
         if not found:
             value = None
-        return json.dumps(_plain_output_result(value), indent=2).splitlines()
+        return json.dumps(_plain_output_result(value), indent=2, ensure_ascii=False).splitlines()
     if "template" in line:
         return [_render_declared_text_template(str(line["template"]), current=current, root=root)]
     if "literal" in line:
@@ -734,8 +737,14 @@ def _declared_text_placeholder_value(token: str, *, current: Any, root: dict[str
             found = True
         elif name == "join":
             separator = argument
-            if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
-                value = separator.join(str(item) for item in value)
+            if not found or value is None:
+                value = ""
+            elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+                if not all(_is_declared_text_scalar(item) for item in value):
+                    raise PrimitiveExecutionError("output.emit join filter requires a list of JSON scalars")
+                value = separator.join(_declared_text_format_scalar(item) for item in value)
+            else:
+                raise PrimitiveExecutionError("output.emit join filter requires a list")
             found = True
         elif name == "empty":
             if not _declared_text_truthy(value):
@@ -764,10 +773,24 @@ def _declared_text_truthy(value: Any) -> bool:
 
 
 def _declared_text_format(value: Any) -> str:
+    if not _is_declared_text_scalar(value):
+        raise PrimitiveExecutionError("output.emit text view placeholders require JSON scalars; use json lines for arrays or objects")
+    return _declared_text_format_scalar(value)
+
+
+def _is_declared_text_scalar(value: Any) -> bool:
+    return value is None or isinstance(value, str | bool | int | float)
+
+
+def _declared_text_format_scalar(value: Any) -> str:
     if isinstance(value, bool):
-        return "True" if value else "False"
+        return "true" if value else "false"
     if value is None:
         return ""
+    if isinstance(value, Real) and not isinstance(value, bool):
+        if isinstance(value, float) and value.is_integer():
+            return str(int(value))
+        return json.dumps(value, ensure_ascii=False, allow_nan=False)
     return str(value)
 
 

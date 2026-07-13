@@ -306,6 +306,7 @@ function declaredTextViewMatches(result, view) {
   const match = view.match ?? {};
   if (!isObject(match) || Object.keys(match).length === 0) return false;
   for (const [path, expected] of Object.entries(match)) {
+    if (!declaredTextIsScalar(expected)) throw new RuntimeError('output.emit text view match values must be JSON scalars');
     const [found, actual] = fieldByPath(result, path);
     if (!found || actual !== expected) return false;
   }
@@ -348,7 +349,7 @@ function renderDeclaredTextLine(line, current, root) {
 }
 
 function renderDeclaredTextTemplate(template, current, root) {
-  return String(template).replace(/\{([^}]+)\}/g, (_match, token) => {
+  return String(template).replace(/\{([^}]*)\}/g, (_match, token) => {
     const [found, value] = declaredTextPlaceholderValue(String(token), current, root);
     return declaredTextFormat(found ? value : '');
   });
@@ -365,7 +366,14 @@ function declaredTextPlaceholderValue(token, current, root) {
       value = Array.isArray(value) ? value.length : 0;
       found = true;
     } else if (name === 'join') {
-      if (Array.isArray(value)) value = value.map(String).join(argument);
+      if (!found || value === null || value === undefined) {
+        value = '';
+      } else if (Array.isArray(value)) {
+        if (!value.every(declaredTextIsScalar)) throw new RuntimeError('output.emit join filter requires a list of JSON scalars');
+        value = value.map(declaredTextFormatScalar).join(argument);
+      } else {
+        throw new RuntimeError('output.emit join filter requires a list');
+      }
       found = true;
     } else if (name === 'empty') {
       if (!declaredTextTruthy(value)) value = argument;
@@ -389,11 +397,24 @@ function declaredTextValue(path, current, root) {
 }
 
 function declaredTextTruthy(value) {
+  if (value === null || value === undefined) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (isObject(value)) return Object.keys(value).length > 0;
+  if (typeof value === 'string') return value.length > 0;
   return Boolean(value);
 }
 
 function declaredTextFormat(value) {
-  if (typeof value === 'boolean') return value ? 'True' : 'False';
+  if (!declaredTextIsScalar(value)) throw new RuntimeError('output.emit text view placeholders require JSON scalars; use json lines for arrays or objects');
+  return declaredTextFormatScalar(value);
+}
+
+function declaredTextIsScalar(value) {
+  return value === null || value === undefined || ['string', 'number', 'boolean'].includes(typeof value);
+}
+
+function declaredTextFormatScalar(value) {
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
   if (value === null || value === undefined) return '';
   return String(value);
 }
