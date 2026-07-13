@@ -13752,16 +13752,22 @@ def _final_response_admission_route_payload(
     final_authorized = bool(_as_dict(terminal_outcome_contract).get("final_response_authorized"))
     return {
         "kind": "agentic-workspace/final-response-admission-route/v1",
-        "status": "not_required" if final_authorized else "host_admission_required",
+        "status": "not_required" if final_authorized else "host_integration_required",
         "rendering_status": status,
         "terminal_state": terminal_state,
         "host_operation": "final-response.admit",
         "command_template": command,
         "attempt_source": "host-supplied-model-authored-final-response",
         "checkpoint_path": LOCAL_CHAT_CHECKPOINT_PATH.as_posix(),
+        "host_boundary_integrated": final_authorized,
+        "ordinary_host_path_unavoidable": final_authorized,
+        "issue_2239_closure_ready": final_authorized,
+        "integration_gap": ""
+        if final_authorized
+        else "No in-repo Codex/agent host wrapper invokes final-response.admit before emitting a real model response.",
         "rule": (
-            "Rendering only advertises the host admission boundary. The host must pass the actual "
-            "model-authored final response to final-response admit before final custody can transfer."
+            "Rendering only advertises the host admission boundary. Until an embedding host invokes this operation on the "
+            "actual model-authored response, it is not an unavoidable custody-transfer boundary and must not close #2239."
         ),
     }
 
@@ -18553,6 +18559,10 @@ def _terminal_outcome_contract_payload(
             "auto_resume_action": required_next_action or ("continue-current-work" if state == "CONTINUE" else ""),
             "progress_without_yield": state == "CONTINUE",
             "compaction_resume_safe": state == "CONTINUE",
+            "enforcement_maturity": "adapter-only-until-host-integrated" if not final_response_authorized else "not_required",
+            "ordinary_host_path_unavoidable": bool(final_response_authorized),
+            "host_boundary_integrated": bool(final_response_authorized),
+            "issue_2239_closure_ready": bool(final_response_authorized),
             "multi_slice_continuation": {
                 "status": "preserved" if state == "CONTINUE" else "not_required",
                 "resume_fields": ["state", "required_next_action", "safe_continuation_option_ids", "blocker_qualification"],

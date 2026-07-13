@@ -31,7 +31,7 @@
       "id": "final-response.admit",
       "path": "operations/final-response.admit.json",
       "command": "final-response",
-      "migration_status": "draft-contract-only"
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "work-thread.prune",

@@ -15,6 +15,7 @@
   "guards": [
     "Rendering closeout_trust must not submit a fabricated final response.",
     "Reject terminal finals while the terminal outcome contract state is CONTINUE.",
+    "This operation is not an unavoidable host boundary until an embedding host invokes it before emitting model-authored final text.",
     "Persist only ignored local checkpoint state under .agentic-workspace/local/.",
     "Do not treat local admission slices as closure evidence."
   ],
@@ -79,7 +80,7 @@
     "outside_repo_writes": "forbidden",
     "requires_repo": false
   },
-  "migration_status": "draft-contract-only",
+  "migration_status": "runtime-consumed",
   "output": {
     "kind": "text-or-json",
     "schema_ref": "schemas/final_response_admission_result.schema.json"
@@ -87,7 +88,8 @@
   "proof": [
     "operation contract validates against operation.schema.json",
     "final-response admission tests execute the generated CLI command across multiple slices",
-    "local checkpoint schema accepts persisted admission slices without making them completion evidence"
+    "local checkpoint schema accepts persisted admission slices without making them completion evidence",
+    "closeout rendering exposes host integration as required and not closure-ready when final-response admit is only advertised"
   ],
   "reads": [
     {
@@ -127,7 +129,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Admit or reject a model-authored final response at the host boundary.",
+  "summary": "Admit or reject a model-authored final response when an embedding host submits it at the response boundary.",
   "writes": [
     {
       "required": true,
