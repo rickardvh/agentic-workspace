@@ -980,11 +980,13 @@
         "option_group_manifest": "cli_option_groups.json",
         "program": "agentic-workspace",
         "subcommands": [
+          "select",
           "prune"
         ]
       },
       "conformance_refs": [
-        "work-thread.prune.process"
+        "work-thread.prune.process",
+        "work-thread.select.process"
       ],
       "effect_hints": {
         "destructive": true,

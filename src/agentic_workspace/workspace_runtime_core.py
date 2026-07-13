@@ -23,6 +23,7 @@ import subprocess
 import sys
 import time
 import tomllib
+import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta, timezone
@@ -32667,16 +32668,20 @@ def _local_work_thread_record_projection(
     if stale_reasons == ["different-branch"]:
         status = "other-branch"
     planning_refs = refs["planning"]
+    select_command = _command_with_cli_invoke(
+        command=f"agentic-workspace work-thread select --thread-id {shlex.quote(thread_id)} --target . --format json",
+        cli_invoke=cli_invoke,
+    )
     select_action = {
         "id": "select-thread",
-        "operation": "write-local-work-thread-index",
-        "path": LOCAL_WORK_THREAD_INDEX_PATH.as_posix(),
-        "payload": {"selected_thread_id": thread_id},
+        "operation": "work-thread.select",
+        "command": select_command,
+        "run": select_command,
         "postcondition": _command_with_cli_invoke(
             command="agentic-workspace start --target . --select work_threads --format json",
             cli_invoke=cli_invoke,
         ),
-        "rule": "Selection writes only the ignored local work-thread index; durable claims still require Planning, issue, PR, or proof evidence.",
+        "rule": "Selection uses the supported local work-thread writer; durable claims still require Planning, issue, PR, or proof evidence.",
     }
     restore_command = f"git switch {shlex.quote(branch)}" if branch and branch != current.get("branch") else ""
     restore_action = {
@@ -32923,7 +32928,10 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
                 cli_invoke=cli_invoke,
             ),
             "selected_index_path": LOCAL_WORK_THREAD_INDEX_PATH.as_posix(),
-            "select_operation": "write selected_thread_id to the ignored local index, then rerun the detail command",
+            "select_operation": _command_with_cli_invoke(
+                command="agentic-workspace work-thread select --thread-id <thread-id> --target . --format json",
+                cli_invoke=cli_invoke,
+            ),
             "restore_operation": "run the selected thread's restore command when it names a different local branch",
             "proceed_operation": "run the selected thread's proceed command only after durable owners are reread",
             "rule": "Use local thread facts to choose a resume handle; durable claims still require durable sources.",
@@ -32950,6 +32958,67 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
 def _local_work_threads_default_visible(work_threads: dict[str, Any]) -> bool:
     status = str(work_threads.get("status") or "").strip()
     return status in {"clear-match", "ambiguous", "stale", "selected-missing", "unreadable"}
+
+
+def _select_local_work_thread(*, target_root: Path, thread_id: str, cli_invoke: str) -> dict[str, Any]:
+    selected_id = thread_id.strip()
+    if not selected_id:
+        raise WorkspaceUsageError("work-thread select requires a thread id")
+    projection = _local_work_threads_projection(target_root=target_root, cli_invoke=cli_invoke)
+    candidates = [
+        *[item for item in _list_payload(projection.get("current_matches")) if isinstance(item, dict)],
+        *[item for item in _list_payload(projection.get("stale_threads")) if isinstance(item, dict)],
+        *[item for item in _list_payload(projection.get("other_threads")) if isinstance(item, dict)],
+    ]
+    selected_thread = _as_dict(projection.get("selected_thread"))
+    if selected_thread:
+        candidates.append(selected_thread)
+    checkpoint_bridge = _as_dict(projection.get("checkpoint_bridge"))
+    if checkpoint_bridge.get("thread_id") == selected_id:
+        candidates.append({"id": selected_id, "source": "local_chat_checkpoint"})
+    candidate_ids = _dedupe([str(item.get("id") or "").strip() for item in candidates if isinstance(item, dict)])
+    if selected_id not in candidate_ids:
+        raise WorkspaceUsageError(
+            f"Unknown local work-thread id: {selected_id}. Run `agentic-workspace start --select work_threads --format json` first."
+        )
+    index_path = _local_work_thread_index_path(target_root)
+    existing: dict[str, Any] = {}
+    if index_path.is_file():
+        try:
+            loaded = json.loads(index_path.read_text(encoding="utf-8-sig"))
+            existing = loaded if isinstance(loaded, dict) else {}
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            existing = {}
+    previous = str(existing.get("selected_thread_id") or "").strip()
+    updated = {
+        **existing,
+        "kind": "agentic-workspace/local-work-thread-index/v1",
+        "selected_thread_id": selected_id,
+        "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+    }
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = index_path.with_name(f"{index_path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        temporary.write_text(json.dumps(serialise_value(updated), indent=2) + "\n", encoding="utf-8")
+        os.replace(temporary, index_path)
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+    return {
+        "kind": "agentic-workspace/local-work-thread-select/v1",
+        "status": "selected",
+        "thread_id": selected_id,
+        "previous_thread_id": previous,
+        "path": LOCAL_WORK_THREAD_INDEX_PATH.as_posix(),
+        "preserved_keys": sorted(key for key in existing if key not in {"selected_thread_id", "updated_at"}),
+        "postcondition": _command_with_cli_invoke(
+            command="agentic-workspace start --target . --select work_threads --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "rule": "Selection writes only the ignored local work-thread index; durable claims still require Planning, issue, PR, or proof evidence.",
+    }
 
 
 def _local_chat_checkpoint_record(
@@ -43585,9 +43654,17 @@ def _run_work_thread_prune_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="work-thread", target_root=target_root)
     work_thread_command = getattr(args, "work_thread_command", None)
+    config = _load_workspace_config(target_root=target_root)
+    if work_thread_command == "select":
+        payload = _select_local_work_thread(
+            target_root=target_root,
+            thread_id=str(getattr(args, "thread_id", "") or ""),
+            cli_invoke=config.cli_invoke,
+        )
+        _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
+        return 0
     if work_thread_command != "prune":
         raise WorkspaceUsageError(f"Unsupported work-thread command: {work_thread_command}")
-    config = _load_workspace_config(target_root=target_root)
     payload = _prune_local_work_threads(
         target_root=target_root,
         thread_ids=list(getattr(args, "thread_id", []) or []),

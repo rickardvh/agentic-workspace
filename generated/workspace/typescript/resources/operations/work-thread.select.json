@@ -1,0 +1,121 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "work-thread",
+    "format_option": "format",
+    "subcommand": "select"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Select only a local work-thread id currently projected by work_threads or the checkpoint fallback.",
+    "Preserve existing index metadata while replacing selected_thread_id.",
+    "Selection is local advisory state only and never proves task completion."
+  ],
+  "id": "work-thread.select",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "thread_id",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "work-thread.select"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "draft-contract-only",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/local_work_thread_select_result.schema.json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "local work-thread select tests validate stdout against local_work_thread_select_result.schema.json",
+    "select tests prove A to B to A round-trip and index key preservation"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/work-threads/*.json"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/chat-checkpoint.json"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/work-threads/index.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Validate the requested local work-thread id and update the ignored local index.",
+      "id": "select_local_thread",
+      "uses": "workspace.local-work-thread.select"
+    },
+    {
+      "description": "Emit the select result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Select an ignored local work-thread continuation handle through the supported local index writer.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/local/work-threads/index.json",
+      "when": "select the local work-thread cursor atomically"
+    }
+  ]
+}

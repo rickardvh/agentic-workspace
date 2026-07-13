@@ -16,6 +16,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "work-thread.select.process",
+      "operation_id": "work-thread.select",
+      "path": "conformance/work-thread.select.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "session-log.manage.process",
       "operation_id": "session-log.manage",
       "path": "conformance/session-log.manage.process.json",

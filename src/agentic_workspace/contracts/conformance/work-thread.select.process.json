@@ -1,0 +1,85 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "work-thread.select.process",
+  "operation_id": "work-thread.select",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "work-thread",
+      "select",
+      "--target",
+      ".",
+      "--thread-id",
+      "stale-thread",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "stale-local-work-thread",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n",
+        ".agentic-workspace/local/work-threads/stale-thread.json": "{\"kind\":\"agentic-workspace/local-work-thread/v1\",\"id\":\"stale-thread\",\"label\":\"Stale thread\",\"created_at\":\"2026-01-01T00:00:00+00:00\",\"updated_at\":\"2026-01-01T00:00:00+00:00\",\"refs\":{\"issues\":[\"#1992\"],\"prs\":[],\"planning\":[]},\"durable_sources\":[\"https://github.com/rickardvh/agentic-workspace/issues/1992\"],\"observations\":{\"branch\":{\"value\":\"old-branch\",\"source\":\"fixture\",\"observed_at\":\"2026-01-01T00:00:00+00:00\"},\"worktree\":{\"value\":\".\",\"source\":\"fixture\",\"observed_at\":\"2026-01-01T00:00:00+00:00\"},\"head_commit\":{\"value\":\"old-head\",\"source\":\"fixture\",\"observed_at\":\"2026-01-01T00:00:00+00:00\"}},\"proof_state\":{\"status\":\"historical-local-summary\",\"last_proof\":[\"fixture proof\"],\"stale_if\":[\"HEAD changed after observed_at\"],\"rule\":\"Do not treat local proof as closure evidence; re-run proof before completion claims.\"},\"next_safe_action\":{\"command\":\"agentic-workspace start --target . --select work_threads --format json\"},\"limits\":{\"local_only\":true,\"gitignored\":true,\"advisory\":true,\"not_closure_evidence\":true,\"no_raw_transcripts\":true,\"no_secrets\":true,\"no_priority_status_assignment\":true,\"durable_decisions_require_durable_source\":true}}"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "agentic-workspace/local-work-thread-select/v1"
+        },
+        {
+          "path": [
+            "status"
+          ],
+          "equals": "selected"
+        },
+        {
+          "path": [
+            "thread_id"
+          ],
+          "equals": "stale-thread"
+        },
+        {
+          "path": [
+            "path"
+          ],
+          "equals": ".agentic-workspace/local/work-threads/index.json"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [
+        ".agentic-workspace/local/work-threads/index.json"
+      ],
+      "required_paths": [
+        ".git/.keep",
+        "README.md",
+        ".agentic-workspace/local/work-threads/stale-thread.json",
+        ".agentic-workspace/local/work-threads/index.json"
+      ],
+      "forbidden_paths": []
+    },
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

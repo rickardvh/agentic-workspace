@@ -1,0 +1,93 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "work-thread.select",
+  "command_surface": {
+    "command": "work-thread",
+    "subcommand": "select",
+    "format_option": "format"
+  },
+  "summary": "Select an ignored local work-thread continuation handle through the supported local index writer.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "thread_id",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/local_work_thread_select_result.schema.json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/local/work-threads/*.json",
+      "required": false
+    },
+    {
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "required": false
+    },
+    {
+      "surface": ".agentic-workspace/local/work-threads/index.json",
+      "required": false
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/local/work-threads/index.json",
+      "required": true,
+      "when": "select the local work-thread cursor atomically"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "select_local_thread",
+      "uses": "workspace.local-work-thread.select",
+      "description": "Validate the requested local work-thread id and update the ignored local index."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the select result."
+    }
+  ],
+  "guards": [
+    "Select only a local work-thread id currently projected by work_threads or the checkpoint fallback.",
+    "Preserve existing index metadata while replacing selected_thread_id.",
+    "Selection is local advisory state only and never proves task completion."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "local work-thread select tests validate stdout against local_work_thread_select_result.schema.json",
+    "select tests prove A to B to A round-trip and index key preservation"
+  ],
+  "migration_status": "draft-contract-only"
+}

@@ -9,7 +9,7 @@ import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
 const supportedCommands = new Set(["checkpoint", "config", "defaults", "doctor", "external-intent", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.prune"]);
+const nativeOperationIds = new Set(["checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.prune", "work-thread.select"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -2261,6 +2261,42 @@ const commandDefinitions = [
       ],
       "subcommand_dest": "work_thread_command",
       "subcommands": [
+        {
+          "help": "Select an ignored local work-thread continuation handle.",
+          "name": "select",
+          "operation_ref": {
+            "id": "work-thread.select",
+            "path": "operations/work-thread.select.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--thread-id"
+              ],
+              "help": "Local work-thread id to select.",
+              "name": "thread_id"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
         {
           "help": "Prune ignored local work-thread records already classified as safe candidates.",
           "name": "prune",

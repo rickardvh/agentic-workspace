@@ -69,6 +69,26 @@
       "generic_behavior_audit": "Classified as package-specific-judgment; generated command surfaces own parser and help projection while workspace runtime owns local work-thread prune eligibility, local-only path safety, and non-evidence policy."
     },
     {
+      "operation_id": "work-thread.select",
+      "program": "agentic-workspace",
+      "command": "work-thread",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/work-thread.select.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "workspace.local-work-thread.select",
+        "atomic local index write",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "work-thread.select.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Local work-thread selection applies package-specific candidate validation, ignored-local index preservation, atomic write semantics, and non-evidence advisory-state policy.",
+      "what_would_make_portable_later": "Represent local selection index merge/write behavior as schema-backed IR steps once local-only work-thread safety policy can be expressed without package-specific runtime judgment.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated command surfaces own parser and help projection while workspace runtime owns local work-thread select eligibility, ignored-local index preservation, atomic write, and non-evidence policy."
+    },
+    {
       "operation_id": "session-log.manage",
       "program": "agentic-workspace",
       "command": "session-log",

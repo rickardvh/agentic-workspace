@@ -1431,6 +1431,18 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; prune safety depends on AW-owned work-thread projection and local-only authority boundaries."
     },
     {
+      "id": "workspace.local-work-thread.select",
+      "summary": "Select the ignored local work-thread cursor under .agentic-workspace/local/work-threads/index.json.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Local work-thread selection validates AW-specific continuation candidates and preserves ignored-local advisory index semantics.",
+      "conformance_ref": "work-thread.select.process plus workspace work-thread tests",
+      "migration_path": "Keep as workspace runtime until local-only selection policy can be represented by portable atomic file-write primitives with equivalent candidate validation.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; select safety depends on AW-owned work-thread projection and local-only authority boundaries."
+    },
+    {
       "id": "workspace.session-log.manage",
       "summary": "Read, rotate, or annotate ignored local AW session logs under .agentic-workspace/local/.",
       "kind": "workspace-runtime",

@@ -5603,6 +5603,7 @@
         "command_manifest": "cli_commands.json",
         "option_group_manifest": "cli_option_groups.json",
         "subcommands": [
+          "select",
           "prune"
         ]
       },
@@ -5670,13 +5671,15 @@
           "dispatch wiring from command id to runtime binding"
         ],
         "runtime_owns": [
+          "local-only work-thread select",
           "local-only work-thread prune",
           "target root validation",
           "output emission"
         ]
       },
       "conformance_refs": [
-        "work-thread.prune.process"
+        "work-thread.prune.process",
+        "work-thread.select.process"
       ]
     },
     {
