@@ -22,6 +22,7 @@ from agentic_workspace.reporting_support import (
     message_economy_payload,
     state_delta_core_payload,
 )
+from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.runtime_source_review import (
     tiny_generated_cli_freshness_payload,
     tiny_runtime_source_edit_review_payload,
@@ -165,9 +166,10 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     requirement_grounding_selected = _selector_requests_requirement_grounding(selected_fields)
     plan_delegation_packet_selected = _selector_requests_plan_delegation_packet(selected_fields)
     test_strategy_check_selected = _selector_requests_test_strategy_check(selected_fields)
+    changed_paths = list(getattr(args, "changed", []) or [])
     full_payload = _implement_payload(
         target_root=target_root,
-        changed_paths=list(getattr(args, "changed", []) or []),
+        changed_paths=changed_paths,
         task_text=task_text,
         include_change_impact=(profile != "tiny" or change_impact_selected),
         include_task_contract=(profile != "tiny" or task_contract_selected),
@@ -216,6 +218,21 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             )
     if getattr(args, "select", None):
         payload = _select_payload_fields(payload, select=getattr(args, "select"), source_command="implement")
+    if changed_paths and not getattr(args, "select", None):
+        transition = record_review_stack_transition(
+            target_root=target_root,
+            phase="review-correction",
+            phase_after="review-proof",
+            command=command_text(
+                "agentic-workspace", ["implement", *sum((["--changed", path] for path in changed_paths), []), "--format", "json"]
+            ),
+            outcome="executed",
+            next_action_id="run-focused-proof",
+            changed_paths=changed_paths,
+            command_exit_code=0,
+        )
+        if transition.get("status") not in {"skipped", ""}:
+            payload["review_stack_transition"] = transition
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 

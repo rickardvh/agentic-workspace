@@ -1,0 +1,297 @@
+{
+  "kind": "planning-execplan/v1",
+  "title": "Issue 2234 review stack routing continuity",
+  "execplan_profile": {
+    "schema": "execplan-profile/v1",
+    "task_shape": "bounded",
+    "required_core": [
+      "kind",
+      "title",
+      "canonical_core",
+      "goal",
+      "non_goals",
+      "active_milestone",
+      "validation_commands",
+      "completion_criteria"
+    ],
+    "optional_sections": [
+      "intent_continuity",
+      "intent_interpretation",
+      "execution_bounds",
+      "stop_conditions",
+      "context_budget",
+      "delegated_judgment",
+      "post_decomposition_delegation"
+    ],
+    "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
+  },
+  "canonical_core": {
+    "requested_outcome": "Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing.",
+    "hard_constraints": "Keep scope bounded to existing PR comment attention, proof reuse, and startup presentation surfaces; do not build a separate review workflow.",
+    "agent_may_decide": "Exact packet shape, compact projection fields, and focused tests for the review-stack routing contract.",
+    "escalate_when": "A correct fix requires live GitHub writes, CI orchestration, parent-issue auto-close, or broad planning framework changes.",
+    "next_action": "Commit the validated change and open the #2234 PR.",
+    "proof_expectations": [
+      "Focused PR comment/proof reuse/runtime mirror tests pass.",
+      "Lint passes for changed runtime and test files.",
+      "AW implement/report validation confirms the changed-path contract remains routable."
+    ],
+    "touched_scope": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "tests/test_workspace_cli.py",
+      ".agentic-workspace/planning/execplans/issue-2234-review-stack-routing.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "completion_criteria": [
+      "Startup exposes current stacked-review phase, dependency order, affected slice, proof manifest, reusable proof receipt state, next action, and closeout route.",
+      "Actionable review findings route to correction and focused proof instead of broad readiness prose.",
+      "Clean stack plus reusable proof routes to closeout while preserving parent boundaries.",
+      "Stale stack state routes to refresh before readiness claims."
+    ],
+    "continuation_owner": "none",
+    "closeout_decision": "pending"
+  },
+  "goal": [
+    "Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing."
+  ],
+  "non_goals": [
+    "No live GitHub writes, automatic review decisions, CI orchestration, parent-issue auto-close, or separate task framework."
+  ],
+  "machine_readable_contract": {
+    "intent": {
+      "outcome": "Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing.",
+      "constraints": "Keep scope bounded to existing PR comment attention, proof reuse, and startup presentation surfaces; do not build a separate review workflow.",
+      "latitude": "Exact packet shape, compact projection fields, and focused tests for the review-stack routing contract.",
+      "escalation": "Escalate when a correct fix requires live GitHub writes, CI orchestration, parent-issue auto-close, or broad planning framework changes."
+    },
+    "execution": {
+      "milestone": "issue-2234-review-stack-routing",
+      "status": "active",
+      "next_step": "Commit the validated change and open the #2234 PR.",
+      "proof": "Focused and broad AW-selected workspace proof passed."
+    },
+    "scope": {
+      "touched": [
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_startup.py",
+        "tests/test_workspace_cli.py"
+      ],
+      "invariants": [
+        "Preserve the planning contract and keep the work bounded to this plan."
+      ]
+    }
+  },
+  "intent_continuity": {
+    "larger intended outcome": "Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing.",
+    "this slice completes the larger intended outcome": "yes",
+    "continuation surface": "none"
+  },
+  "required_continuation": {
+    "required follow-on for the larger intended outcome": "no",
+    "owner surface": "none",
+    "activation trigger": "none"
+  },
+  "iterative_follow_through": {
+    "what this slice enabled": "none yet",
+    "intentionally deferred": "none",
+    "discovered implications": "none yet",
+    "proof achieved now": "broad-proof-passed",
+    "validation still needed": "none before PR packaging",
+    "next likely slice": "continue the current milestone until the completion criteria are met"
+  },
+  "intent_interpretation": {
+    "literal request": "Issue 2234 review stack routing continuity",
+    "inferred intended outcome": "AW should keep the review-stack phase, proof obligation, and closeout route current after startup orientation.",
+    "chosen concrete what": "Add review_stack_continuity to PR comment attention and compact startup output.",
+    "interpretation distance": "low",
+    "review guidance": "Review the packet shape and focused test coverage against #2234 acceptance criteria."
+  },
+  "execution_bounds": {
+    "allowed paths": "Existing PR comment attention, proof reuse guidance, startup projection, focused CLI tests, and active planning state.",
+    "max changed files": "About 13 files including AW payload sync and plan state.",
+    "required validation commands": "uv run pytest tests/test_workspace_cli.py -k \"pr_comment_attention or proof_reuse_guidance or runtime_mirror_consistency\" -q; uv run ruff check src/agentic_workspace/workspace_runtime_core.py src/agentic_workspace/workspace_runtime_primitives.py src/agentic_workspace/workspace_runtime_startup.py tests/test_workspace_cli.py; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json.",
+    "ask-before-refactor threshold": "Ask before broadening beyond the promoted item.",
+    "stop before touching": "Live GitHub write automation, CI orchestration, parent issue auto-close, or broad planning framework changes."
+  },
+  "stop_conditions": {
+    "stop when": "The work no longer matches the promoted item or its completion criteria.",
+    "escalate when boundary reached": "A correct fix requires changing the requested outcome or ownership boundary.",
+    "escalate on scope drift": "Implementation needs files outside the filled execution bounds.",
+    "escalate on proof failure": "The selected proof cannot demonstrate the completion criteria."
+  },
+  "context_budget": {
+    "live working set": "This execplan, the promoted item, and the narrow files needed for the current implementation step.",
+    "recoverable later": "Repo background, historical reviews, and deferred backlog unless compact outputs point there.",
+    "externalize before shift": "Update execution_run, proof_report, finished_run_review, and closeout_distillation before pausing.",
+    "pre-work config pull": "Use compact config/startup/summary outputs before opening raw planning or routing files.",
+    "pre-work memory pull": "Route to the narrowest relevant memory only when the task needs durable repo knowledge.",
+    "tiny resumability note": "Resume from packaging: review_stack_continuity is implemented and AW-selected proof passed.",
+    "context-shift triggers": "Proof failure, scope drift, interruption, handoff, or closeout."
+  },
+  "delegated_judgment": {
+    "requested outcome": "Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing.",
+    "hard constraints": "Keep scope bounded to existing PR comment attention, proof reuse, and startup presentation surfaces.",
+    "agent may decide locally": "Exact packet shape, compact projection fields, and focused tests for the review-stack routing contract.",
+    "escalate when": "A correct fix requires live GitHub writes, CI orchestration, parent-issue auto-close, or broad planning framework changes."
+  },
+  "post_decomposition_delegation": {
+    "status": "pending",
+    "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
+    "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
+    "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
+  },
+  "system_intent_alignment": {
+    "relevant system intent": "Preserve the larger intended outcome separately from this bounded slice.",
+    "slice shaping bias": "Keep the slice bounded while carrying any larger follow-on through explicit continuation fields.",
+    "broader-lane validation question": "Did this slice advance the declared larger outcome, or only complete the local task?",
+    "intent evidence source": ".agentic-workspace/docs/system-intent-contract.md"
+  },
+  "references": [],
+  "active_milestone": {
+    "id": "issue-2234-review-stack-routing",
+    "status": "active",
+    "scope": "Review-stack continuity packet and compact startup routing for existing PR comment/proof reuse surfaces.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "immediate_next_action": [
+    "Commit the validated change and open the #2234 PR."
+  ],
+  "blockers": [
+    "None."
+  ],
+  "touched_paths": [
+    "src/agentic_workspace/workspace_runtime_core.py",
+    "src/agentic_workspace/workspace_runtime_primitives.py",
+    "src/agentic_workspace/workspace_runtime_startup.py",
+    "tests/test_workspace_cli.py",
+    ".agentic-workspace/planning/execplans/issue-2234-review-stack-routing.plan.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "invariants": [
+    "Preserve the planning contract and keep the work bounded to this plan."
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_workspace_cli.py -k \"pr_comment_attention or proof_reuse_guidance or runtime_mirror_consistency\" -q",
+    "uv run ruff check src/agentic_workspace/workspace_runtime_core.py src/agentic_workspace/workspace_runtime_primitives.py src/agentic_workspace/workspace_runtime_startup.py tests/test_workspace_cli.py",
+    "uv run python scripts/run_agentic_workspace.py implement --target . --changed <paths> --task \"Implement GitHub #2234 review stack routing continuity\" --format json"
+  ],
+  "required_tools": [
+    "None."
+  ],
+  "completion_criteria": [
+    "Issue 2234 review stack routing continuity is implemented, validated, and closed out honestly."
+  ],
+  "execution_run": {
+    "run status": "implemented-focused-proof-passed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Added review_stack_continuity to PR comment attention, mirrored it through runtime primitives, and projected the compact phase through startup context/action signals.",
+    "scope touched": "Existing PR comment attention, proof reuse guidance, startup projection, and focused CLI tests.",
+    "changed surfaces": "workspace_runtime_core.py, workspace_runtime_primitives.py, workspace_runtime_startup.py, tests/test_workspace_cli.py, active planning state.",
+    "validations run": "Focused PR comment/proof reuse/runtime mirror pytest and ruff passed.",
+    "result for continuation": "Continue with AW implement-selected validation, then commit and open the #2234 PR.",
+    "next step": "Run AW implement-selected validation, then commit and open the #2234 PR if proof stays green."
+  },
+  "finished_run_review": {
+    "review status": "self-reviewed-focused",
+    "scope respected": "yes",
+    "proof status": "broad-proof-passed",
+    "intent served": "yes, startup now exposes review correction, proof, proof reuse closeout, and refresh phases.",
+    "config compliance": "AW startup, payload sync, active plan creation, and plan update performed.",
+    "misinterpretation risk": "low",
+    "follow-on decision": "complete after PR creation"
+  },
+  "delegation_outcome_feedback": {
+    "route chosen": "pending",
+    "route skipped reason": "pending",
+    "expected savings": "pending",
+    "actual friction": "pending",
+    "proof result": "pending",
+    "quality concern": "pending",
+    "decomposition adjustment": "pending"
+  },
+  "proof_report": {
+    "validation proof": "uv run pytest tests/test_workspace_cli.py -k \"pr_comment_attention or proof_reuse_guidance or runtime_mirror_consistency\" -q; uv run ruff check src/agentic_workspace/workspace_runtime_core.py src/agentic_workspace/workspace_runtime_primitives.py src/agentic_workspace/workspace_runtime_startup.py tests/test_workspace_cli.py; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
+    "proof achieved now": "broad-proof-passed",
+    "evidence for \"proof achieved\" state": "Focused pytest passed; ruff passed; make test-workspace passed; make lint-workspace passed; AW summary passed; planning doctor passed with scoped planning healthy and only pre-existing global payload advisories; full tests/test_workspace_cli.py passed 190 tests; make typecheck passed; runtime mirror consistency reported shape_in_sync."
+  },
+  "intent_satisfaction": {
+    "original intent": "Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing.",
+    "was original intent fully satisfied?": "yes, pending PR publication",
+    "evidence of intent satisfaction": "review_stack_continuity packet includes dependency order, current PR, affected slice, proof manifest, proof reuse status, next action, and closeout route; startup projects it compactly and action_signals include review_stack_phase.",
+    "unsolved intent passed to": "none yet"
+  },
+  "execution_summary": {
+    "outcome delivered": "implementation and validation complete; PR pending",
+    "validation confirmed": "focused and broad AW-selected proof passed",
+    "follow-on routed to": "none yet",
+    "post-work posterity capture": "pending",
+    "knowledge promoted (Memory/Docs/Config)": "none",
+    "resume from": "current milestone"
+  },
+  "durable_residue": {
+    "status": "none",
+    "learned constraint": "none yet",
+    "motivation worth preserving": "none yet",
+    "canonical owner now": "none",
+    "promotion trigger": "none",
+    "retention after promotion": "retain"
+  },
+  "task_intent_promotion": {
+    "decision": "pending",
+    "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
+    "evidence source": "",
+    "target scope": "",
+    "proposed durable intent": "",
+    "confidence": "low",
+    "needs review": true,
+    "owner surface": ""
+  },
+  "closure_check": {
+    "slice status": "validated-pr-pending",
+    "larger-intent status": "pending",
+    "closure decision": "pending",
+    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
+    "why this decision is honest": "",
+    "evidence carried forward": "",
+    "reopen trigger": ""
+  },
+  "improvement_signal_review": {
+    "status": "not_checked",
+    "accepted statuses": "not_checked|signals_routed|signals_fixed|signals_dismissed|no_signal_found",
+    "guidance": "At closeout, report AW smoothness/helpfulness gaps, better-way signals, unused-feature reflections, and places AW could help more. Route each concrete signal to exactly one owner class unless explicitly split, or mark no_signal_found after checking.",
+    "source": "operating_posture",
+    "owner classes": [
+      "issue",
+      "Memory",
+      "Planning",
+      "docs/checks/contracts",
+      "direct fix",
+      "dismissed with reason"
+    ],
+    "ordinary output cap": 3,
+    "signals found": [],
+    "signals fixed": [],
+    "signals routed": [],
+    "signals dismissed": [],
+    "next owner": ""
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [],
+      "continuation": [],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "drift_log": [
+    "2026-07-13: Scaffolded by agentic-planning new-plan."
+  ]
+}
