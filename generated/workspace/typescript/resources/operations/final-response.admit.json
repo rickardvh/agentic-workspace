@@ -15,7 +15,8 @@
   "guards": [
     "Rendering closeout_trust must not submit a fabricated final response.",
     "Reject terminal finals while the terminal outcome contract state is CONTINUE.",
-    "This operation is not an unavoidable host boundary until an embedding host invokes it before emitting model-authored final text.",
+    "--executor-command is the package-owned ordinary host boundary: it must admit executor stdout before exposing final text.",
+    "Rejected CONTINUE attempts must keep custody with the agent and re-enter the executor after the selected continuation operation.",
     "Persist only ignored local checkpoint state under .agentic-workspace/local/.",
     "Do not treat local admission slices as closure evidence."
   ],
@@ -33,6 +34,11 @@
     },
     {
       "name": "attempt_file",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "executor_command",
       "required": false,
       "source": "cli-option"
     },
@@ -92,10 +98,10 @@
   },
   "proof": [
     "operation contract validates against operation.schema.json",
-    "final-response admission tests execute the generated CLI command across multiple slices",
+    "final-response admission tests execute the generated CLI command across multiple ordinary executor slices",
     "codex-sbx host adapter submits the output-last-message artifact through final-response admit before the harness can read it",
     "local checkpoint schema accepts persisted admission slices without making them completion evidence",
-    "closeout rendering exposes the integrated codex-sbx host boundary and the still-required admission operation when continuation remains"
+    "closeout rendering exposes the integrated vendor-neutral ordinary executor loop and the codex-sbx dogfooding adapter"
   ],
   "reads": [
     {
@@ -115,7 +121,7 @@
       "uses": "workspace.target-root.resolve"
     },
     {
-      "description": "Evaluate the terminal outcome contract against the model-authored final response attempt.",
+      "description": "Evaluate the terminal outcome contract against the model-authored final response attempt; when --executor-command is supplied, repeat executor stdout admission after rejected CONTINUE attempts.",
       "id": "evaluate_terminal_contract",
       "uses": "workspace.final-response.admission"
     },
@@ -135,7 +141,7 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Admit or reject a model-authored final response when an embedding host submits it at the response boundary.",
+  "summary": "Admit or reject a model-authored final response, or run a vendor-neutral executor loop that re-enters execution while CONTINUE remains.",
   "writes": [
     {
       "required": true,

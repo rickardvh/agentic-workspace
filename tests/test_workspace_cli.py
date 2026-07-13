@@ -6,6 +6,8 @@ import hashlib
 import re
 import shlex
 import shutil
+import subprocess
+import sys
 import tomllib
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
@@ -1351,11 +1353,15 @@ def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missi
     assert admission["status"] == "host_integrated_admission_required"
     assert admission["host_operation"] == "final-response.admit"
     assert '--attempt "<model-authored final response>"' in admission["command_template"]
+    assert "--executor-command" in admission["ordinary_execution_command_template"]
     assert admission["host_boundary_integrated"] is True
-    assert admission["ordinary_host_path_unavoidable"] is False
+    assert admission["ordinary_host_path_unavoidable"] is True
     assert admission["issue_2239_closure_ready"] is False
-    assert admission["integrated_host_boundaries"][0]["entrypoint"] == "scripts/model_cli_harness/run_sbx_codex_adapter.py"
-    assert "no vendor-neutral ordinary host/autopilot path" in admission["integration_gap"]
+    assert "Broader unattended end-to-end evidence" in admission["issue_2239_closure_gap"]
+    assert admission["integrated_host_boundaries"][0]["id"] == "agentic-workspace.final-response-executor-loop"
+    assert admission["integrated_host_boundaries"][0]["ordinary_path_unavoidable"] is True
+    assert admission["integrated_host_boundaries"][1]["entrypoint"] == "scripts/model_cli_harness/run_sbx_codex_adapter.py"
+    assert "Vendor-neutral ordinary final-response executor loop is available" in admission["integration_gap"]
     assert rendering["plain_done_allowed"] is False
     assert any("terminal final response" in item for item in rendering["must_not_claim"])
 
@@ -1400,6 +1406,123 @@ def test_final_response_admit_rejects_final_runs_continuation_and_persists_resum
     assert len(admission_checkpoint["slices"]) == 2
     assert {item["continuation_operation"] for item in admission_checkpoint["slices"]} == {"proof.report"}
     assert admission_checkpoint["not_closure_evidence"] is True
+
+
+def test_final_response_admit_executor_command_reenters_until_delivered(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    contracts = [
+        {
+            "kind": "agentic-workspace/terminal-outcome-contract/v1",
+            "state": "CONTINUE",
+            "final_response_authorized": False,
+            "required_next_action": "continue-current-work",
+            "safe_continuation_option_ids": ["run-proof"],
+            "blocker_qualification": {"status": "not_required"},
+            "final_response_enforcement": {
+                "status": "rejected_auto_resume",
+                "terminal_final_rejected": True,
+                "auto_resume_action": "continue-current-work",
+                "progress_without_yield": True,
+                "multi_slice_continuation": {"status": "preserved"},
+            },
+        },
+        {
+            "kind": "agentic-workspace/terminal-outcome-contract/v1",
+            "state": "DELIVERED",
+            "final_response_authorized": True,
+            "required_next_action": "",
+            "safe_continuation_option_ids": [],
+            "blocker_qualification": {"status": "not_required"},
+            "final_response_enforcement": {
+                "status": "authorized",
+                "terminal_final_rejected": False,
+                "multi_slice_continuation": {"status": "not_required"},
+            },
+        },
+    ]
+
+    def fake_closeout_trust(*, target_root: Path) -> tuple[dict[str, Any], object]:
+        assert target_root == tmp_path.resolve()
+        return {"terminal_outcome_contract": contracts.pop(0)}, object()
+
+    def fake_continuation(*, target_root: Path, terminal_outcome_contract: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
+        assert target_root == tmp_path.resolve()
+        assert terminal_outcome_contract["state"] == "CONTINUE"
+        assert request["terminal_final_rejected"] is True
+        return {
+            "kind": "agentic-workspace/final-response-resume-result/v1",
+            "status": "executed",
+            "invoked_operation": "proof.report",
+            "invoked_action": "continue-current-work",
+            "command": "agentic-workspace proof --target . --format json",
+            "exit_code": 0,
+            "custody": "agent",
+            "after_state_patch": {
+                "required_next_action": "continue-current-work",
+                "custody_owner": "agent",
+                "continuation_slice": "post-admission-resume",
+            },
+        }
+
+    monkeypatch.setattr(cli, "_final_response_closeout_trust_for_admission", fake_closeout_trust)
+    monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fake_continuation)
+
+    attempt_log = tmp_path / "attempts.log"
+    monkeypatch.setenv("ATTEMPT_LOG", str(attempt_log))
+    executor_script = tmp_path / "emit_final_attempt.py"
+    executor_script.write_text(
+        """
+import os
+from pathlib import Path
+
+slice_no = os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_SLICE"]
+assert os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_CUSTODY"] == "agent"
+log = Path(os.environ["ATTEMPT_LOG"])
+log.write_text((log.read_text() if log.exists() else "") + slice_no + "\\n")
+if slice_no == "1":
+    print("Done too early.")
+else:
+    assert os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_PREVIOUS_ADMISSION"]
+    assert os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION"]
+    assert os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION_STATE"]
+    assert os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_ACTIVE_OBJECTIVE"] == "continue-current-work"
+    print("Actually delivered.")
+""".strip(),
+        encoding="utf-8",
+    )
+
+    command = [
+        "final-response",
+        "admit",
+        "--target",
+        str(tmp_path),
+        "--executor-command",
+        subprocess.list2cmdline([sys.executable, str(executor_script)]),
+        "--format",
+        "json",
+    ]
+    assert cli.main(command) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["status"] == "accepted_terminal_final"
+    loop = payload["ordinary_execution_loop"]
+    assert loop["vendor_neutral"] is True
+    assert loop["depends_on_codex_goal_mode"] is False
+    assert loop["depends_on_model_cli_harness"] is False
+    assert "AGENTIC_WORKSPACE_FINAL_RESPONSE_ACTIVE_OBJECTIVE" in loop["preserved_state_fields"]
+    assert loop["slice_count"] == 2
+    assert loop["slices"][0]["admission_status"] == "rejected_auto_resumed"
+    assert loop["slices"][1]["admission_status"] == "accepted_terminal_final"
+    assert payload["admission"]["attempt"]["claim"] == "Actually delivered."
+    assert attempt_log.read_text(encoding="utf-8").splitlines() == ["1", "2"]
+    checkpoint = json.loads((tmp_path / ".agentic-workspace" / "local" / "chat-checkpoint.json").read_text())
+    admission_checkpoint = checkpoint["final_response_admission"]
+    assert admission_checkpoint["slice_count"] == 2
+    assert admission_checkpoint["slices"][0]["ordinary_execution_slice"] == 1
+    assert admission_checkpoint["slices"][1]["ordinary_execution_slice"] == 2
 
 
 def test_closeout_trust_names_external_intent_evidence_blocker_for_open_issue(tmp_path: Path, capsys) -> None:

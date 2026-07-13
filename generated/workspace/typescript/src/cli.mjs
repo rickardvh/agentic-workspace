@@ -2293,6 +2293,14 @@ const commandDefinitions = [
               "name": "attempt_file"
             },
             {
+              "default": "",
+              "flags": [
+                "--executor-command"
+              ],
+              "help": "Vendor-neutral command that emits the next model-authored final response attempt on stdout; rejected CONTINUE attempts re-enter the command with custody metadata.",
+              "name": "executor_command"
+            },
+            {
               "default": "model-authored-final-response",
               "flags": [
                 "--source"

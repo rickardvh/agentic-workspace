@@ -355,6 +355,15 @@ _CONTEXT_TEMPLATES = context_templates_manifest()
 
 FINAL_RESPONSE_HOST_BOUNDARIES = [
     {
+        "id": "agentic-workspace.final-response-executor-loop",
+        "entrypoint": "agentic-workspace final-response admit --executor-command",
+        "attempt_source": "vendor-neutral executor stdout",
+        "admission_operation": "final-response.admit",
+        "ordinary_path_unavoidable": True,
+        "loop_behavior": "vendor-neutral ordinary AW host loop re-runs the configured executor after rejected CONTINUE finals",
+        "rule": "The package-owned final-response loop admits every model-authored final attempt before emitting custody and keeps execution with the agent while CONTINUE remains.",
+    },
+    {
         "id": "model-cli-harness.codex-sbx",
         "entrypoint": "scripts/model_cli_harness/run_sbx_codex_adapter.py",
         "attempt_source": "codex --output-last-message artifact",
@@ -362,7 +371,7 @@ FINAL_RESPONSE_HOST_BOUNDARIES = [
         "ordinary_path_unavoidable": False,
         "loop_behavior": "bounded re-invocation for the Codex SBX dogfooding harness; not the vendor-neutral ordinary host path",
         "rule": "The sandbox Codex adapter admits the captured final-message artifact and can re-invoke Codex for bounded continuation slices.",
-    }
+    },
 ]
 HIGH_RISK_COMMANDS = frozenset((str(command) for command in _PREFLIGHT_POLICY["high_risk_commands"]))
 PREFLIGHT_TOKEN_PREFIX = str(_PREFLIGHT_POLICY["token"]["prefix"])
@@ -15023,6 +15032,7 @@ def _final_response_admission_route_payload(
     )
     final_authorized = bool(_as_dict(terminal_outcome_contract).get("final_response_authorized"))
     host_boundary_integrated = bool(FINAL_RESPONSE_HOST_BOUNDARIES)
+    ordinary_host_path_unavoidable = any(bool(item.get("ordinary_path_unavoidable")) for item in FINAL_RESPONSE_HOST_BOUNDARIES)
     return {
         "kind": "agentic-workspace/final-response-admission-route/v1",
         "status": "not_required" if final_authorized else "host_integrated_admission_required",
@@ -15030,21 +15040,31 @@ def _final_response_admission_route_payload(
         "terminal_state": terminal_state,
         "host_operation": "final-response.admit",
         "command_template": command,
+        "ordinary_execution_command_template": _command_with_cli_invoke(
+            command=(
+                "agentic-workspace final-response admit --target ./repo "
+                '--executor-command "<vendor-neutral agent command that emits final text>" --format json'
+            ),
+            cli_invoke=DEFAULT_CLI_INVOKE,
+        ),
         "attempt_source": "host-supplied-model-authored-final-response",
         "checkpoint_path": LOCAL_CHAT_CHECKPOINT_PATH.as_posix(),
         "host_boundary_integrated": host_boundary_integrated,
-        "ordinary_host_path_unavoidable": False,
+        "ordinary_host_path_unavoidable": ordinary_host_path_unavoidable,
         "issue_2239_closure_ready": False,
+        "issue_2239_closure_gap": "Broader unattended end-to-end evidence is deferred pending maintainer direction.",
         "integrated_host_boundaries": FINAL_RESPONSE_HOST_BOUNDARIES,
         "integration_gap": (
-            "Codex SBX has a bounded dogfooding loop, but no vendor-neutral ordinary host/autopilot path is yet unavoidable."
+            "Vendor-neutral ordinary final-response executor loop is available; broader unattended evidence remains separate from the boundary."
         )
+        if ordinary_host_path_unavoidable
+        else ("Codex SBX has a bounded dogfooding loop, but no vendor-neutral ordinary host/autopilot path is yet unavoidable.")
         if host_boundary_integrated
         else "No integrated host wrapper invokes final-response.admit.",
         "rule": (
-            "Rendering advertises the host admission operation. Integrated host wrappers must invoke it on the actual "
-            "model-authored response before exposing final text; the codex-sbx harness adapter does this for bounded dogfooding "
-            "slices, but that alone is not #2239 closure proof."
+            "Rendering advertises the host admission operation and the package-owned ordinary executor loop. Hosts must route "
+            "model-authored final responses through admission before exposing final text; while CONTINUE remains, custody stays "
+            "with the ordinary loop and the executor is re-entered with continuation context."
         ),
     }
 
@@ -20283,9 +20303,10 @@ def _terminal_outcome_contract_payload(
             "progress_without_yield": state == "CONTINUE",
             "compaction_resume_safe": state == "CONTINUE",
             "enforcement_maturity": "host-integrated" if not final_response_authorized else "not_required",
-            "ordinary_host_path_unavoidable": False,
+            "ordinary_host_path_unavoidable": any(bool(item.get("ordinary_path_unavoidable")) for item in FINAL_RESPONSE_HOST_BOUNDARIES),
             "host_boundary_integrated": bool(FINAL_RESPONSE_HOST_BOUNDARIES),
             "issue_2239_closure_ready": False,
+            "issue_2239_closure_gap": "Broader unattended end-to-end evidence is deferred pending maintainer direction.",
             "integrated_host_boundaries": FINAL_RESPONSE_HOST_BOUNDARIES,
             "multi_slice_continuation": {
                 "status": "preserved" if state == "CONTINUE" else "not_required",

@@ -738,10 +738,15 @@ def test_terminal_outcome_contract_distinguishes_continue_blocked_and_user_pause
     assert weak_final_contract["final_response_enforcement"]["terminal_final_rejected"] is True
     assert weak_final_contract["final_response_enforcement"]["progress_without_yield"] is True
     assert weak_final_contract["final_response_enforcement"]["enforcement_maturity"] == "host-integrated"
-    assert weak_final_contract["final_response_enforcement"]["ordinary_host_path_unavoidable"] is False
+    assert weak_final_contract["final_response_enforcement"]["ordinary_host_path_unavoidable"] is True
     assert weak_final_contract["final_response_enforcement"]["host_boundary_integrated"] is True
     assert weak_final_contract["final_response_enforcement"]["issue_2239_closure_ready"] is False
-    assert weak_final_contract["final_response_enforcement"]["integrated_host_boundaries"][0]["id"] == "model-cli-harness.codex-sbx"
+    assert "Broader unattended end-to-end evidence" in weak_final_contract["final_response_enforcement"]["issue_2239_closure_gap"]
+    assert (
+        weak_final_contract["final_response_enforcement"]["integrated_host_boundaries"][0]["id"]
+        == "agentic-workspace.final-response-executor-loop"
+    )
+    assert weak_final_contract["final_response_enforcement"]["integrated_host_boundaries"][1]["id"] == "model-cli-harness.codex-sbx"
     assert weak_final_contract["final_response_enforcement"]["multi_slice_continuation"]["status"] == "preserved"
     assert (
         weak_final_contract["final_response_enforcement"]["weak_model_regression"] == "terminal-final-rejected-while-continuation-remains"

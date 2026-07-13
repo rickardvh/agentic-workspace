@@ -3886,6 +3886,14 @@
                     "help": "Path to a file containing the model-authored final response text submitted for host admission."
                   },
                   {
+                    "name": "executor_command",
+                    "flags": [
+                      "--executor-command"
+                    ],
+                    "default": "",
+                    "help": "Vendor-neutral command that emits the next model-authored final response attempt on stdout; rejected CONTINUE attempts re-enter the command with custody metadata."
+                  },
+                  {
                     "name": "source",
                     "flags": [
                       "--source"

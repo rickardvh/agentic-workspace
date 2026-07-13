@@ -26,11 +26,11 @@
     "projection_rule": "canonical_core is authoritative for intent, scope, next action, proof, continuation, and closeout; legacy fields remain compatibility projections."
   },
   "canonical_core": {
-    "requested_outcome": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
+    "requested_outcome": "Advance #2239 by making closeout custody explicit and landing the package-owned vendor-neutral ordinary final-response executor loop; do not claim full #2239 closure until broader unattended end-to-end evidence is accepted or explicitly deferred by the maintainer.",
     "hard_constraints": "Do not treat progress, context pressure, task size, successful compaction, or one completed slice as terminal blockers; BLOCKED requires an external or human-action blocker with no safe in-scope continuation.",
     "agent_may_decide": "Exact projection shape, compact report fields, and focused regression coverage for closeout_trust, closeout_claim_boundary, closeout_report, and final-response rendering.",
-    "escalate_when": "The fix would require redesigning Planning autopilot or changing issue closure semantics beyond terminal outcome custody.",
-    "next_action": "Run AW implement proof and publish the #2239 PR after validation.",
+    "escalate_when": "The fix would require redesigning Planning autopilot or changing issue closure semantics beyond terminal outcome custody, or the maintainer reclassifies broader unattended end-to-end evidence as required for this PR.",
+    "next_action": "Push the locally proven vendor-neutral ordinary final-response executor loop and reconciled planning state for PR #2249; keep broader unattended evidence deferred pending maintainer direction.",
     "proof_expectations": [
       "uv run pytest tests/test_workspace_summary_cli.py -k \"terminal_outcome_contract or completion_gate_claim_authorization\" -q",
       "uv run pytest tests/test_workspace_cli.py -k \"closeout_trust or closeout_claim_boundary\" -q",
@@ -60,10 +60,12 @@
       "CONTINUE is selected whenever safe in-scope continuation remains and final_response_authorized is false.",
       "Pseudo blockers such as context pressure, task size, one-slice-complete, successful compaction, and work-remains are named invalid blockers.",
       "Closeout compact reports and final-response rendering expose the contract so terminal final responses are blocked in CONTINUE.",
+      "final-response admit exposes a vendor-neutral --executor-command ordinary path that admits executor stdout, rejects CONTINUE finals, preserves active objective/continuation custody, and re-enters execution until DELIVERED, qualified BLOCKED, or USER_PAUSED.",
+      "Planning state no longer claims this bounded PR completes all of #2239 or requires no follow-on.",
       "Focused CLI, summary, lint, and generated-package freshness checks pass."
     ],
-    "continuation_owner": "none for #2239 after PR publication; remaining P0 issues continue in their own stacked branches.",
-    "closeout_decision": "ready-for-pr-after-aw-implement-proof"
+    "continuation_owner": "agent/maintainer for #2239 review residue; broader unattended end-to-end evidence remains deferred pending maintainer direction.",
+    "closeout_decision": "archive-this-pr-slice-but-keep-2239-lane-open"
   },
   "goal": [
     "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains."
@@ -105,22 +107,22 @@
     }
   },
   "intent_continuity": {
-    "larger intended outcome": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
-    "this slice completes the larger intended outcome": "yes",
-    "continuation surface": "remaining open P0 issues are separate issue/PR slices"
+    "larger intended outcome": "Close #2239 by making closeout custody explicit and proving ordinary unattended continuation through a host-neutral path.",
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": "PR #2249 owns the vendor-neutral ordinary execution boundary; broader unattended end-to-end evidence remains deferred pending maintainer direction."
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "no",
-    "owner surface": "none for #2239",
-    "activation trigger": "none"
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": "PR #2249 review / #2239 planning state",
+    "activation trigger": "maintainer asks for broader unattended end-to-end evidence or review finds the ordinary executor boundary insufficient"
   },
   "iterative_follow_through": {
-    "what this slice enabled": "AW closeout packets can distinguish delivered, blocked, user-paused, and continue custody instead of allowing progress to look terminal.",
-    "intentionally deferred": "Broader autopilot wording cleanup outside the terminal custody enforcement path.",
+    "what this slice enabled": "AW closeout packets can distinguish delivered, blocked, user-paused, and continue custody, and PR #2249 adds the package-owned vendor-neutral ordinary executor loop for final-response admission.",
+    "intentionally deferred": "Broader unattended end-to-end evidence matrix, including representative no-native-Goal multi-milestone runs, remains deferred pending maintainer direction.",
     "discovered implications": "The lazy report route imports closeout logic from workspace_runtime_core, so runtime closeout semantics must stay mirrored with primitives until that duplication is retired.",
     "proof achieved now": "focused tests, full workspace suite, lint, typecheck, summary/doctor, runtime mirror, and generated freshness passed",
-    "validation still needed": "AW implement proof and PR checks",
-    "next likely slice": "continue remaining open P0 issues after #2239 PR"
+    "validation still needed": "PR checks and maintainer review; broader unattended end-to-end evidence only if the maintainer requests it",
+    "next likely slice": "broader unattended end-to-end evidence if the maintainer requests it after PR #2249"
   },
   "intent_interpretation": {
     "literal request": "Keep working as before until done with all P0 issues; implement #2239 as the next P0 bug.",
@@ -174,17 +176,17 @@
   ],
   "active_milestone": {
     "id": "issue-2239",
-    "status": "validation-ready",
-    "scope": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
-    "ready": "ready",
-    "blocked": "none",
-    "optional_deps": "none"
+    "status": "local-proof-ready",
+    "scope": "Land the package-owned vendor-neutral ordinary final-response executor loop and reconcile #2239 planning state without claiming full #2239 closure.",
+    "ready": "ready-for-pr-checks-and-maintainer-review",
+    "blocked": "broader unattended end-to-end evidence deferred pending maintainer direction",
+    "optional_deps": "representative no-native-Goal multi-milestone run, pending maintainer direction"
   },
   "immediate_next_action": [
-    "Run AW implement proof and publish the #2239 PR."
+    "Push the locally proven executor-loop and planning-state fixes; wait for PR checks and maintainer review."
   ],
   "blockers": [
-    "None."
+    "Broader unattended end-to-end evidence is deferred pending maintainer direction and is not closure evidence in this slice."
   ],
   "touched_paths": [
     "src/agentic_workspace/workspace_runtime_core.py",
@@ -223,27 +225,29 @@
     "CONTINUE is selected whenever safe in-scope continuation remains and final_response_authorized is false.",
     "Pseudo blockers such as context pressure, task size, one-slice-complete, successful compaction, and work-remains are named invalid blockers.",
     "Closeout compact reports and final-response rendering expose the contract so terminal final responses are blocked in CONTINUE.",
+    "final-response admit exposes a vendor-neutral --executor-command ordinary path that admits executor stdout, rejects CONTINUE finals, preserves active objective/continuation custody, and re-enters execution until DELIVERED, qualified BLOCKED, or USER_PAUSED.",
+    "Planning state no longer claims this bounded PR completes all of #2239 or requires no follow-on.",
     "Focused CLI, summary, lint, and generated-package freshness checks pass."
   ],
   "execution_run": {
-    "run status": "implemented",
+    "run status": "local-proof-ready",
     "executor": "Codex",
     "handoff source": "local implementation for GitHub #2239",
-    "what happened": "Added terminal outcome contract projection, propagated it through closeout trust/boundary/report/rendering, and added focused regressions.",
+    "what happened": "Added terminal outcome contract projection and the vendor-neutral ordinary final-response executor loop required by PR #2249 review.",
     "scope touched": "src/agentic_workspace/workspace_runtime_core.py, src/agentic_workspace/workspace_runtime_primitives.py, src/agentic_workspace/workspace_runtime_planning.py, src/agentic_workspace/reporting_support.py, src/agentic_workspace/workspace_runtime_proof.py, tests/test_workspace_cli.py, tests/test_workspace_summary_cli.py, .agentic-workspace/planning/execplans/issue-2239.plan.json, .agentic-workspace/planning/state.toml",
     "changed surfaces": "workspace runtime closeout projections, compact report projection, closeout proof boundary, and tests",
     "validations run": "uv run pytest tests/test_workspace_summary_cli.py -k \"terminal_outcome_contract or completion_gate_claim_authorization\" -q; uv run pytest tests/test_workspace_cli.py -k \"closeout_trust or closeout_claim_boundary\" -q; uv run pytest tests/test_workspace_cli.py::test_start_treats_shared_issue_ref_as_active_plan_continuation -q; make test-workspace; make lint-workspace; make typecheck; uv run pytest tests/test_workspace_cli.py -q; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json; uv run python scripts/generate/generate_command_packages.py --check",
-    "result for continuation": "run AW implement proof and open PR, then continue remaining P0 queue",
-    "next step": "Publish #2239 PR."
+    "result for continuation": "PR #2249 local proof is ready; broader #2239 unattended evidence remains deferred pending maintainer direction",
+    "next step": "Push the blocker fix and wait for PR checks/review."
   },
   "finished_run_review": {
-    "review status": "self-reviewed",
+    "review status": "local-proof-ready",
     "scope respected": "yes",
-    "proof status": "focused proof passed",
-    "intent served": "yes",
+    "proof status": "focused and broad local proof passed",
+    "intent served": "partial for #2239; complete for the PR #2249 vendor-neutral-boundary blocker",
     "config compliance": "AW startup and plan route used; payload sync applied before implementation",
     "misinterpretation risk": "low",
-    "follow-on decision": "continue remaining P0 issues separately"
+    "follow-on decision": "do not claim full #2239 closure; broader unattended evidence remains deferred pending maintainer direction"
   },
   "delegation_outcome_feedback": {
     "route chosen": "keep-local",
@@ -261,17 +265,17 @@
   },
   "intent_satisfaction": {
     "original intent": "Close #2239 by making closeout custody explicit: DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are projected from completion gates, and CONTINUE forbids terminal final-response claims while safe in-scope continuation remains.",
-    "was original intent fully satisfied?": "yes",
-    "evidence of intent satisfaction": "Terminal outcome contract is present on closeout_trust, closeout_claim_boundary, closeout_report/proof boundary, and final_response_rendering; CONTINUE sets final_response_authorized=false.",
-    "unsolved intent passed to": "none for #2239"
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "Terminal outcome contract is present on closeout_trust, closeout_claim_boundary, closeout_report/proof boundary, and final_response_rendering; PR #2249 now also owns the vendor-neutral ordinary executor-loop proof.",
+    "unsolved intent passed to": "broader unattended end-to-end evidence remains deferred pending maintainer direction"
   },
   "execution_summary": {
-    "outcome delivered": "terminal outcome custody implemented for #2239",
-    "validation confirmed": "focused tests, full workspace suite, lint, typecheck, summary/doctor, runtime mirror, and generated freshness passed",
-    "follow-on routed to": "remaining P0 queue after PR",
+    "outcome delivered": "terminal outcome custody implemented; vendor-neutral ordinary executor-loop blocker addressed on PR #2249",
+    "validation confirmed": "focused executor-loop test, full workspace suite, lint, typecheck, operation conformance, generated freshness, planning doctor, and runtime mirror checks passed locally",
+    "follow-on routed to": "broader unattended evidence pending maintainer direction",
     "post-work posterity capture": "execplan updated; duplicate core/primitives risk noted",
     "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "publish #2239 PR then continue P0 queue"
+    "resume from": "push PR #2249 blocker fixes and wait for CI/review"
   },
   "durable_residue": {
     "status": "planning",
@@ -292,13 +296,13 @@
     "owner surface": ""
   },
   "closure_check": {
-    "slice status": "complete",
-    "larger-intent status": "closed",
-    "closure decision": "archive-and-close-after-pr",
+    "slice status": "bounded slice complete",
+    "larger-intent status": "unfinished",
+    "closure decision": "archive-but-keep-lane-open",
     "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "The issue-scoped behavior is implemented and focused proof passed; PR publication and CI remain the release step.",
+    "why this decision is honest": "PR #2249 locally proves the vendor-neutral ordinary executor loop and reconciled planning state, but broader #2239 unattended evidence remains deferred and unfinished.",
     "evidence carried forward": "uv run pytest tests/test_workspace_summary_cli.py -k \"terminal_outcome_contract or completion_gate_claim_authorization\" -q; uv run pytest tests/test_workspace_cli.py -k \"closeout_trust or closeout_claim_boundary\" -q; uv run ruff check src\\agentic_workspace\\workspace_runtime_core.py src\\agentic_workspace\\workspace_runtime_primitives.py src\\agentic_workspace\\workspace_runtime_proof.py src\\agentic_workspace\\reporting_support.py tests\\test_workspace_cli.py tests\\test_workspace_summary_cli.py; uv run python scripts\\generate\\generate_command_packages.py --check",
-    "reopen trigger": "Review or CI shows CONTINUE can still authorize terminal final responses or BLOCKED is used for pseudo blockers."
+    "reopen trigger": "Review or CI shows CONTINUE can still authorize terminal final responses, the ordinary executor loop can yield custody in CONTINUE, or the maintainer requests broader unattended evidence."
   },
   "improvement_signal_review": {
     "status": "signals_routed",
