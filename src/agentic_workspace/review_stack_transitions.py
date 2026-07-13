@@ -91,8 +91,8 @@ def _review_record_path(target_root: Path, slug: str) -> Path:
     return matches[-1] if matches else expected
 
 
-def _default_review_record(*, title: str, classification: str, scope_payload: dict[str, Any]) -> dict[str, Any]:
-    scope_text = json.dumps(scope_payload, separators=(",", ":"), sort_keys=True)
+def _default_review_record(*, title: str, classification: str, lifecycle_payload: dict[str, Any], command: str) -> dict[str, Any]:
+    scope_text = json.dumps(lifecycle_payload, separators=(",", ":"), sort_keys=True)
     return {
         "kind": "planning-review/v1",
         "title": title,
@@ -108,8 +108,8 @@ def _default_review_record(*, title: str, classification: str, scope_payload: di
             "inputs inspected first": "ordinary command result and current PR stack cache",
         },
         "review_method": {
-            "commands used": scope_payload.get("command", ""),
-            "evidence sources": "ordinary command result; PR stack cache; proof receipt when present",
+            "commands used": command,
+            "evidence sources": "ordinary command results; PR stack cache; proof receipt when present",
         },
         "references": [],
         "findings": [],
@@ -124,8 +124,8 @@ def _default_review_record(*, title: str, classification: str, scope_payload: di
             "proof surface": "review_stack_continuity.workflow_trace",
         },
         "prose_templates": {},
-        "validation_commands": [scope_payload.get("command", "")],
-        "drift_log": [f"{date.today().isoformat()}: Review-stack transition recorded by ordinary command."],
+        "validation_commands": [command],
+        "drift_log": [f"{date.today().isoformat()}: Review-stack lifecycle recorded by ordinary command."],
     }
 
 
@@ -160,7 +160,7 @@ def record_review_stack_transition(
         and not (set(normalized_paths).issubset(set(member_paths)) or set(member_paths).intersection(normalized_paths))
     ):
         return {"status": "skipped", "reason": "changed paths do not match review stack member", "pr_number": selected_pr}
-    scope_payload = {
+    transition_payload = {
         "pr_number": selected_pr,
         "phase": phase,
         "phase_after": phase_after,
@@ -174,14 +174,24 @@ def record_review_stack_transition(
         "recorded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "source": "ordinary-command",
     }
-    slug = _safe_slug(f"review-stack-{selected_pr}-{phase_after}")
+    slug = _safe_slug(f"review-stack-{selected_pr}-lifecycle")
     record_path = _review_record_path(target_root, slug)
-    title = f"Review Stack {selected_pr} {phase} To {phase_after}".replace("-", " ").title()
+    title = f"Review Stack {selected_pr} Lifecycle".replace("-", " ").title()
+    lifecycle_payload: dict[str, Any] = {
+        "record_kind": "review-stack-lifecycle",
+        "pr_number": selected_pr,
+        "current_phase": phase_after,
+        "next_action_id": next_action_id,
+        "changed_paths": normalized_paths or member_paths,
+        "updated_at": transition_payload["recorded_at"],
+        "source": "ordinary-command",
+        "transitions": [transition_payload],
+    }
     if dry_run:
         return {
             "status": "dry-run",
             "path": record_path.relative_to(target_root).as_posix(),
-            "scope": scope_payload,
+            "scope": lifecycle_payload,
         }
     record_path.parent.mkdir(parents=True, exist_ok=True)
     if record_path.exists():
@@ -192,20 +202,43 @@ def record_review_stack_transition(
         if not isinstance(record, dict):
             record = {}
         if not record:
-            record = _default_review_record(title=title, classification="review-stack-transition", scope_payload=scope_payload)
+            record = _default_review_record(
+                title=title,
+                classification="review-stack-transition",
+                lifecycle_payload=lifecycle_payload,
+                command=command,
+            )
         else:
+            existing_lifecycle: dict[str, Any] = {}
+            for raw_scope in _string_list(record.get("scope")):
+                try:
+                    parsed = json.loads(raw_scope)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(parsed, dict):
+                    existing_lifecycle = parsed
+                    break
+            existing_transitions = [item for item in existing_lifecycle.get("transitions", []) if isinstance(item, dict)]
+            transitions_by_phase = {str(item.get("phase_after") or item.get("phase") or ""): item for item in existing_transitions}
+            transitions_by_phase[phase_after or phase] = transition_payload
+            lifecycle_payload["transitions"] = list(transitions_by_phase.values())
             record["title"] = title
             record["classification"] = "review-stack-transition"
-            record["scope"] = [json.dumps(scope_payload, separators=(",", ":"), sort_keys=True)]
+            record["scope"] = [json.dumps(lifecycle_payload, separators=(",", ":"), sort_keys=True)]
             record.setdefault("validation_commands", [])
             if isinstance(record["validation_commands"], list) and command not in record["validation_commands"]:
                 record["validation_commands"].append(command)
             record.setdefault("drift_log", [])
             if isinstance(record["drift_log"], list):
-                record["drift_log"].append(f"{date.today().isoformat()}: Review-stack transition updated by ordinary command.")
+                record["drift_log"].append(f"{date.today().isoformat()}: Review-stack lifecycle updated by ordinary command.")
         status = "updated"
     else:
-        record = _default_review_record(title=title, classification="review-stack-transition", scope_payload=scope_payload)
+        record = _default_review_record(
+            title=title,
+            classification="review-stack-transition",
+            lifecycle_payload=lifecycle_payload,
+            command=command,
+        )
         status = "written"
     record_path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return {

@@ -6417,6 +6417,9 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     changed_path = tmp_path / "src" / "app.py"
     changed_path.parent.mkdir(parents=True, exist_ok=True)
     changed_path.write_text("VALUE = 1\n", encoding="utf-8")
+    test_path = tmp_path / "tests" / "test_app.py"
+    test_path.parent.mkdir(parents=True, exist_ok=True)
+    test_path.write_text("def test_app():\n    assert True\n", encoding="utf-8")
     proof_reuse_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "proof-reuse.json"
 
     assert (
@@ -6562,32 +6565,17 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         == 0
     )
     receipt = json.loads(capsys.readouterr().out)
-    assert receipt["review_stack_transition"]["status"] == "written"
+    assert receipt["review_stack_transition"]["status"] == "updated"
     assert receipt["review_stack_transition"]["phase_after"] == "review-closeout-ready"
     assert receipt["review_stack_transition"]["proof_receipt_path"] == ".agentic-workspace/local/proof-receipts/last.json"
-
-    proof_reuse_path.write_text(
-        json.dumps(
-            {
-                "prior_head": "bbb222",
-                "prior_base": "base111",
-                "changed_paths": ["src/app.py"],
-                "path_fingerprints": {"src/app.py": hashlib.sha256(changed_path.read_bytes()).hexdigest()},
-                "parent_proof_reference": "proof-receipt:bbb222",
-                "proof_selection_fingerprint": "selection:stack-review",
-                "dependency_config_fingerprint": "deps:locked",
-                "generated_surface_freshness": {"status": "verified"},
-                "proof_groups": [
-                    {
-                        "command": "uv run pytest tests/test_app.py -q",
-                        "command_fingerprint": "cmd:test-app",
-                        "status": "passed",
-                    }
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
+    assert receipt["proof_reuse_cache"]["status"] == "written"
+    assert receipt["proof_reuse_cache"]["path"] == ".agentic-workspace/local/cache/proof-reuse.json"
+    proof_reuse = json.loads(proof_reuse_path.read_text(encoding="utf-8"))
+    assert proof_reuse["source"] == "proof --record-receipt"
+    assert proof_reuse["path_fingerprints"] == {
+        "src/app.py": hashlib.sha256(changed_path.read_bytes()).hexdigest(),
+        "tests/test_app.py": hashlib.sha256(test_path.read_bytes()).hexdigest(),
+    }
     cache_path.write_text(json.dumps(fresh_stack), encoding="utf-8")
     assert (
         cli.main(
@@ -6611,10 +6599,13 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert reusable_continuity["next_action"]["id"] == "closeout-with-reused-proof-receipt"
     assert reusable_continuity["closeout_route"]["status"] == "ready_after_recording_reuse_rationale"
     assert reusable_continuity["planning_owner"]["phase_source"] == "planning_lifecycle_transition"
-    assert len(reusable_continuity["planning_owner"]["transition_records"]) == 2
+    assert reusable_continuity["planning_owner"]["transition_records"] == [correction["review_stack_transition"]["path"]]
     assert reusable_continuity["workflow_trace"]["status"] == "executed_transition_trace"
     assert reusable_continuity["workflow_trace"]["transition_source"] == "planning_lifecycle_transition"
-    assert reusable_continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 2
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 1
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["executed_transition_count"] == 2
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["manual_transition_record_count"] == 0
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["avoided_manual_transition_records"] == 2
     assert reusable_continuity["workflow_trace"]["interaction_cost"]["evidence_source"] == "planning_lifecycle_transition"
     assert [event["phase_after"] for event in reusable_continuity["workflow_trace"]["executed_events"]] == [
         "review-proof",
@@ -6656,7 +6647,7 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         == 0
     )
     closeout = json.loads(capsys.readouterr().out)
-    assert closeout["review_stack_transition"]["status"] == "written"
+    assert closeout["review_stack_transition"]["status"] == "updated"
     assert closeout["review_stack_transition"]["phase"] == "review-closeout-ready"
     assert closeout["review_stack_transition"]["phase_after"] == "review-closed"
     assert closeout["review_stack_transition"]["command_exit_code"] == 0
@@ -6726,7 +6717,10 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert continuity["planning_owner"]["status"] == "bound_to_active_planning_owner"
     assert continuity["workflow_trace"]["status"] == "executed_transition_trace"
     assert continuity["workflow_trace"]["transition_source"] == "planning_lifecycle_transition"
-    assert continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 3
+    assert continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 1
+    assert continuity["workflow_trace"]["interaction_cost"]["executed_transition_count"] == 3
+    assert continuity["workflow_trace"]["interaction_cost"]["manual_transition_record_count"] == 0
+    assert continuity["workflow_trace"]["interaction_cost"]["avoided_manual_transition_records"] == 3
     assert continuity["workflow_trace"]["interaction_cost"]["evidence_source"] == "planning_lifecycle_transition"
     assert [event["phase_after"] for event in continuity["workflow_trace"]["executed_events"]] == [
         "review-proof",

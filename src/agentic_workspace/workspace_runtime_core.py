@@ -27984,8 +27984,23 @@ def _review_stack_planning_transition_payloads(*, target_root: Path, current_pr_
             pr_number = str(payload.get("pr_number") or "").strip()
             if current_pr_number and pr_number and pr_number != current_pr_number:
                 continue
-            payload["planning_surface"] = path.relative_to(target_root).as_posix()
-            payload["planning_title"] = str(record.get("title") or "")
+            planning_surface = path.relative_to(target_root).as_posix()
+            planning_title = str(record.get("title") or "")
+            lifecycle_transitions = [item for item in _list_payload(payload.get("transitions")) if isinstance(item, dict)]
+            if lifecycle_transitions:
+                for transition in lifecycle_transitions:
+                    transition_pr = str(transition.get("pr_number") or pr_number).strip()
+                    if current_pr_number and transition_pr and transition_pr != current_pr_number:
+                        continue
+                    transition = dict(transition)
+                    transition.setdefault("pr_number", pr_number)
+                    transition["planning_surface"] = planning_surface
+                    transition["planning_title"] = planning_title
+                    transition["lifecycle_record"] = True
+                    transitions.append(transition)
+                continue
+            payload["planning_surface"] = planning_surface
+            payload["planning_title"] = planning_title
             transitions.append(payload)
     return transitions
 
@@ -28057,6 +28072,13 @@ def _review_stack_workflow_trace_payload(
             }
         )
     executed_events = [event for event in events if event.get("outcome") in {"executed", "passed", "reused"}]
+    proof_events = [
+        event
+        for event in executed_events
+        if str(event.get("phase") or "") == "review-proof"
+        or str(event.get("phase_after") or "") == "review-closeout-ready"
+        or bool(str(event.get("proof_receipt_path") or ""))
+    ]
     event_phase_sequence = _dedupe(
         [
             phase_value
@@ -28075,9 +28097,12 @@ def _review_stack_workflow_trace_payload(
         "proof_reuse_status": str(proof_reuse.get("status") or "reuse_unknown"),
         "reuse_or_invalidation_evidence": proof_reuse.get("rationale") or proof_reuse.get("reason") or proof_reuse.get("status"),
         "interaction_cost": {
-            "resume_inputs_before_packet": ["stack cache", "comment samples", "proof reuse receipt", "Planning transition record"],
+            "resume_inputs_before_packet": ["stack cache", "comment samples", "proof reuse receipt", "review-stack lifecycle record"],
             "resume_inputs_after_packet": ["review_stack_continuity.next_action.command"],
-            "ordinary_rerun_count": len(executed_events) if events else 1,
+            "ordinary_rerun_count": len(proof_events) if events else 1,
+            "executed_transition_count": len(executed_events),
+            "manual_transition_record_count": 0 if planning_events else None,
+            "avoided_manual_transition_records": len(executed_events) if planning_events else 0,
             "evidence_source": transition_source if events else "projection_fallback",
         },
     }
@@ -28275,7 +28300,9 @@ def _review_stack_continuity_payload(
             "id": active_plan_id,
             "phase": phase,
             "phase_source": planning_phase_source,
-            "transition_records": [item.get("planning_surface") for item in planning_transitions if item.get("planning_surface")],
+            "transition_records": _dedupe(
+                [str(item.get("planning_surface") or "") for item in planning_transitions if item.get("planning_surface")]
+            ),
         },
         "workflow_trace": {
             **workflow_trace,
@@ -42871,6 +42898,7 @@ def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
 
 PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 PROOF_RECEIPT_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "history.jsonl"
+PROOF_REUSE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "proof-reuse.json"
 
 
 def _proof_receipt_result_failed(result: str) -> bool:
@@ -43094,6 +43122,51 @@ def _proof_receipt_retry_ladder(*, command: str, result: str, changed_paths: lis
     }
 
 
+def _write_proof_reuse_cache_from_receipt(
+    *,
+    target_root: Path,
+    command: str,
+    result: str,
+    changed_paths: list[str],
+    receipt: dict[str, Any],
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    path_fingerprints = {relative: digest for relative in normalized_paths if (digest := _file_sha256(target_root / relative))}
+    command_identity = hashlib.sha256(command.encode("utf-8")).hexdigest()
+    proof_selection_fingerprint = hashlib.sha256("\n".join([*sorted(normalized_paths), command]).encode("utf-8")).hexdigest()
+    cache_payload = {
+        "kind": "agentic-workspace/proof-reuse-cache/v1",
+        "changed_paths": normalized_paths,
+        "path_fingerprints": path_fingerprints,
+        "parent_proof_reference": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+        "proof_selection_fingerprint": proof_selection_fingerprint,
+        "dependency_config_fingerprint": "ordinary-proof-receipt",
+        "generated_surface_freshness": {"status": "verified"},
+        "proof_groups": [
+            {
+                "command": command,
+                "command_fingerprint": command_identity,
+                "status": result,
+            }
+        ],
+        "source_receipt_recorded_at": receipt.get("recorded_at"),
+        "source": "proof --record-receipt",
+    }
+    if not dry_run:
+        cache_path = target_root / PROOF_REUSE_RELATIVE_PATH
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(cache_payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    return {
+        "status": "dry-run" if dry_run else "written",
+        "path": PROOF_REUSE_RELATIVE_PATH.as_posix(),
+        "changed_paths": normalized_paths,
+        "fingerprint_count": len(path_fingerprints),
+        "command_identity": command_identity,
+        "source": "proof --record-receipt",
+    }
+
+
 def _record_proof_receipt_payload(
     *,
     target_root: Path,
@@ -43140,6 +43213,14 @@ def _record_proof_receipt_payload(
         )
     if failure_summary is not None:
         receipt["failure_summary"] = failure_summary
+    proof_reuse_cache = _write_proof_reuse_cache_from_receipt(
+        target_root=target_root,
+        command=command,
+        result=result,
+        changed_paths=changed_paths,
+        receipt=receipt,
+        dry_run=dry_run,
+    )
     if not dry_run:
         receipt_path.parent.mkdir(parents=True, exist_ok=True)
         receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
@@ -43178,6 +43259,7 @@ def _record_proof_receipt_payload(
         "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
         "history_path": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
         "receipt": receipt,
+        "proof_reuse_cache": proof_reuse_cache,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
     }
     if review_stack_transition.get("status") != "skipped":
