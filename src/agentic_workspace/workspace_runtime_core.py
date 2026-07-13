@@ -32667,6 +32667,35 @@ def _local_work_thread_record_projection(
     if stale_reasons == ["different-branch"]:
         status = "other-branch"
     planning_refs = refs["planning"]
+    select_action = {
+        "id": "select-thread",
+        "operation": "write-local-work-thread-index",
+        "path": LOCAL_WORK_THREAD_INDEX_PATH.as_posix(),
+        "payload": {"selected_thread_id": thread_id},
+        "postcondition": _command_with_cli_invoke(
+            command="agentic-workspace start --target . --select work_threads --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "rule": "Selection writes only the ignored local work-thread index; durable claims still require Planning, issue, PR, or proof evidence.",
+    }
+    restore_command = f"git switch {shlex.quote(branch)}" if branch and branch != current.get("branch") else ""
+    restore_action = {
+        "id": "restore-thread-branch",
+        "command": restore_command,
+        "run": restore_command or None,
+        "status": "available" if restore_command else "not-needed",
+        "postcondition": _command_with_cli_invoke(
+            command="agentic-workspace start --target . --select work_threads --format json",
+            cli_invoke=cli_invoke,
+        ),
+        "rule": "Restore only changes the local git branch; reread durable owners before claims.",
+    }
+    proceed_action = {
+        "id": "proceed-from-thread",
+        "command": str(_as_dict(record.get("next_safe_action")).get("command") or "").strip(),
+        "selector": str(_as_dict(record.get("next_safe_action")).get("selector") or "").strip(),
+        "rule": "Proceed commands are advisory resume hints and not proof of completion.",
+    }
     planning_boundary = {
         "status": "changed-owner" if planning_owner_changes else "reread-required" if planning_refs else "not-linked",
         "planning_refs": planning_refs,
@@ -32694,6 +32723,11 @@ def _local_work_thread_record_projection(
         },
         "durable_sources": durable_sources,
         "next_safe_action": _as_dict(record.get("next_safe_action")),
+        "selection_actions": {
+            "select": select_action,
+            "restore": restore_action,
+            "proceed": proceed_action,
+        },
         "proof_state": {
             "status": proof_status or "not-recorded",
             "stale_if": _compact_checkpoint_refs(proof_stale_if, limit=5),
@@ -32888,6 +32922,10 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
                 command="agentic-workspace start --target . --select work_threads --format json",
                 cli_invoke=cli_invoke,
             ),
+            "selected_index_path": LOCAL_WORK_THREAD_INDEX_PATH.as_posix(),
+            "select_operation": "write selected_thread_id to the ignored local index, then rerun the detail command",
+            "restore_operation": "run the selected thread's restore command when it names a different local branch",
+            "proceed_operation": "run the selected thread's proceed command only after durable owners are reread",
             "rule": "Use local thread facts to choose a resume handle; durable claims still require durable sources.",
         },
         "cleanup": {

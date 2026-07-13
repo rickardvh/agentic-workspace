@@ -5042,6 +5042,22 @@ def test_local_work_threads_report_ambiguity_and_checkpoint_bridge(tmp_path: Pat
     assert packet["checkpoint_bridge"]["source_selector"] == "local_chat_checkpoint"
     forbidden_task_fields = {"priority", "assignee", "assignment", "canonical_status", "estimate", "dependencies"}
     assert all(not forbidden_task_fields.intersection(thread) for thread in packet["current_matches"])
+    alpha = next(thread for thread in packet["current_matches"] if thread["id"] == "issue-1987-alpha")
+    assert alpha["selection_actions"]["select"]["path"] == ".agentic-workspace/local/work-threads/index.json"
+    assert alpha["selection_actions"]["select"]["payload"] == {"selected_thread_id": "issue-1987-alpha"}
+    assert alpha["selection_actions"]["restore"]["status"] == "not-needed"
+    assert alpha["selection_actions"]["proceed"]["selector"] == "work_threads"
+
+    _write_json(
+        tmp_path / ".agentic-workspace" / "local" / "work-threads" / "index.json",
+        alpha["selection_actions"]["select"]["payload"],
+    )
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Resume #1987", "--select", "work_threads", "--format", "json"]) == 0
+    selected = json.loads(capsys.readouterr().out)["values"]["work_threads"]
+    assert selected["status"] == "clear-match"
+    assert selected["index"]["selected_thread_id"] == "issue-1987-alpha"
+    assert selected["selected_thread"]["id"] == "issue-1987-alpha"
+    assert selected["selection_routes"]["selected_index_path"] == ".agentic-workspace/local/work-threads/index.json"
 
 
 def test_local_work_threads_checkpoint_fallback_does_not_compete_with_registry_match(tmp_path: Path, capsys) -> None:
