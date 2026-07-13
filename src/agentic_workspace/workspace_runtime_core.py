@@ -29842,33 +29842,44 @@ def _planning_roadmap_candidates(target_root: Path) -> list[dict[str, Any]]:
         state = tomllib.loads(state_path.read_text(encoding="utf-8-sig"))
     except (OSError, tomllib.TOMLDecodeError, UnicodeDecodeError):
         return []
+    todo = state.get("todo", {}) if isinstance(state, dict) else {}
     roadmap = state.get("roadmap", {}) if isinstance(state, dict) else {}
-    raw_candidates = roadmap.get("candidates", []) if isinstance(roadmap, dict) else []
+    collections = (
+        ("todo.active_items", todo.get("active_items", []) if isinstance(todo, dict) else [], "active-execplan"),
+        ("todo.queued_items", todo.get("queued_items", []) if isinstance(todo, dict) else [], "queued-execplan"),
+        ("roadmap.lanes", roadmap.get("lanes", []) if isinstance(roadmap, dict) else [], "roadmap-lane"),
+        ("roadmap.candidates", roadmap.get("candidates", []) if isinstance(roadmap, dict) else [], "roadmap-candidate"),
+    )
     candidates: list[dict[str, Any]] = []
-    for candidate in raw_candidates if isinstance(raw_candidates, list) else []:
-        if not isinstance(candidate, dict):
-            continue
-        status = str(candidate.get("status", "")).strip().lower()
-        maturity = str(candidate.get("maturity", "")).strip().lower()
-        if status in {"done", "closed", "retired", "superseded", "deferred"}:
-            continue
-        candidates.append(
-            {
-                "id": str(candidate.get("id", "")).strip(),
-                "title": str(candidate.get("title", "")).strip(),
-                "refs": str(candidate.get("refs", "")).strip(),
-                "priority": str(candidate.get("priority", "")).strip(),
-                "status": status or "unknown",
-                "maturity": maturity or "unknown",
-                "route_kind": str(candidate.get("kind") or candidate.get("route_kind") or "").strip(),
-                "parent_id": str(candidate.get("parent_id") or candidate.get("parent") or "").strip(),
-                "lane_id": str(candidate.get("lane_id") or "").strip(),
-                "owner_surface": str(candidate.get("owner_surface") or "").strip(),
-                "outcome": str(candidate.get("outcome", "")).strip(),
-                "promotion_signal": str(candidate.get("promotion_signal", "")).strip(),
-                "suggested_first_slice": str(candidate.get("suggested_first_slice", "")).strip(),
-            }
-        )
+    for source_bucket, raw_candidates, default_route_kind in collections:
+        for candidate in raw_candidates if isinstance(raw_candidates, list) else []:
+            if not isinstance(candidate, dict):
+                continue
+            status = str(candidate.get("status", "")).strip().lower()
+            maturity = str(candidate.get("maturity", "")).strip().lower()
+            if status in {"done", "closed", "retired", "superseded", "deferred"}:
+                continue
+            raw_refs = candidate.get("refs", "")
+            refs = " ".join(str(item) for item in raw_refs) if isinstance(raw_refs, list) else str(raw_refs)
+            candidates.append(
+                {
+                    "id": str(candidate.get("id", "")).strip(),
+                    "title": str(candidate.get("title", "")).strip(),
+                    "refs": refs.strip(),
+                    "priority": str(candidate.get("priority", "")).strip(),
+                    "status": status or "unknown",
+                    "maturity": maturity or "unknown",
+                    "route_kind": str(candidate.get("kind") or candidate.get("route_kind") or default_route_kind).strip(),
+                    "parent_id": str(candidate.get("parent_id") or candidate.get("parent") or "").strip(),
+                    "lane_id": str(candidate.get("lane_id") or "").strip(),
+                    "surface": str(candidate.get("surface") or "").strip(),
+                    "owner_surface": str(candidate.get("owner_surface") or candidate.get("surface") or "").strip(),
+                    "outcome": str(candidate.get("outcome", "")).strip(),
+                    "promotion_signal": str(candidate.get("promotion_signal", "")).strip(),
+                    "suggested_first_slice": str(candidate.get("suggested_first_slice", "")).strip(),
+                    "source_bucket": source_bucket,
+                }
+            )
     return [candidate for candidate in candidates if candidate.get("id") or candidate.get("title")]
 
 
@@ -29959,6 +29970,10 @@ def _candidate_relevance_payload(candidate: dict[str, Any], *, issue_refs: list[
     for issue_ref in issue_refs:
         if issue_ref.lower() in candidate_text:
             strong_evidence.append(f"issue_ref:{issue_ref}")
+            continue
+        issue_number = issue_ref.lstrip("#")
+        if issue_number and re.search(rf"(?<!\d){re.escape(issue_number)}(?!\d)", candidate_text):
+            strong_evidence.append(f"issue_ref_number:{issue_ref}")
     normalized_task = str(task_text or "").lower()
     for field in ("id", "lane_id"):
         value = str(candidate.get(field, "")).strip().lower()

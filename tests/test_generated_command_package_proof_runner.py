@@ -733,6 +733,44 @@ def test_ordinary_command_migration_inventory_fails_closed_when_generated_comman
     assert any("generated_command_module" in error and "does not exist" in error for error in errors)
 
 
+def test_runtime_semantic_exceptions_registry_is_current() -> None:
+    checker = _load_checker()
+    ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)
+
+    assert checker._validate_runtime_semantic_exceptions() == []
+    report = checker._python_completion_blockers_report(ir)
+    exceptions = report["runtime_semantic_exceptions"]
+    assert exceptions["status"] == "available"
+    assert exceptions["exception_count"] == 1
+    assert exceptions["exception_ids"] == ["planning.closeout.decision-point-intent-carry"]
+
+
+def test_runtime_semantic_exceptions_fail_closed_when_symbol_missing() -> None:
+    errors = _checker_case_errors(
+        """
+        registry = copy.deepcopy(checker.runtime_semantic_exceptions_manifest())
+        registry["exceptions"][0]["source_symbols"] = ["missing_decision_point_symbol"]
+        checker.runtime_semantic_exceptions_manifest = lambda: registry
+        _emit({"errors": checker._validate_runtime_semantic_exceptions()})
+        """
+    )
+
+    assert any("missing_decision_point_symbol" in error and "is not defined" in error for error in errors)
+
+
+def test_runtime_semantic_exceptions_fail_closed_when_adapter_missing() -> None:
+    errors = _checker_case_errors(
+        """
+        registry = copy.deepcopy(checker.runtime_semantic_exceptions_manifest())
+        registry["exceptions"][0]["adapter_id"] = "planning.missing.cli"
+        checker.runtime_semantic_exceptions_manifest = lambda: registry
+        _emit({"errors": checker._validate_runtime_semantic_exceptions()})
+        """
+    )
+
+    assert any("adapter_id 'planning.missing.cli' is not present" in error for error in errors)
+
+
 def test_current_python_completion_state_is_satisfied_by_exact_symbol_proof() -> None:
     checker = _load_checker()
     ir = checker.load_workspace_command_package_ir(repo_root=checker.REPO_ROOT)

@@ -44,6 +44,7 @@ from agentic_workspace.contract_tooling import (
     python_runtime_projection_inventory_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
+    runtime_semantic_exceptions_manifest,
     setup_findings_policy_manifest,
     target_support_manifest,
     workflow_artifact_profiles_manifest,
@@ -2877,6 +2878,10 @@ def main(argv: list[str] | None = None) -> int:
         (
             "python runtime projection inventory",
             _validate(python_runtime_projection_inventory_manifest(), "python_runtime_projection_inventory.schema.json"),
+        ),
+        (
+            "runtime semantic exceptions",
+            _validate(runtime_semantic_exceptions_manifest(), "runtime_semantic_exceptions.schema.json"),
         ),
         (
             "workspace runtime primitive families",

@@ -207,6 +207,12 @@
       "consumer": "scripts/check/check_generated_command_packages.py"
     },
     {
+      "contract": "runtime_semantic_exceptions.json",
+      "schema": "runtime_semantic_exceptions.schema.json",
+      "loader": "runtime_semantic_exceptions_manifest",
+      "consumer": "scripts/check/check_generated_command_packages.py"
+    },
+    {
       "contract": "workspace_runtime_primitive_families.json",
       "schema": "workspace_runtime_primitive_families.schema.json",
       "loader": "workspace_runtime_primitive_families_manifest",

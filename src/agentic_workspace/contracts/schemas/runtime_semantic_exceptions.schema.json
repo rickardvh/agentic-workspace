@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/runtime_semantic_exceptions.schema.json",
+  "title": "Runtime Semantic Exceptions",
+  "description": "Temporary exact-symbol exceptions for ordinary command semantics that remain in runtime code while IR/codegen support is incomplete.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schema_version",
+    "purpose",
+    "exceptions"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/runtime-semantic-exceptions/v1",
+      "description": "Stable document kind for the runtime semantic exception registry."
+    },
+    "schema_version": {
+      "const": "agentic-workspace/runtime-semantic-exceptions/v1",
+      "description": "Schema version for this registry."
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable purpose for keeping temporary runtime semantic exceptions exact and reviewable."
+    },
+    "exceptions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/exception"
+      },
+      "uniqueItems": true,
+      "description": "Exact-symbol temporary runtime semantic exceptions that are allowed only while their migration path remains open."
+    }
+  },
+  "$defs": {
+    "exception": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "owner",
+        "command_id",
+        "adapter_id",
+        "operation_id",
+        "runtime_path",
+        "source_module",
+        "source_symbols",
+        "accepted_runtime_boundary",
+        "reason",
+        "scope",
+        "migration_path",
+        "proof_refs",
+        "conformance_refs"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_.-]+$"
+        },
+        "status": {
+          "const": "accepted-temporary-runtime-semantic-exception"
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "command_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "adapter_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtime_path": {
+          "type": "string",
+          "pattern": "^(src|packages)/.+\\.py$"
+        },
+        "source_module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_symbols": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+          },
+          "uniqueItems": true
+        },
+        "accepted_runtime_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "source_module",
+            "source_symbol",
+            "runtime_boundary_class"
+          ],
+          "properties": {
+            "source_module": {
+              "type": "string",
+              "minLength": 1
+            },
+            "source_symbol": {
+              "type": "string",
+              "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+            },
+            "runtime_boundary_class": {
+              "enum": [
+                "front-door-dispatch",
+                "live-workspace-inspection",
+                "mutation-orchestration",
+                "package-specific-judgment",
+                "provider-integration"
+              ]
+            }
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 20
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 20
+        },
+        "migration_path": {
+          "type": "string",
+          "minLength": 20
+        },
+        "proof_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "conformance_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    }
+  },
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

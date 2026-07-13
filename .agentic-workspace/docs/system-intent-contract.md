@@ -55,3 +55,4 @@ Use:
 ## Checked-In Residue Rule
 
 Keep a checked-in execplan whenever later proof, intent validation, or required continuation would be expensive or ambiguous to reconstruct from chat alone.
+
