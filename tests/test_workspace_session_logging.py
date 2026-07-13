@@ -6,8 +6,15 @@ import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import pytest
+
 from agentic_workspace import cli as source_cli
 from agentic_workspace import current_work_context, session_logging
+
+
+@pytest.fixture(autouse=True)
+def _capture_pytest_session_log_detail(monkeypatch) -> None:
+    monkeypatch.setenv("AW_SESSION_LOG_CAPTURE_DETAIL", "1")
 
 
 def _write(path: Path, content: str) -> None:
@@ -55,6 +62,94 @@ def test_session_logging_disabled_does_not_redirect_command_output(tmp_path: Pat
 
     assert observed_stdout is original_stdout
     assert not (target / ".agentic-workspace/local/logs").exists()
+
+
+def test_session_logging_mutes_pytest_origin_capture_by_default(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.delenv("AW_SESSION_LOG_CAPTURE_DETAIL", raising=False)
+    monkeypatch.delenv("AW_SESSION_LOG_PYTEST_CAPTURE", raising=False)
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_example (call)")
+
+    def runner(_argv: list[str]) -> int:
+        print("visible stdout")
+        print("visible stderr", file=sys.stderr)
+        return 7
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], runner) == 7
+
+    output = capsys.readouterr()
+    assert output.out == "visible stdout\n"
+    assert output.err == "visible stderr\n"
+    assert not (target / session_logging.SESSION_POINTER_PATH).exists()
+    assert not (target / session_logging.SESSION_LOG_ROOT).exists()
+
+
+def test_session_logging_default_pytest_capture_stays_bounded_across_many_commands(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.delenv("AW_SESSION_LOG_CAPTURE_DETAIL", raising=False)
+    monkeypatch.delenv("AW_SESSION_LOG_PYTEST_CAPTURE", raising=False)
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_bounded (call)")
+
+    for index in range(5):
+        assert session_logging.run_with_session_logging(["summary", "--target", str(target)], lambda _argv: print(index) or 0) == 0
+
+    assert capsys.readouterr().out == "0\n1\n2\n3\n4\n"
+    assert not (target / session_logging.SESSION_POINTER_PATH).exists()
+    assert not (target / session_logging.SESSION_LOG_ROOT).exists()
+
+
+def test_session_logging_pytest_origin_full_capture_requires_explicit_opt_in(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_captured (call)")
+    monkeypatch.setenv("AW_SESSION_LOG_CAPTURE_DETAIL", "1")
+
+    assert session_logging.run_with_session_logging(["config", "--target", str(target)], lambda _argv: print("captured") or 0) == 0
+    capsys.readouterr()
+
+    payload = session_logging.analyze_session_log(
+        state=session_logging.load_state_for_argv(["--target", str(target)]),
+        origin_scope="test",
+    )
+    assert payload["summary"]["command_count"] == 1
+    assert payload["origin_breakdown"] == {"pytest": 1}
+    entry = payload["origin_partitions"]["test"]["entries"][0]
+    assert entry["origin"]["classification"] == "pytest"
+    assert entry["parent"]["context"].startswith("tests/test_workspace_session_logging.py::test_captured")
+
+
+def test_session_logging_explicit_live_agent_origin_captures_even_under_pytest(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.delenv("AW_SESSION_LOG_CAPTURE_DETAIL", raising=False)
+    monkeypatch.delenv("AW_SESSION_LOG_PYTEST_CAPTURE", raising=False)
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_live_agent (call)")
+    monkeypatch.setenv("AW_SESSION_LOG_ORIGIN", "agent")
+
+    assert session_logging.run_with_session_logging(["status", "--target", str(target)], lambda _argv: print("agent") or 0) == 0
+    capsys.readouterr()
+
+    payload = session_logging.analyze_session_log(state=session_logging.load_state_for_argv(["--target", str(target)]))
+    assert payload["summary"]["command_count"] == 1
+    assert payload["origin_breakdown"] == {"agent": 1}
+
+
+def test_session_logging_mutes_nested_pytest_origin_capture_by_default(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    _write(target / ".agentic-workspace/config.local.toml", "schema_version = 1\n\n[session_logging]\nenabled = true\n")
+    monkeypatch.delenv("AW_SESSION_LOG_CAPTURE_DETAIL", raising=False)
+    monkeypatch.delenv("AW_SESSION_LOG_PYTEST_CAPTURE", raising=False)
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "tests/test_workspace_session_logging.py::test_nested (call)")
+
+    def outer(_argv: list[str]) -> int:
+        return session_logging.run_with_session_logging(["summary", "--target", str(target)], lambda _inner: 0)
+
+    assert session_logging.run_with_session_logging(["start", "--target", str(target)], outer) == 0
+
+    assert not (target / session_logging.SESSION_POINTER_PATH).exists()
+    assert not (target / session_logging.SESSION_LOG_ROOT).exists()
 
 
 def test_session_logging_status_defaults_for_parent_command(tmp_path: Path, capsys) -> None:

@@ -32,6 +32,8 @@ SESSION_REGISTRY_PATH = Path(".agentic-workspace") / "local" / "session-logging"
 SESSION_REGISTRY_LOCK_PATH = Path(".agentic-workspace") / "local" / "session-logging" / ".sessions.lock"
 SESSION_REGISTRY_KIND = "agentic-workspace/session-logging-registry/v1"
 LOGICAL_SESSION_IDENTITY_ENV = "AW_SESSION_LOGICAL_IDENTITY"
+PYTEST_DETAIL_CAPTURE_ENV = "AW_SESSION_LOG_CAPTURE_DETAIL"
+PYTEST_CAPTURE_MODE_ENV = "AW_SESSION_LOG_PYTEST_CAPTURE"
 SESSION_LOG_KIND = "agentic-workspace/session-log/v1"
 SESSION_LOG_INDEX_KIND = "agentic-workspace/session-log-index/v1"
 DEFAULT_MAX_INLINE_OUTPUT_BYTES = 64 * 1024
@@ -108,6 +110,8 @@ def run_with_session_logging(
     state = load_state_for_argv(argv_list, cwd=cwd)
     if not state.enabled:
         return runner(argv_list)
+    if _suppress_pytest_origin_capture():
+        return runner(argv_list)
     record_command = not (argv_list and argv_list[0] == "session-log" and any(token in {"repair", "export"} for token in argv_list[1:]))
 
     output_stdout = stdout or sys.stdout
@@ -117,6 +121,7 @@ def run_with_session_logging(
     capture = CommandCapture(exit_code=0, stdout="", stderr="")
     started_at = datetime.now(UTC).isoformat()
     started = time.monotonic()
+    parent_context = _entry_parent_context(argv_list)
     try:
         try:
             with (
@@ -162,7 +167,9 @@ def run_with_session_logging(
             print(capture.stdout, end="", file=output_stdout)
         if capture.stderr:
             print(capture.stderr, end="", file=output_stderr)
-        warning = append_command_entry(state=state, argv=argv_list, capture=capture) if record_command else None
+        warning = (
+            append_command_entry(state=state, argv=argv_list, capture=capture, parent_context=parent_context) if record_command else None
+        )
         if warning:
             print(f"AW session logging warning: {warning}", file=output_stderr)
 
@@ -183,6 +190,39 @@ def _session_parent_environment(argv: Sequence[str]) -> Iterator[None]:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = value
+
+
+def _entry_parent_context(argv: Sequence[str]) -> dict[str, str]:
+    current = _parent_context()
+    if any(current.values()):
+        return current
+    pytest_context = os.environ.get("PYTEST_CURRENT_TEST", "")
+    if pytest_context:
+        return {
+            "entry_id": "",
+            "command": "agentic-workspace " + shlex.join(list(argv)),
+            "context": pytest_context,
+        }
+    return current
+
+
+def _truthy_capture_value(value: str) -> bool:
+    return value.strip().lower() in {"1", "true", "yes", "on", "full", "detail", "detailed"}
+
+
+def _pytest_detail_capture_enabled() -> bool:
+    return _truthy_capture_value(os.environ.get(PYTEST_DETAIL_CAPTURE_ENV, "")) or _truthy_capture_value(
+        os.environ.get(PYTEST_CAPTURE_MODE_ENV, "")
+    )
+
+
+def _suppress_pytest_origin_capture() -> bool:
+    if not os.environ.get("PYTEST_CURRENT_TEST"):
+        return False
+    explicit_origin = os.environ.get("AW_SESSION_LOG_ORIGIN", "").strip().lower()
+    if explicit_origin and explicit_origin != "pytest":
+        return False
+    return not _pytest_detail_capture_enabled()
 
 
 def _run_session_log_adapter(args: Any) -> int:
@@ -229,7 +269,13 @@ def _run_session_log_adapter(args: Any) -> int:
     return 0
 
 
-def append_command_entry(*, state: SessionLoggingState, argv: Sequence[str], capture: CommandCapture) -> str | None:
+def append_command_entry(
+    *,
+    state: SessionLoggingState,
+    argv: Sequence[str],
+    capture: CommandCapture,
+    parent_context: dict[str, str] | None = None,
+) -> str | None:
     if not state.enabled:
         return None
     try:
@@ -278,6 +324,7 @@ def append_command_entry(*, state: SessionLoggingState, argv: Sequence[str], cap
             invocation_intent=invocation_intent,
             provenance=provenance,
             segment=segment,
+            parent_context=parent_context,
         )
     except Exception as exc:  # pragma: no cover - intentionally best effort
         return str(exc)
@@ -1014,6 +1061,7 @@ def _append_index_command(
     invocation_intent: dict[str, Any],
     provenance: dict[str, Any],
     segment: dict[str, Any],
+    parent_context: dict[str, str] | None = None,
 ) -> None:
     index = _read_index(state=state, session=session) or {}
     entries = _entries_from_index(index)
@@ -1050,7 +1098,7 @@ def _append_index_command(
             "invocation_intent": invocation_intent,
             "invocation_outcome": invocation_outcome,
             "origin": origin,
-            "parent_context": _parent_context(),
+            "parent_context": parent_context or _parent_context(),
             "provenance": provenance,
             "segment": segment,
             "exception": normalized_capture.exception or "",
