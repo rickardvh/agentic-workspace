@@ -2150,6 +2150,45 @@ def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path
     ]
 
 
+def test_start_embeds_active_planning_orientation_without_immediate_summary_rerun(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "orientation-plan",
+                "--title",
+                "Orientation plan",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Orientation plan", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    active_state = payload["context"]["active_state"]
+    orientation = active_state["orientation_delta"]
+    assert orientation["status"] == "embedded"
+    assert orientation["summary_equivalent_for_first_contact"] is True
+    assert "summary --target . --format json" in orientation["full_detail_command"]
+    assert not any("summary --target . --format json" in item for item in payload["context"]["primary_action"]["read_first"])
+    workflow = payload["context"]["planning"]["workflow_sufficiency"]
+    if workflow["sufficiency_result"] != "startup-orientation-embedded":
+        assert workflow["sufficiency_result"] == "delegation-decision-required"
+    assert "summary --target . --format json" not in payload["decision_packet"]["detail_routes"]["active_plan"]
+
+
 def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyword(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
