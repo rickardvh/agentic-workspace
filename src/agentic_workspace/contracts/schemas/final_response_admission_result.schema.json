@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/final_response_admission_result.schema.json",
+  "title": "Agentic Workspace final response admission result",
+  "description": "Host admission boundary result for a model-authored final response attempt.",
+  "x-agentic-workspace-doc-role": "reference",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "kind",
+    "status",
+    "terminal_outcome_contract",
+    "admission",
+    "continuation_operation",
+    "checkpoint_write",
+    "checkpoint_before",
+    "checkpoint_after",
+    "rule"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/final-response-admission-result/v1",
+      "description": "Stable discriminator for final-response admission command output."
+    },
+    "status": {
+      "enum": [
+        "accepted_terminal_final",
+        "rejected_auto_resumed"
+      ],
+      "description": "Whether the host accepted final custody transfer or rejected the attempt and resumed work."
+    },
+    "terminal_outcome_contract": {
+      "type": "object",
+      "description": "Terminal outcome contract used to decide whether a final response is authorized."
+    },
+    "admission": {
+      "type": "object",
+      "description": "Detailed admission decision, including rejection and resume transition facts."
+    },
+    "continuation_operation": {
+      "type": "object",
+      "description": "Ordinary AW continuation operation executed after an unauthorized final response."
+    },
+    "checkpoint_write": {
+      "type": "object",
+      "description": "Local checkpoint write result for the persisted admission slice."
+    },
+    "checkpoint_before": {
+      "type": "object",
+      "description": "Local admission checkpoint state observed before this command."
+    },
+    "checkpoint_after": {
+      "type": "object",
+      "description": "Local admission checkpoint state observed after this command."
+    },
+    "rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Boundary rule for interpreting this command output."
+    }
+  }
+}

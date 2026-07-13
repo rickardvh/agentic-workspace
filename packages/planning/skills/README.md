@@ -15,7 +15,7 @@ For maintainers of this repository, `skills/` is the canonical source of truth. 
 - `bootstrap-upgrade`
   - upgrade planning bootstrap files for an already bootstrapped repository safely
 - `planning-autopilot`
-  - execute one bounded planning milestone at a time from the checked-in planning surfaces
+  - execute bounded planning slices from checked-in planning surfaces until the active objective reaches an authorized terminal outcome
 - `planning-orchestrator-workflow`
   - run planner-to-worker delegated execution from checked-in planning using the local mixed-agent posture and a derived handoff contract
 - `planning-intake-upstream-task`

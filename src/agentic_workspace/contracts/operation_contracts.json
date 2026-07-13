@@ -22,10 +22,22 @@
   },
   "operations": [
     {
+      "id": "autopilot.run",
+      "path": "operations/autopilot.run.json",
+      "command": "autopilot",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "checkpoint.write",
       "path": "operations/checkpoint.write.json",
       "command": "checkpoint",
       "migration_status": "draft-contract-only"
+    },
+    {
+      "id": "final-response.admit",
+      "path": "operations/final-response.admit.json",
+      "command": "final-response",
+      "migration_status": "runtime-consumed"
     },
     {
       "id": "work-thread.prune",

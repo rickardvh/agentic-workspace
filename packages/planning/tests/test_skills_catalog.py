@@ -39,6 +39,14 @@ def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
     assert "planning-high-assurance-lifecycle" in readme_text
     assert "planning-intent-verification" in readme_text
     assert "planning-autopilot" in registry_text
+    autopilot_text = autopilot_skill.read_text(encoding="utf-8")
+    assert "re-enters execution while the same explicit objective has safe continuation state" in autopilot_text
+    assert "must not treat one milestone completion as permission to yield" in autopilot_text
+    assert "do not run the slice loop directly outside that host boundary" in autopilot_text
+    assert "agentic-workspace autopilot --target <repo> --executor-command <agent-command> --format json" in autopilot_text
+    assert "Reconcile before editing when:" in autopilot_text
+    assert "record a typed BLOCKED state only when no safe selection exists" in autopilot_text
+    assert "Stop and report instead of editing when:" not in autopilot_text
     assert "planning-review-pass" in registry_text
     assert "planning-reporting" in registry_text
     assert "planning-high-assurance-lifecycle" in registry_text
@@ -54,12 +62,16 @@ def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
     lifecycle_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-high-assurance-lifecycle")
     intent_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-intent-verification")
     assert "run autopilot" in autopilot_entry["activation_hints"]["phrases"]
+    assert autopilot_entry["host_entrypoint"]["operation_id"] == "autopilot.run"
+    assert autopilot_entry["host_entrypoint"]["required"] is True
+    assert autopilot_entry["host_entrypoint"]["ordinary_path_unavoidable"] is True
     assert "perform a review" in review_entry["activation_hints"]["phrases"]
     assert "planning report" in reporting_entry["activation_hints"]["phrases"]
     assert "high assurance planning lifecycle" in lifecycle_entry["activation_hints"]["phrases"]
     assert "intent verification" in intent_entry["activation_hints"]["phrases"]
     assert "negative invariants" in intent_entry["activation_hints"]["phrases"]
     summaries = {entry["id"]: entry["summary"] for entry in registry_payload["skills"]}
+    assert "authorized terminal outcome" in summaries["planning-autopilot"]
     assert "semantic intent satisfaction" in summaries["planning-intent-verification"]
     assert "closeout procedure" in summaries["planning-closeout-trust"]
     assert "broad or high-assurance" in summaries["planning-high-assurance-lifecycle"]

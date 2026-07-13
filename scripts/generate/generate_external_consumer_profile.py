@@ -339,10 +339,6 @@ def render_bundle(profile: dict[str, object]) -> str:
         output_closure = schema_closure(output_refs)
         failure_closure = schema_closure(failure_refs)
         closure = input_closure | output_closure | failure_closure
-        compatibility_contract = {
-            key: contract.get(key)
-            for key in ("schema_version", "id", "classification", "inputs", "output", "effects", "guards")
-        }
         operations[str(entry["id"])] = {
             "identity": str(entry["id"]),
             "version": contract.get("schema_version"),
@@ -426,7 +422,7 @@ def render_python_typed_operations(profile: dict[str, object]) -> str:
                 "",
             ]
         )
-    return "\n".join(lines)
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def main() -> int:

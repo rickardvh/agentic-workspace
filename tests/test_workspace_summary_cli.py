@@ -704,6 +704,157 @@ def test_completion_gate_claim_authorization_surfaces_closure_keyword_guard() ->
     assert "Closes #2113" in guard["targets"][0]["unsafe_examples"]
 
 
+def test_terminal_outcome_contract_distinguishes_continue_blocked_and_user_paused() -> None:
+    from agentic_workspace.workspace_runtime_primitives import (
+        _terminal_final_response_admission,
+        _terminal_outcome_contract_payload,
+    )
+
+    continue_contract = _terminal_outcome_contract_payload(
+        completion_gate={
+            "status": "blocked",
+            "active_intent_satisfied": False,
+            "claim_authorization": {"allowed_claim_classes": ["partial_progress"]},
+        },
+        completion_options=[
+            {"id": "run-proof", "allowed": True},
+            {"id": "stop-with-status", "allowed": True},
+        ],
+    )
+    assert continue_contract["state"] == "CONTINUE"
+    assert continue_contract["final_response_authorized"] is False
+    assert continue_contract["custody_owner"] == "agent"
+    assert "context-pressure" in continue_contract["invalid_pseudo_blockers"]
+
+    weak_final_contract = _terminal_outcome_contract_payload(
+        completion_gate={"status": "clarification-required", "required_next_action": "ask-human"},
+        completion_options=[{"id": "request-review", "allowed": True}],
+    )
+    assert weak_final_contract["state"] == "CONTINUE"
+    assert weak_final_contract["final_response_authorized"] is False
+    assert weak_final_contract["blocker_qualification"]["status"] == "missing_typed_external_blocker"
+    assert "qualify-terminal-blocker" in weak_final_contract["safe_continuation_option_ids"]
+    assert weak_final_contract["final_response_enforcement"]["status"] == "rejected_auto_resume"
+    assert weak_final_contract["final_response_enforcement"]["terminal_final_rejected"] is True
+    assert weak_final_contract["final_response_enforcement"]["progress_without_yield"] is True
+    assert weak_final_contract["final_response_enforcement"]["enforcement_maturity"] == "host-integrated"
+    assert weak_final_contract["final_response_enforcement"]["ordinary_host_path_unavoidable"] is True
+    assert weak_final_contract["final_response_enforcement"]["host_boundary_integrated"] is True
+    assert weak_final_contract["final_response_enforcement"]["issue_2239_closure_ready"] is False
+    assert "Broader unattended end-to-end evidence" in weak_final_contract["final_response_enforcement"]["issue_2239_closure_gap"]
+    assert weak_final_contract["final_response_enforcement"]["integrated_host_boundaries"][0]["id"] == "agentic-workspace.autopilot"
+    assert weak_final_contract["final_response_enforcement"]["integrated_host_boundaries"][1]["id"] == "model-cli-harness.codex-sbx"
+    assert weak_final_contract["final_response_enforcement"]["multi_slice_continuation"]["status"] == "preserved"
+    assert (
+        weak_final_contract["final_response_enforcement"]["weak_model_regression"] == "terminal-final-rejected-while-continuation-remains"
+    )
+    admission = _terminal_final_response_admission(
+        terminal_outcome_contract=weak_final_contract,
+        final_response_attempt={
+            "source": "weak-model-fixture",
+            "claim": "Done.",
+            "after_compaction": True,
+        },
+        resume_state={"slice": "pre-compaction"},
+    )
+    assert admission["status"] == "rejected_auto_resumed"
+    assert admission["terminal_final_rejected"] is True
+    assert admission["resume_transition"]["status"] == "executed"
+    assert admission["resume_transition"]["auto_resume_action"] == "ask-human"
+    assert admission["resume_transition"]["compaction_boundary_crossed"] is True
+    assert admission["resume_transition"]["after_state"]["required_next_action"] == "ask-human"
+    assert admission["progress_without_yield"] is True
+
+    blocked_contract = _terminal_outcome_contract_payload(
+        completion_gate={
+            "status": "clarification-required",
+            "required_next_action": "ask-human",
+            "external_blockers": [
+                {
+                    "id": "missing-user-secret",
+                    "type": "human_action",
+                    "evidence": "The required secret is unavailable to the agent.",
+                    "recovery": "Ask the user to provide the secret or approve a different path.",
+                    "no_safe_continuation": True,
+                }
+            ],
+        },
+        completion_options=[{"id": "request-review", "allowed": True}],
+    )
+    assert blocked_contract["state"] == "BLOCKED"
+    assert blocked_contract["final_response_authorized"] is True
+    assert blocked_contract["blocker_qualification"]["status"] == "qualified_external_blocker"
+    assert blocked_contract["blocker_qualification"]["qualified_blockers"][0]["id"] == "missing-user-secret"
+
+    paused_contract = _terminal_outcome_contract_payload(
+        completion_gate={"status": "human-accepted-partial", "human_accepted_partial": True},
+        completion_options=[],
+    )
+    assert paused_contract["state"] == "USER_PAUSED"
+    assert paused_contract["custody_owner"] == "user"
+
+
+def test_final_response_admission_rejects_non_compliant_final_and_resumes_through_compaction() -> None:
+    from agentic_workspace.workspace_runtime_primitives import (
+        _terminal_final_response_admission,
+        _terminal_outcome_contract_payload,
+    )
+
+    contract = _terminal_outcome_contract_payload(
+        completion_gate={
+            "status": "continue-required",
+            "required_next_action": "run-focused-proof",
+            "active_intent_satisfied": False,
+            "claim_authorization": {"allowed_claim_classes": ["partial_progress"]},
+        },
+        completion_options=[{"id": "run-proof", "allowed": True}],
+    )
+    invoked_requests = []
+
+    def execute_resume(request: dict[str, object]) -> dict[str, object]:
+        invoked_requests.append(request)
+        assert request["auto_resume_action"] == "run-focused-proof"
+        assert request["terminal_final_rejected"] is True
+        assert request["after_compaction"] is True
+        return {
+            "kind": "agentic-workspace/final-response-resume-result/v1",
+            "status": "executed",
+            "invoked_action": request["auto_resume_action"],
+            "after_state_patch": {
+                "continuation_slice": "slice-2-post-compaction",
+                "required_next_action": request["auto_resume_action"],
+                "custody_owner": "agent",
+                "resume_count": 1,
+            },
+        }
+
+    admission = _terminal_final_response_admission(
+        terminal_outcome_contract=contract,
+        final_response_attempt={
+            "source": "simulated-2236-2237-non-compliance",
+            "claim": "Done.",
+            "after_compaction": True,
+        },
+        resume_state={"continuation_slice": "slice-1-pre-compaction", "resume_count": 0},
+        resume_executor=execute_resume,
+    )
+
+    assert len(invoked_requests) == 1
+    assert admission["status"] == "rejected_auto_resumed"
+    assert admission["host_admission_boundary"]["status"] == "rejected-and-resumed"
+    assert admission["host_admission_boundary"]["invoked_resume_executor"] is True
+    assert admission["host_admission_boundary"]["rejects_model_obedience_only"] is True
+    transition = admission["resume_transition"]
+    assert transition["status"] == "executed"
+    assert transition["auto_resume_action"] == "run-focused-proof"
+    assert transition["compaction_boundary_crossed"] is True
+    assert transition["executor_result"]["status"] == "executed"
+    assert transition["executor_result"]["invoked_action"] == "run-focused-proof"
+    assert transition["after_state"]["continuation_slice"] == "slice-2-post-compaction"
+    assert transition["after_state"]["custody_owner"] == "agent"
+    assert admission["progress_without_yield"] is True
+
+
 def test_memory_decision_packet_pull_statuses_distinguish_route_inspection() -> None:
     baseline_only = _memory_decision_packet_payload(
         stage="implement",

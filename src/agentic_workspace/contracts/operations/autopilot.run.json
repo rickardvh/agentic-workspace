@@ -1,0 +1,130 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "autopilot.run",
+  "command_surface": {
+    "command": "autopilot",
+    "format_option": "format"
+  },
+  "summary": "Run the canonical ordinary AW executor loop through final-response admission until terminal custody is authorized.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "executor_command",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "source",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "after_compaction",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/final_response_admission_result.schema.json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": true,
+    "idempotent": false,
+    "writes_repo_state": true,
+    "requires_preflight_gate": true
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "allowed",
+    "outside_repo_writes": "allowed"
+  },
+  "reads": [
+    {
+      "surface": "report.closeout_trust",
+      "required": true
+    },
+    {
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "required": false
+    },
+    {
+      "surface": "caller-supplied executor command",
+      "required": true
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "required": true,
+      "when": "persist each admission and continuation slice"
+    },
+    {
+      "surface": "executor-defined repository or external state",
+      "required": false,
+      "when": "the caller-supplied executor performs work before emitting a final attempt"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "run_executor",
+      "uses": "workspace.final-response.admission",
+      "description": "Run the caller-supplied executor command and treat stdout as the model-authored final response attempt."
+    },
+    {
+      "id": "evaluate_terminal_contract",
+      "uses": "workspace.final-response.admission",
+      "description": "Evaluate the terminal outcome contract against the executor final response attempt."
+    },
+    {
+      "id": "run_continuation",
+      "uses": "workspace.final-response.continuation.execute",
+      "description": "Run the selected ordinary continuation operation when the final response is not authorized."
+    },
+    {
+      "id": "repeat_until_terminal",
+      "uses": "workspace.final-response.admission",
+      "description": "Re-enter the executor with continuation state until DELIVERED, qualified BLOCKED, or USER_PAUSED authorizes final custody."
+    },
+    {
+      "id": "write_checkpoint",
+      "uses": "workspace.local-chat-checkpoint.write",
+      "description": "Persist the local admission and resume slice."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit the autopilot admission result."
+    }
+  ],
+  "guards": [
+    "This is the canonical ordinary AW/autopilot execution boundary for model-authored finals.",
+    "Every executor stdout final attempt must pass through final-response admission before it can be exposed as terminal output.",
+    "Rejected CONTINUE attempts must keep custody with the agent and re-enter the executor with active objective and continuation state.",
+    "Executor mode is conservatively classified as mutation-capable, non-idempotent, network-allowed, and outside-repo-write-capable because the executor command is caller supplied.",
+    "Local admission slices are continuity checkpoints and must not be treated as closure evidence."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "autopilot route tests execute the generated CLI command across multiple ordinary executor slices",
+    "autopilot route tests prove a real repository-state transition between a rejected CONTINUE final and an accepted DELIVERED final",
+    "generated package freshness checks include the Python and TypeScript autopilot command surfaces"
+  ],
+  "migration_status": "runtime-consumed"
+}

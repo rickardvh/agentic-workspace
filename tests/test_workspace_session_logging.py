@@ -984,9 +984,7 @@ def test_pytest_subprocess_helper_declares_invocation_intent_without_inference(t
     assert expected_success_failure in analysis["failed_commands"]
 
     product_operation = [
-        entry
-        for entry in analysis["origin_partitions"]["test"]["entries"]
-        if entry["invocation_intent"]["scenario_id"] == "status-success"
+        entry for entry in analysis["origin_partitions"]["test"]["entries"] if entry["invocation_intent"]["scenario_id"] == "status-success"
     ][0]
     assert product_operation["origin"]["classification"] == "pytest"
     assert product_operation["invocation_intent"]["invocation_class"] == "product-operation"
