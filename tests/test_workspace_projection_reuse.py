@@ -81,6 +81,43 @@ def test_report_reuses_equivalent_router_projection_and_verbose_forces_full_deta
     assert verbose["kind"] != "agentic-workspace/unchanged-projection/v1"
 
 
+def test_summary_reuses_unchanged_projection_and_preserves_decision_deltas(tmp_path: Path, capsys, monkeypatch) -> None:
+    target = _target(tmp_path)
+    capsys.readouterr()
+
+    assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
+    first_text = capsys.readouterr().out
+    assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
+    unchanged_text = capsys.readouterr().out
+    unchanged = json.loads(unchanged_text)
+
+    assert unchanged["kind"] == "agentic-workspace/unchanged-projection/v1"
+    assert unchanged["operation"] == "summary"
+    assert unchanged["decision_delta"] == "unchanged"
+    assert unchanged["proof_delta"] == "unchanged"
+    assert unchanged["residue_delta"] == "unchanged"
+    assert unchanged["next_action_delta"] == "unchanged"
+    assert unchanged["prior_decision"]["health"]
+    assert unchanged["prior_decision"]["next_action"]
+    assert unchanged["work_avoided"]["full_projection_builder_skipped"] is True
+    assert unchanged["work_avoided"]["serialization_of_full_projection_skipped"] is True
+    assert len(unchanged_text) < len(first_text) / 2
+    assert "--verbose" in unchanged["full_detail"]["command"]
+
+    planning_state = target / ".agentic-workspace" / "planning" / "state.toml"
+    planning_state.write_text(planning_state.read_text(encoding="utf-8") + "\n# decision relevant planning change\n", encoding="utf-8")
+    assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
+    changed = json.loads(capsys.readouterr().out)
+    assert changed.get("kind") != "agentic-workspace/unchanged-projection/v1"
+
+    assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    monkeypatch.setenv("AW_PROJECTION_FORCE_REFRESH", "1")
+    assert cli.main(["summary", "--target", str(target), "--format", "json"]) == 0
+    forced = json.loads(capsys.readouterr().out)
+    assert forced.get("kind") != "agentic-workspace/unchanged-projection/v1"
+
+
 def test_dependency_digest_tracks_commit_relevant_worktree_and_contract_but_ignores_irrelevant_file(tmp_path: Path, monkeypatch) -> None:
     from agentic_workspace import projection_reuse
 
@@ -96,6 +133,18 @@ def test_dependency_digest_tracks_commit_relevant_worktree_and_contract_but_igno
     monkeypatch.setattr(projection_reuse, "_CACHE_CONTRACT_VERSION", 99)
     contract, _ = projection_reuse.dependency_digest(root=target, operation="doctor", query={})
     assert contract != relevant
+
+
+def test_dependency_digest_ignores_revision_only_changes_for_declared_dependencies(tmp_path: Path) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+    first, _ = projection_reuse.dependency_digest(root=target, operation="summary", query={})
+    (target / ".git" / "HEAD").write_text("ref: refs/heads/feature\n", encoding="utf-8")
+    (target / "notes.txt").write_text("not summary relevant\n", encoding="utf-8")
+    unchanged, _ = projection_reuse.dependency_digest(root=target, operation="summary", query={})
+
+    assert unchanged == first
 
 
 def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> None:
