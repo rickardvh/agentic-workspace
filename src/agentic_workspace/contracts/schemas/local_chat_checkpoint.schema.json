@@ -280,6 +280,11 @@
         }
       }
     },
+    "final_response_admission": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Ignored host final-response admission resume slices. Advisory only; not closure evidence."
+    },
     "limits": {
       "type": "object",
       "additionalProperties": false,

@@ -4,7 +4,24 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+
+def _repo_root(cwd: Path | None = None) -> Path:
+    current = cwd or Path.cwd()
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=current,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return Path(__file__).resolve().parents[2]
+    root = result.stdout.strip()
+    return Path(root).resolve() if root else Path(__file__).resolve().parents[2]
+
+
+REPO_ROOT = _repo_root()
 FORMAT_EXTENSIONS = {".py", ".pyi", ".ipynb"}
 FORMAT_ROOTS = {"src", "tests", "packages"}
 HOOK_COMMANDS = (

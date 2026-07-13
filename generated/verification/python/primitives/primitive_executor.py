@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib
 import json
 import math
+import re
 import tomllib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, is_dataclass
@@ -30,6 +31,7 @@ class PrimitiveExecutionError(RuntimeError):
 
 
 _DECLARED_TEXT_MAX_SAFE_INTEGER = 9_007_199_254_740_991
+_DECLARED_TEXT_TEMPLATE_PATTERN = re.compile(r"\{([^}]*)\}")
 
 
 PrimitiveHandler = Callable[[dict[str, Any], dict[str, Any], "PrimitiveContext"], Any]
@@ -796,26 +798,12 @@ def _render_declared_text_line(line: Any, *, current: Any, root: dict[str, Any])
 
 
 def _render_declared_text_template(template: str, *, current: Any, root: dict[str, Any]) -> str:
-    rendered = template
-    for token in _declared_text_template_tokens(template):
+    def replace(match: re.Match[str]) -> str:
+        token = match.group(1)
         found, value = _declared_text_placeholder_value(token, current=current, root=root)
-        rendered = rendered.replace("{" + token + "}", _declared_text_format(value if found else ""))
-    return rendered
+        return _declared_text_format(value if found else "")
 
-
-def _declared_text_template_tokens(template: str) -> list[str]:
-    tokens: list[str] = []
-    index = 0
-    while index < len(template):
-        start = template.find("{", index)
-        if start == -1:
-            break
-        end = template.find("}", start + 1)
-        if end == -1:
-            break
-        tokens.append(template[start + 1 : end])
-        index = end + 1
-    return tokens
+    return _DECLARED_TEXT_TEMPLATE_PATTERN.sub(replace, template)
 
 
 def _declared_text_placeholder_value(token: str, *, current: Any, root: dict[str, Any]) -> tuple[bool, Any]:

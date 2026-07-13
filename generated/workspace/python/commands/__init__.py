@@ -11,12 +11,14 @@ from __future__ import annotations
 # Command module changes belong in src/agentic_workspace/contracts/command_package_ir.json.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
+from . import autopilot_run as _command_autopilot_run
 from . import checkpoint_write as _command_checkpoint_write
 from . import config_report as _command_config_report
 from . import defaults_report as _command_defaults_report
 from . import delegation_outcome_append as _command_delegation_outcome_append
 from . import doctor_report as _command_doctor_report
 from . import external_intent_refresh_github as _command_external_intent_refresh_github
+from . import final_response_admit as _command_final_response_admit
 from . import implement_context as _command_implement_context
 from . import init_lifecycle as _command_init_lifecycle
 from . import install_lifecycle as _command_install_lifecycle
@@ -44,12 +46,14 @@ from . import work_thread_prune as _command_work_thread_prune
 
 
 GENERATED_COMMAND_HANDLERS = {
+    'autopilot.run': _command_autopilot_run.run,
     'checkpoint.write': _command_checkpoint_write.run,
     'config.report': _command_config_report.run,
     'defaults.report': _command_defaults_report.run,
     'delegation-outcome.append': _command_delegation_outcome_append.run,
     'doctor.report': _command_doctor_report.run,
     'external-intent.refresh-github': _command_external_intent_refresh_github.run,
+    'final-response.admit': _command_final_response_admit.run,
     'implement.context': _command_implement_context.run,
     'init.lifecycle': _command_init_lifecycle.run,
     'install.lifecycle': _command_install_lifecycle.run,

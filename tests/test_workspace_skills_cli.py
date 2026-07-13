@@ -157,6 +157,7 @@ def test_skills_command_lists_registered_workspace_skills(tmp_path: Path, capsys
     assert "first slice" in intent_discovery["activation_hints"]["nouns"]
     autopilot = next(entry for entry in payload["skills"] if entry["id"] == "planning-autopilot")
     assert "run autopilot" in autopilot["activation_hints"]["phrases"]
+    assert "authorized terminal outcome" in autopilot["summary"]
 
 
 def test_skills_command_recommends_matching_agent_aids_without_retired_aids(tmp_path: Path, capsys) -> None:

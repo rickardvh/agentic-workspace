@@ -1,0 +1,158 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "autopilot",
+    "format_option": "format"
+  },
+  "effects": {
+    "destructive": true,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": true,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "This is the canonical ordinary AW/autopilot execution boundary for model-authored finals.",
+    "Every executor stdout final attempt must pass through final-response admission before it can be exposed as terminal output.",
+    "Rejected CONTINUE attempts must keep custody with the agent and re-enter the executor with active objective and continuation state.",
+    "Executor mode is conservatively classified as mutation-capable, non-idempotent, network-allowed, and outside-repo-write-capable because the executor command is caller supplied.",
+    "Local admission slices are continuity checkpoints and must not be treated as closure evidence."
+  ],
+  "id": "autopilot.run",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "executor_command",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "source",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "after_compaction",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "autopilot.run"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "allowed",
+    "outside_repo_writes": "allowed",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/final_response_admission_result.schema.json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "autopilot route tests execute the generated CLI command across multiple ordinary executor slices",
+    "autopilot route tests prove a real repository-state transition between a rejected CONTINUE final and an accepted DELIVERED final",
+    "generated package freshness checks include the Python and TypeScript autopilot command surfaces"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "report.closeout_trust"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/chat-checkpoint.json"
+    },
+    {
+      "required": true,
+      "surface": "caller-supplied executor command"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Run the caller-supplied executor command and treat stdout as the model-authored final response attempt.",
+      "id": "run_executor",
+      "uses": "workspace.final-response.admission"
+    },
+    {
+      "description": "Evaluate the terminal outcome contract against the executor final response attempt.",
+      "id": "evaluate_terminal_contract",
+      "uses": "workspace.final-response.admission"
+    },
+    {
+      "description": "Run the selected ordinary continuation operation when the final response is not authorized.",
+      "id": "run_continuation",
+      "uses": "workspace.final-response.continuation.execute"
+    },
+    {
+      "description": "Re-enter the executor with continuation state until DELIVERED, qualified BLOCKED, or USER_PAUSED authorizes final custody.",
+      "id": "repeat_until_terminal",
+      "uses": "workspace.final-response.admission"
+    },
+    {
+      "description": "Persist the local admission and resume slice.",
+      "id": "write_checkpoint",
+      "uses": "workspace.local-chat-checkpoint.write"
+    },
+    {
+      "description": "Emit the autopilot admission result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Run the canonical ordinary AW executor loop through final-response admission until terminal custody is authorized.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "when": "persist each admission and continuation slice"
+    },
+    {
+      "required": false,
+      "surface": "executor-defined repository or external state",
+      "when": "the caller-supplied executor performs work before emitting a final attempt"
+    }
+  ]
+}

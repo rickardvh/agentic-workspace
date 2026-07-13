@@ -50,6 +50,48 @@
       "generic_behavior_audit": "Classified as package-specific-judgment; generated command surfaces own parser and help projection while workspace runtime primitives own local checkpoint merge/write semantics, local-only limits, and non-evidence policy."
     },
     {
+      "operation_id": "final-response.admit",
+      "program": "agentic-workspace",
+      "command": "final-response",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/final-response.admit.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "workspace.final-response.admission",
+        "workspace.final-response.continuation.execute",
+        "workspace.local-chat-checkpoint.write",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "final-response.admit.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Final-response admission applies package-specific terminal outcome custody, continuation operation selection, and local-only checkpoint semantics.",
+      "what_would_make_portable_later": "Represent host final-response custody and continuation dispatch as schema-backed protocol primitives once the host-loop boundary is stable.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated command surfaces own parser and help projection while workspace runtime primitives own terminal outcome admission, continuation execution, and local-only resume checkpointing."
+    },
+    {
+      "operation_id": "autopilot.run",
+      "program": "agentic-workspace",
+      "command": "autopilot",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/autopilot.run.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "workspace.final-response.admission",
+        "workspace.final-response.continuation.execute",
+        "workspace.local-chat-checkpoint.write",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "autopilot.run.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Autopilot run owns the ordinary host executor loop, final-response custody admission, continuation re-entry, and local-only checkpoint semantics.",
+      "what_would_make_portable_later": "Represent ordinary host executor custody and continuation dispatch as schema-backed protocol primitives once the autopilot boundary is stable.",
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated command surfaces own parser and help projection while workspace runtime primitives own the ordinary executor loop, terminal outcome admission, continuation execution, and local-only resume checkpointing."
+    },
+    {
       "operation_id": "work-thread.prune",
       "program": "agentic-workspace",
       "command": "work-thread",

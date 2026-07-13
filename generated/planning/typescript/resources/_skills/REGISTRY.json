@@ -21,7 +21,23 @@
       "path": "planning-autopilot/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "execute one bounded planning milestone at a time from the checked-in planning surfaces",
+      "summary": "execute bounded planning slices from checked-in planning surfaces until the active objective reaches an authorized terminal outcome",
+      "host_entrypoint": {
+        "operation_id": "autopilot.run",
+        "command": "agentic-workspace autopilot --target <repo> --executor-command <agent-command> --format json",
+        "argv_template": [
+          "autopilot",
+          "--target",
+          "{target}",
+          "--executor-command",
+          "{executor_command}",
+          "--format",
+          "json"
+        ],
+        "required": true,
+        "ordinary_path_unavoidable": true,
+        "rule": "Planning Autopilot activation must enter the package-owned autopilot.run boundary so model-authored finals are admitted before output."
+      },
       "activation_hints": {
         "verbs": ["run", "execute", "implement", "continue", "finish", "ship"],
         "nouns": ["autopilot", "milestone", "execplan", "planned work", "active task"],

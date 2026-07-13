@@ -84,6 +84,7 @@ Ignored local-only continuity checkpoint used to rehydrate a chat after compacti
 | `proof_state.stale_if` | array of string | yes |  | Concrete stale conditions that require proof re-check. |  |  |
 | `proof_state.rule` | string | yes |  | Rule preventing checkpoint proof history from becoming completion evidence. |  |  |
 | `resume_checklist` | array of object | yes |  | Action-shaped checklist for the next agent before trusting checkpoint state. |  |  |
+| `final_response_admission` | object | no |  | Ignored host final-response admission resume slices. Advisory only; not closure evidence. |  |  |
 | `limits` | object | yes |  | Invariant flags that make the local-only and non-evidence limits explicit. |  |  |
 | `limits.local_only` | const `true` | yes |  | Checkpoint is only for the local workspace. |  |  |
 | `limits.gitignored` | const `true` | yes |  | Checkpoint must remain in an ignored local path. |  |  |
