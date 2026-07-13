@@ -44,6 +44,7 @@ from agentic_workspace.contract_tooling import (
     python_runtime_projection_inventory_manifest,
     repo_friction_policy_manifest,
     report_contract_manifest,
+    runtime_semantic_exceptions_manifest,
     setup_findings_policy_manifest,
     target_support_manifest,
     workflow_artifact_profiles_manifest,
@@ -1541,6 +1542,7 @@ def _validate_generated_command_check_inventory(payload: dict[str, object]) -> l
         "aw-host-behavior",
         "release-pinning",
         "generated-freshness",
+        "transitional-host-boundary",
         "retired-primitive-boundary",
         "obsolete-duplicate",
     }
@@ -1566,7 +1568,13 @@ def _validate_generated_command_check_inventory(payload: dict[str, object]) -> l
                 errors.append(f"generic target baseline check {check_id} must be owned by command-generation")
             if disposition == "keep-in-aw":
                 errors.append(f"generic target baseline check {check_id} must not be kept as an AW-owned check")
-        if classification in {"aw-host-behavior", "release-pinning", "generated-freshness", "retired-primitive-boundary"}:
+        if classification in {
+            "aw-host-behavior",
+            "release-pinning",
+            "generated-freshness",
+            "transitional-host-boundary",
+            "retired-primitive-boundary",
+        }:
             if owner != "agentic-workspace":
                 errors.append(f"AW-specific check {check_id} must be owned by agentic-workspace")
             if disposition != "keep-in-aw":
@@ -1608,6 +1616,7 @@ def _validate_generated_command_check_inventory(payload: dict[str, object]) -> l
         "generated-output-freshness",
         "operation-contract-and-cli-inputs",
         "host-runtime-boundaries",
+        "runtime-semantic-exception-registry",
         "retired-command-generation-primitive-usage",
         "release-and-generator-provenance",
         "operation-conformance-parity",
@@ -2877,6 +2886,10 @@ def main(argv: list[str] | None = None) -> int:
         (
             "python runtime projection inventory",
             _validate(python_runtime_projection_inventory_manifest(), "python_runtime_projection_inventory.schema.json"),
+        ),
+        (
+            "runtime semantic exceptions",
+            _validate(runtime_semantic_exceptions_manifest(), "runtime_semantic_exceptions.schema.json"),
         ),
         (
             "workspace runtime primitive families",

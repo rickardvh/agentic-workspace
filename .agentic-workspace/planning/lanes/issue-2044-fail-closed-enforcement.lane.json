@@ -1,0 +1,39 @@
+{
+  "kind": "planning-lane/v1",
+  "id": "issue-2044-fail-closed-enforcement",
+  "title": "Issue 2044 fail-closed ownership enforcement",
+  "status": "ready",
+  "parent_decomposition_ref": ".agentic-workspace/planning/decompositions/issue-2044-runtime-ownership.decomposition.json",
+  "lane_outcome": "Enforce the runtime ownership boundary with fail-closed checks, exact exception metadata, and multi-target conformance so future ordinary command changes cannot regress into mirrored runtime semantics.",
+  "purpose_for_parent": "Turns the demonstrated path into an enforceable architecture invariant.",
+  "subsystems": [],
+  "technical_strategy": "Tighten the lane strategy before the first slice starts.",
+  "technology_choices": [],
+  "slice_sequence": [],
+  "current_slice": "",
+  "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
+  "proof_strategy": "Prove negative runtime-only command-semantics cases fail, allowed primitives remain accepted, and Python/TypeScript parity holds.",
+  "proof_aggregation": {
+    "status": "not-started",
+    "evidence": [],
+    "known_gaps": []
+  },
+  "residual_lane_work": "not evaluated",
+  "lane_to_epic_contribution": "not evaluated",
+  "parent_close_permission": "not-evaluated",
+  "closeout_state": {
+    "status": "open",
+    "summary": "",
+    "residual_work": "",
+    "next_owner": ""
+  },
+  "references": [
+    {
+      "kind": "decomposition",
+      "target": ".agentic-workspace/planning/decompositions/issue-2044-runtime-ownership.decomposition.json",
+      "label": ".agentic-workspace/planning/decompositions/issue-2044-runtime-ownership.decomposition.json",
+      "role": "parent"
+    }
+  ],
+  "notes": ""
+}

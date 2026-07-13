@@ -6701,8 +6701,34 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     _set_git_branch(tmp_path, current="codex/stack-comments", default="main")
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "stack-review-plan",
+                "--title",
+                "Stack review plan",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
     cache_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "pr-comment-stack.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
+    changed_path = tmp_path / "src" / "app.py"
+    changed_path.parent.mkdir(parents=True, exist_ok=True)
+    changed_path.write_text("VALUE = 1\n", encoding="utf-8")
+    test_path = tmp_path / "tests" / "test_app.py"
+    test_path.parent.mkdir(parents=True, exist_ok=True)
+    test_path.write_text("def test_app():\n    assert True\n", encoding="utf-8")
+    proof_reuse_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "proof-reuse.json"
 
     assert (
         cli.main(
@@ -6747,6 +6773,8 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
                 "pr_number": 1841,
                 "branch": "codex/stack-comments",
                 "head_sha": "bbb222",
+                "changed_paths": ["src/app.py", "tests/test_app.py"],
+                "proof_hints": ["Run changed-effect proof."],
                 "delta": {
                     "category_counts": {
                         "actionable_code_doc_body_change": 0,
@@ -6781,6 +6809,156 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert current["context"]["pr_comment_attention"]["pr_number"] == "1841"
     assert current["context"]["pr_comment_attention"]["stack_member_count"] == 2
     assert current["context"]["pr_comment_attention"]["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
+    current_continuity = current["context"]["pr_comment_attention"]["review_stack_continuity"]
+    assert current_continuity["phase"] == "review-proof"
+    assert current_continuity["current_pr_number"] == "1841"
+    assert [member["pr_number"] for member in current_continuity["dependency_order"]] == ["1840", "1841"]
+    assert current_continuity["affected_slice"]["pr_number"] == "1841"
+    assert current_continuity["affected_slice"]["paths"] == ["src/app.py", "tests/test_app.py"]
+    assert current_continuity["incremental_proof_manifest"]["status"] == "focused_proof_required"
+    assert current_continuity["incremental_proof_manifest"]["path_source"] == "stack_member_changed_effect_paths"
+    assert current_continuity["next_action"]["id"] == "run-focused-proof"
+    assert "proof --changed src/app.py tests/test_app.py --format json" in current_continuity["next_action"]["command"]
+
+    actionable_for_transition = copy.deepcopy(fresh_stack)
+    actionable_for_transition["stack_members"][1]["delta"]["category_counts"]["actionable_code_doc_body_change"] = 1
+    actionable_for_transition["stack_members"][1]["delta"]["items"] = [
+        {
+            "kind": "review_thread_comment",
+            "category": "actionable_code_doc_body_change",
+            "path": "src/app.py",
+            "proof_hint": "Run changed-effect proof.",
+        }
+    ]
+    cache_path.write_text(json.dumps(actionable_for_transition), encoding="utf-8")
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/app.py",
+                "tests/test_app.py",
+                "--task",
+                "Address review findings for PR #1841",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    correction = json.loads(capsys.readouterr().out)
+    assert correction["review_stack_transition"]["status"] == "written"
+    assert correction["review_stack_transition"]["phase_after"] == "review-proof"
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/app.py",
+                "tests/test_app.py",
+                "--record-receipt",
+                "--receipt-command",
+                "uv run pytest tests/test_app.py -q",
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    receipt = json.loads(capsys.readouterr().out)
+    assert receipt["review_stack_transition"]["status"] == "updated"
+    assert receipt["review_stack_transition"]["phase_after"] == "review-closeout-ready"
+    assert receipt["review_stack_transition"]["proof_receipt_path"] == ".agentic-workspace/local/proof-receipts/last.json"
+    assert receipt["proof_reuse_cache"]["status"] == "written"
+    assert receipt["proof_reuse_cache"]["path"] == ".agentic-workspace/local/cache/proof-reuse.json"
+    proof_reuse = json.loads(proof_reuse_path.read_text(encoding="utf-8"))
+    assert proof_reuse["source"] == "proof --record-receipt"
+    assert proof_reuse["path_fingerprints"] == {
+        "src/app.py": hashlib.sha256(changed_path.read_bytes()).hexdigest(),
+        "tests/test_app.py": hashlib.sha256(test_path.read_bytes()).hexdigest(),
+    }
+    cache_path.write_text(json.dumps(fresh_stack), encoding="utf-8")
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue stacked PR review fixes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    reusable = json.loads(capsys.readouterr().out)
+    reusable_continuity = reusable["context"]["pr_comment_attention"]["review_stack_continuity"]
+    assert reusable_continuity["phase"] == "review-closeout-ready"
+    assert reusable_continuity["incremental_proof_manifest"]["proof_reuse_status"] == "reuse_safe_with_evidence"
+    assert reusable_continuity["incremental_proof_manifest"]["reusable_groups"][0]["command"] == "uv run pytest tests/test_app.py -q"
+    assert reusable_continuity["next_action"]["id"] == "closeout-with-reused-proof-receipt"
+    assert reusable_continuity["closeout_route"]["status"] == "ready_after_recording_reuse_rationale"
+    assert reusable_continuity["planning_owner"]["phase_source"] == "planning_lifecycle_transition"
+    assert reusable_continuity["planning_owner"]["transition_records"] == [correction["review_stack_transition"]["path"]]
+    assert reusable_continuity["workflow_trace"]["status"] == "executed_transition_trace"
+    assert reusable_continuity["workflow_trace"]["transition_source"] == "planning_lifecycle_transition"
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 1
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["executed_transition_count"] == 2
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["manual_transition_record_count"] == 0
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["avoided_manual_transition_records"] == 2
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["evidence_source"] == "planning_lifecycle_transition"
+    assert [event["phase_after"] for event in reusable_continuity["workflow_trace"]["executed_events"]] == [
+        "review-proof",
+        "review-closeout-ready",
+    ]
+    proof_event = reusable_continuity["workflow_trace"]["executed_events"][1]
+    assert proof_event["proof_receipt_path"] == ".agentic-workspace/local/proof-receipts/last.json"
+    assert proof_event["proof_receipt_result"] == "passed"
+    assert proof_event["command_exit_code"] == 0
+    assert (
+        cli.main(
+            [
+                "planning",
+                "closeout",
+                "--target",
+                str(tmp_path),
+                "--claim-level",
+                "slice",
+                "--intent-status",
+                "satisfied",
+                "--residue",
+                "none",
+                "--proof-from",
+                "last",
+                "--what-happened",
+                "Review stack comments addressed.",
+                "--scope-touched",
+                "src/app.py tests/test_app.py",
+                "--changed-surfaces",
+                "src/app.py tests/test_app.py",
+                "--review-summary",
+                "Review blockers addressed.",
+                "--outcome-summary",
+                "Ready to close review stack slice.",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    closeout = json.loads(capsys.readouterr().out)
+    assert closeout["review_stack_transition"]["status"] == "updated"
+    assert closeout["review_stack_transition"]["phase"] == "review-closeout-ready"
+    assert closeout["review_stack_transition"]["phase_after"] == "review-closed"
+    assert closeout["review_stack_transition"]["command_exit_code"] == 0
 
     actionable_stack = copy.deepcopy(fresh_stack)
     actionable_stack["stack_members"][1]["delta"]["category_counts"]["actionable_code_doc_body_change"] = 1
@@ -6789,11 +6967,11 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         {
             "kind": "review_thread_comment",
             "category": "actionable_code_doc_body_change",
-            "path": "src/app.py",
+            "path": "docs/comment-anchor.md",
             "line": 12,
             "url": "https://example.test/pr#thread",
             "author": "reviewer",
-            "proof_hint": "Run focused tests.",
+            "proof_hint": "Comment-local hint should not replace changed-effect proof.",
         }
     ]
     cache_path.write_text(
@@ -6825,7 +7003,41 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert attention["comment_addressing"]["status"] == "open_feedback_present"
     assert "--section pr_comment_attention --format json" in attention["detail_route"]
     assert attention["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
+    continuity = attention["review_stack_continuity"]
+    assert continuity["phase"] == "review-correction"
+    assert continuity["affected_slice"]["status"] == "review_findings_present"
+    assert continuity["affected_slice"]["pr_number"] == "1841"
+    assert continuity["affected_slice"]["paths"] == ["src/app.py", "tests/test_app.py"]
+    assert continuity["affected_slice"]["proof_hints"] == ["Run changed-effect proof."]
+    assert continuity["affected_slice"]["path_source"] == "stack_member_changed_effect_paths"
+    assert continuity["review_findings"]["actionable_pr_numbers"] == ["1841"]
+    assert continuity["review_findings"]["owner"]["status"] == "bound_to_active_planning_owner"
+    assert continuity["review_findings"]["owner"]["surface"].endswith("stack-review-plan.plan.json")
+    assert continuity["incremental_proof_manifest"]["status"] == "pending_after_correction"
+    assert continuity["incremental_proof_manifest"]["changed_effect_paths"] == ["src/app.py", "tests/test_app.py"]
+    assert (
+        "proof --changed src/app.py tests/test_app.py --format json"
+        in continuity["incremental_proof_manifest"]["proof_selection_command_template"]
+    )
+    assert continuity["next_action"]["id"] == "run-review-correction-workflow"
+    assert "implement --changed src/app.py tests/test_app.py" in continuity["next_action"]["command"]
+    assert continuity["closeout_route"]["status"] == "blocked"
+    assert continuity["planning_owner"]["status"] == "bound_to_active_planning_owner"
+    assert continuity["workflow_trace"]["status"] == "executed_transition_trace"
+    assert continuity["workflow_trace"]["transition_source"] == "planning_lifecycle_transition"
+    assert continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 1
+    assert continuity["workflow_trace"]["interaction_cost"]["executed_transition_count"] == 3
+    assert continuity["workflow_trace"]["interaction_cost"]["manual_transition_record_count"] == 0
+    assert continuity["workflow_trace"]["interaction_cost"]["avoided_manual_transition_records"] == 3
+    assert continuity["workflow_trace"]["interaction_cost"]["evidence_source"] == "planning_lifecycle_transition"
+    assert [event["phase_after"] for event in continuity["workflow_trace"]["executed_events"]] == [
+        "review-proof",
+        "review-closeout-ready",
+        "review-closed",
+    ]
+    assert "review_stack_continuity.next_action.command" in continuity["workflow_trace"]["interaction_cost"]["resume_inputs_after_packet"]
     assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
+    assert "review_stack_phase=review-correction" in payload["action_signals"]["changed_signals"]
 
     stale_stack = copy.deepcopy(fresh_stack)
     stale_stack["stack_members"][0]["delta"].pop("freshness")
@@ -6849,6 +7061,10 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert stale["context"]["pr_comment_attention"]["comment_state"] == "stack_stale_or_unknown"
     assert stale["context"]["pr_comment_attention"]["absence_states"]["thread_level_comments"] == "hidden_behind_detail_route"
     assert "--section pr_comment_attention --format json" in stale["context"]["pr_comment_attention"]["detail_route"]
+    stale_continuity = stale["context"]["pr_comment_attention"]["review_stack_continuity"]
+    assert stale_continuity["phase"] == "review-state-refresh"
+    assert stale_continuity["review_findings"]["stale_or_unverified_pr_numbers"] == ["1840"]
+    assert stale_continuity["next_action"]["id"] == "refresh-stack-review-state"
 
 
 def test_report_proof_reuse_guidance_classifies_safe_and_stale_receipts(tmp_path: Path, capsys) -> None:

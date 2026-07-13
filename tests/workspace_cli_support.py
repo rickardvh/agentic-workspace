@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -60,6 +61,61 @@ class _WorkspaceCliTestProxy:
 
 cli = _WorkspaceCliTestProxy()
 REPO_LOCAL_CLI_INVOKE = "uv run python scripts/run_agentic_workspace.py"
+
+AW_SUBPROCESS_INVOCATION_CLASSES = {
+    "product-operation",
+    "probe",
+    "negative-fixture",
+    "recovery-attempt",
+    "analyzer-action",
+    "synthetic-check",
+}
+AW_SUBPROCESS_EXPECTED_EXITS = {"success", "failure"}
+
+
+def aw_subprocess_env(
+    *,
+    purpose_id: str | None = None,
+    scenario_id: str | None = None,
+    invocation_class: str | None = None,
+    expected_exit: str | None = None,
+    expected_reason_class: str | None = None,
+    parent_entry_id: str | None = None,
+    parent_command: str | None = None,
+    parent_context: str | None = None,
+    origin: str = "pytest",
+    capture_detail: bool = True,
+    base_env: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """Declare AW subprocess intent without inferring expectation from the command."""
+
+    env = dict(os.environ if base_env is None else base_env)
+    if origin:
+        env["AW_SESSION_LOG_ORIGIN"] = origin
+    if capture_detail:
+        env["AW_SESSION_LOG_CAPTURE_DETAIL"] = "1"
+    if purpose_id:
+        env["AW_SESSION_LOG_PURPOSE_ID"] = purpose_id
+    if scenario_id:
+        env["AW_SESSION_LOG_SCENARIO_ID"] = scenario_id
+    if invocation_class:
+        if invocation_class not in AW_SUBPROCESS_INVOCATION_CLASSES:
+            raise ValueError(f"unsupported AW subprocess invocation_class: {invocation_class}")
+        env["AW_SESSION_LOG_INVOCATION_CLASS"] = invocation_class
+    if expected_exit:
+        if expected_exit not in AW_SUBPROCESS_EXPECTED_EXITS:
+            raise ValueError(f"unsupported AW subprocess expected_exit: {expected_exit}")
+        env["AW_SESSION_LOG_EXPECTED_EXIT"] = expected_exit
+    if expected_reason_class:
+        env["AW_SESSION_LOG_EXPECTED_REASON_CLASS"] = expected_reason_class
+    if parent_entry_id:
+        env["AW_SESSION_LOG_PARENT_ENTRY_ID"] = parent_entry_id
+    if parent_command:
+        env["AW_SESSION_LOG_PARENT_COMMAND"] = parent_command
+    if parent_context:
+        env["AW_SESSION_LOG_PARENT_CONTEXT"] = parent_context
+    return env
+
 
 _ORIGINAL_PATH_WRITE_TEXT = Path.write_text
 

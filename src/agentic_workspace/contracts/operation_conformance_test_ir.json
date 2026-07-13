@@ -406,7 +406,7 @@
       },
       "artifacts": [
         {
-          "artifact_id": "root-workspace.config.python",
+          "artifact_id": "root-workspace.config-cli.python",
           "target": "python",
           "adapter_id": "cli.process",
           "proof_role": "wrapper-smoke",
@@ -416,7 +416,7 @@
           ]
         },
         {
-          "artifact_id": "root-workspace.config.typescript",
+          "artifact_id": "root-workspace.config-cli.typescript",
           "target": "typescript",
           "adapter_id": "cli.process",
           "proof_role": "wrapper-smoke",
@@ -514,8 +514,8 @@
         {
           "artifact_id": "root-workspace.config.python",
           "target": "python",
-          "adapter_id": "cli.process",
-          "proof_role": "wrapper-smoke",
+          "adapter_id": "python.function",
+          "proof_role": "operation-conformance",
           "source_ref": "command_package_ir:root-workspace/config",
           "wrapper_refs": [
             "config.report.cli"
@@ -524,8 +524,8 @@
         {
           "artifact_id": "root-workspace.config.typescript",
           "target": "typescript",
-          "adapter_id": "cli.process",
-          "proof_role": "wrapper-smoke",
+          "adapter_id": "typescript.function",
+          "proof_role": "operation-conformance",
           "source_ref": "command_package_ir:root-workspace/config",
           "wrapper_refs": [
             "config.report.cli"
@@ -584,7 +584,10 @@
           "format": "text",
           "selected_fields": {
             "kind": "agentic-workspace/selected-output/v1",
-            "source_command": "config"
+            "source_command": "config",
+            "values": {
+              "workspace.optimization_bias": "agent-efficiency"
+            }
           },
           "contains": [
             "Kind: agentic-workspace/selected-output/v1",
@@ -624,7 +627,7 @@
           "detailed config policy and local override tests",
           "config CLI wrapper tests where argv parsing, invalid choice behavior, stdout formatting, or process exit behavior is the behavior under test"
         ],
-        "rationale": "This case is IR-backed but remains wrapper-smoke because config.report still depends on package-specific config loading and compatibility text boundaries. It records the stable black-box selected-output behavior without claiming direct callable semantic proof before config direct artifacts exist."
+        "rationale": "This case now uses generated Python and TypeScript operation callables for semantic proof of config selected-output projection. The operation still calls explicit package-domain primitives for config loading and compatibility text, but the stable selected-output dataflow and text contract are represented in IR and executed through direct generated artifacts rather than a wrapper-smoke CLI case."
       }
     },
     {

@@ -142,3 +142,4 @@ The final state before archive must include:
 - `agentic-planning handoff --format json`: Derived worker contract.
 - `agentic-workspace report --target ./repo --format json`: Combined workspace status.
 - `agentic-workspace doctor --target ./repo`: Run deep diagnostics and planning hygiene checks.
+

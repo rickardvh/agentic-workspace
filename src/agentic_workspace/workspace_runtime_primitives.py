@@ -134,6 +134,7 @@ from agentic_workspace.reporting_support import (
 )
 from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
+from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
 from agentic_workspace.runtime_symbol_working_set import tiny_runtime_symbol_working_set_payload
 from agentic_workspace.workspace_output import (
     _display_path,
@@ -25892,6 +25893,410 @@ def _pr_comment_addressing_unavailable_packet(
     }
 
 
+def _review_stack_string_list(value: Any) -> list[str]:
+    values = value if isinstance(value, list) else [value] if value not in (None, "") else []
+    return [str(item).strip().replace("\\", "/") for item in values if str(item).strip()]
+
+
+def _review_stack_changed_effect_paths(*, member: dict[str, Any], member_cache: dict[str, Any]) -> list[str]:
+    paths: list[str] = []
+    for key in ("changed_effect_paths", "changed_paths", "files_changed", "changed_files"):
+        paths.extend(_review_stack_string_list(member.get(key)))
+        paths.extend(_review_stack_string_list(member_cache.get(key)))
+    for source in (member.get("files"), member_cache.get("files")):
+        if isinstance(source, list):
+            for item in source:
+                if isinstance(item, dict):
+                    paths.extend(_review_stack_string_list(item.get("path") or item.get("filename")))
+                else:
+                    paths.extend(_review_stack_string_list([item]))
+    return _dedupe(paths)
+
+
+def _review_stack_member_proof_hints(*, member: dict[str, Any], member_cache: dict[str, Any]) -> list[str]:
+    hints: list[str] = []
+    for key in ("proof_hints", "focused_proof_hints", "validation_hints"):
+        hints.extend(_review_stack_string_list(member.get(key)))
+        hints.extend(_review_stack_string_list(member_cache.get(key)))
+    return _dedupe(hints)
+
+
+def _review_stack_proof_command(*, paths: list[str], cli_invoke: str) -> str:
+    if paths:
+        changed_args = " ".join(shlex.quote(path) for path in paths)
+        command = f"agentic-workspace proof --changed {changed_args} --format json"
+    else:
+        command = "agentic-workspace proof --changed <paths> --format json"
+    return _command_with_cli_invoke(command=command, cli_invoke=cli_invoke)
+
+
+def _review_stack_implement_command(*, paths: list[str], pr_number: str, cli_invoke: str) -> str:
+    if not paths:
+        return _command_with_cli_invoke(
+            command="agentic-workspace report --target . --section pr_comment_attention --format json",
+            cli_invoke=cli_invoke,
+        )
+    changed_args = " ".join(shlex.quote(path) for path in paths)
+    task = f"Address review findings for PR #{pr_number}" if pr_number else "Address review findings for the affected stack slice"
+    return _command_with_cli_invoke(
+        command=f"agentic-workspace implement --changed {changed_args} --task {shlex.quote(task)} --format json",
+        cli_invoke=cli_invoke,
+    )
+
+
+def _review_stack_planning_transition_payloads(*, target_root: Path, current_pr_number: str) -> list[dict[str, Any]]:
+    review_root = target_root / ".agentic-workspace" / "planning" / "reviews"
+    if not review_root.is_dir():
+        return []
+    transitions: list[dict[str, Any]] = []
+    for path in sorted(review_root.glob("*.review.json")):
+        try:
+            record = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if str(record.get("classification") or "") != "review-stack-transition":
+            continue
+        for raw_scope in _list_payload(record.get("scope")):
+            scope_text = str(raw_scope or "").strip()
+            if not scope_text.startswith("{"):
+                continue
+            try:
+                payload = json.loads(scope_text)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            pr_number = str(payload.get("pr_number") or "").strip()
+            if current_pr_number and pr_number and pr_number != current_pr_number:
+                continue
+            planning_surface = path.relative_to(target_root).as_posix()
+            planning_title = str(record.get("title") or "")
+            lifecycle_transitions = [item for item in _list_payload(payload.get("transitions")) if isinstance(item, dict)]
+            if lifecycle_transitions:
+                for transition in lifecycle_transitions:
+                    transition_pr = str(transition.get("pr_number") or pr_number).strip()
+                    if current_pr_number and transition_pr and transition_pr != current_pr_number:
+                        continue
+                    transition = dict(transition)
+                    transition.setdefault("pr_number", pr_number)
+                    transition["planning_surface"] = planning_surface
+                    transition["planning_title"] = planning_title
+                    transition["lifecycle_record"] = True
+                    transitions.append(transition)
+                continue
+            payload["planning_surface"] = planning_surface
+            payload["planning_title"] = planning_title
+            transitions.append(payload)
+    return transitions
+
+
+def _review_stack_planning_transition_events(*, transitions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for item in transitions:
+        phase = str(item.get("phase") or "").strip()
+        phase_after = str(item.get("phase_after") or "").strip()
+        command = str(item.get("command") or item.get("next_action_command") or "").strip()
+        outcome = str(item.get("outcome") or "").strip() or "executed"
+        if not (phase or phase_after or command):
+            continue
+        events.append(
+            {
+                "phase": phase,
+                "phase_after": phase_after,
+                "command": command,
+                "outcome": outcome,
+                "planning_surface": str(item.get("planning_surface") or ""),
+                "next_action_id": str(item.get("next_action_id") or ""),
+                "command_exit_code": item.get("command_exit_code"),
+                "proof_receipt_path": str(item.get("proof_receipt_path") or ""),
+                "proof_receipt_result": str(item.get("proof_receipt_result") or ""),
+            }
+        )
+    phase_order = {"review-correction": 0, "review-proof": 1, "review-closeout-ready": 2, "review-closed": 3}
+    events.sort(
+        key=lambda event: (
+            phase_order.get(str(event.get("phase") or ""), 99),
+            phase_order.get(str(event.get("phase_after") or ""), 99),
+            str(event.get("planning_surface") or ""),
+        )
+    )
+    return events
+
+
+def _review_stack_workflow_trace_payload(
+    *,
+    stack: dict[str, Any],
+    phase: str,
+    commands: dict[str, str],
+    proof_reuse: dict[str, Any],
+    planning_events: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    raw_events = (
+        planning_events if planning_events else [item for item in _list_payload(stack.get("workflow_events")) if isinstance(item, dict)]
+    )
+    transition_source = "planning_lifecycle_transition" if planning_events else "workflow_events" if raw_events else "derived_projection"
+    events: list[dict[str, Any]] = []
+    for raw_event in raw_events:
+        command = str(raw_event.get("command") or "").strip()
+        event_phase = str(raw_event.get("phase") or raw_event.get("phase_before") or "").strip()
+        phase_after = str(raw_event.get("phase_after") or "").strip()
+        outcome = str(raw_event.get("outcome") or raw_event.get("status") or "").strip()
+        if not (command or event_phase or phase_after or outcome):
+            continue
+        events.append(
+            {
+                "phase": event_phase,
+                "phase_after": phase_after,
+                "command": command,
+                "outcome": outcome,
+                "planning_surface": str(raw_event.get("planning_surface") or ""),
+                "next_action_id": str(raw_event.get("next_action_id") or ""),
+                "command_exit_code": raw_event.get("command_exit_code"),
+                "proof_receipt_path": str(raw_event.get("proof_receipt_path") or ""),
+                "proof_receipt_result": str(raw_event.get("proof_receipt_result") or ""),
+            }
+        )
+    executed_events = [event for event in events if event.get("outcome") in {"executed", "passed", "reused"}]
+    proof_events = [
+        event
+        for event in executed_events
+        if str(event.get("phase") or "") == "review-proof"
+        or str(event.get("phase_after") or "") == "review-closeout-ready"
+        or bool(str(event.get("proof_receipt_path") or ""))
+    ]
+    event_phase_sequence = _dedupe(
+        [
+            phase_value
+            for event in events
+            for phase_value in (str(event.get("phase") or ""), str(event.get("phase_after") or ""))
+            if phase_value
+        ]
+    )
+    return {
+        "status": "executed_transition_trace" if events else "representative_multi_pr_trace",
+        "phase_sequence": event_phase_sequence or ["review-correction", "review-proof", "review-closeout-ready"],
+        "current_phase": phase,
+        "commands": commands,
+        "executed_events": events,
+        "transition_source": transition_source,
+        "proof_reuse_status": str(proof_reuse.get("status") or "reuse_unknown"),
+        "reuse_or_invalidation_evidence": proof_reuse.get("rationale") or proof_reuse.get("reason") or proof_reuse.get("status"),
+        "interaction_cost": {
+            "resume_inputs_before_packet": ["stack cache", "comment samples", "proof reuse receipt", "review-stack lifecycle record"],
+            "resume_inputs_after_packet": ["review_stack_continuity.next_action.command"],
+            "ordinary_rerun_count": len(proof_events) if events else 1,
+            "executed_transition_count": len(executed_events),
+            "manual_transition_record_count": 0 if planning_events else None,
+            "avoided_manual_transition_records": len(executed_events) if planning_events else 0,
+            "evidence_source": transition_source if events else "projection_fallback",
+        },
+    }
+
+
+def _review_stack_continuity_payload(
+    *,
+    target_root: Path,
+    stack: dict[str, Any],
+    branch: str,
+    proof_reuse: dict[str, Any],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    members = [item for item in _list_payload(stack.get("stack_members")) if isinstance(item, dict)]
+    current_pr_number = str(stack.get("stack_discovery", {}).get("current_branch_pr_number") or _pr_number_from_stack(stack, branch=branch))
+    dependency_order = [
+        {
+            "pr_number": str(member.get("pr_number") or ""),
+            "branch": str(member.get("branch") or ""),
+            "head_sha": str(member.get("head_sha") or ""),
+            "comment_status": str(member.get("comment_status") or ""),
+            "actionable_count": _as_int(member.get("actionable_count")),
+        }
+        for member in members
+    ]
+    actionable_members = [member for member in members if _as_int(member.get("actionable_count")) > 0]
+    stale_members = [
+        member
+        for member in members
+        if str(member.get("comment_status") or "") in {"pr_comment_status_unavailable", "stack_comment_status_unavailable"}
+    ]
+    current_member = next((member for member in members if str(member.get("pr_number") or "") == current_pr_number), {})
+    affected_member = actionable_members[0] if actionable_members else current_member if current_member else members[-1] if members else {}
+    affected_samples: list[dict[str, Any]] = []
+    comment_sample_paths: list[str] = []
+    comment_proof_hints: list[str] = []
+    for member in actionable_members:
+        for sample in [entry for entry in _list_payload(member.get("sample")) if isinstance(entry, dict)]:
+            affected_samples.append(
+                {
+                    key: sample.get(key)
+                    for key in ("kind", "category", "path", "line", "url", "author", "created_at", "proof_hint")
+                    if sample.get(key) not in (None, "")
+                }
+            )
+            path = str(sample.get("path") or "").strip()
+            hint = str(sample.get("proof_hint") or "").strip()
+            if path:
+                comment_sample_paths.append(path)
+            if hint:
+                comment_proof_hints.append(hint)
+    affected_members = actionable_members or ([affected_member] if affected_member else [])
+    affected_paths = _dedupe(
+        [
+            path
+            for member in affected_members
+            for path in _review_stack_string_list(member.get("changed_effect_paths") or member.get("changed_paths"))
+        ]
+    )
+    proof_hints = _dedupe([hint for member in affected_members for hint in _review_stack_string_list(member.get("proof_hints"))])
+    comment_sample_paths = _dedupe(comment_sample_paths)
+    comment_proof_hints = _dedupe(comment_proof_hints)
+    changed_effect_path_source = "stack_member_changed_effect_paths" if affected_paths else "missing_changed_effect_paths"
+    proof_status = str(proof_reuse.get("status") or "reuse_unknown")
+    reusable_groups = [
+        {
+            "command": str(group.get("command") or ""),
+            "classification": str(group.get("classification") or ""),
+            "rationale": str(group.get("rationale") or ""),
+        }
+        for group in [item for item in _list_payload(proof_reuse.get("proof_groups")) if isinstance(item, dict)]
+        if str(group.get("classification") or "") == "reuse_safe_with_evidence"
+    ]
+    if str(stack.get("status") or "") == "stack_comment_status_unavailable" or stale_members:
+        phase = "review-state-refresh"
+        next_action = "refresh-stack-review-state"
+        proof_manifest_status = "blocked_until_stack_state_current"
+        closeout_status = "blocked"
+    elif actionable_members:
+        phase = "review-correction"
+        next_action = "run-review-correction-workflow"
+        proof_manifest_status = "pending_after_correction" if affected_paths else "blocked_until_changed_effects_known"
+        closeout_status = "blocked"
+    elif proof_status == "reuse_safe_with_evidence":
+        phase = "review-closeout-ready"
+        next_action = "closeout-with-reused-proof-receipt"
+        proof_manifest_status = "reuse_safe_with_evidence"
+        closeout_status = "ready_after_recording_reuse_rationale"
+    else:
+        phase = "review-proof"
+        next_action = "run-focused-proof"
+        proof_manifest_status = "focused_proof_required"
+        closeout_status = "blocked"
+    proof_command = _review_stack_proof_command(paths=affected_paths, cli_invoke=cli_invoke)
+    correction_command = _review_stack_implement_command(
+        paths=affected_paths,
+        pr_number=str(affected_member.get("pr_number") or current_pr_number),
+        cli_invoke=cli_invoke,
+    )
+    closeout_command = _command_with_cli_invoke(
+        command="agentic-workspace report --target . --section closeout_report --format json",
+        cli_invoke=cli_invoke,
+    )
+    active_plan = _active_planning_record_for_report_section(target_root=target_root)
+    active_plan_id = str(active_plan.get("id") or active_plan.get("plan_id") or active_plan.get("title") or "").strip()
+    active_plan_surface = str(active_plan.get("_record_surface") or active_plan.get("surface") or active_plan.get("path") or "").strip()
+    planning_transitions = _review_stack_planning_transition_payloads(
+        target_root=target_root,
+        current_pr_number=current_pr_number,
+    )
+    planning_events = _review_stack_planning_transition_events(transitions=planning_transitions)
+    workflow_trace = _review_stack_workflow_trace_payload(
+        stack=stack,
+        phase=phase,
+        commands={
+            "correct": correction_command,
+            "prove": proof_command,
+            "closeout": closeout_command,
+        },
+        proof_reuse=proof_reuse,
+        planning_events=planning_events,
+    )
+    planning_phase_source = (
+        "planning_lifecycle_transition"
+        if workflow_trace.get("transition_source") == "planning_lifecycle_transition"
+        else "executed_transition_event"
+        if workflow_trace.get("transition_source") == "workflow_events"
+        else "derived_projection"
+    )
+    return {
+        "kind": "agentic-workspace/review-stack-continuity/v1",
+        "status": phase,
+        "phase": phase,
+        "current_branch": branch,
+        "current_pr_number": current_pr_number,
+        "stack_status": str(stack.get("status") or ""),
+        "stack_comment_state": str(stack.get("comment_state") or ""),
+        "stack_member_count": len(members),
+        "dependency_order": dependency_order,
+        "affected_slice": {
+            "status": "review_findings_present" if actionable_members else "current_branch_pr" if current_pr_number else "unresolved",
+            "pr_number": str(affected_member.get("pr_number") or current_pr_number),
+            "branch": str(affected_member.get("branch") or branch),
+            "actionable_count": _as_int(affected_member.get("actionable_count")),
+            "paths": affected_paths,
+            "proof_hints": proof_hints,
+            "comment_sample_paths": comment_sample_paths,
+            "comment_proof_hints": comment_proof_hints,
+            "sample": affected_samples[:3],
+            "path_source": changed_effect_path_source,
+        },
+        "review_findings": {
+            "actionable_pr_numbers": [str(member.get("pr_number") or "") for member in actionable_members],
+            "stale_or_unverified_pr_numbers": [str(member.get("pr_number") or "") for member in stale_members],
+            "owner": {
+                "status": "bound_to_active_planning_owner" if active_plan_surface else "active_planning_owner_unavailable",
+                "surface": active_plan_surface,
+                "id": active_plan_id,
+                "phase": phase,
+                "phase_source": planning_phase_source,
+            },
+            "route_rule": "Bind each review finding to its stack member before changing proof or closeout phase.",
+        },
+        "incremental_proof_manifest": {
+            "status": proof_manifest_status,
+            "changed_effect_paths": affected_paths,
+            "proof_hints": proof_hints,
+            "path_source": changed_effect_path_source,
+            "proof_selection_command_template": proof_command,
+            "proof_reuse_status": proof_status,
+            "reusable_groups": reusable_groups,
+            "reuse_detail_command": proof_reuse.get("detail_command"),
+            "rule": "Use focused proof for the affected review slice; reuse cached proof groups only when the receipt is explicit and current.",
+        },
+        "next_action": {
+            "id": next_action,
+            "phase": phase,
+            "command": str(stack.get("recommended_command") or _pr_comment_report_command(cli_invoke=cli_invoke))
+            if next_action == "refresh-stack-review-state"
+            else proof_command
+            if next_action == "run-focused-proof"
+            else closeout_command
+            if next_action == "closeout-with-reused-proof-receipt"
+            else correction_command,
+            "rule": "Review correction, focused proof, and closeout are separate phases; do not replace unresolved review work with broad readiness prose.",
+        },
+        "closeout_route": {
+            "status": closeout_status,
+            "command": closeout_command,
+            "parent_boundary": "Do not close a parent issue solely because a stack member is locally ready.",
+        },
+        "planning_owner": {
+            "status": "bound_to_active_planning_owner" if active_plan_surface else "active_planning_owner_unavailable",
+            "surface": active_plan_surface,
+            "id": active_plan_id,
+            "phase": phase,
+            "phase_source": planning_phase_source,
+            "transition_records": _dedupe(
+                [str(item.get("planning_surface") or "") for item in planning_transitions if item.get("planning_surface")]
+            ),
+        },
+        "workflow_trace": {
+            **workflow_trace,
+            "member_count": len(members),
+        },
+        "compact_continuation_rule": "Resume from phase, affected_slice, incremental_proof_manifest, and next_action before rereading raw stack cache.",
+    }
+
+
 def _pr_comment_addressing_packet_from_delta(
     *, cache: dict[str, Any], repo: str, pr_number: str, cache_path: str, cli_invoke: str
 ) -> dict[str, Any]:
@@ -26030,6 +26435,8 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
             cache_path=cache_path,
             cli_invoke=cli_invoke,
         )
+        changed_effect_paths = _review_stack_changed_effect_paths(member=item, member_cache=member_cache)
+        proof_hints = _review_stack_member_proof_hints(member=item, member_cache=member_cache)
         members.append(
             {
                 "pr_number": pr_number,
@@ -26039,6 +26446,8 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
                 "freshness": freshness or {"status": "missing"},
                 "new_comment_count": _as_int(member_cache.get("new_comment_count")),
                 "actionable_count": actionable_count,
+                "changed_effect_paths": changed_effect_paths,
+                "proof_hints": proof_hints,
                 "sample": [
                     {
                         key: entry.get(key)
@@ -26069,6 +26478,7 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
         "branch": branch,
         "stack_member_count": len(members),
         "stack_members": members,
+        "workflow_events": [item for item in _list_payload(cache.get("workflow_events")) if isinstance(item, dict)],
         "cache_path": cache_path,
         "comment_state": "stack_comments_requiring_action"
         if actionable_present
@@ -26186,6 +26596,14 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
         stack = _pr_stack_comment_unavailable_payload(repo=repo, branch=branch, pr_number=pr_number, cli_invoke=cli_invoke)
     if stack:
         status = str(stack.get("status") or "stack_comment_status_unavailable")
+        proof_reuse = _proof_reuse_guidance_payload(target_root=target_root, cli_invoke=cli_invoke)
+        review_stack_continuity = _review_stack_continuity_payload(
+            target_root=target_root,
+            stack=stack,
+            branch=branch,
+            proof_reuse=proof_reuse,
+            cli_invoke=cli_invoke,
+        )
         return {
             "kind": "agentic-workspace/pr-comment-attention/v1",
             "status": status,
@@ -26205,6 +26623,7 @@ def _pr_comment_attention_payload(*, target_root: Path, task_text: str | None, c
             else str(stack.get("recommended_command") or _pr_comment_report_command(cli_invoke=cli_invoke)),
             "live_inspection": stack.get("live_inspection", {}),
             "pr_resolution": stack.get("pr_resolution", {}),
+            "review_stack_continuity": review_stack_continuity,
             "selector": "pr_comment_attention",
             "degraded_explicitly": status == "stack_comment_status_unavailable",
             "claim_boundary": stack.get("claim_boundary"),
@@ -39947,6 +40366,7 @@ def _tiny_required_proof_commands(answer: dict[str, Any]) -> list[str]:
 
 PROOF_RECEIPT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 PROOF_RECEIPT_HISTORY_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "history.jsonl"
+PROOF_REUSE_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "cache" / "proof-reuse.json"
 
 
 def _proof_receipt_result_failed(result: str) -> bool:
@@ -40170,6 +40590,51 @@ def _proof_receipt_retry_ladder(*, command: str, result: str, changed_paths: lis
     }
 
 
+def _write_proof_reuse_cache_from_receipt(
+    *,
+    target_root: Path,
+    command: str,
+    result: str,
+    changed_paths: list[str],
+    receipt: dict[str, Any],
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    path_fingerprints = {relative: digest for relative in normalized_paths if (digest := _file_sha256(target_root / relative))}
+    command_identity = hashlib.sha256(command.encode("utf-8")).hexdigest()
+    proof_selection_fingerprint = hashlib.sha256("\n".join([*sorted(normalized_paths), command]).encode("utf-8")).hexdigest()
+    cache_payload = {
+        "kind": "agentic-workspace/proof-reuse-cache/v1",
+        "changed_paths": normalized_paths,
+        "path_fingerprints": path_fingerprints,
+        "parent_proof_reference": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+        "proof_selection_fingerprint": proof_selection_fingerprint,
+        "dependency_config_fingerprint": "ordinary-proof-receipt",
+        "generated_surface_freshness": {"status": "verified"},
+        "proof_groups": [
+            {
+                "command": command,
+                "command_fingerprint": command_identity,
+                "status": result,
+            }
+        ],
+        "source_receipt_recorded_at": receipt.get("recorded_at"),
+        "source": "proof --record-receipt",
+    }
+    if not dry_run:
+        cache_path = target_root / PROOF_REUSE_RELATIVE_PATH
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(cache_payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    return {
+        "status": "dry-run" if dry_run else "written",
+        "path": PROOF_REUSE_RELATIVE_PATH.as_posix(),
+        "changed_paths": normalized_paths,
+        "fingerprint_count": len(path_fingerprints),
+        "command_identity": command_identity,
+        "source": "proof --record-receipt",
+    }
+
+
 def _record_proof_receipt_payload(
     *,
     target_root: Path,
@@ -40216,20 +40681,57 @@ def _record_proof_receipt_payload(
         )
     if failure_summary is not None:
         receipt["failure_summary"] = failure_summary
+    proof_reuse_cache = _write_proof_reuse_cache_from_receipt(
+        target_root=target_root,
+        command=command,
+        result=result,
+        changed_paths=changed_paths,
+        receipt=receipt,
+        dry_run=dry_run,
+    )
     if not dry_run:
         receipt_path.parent.mkdir(parents=True, exist_ok=True)
         receipt_path.write_text(json.dumps(receipt, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
         history_path = target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH
         with history_path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(receipt, sort_keys=True, ensure_ascii=True) + "\n")
+    review_stack_transition = record_review_stack_transition(
+        target_root=target_root,
+        phase="review-proof",
+        phase_after="review-closeout-ready" if admission.get("proof_sufficient") else "review-proof",
+        command=command_text(
+            "agentic-workspace",
+            [
+                "proof",
+                *sum((["--changed", path] for path in _normalize_changed_paths(changed_paths)), []),
+                "--record-receipt",
+                "--receipt-command",
+                command,
+                "--receipt-result",
+                result,
+                "--format",
+                "json",
+            ],
+        ),
+        outcome=result,
+        next_action_id="closeout-with-reused-proof-receipt" if admission.get("proof_sufficient") else "rerun-focused-proof",
+        changed_paths=_normalize_changed_paths(changed_paths),
+        command_exit_code=0 if admission.get("proof_sufficient") else 1,
+        proof_receipt_path=PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
+        proof_receipt_result=result,
+        dry_run=dry_run,
+    )
     payload = {
         "kind": "agentic-workspace/proof-receipt-write/v1",
         "status": "dry-run" if dry_run else "written",
         "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
         "history_path": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
         "receipt": receipt,
+        "proof_reuse_cache": proof_reuse_cache,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
     }
+    if review_stack_transition.get("status") != "skipped":
+        payload["review_stack_transition"] = review_stack_transition
     if repair_retry_ladder is not None:
         payload["repair_retry_ladder"] = repair_retry_ladder
     if failure_summary is not None:
@@ -40863,6 +41365,24 @@ def _run_planning_decision_adapter(args: argparse.Namespace) -> int:
     return 0
 
 
+def _changed_surface_paths(value: Any) -> list[str]:
+    if value in (None, "", []):
+        return []
+    values = value if isinstance(value, (list, tuple)) else [value]
+    parts: list[str] = []
+    for item in values:
+        for comma_part in str(item).split(","):
+            stripped = comma_part.strip()
+            if not stripped:
+                continue
+            try:
+                tokens = shlex.split(stripped)
+            except ValueError:
+                tokens = [stripped]
+            parts.extend(tokens or [stripped])
+    return _normalize_changed_paths(parts)
+
+
 def _run_planning_closeout_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(getattr(args, "target", None))
     _validate_target_root(command_name="planning", target_root=target_root)
@@ -40957,6 +41477,20 @@ def _run_planning_closeout_adapter(args: argparse.Namespace) -> int:
                 closeout_payload = json.loads(output)
             except json.JSONDecodeError:
                 closeout_payload = None
+            if isinstance(closeout_payload, dict) and int(result or 0) == 0 and not bool(getattr(args, "dry_run", False)):
+                transition = record_review_stack_transition(
+                    target_root=target_root,
+                    phase="review-closeout-ready",
+                    phase_after="review-closed",
+                    command=command_text("agentic-workspace", ["planning", *argv]),
+                    outcome="executed",
+                    next_action_id="review-stack-closeout-recorded",
+                    changed_paths=_changed_surface_paths(getattr(args, "changed_surfaces", None)),
+                    command_exit_code=0,
+                )
+                if transition.get("status") != "skipped":
+                    closeout_payload["review_stack_transition"] = transition
+                    output = json.dumps(closeout_payload, indent=2) + "\n"
             if (
                 isinstance(closeout_payload, dict)
                 and int(result or 0) != 0

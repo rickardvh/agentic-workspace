@@ -3,7 +3,6 @@
   "$id": "command-generation/command-package-ir.schema.json",
   "title": "Command Generation Command Package IR",
   "description": "Intermediate representation for generating command package metadata and language/runtime adapters.",
-  "x-agentic-workspace-doc-role": "contract-reference",
   "type": "object",
   "required": [
     "schema_version",

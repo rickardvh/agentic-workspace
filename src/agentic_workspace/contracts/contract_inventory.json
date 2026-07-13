@@ -492,6 +492,16 @@
       "notes": "Remaining Python-owned behavior is classified as procedural-owned, live-inspection-owned, operation-contract-covered, or deferred-extractable so cli.py is no longer the only boundary map."
     },
     {
+      "area": "runtime_semantic_exceptions",
+      "classification": "declarative",
+      "owner_surface": "src/agentic_workspace/contracts/runtime_semantic_exceptions.json",
+      "consumers": [
+        "scripts/check/check_generated_command_packages.py",
+        "scripts/check/check_contract_tooling_surfaces.py"
+      ],
+      "notes": "Temporary ordinary-command runtime semantic exceptions are exact-symbol, schema-backed, and tied to generated command/operation IR plus accepted runtime boundaries."
+    },
+    {
       "area": "module_registry",
       "classification": "declarative",
       "owner_surface": "src/agentic_workspace/contracts/module_registry.json",

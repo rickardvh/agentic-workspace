@@ -10,7 +10,7 @@ Intermediate representation for generating command package metadata and language
 
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
-| (root) | object | yes |  | Intermediate representation for generating command package metadata and language/runtime adapters. |  | x-agentic-workspace-doc-role: "contract-reference" |
+| (root) | object | yes |  | Intermediate representation for generating command package metadata and language/runtime adapters. |  |  |
 | `schema_version` | const `"command-generation/command-package-ir/v1"` | yes |  | Command package IR contract version. |  |  |
 | `summary` | string | yes |  | Short summary of the generated command package boundary. |  |  |
 | `schema` | const `"schemas/command_package_ir.schema.json"` | yes |  | Schema reference carried by the IR document. |  |  |

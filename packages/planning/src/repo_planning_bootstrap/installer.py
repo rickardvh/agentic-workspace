@@ -6285,7 +6285,8 @@ def _planning_state_v1_item_warnings(*, bucket_path: str, item_id: str, item: di
             warnings.append(_planning_state_v1_warning(bucket_path, f"ready item {item_id} requires handoff_ready = true."))
     if maturity == "active":
         surface = str(item.get("execplan") or item.get("surface") or item.get("path") or "").strip()
-        if not surface or not _surface_execplan_reference(surface):
+        is_active_lane_owner = bucket_path == "roadmap.lanes" and surface.endswith(".lane.json")
+        if not surface or (not _surface_execplan_reference(surface) and not is_active_lane_owner):
             warnings.append(
                 _planning_state_v1_warning(
                     bucket_path,

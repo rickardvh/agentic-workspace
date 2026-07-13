@@ -314,3 +314,4 @@ Prefer refining the existing contract over inventing a second schema. If a propo
 Default to one active milestone at a time.
 Prefer updating an existing active plan over creating overlapping plan files for the same feature.
 Close and remove completed plans once they no longer affect future execution; retain archives only when audit or compatibility needs are explicit.
+

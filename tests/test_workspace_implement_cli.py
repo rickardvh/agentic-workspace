@@ -4998,6 +4998,89 @@ def test_start_custody_required_bounded_route_creates_selectable_execplan(tmp_pa
     assert (tmp_path / writer["postcondition"]["owner_path"]).is_file()
 
 
+def test_start_reuses_exact_issue_state_plan_before_new_plan(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "issue-2245-lane-lifecycle-validity", title = "Issue 2245 lane lifecycle validity", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/issue-2245-lane-lifecycle-validity.plan.json" },
+]
+queued_items = [
+  { id = "issue-2044-runtime-ownership", title = "Issue 2044 ordinary-command runtime ownership behind IR/codegen", maturity = "ready", status = "next", surface = ".agentic-workspace/planning/execplans/issue-2044-runtime-ownership.plan.json" },
+]
+
+[roadmap]
+lanes = [
+  { id = "issue-2044-ownership-inventory", title = "Issue 2044 runtime ownership inventory and boundary", maturity = "ready", status = "next", surface = ".agentic-workspace/planning/lanes/issue-2044-ownership-inventory.lane.json", owner_surface = ".agentic-workspace/planning/lanes/issue-2044-ownership-inventory.lane.json", refs = [".agentic-workspace/planning/decompositions/issue-2044-runtime-ownership.decomposition.json"] },
+]
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace/planning/execplans/issue-2245-lane-lifecycle-validity.plan.json",
+        json.dumps(
+            {
+                "kind": "agentic-workspace-execplan/v1",
+                "title": "Issue 2245 lane lifecycle validity",
+                "task": {"surface": ".agentic-workspace/planning/execplans/issue-2245-lane-lifecycle-validity.plan.json"},
+            }
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        json.dumps(
+            {
+                "kind": "planning-external-intent-evidence/v1",
+                "items": [
+                    {
+                        "id": "#2044",
+                        "system": "github",
+                        "status": "open",
+                        "kind": "issue",
+                        "title": "Push ordinary-command runtime ownership behind IR/codegen",
+                    }
+                ],
+            }
+        ),
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement #2044 in full",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
+    assert gate["gate_result"] == "active-plan-task-switch"
+    pressure = gate["candidate_pressure"]
+    assert pressure["candidate_ids"][:2] == ["issue-2044-runtime-ownership", "issue-2044-ownership-inventory"]
+    writer = gate["work_shape_study"]["decision"]["owner_writer"]
+    assert writer["id"] == "issue-2044-runtime-ownership"
+    assert writer["selected_route"] == "reuse-existing-execplan-owner"
+    assert writer["mutation_required"] is False
+    assert writer["postcondition"]["owner_path"] == ".agentic-workspace/planning/execplans/issue-2044-runtime-ownership.plan.json"
+    assert "summary" in writer["command"]
+    assert "new-plan --id issue-2044" not in writer["command"]
+
+
 def test_start_default_output_surfaces_parent_lane_shape_study(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

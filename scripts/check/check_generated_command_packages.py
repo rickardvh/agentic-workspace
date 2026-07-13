@@ -16,7 +16,7 @@ import sys
 import tempfile
 import tomllib
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERATOR_SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
@@ -61,6 +61,7 @@ from agentic_workspace.contract_tooling import (  # noqa: E402
     load_contract_json,
     operation_manifest,
     python_runtime_projection_inventory_manifest,
+    runtime_semantic_exceptions_manifest,
     workspace_runtime_primitive_families_manifest,
 )
 
@@ -1324,7 +1325,6 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "workspace.defaults.select",
     "workspace.config.load",
     "output.fields.select",
-    "workspace.config.emit",
     "workspace.output.emit",
     "python.function.call",
     "planning.adopt.apply",
@@ -2075,6 +2075,89 @@ def _find_command_adapter(payload: object, *, adapter_id: str) -> dict[str, obje
     return None
 
 
+def _package_for_adapter(ir: dict[str, object], *, adapter_id: str) -> dict[str, object] | None:
+    packages = ir.get("packages", [])
+    if not isinstance(packages, list):
+        return None
+    for package in packages:
+        if not isinstance(package, dict):
+            continue
+        if _find_command_adapter(package, adapter_id=adapter_id) is not None:
+            return package
+    return None
+
+
+def _operation_ir_steps_for_text_view_check(operation: dict[str, object]) -> list[dict[str, object]]:
+    ir_plan = operation.get("ir_plan", {})
+    if not isinstance(ir_plan, dict):
+        return []
+    steps: list[dict[str, object]] = []
+    for step in ir_plan.get("steps", []):
+        if isinstance(step, dict):
+            steps.append(step)
+    for fragment in ir_plan.get("fragments", []):
+        if not isinstance(fragment, dict):
+            continue
+        for step in fragment.get("steps", []):
+            if isinstance(step, dict):
+                steps.append(step)
+    return steps
+
+
+def _validate_generated_text_view_expectation(
+    expectation: object,
+    *,
+    location: str,
+    primitive_refs: list[object],
+) -> list[str]:
+    errors: list[str] = []
+    if not isinstance(expectation, dict):
+        return [f"{location} must be an object"]
+    primitive = str(expectation.get("primitive", ""))
+    if primitive not in {str(ref) for ref in primitive_refs}:
+        errors.append(f"{location} primitive {primitive!r} is not present in command_package_ir adapter primitive_refs")
+    expected_view_ids = {str(view_id) for view_id in expectation.get("view_ids", []) if str(view_id)}
+    if not expected_view_ids:
+        errors.append(f"{location} view_ids must be non-empty")
+    generated_paths = expectation.get("generated_operation_paths", [])
+    if not isinstance(generated_paths, list) or not generated_paths:
+        return [*errors, f"{location} generated_operation_paths must be a non-empty list"]
+    forbidden_primitives = {str(item) for item in expectation.get("forbidden_primitives", []) if str(item)}
+    for path_index, generated_path_value in enumerate(generated_paths):
+        generated_path = REPO_ROOT / str(generated_path_value)
+        path_location = f"{location}.generated_operation_paths[{path_index}]"
+        if not generated_path.is_file():
+            errors.append(f"{path_location} does not exist: {generated_path_value!r}")
+            continue
+        generated_text = generated_path.read_text(encoding="utf-8")
+        for forbidden in sorted(forbidden_primitives):
+            if forbidden in generated_text:
+                errors.append(f"{path_location} must not contain superseded primitive {forbidden!r}")
+        try:
+            operation = json.loads(generated_text)
+        except json.JSONDecodeError as exc:
+            errors.append(f"{path_location} generated operation JSON is invalid: {exc}")
+            continue
+        view_ids: set[str] = set()
+        primitive_step_count = 0
+        for step in _operation_ir_steps_for_text_view_check(operation):
+            if step.get("uses") != primitive:
+                continue
+            primitive_step_count += 1
+            arguments = step.get("arguments", {})
+            text_views = arguments.get("text_views", []) if isinstance(arguments, dict) else []
+            if not isinstance(text_views, list):
+                errors.append(f"{path_location} {primitive} arguments.text_views must be a list")
+                continue
+            view_ids.update(str(view.get("id", "")) for view in text_views if isinstance(view, dict))
+        if primitive_step_count == 0:
+            errors.append(f"{path_location} must contain a generated {primitive!r} step")
+        missing = sorted(expected_view_ids - view_ids)
+        if missing:
+            errors.append(f"{path_location} {primitive} text_views missing id(s): {', '.join(missing)}")
+    return errors
+
+
 def _validate_ordinary_command_migration_inventory() -> list[str]:
     errors: list[str] = []
     try:
@@ -2108,6 +2191,22 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
         if adapter is None:
             errors.append(f"{location} adapter_id {adapter_id!r} is not present in command_package_ir.json")
             continue
+        package = _package_for_adapter(ir, adapter_id=adapter_id)
+        python_runtime_binding = package.get("python_runtime_binding", {}) if isinstance(package, dict) else {}
+        operation_executor = python_runtime_binding.get("operation_executor", {}) if isinstance(python_runtime_binding, dict) else {}
+        runtime_handlers = {
+            str(handler.get("primitive", "")): handler
+            for handler in operation_executor.get("handlers", [])
+            if isinstance(handler, dict)
+        }
+        generated_overrides: dict[tuple[str, str], dict[str, Any]] = {}
+        for binding in python_runtime_binding.get("local_runtime_bindings", []) if isinstance(python_runtime_binding, dict) else []:
+            if not isinstance(binding, dict):
+                continue
+            module_file = str(binding.get("module_file", ""))
+            for override in binding.get("generated_function_overrides", []):
+                if isinstance(override, dict):
+                    generated_overrides[(module_file, str(override.get("function", "")))] = override
         operation_ref = adapter.get("operation_ref", {})
         if not isinstance(operation_ref, dict) or operation_ref.get("id") != operation_id:
             errors.append(f"{location} adapter {adapter_id!r} must reference operation_id {operation_id!r}")
@@ -2137,6 +2236,56 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
             else:
                 if generated_operation_payload.get("id") != operation_id:
                     errors.append(f"{location} generated operation must have id {operation_id!r}")
+        generated_runtime_handlers = record.get("generated_runtime_handlers", [])
+        if generated_runtime_handlers is not None:
+            if not isinstance(generated_runtime_handlers, list):
+                errors.append(f"{location} generated_runtime_handlers must be a list when present")
+            else:
+                for handler_index, generated_handler in enumerate(generated_runtime_handlers):
+                    handler_location = f"{location}.generated_runtime_handlers[{handler_index}]"
+                    if not isinstance(generated_handler, dict):
+                        errors.append(f"{handler_location} must be an object")
+                        continue
+                    primitive = str(generated_handler.get("primitive", ""))
+                    expected_function = str(generated_handler.get("function", ""))
+                    expected_implementation = str(generated_handler.get("implementation", ""))
+                    handler = runtime_handlers.get(primitive)
+                    if handler is None:
+                        errors.append(f"{handler_location} primitive {primitive!r} is not present in command_package_ir operation_executor handlers")
+                    elif handler.get("function") != expected_function:
+                        errors.append(
+                            f"{handler_location} primitive {primitive!r} must bind function {expected_function!r}, found {handler.get('function')!r}"
+                        )
+                    facade_path = REPO_ROOT / str(generated_handler.get("facade_path", ""))
+                    if not facade_path.is_file():
+                        errors.append(f"{handler_location} facade_path {generated_handler.get('facade_path')!r} does not exist")
+                    else:
+                        facade_text = facade_path.read_text(encoding="utf-8")
+                        if f"def {expected_function}(" not in facade_text:
+                            errors.append(f"{handler_location} facade must define {expected_function!r}")
+                    module_file = str(generated_handler.get("facade_path", "")).removeprefix("generated/workspace/python/").replace("/", ".")
+                    if module_file.endswith(".py"):
+                        module_file = module_file[:-3]
+                    override = generated_overrides.get((module_file, expected_function))
+                    if override is None:
+                        errors.append(f"{handler_location} function {expected_function!r} must have a generated_function_overrides entry")
+                    elif override.get("implementation") != expected_implementation:
+                        errors.append(
+                            f"{handler_location} function {expected_function!r} must use implementation {expected_implementation!r}, found {override.get('implementation')!r}"
+                        )
+        generated_text_views = record.get("generated_text_views", [])
+        if generated_text_views is not None:
+            if not isinstance(generated_text_views, list):
+                errors.append(f"{location} generated_text_views must be a list when present")
+            else:
+                for text_view_index, expectation in enumerate(generated_text_views):
+                    errors.extend(
+                        _validate_generated_text_view_expectation(
+                            expectation,
+                            location=f"{location}.generated_text_views[{text_view_index}]",
+                            primitive_refs=primitive_refs,
+                        )
+                    )
         boundary = record.get("remaining_runtime_boundary", {})
         if not isinstance(boundary, dict):
             errors.append(f"{location} remaining_runtime_boundary must be an object")
@@ -2151,6 +2300,119 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
         if operation_id not in set(accepted_entry.get("operation_ids", [])):
             errors.append(f"{location} remaining runtime boundary must name operation_id {operation_id!r}")
     return errors
+
+
+def _source_symbols_for_path(relative_path: str) -> set[str]:
+    path = REPO_ROOT / relative_path
+    if not path.is_file():
+        return set()
+    try:
+        module = ast.parse(path.read_text(encoding="utf-8"))
+    except SyntaxError:
+        return set()
+    return {
+        node.name
+        for node in module.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+    }
+
+
+def _validate_runtime_semantic_exceptions() -> list[str]:
+    errors: list[str] = []
+    try:
+        registry = runtime_semantic_exceptions_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return [f"runtime_semantic_exceptions.json is missing or invalid: {exc}"]
+    try:
+        inventory = python_runtime_projection_inventory_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return [f"python_runtime_projection_inventory.json is missing or invalid for runtime semantic exceptions: {exc}"]
+
+    exceptions = registry.get("exceptions", [])
+    if not isinstance(exceptions, list):
+        return ["runtime_semantic_exceptions.json exceptions must be a list"]
+
+    ir = load_workspace_command_package_ir(repo_root=REPO_ROOT)
+    accepted = inventory.get("accepted_runtime_boundaries", {})
+    boundary_entries = accepted.get("entries", []) if isinstance(accepted, dict) else []
+    boundary_index = {
+        (str(entry.get("source_module", "")), str(entry.get("source_symbol", ""))): entry
+        for entry in boundary_entries
+        if isinstance(entry, dict)
+    }
+
+    for index, exception in enumerate(exceptions):
+        if not isinstance(exception, dict):
+            errors.append(f"runtime_semantic_exceptions.json exceptions[{index}] must be an object")
+            continue
+        exception_id = str(exception.get("id") or f"exceptions[{index}]")
+        location = f"runtime_semantic_exceptions.json {exception_id}"
+        operation_id = str(exception.get("operation_id", ""))
+        adapter_id = str(exception.get("adapter_id", ""))
+        adapter = _find_command_adapter(ir, adapter_id=adapter_id)
+        if adapter is None:
+            errors.append(f"{location} adapter_id {adapter_id!r} is not present in command_package_ir.json")
+        else:
+            operation_ref = adapter.get("operation_ref", {})
+            if not isinstance(operation_ref, dict) or operation_ref.get("id") != operation_id:
+                errors.append(f"{location} adapter {adapter_id!r} must reference operation_id {operation_id!r}")
+            command = adapter.get("command", {})
+            command_name = str(command.get("name", "")) if isinstance(command, dict) else ""
+            command_id = str(exception.get("command_id", ""))
+            if command_id and command_name and not command_id.endswith(command_name):
+                errors.append(f"{location} command_id {command_id!r} must end with adapter command name {command_name!r}")
+
+        boundary = exception.get("accepted_runtime_boundary", {})
+        if not isinstance(boundary, dict):
+            errors.append(f"{location} accepted_runtime_boundary must be an object")
+            continue
+        boundary_key = (str(boundary.get("source_module", "")), str(boundary.get("source_symbol", "")))
+        accepted_entry = boundary_index.get(boundary_key)
+        if accepted_entry is None:
+            errors.append(f"{location} accepted_runtime_boundary {boundary_key!r} is not accepted at source-symbol granularity")
+        else:
+            if accepted_entry.get("runtime_boundary_class") != boundary.get("runtime_boundary_class"):
+                errors.append(f"{location} accepted_runtime_boundary runtime_boundary_class must match python_runtime_projection_inventory.json")
+            if operation_id not in set(accepted_entry.get("operation_ids", [])):
+                errors.append(f"{location} accepted_runtime_boundary must name operation_id {operation_id!r}")
+
+        runtime_path = str(exception.get("runtime_path", ""))
+        path = REPO_ROOT / runtime_path
+        if not path.is_file():
+            errors.append(f"{location} runtime_path {runtime_path!r} does not exist")
+            available_symbols: set[str] = set()
+        else:
+            available_symbols = _source_symbols_for_path(runtime_path)
+        for symbol in exception.get("source_symbols", []) if isinstance(exception.get("source_symbols"), list) else []:
+            if str(symbol) not in available_symbols:
+                errors.append(f"{location} source_symbol {symbol!r} is not defined in {runtime_path}")
+
+        for field in ("reason", "scope", "migration_path"):
+            text = str(exception.get(field, "")).strip().lower()
+            if any(vague in text for vague in ("whole file", "entire file", "misc", "various")):
+                errors.append(f"{location} {field} is too vague for a runtime semantic exception")
+        for conformance_ref in exception.get("conformance_refs", []) if isinstance(exception.get("conformance_refs"), list) else []:
+            conformance_path = REPO_ROOT / "src" / "agentic_workspace" / "contracts" / "conformance" / f"{conformance_ref}.json"
+            if not conformance_path.is_file():
+                errors.append(f"{location} conformance_ref {conformance_ref!r} does not exist")
+    return errors
+
+
+def _runtime_semantic_exceptions_report() -> dict[str, object]:
+    try:
+        registry = runtime_semantic_exceptions_manifest()
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "unavailable", "error": str(exc), "exception_count": 0, "exception_ids": []}
+    exceptions = registry.get("exceptions", [])
+    if not isinstance(exceptions, list):
+        return {"status": "unavailable", "error": "exceptions is not a list", "exception_count": 0, "exception_ids": []}
+    exception_ids = [str(item.get("id", "")).strip() for item in exceptions if isinstance(item, dict) and str(item.get("id", "")).strip()]
+    return {
+        "status": "available",
+        "exception_count": len(exception_ids),
+        "exception_ids": exception_ids,
+        "rule": "Runtime semantic exceptions are temporary exact-symbol allowances and must pass generated-command fail-closed validation.",
+    }
 
 
 def _validate_python_completion_output_boundary_audit(entry: dict[str, object], *, location: str) -> list[str]:
@@ -5053,6 +5315,7 @@ def _validate_static_surfaces() -> list[str]:
                 )
             )
             errors.extend(_validate_ordinary_command_migration_inventory())
+            errors.extend(_validate_runtime_semantic_exceptions())
         errors.extend(_validate_python_operation_execution_inventory(ir))
         errors.extend(_validate_retired_command_generation_primitive_usage_inventory())
         errors.extend(_validate_generated_command_check_inventory_removals())
@@ -5438,6 +5701,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     blockers.extend(_validate_full_python_completion_executable_ownership(forced_full_ir))
     blockers.extend(_validate_python_runtime_projection_inventory(full_completion=True))
     blockers.extend(_validate_ordinary_command_migration_inventory())
+    blockers.extend(_validate_runtime_semantic_exceptions())
     blockers.extend(_validate_python_operation_execution_inventory(forced_full_ir))
     blockers.extend(_validate_lifecycle_dry_run_generation())
     blockers.extend(_validate_declarative_view_specs())
@@ -5453,6 +5717,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
     retired_primitive_usage = _retired_primitive_usage_inventory()
     aw_primitive_ownership = _aw_primitive_ownership_report(ir)
     generated_command_check_inventory = _generated_command_check_inventory_report()
+    runtime_semantic_exceptions = _runtime_semantic_exceptions_report()
     extraction_readiness_errors = _validate_command_generation_extraction_readiness(ir)
     generated_command_migration_completion = _generated_command_migration_completion_report(
         blockers=blockers,
@@ -5478,6 +5743,7 @@ def _python_completion_blockers_report(ir: dict[str, object]) -> dict[str, objec
         "retired_command_generation_primitive_usage": retired_primitive_usage,
         "aw_primitive_ownership": aw_primitive_ownership,
         "generated_command_check_inventory": generated_command_check_inventory,
+        "runtime_semantic_exceptions": runtime_semantic_exceptions,
         "generated_command_migration_completion": generated_command_migration_completion,
         "remaining_scope": "tier-6-final-python-completion-promotion" if blockers else "none",
         "next_owner": ("#892 / tier-6-final-python-completion-promotion" if blockers else "none"),
@@ -5637,6 +5903,9 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
         print(f"Remaining hand-owned runtime symbols: {minimization.get('remaining_hand_owned_symbol_count')}")
         print(f"Move-to-command-generation candidate symbols: {minimization.get('move_to_command_generation_candidate_count')}")
         print(f"Runtime minimization claim rule: {minimization.get('claim_rule')}")
+    exceptions = report.get("runtime_semantic_exceptions", {})
+    if isinstance(exceptions, dict) and exceptions.get("status") == "available":
+        print(f"Runtime semantic exceptions: {exceptions.get('exception_count')} ({exceptions.get('exception_ids')})")
     target_freshness = report.get("generated_target_freshness", {})
     if isinstance(target_freshness, dict) and target_freshness.get("status"):
         print(f"Generated target freshness: {target_freshness.get('status')}")

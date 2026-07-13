@@ -10,6 +10,9 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SCHEMA = Path("src/agentic_workspace/contracts/schemas/workspace_config.schema.json")
+MIRRORED_EXTERNAL_SCHEMAS = {
+    Path("src/agentic_workspace/contracts/schemas/command_package_ir.schema.json"),
+}
 DEFAULT_OUTPUT = Path("docs/reference/workspace-config.md")
 SCHEMA_ROOT = Path("src/agentic_workspace/contracts/schemas")
 
@@ -280,7 +283,7 @@ def _annotation_errors(schema_path: Path, *, repo_root: Path = REPO_ROOT) -> lis
             errors.append(f"{schema_path.as_posix()} field {row['path']} is missing description")
         elif _is_mechanical_description(row["description"]):
             errors.append(f"{schema_path.as_posix()} field {row['path']} has mechanical description: {row['description']}")
-    if not schema.get("x-agentic-workspace-doc-role"):
+    if not schema.get("x-agentic-workspace-doc-role") and schema_path not in MIRRORED_EXTERNAL_SCHEMAS:
         errors.append(f"{schema_path.as_posix()} root is missing x-agentic-workspace-doc-role")
     if schema_path == DEFAULT_SCHEMA:
         for public_field in (

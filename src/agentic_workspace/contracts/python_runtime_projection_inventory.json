@@ -1483,8 +1483,12 @@
         "source_module": "repo_planning_bootstrap.runtime_projection",
         "source_symbol": "apply_planning_decomposition_create_operation",
         "owner_package": "planning package runtime boundary",
-        "operation_ids": ["planning.decomposition-create.lifecycle"],
-        "primitive_refs": ["planning.decomposition-create.apply"],
+        "operation_ids": [
+          "planning.decomposition-create.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.decomposition-create.apply"
+        ],
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol owns Planning decomposition lifecycle mutation policy, validation, conflict handling, and provenance.",
         "conformance_ref": "planning.decomposition-create.lifecycle.dry-run.process",
@@ -1495,7 +1499,10 @@
         "minimization_owner": "package runtime primitive owner for mutation, safety, conflict, and provenance policy",
         "minimization_tracking_issue": "#1657",
         "stale_when": "Stale when portable generation can render and prove the call adapter while preserving package semantic ownership.",
-        "direct_edit_reasons_allowed": ["existing-primitive-bugfix", "new-primitive-implementation"]
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -1737,14 +1744,13 @@
         ],
         "primitive_refs": [
           "output.emit",
-          "system_intent.result.emit",
-          "workspace.config.emit"
+          "system_intent.result.emit"
         ],
         "runtime_boundary_class": "package-specific-judgment",
-        "why_not_generic_deterministic": "Generated JSON, selected-output, compact-answer, delegation-outcome, memory route/report text, and codegen-owned planning-module tiny text are emitted before source fallback. Defaults-router text now consumes declared view metadata from src/agentic_workspace/contracts/workspace_output_views.json. The accepted source fallback is now split into named workspace policy helpers for the remaining package-specific output judgment: prompt payload text, workspace-system-intent text, delegation-outcome compatibility, compact section answers, and config/defaults compatibility surfaces whose wording depends on workspace package policy.",
+        "why_not_generic_deterministic": "Generated JSON, selected-output, compact-answer, delegation-outcome, memory route/report text, and codegen-owned planning-module tiny text are emitted before source fallback. Defaults-router text now consumes declared view metadata from src/agentic_workspace/contracts/workspace_output_views.json. The accepted source fallback is now split into named workspace policy helpers for the remaining package-specific output judgment: prompt payload text, workspace-system-intent text, delegation-outcome compatibility, compact section answers, and defaults compatibility surfaces whose wording depends on workspace package policy.",
         "conformance_ref": "config.report.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, selected-output text, compact-answer text, delegation-outcomes text, memory route/report text, and planning-module tiny text are handled before source fallback; planning-module tiny text is now owned by the codegen output primitive. declared view coverage: defaults-router text consumes defaults-router.text from src/agentic_workspace/contracts/workspace_output_views.json. accepted source fallback: _emit_workspace_prompt_output, _emit_workspace_system_intent_output, _emit_workspace_delegation_outcomes_output, _emit_workspace_compact_section_answer_output, _emit_workspace_config_compat_output, and _emit_workspace_defaults_compat_output name the remaining package-specific output judgment because their wording is coupled to workspace policy and compatibility contracts. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only as the dispatcher for the named package-specific fallback cases.",
+        "generic_behavior_audit": "generated-owned output coverage: JSON dict emission, selected-output text, compact-answer text, delegation-outcomes text, memory route/report text, planning-module tiny text, and config.report JSON/tiny/compact/full/selected text is handled by generated output.emit text_views before source fallback; planning-module tiny text and config.report output.emit text_views are now owned by codegen output primitives. declared view coverage: defaults-router text consumes defaults-router.text from src/agentic_workspace/contracts/workspace_output_views.json. accepted source fallback: _emit_workspace_prompt_output, _emit_workspace_system_intent_output, _emit_workspace_delegation_outcomes_output, _emit_workspace_compact_section_answer_output, and _emit_workspace_defaults_compat_output name the remaining package-specific output judgment because their wording is coupled to workspace policy and compatibility contracts. not accepted as generic output: generic JSON/text dict emission is already generated-owned and this exact symbol is accepted only as the dispatcher for the named package-specific fallback cases.",
         "minimization_category": "package-specific-judgment",
         "minimization_route": "keep-as-hand-owned-primitive",
         "minimization_owner": "package runtime primitive owner for semantic package judgment",
@@ -1772,7 +1778,7 @@
         "why_not_generic_deterministic": "The symbol owns package-specific policy, compatibility, or payload judgment behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
         "conformance_ref": "config.report.process",
         "status": "accepted-permanent-package-domain-boundary",
-        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, payload.project owns exact selector projection, and generated output owns selected-output text. Domain primitive refs (workspace.target-root.resolve, workspace.config.load, workspace.config.emit) remain explicit package-boundary calls for config loading and tiny/full text. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, payload.project owns exact selector projection, and output.emit consumes schema-backed config text_views declared in operation IR for JSON/tiny/compact/full/selected text. workspace.config.load remains an explicit package-boundary call for config layering, local override state, module descriptor validation, and payload assembly. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
         "minimization_category": "package-specific-judgment",
         "minimization_route": "keep-as-hand-owned-primitive",
         "minimization_owner": "package runtime primitive owner for semantic package judgment",
@@ -2359,6 +2365,50 @@
           "why_runtime_owned": "Planning closeout still owns package-specific mutation safety, proof-to-claim reconciliation, archive decisions, and continuation/residue updates behind the generated operation primitive."
         },
         "fail_closed_rule": "The checker must fail when the generated command module, generated operation contract, command-package IR adapter, or accepted runtime boundary no longer matches this representative migration."
+      },
+      {
+        "id": "root-config-selected-output",
+        "operation_id": "config.report",
+        "adapter_id": "config.report.cli",
+        "source_ir_path": "src/agentic_workspace/contracts/command_package_ir.json",
+        "generated_command_module": "generated/workspace/python/commands/config_report.py",
+        "generated_operation_path": "generated/workspace/python/operations/config.report.json",
+        "migrated_behavior_fields": [
+          "command identity",
+          "option schema",
+          "help text",
+          "effect hints",
+          "operation steps",
+          "primitive refs",
+          "conformance refs",
+          "generated Python command module"
+        ],
+        "remaining_runtime_boundary": {
+          "source_module": "agentic_workspace.workspace_runtime_primitives",
+          "source_symbol": "_load_workspace_operation_config",
+          "runtime_boundary_class": "package-specific-judgment",
+          "owner": "workspace package runtime boundary",
+          "why_runtime_owned": "The root config command still owns package-specific config layering, local override state, module descriptor validation, and payload assembly behind the generated config.report operation primitive; selected-output projection, generated callable conformance, and config JSON/tiny/compact/full/selected output emission are IR/codegen-owned through output.emit text_views."
+        },
+        "fail_closed_rule": "The checker must fail when the generated config command module, generated config.report operation resources, command-package IR adapter, declared output.emit text views, or accepted workspace config runtime boundary no longer matches this representative migration.",
+        "generated_text_views": [
+          {
+            "primitive": "output.emit",
+            "view_ids": [
+              "config.selected-output.text",
+              "config.tiny.text",
+              "config.compact.text",
+              "config.full.text"
+            ],
+            "generated_operation_paths": [
+              "generated/workspace/python/operations/config.report.json",
+              "generated/workspace/typescript/resources/operations/config.report.json"
+            ],
+            "forbidden_primitives": [
+              "workspace.config.emit"
+            ]
+          }
+        ]
       }
     ]
   },

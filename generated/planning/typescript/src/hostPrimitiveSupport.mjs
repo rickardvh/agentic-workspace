@@ -1145,7 +1145,6 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
     return args?.include_payload ? { config, result: config } : config;
   }
   if (primitive === 'output.fields.select') return selectFields(values.config, values);
-  if (primitive === 'workspace.config.emit') return emitOutput({ ...values, result: values.result ?? values.config }, args);
   return domainPrimitive(primitive, values, args, operationId);
 }
 

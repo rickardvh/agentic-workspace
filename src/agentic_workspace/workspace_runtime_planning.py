@@ -194,21 +194,56 @@ def _planning_candidate_pressure_payload(
     include_candidate_detail = promotion_required or bool(matched_roadmap)
     top_roadmap = matched_roadmap if include_candidate_detail else []
     route_options: list[dict[str, Any]] = []
-    for candidate in top_roadmap[:3]:
+    for candidate in top_roadmap[:5]:
         candidate_id = str(candidate.get("id", "")).strip()
         if not candidate_id:
             continue
+        source_bucket = str(candidate.get("source_bucket", "")).strip()
+        owner_surface = str(candidate.get("owner_surface") or candidate.get("surface") or "").strip()
+        has_existing_execplan = source_bucket.startswith("todo.") and bool(
+            re.search(r"\.agentic-workspace/planning/execplans/.+", owner_surface)
+        )
+        is_lane_record = source_bucket == "roadmap.lanes" or owner_surface.endswith(".lane.json")
+        if has_existing_execplan:
+            route_command = _command_with_cli_invoke(
+                command=f'agentic-workspace summary --target "{target_root.as_posix()}" --select execplans --format json',
+                cli_invoke=config.cli_invoke,
+            )
+            canonical_operation = "none"
+            next_action = "reuse-existing-execplan-owner"
+            mutation_required = False
+        elif is_lane_record:
+            route_command = _command_with_cli_invoke(
+                command=_command_with_expected_planning_revision(
+                    f'agentic-workspace planning lane-activate {candidate_id} --target "{target_root.as_posix()}" --format json',
+                    planning_revision=planning_revision,
+                ),
+                cli_invoke=config.cli_invoke,
+            )
+            canonical_operation = "planning.lane-activate.lifecycle"
+            next_action = "activate-existing-lane-owner"
+            mutation_required = True
+        else:
+            route_command = _candidate_promotion_command(
+                candidate_id=candidate_id,
+                config=config,
+                planning_revision=planning_revision,
+            )
+            canonical_operation = "planning.promote-to-plan.lifecycle"
+            next_action = "promote-roadmap-candidate-to-plan"
+            mutation_required = True
         route_options.append(
             {
                 "kind": "roadmap-candidate",
                 "id": candidate_id,
                 "title": candidate.get("title", ""),
                 "refs": candidate.get("refs", ""),
-                "command": _candidate_promotion_command(
-                    candidate_id=candidate_id,
-                    config=config,
-                    planning_revision=planning_revision,
-                ),
+                "source_bucket": source_bucket,
+                "owner_surface": owner_surface,
+                "canonical_operation": canonical_operation,
+                "next_action": next_action,
+                "mutation_required": mutation_required,
+                "command": route_command,
             }
         )
     top_decomposition = matched_decomposition if promotion_required else []
@@ -512,8 +547,51 @@ def _work_shape_study_payload(
             "bounded": "create-bounded-execplan" if custody_required else "continue-direct",
         }.get(selected_shape, "needs-human-decision")
 
+    route_options = [route for route in candidate_pressure.get("route_options", []) if isinstance(route, dict)]
+    reusable_owner_route = next(
+        (
+            route
+            for route in route_options
+            if route.get("next_action") == "reuse-existing-execplan-owner" and str(route.get("owner_surface") or "").strip()
+        ),
+        None,
+    )
+    if reusable_owner_route is None:
+        reusable_owner_route = next(
+            (
+                route
+                for route in route_options
+                if route.get("next_action") == "activate-existing-lane-owner" and str(route.get("owner_surface") or "").strip()
+            ),
+            None,
+        )
+    if reusable_owner_route and selected_shape in {"bounded", "slice", "epic"}:
+        artifact_route = "existing-planning-owner"
+        next_action = str(reusable_owner_route.get("next_action") or "select-existing-planning-owner")
+
     owner_writer: dict[str, Any]
-    if selected_shape == "lane":
+    if reusable_owner_route and selected_shape in {"bounded", "slice", "epic"}:
+        owner_surface = str(reusable_owner_route.get("owner_surface") or "").strip()
+        expected_kind = "planning-lane-record" if owner_surface.endswith(".lane.json") else "planning-execplan"
+        owner_writer = {
+            "required_artifact_kind": expected_kind,
+            "canonical_operation": str(reusable_owner_route.get("canonical_operation") or "none"),
+            "selected_route": str(reusable_owner_route.get("next_action") or "select-existing-planning-owner"),
+            "mutation_required": bool(reusable_owner_route.get("mutation_required")),
+            "id": str(reusable_owner_route.get("id") or "").strip(),
+            "source_bucket": str(reusable_owner_route.get("source_bucket") or "").strip(),
+            "command": str(reusable_owner_route.get("command") or ""),
+            "readiness_requirements": ["existing Planning owner remains current", "planning revision remains current"],
+            "postcondition": {
+                "owner_path": owner_surface,
+                "selector_command": _command_with_cli_invoke(
+                    command=f'agentic-workspace summary --target "{target_root.as_posix()}" --select execplans,lanes --format json',
+                    cli_invoke=config.cli_invoke,
+                ),
+                "expected_owner_kind": expected_kind,
+            },
+        }
+    elif selected_shape == "lane":
         source_ref = next((str(item.get("id") or "") for item in raw_evidence if str(item.get("id") or "").strip()), "lane")
         lane_id = re.sub(r"[^a-z0-9]+", "-", source_ref.lower()).strip("-") or "lane"
         owner_id = f"issue-{lane_id}"
@@ -853,13 +931,22 @@ def _task_switch_reconciliation_payload(
         completed_route_target_root = Path(configured_target_root)
     else:
         completed_route_target_root = Path.cwd()
+    text = " ".join((task_text or "").lower().split())
+    maintenance_markers = ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status")
+    matched_maintenance_markers = [marker for marker in maintenance_markers if marker in text]
+    maintenance_like = bool(matched_maintenance_markers)
+    bounded_reflection = _bounded_reflection_reporting_payload(task_text=task_text)
+    classification_basis = "bounded-maintenance-marker-hint" if maintenance_like else "no-maintenance-marker-hint"
+    recommended = "proceed-bounded-repo-maintenance" if maintenance_like else "choose-between-new-task-and-active-plan"
+    mismatch_evidence = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
+    shared_refs = [str(ref) for ref in mismatch_evidence.get("shared_refs", []) if str(ref).strip()]
     completed_plan_route = _completed_active_plan_route_payload(
         target_root=completed_route_target_root,
         active_summary=active_summary,
         config=config,
         planning_revision=planning_revision,
     )
-    if completed_plan_route.get("status") == "archive-or-retire-recommended":
+    if completed_plan_route.get("status") == "archive-or-retire-recommended" and not shared_refs:
         return {
             "kind": "agentic-workspace/task-switch-reconciliation/v1",
             "status": "completed-active-plan-route",
@@ -901,15 +988,6 @@ def _task_switch_reconciliation_payload(
             },
             "rule": "Completed active-plan cleanup is command-routed; startup never silently archives or closes planning state.",
         }
-    text = " ".join((task_text or "").lower().split())
-    maintenance_markers = ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status")
-    matched_maintenance_markers = [marker for marker in maintenance_markers if marker in text]
-    maintenance_like = bool(matched_maintenance_markers)
-    bounded_reflection = _bounded_reflection_reporting_payload(task_text=task_text)
-    classification_basis = "bounded-maintenance-marker-hint" if maintenance_like else "no-maintenance-marker-hint"
-    recommended = "proceed-bounded-repo-maintenance" if maintenance_like else "choose-between-new-task-and-active-plan"
-    mismatch_evidence = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
-    shared_refs = [str(ref) for ref in mismatch_evidence.get("shared_refs", []) if str(ref).strip()]
     if shared_refs:
         return {
             "kind": "agentic-workspace/task-switch-reconciliation/v1",
