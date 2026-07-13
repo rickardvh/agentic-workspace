@@ -1,0 +1,153 @@
+{
+  "classification": "local-record-append",
+  "command_surface": {
+    "command": "final-response",
+    "format_option": "format",
+    "subcommand": "admit"
+  },
+  "effects": {
+    "destructive": true,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": true,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Rendering closeout_trust must not submit a fabricated final response.",
+    "Reject terminal finals while the terminal outcome contract state is CONTINUE.",
+    "--executor-command is the package-owned ordinary host boundary: it must admit executor stdout before exposing final text.",
+    "Executor mode is conservatively classified as mutation-capable, non-idempotent, network-allowed, and outside-repo-write-capable because the executor command is caller supplied.",
+    "Rejected CONTINUE attempts must keep custody with the agent and re-enter the executor after the selected continuation operation.",
+    "Persist only ignored local checkpoint state under .agentic-workspace/local/.",
+    "Do not treat local admission slices as closure evidence."
+  ],
+  "id": "final-response.admit",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "attempt",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "attempt_file",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "executor_command",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "source",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "after_compaction",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "final-response.admit"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "allowed",
+    "outside_repo_writes": "allowed",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/final_response_admission_result.schema.json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "final-response admission tests execute the generated CLI command across multiple ordinary executor slices",
+    "codex-sbx host adapter submits the output-last-message artifact through final-response admit before the harness can read it",
+    "local checkpoint schema accepts persisted admission slices without making them completion evidence",
+    "closeout rendering exposes the integrated vendor-neutral ordinary executor loop and the codex-sbx dogfooding adapter"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": "report.closeout_trust"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/chat-checkpoint.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Evaluate the terminal outcome contract against the model-authored final response attempt; when --executor-command is supplied, repeat executor stdout admission after rejected CONTINUE attempts.",
+      "id": "evaluate_terminal_contract",
+      "uses": "workspace.final-response.admission"
+    },
+    {
+      "description": "Run the selected ordinary continuation operation when the final response is not authorized.",
+      "id": "run_continuation",
+      "uses": "workspace.final-response.continuation.execute"
+    },
+    {
+      "description": "Persist the local admission and resume slice.",
+      "id": "write_checkpoint",
+      "uses": "workspace.local-chat-checkpoint.write"
+    },
+    {
+      "description": "Emit the admission result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Admit or reject a model-authored final response, or run a vendor-neutral executor loop that re-enters execution while CONTINUE remains.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/local/chat-checkpoint.json",
+      "when": "persist the host admission and continuation slice"
+    }
+  ]
+}

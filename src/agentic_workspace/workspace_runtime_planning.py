@@ -867,6 +867,63 @@ def _task_switch_reconciliation_payload(
         ),
         planning_revision=planning_revision,
     )
+    text = " ".join((task_text or "").lower().split())
+    maintenance_markers = ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status")
+    matched_maintenance_markers = [marker for marker in maintenance_markers if marker in text]
+    mismatch_evidence = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
+    shared_refs = [str(ref) for ref in mismatch_evidence.get("shared_refs", []) if str(ref).strip()]
+    if shared_refs:
+        return {
+            "kind": "agentic-workspace/task-switch-reconciliation/v1",
+            "status": "issue-matched-continuation",
+            "summary": "Current task shares explicit structured issue or PR refs with the active plan; treat it as active-plan continuation unless other gates name a concrete mismatch.",
+            "active_execplan": active_summary.get("active_execplan", ""),
+            "intent_conflict_state": "explicit-reference-continuation",
+            "mismatch_evidence": mismatch_evidence,
+            "current_task_class": "active-plan-continuation",
+            "classification_basis": "shared-structured-reference",
+            "matched_maintenance_markers": matched_maintenance_markers,
+            "classification_inputs": [
+                "active_plan_reliance.status=not-needed-for-current-task",
+                f"shared_refs={','.join(str(ref) for ref in shared_refs[:8])}",
+                f"shared_ref_count={len(shared_refs)}",
+                f"shared_term_count={len(mismatch_evidence.get('shared_terms', []))}",
+            ],
+            "semantic_boundary": (
+                "Only structured issue/PR reference overlap can suppress generic active-plan task-switch pressure here. "
+                "This does not close the active plan or override other planning, proof, parent-closure, or delegation gates."
+            ),
+            "recommended_next_action": "continue-active-plan",
+            "next_action_packet": {
+                "action": "continue-active-plan",
+                "summary": "The task and active plan share explicit refs; continue through the active plan route unless a concrete structured mismatch appears.",
+                "command": summary_command,
+                "run": summary_command,
+                "risk": "issue-matched-continuation",
+                "required_inputs": ["current task", "active plan boundary", "shared issue/PR refs"],
+                "next_proof": "use implement/proof for changed paths and keep active plan closeout separate from task-switch classification",
+                "read_first": [summary_command],
+                "open_execplan_only_when": "the continuation needs active plan contract or proof detail",
+            },
+            "safe_routes": [
+                {
+                    "id": "continue-active-plan",
+                    "command": summary_command,
+                    "when": "the shared issue/PR reference is the intended active plan continuation",
+                },
+                {
+                    "id": "reconcile-active-plan-before-implementation",
+                    "command": closeout_command,
+                    "when": "another structured field names a concrete mismatch despite the shared reference",
+                },
+            ],
+            "implementation_allowed": True,
+            "active_plan_protection": {
+                "claim_boundary": "The task may continue the active plan but must still satisfy plan proof and closeout before completion claims.",
+                "blocked_claims": ["claim-unrelated-task-complete", "silently-close-active-plan"],
+            },
+            "rule": "Structured issue/PR ref overlap is active-plan continuation evidence; arbitrary prose keyword overlap is not.",
+        }
     configured_target_root = getattr(config, "target_root", None)
     if isinstance(configured_target_root, Path):
         completed_route_target_root = configured_target_root

@@ -5595,6 +5595,93 @@
       ]
     },
     {
+      "id": "final-response.admit.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "final-response",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json",
+        "subcommands": [
+          "admit"
+        ]
+      },
+      "operation_ref": {
+        "id": "final-response.admit",
+        "registry": "operation_contracts.json",
+        "path": "operations/final-response.admit.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "workspace.final-response.admission",
+          "workspace.final-response.continuation.execute",
+          "workspace.local-chat-checkpoint.write",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "final_response_admission_result.schema.json"
+        ]
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "terminal outcome contract evaluation",
+          "host continuation command execution",
+          "local-only checkpoint write",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "final-response.admit.process"
+      ]
+    },
+    {
       "id": "work-thread.prune.cli",
       "status": "generated",
       "command": {

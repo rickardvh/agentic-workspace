@@ -1419,6 +1419,30 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; local-only policy and checkpoint schema remain AW-owned."
     },
     {
+      "id": "workspace.final-response.admission",
+      "summary": "Evaluate a model-authored final response attempt against the terminal outcome contract.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Final-response custody depends on AW closeout and terminal outcome semantics.",
+      "conformance_ref": "final-response.admit.process plus workspace final-response admission tests",
+      "migration_path": "Keep as workspace runtime until terminal outcome custody can be represented as portable host protocol primitives.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; final-response admission is AW-owned host policy."
+    },
+    {
+      "id": "workspace.final-response.continuation.execute",
+      "summary": "Execute the selected ordinary continuation operation after rejecting an unauthorized final response.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Continuation selection and execution depends on AW terminal outcome contracts and CLI surfaces.",
+      "conformance_ref": "final-response.admit.process plus workspace final-response admission tests",
+      "migration_path": "Keep as workspace runtime until host-loop continuation dispatch is a portable protocol.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; continuation execution is AW-owned host behavior."
+    },
+    {
       "id": "workspace.local-work-thread.prune",
       "summary": "Prune ignored local work-thread records under .agentic-workspace/local/work-threads/.",
       "kind": "workspace-runtime",

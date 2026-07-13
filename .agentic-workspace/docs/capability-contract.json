@@ -33,7 +33,7 @@
     "autopilot_milestone": {
       "trigger": "bounded by active execplan milestone",
       "surface": ".agentic-workspace/planning/execplans/",
-      "recommendation": "Execute one bounded milestone; keep plan current."
+      "recommendation": "Execute bounded planning slices, re-read active state after each slice, and continue the same explicit objective until an authorized terminal outcome."
     },
     "escalate_and_stop": {
       "trigger": "unsafe continuation, unknown validation, or blocked path",

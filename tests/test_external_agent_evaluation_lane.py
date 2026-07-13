@@ -780,12 +780,27 @@ def test_sbx_codex_adapter_copies_prompt_file_into_sandbox_on_windows(
     commands: list[list[str]] = []
     prompt_file = tmp_path / "prompt.txt"
     prompt_file.write_text("large prompt\n" * 100, encoding="utf-8")
+    share_path = tmp_path / "work" / "share" / "final.md"
 
     def fake_run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
         commands.append(command)
+        if command[:5] == ["sbx", "exec", "aw-test", "sh", "-lc"] and "codex exec" in command[-1]:
+            share_path.parent.mkdir(parents=True, exist_ok=True)
+            share_path.write_text("Done.", encoding="utf-8")
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
+    def fake_subprocess_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert "--attempt-file" in command
+        assert command[command.index("--attempt-file") + 1] == str(share_path)
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            stdout=json.dumps({"kind": "agentic-workspace/final-response-admission-result/v1", "status": "accepted_terminal_final"}),
+            stderr="",
+        )
+
     monkeypatch.setattr(module, "_run", fake_run)
+    monkeypatch.setattr(module.subprocess, "run", fake_subprocess_run)
     monkeypatch.setattr(module.sys, "platform", "win32")
     monkeypatch.setattr(module, "WINDOWS_COMMAND_LINE_LIMIT", 1000)
 
@@ -800,7 +815,7 @@ def test_sbx_codex_adapter_copies_prompt_file_into_sandbox_on_windows(
             "--model",
             "gpt-test",
             "--share-path",
-            "work/share/final.md",
+            str(share_path),
             "--prompt-file",
             str(prompt_file),
         ]
@@ -811,6 +826,7 @@ def test_sbx_codex_adapter_copies_prompt_file_into_sandbox_on_windows(
     assert captured.err == ""
     sandbox_prompt_dir = posixpath.join(posixpath.sep, "tmp", "agentic-workspace-model-cli-harness")
     sandbox_prompt_path = posixpath.join(sandbox_prompt_dir, "prompt.txt")
+    sandbox_share_dir = module._sandbox_path(str(share_path.parent))
     assert commands[0] == ["sbx", "create", "--name", "aw-test", "codex", "work/repo"]
     assert commands[1] == [
         "sbx",
@@ -818,7 +834,7 @@ def test_sbx_codex_adapter_copies_prompt_file_into_sandbox_on_windows(
         "aw-test",
         "sh",
         "-lc",
-        f"mkdir -p work/share {sandbox_prompt_dir}",
+        f"mkdir -p {sandbox_share_dir} {sandbox_prompt_dir}",
     ]
     assert commands[2] == [
         "sbx",
@@ -830,6 +846,164 @@ def test_sbx_codex_adapter_copies_prompt_file_into_sandbox_on_windows(
     assert "codex exec" in commands[3][-1]
     assert f"- < {sandbox_prompt_path}" in commands[3][-1]
     assert "large prompt" not in subprocess.list2cmdline(commands[3])
+    assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
+    assert share_path.read_text(encoding="utf-8") == "Done."
+    assert json.loads(Path(f"{share_path}.admission.json").read_text(encoding="utf-8"))["status"] == "accepted_terminal_final"
+
+
+def test_sbx_codex_adapter_reinvokes_after_rejected_final_and_preserves_admission_sidecar(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = _load_sbx_adapter_module()
+    commands: list[list[str]] = []
+    share_path = tmp_path / "session.md"
+    admission_payloads = [
+        {
+            "kind": "agentic-workspace/final-response-admission-result/v1",
+            "status": "rejected_auto_resumed",
+            "continuation_operation": {
+                "invoked_operation": "proof.report",
+                "exit_code": 0,
+            },
+        },
+        {
+            "kind": "agentic-workspace/final-response-admission-result/v1",
+            "status": "accepted_terminal_final",
+        },
+    ]
+    admission_attempts: list[str] = []
+
+    def fake_run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
+        commands.append(command)
+        if command[:5] == ["sbx", "exec", "aw-test", "codex", "exec"]:
+            share_path.write_text("Done too early.", encoding="utf-8")
+        if command[:5] == ["sbx", "exec", "aw-test", "sh", "-lc"] and "codex exec" in command[-1]:
+            share_path.write_text("Actually delivered.", encoding="utf-8")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    def fake_subprocess_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert command[3:5] == ["final-response", "admit"]
+        assert command[command.index("--target") + 1] == str(tmp_path / "repo")
+        assert command[command.index("--attempt-file") + 1] == str(share_path)
+        admission_attempts.append(share_path.read_text(encoding="utf-8"))
+        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(admission_payloads[len(admission_attempts) - 1]), stderr="")
+
+    monkeypatch.setattr(module, "_run", fake_run)
+    monkeypatch.setattr(module.subprocess, "run", fake_subprocess_run)
+
+    result = module.main(
+        [
+            "--sbx",
+            "sbx",
+            "--sandbox-name",
+            "aw-test",
+            "--repo",
+            str(tmp_path / "repo"),
+            "--model",
+            "gpt-test",
+            "--share-path",
+            str(share_path),
+            "--prompt",
+            "do work",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert result == 0
+    assert "rejected terminal output" in captured.err
+    assert admission_attempts == ["Done too early.", "Actually delivered."]
+    assert share_path.read_text(encoding="utf-8") == "Actually delivered."
+    assert json.loads(Path(f"{share_path}.admission.json").read_text(encoding="utf-8")) == admission_payloads[-1]
+    assert any(command[:3] == ["sbx", "cp", str(share_path) + ".continuation-2.txt"] for command in commands)
+    assert (
+        sum(1 for command in commands if command[:3] == ["sbx", "exec", "aw-test"] and "codex exec" in subprocess.list2cmdline(command))
+        == 2
+    )
+    assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
+
+
+def test_sbx_codex_adapter_keeps_custody_after_compatibility_slice_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    module = _load_sbx_adapter_module()
+    commands: list[list[str]] = []
+    share_path = tmp_path / "session.md"
+    final_messages = ["Done too early 1.", "Done too early 2.", "Actually delivered."]
+    admission_payloads = [
+        {
+            "kind": "agentic-workspace/final-response-admission-result/v1",
+            "status": "rejected_auto_resumed",
+            "continuation_operation": {
+                "invoked_operation": "proof.report",
+                "exit_code": 0,
+            },
+        },
+        {
+            "kind": "agentic-workspace/final-response-admission-result/v1",
+            "status": "rejected_auto_resumed",
+            "continuation_operation": {
+                "invoked_operation": "proof.report",
+                "exit_code": 0,
+            },
+        },
+        {
+            "kind": "agentic-workspace/final-response-admission-result/v1",
+            "status": "accepted_terminal_final",
+        },
+    ]
+    admission_attempts: list[str] = []
+    codex_invocations = 0
+
+    def fake_run(command: list[str], *, capture: bool = False) -> subprocess.CompletedProcess[str]:
+        nonlocal codex_invocations
+        commands.append(command)
+        if command[:5] == ["sbx", "exec", "aw-test", "codex", "exec"] or (
+            command[:5] == ["sbx", "exec", "aw-test", "sh", "-lc"] and "codex exec" in command[-1]
+        ):
+            share_path.write_text(final_messages[codex_invocations], encoding="utf-8")
+            codex_invocations += 1
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    def fake_subprocess_run(command: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        admission_attempts.append(share_path.read_text(encoding="utf-8"))
+        return subprocess.CompletedProcess(command, 0, stdout=json.dumps(admission_payloads[len(admission_attempts) - 1]), stderr="")
+
+    monkeypatch.setattr(module, "_run", fake_run)
+    monkeypatch.setattr(module.subprocess, "run", fake_subprocess_run)
+
+    result = module.main(
+        [
+            "--sbx",
+            "sbx",
+            "--sandbox-name",
+            "aw-test",
+            "--repo",
+            str(tmp_path / "repo"),
+            "--model",
+            "gpt-test",
+            "--share-path",
+            str(share_path),
+            "--prompt",
+            "do work",
+            "--max-admission-slices",
+            "1",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert result == 0
+    assert "slice budget" in captured.err
+    assert "not an authorized terminal outcome" in captured.err
+    assert admission_attempts == final_messages
+    assert share_path.read_text(encoding="utf-8") == "Actually delivered."
+    assert json.loads(Path(f"{share_path}.admission.json").read_text(encoding="utf-8")) == admission_payloads[-1]
+    assert codex_invocations == 3
+    assert sum(1 for command in commands if command[:3] == ["sbx", "cp", str(share_path) + ".continuation-2.txt"]) == 1
+    assert sum(1 for command in commands if command[:3] == ["sbx", "cp", str(share_path) + ".continuation-3.txt"]) == 1
     assert commands[-1] == ["sbx", "rm", "--force", "aw-test"]
 
 

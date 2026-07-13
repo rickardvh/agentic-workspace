@@ -1,0 +1,72 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "final-response.admit.process",
+  "operation_id": "final-response.admit",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "final-response",
+      "admit",
+      "--target",
+      ".",
+      "--attempt",
+      "Done.",
+      "--after-compaction",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "agentic-workspace/final-response-admission-result/v1"
+        },
+        {
+          "path": [
+            "checkpoint_write",
+            "path"
+          ],
+          "equals": ".agentic-workspace/local/chat-checkpoint.json"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [
+        ".agentic-workspace/local/chat-checkpoint.json"
+      ],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": []
+    },
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

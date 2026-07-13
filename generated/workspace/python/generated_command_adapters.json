@@ -187,6 +187,46 @@
       },
       "status": "generated"
     },
+    "final-response": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "final-response",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommands": [
+          "admit"
+        ]
+      },
+      "conformance_refs": [
+        "final-response.admit.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "final-response.admit.cli",
+      "operation_id": "final-response.admit",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "workspace.final-response.admission",
+          "workspace.final-response.continuation.execute",
+          "workspace.local-chat-checkpoint.write",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "final_response_admission_result.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
     "implement": {
       "command": {
         "command_manifest": "cli_commands.json",
