@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["checkpoint", "config", "defaults", "doctor", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.prune"]);
+const supportedCommands = new Set(["autopilot", "checkpoint", "config", "defaults", "doctor", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
+const nativeOperationIds = new Set(["autopilot.run", "checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.prune"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -2337,6 +2337,62 @@ const commandDefinitions = [
     "operation_ref": {
       "id": "final-response.admit",
       "path": "operations/final-response.admit.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Run the ordinary AW executor loop through final-response admission.",
+      "name": "autopilot",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path.",
+          "name": "target"
+        },
+        {
+          "flags": [
+            "--executor-command"
+          ],
+          "help": "Vendor-neutral command that emits the next model-authored final response attempt on stdout; rejected CONTINUE attempts re-enter the command with custody metadata.",
+          "name": "executor_command",
+          "required": true
+        },
+        {
+          "default": "autopilot-executor-stdout",
+          "flags": [
+            "--source"
+          ],
+          "help": "Source label for the executor final response attempt.",
+          "name": "source"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--after-compaction"
+          ],
+          "help": "Mark that the first attempt happened after a compaction or resume boundary.",
+          "name": "after_compaction"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "autopilot",
+    "operation_ref": {
+      "id": "autopilot.run",
+      "path": "operations/autopilot.run.json"
     }
   },
   {

@@ -2296,11 +2296,11 @@
         "checkpoint.write.process"
       ],
       "effect_hints": {
-        "destructive": false,
-        "idempotent": true,
+        "destructive": true,
+        "idempotent": false,
         "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
       },
       "interface": {
         "help": "Create or update ignored local chat continuity checkpoints.",
@@ -2592,6 +2592,115 @@
       },
       "projection_boundary": {
         "runtime_owned": [
+          "terminal outcome contract evaluation",
+          "host continuation command execution",
+          "local-only checkpoint write",
+          "output emission"
+        ],
+        "target_specific": [
+          "parser library",
+          "help text layout",
+          "package entrypoint wiring"
+        ],
+        "universal": [
+          "command identity",
+          "option semantics",
+          "operation reference",
+          "runtime primitive reference",
+          "conformance refs",
+          "effect hints"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "workspace.final-response.admission",
+          "workspace.final-response.continuation.execute",
+          "workspace.local-chat-checkpoint.write",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "final_response_admission_result.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
+    {
+      "adapter_id": "autopilot.run.cli",
+      "command": {
+        "manifest_ref": "cli_commands.json",
+        "name": "autopilot"
+      },
+      "conformance_refs": [
+        "autopilot.run.process"
+      ],
+      "effect_hints": {
+        "destructive": true,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
+      },
+      "interface": {
+        "help": "Run the ordinary AW executor loop through final-response admission.",
+        "name": "autopilot",
+        "options": [
+          {
+            "flags": [
+              "--target"
+            ],
+            "help": "Optional repository path.",
+            "name": "target"
+          },
+          {
+            "flags": [
+              "--executor-command"
+            ],
+            "help": "Vendor-neutral command that emits the next model-authored final response attempt on stdout; rejected CONTINUE attempts re-enter the command with custody metadata.",
+            "name": "executor_command",
+            "required": true
+          },
+          {
+            "default": "autopilot-executor-stdout",
+            "flags": [
+              "--source"
+            ],
+            "help": "Source label for the executor final response attempt.",
+            "name": "source"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--after-compaction"
+            ],
+            "help": "Mark that the first attempt happened after a compaction or resume boundary.",
+            "name": "after_compaction"
+          },
+          {
+            "choices": [
+              "text",
+              "json"
+            ],
+            "default": "text",
+            "flags": [
+              "--format"
+            ],
+            "help": "Output format.",
+            "name": "format"
+          }
+        ]
+      },
+      "operation_ref": {
+        "id": "autopilot.run",
+        "path": "operations/autopilot.run.json"
+      },
+      "projection_boundary": {
+        "runtime_owned": [
+          "ordinary autopilot executor invocation",
           "terminal outcome contract evaluation",
           "host continuation command execution",
           "local-only checkpoint write",
@@ -6211,6 +6320,11 @@
         "function": "_run_final_response_admit_adapter",
         "import_module": "agentic_workspace.workspace_runtime_primitives",
         "operation_id": "final-response.admit"
+      },
+      {
+        "function": "_run_autopilot_adapter",
+        "import_module": "agentic_workspace.workspace_runtime_primitives",
+        "operation_id": "autopilot.run"
       },
       {
         "function": "_run_work_thread_prune_adapter",

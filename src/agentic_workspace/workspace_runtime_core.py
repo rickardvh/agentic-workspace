@@ -355,13 +355,13 @@ _CONTEXT_TEMPLATES = context_templates_manifest()
 
 FINAL_RESPONSE_HOST_BOUNDARIES = [
     {
-        "id": "agentic-workspace.final-response-executor-loop",
-        "entrypoint": "agentic-workspace final-response admit --executor-command",
+        "id": "agentic-workspace.autopilot",
+        "entrypoint": "agentic-workspace autopilot --executor-command",
         "attempt_source": "vendor-neutral executor stdout",
         "admission_operation": "final-response.admit",
         "ordinary_path_unavoidable": True,
-        "loop_behavior": "vendor-neutral ordinary AW host loop re-runs the configured executor after rejected CONTINUE finals",
-        "rule": "The package-owned final-response loop admits every model-authored final attempt before emitting custody and keeps execution with the agent while CONTINUE remains.",
+        "loop_behavior": "canonical ordinary AW autopilot route re-runs the configured executor after rejected CONTINUE finals",
+        "rule": "The package-owned ordinary autopilot route admits every model-authored final attempt before emitting custody and keeps execution with the agent while CONTINUE remains.",
     },
     {
         "id": "model-cli-harness.codex-sbx",
@@ -15042,7 +15042,7 @@ def _final_response_admission_route_payload(
         "command_template": command,
         "ordinary_execution_command_template": _command_with_cli_invoke(
             command=(
-                "agentic-workspace final-response admit --target ./repo "
+                "agentic-workspace autopilot --target ./repo "
                 '--executor-command "<vendor-neutral agent command that emits final text>" --format json'
             ),
             cli_invoke=DEFAULT_CLI_INVOKE,
@@ -15055,16 +15055,16 @@ def _final_response_admission_route_payload(
         "issue_2239_closure_gap": "Broader unattended end-to-end evidence is deferred pending maintainer direction.",
         "integrated_host_boundaries": FINAL_RESPONSE_HOST_BOUNDARIES,
         "integration_gap": (
-            "Vendor-neutral ordinary final-response executor loop is available; broader unattended evidence remains separate from the boundary."
+            "The canonical ordinary autopilot route uses the final-response executor loop; broader unattended evidence remains separate from the boundary."
         )
         if ordinary_host_path_unavoidable
         else ("Codex SBX has a bounded dogfooding loop, but no vendor-neutral ordinary host/autopilot path is yet unavoidable.")
         if host_boundary_integrated
         else "No integrated host wrapper invokes final-response.admit.",
         "rule": (
-            "Rendering advertises the host admission operation and the package-owned ordinary executor loop. Hosts must route "
-            "model-authored final responses through admission before exposing final text; while CONTINUE remains, custody stays "
-            "with the ordinary loop and the executor is re-entered with continuation context."
+            "Rendering advertises the host admission operation and the package-owned ordinary autopilot route. Ordinary execution "
+            "must enter autopilot so model-authored final responses are admitted before exposure; while CONTINUE remains, custody "
+            "stays with the loop and the executor is re-entered with continuation context."
         ),
     }
 

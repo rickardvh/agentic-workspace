@@ -1,9 +1,8 @@
 {
-  "classification": "local-record-append",
+  "classification": "lifecycle-mutation",
   "command_surface": {
-    "command": "final-response",
-    "format_option": "format",
-    "subcommand": "admit"
+    "command": "autopilot",
+    "format_option": "format"
   },
   "effects": {
     "destructive": true,
@@ -13,15 +12,13 @@
     "writes_repo_state": true
   },
   "guards": [
-    "Rendering closeout_trust must not submit a fabricated final response.",
-    "Reject terminal finals while the terminal outcome contract state is CONTINUE.",
-    "--executor-command is the package-owned ordinary host boundary: it must admit executor stdout before exposing final text.",
+    "This is the canonical ordinary AW/autopilot execution boundary for model-authored finals.",
+    "Every executor stdout final attempt must pass through final-response admission before it can be exposed as terminal output.",
+    "Rejected CONTINUE attempts must keep custody with the agent and re-enter the executor with active objective and continuation state.",
     "Executor mode is conservatively classified as mutation-capable, non-idempotent, network-allowed, and outside-repo-write-capable because the executor command is caller supplied.",
-    "Rejected CONTINUE attempts must keep custody with the agent and re-enter the executor after the selected continuation operation.",
-    "Persist only ignored local checkpoint state under .agentic-workspace/local/.",
-    "Do not treat local admission slices as closure evidence."
+    "Local admission slices are continuity checkpoints and must not be treated as closure evidence."
   ],
-  "id": "final-response.admit",
+  "id": "autopilot.run",
   "inputs": [
     {
       "name": "target",
@@ -29,18 +26,8 @@
       "source": "cli-option"
     },
     {
-      "name": "attempt",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
-      "name": "attempt_file",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
       "name": "executor_command",
-      "required": false,
+      "required": true,
       "source": "cli-option"
     },
     {
@@ -64,7 +51,7 @@
     "steps": [
       {
         "arguments": {
-          "operation_id": "final-response.admit"
+          "operation_id": "autopilot.run"
         },
         "description": "Execute the operation through the generated TypeScript domain operation table.",
         "id": "execute_typescript_domain_operation",
@@ -99,10 +86,9 @@
   },
   "proof": [
     "operation contract validates against operation.schema.json",
-    "final-response admission tests execute the generated CLI command across multiple ordinary executor slices",
-    "codex-sbx host adapter submits the output-last-message artifact through final-response admit before the harness can read it",
-    "local checkpoint schema accepts persisted admission slices without making them completion evidence",
-    "closeout rendering exposes the integrated vendor-neutral ordinary executor loop and the codex-sbx dogfooding adapter"
+    "autopilot route tests execute the generated CLI command across multiple ordinary executor slices",
+    "autopilot route tests prove a real repository-state transition between a rejected CONTINUE final and an accepted DELIVERED final",
+    "generated package freshness checks include the Python and TypeScript autopilot command surfaces"
   ],
   "reads": [
     {
@@ -112,6 +98,10 @@
     {
       "required": false,
       "surface": ".agentic-workspace/local/chat-checkpoint.json"
+    },
+    {
+      "required": true,
+      "surface": "caller-supplied executor command"
     }
   ],
   "schema_version": "agentic-workspace/operation/v1",
@@ -122,7 +112,12 @@
       "uses": "workspace.target-root.resolve"
     },
     {
-      "description": "Evaluate the terminal outcome contract against the model-authored final response attempt; when --executor-command is supplied, repeat executor stdout admission after rejected CONTINUE attempts.",
+      "description": "Run the caller-supplied executor command and treat stdout as the model-authored final response attempt.",
+      "id": "run_executor",
+      "uses": "workspace.final-response.admission"
+    },
+    {
+      "description": "Evaluate the terminal outcome contract against the executor final response attempt.",
       "id": "evaluate_terminal_contract",
       "uses": "workspace.final-response.admission"
     },
@@ -132,22 +127,32 @@
       "uses": "workspace.final-response.continuation.execute"
     },
     {
+      "description": "Re-enter the executor with continuation state until DELIVERED, qualified BLOCKED, or USER_PAUSED authorizes final custody.",
+      "id": "repeat_until_terminal",
+      "uses": "workspace.final-response.admission"
+    },
+    {
       "description": "Persist the local admission and resume slice.",
       "id": "write_checkpoint",
       "uses": "workspace.local-chat-checkpoint.write"
     },
     {
-      "description": "Emit the admission result.",
+      "description": "Emit the autopilot admission result.",
       "id": "emit_output",
       "uses": "output.emit"
     }
   ],
-  "summary": "Admit or reject a model-authored final response, or run a vendor-neutral executor loop that re-enters execution while CONTINUE remains.",
+  "summary": "Run the canonical ordinary AW executor loop through final-response admission until terminal custody is authorized.",
   "writes": [
     {
       "required": true,
       "surface": ".agentic-workspace/local/chat-checkpoint.json",
-      "when": "persist the host admission and continuation slice"
+      "when": "persist each admission and continuation slice"
+    },
+    {
+      "required": false,
+      "surface": "executor-defined repository or external state",
+      "when": "the caller-supplied executor performs work before emitting a final attempt"
     }
   ]
 }

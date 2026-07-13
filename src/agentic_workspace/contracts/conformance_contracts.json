@@ -16,6 +16,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "autopilot.run.process",
+      "operation_id": "autopilot.run",
+      "path": "conformance/autopilot.run.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "work-thread.prune.process",
       "operation_id": "work-thread.prune",
       "path": "conformance/work-thread.prune.process.json",

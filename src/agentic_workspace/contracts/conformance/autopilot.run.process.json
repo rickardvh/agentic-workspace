@@ -1,0 +1,80 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "autopilot.run.process",
+  "operation_id": "autopilot.run",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "autopilot",
+      "--target",
+      ".",
+      "--executor-command",
+      "uv run python -c \"print('Done.')\"",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n",
+        ".agentic-workspace/planning/state.toml": "kind = \"agentic-planning-state\"\nschema_version = \"planning-state/v1\"\n\n[todo]\nactive_items = [\n  { id = \"issue-1981\", title = \"Issue 1981 state-delta shared core\", status = \"active\", surface = \".agentic-workspace/planning/execplans/issue-1981.plan.json\", next_action = \"Close complete.\", done_when = \"Issue 1981 can honestly be closed.\" },\n]\nqueued_items = []\n\n[roadmap]\nlanes = []\ncandidates = []\n",
+        ".agentic-workspace/planning/execplans/issue-1981.plan.json": "{\n  \"kind\": \"agentic-planning-execplan\",\n  \"id\": \"issue-1981\",\n  \"title\": \"Issue 1981 state-delta shared core\",\n  \"references\": [\"#1981\"],\n  \"completion_criteria\": [\"summary and closeout trust agree on active execplan intent satisfaction\"],\n  \"active_milestone\": {\n    \"id\": \"issue-1981\",\n    \"status\": \"completed\",\n    \"scope\": \"Keep this execution thread bounded to the promoted TODO item.\",\n    \"ready\": \"ready\",\n    \"blocked\": \"none\",\n    \"optional_deps\": \"none\"\n  },\n  \"proof_expectations\": [\"agentic-workspace report --section closeout_trust --format json\"],\n  \"proof_report\": {\n    \"validation proof\": \"autopilot conformance fixture proof passed\",\n    \"proof achieved now\": \"yes, proof passed for the requested behavior\",\n    \"evidence for \\\"proof achieved\\\" state\": \"completed active execplan fixture\"\n  },\n  \"execution_run\": {\n    \"handoff source\": \"synthetic conformance fixture\",\n    \"what happened\": \"The shared state-delta core was implemented.\",\n    \"validations run\": [\"agentic-workspace report --section closeout_trust passed\"]\n  },\n  \"execution_summary\": {\n    \"outcome delivered\": \"The shared state-delta core was implemented.\",\n    \"validation confirmed\": \"agentic-workspace report --section closeout_trust passed\",\n    \"follow-on routed to\": \"none\",\n    \"post-work posterity capture\": \"none\",\n    \"knowledge promoted (Memory/Docs/Config)\": \"none\",\n    \"resume from\": \"archive\"\n  },\n  \"intent_satisfaction\": {\n    \"original intent\": \"Implement #1981 by making state-delta packet views derive from one shared compact core.\",\n    \"was original intent fully satisfied?\": \"yes\",\n    \"evidence of intent satisfaction\": \"Summary payloads and closeout trust agree the requested behavior is complete.\",\n    \"unsolved intent passed to\": \"none\"\n  },\n  \"intent_continuity\": {\n    \"larger intended outcome\": \"Implement #1981 by making state-delta packet views derive from one shared compact core.\",\n    \"this slice completes the larger intended outcome\": \"yes\",\n    \"continuation surface\": \"none\"\n  },\n  \"required_continuation\": {\n    \"required follow-on for the larger intended outcome\": \"no\",\n    \"owner surface\": \"none\"\n  },\n  \"closure_check\": {\n    \"slice status\": \"complete\",\n    \"larger-intent status\": \"closed\",\n    \"closure decision\": \"archive-and-close-after-pr-merge\",\n    \"why this decision is honest\": \"#1981 acceptance criteria are satisfied by the fixture proof.\",\n    \"evidence carried forward\": \"closeout_trust proof\",\n    \"reopen trigger\": \"closeout_trust stops accepting active execplan closeout evidence\"\n  }\n}\n",
+        ".agentic-workspace/local/cache/external-intent-evidence.json": "{\n  \"kind\": \"planning-external-intent-evidence/v1\",\n  \"refreshed_at\": \"2026-01-01T00:00:00+00:00\",\n  \"items\": [\n    {\n      \"system\": \"fixture\",\n      \"id\": \"#1981\",\n      \"title\": \"Issue 1981 state-delta shared core\",\n      \"status\": \"closed\",\n      \"kind\": \"issue\"\n    }\n  ]\n}\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "agentic-workspace/final-response-admission-result/v1"
+        },
+        {
+          "path": [
+            "ordinary_autopilot_route",
+            "status"
+          ],
+          "equals": "entered"
+        },
+        {
+          "path": [
+            "checkpoint_write",
+            "path"
+          ],
+          "equals": ".agentic-workspace/local/chat-checkpoint.json"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [
+        ".agentic-workspace/local/chat-checkpoint.json"
+      ],
+      "required_paths": [
+        ".git/.keep",
+        "README.md"
+      ],
+      "forbidden_paths": []
+    },
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

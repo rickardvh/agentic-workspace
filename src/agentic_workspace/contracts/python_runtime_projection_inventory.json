@@ -1954,10 +1954,10 @@
           "new-primitive-implementation"
         ]
       },
-      {
-        "binding_kind": "runtime-facade-call",
-        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-        "facade_symbol": "_run_final_response_admit_adapter",
+    {
+      "binding_kind": "runtime-facade-call",
+      "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+      "facade_symbol": "_run_final_response_admit_adapter",
         "source_module": "agentic_workspace.workspace_runtime_primitives",
         "source_symbol": "_run_final_response_admit_adapter",
         "owner_package": "workspace package runtime boundary",
@@ -1977,13 +1977,41 @@
         "minimization_owner": "package runtime primitive owner for semantic package judgment",
         "minimization_tracking_issue": "#1364",
         "stale_when": "Stale when host final-response custody and continuation dispatch can be represented as stable declarative dataflow with equivalent terminal outcome safeguards.",
-        "direct_edit_reasons_allowed": [
-          "existing-primitive-bugfix",
-          "new-primitive-implementation"
-        ]
-      },
-      {
-        "binding_kind": "runtime-facade-call",
+      "direct_edit_reasons_allowed": [
+        "existing-primitive-bugfix",
+        "new-primitive-implementation"
+      ]
+    },
+    {
+      "binding_kind": "runtime-facade-call",
+      "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+      "facade_symbol": "_run_autopilot_adapter",
+      "source_module": "agentic_workspace.workspace_runtime_primitives",
+      "source_symbol": "_run_autopilot_adapter",
+      "owner_package": "workspace package runtime boundary",
+      "operation_ids": [
+        "autopilot.run"
+      ],
+      "primitive_refs": [
+        "runtime_module_handler:autopilot.run"
+      ],
+      "runtime_boundary_class": "package-specific-judgment",
+      "why_not_generic_deterministic": "The symbol owns the ordinary host executor loop, terminal outcome custody, continuation command execution, and ignored-local admission checkpointing rather than generic deterministic target-executor logic.",
+      "conformance_ref": "autopilot.run.process",
+      "status": "accepted-permanent-package-domain-boundary",
+      "generic_behavior_audit": "Classified as package-specific-judgment; generated parser and facade wiring own command projection while the package runtime boundary owns ordinary autopilot execution, final-response admission, continuation execution, and local-only checkpoint semantics.",
+      "minimization_category": "package-specific-judgment",
+      "minimization_route": "keep-as-hand-owned-primitive",
+      "minimization_owner": "package runtime primitive owner for semantic package judgment",
+      "minimization_tracking_issue": "#1364",
+      "stale_when": "Stale when ordinary host executor custody and continuation dispatch can be represented as stable declarative dataflow with equivalent terminal outcome safeguards.",
+      "direct_edit_reasons_allowed": [
+        "existing-primitive-bugfix",
+        "new-primitive-implementation"
+      ]
+    },
+    {
+      "binding_kind": "runtime-facade-call",
         "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
         "facade_symbol": "_run_external_intent_refresh_github_adapter",
         "source_module": "agentic_workspace.workspace_runtime_primitives",

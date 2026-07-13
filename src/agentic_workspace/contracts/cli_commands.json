@@ -1859,6 +1859,50 @@
       "mutates_state": true
     },
     {
+      "name": "autopilot",
+      "help": "Run the ordinary AW executor loop through final-response admission.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Optional repository path."
+        },
+        {
+          "name": "executor_command",
+          "flags": [
+            "--executor-command"
+          ],
+          "required": true,
+          "help": "Vendor-neutral command that emits the next model-authored final response attempt on stdout; rejected CONTINUE attempts re-enter the command with custody metadata."
+        },
+        {
+          "name": "source",
+          "flags": [
+            "--source"
+          ],
+          "default": "autopilot-executor-stdout",
+          "help": "Source label for the executor final response attempt."
+        },
+        {
+          "name": "after_compaction",
+          "flags": [
+            "--after-compaction"
+          ],
+          "action": "store_true",
+          "help": "Mark that the first attempt happened after a compaction or resume boundary."
+        }
+      ],
+      "role": "core_context_router",
+      "audience": "ordinary_host_repo",
+      "classification_note": "ordinary autopilot execution boundary with conservative executor-mode effects",
+      "mutates_state": true
+    },
+    {
       "name": "work-thread",
       "help": "Manage ignored local work-thread continuation handles.",
       "uses_option_groups": [

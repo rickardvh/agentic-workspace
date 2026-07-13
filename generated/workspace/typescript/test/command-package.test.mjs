@@ -9,7 +9,7 @@ const commandPackage = JSON.parse(readFileSync(new URL('../resources/command_pac
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 test('generated package resource exposes expected commands', () => {
-  const expected = ["checkpoint", "config", "defaults", "doctor", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"];
+  const expected = ["autopilot", "checkpoint", "config", "defaults", "doctor", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"];
   assert.deepEqual(commandPackage.commands.map((command) => command.command.name).sort(), expected);
   assert.match(source, /resources\/command_package\.json/);
   assert.doesNotMatch(source, /adapter_id/);
@@ -32,20 +32,25 @@ test('generated package metadata exposes maturity and weak-agent routing status'
 
 test('generated runnable adapter executes supported command without Python runtime', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, ...["checkpoint", "write", "--format", "json"]], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [cli, ...["autopilot", "--executor-command", "value", "--format", "json"]], { encoding: 'utf8' });
   assert.equal(result.status, 0);
   const payload = JSON.parse(result.stdout);
   assert.equal(typeof payload, 'object');
   assert.equal(result.stderr, '');
 });
 
-test('generated runnable adapter rejects command without required subcommand', () => {
+test('generated runnable adapter preserves spaced argv values during native execution', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, ...["checkpoint"]], { encoding: 'utf8' });
-  assert.equal(result.status, 2);
-  assert.equal(result.stdout, '');
-  assert.match(result.stderr, /missing subcommand for checkpoint/);
-  assert.doesNotMatch(result.stderr, /runtime handoff/i);
+  const spacedTarget = fileURLToPath(new URL('../tmp target with spaces', import.meta.url));
+  mkdirSync(spacedTarget, { recursive: true });
+  try {
+    const args = ["autopilot", "--executor-command", "__SPACED_TARGET__"].map((token) => token === '__SPACED_TARGET__' ? spacedTarget : token);
+    const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
+    assert.equal(result.status, 0);
+    assert.doesNotMatch(result.stderr, /runtime handoff/i);
+  } finally {
+    rmSync(spacedTarget, { recursive: true, force: true });
+  }
 });
 
 test('generated runnable adapter exposes routing status and recovery guidance', () => {
@@ -61,7 +66,7 @@ test('generated runnable adapter exposes routing status and recovery guidance', 
 
 test('generated runnable adapter renders command help without executing runtime', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, ...["checkpoint", "write"], '--help'], {
+  const result = spawnSync(process.execPath, [cli, ...["autopilot"], '--help'], {
     encoding: 'utf8',
   });
   assert.equal(result.status, 0);
@@ -71,7 +76,7 @@ test('generated runnable adapter renders command help without executing runtime'
 
 test('generated runnable adapter validates choices before command execution', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, ...["checkpoint", "write"], '--format', '__invalid__'], {
+  const result = spawnSync(process.execPath, [cli, ...["autopilot", "--executor-command", "value"], '--format', '__invalid__'], {
     encoding: 'utf8',
   });
   assert.equal(result.status, 2);

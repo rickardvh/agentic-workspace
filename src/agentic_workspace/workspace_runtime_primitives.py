@@ -242,13 +242,13 @@ _CONTEXT_TEMPLATES = context_templates_manifest()
 
 FINAL_RESPONSE_HOST_BOUNDARIES = [
     {
-        "id": "agentic-workspace.final-response-executor-loop",
-        "entrypoint": "agentic-workspace final-response admit --executor-command",
+        "id": "agentic-workspace.autopilot",
+        "entrypoint": "agentic-workspace autopilot --executor-command",
         "attempt_source": "vendor-neutral executor stdout",
         "admission_operation": "final-response.admit",
         "ordinary_path_unavoidable": True,
-        "loop_behavior": "vendor-neutral ordinary AW host loop re-runs the configured executor after rejected CONTINUE finals",
-        "rule": "The package-owned final-response loop admits every model-authored final attempt before emitting custody and keeps execution with the agent while CONTINUE remains.",
+        "loop_behavior": "canonical ordinary AW autopilot route re-runs the configured executor after rejected CONTINUE finals",
+        "rule": "The package-owned ordinary autopilot route admits every model-authored final attempt before emitting custody and keeps execution with the agent while CONTINUE remains.",
     },
     {
         "id": "model-cli-harness.codex-sbx",
@@ -13782,7 +13782,7 @@ def _final_response_admission_route_payload(
         "command_template": command,
         "ordinary_execution_command_template": _command_with_cli_invoke(
             command=(
-                "agentic-workspace final-response admit --target ./repo "
+                "agentic-workspace autopilot --target ./repo "
                 '--executor-command "<vendor-neutral agent command that emits final text>" --format json'
             ),
             cli_invoke=DEFAULT_CLI_INVOKE,
@@ -13795,16 +13795,16 @@ def _final_response_admission_route_payload(
         "issue_2239_closure_gap": "Broader unattended end-to-end evidence is deferred pending maintainer direction.",
         "integrated_host_boundaries": FINAL_RESPONSE_HOST_BOUNDARIES,
         "integration_gap": (
-            "Vendor-neutral ordinary final-response executor loop is available; broader unattended evidence remains separate from the boundary."
+            "The canonical ordinary autopilot route uses the final-response executor loop; broader unattended evidence remains separate from the boundary."
         )
         if ordinary_host_path_unavoidable
         else ("Codex SBX has a bounded dogfooding loop, but no vendor-neutral ordinary host/autopilot path is yet unavoidable.")
         if host_boundary_integrated
         else "No integrated host wrapper invokes final-response.admit.",
         "rule": (
-            "Rendering advertises the host admission operation and the package-owned ordinary executor loop. Hosts must route "
-            "model-authored final responses through admission before exposing final text; while CONTINUE remains, custody stays "
-            "with the ordinary loop and the executor is re-entered with continuation context."
+            "Rendering advertises the host admission operation and the package-owned ordinary autopilot route. Ordinary execution "
+            "must enter autopilot so model-authored final responses are admitted before exposure; while CONTINUE remains, custody "
+            "stays with the loop and the executor is re-entered with continuation context."
         ),
     }
 
@@ -30265,6 +30265,43 @@ def _final_response_closeout_trust_for_admission(*, target_root: Path) -> tuple[
         descriptors=descriptors,
         config=config,
     )
+    report_command = [
+        sys.executable,
+        "-c",
+        "from agentic_workspace.cli import main; raise SystemExit(main())",
+        "report",
+        "--target",
+        str(target_root),
+        "--section",
+        "closeout_trust",
+        "--format",
+        "json",
+    ]
+    with contextlib.suppress(OSError, subprocess.SubprocessError, json.JSONDecodeError, UnicodeDecodeError):
+        completed = subprocess.run(
+            report_command,
+            cwd=target_root,
+            text=True,
+            capture_output=True,
+            timeout=90,
+            check=False,
+        )
+        if completed.returncode == 0 and completed.stdout.strip():
+            routed_payload = json.loads(completed.stdout)
+            answer = _as_dict(_as_dict(routed_payload).get("answer"))
+            if answer:
+                return (answer, config)
+    routed = _run_lazy_report_section_command(
+        target_root=target_root,
+        selected_modules=selected_modules,
+        resolved_preset=_resolved_preset,
+        config=config,
+        section="closeout_trust",
+    )
+    if routed:
+        answer = _as_dict(routed.get("answer"))
+        if answer:
+            return (answer, config)
     module_reports = _selected_module_reports(target_root=target_root, selected_modules=selected_modules)
     return (
         _report_closeout_trust_payload(
@@ -30551,6 +30588,38 @@ def _run_final_response_admit_adapter(args: argparse.Namespace) -> int:
         "checkpoint_after": after_state,
         "rule": "This command is the host admission boundary for model-authored final responses.",
     }
+    _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
+    return 0
+
+
+def _run_autopilot_adapter(args: argparse.Namespace) -> int:
+    target_root = _resolve_target_root(args.target) if getattr(args, "target", None) else _resolve_target_root(None)
+    _validate_target_root(command_name="autopilot", target_root=target_root)
+    config = _load_workspace_config(target_root=target_root)
+    if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="autopilot", config=config):
+        _emit_payload(payload=disabled_payload, format_name=getattr(args, "format", "text"))
+        return 0
+    executor_command = str(getattr(args, "executor_command", "") or "").strip()
+    if not executor_command:
+        raise WorkspaceUsageError("autopilot requires --executor-command.")
+    payload = _run_final_response_executor_loop(
+        target_root=target_root,
+        args=args,
+        executor_command=executor_command,
+        attempt_source=str(getattr(args, "source", "") or "autopilot-executor-stdout").strip(),
+    )
+    payload["ordinary_autopilot_route"] = {
+        "kind": "agentic-workspace/ordinary-autopilot-route/v1",
+        "status": "entered",
+        "entrypoint": "agentic-workspace autopilot --executor-command",
+        "admission_operation": "final-response.admit",
+        "ordinary_host_path_unavoidable": True,
+        "depends_on_codex_goal_mode": False,
+        "depends_on_model_cli_harness": False,
+        "effect_contract": "executor-mode-conservative",
+        "rule": "The canonical ordinary autopilot route delegates all executor finals through final-response admission before output.",
+    }
+    payload["rule"] = "This command is the canonical ordinary AW/autopilot execution boundary for model-authored final responses."
     _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
     return 0
 

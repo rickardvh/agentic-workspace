@@ -488,6 +488,11 @@
             "function": "_run_final_response_admit_adapter"
           },
           {
+            "operation_id": "autopilot.run",
+            "import_module": "agentic_workspace.workspace_runtime_primitives",
+            "function": "_run_autopilot_adapter"
+          },
+          {
             "operation_id": "work-thread.prune",
             "import_module": "agentic_workspace.workspace_runtime_core",
             "function": "_run_work_thread_prune_adapter"
@@ -3791,10 +3796,10 @@
           },
           "effect_hints": {
             "read_only": false,
-            "destructive": false,
-            "idempotent": true,
-            "writes_repo_state": false,
-            "requires_preflight_gate": false
+            "destructive": true,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": true
           },
           "conformance_refs": [
             "checkpoint.write.process"
@@ -3970,6 +3975,115 @@
               "package entrypoint wiring"
             ],
             "runtime_owned": [
+              "terminal outcome contract evaluation",
+              "host continuation command execution",
+              "local-only checkpoint write",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "autopilot.run.cli",
+          "status": "generated",
+          "command": {
+            "name": "autopilot",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "autopilot",
+            "help": "Run the ordinary AW executor loop through final-response admission.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Optional repository path."
+              },
+              {
+                "name": "executor_command",
+                "flags": [
+                  "--executor-command"
+                ],
+                "required": true,
+                "help": "Vendor-neutral command that emits the next model-authored final response attempt on stdout; rejected CONTINUE attempts re-enter the command with custody metadata."
+              },
+              {
+                "name": "source",
+                "flags": [
+                  "--source"
+                ],
+                "default": "autopilot-executor-stdout",
+                "help": "Source label for the executor final response attempt."
+              },
+              {
+                "name": "after_compaction",
+                "flags": [
+                  "--after-compaction"
+                ],
+                "action": "store_true",
+                "help": "Mark that the first attempt happened after a compaction or resume boundary."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "autopilot.run",
+            "path": "operations/autopilot.run.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.target-root.resolve",
+              "workspace.final-response.admission",
+              "workspace.final-response.continuation.execute",
+              "workspace.local-chat-checkpoint.write",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "final_response_admission_result.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": true,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": true
+          },
+          "conformance_refs": [
+            "autopilot.run.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "runtime primitive reference",
+              "conformance refs",
+              "effect hints"
+            ],
+            "target_specific": [
+              "parser library",
+              "help text layout",
+              "package entrypoint wiring"
+            ],
+            "runtime_owned": [
+              "ordinary autopilot executor invocation",
               "terminal outcome contract evaluation",
               "host continuation command execution",
               "local-only checkpoint write",
