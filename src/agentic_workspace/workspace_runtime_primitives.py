@@ -39502,6 +39502,28 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         _emit_payload(payload=payload, format_name=args.format)
     else:
         summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
+        reuse_query = {
+            "profile": summary_profile,
+            "format": str(args.format),
+            "task": str(getattr(args, "task", None) or ""),
+            "changed": changed_paths,
+            "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
+        }
+        reuse_context: dict[str, Any] | None = None
+        if args.format == "json" and summary_profile == "tiny":
+            full_detail_command = _command_with_cli_invoke(
+                command=f"agentic-workspace summary --target {target_root.as_posix()} --verbose --format json",
+                cli_invoke=config.cli_invoke,
+            )
+            reused, reuse_context = lookup_projection_reuse(
+                root=target_root,
+                operation="summary",
+                query=reuse_query,
+                full_detail_command=full_detail_command,
+            )
+            if reused is not None:
+                _emit_payload(payload=reused, format_name=args.format)
+                return 0
         summary = planning_summary(
             target=target_root.as_posix(), profile=summary_profile, task_text=getattr(args, "task", None), changed_paths=changed_paths
         )
@@ -39534,6 +39556,8 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     cli_invoke=config.cli_invoke,
                 )
         summary = _rewrite_module_cli_commands(summary)
+        if reuse_context is not None:
+            record_projection_reuse(root=target_root, operation="summary", query=reuse_query, context=reuse_context, payload=summary)
         if args.format == "json":
             print(format_summary_json(summary))
         else:
