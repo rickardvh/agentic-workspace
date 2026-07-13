@@ -496,7 +496,11 @@ def test_operation_conformance_runner_executes_python_cases(capsys) -> None:
     assert cases[("defaults.root-cli-authority.success", "python")]["state"] == "pass"
     assert "Kind: agentic-workspace/selected-output/v1" not in capsys.readouterr().out
     assert cases[("config.invalid-format.error", "python")]["exit_code"] == 2
-    assert cases[("config.selected-output.success", "python")]["exit_code"] == 0
+    assert cases[("config.selected-output.success", "python")]["state"] == "pass"
+    assert cases[("config.selected-output.success", "python")]["adapter_id"] == "python.function"
+    assert cases[("config.selected-output.success", "python")]["selected_fields"]["values"] == {
+        "workspace.optimization_bias": "agent-efficiency"
+    }
     assert cases[("defaults.tiny-router-text.success", "python")]["exit_code"] == 0
     assert cases[("modules.report-router.success", "python")]["state"] == "pass"
     assert cases[("session-log.manage-status.boundary", "python")]["selected_fields"]["enabled"] is False
@@ -723,14 +727,15 @@ def test_ordinary_command_migration_inventory_fails_closed_when_generated_comman
     errors = _checker_case_errors(
         """
         inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
-        migration = inventory["ordinary_command_migration"]["representative_migrations"][0]
-        migration["generated_command_module"] = "generated/planning/python/commands/missing_closeout.py"
+        for index, migration in enumerate(inventory["ordinary_command_migration"]["representative_migrations"]):
+            migration["generated_command_module"] = f"generated/workspace/python/commands/missing_migration_{index}.py"
         checker.python_runtime_projection_inventory_manifest = lambda: inventory
         _emit({"errors": checker._validate_ordinary_command_migration_inventory()})
         """
     )
 
-    assert any("generated_command_module" in error and "does not exist" in error for error in errors)
+    missing_errors = [error for error in errors if "generated_command_module" in error and "does not exist" in error]
+    assert len(missing_errors) >= 2
 
 
 def test_runtime_semantic_exceptions_registry_is_current() -> None:
