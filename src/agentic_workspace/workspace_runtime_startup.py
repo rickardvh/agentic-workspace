@@ -504,7 +504,11 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         reasons=list(projected["action_signals"].get("changed_signals", []))[:6],
         detail_routes={
             "why_blocked": "agentic-workspace start --target . --select next_safe_action,action_signals --format json",
-            "active_plan": "agentic-workspace summary --target . --format json",
+            "active_plan": (
+                "agentic-workspace start --target . --select active_state_summary,continuation_view --format json"
+                if _active_state_has_planning(payload.get("active_state_summary", {}))
+                else "agentic-workspace summary --target . --format json"
+            ),
             "proof_detail": "agentic-workspace proof --target . --changed <paths> --format json",
         },
         shown_because=["command_phase=start", *list(projected["action_signals"].get("changed_signals", []))[:3]],
@@ -718,15 +722,30 @@ def _start_payload(
             "todo_active_count": active_state.get("todo", {}).get("active_count", 0),
             "active_execplan": active_execplan,
             "planning_status": planning_record.get("status", "unavailable") if isinstance(planning_record, dict) else "unavailable",
+            **(
+                {
+                    "orientation_delta": {
+                        "status": "embedded",
+                        "summary_equivalent_for_first_contact": True,
+                        "detail_selectors": ["active_state_summary", "continuation_view", "next_safe_action", "action_signals"],
+                        "full_detail_command": _command_with_cli_invoke(
+                            command="agentic-workspace summary --target . --format json", cli_invoke=config.cli_invoke
+                        ),
+                        "rule": "Startup carries the compact active-planning facts needed for first-contact routing; run summary only for explicit detail or refresh.",
+                    }
+                }
+                if active_planning_present
+                else {}
+            ),
         },
         "workflow_sufficiency": _workflow_sufficiency_payload(
             surface="start",
-            decision="active-planning-summary-needed" if active_planning_present else "enough-for-first-contact-routing",
-            reason="Active planning exists; compact summary is next."
+            decision="startup-orientation-embedded" if active_planning_present else "enough-for-first-contact-routing",
+            reason="Active planning exists; compact startup includes the first-contact summary facts."
             if active_planning_present
             else "No active planning detected; choose the smallest shape and wait for changed paths before proof.",
-            required_next_action="run summary" if active_planning_present else "choose-smallest-workflow-shape",
-            evidence_required=["compact active planning summary"] if active_planning_present else [],
+            required_next_action="follow startup next_safe_action" if active_planning_present else "choose-smallest-workflow-shape",
+            evidence_required=["embedded compact active planning orientation"] if active_planning_present else [],
         ),
         "package_boundary": _package_boundary_payload(target_root=target_root),
         "authority_markers": _authority_markers_for_startup(
@@ -740,9 +759,7 @@ def _start_payload(
             "risk": "read-only routing",
             "required_inputs": ["target repo", "current task"],
             "next_proof": "run proof selection once changed paths are known",
-            "read_first": [_command_with_cli_invoke(command="agentic-workspace summary --format json", cli_invoke=config.cli_invoke)]
-            if active_planning_present
-            else [],
+            "read_first": [],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         },
         "workflow_obligations": compact_workflow_obligations,
@@ -1310,7 +1327,11 @@ def _hydrate_selected_start_advisory_payloads(
                 reasons=list(action_signals.get("changed_signals", []))[:6],
                 detail_routes={
                     "why_blocked": f"{config.cli_invoke} start --target . --select next_safe_action,action_signals --format json",
-                    "active_plan": f"{config.cli_invoke} summary --target . --format json",
+                    "active_plan": (
+                        f"{config.cli_invoke} start --target . --select active_state_summary,continuation_view --format json"
+                        if _active_state_has_planning(payload.get("active_state_summary", {}))
+                        else f"{config.cli_invoke} summary --target . --format json"
+                    ),
                     "proof_detail": f"{config.cli_invoke} proof --target . --changed <paths> --format json",
                 },
                 shown_because=["command_phase=start", *list(action_signals.get("changed_signals", []))[:3]],
@@ -1658,7 +1679,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         }
     context: dict[str, Any] = {
         "primary_action": payload["immediate_next_allowed_action"],
-        "active_state": payload["active_state_summary"],
+        "active_state": _active_state_with_orientation_delta(payload.get("active_state_summary", {}), cli_invoke=cli_invoke),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
             "query": skill_routing.get("query", "") if isinstance(skill_routing, dict) else "",
@@ -2040,22 +2061,28 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             next_action=str(next_safe_action.get("next_safe_action", "")),
             blocked_actions=[str(item) for item in next_safe_action.get("forbidden_actions", []) if str(item).strip()],
             required_commands=[
-                str(item)
-                for item in [
-                    next_safe_action.get("preferred_cli"),
-                    payload.get("immediate_next_allowed_action", {}).get("command")
-                    if isinstance(payload.get("immediate_next_allowed_action"), dict)
-                    else "",
-                    *startup_proof_commands,
-                ]
-                if item not in (None, "", []) and str(item).strip() and str(item).strip().lower() != "none"
+                *dict.fromkeys(
+                    str(item)
+                    for item in [
+                        next_safe_action.get("preferred_cli"),
+                        payload.get("immediate_next_allowed_action", {}).get("command")
+                        if isinstance(payload.get("immediate_next_allowed_action"), dict)
+                        else "",
+                        *startup_proof_commands,
+                    ]
+                    if item not in (None, "", []) and str(item).strip() and str(item).strip().lower() != "none"
+                )
             ],
             claim_boundary=next_safe_action.get("claim_boundary", "completion claim requires proof"),
             residue_owner="active continuation state" if payload.get("active_state_summary", {}).get("active_execplan") else "none",
             reasons=startup_changed_signals[:6],
             detail_routes={
                 "why_blocked": f"{cli_invoke} start --target . --select next_safe_action,action_signals --format json",
-                "active_plan": f"{cli_invoke} summary --target . --format json",
+                "active_plan": (
+                    f"{cli_invoke} start --target . --select active_state_summary,continuation_view --format json"
+                    if _active_state_has_planning(payload.get("active_state_summary", {}))
+                    else f"{cli_invoke} summary --target . --format json"
+                ),
                 "proof_detail": f"{cli_invoke} proof --target . --changed <paths> --format json",
             },
             shown_because=["command_phase=start", *startup_changed_signals[:3]],
@@ -2268,6 +2295,35 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(maintainer_mode, dict) and maintainer_mode.get("status") == "enabled":
         context["maintainer_mode"] = maintainer_mode
     return selected
+
+
+def _active_state_with_orientation_delta(active_state: Any, *, cli_invoke: str) -> dict[str, Any]:
+    if not isinstance(active_state, dict):
+        return {}
+    projected = dict(active_state)
+    active_planning_present = _active_state_has_planning(projected)
+    if active_planning_present and "orientation_delta" not in projected:
+        projected["orientation_delta"] = {
+            "status": "embedded",
+            "summary_equivalent_for_first_contact": True,
+            "detail_selectors": ["active_state_summary", "continuation_view", "next_safe_action", "action_signals"],
+            "full_detail_command": _command_with_cli_invoke(
+                command="agentic-workspace summary --target . --format json", cli_invoke=cli_invoke
+            ),
+            "rule": "Startup carries the compact active-planning facts needed for first-contact routing; run summary only for explicit detail or refresh.",
+        }
+    return projected
+
+
+def _active_state_has_planning(active_state: Any) -> bool:
+    if not isinstance(active_state, dict):
+        return False
+    return bool(
+        active_state.get("todo_active_count")
+        or active_state.get("active_execplan_count")
+        or active_state.get("active_execplan")
+        or active_state.get("planning_status") == "present"
+    )
 
 
 def _run_start_context_adapter(args: argparse.Namespace) -> int:
