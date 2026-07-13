@@ -246,8 +246,9 @@ FINAL_RESPONSE_HOST_BOUNDARIES = [
         "entrypoint": "scripts/model_cli_harness/run_sbx_codex_adapter.py",
         "attempt_source": "codex --output-last-message artifact",
         "admission_operation": "final-response.admit",
-        "ordinary_path_unavoidable": True,
-        "rule": "The sandbox Codex adapter admits the captured final-message artifact before returning success to the harness.",
+        "ordinary_path_unavoidable": False,
+        "loop_behavior": "bounded re-invocation for the Codex SBX dogfooding harness; not the vendor-neutral ordinary host path",
+        "rule": "The sandbox Codex adapter admits the captured final-message artifact and can re-invoke Codex for bounded continuation slices.",
     }
 ]
 HIGH_RISK_COMMANDS = frozenset((str(command) for command in _PREFLIGHT_POLICY["high_risk_commands"]))
@@ -13772,13 +13773,18 @@ def _final_response_admission_route_payload(
         "attempt_source": "host-supplied-model-authored-final-response",
         "checkpoint_path": LOCAL_CHAT_CHECKPOINT_PATH.as_posix(),
         "host_boundary_integrated": host_boundary_integrated,
-        "ordinary_host_path_unavoidable": host_boundary_integrated,
-        "issue_2239_closure_ready": host_boundary_integrated,
+        "ordinary_host_path_unavoidable": False,
+        "issue_2239_closure_ready": False,
         "integrated_host_boundaries": FINAL_RESPONSE_HOST_BOUNDARIES,
-        "integration_gap": "" if host_boundary_integrated else "No integrated host wrapper invokes final-response.admit.",
+        "integration_gap": (
+            "Codex SBX has a bounded dogfooding loop, but no vendor-neutral ordinary host/autopilot path is yet unavoidable."
+        )
+        if host_boundary_integrated
+        else "No integrated host wrapper invokes final-response.admit.",
         "rule": (
             "Rendering advertises the host admission operation. Integrated host wrappers must invoke it on the actual "
-            "model-authored response before exposing final text; the codex-sbx harness adapter does so for its ordinary path."
+            "model-authored response before exposing final text; the codex-sbx harness adapter does this for bounded dogfooding "
+            "slices, but that alone is not #2239 closure proof."
         ),
     }
 
@@ -18571,9 +18577,9 @@ def _terminal_outcome_contract_payload(
             "progress_without_yield": state == "CONTINUE",
             "compaction_resume_safe": state == "CONTINUE",
             "enforcement_maturity": "host-integrated" if not final_response_authorized else "not_required",
-            "ordinary_host_path_unavoidable": bool(FINAL_RESPONSE_HOST_BOUNDARIES),
+            "ordinary_host_path_unavoidable": False,
             "host_boundary_integrated": bool(FINAL_RESPONSE_HOST_BOUNDARIES),
-            "issue_2239_closure_ready": bool(FINAL_RESPONSE_HOST_BOUNDARIES),
+            "issue_2239_closure_ready": False,
             "integrated_host_boundaries": FINAL_RESPONSE_HOST_BOUNDARIES,
             "multi_slice_continuation": {
                 "status": "preserved" if state == "CONTINUE" else "not_required",

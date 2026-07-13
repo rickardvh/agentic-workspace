@@ -1709,6 +1709,12 @@
           },
           "description": "Allowed positional argument values."
         },
+        "type": {
+          "enum": [
+            "integer"
+          ],
+          "description": "Primitive parser coercion used by generated adapters."
+        },
         "help": {
           "type": "string",
           "minLength": 1,

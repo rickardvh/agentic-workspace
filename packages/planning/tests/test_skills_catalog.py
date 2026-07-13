@@ -39,6 +39,9 @@ def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
     assert "planning-high-assurance-lifecycle" in readme_text
     assert "planning-intent-verification" in readme_text
     assert "planning-autopilot" in registry_text
+    autopilot_text = autopilot_skill.read_text(encoding="utf-8")
+    assert "same explicit objective still has safe continuation state" in autopilot_text
+    assert "must not treat one milestone completion as permission to yield" in autopilot_text
     assert "planning-review-pass" in registry_text
     assert "planning-reporting" in registry_text
     assert "planning-high-assurance-lifecycle" in registry_text
@@ -60,6 +63,7 @@ def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
     assert "intent verification" in intent_entry["activation_hints"]["phrases"]
     assert "negative invariants" in intent_entry["activation_hints"]["phrases"]
     summaries = {entry["id"]: entry["summary"] for entry in registry_payload["skills"]}
+    assert "authorized terminal outcome" in summaries["planning-autopilot"]
     assert "semantic intent satisfaction" in summaries["planning-intent-verification"]
     assert "closeout procedure" in summaries["planning-closeout-trust"]
     assert "broad or high-assurance" in summaries["planning-high-assurance-lifecycle"]

@@ -114,29 +114,14 @@ function resolveTemplate(template, values) {
   if (!isObject(template)) return template;
   const keys = Object.keys(template);
   if (keys.length === 1 && keys[0] === '$value') return values[String(template.$value)];
-  if (Object.prototype.hasOwnProperty.call(template, '$field')) {
-    const spec = template.$field;
-    const parts = Array.isArray(spec.path) ? spec.path.map(String) : String(spec.path ?? '').split('.').filter(Boolean);
-    let value = values[String(spec.value ?? '')];
-    for (const part of parts) {
-      if (!isObject(value) || !Object.prototype.hasOwnProperty.call(value, part)) throw new RuntimeError(`template $field cannot resolve ${spec.value}.${parts.join('.')}`);
-      value = value[part];
-    }
-    return value;
-  }
   if (keys.length === 1 && keys[0] === '$count') return Array.isArray(values[String(template.$count)]) ? values[String(template.$count)].length : 0;
-  if (Object.prototype.hasOwnProperty.call(template, '$exists_status')) {
-    const spec = template.$exists_status;
-    return Boolean(values[String(spec.value ?? '')]) ? spec.present : spec.missing;
-  }
-  if (Object.prototype.hasOwnProperty.call(template, '$count_status')) {
-    const spec = template.$count_status;
-    const counted = values[String(spec.value ?? '')];
-    return Array.isArray(counted) && counted.length ? spec.present : spec.missing;
-  }
-  if (Object.prototype.hasOwnProperty.call(template, '$join_path')) {
-    const spec = template.$join_path;
-    return join(String(values[String(spec.base ?? '')] ?? ''), String(spec.path ?? '')).replace(/\\/g, '/');
+  if (keys.length === 1 && keys[0] === '$select_by_value') {
+    const spec = template.$select_by_value;
+    if (!isObject(spec) || !isObject(spec.choices)) throw new RuntimeError('template $select_by_value choices must be an object');
+    let selectedKey = String(values[String(spec.value ?? '')] ?? spec.default ?? '');
+    if (!Object.prototype.hasOwnProperty.call(spec.choices, selectedKey)) selectedKey = String(spec.default ?? '');
+    if (!Object.prototype.hasOwnProperty.call(spec.choices, selectedKey)) throw new RuntimeError(`template $select_by_value cannot resolve choice for ${String(spec.value ?? '')}`);
+    return resolveTemplate(spec.choices[selectedKey], values);
   }
   return Object.fromEntries(Object.entries(template).map(([key, value]) => [key, resolveTemplate(value, values)]));
 }
@@ -234,6 +219,20 @@ function assemblePayload(values, args) {
       optional_enable_commands: stringList(fields.optional_enable_commands ?? [], 'payload.assemble fields.optional_enable_commands')
     };
   }
+  if (fields.payload_kind === 'package-resource-manifest') {
+    const manifestFrom = String(fields.manifest_from ?? 'manifest');
+    const manifest = values[manifestFrom] ?? {};
+    if (!isObject(manifest)) throw new RuntimeError(`${manifestFrom} must be an object`);
+    const filesPath = String(fields.files_path ?? 'files');
+    const bundledSkillsPath = String(fields.bundled_skill_files_path ?? 'bundled_skill_files');
+    return {
+      files: manifestPathList(dottedValue(manifest, filesPath) ?? [], `${manifestFrom}.${filesPath}`),
+      default_files: stringList(fields.default_files ?? [], 'payload.assemble fields.default_files'),
+      optional_files: stringList(fields.optional_files ?? [], 'payload.assemble fields.optional_files'),
+      bundled_skill_files: manifestPathList(dottedValue(manifest, bundledSkillsPath) ?? [], `${manifestFrom}.${bundledSkillsPath}`),
+      optional_enable_commands: stringList(fields.optional_enable_commands ?? [], 'payload.assemble fields.optional_enable_commands')
+    };
+  }
   const payload = { dry_run: Boolean(fields.dry_run ?? true), message: String(fields.message ?? '') };
   if (values.target_root !== undefined) payload.target_root = String(values.target_root);
   if (fields.actions_from === 'files') {
@@ -263,10 +262,24 @@ function relativePathList(value, source) {
   });
 }
 
-function emitOutput(values) {
+function manifestPathList(value, source) {
+  if (!Array.isArray(value)) throw new RuntimeError(`${source} must be a list`);
+  return value.map((item) => {
+    if (typeof item === 'string') return item;
+    if (isObject(item) && typeof item.relative_path === 'string') return item.relative_path;
+    if (isObject(item) && typeof item.path === 'string') return item.path;
+    throw new RuntimeError(`${source} entries must be strings or objects with path`);
+  });
+}
+
+function emitOutput(values, args = {}) {
   const result = values.result;
   if (String(values.format ?? 'text') === 'json') return `${JSON.stringify(result, null, 2)}
 `;
+  if (isObject(result)) {
+    const declaredView = emitDeclaredTextView(result, args.text_views ?? []);
+    if (declaredView !== null) return declaredView;
+  }
   if (!isObject(result)) return `${result}
 `;
   if (Array.isArray(result.files) && result.files.every((item) => typeof item === 'string')) return `${result.files.join('\n')}
@@ -275,6 +288,319 @@ function emitOutput(values) {
   for (const action of (Array.isArray(result.actions) ? result.actions : [])) lines.push(`- ${action.path ?? action.id ?? action.kind}`);
   return `${lines.join('\n').trimEnd()}
 `;
+}
+
+function emitDeclaredTextView(result, views) {
+  if (views === null || views === undefined) return null;
+  if (!Array.isArray(views)) throw new RuntimeError('output.emit text_views must be a list');
+  for (const view of views) {
+    if (!isObject(view)) throw new RuntimeError('output.emit text_views entries must be objects');
+    validateDeclaredTextView(view);
+  }
+  let defaultView = null;
+  for (const view of views) {
+    if (view.default === true) defaultView = view;
+    if (declaredTextViewMatches(result, view)) return renderDeclaredTextView(result, view);
+  }
+  return defaultView ? renderDeclaredTextView(result, defaultView) : null;
+}
+
+function declaredTextViewMatches(result, view) {
+  const match = view.match ?? {};
+  if (!isObject(match) || Object.keys(match).length === 0) return false;
+  for (const [path, expected] of Object.entries(match)) {
+    if (!declaredTextIsScalar(expected)) throw new RuntimeError('output.emit text view match values must be JSON scalars');
+    const [found, actual] = fieldByPath(result, path);
+    if (!found || !declaredTextScalarEqual(actual, expected)) return false;
+  }
+  return true;
+}
+
+function validateDeclaredTextView(view) {
+  const allowedViewKeys = new Set(['id', 'match', 'default', 'lines']);
+  if (Object.keys(view).some((key) => !allowedViewKeys.has(key))) throw new RuntimeError('output.emit text view has unsupported fields');
+  if (Object.prototype.hasOwnProperty.call(view, 'default') && typeof view.default !== 'boolean') throw new RuntimeError('output.emit text view default must be a boolean');
+  const match = view.match ?? {};
+  if (Object.prototype.hasOwnProperty.call(view, 'match') && !isObject(match)) throw new RuntimeError('output.emit text view match must be an object');
+  for (const expected of Object.values(match)) {
+    if (!declaredTextIsScalar(expected)) throw new RuntimeError('output.emit text view match values must be JSON scalars');
+  }
+  if (Object.prototype.hasOwnProperty.call(view, 'lines')) validateDeclaredTextLines(view.lines);
+}
+
+function validateDeclaredTextLines(lines) {
+  if (!Array.isArray(lines)) throw new RuntimeError('output.emit text view lines must be a list');
+  for (const line of lines) validateDeclaredTextLine(line);
+}
+
+function validateDeclaredTextLine(line) {
+  if (typeof line === 'string') return;
+  if (!isObject(line)) throw new RuntimeError('output.emit text view lines must be strings or objects');
+  const discriminators = ['when', 'for_each', 'json', 'template', 'literal'];
+  const present = discriminators.filter((key) => Object.prototype.hasOwnProperty.call(line, key));
+  if (present.length !== 1) throw new RuntimeError('output.emit text view line object must declare exactly one of when, for_each, json, template, or literal');
+  const key = present[0];
+  const keys = Object.keys(line).sort();
+  if (key === 'literal') {
+    if (keys.length !== 1 || keys[0] !== 'literal') throw new RuntimeError('output.emit literal line must only declare literal');
+    requireDeclaredTextString(line.literal, 'output.emit literal line value must be a string');
+    return;
+  }
+  if (key === 'template') {
+    if (keys.length !== 1 || keys[0] !== 'template') throw new RuntimeError('output.emit template line must only declare template');
+    requireDeclaredTextString(line.template, 'output.emit template line value must be a string');
+    return;
+  }
+  if (key === 'json') {
+    if (keys.length !== 1 || keys[0] !== 'json') throw new RuntimeError('output.emit json line must only declare json');
+    requireDeclaredTextString(line.json, 'output.emit json line path must be a string');
+    return;
+  }
+  if (key === 'when') {
+    if (keys.length !== 2 || keys[0] !== 'lines' || keys[1] !== 'when') throw new RuntimeError('output.emit when line must declare when and lines');
+    requireDeclaredTextString(line.when, 'output.emit when line path must be a string');
+    validateDeclaredTextLines(line.lines);
+    return;
+  }
+  const spec = line.for_each;
+  if (!isObject(spec)) throw new RuntimeError('output.emit for_each line must be an object');
+  if (!Object.prototype.hasOwnProperty.call(spec, 'path')) throw new RuntimeError('output.emit for_each line must declare path');
+  requireDeclaredTextString(spec.path, 'output.emit for_each path must be a string');
+  const nestedForms = ['lines', 'template'].filter((name) => Object.prototype.hasOwnProperty.call(spec, name));
+  if (nestedForms.length !== 1) throw new RuntimeError('output.emit for_each line must declare exactly one of lines or template');
+  const specKeys = Object.keys(spec).sort();
+  const expectedKeys = ['path', nestedForms[0]].sort();
+  if (specKeys.length !== 2 || specKeys[0] !== expectedKeys[0] || specKeys[1] !== expectedKeys[1]) throw new RuntimeError('output.emit for_each line has unsupported fields');
+  if (Object.prototype.hasOwnProperty.call(spec, 'lines')) validateDeclaredTextLines(spec.lines);
+  else requireDeclaredTextString(spec.template, 'output.emit for_each template must be a string');
+}
+
+function requireDeclaredTextString(value, message) {
+  if (typeof value !== 'string') throw new RuntimeError(message);
+}
+
+function renderDeclaredTextView(result, view) {
+  return `${renderDeclaredTextLines(view.lines ?? [], result, result).join('\n').trimEnd()}
+`;
+}
+
+function renderDeclaredTextLines(lines, current, root) {
+  if (!Array.isArray(lines)) throw new RuntimeError('output.emit text view lines must be a list');
+  return lines.flatMap((line) => renderDeclaredTextLine(line, current, root));
+}
+
+function renderDeclaredTextLine(line, current, root) {
+  if (typeof line === 'string') return [renderDeclaredTextTemplate(line, current, root)];
+  if (!isObject(line)) throw new RuntimeError('output.emit text view lines must be strings or objects');
+  if (Object.prototype.hasOwnProperty.call(line, 'when')) {
+    const [found, value] = declaredTextValue(line.when, current, root);
+    return found && declaredTextTruthy(value) ? renderDeclaredTextLines(line.lines ?? [], current, root) : [];
+  }
+  if (Object.prototype.hasOwnProperty.call(line, 'for_each')) {
+    const spec = line.for_each;
+    if (!isObject(spec)) throw new RuntimeError('output.emit for_each line must be an object');
+    const [found, value] = declaredTextValue(spec.path ?? '', current, root);
+    if (!found || value === null || value === undefined || value === '') return [];
+    if (!Array.isArray(value)) throw new RuntimeError('output.emit for_each path must resolve to a list');
+    const nestedLines = spec.lines ?? [String(spec.template ?? '{}')];
+    return value.flatMap((item) => renderDeclaredTextLines(nestedLines, item, root));
+  }
+  if (Object.prototype.hasOwnProperty.call(line, 'json')) {
+    const [found, value] = declaredTextValue(line.json, current, root);
+    return declaredTextCanonicalJsonString(declaredTextCanonicalJsonValue(found ? value : null)).split('\n');
+  }
+  if (Object.prototype.hasOwnProperty.call(line, 'template')) return [renderDeclaredTextTemplate(String(line.template), current, root)];
+  if (Object.prototype.hasOwnProperty.call(line, 'literal')) return [String(line.literal)];
+  throw new RuntimeError('output.emit text view line object must declare when, for_each, json, template, or literal');
+}
+
+function renderDeclaredTextTemplate(template, current, root) {
+  return String(template).replace(/\{([^}]*)\}/g, (_match, token) => {
+    const [found, value] = declaredTextPlaceholderValue(String(token), current, root);
+    return declaredTextFormat(found ? value : '');
+  });
+}
+
+function declaredTextPlaceholderValue(token, current, root) {
+  const parts = String(token).split('|');
+  let [found, value] = declaredTextValue(parts[0], current, root);
+  for (const rawFilter of parts.slice(1)) {
+    const separatorIndex = rawFilter.indexOf(':');
+    const name = separatorIndex === -1 ? rawFilter : rawFilter.slice(0, separatorIndex);
+    const argument = separatorIndex === -1 ? '' : rawFilter.slice(separatorIndex + 1);
+    if (name === 'len') {
+      value = Array.isArray(value) ? value.length : 0;
+      found = true;
+    } else if (name === 'join') {
+      if (!found || value === null || value === undefined) {
+        value = '';
+      } else if (Array.isArray(value)) {
+        if (!value.every(declaredTextIsScalar)) throw new RuntimeError('output.emit join filter requires a list of JSON scalars');
+        value = value.map(declaredTextFormatScalar).join(argument);
+      } else {
+        throw new RuntimeError('output.emit join filter requires a list');
+      }
+      found = true;
+    } else if (name === 'empty') {
+      if (!declaredTextTruthy(value)) value = argument;
+      found = true;
+    } else {
+      throw new RuntimeError(`unsupported output.emit text view filter: ${name}`);
+    }
+  }
+  return [found, value];
+}
+
+function declaredTextValue(path, current, root) {
+  const pathText = String(path ?? '');
+  if (pathText === '' || pathText === '.') return [true, current];
+  if (pathText.startsWith('root.')) return fieldByPath(root, pathText.slice('root.'.length));
+  if (isObject(current)) {
+    const [found, value] = fieldByPath(current, pathText);
+    if (found) return [true, value];
+  }
+  return fieldByPath(root, pathText);
+}
+
+function declaredTextTruthy(value) {
+  if (value === null || value === undefined) return false;
+  if (Array.isArray(value)) return value.length > 0;
+  if (isObject(value)) return Object.keys(value).length > 0;
+  if (typeof value === 'string') return value.length > 0;
+  return Boolean(value);
+}
+
+function declaredTextFormat(value) {
+  if (!declaredTextIsScalar(value)) throw new RuntimeError('output.emit text view placeholders require JSON scalars; use json lines for arrays or objects');
+  return declaredTextFormatScalar(value);
+}
+
+function declaredTextIsScalar(value) {
+  return value === null || value === undefined || ['string', 'boolean'].includes(typeof value) || declaredTextIsSafeInteger(value);
+}
+
+function declaredTextIsSafeInteger(value) {
+  return typeof value === 'number' && Number.isSafeInteger(value);
+}
+
+function declaredTextScalarEqual(actual, expected) {
+  if (expected === null || expected === undefined) return actual === null || actual === undefined;
+  if (typeof expected === 'boolean') return typeof actual === 'boolean' && actual === expected;
+  if (typeof expected === 'string') return typeof actual === 'string' && actual === expected;
+  if (declaredTextIsSafeInteger(expected)) return declaredTextIsSafeInteger(actual) && actual === expected;
+  return false;
+}
+
+function declaredTextFormatScalar(value) {
+  if (typeof value === 'boolean') return value ? 'true' : 'false';
+  if (value === null || value === undefined) return '';
+  if (declaredTextIsSafeInteger(value)) return String(value);
+  return String(value);
+}
+
+function declaredTextCanonicalJsonValue(value) {
+  if (Array.isArray(value)) return value.map(declaredTextCanonicalJsonValue);
+  if (isObject(value)) {
+    const out = {};
+    for (const key of Object.keys(value).sort()) out[key] = declaredTextCanonicalJsonValue(value[key]);
+    return out;
+  }
+  if (value === null || value === undefined || ['string', 'boolean'].includes(typeof value)) return value;
+  if (declaredTextIsSafeInteger(value)) return value;
+  if (typeof value === 'number') throw new RuntimeError('output.emit text view JSON numbers must be finite safe integers');
+  return value;
+}
+
+function declaredTextCanonicalJsonString(value, level = 0) {
+  const indent = '  '.repeat(level);
+  const childIndent = '  '.repeat(level + 1);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return '[]';
+    return '[\n' + value.map((item) => `${childIndent}${declaredTextCanonicalJsonString(item, level + 1)}`).join(',\n') + '\n' + indent + ']';
+  }
+  if (isObject(value)) {
+    const keys = Object.keys(value).sort();
+    if (keys.length === 0) return '{}';
+    return '{\n' + keys.map((key) => `${childIndent}${JSON.stringify(key)}: ${declaredTextCanonicalJsonString(value[key], level + 1)}`).join(',\n') + '\n' + indent + '}';
+  }
+  if (value === undefined) return 'null';
+  return JSON.stringify(value);
+}
+
+function limitedViewValue(value, limit) {
+  if (!Number.isInteger(limit) || typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.slice(0, Math.max(limit, 0));
+  return value;
+}
+
+function viewPayload(values, args) {
+  const sourceName = String(args.source ?? 'result');
+  if (!Object.prototype.hasOwnProperty.call(values, sourceName)) throw new RuntimeError(`payload.view source value is missing: ${sourceName}`);
+  const fields = stringList(args.fields ?? [], 'payload.view fields');
+  if (args.limits !== undefined && !isObject(args.limits)) throw new RuntimeError('payload.view limits must be an object');
+  const limits = args.limits ?? {};
+  const payload = values[sourceName];
+  const viewed = {
+    kind: String(args.view_kind ?? 'command-generation/payload-view/v1'),
+    source_command: String(args.source_command ?? values.operation_id ?? ''),
+    values: {}
+  };
+  const missing = [];
+  for (const field of fields) {
+    const [found, value] = fieldByPath(payload, field);
+    if (found) viewed.values[field] = limitedViewValue(value, limits[field]);
+    else missing.push(field);
+  }
+  if (missing.length) viewed.missing = missing;
+  return viewed;
+}
+
+function transactionPlan(values, args) {
+  const resourcesFrom = String(args.resources_from ?? 'resources');
+  const rawResources = values[resourcesFrom] ?? args.resources ?? [];
+  if (!Array.isArray(rawResources)) throw new RuntimeError('transaction.plan resources must be a list');
+  const defaultAction = String(args.default_action ?? 'write');
+  const defaultKind = String(args.default_kind ?? 'file');
+  const actions = rawResources.map((item) => {
+    if (typeof item === 'string') return { action: defaultAction, kind: defaultKind, path: validateResourcePath(item) };
+    if (!isObject(item)) throw new RuntimeError('transaction.plan resources must be strings or objects');
+    const rawPath = item.path ?? item.relative_path;
+    if (typeof rawPath !== 'string' || !rawPath) throw new RuntimeError('transaction.plan resource path is required');
+    return {
+      action: String(item.action ?? defaultAction),
+      kind: String(item.kind ?? defaultKind),
+      path: validateResourcePath(rawPath)
+    };
+  });
+  const targetRootValue = String(args.target_root_value ?? 'target_root');
+  return {
+    kind: String(args.plan_kind ?? 'command-generation/transaction-plan/v1'),
+    dry_run: true,
+    target_root: String(values[targetRootValue] ?? ''),
+    schema_ref: String(args.schema_ref ?? ''),
+    actions,
+    mutation_safety: {
+      apply_status: 'package-owned',
+      apply_primitive: String(args.apply_primitive ?? ''),
+      conflict_hooks: stringList(args.conflict_hooks ?? [], 'transaction.plan conflict_hooks'),
+      provenance_hooks: stringList(args.provenance_hooks ?? [], 'transaction.plan provenance_hooks'),
+      rule: 'Generic transaction planning is dry-run only; mutating apply remains an explicit package-domain primitive.'
+    }
+  };
+}
+
+function validateResourcePath(path) {
+  const resourcePath = String(path).replace(/\\/g, '/');
+  const parts = resourcePath.split('/');
+  if (
+    !resourcePath ||
+    resourcePath.startsWith('/') ||
+    /^[A-Za-z]:/.test(parts[0] ?? '') ||
+    parts.some((part) => part === '' || part === '.' || part === '..')
+  ) {
+    throw new RuntimeError(`transaction.plan resource path must be relative and stay inside resources: ${path}`);
+  }
+  return resourcePath;
 }
 
 function executeHostPrimitive(primitive, values, args, operationId) {
@@ -307,8 +633,10 @@ function executePrimitive(primitive, values, args, operationId) {
   if (primitive === 'filesystem.glob') return globFiles(valueRoot(args, values), String(args.pattern ?? '')).map((relative_path) => ({ relative_path }));
   if (primitive === 'json.parse') return JSON.parse(String(values[String(args.source ?? 'registry_text')]));
   if (primitive === 'payload.assemble') return assemblePayload(values, args);
+  if (primitive === 'payload.view') return viewPayload(values, args);
   if (primitive === 'payload.project') return projectPayload(values, args);
-  if (primitive === 'output.emit') return emitOutput(values);
+  if (primitive === 'output.emit') return emitOutput(values, args);
+  if (primitive === 'transaction.plan') return transactionPlan(values, args);
   return executeHostPrimitive(primitive, values, args, operationId);
 }
 

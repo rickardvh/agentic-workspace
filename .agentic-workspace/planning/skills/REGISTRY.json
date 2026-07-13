@@ -21,7 +21,7 @@
       "path": "planning-autopilot/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
-      "summary": "execute one bounded planning milestone at a time from the checked-in planning surfaces",
+      "summary": "execute bounded planning slices from checked-in planning surfaces until the active objective reaches an authorized terminal outcome",
       "activation_hints": {
         "verbs": ["run", "execute", "implement", "continue", "finish", "ship"],
         "nouns": ["autopilot", "milestone", "execplan", "planned work", "active task"],
