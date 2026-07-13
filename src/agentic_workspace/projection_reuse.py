@@ -16,6 +16,7 @@ _MAX_CACHE_RECORDS = 32
 _OPERATION_DEPENDENCY_ROOTS = {
     "doctor": ("src/agentic_workspace", "generated/workspace", "scripts", "packages"),
     "report": ("src/agentic_workspace", "generated/workspace", "scripts", "packages", "docs"),
+    "summary": ("src/agentic_workspace", "generated/workspace", "generated/planning", "scripts", "packages/planning", "docs"),
 }
 
 
@@ -52,8 +53,6 @@ def dependency_digest(*, root: Path, operation: str, query: dict[str, Any]) -> t
     except PackageNotFoundError:
         package_version = "source-checkout"
     digest.update(package_version.encode())
-    resolved_head = _git(root, "rev-parse", "HEAD")
-    digest.update(resolved_head.encode())
     dependencies: list[str] = []
     relevant_files = _dependency_files(root, operation)
     relevant_relatives = {path.relative_to(root).as_posix() for path in relevant_files}
@@ -145,6 +144,13 @@ def record_projection_reuse(*, root: Path, operation: str, query: dict[str, Any]
     path = context["path"]
     actionability = payload.get("actionability", {}) if isinstance(payload.get("actionability"), dict) else {}
     next_action = payload.get("next_action", {}) if isinstance(payload.get("next_action"), dict) else {}
+    decision_packet = payload.get("decision_packet", {}) if isinstance(payload.get("decision_packet"), dict) else {}
+    planning_health = payload.get("planning_surface_health", {}) if isinstance(payload.get("planning_surface_health"), dict) else {}
+    execution_readiness = payload.get("execution_readiness", {}) if isinstance(payload.get("execution_readiness"), dict) else {}
+    current_pressure = payload.get("current_execution_pressure", {}) if isinstance(payload.get("current_execution_pressure"), dict) else {}
+    continuation_view = payload.get("continuation_view", {}) if isinstance(payload.get("continuation_view"), dict) else {}
+    proof_state = continuation_view.get("proof_state", {}) if isinstance(continuation_view.get("proof_state"), dict) else {}
+    residue_governance = payload.get("residue_governance", {}) if isinstance(payload.get("residue_governance"), dict) else {}
     record = {
         "kind": _CACHE_KIND,
         "contract_version": _CACHE_CONTRACT_VERSION,
@@ -154,10 +160,19 @@ def record_projection_reuse(*, root: Path, operation: str, query: dict[str, Any]
         "dependencies": context["dependencies"],
         "output_digest": hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()[:20],
         "decision_snapshot": {
-            "health": payload.get("health", payload.get("status", "")),
-            "action_required": actionability.get("action_required", payload.get("action_required", False)),
-            "actionability_status": actionability.get("status", ""),
-            "next_action": next_action.get("action", next_action.get("summary", "")),
+            "health": payload.get("health", payload.get("status", planning_health.get("status", ""))),
+            "action_required": actionability.get("action_required", payload.get("action_required", bool(payload.get("warning_count", 0)))),
+            "actionability_status": actionability.get("status", execution_readiness.get("status", "")),
+            "decision": decision_packet.get("next_action", ""),
+            "next_action": next_action.get(
+                "action",
+                next_action.get(
+                    "summary",
+                    current_pressure.get("recommended_next_action", planning_health.get("recommended_next_action", "")),
+                ),
+            ),
+            "proof": proof_state.get("summary", proof_state.get("status", "")),
+            "residue": residue_governance.get("status", ""),
         },
     }
     try:

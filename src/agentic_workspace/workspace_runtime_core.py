@@ -27958,6 +27958,57 @@ def _review_stack_implement_command(*, paths: list[str], pr_number: str, cli_inv
     )
 
 
+def _review_stack_workflow_trace_payload(
+    *,
+    stack: dict[str, Any],
+    phase: str,
+    commands: dict[str, str],
+    proof_reuse: dict[str, Any],
+) -> dict[str, Any]:
+    raw_events = [item for item in _list_payload(stack.get("workflow_events")) if isinstance(item, dict)]
+    events: list[dict[str, Any]] = []
+    for raw_event in raw_events:
+        command = str(raw_event.get("command") or "").strip()
+        event_phase = str(raw_event.get("phase") or raw_event.get("phase_before") or "").strip()
+        phase_after = str(raw_event.get("phase_after") or "").strip()
+        outcome = str(raw_event.get("outcome") or raw_event.get("status") or "").strip()
+        if not (command or event_phase or phase_after or outcome):
+            continue
+        events.append(
+            {
+                "phase": event_phase,
+                "phase_after": phase_after,
+                "command": command,
+                "outcome": outcome,
+            }
+        )
+    executed_events = [event for event in events if event.get("outcome") in {"executed", "passed", "reused"}]
+    event_phase_sequence = _dedupe(
+        [
+            phase_value
+            for event in events
+            for phase_value in (str(event.get("phase") or ""), str(event.get("phase_after") or ""))
+            if phase_value
+        ]
+    )
+    return {
+        "status": "executed_transition_trace" if events else "representative_multi_pr_trace",
+        "phase_sequence": event_phase_sequence or ["review-correction", "review-proof", "review-closeout-ready"],
+        "current_phase": phase,
+        "commands": commands,
+        "executed_events": events,
+        "transition_source": "workflow_events" if events else "derived_projection",
+        "proof_reuse_status": str(proof_reuse.get("status") or "reuse_unknown"),
+        "reuse_or_invalidation_evidence": proof_reuse.get("rationale") or proof_reuse.get("reason") or proof_reuse.get("status"),
+        "interaction_cost": {
+            "resume_inputs_before_packet": ["stack cache", "comment samples", "proof reuse receipt", "active Planning owner"],
+            "resume_inputs_after_packet": ["review_stack_continuity.next_action.command"],
+            "ordinary_rerun_count": len(executed_events) if events else 1,
+            "evidence_source": "workflow_events" if events else "projection_fallback",
+        },
+    }
+
+
 def _review_stack_continuity_payload(
     *,
     target_root: Path,
@@ -28059,6 +28110,17 @@ def _review_stack_continuity_payload(
     active_plan = _active_planning_record_for_report_section(target_root=target_root)
     active_plan_id = str(active_plan.get("id") or active_plan.get("plan_id") or active_plan.get("title") or "").strip()
     active_plan_surface = str(active_plan.get("_record_surface") or active_plan.get("surface") or active_plan.get("path") or "").strip()
+    workflow_trace = _review_stack_workflow_trace_payload(
+        stack=stack,
+        phase=phase,
+        commands={
+            "correct": correction_command,
+            "prove": proof_command,
+            "closeout": closeout_command,
+        },
+        proof_reuse=proof_reuse,
+    )
+    planning_phase_source = "executed_transition_event" if workflow_trace.get("transition_source") == "workflow_events" else "derived_projection"
     return {
         "kind": "agentic-workspace/review-stack-continuity/v1",
         "status": phase,
@@ -28089,6 +28151,7 @@ def _review_stack_continuity_payload(
                 "surface": active_plan_surface,
                 "id": active_plan_id,
                 "phase": phase,
+                "phase_source": planning_phase_source,
             },
             "route_rule": "Bind each review finding to its stack member before changing proof or closeout phase.",
         },
@@ -28125,24 +28188,11 @@ def _review_stack_continuity_payload(
             "surface": active_plan_surface,
             "id": active_plan_id,
             "phase": phase,
+            "phase_source": planning_phase_source,
         },
         "workflow_trace": {
-            "status": "representative_multi_pr_trace" if len(members) > 1 else "single_pr_trace",
+            **workflow_trace,
             "member_count": len(members),
-            "phase_sequence": ["review-correction", "review-proof", "review-closeout-ready"],
-            "current_phase": phase,
-            "commands": {
-                "correct": correction_command,
-                "prove": proof_command,
-                "closeout": closeout_command,
-            },
-            "proof_reuse_status": proof_status,
-            "reuse_or_invalidation_evidence": proof_reuse.get("rationale") or proof_reuse.get("reason") or proof_reuse.get("status"),
-            "interaction_cost": {
-                "resume_inputs_before_packet": ["stack cache", "comment samples", "proof reuse receipt", "active Planning owner"],
-                "resume_inputs_after_packet": ["review_stack_continuity.next_action.command"],
-                "ordinary_rerun_count": 1,
-            },
         },
         "compact_continuation_rule": "Resume from phase, affected_slice, incremental_proof_manifest, and next_action before rereading raw stack cache.",
     }
@@ -28329,6 +28379,7 @@ def _pr_stack_comment_cache_payload(*, target_root: Path, repo: str, branch: str
         "branch": branch,
         "stack_member_count": len(members),
         "stack_members": members,
+        "workflow_events": [item for item in _list_payload(cache.get("workflow_events")) if isinstance(item, dict)],
         "cache_path": cache_path,
         "comment_state": "stack_comments_requiring_action"
         if actionable_present

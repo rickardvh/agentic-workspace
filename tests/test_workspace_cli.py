@@ -2150,6 +2150,45 @@ def test_start_exposes_continuation_capsule_when_active_planning_exists(tmp_path
     ]
 
 
+def test_start_embeds_active_planning_orientation_without_immediate_summary_rerun(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "orientation-plan",
+                "--title",
+                "Orientation plan",
+                "--target",
+                str(tmp_path),
+                "--activate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", "Orientation plan", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    active_state = payload["context"]["active_state"]
+    orientation = active_state["orientation_delta"]
+    assert orientation["status"] == "embedded"
+    assert orientation["summary_equivalent_for_first_contact"] is True
+    assert "summary --target . --format json" in orientation["full_detail_command"]
+    assert not any("summary --target . --format json" in item for item in payload["context"]["primary_action"]["read_first"])
+    workflow = payload["context"]["planning"]["workflow_sufficiency"]
+    if workflow["sufficiency_result"] != "startup-orientation-embedded":
+        assert workflow["sufficiency_result"] == "delegation-decision-required"
+    assert "summary --target . --format json" not in payload["decision_packet"]["detail_routes"]["active_plan"]
+
+
 def test_start_surfaces_configured_pre_test_guardrail_without_universal_bug_keyword(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -6492,6 +6531,21 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
         ),
         encoding="utf-8",
     )
+    fresh_stack["workflow_events"] = [
+        {
+            "phase": "review-correction",
+            "phase_after": "review-proof",
+            "command": "uv run python scripts/run_agentic_workspace.py implement --changed src/app.py tests/test_app.py --task 'Address review findings for PR #1841' --format json",
+            "outcome": "executed",
+        },
+        {
+            "phase": "review-proof",
+            "phase_after": "review-closeout-ready",
+            "command": "uv run pytest tests/test_app.py -q",
+            "outcome": "passed",
+        },
+    ]
+    cache_path.write_text(json.dumps(fresh_stack), encoding="utf-8")
     assert (
         cli.main(
             [
@@ -6513,6 +6567,15 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert reusable_continuity["incremental_proof_manifest"]["reusable_groups"][0]["command"] == "uv run pytest tests/test_app.py -q"
     assert reusable_continuity["next_action"]["id"] == "closeout-with-reused-proof-receipt"
     assert reusable_continuity["closeout_route"]["status"] == "ready_after_recording_reuse_rationale"
+    assert reusable_continuity["planning_owner"]["phase_source"] == "executed_transition_event"
+    assert reusable_continuity["workflow_trace"]["status"] == "executed_transition_trace"
+    assert reusable_continuity["workflow_trace"]["transition_source"] == "workflow_events"
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 2
+    assert reusable_continuity["workflow_trace"]["interaction_cost"]["evidence_source"] == "workflow_events"
+    assert [event["phase_after"] for event in reusable_continuity["workflow_trace"]["executed_events"]] == [
+        "review-proof",
+        "review-closeout-ready",
+    ]
 
     actionable_stack = copy.deepcopy(fresh_stack)
     actionable_stack["stack_members"][1]["delta"]["category_counts"]["actionable_code_doc_body_change"] = 1
@@ -6577,8 +6640,10 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert "implement --changed src/app.py tests/test_app.py" in continuity["next_action"]["command"]
     assert continuity["closeout_route"]["status"] == "blocked"
     assert continuity["planning_owner"]["status"] == "bound_to_active_planning_owner"
-    assert continuity["workflow_trace"]["status"] == "representative_multi_pr_trace"
-    assert continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 1
+    assert continuity["workflow_trace"]["status"] == "executed_transition_trace"
+    assert continuity["workflow_trace"]["transition_source"] == "workflow_events"
+    assert continuity["workflow_trace"]["interaction_cost"]["ordinary_rerun_count"] == 2
+    assert continuity["workflow_trace"]["interaction_cost"]["evidence_source"] == "workflow_events"
     assert "review_stack_continuity.next_action.command" in continuity["workflow_trace"]["interaction_cost"]["resume_inputs_after_packet"]
     assert "pr_comment_attention=actionable_stack_comments_present" in payload["action_signals"]["changed_signals"]
     assert "review_stack_phase=review-correction" in payload["action_signals"]["changed_signals"]
