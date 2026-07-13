@@ -251,7 +251,7 @@
       {
         "id": "generated-direct-operation-callables",
         "status": "satisfied",
-        "intent_served": "Applicable migrated defaults and config selected-output behavior has generated Python and TypeScript direct operation callable artifacts, and wrapper execution is no longer the default semantic substitute for those cases.",
+        "intent_served": "Applicable migrated defaults and config selected-output behavior has generated Python and TypeScript direct operation callable artifacts, and config.report Python emission now uses a regenerated command-generation-owned workspace.config.emit facade instead of the source output dispatcher.",
         "evidence_refs": [
           "src/agentic_workspace/contracts/operation_artifact_registry.json",
           "src/agentic_workspace/contracts/operation_conformance_test_ir.json",

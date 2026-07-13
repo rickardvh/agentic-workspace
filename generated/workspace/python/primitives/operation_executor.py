@@ -199,6 +199,6 @@ def _handle_output_emit(values: dict[str, Any], arguments: dict[str, Any], conte
 
 
 def _handle_workspace_config_emit(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
-    from .workspace_runtime import _emit_workspace_operation_output
+    from .workspace_runtime import _emit_workspace_config_output
 
-    return _emit_workspace_operation_output(values, arguments, context)
+    return _emit_workspace_config_output(values, arguments, context)

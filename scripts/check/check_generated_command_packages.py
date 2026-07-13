@@ -16,7 +16,7 @@ import sys
 import tempfile
 import tomllib
 from pathlib import Path
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GENERATOR_SCRIPT_ROOT = REPO_ROOT / "scripts" / "generate"
@@ -2076,6 +2076,18 @@ def _find_command_adapter(payload: object, *, adapter_id: str) -> dict[str, obje
     return None
 
 
+def _package_for_adapter(ir: dict[str, object], *, adapter_id: str) -> dict[str, object] | None:
+    packages = ir.get("packages", [])
+    if not isinstance(packages, list):
+        return None
+    for package in packages:
+        if not isinstance(package, dict):
+            continue
+        if _find_command_adapter(package, adapter_id=adapter_id) is not None:
+            return package
+    return None
+
+
 def _validate_ordinary_command_migration_inventory() -> list[str]:
     errors: list[str] = []
     try:
@@ -2109,6 +2121,22 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
         if adapter is None:
             errors.append(f"{location} adapter_id {adapter_id!r} is not present in command_package_ir.json")
             continue
+        package = _package_for_adapter(ir, adapter_id=adapter_id)
+        python_runtime_binding = package.get("python_runtime_binding", {}) if isinstance(package, dict) else {}
+        operation_executor = python_runtime_binding.get("operation_executor", {}) if isinstance(python_runtime_binding, dict) else {}
+        runtime_handlers = {
+            str(handler.get("primitive", "")): handler
+            for handler in operation_executor.get("handlers", [])
+            if isinstance(handler, dict)
+        }
+        generated_overrides: dict[tuple[str, str], dict[str, Any]] = {}
+        for binding in python_runtime_binding.get("local_runtime_bindings", []) if isinstance(python_runtime_binding, dict) else []:
+            if not isinstance(binding, dict):
+                continue
+            module_file = str(binding.get("module_file", ""))
+            for override in binding.get("generated_function_overrides", []):
+                if isinstance(override, dict):
+                    generated_overrides[(module_file, str(override.get("function", "")))] = override
         operation_ref = adapter.get("operation_ref", {})
         if not isinstance(operation_ref, dict) or operation_ref.get("id") != operation_id:
             errors.append(f"{location} adapter {adapter_id!r} must reference operation_id {operation_id!r}")
@@ -2138,6 +2166,43 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
             else:
                 if generated_operation_payload.get("id") != operation_id:
                     errors.append(f"{location} generated operation must have id {operation_id!r}")
+        generated_runtime_handlers = record.get("generated_runtime_handlers", [])
+        if generated_runtime_handlers is not None:
+            if not isinstance(generated_runtime_handlers, list):
+                errors.append(f"{location} generated_runtime_handlers must be a list when present")
+            else:
+                for handler_index, generated_handler in enumerate(generated_runtime_handlers):
+                    handler_location = f"{location}.generated_runtime_handlers[{handler_index}]"
+                    if not isinstance(generated_handler, dict):
+                        errors.append(f"{handler_location} must be an object")
+                        continue
+                    primitive = str(generated_handler.get("primitive", ""))
+                    expected_function = str(generated_handler.get("function", ""))
+                    expected_implementation = str(generated_handler.get("implementation", ""))
+                    handler = runtime_handlers.get(primitive)
+                    if handler is None:
+                        errors.append(f"{handler_location} primitive {primitive!r} is not present in command_package_ir operation_executor handlers")
+                    elif handler.get("function") != expected_function:
+                        errors.append(
+                            f"{handler_location} primitive {primitive!r} must bind function {expected_function!r}, found {handler.get('function')!r}"
+                        )
+                    facade_path = REPO_ROOT / str(generated_handler.get("facade_path", ""))
+                    if not facade_path.is_file():
+                        errors.append(f"{handler_location} facade_path {generated_handler.get('facade_path')!r} does not exist")
+                    else:
+                        facade_text = facade_path.read_text(encoding="utf-8")
+                        if f"def {expected_function}(" not in facade_text:
+                            errors.append(f"{handler_location} facade must define {expected_function!r}")
+                    module_file = str(generated_handler.get("facade_path", "")).removeprefix("generated/workspace/python/").replace("/", ".")
+                    if module_file.endswith(".py"):
+                        module_file = module_file[:-3]
+                    override = generated_overrides.get((module_file, expected_function))
+                    if override is None:
+                        errors.append(f"{handler_location} function {expected_function!r} must have a generated_function_overrides entry")
+                    elif override.get("implementation") != expected_implementation:
+                        errors.append(
+                            f"{handler_location} function {expected_function!r} must use implementation {expected_implementation!r}, found {override.get('implementation')!r}"
+                        )
         boundary = record.get("remaining_runtime_boundary", {})
         if not isinstance(boundary, dict):
             errors.append(f"{location} remaining_runtime_boundary must be an object")

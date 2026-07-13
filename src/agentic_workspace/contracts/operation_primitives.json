@@ -1289,10 +1289,10 @@
       "summary": "Emit the resolved workspace config payload in the requested output format.",
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "workspace package runtime boundary",
-      "tier_reason": "Workspace routing, live inspection, policy assembly, or agent-facing judgment remains package-domain behavior.",
+      "tier_reason": "Python config output rendering is now generated from command_package_ir.json through _emit_workspace_config_output, but the primitive remains workspace-package-specific until the output contract is host-neutral and shared across targets.",
       "conformance_ref": "workspace tests plus generated command package checks",
-      "migration_path": "Extract deterministic file/data/schema/template/output portions into Tier 1 primitives after the package judgment boundary is separated.",
-      "generic_behavior_audit": "Not counted as portable codegen completion; any deterministic file/data/schema/template/output sub-behavior must be migrated to Tier 1 before full Python completion is claimed."
+      "migration_path": "Promote this primitive to a schema-backed Tier 1 output/view primitive only after the config text profiles are expressed as host-neutral view contracts across command-generation targets.",
+      "generic_behavior_audit": "Representative migration completed for Python config.report emission: command_package_ir.json binds workspace.config.emit to generated _emit_workspace_config_output, and the regenerated facade renders JSON/tiny/compact/full/selected text from values['result'] without the source output dispatcher. This is not counted as portable Tier 1 codegen until the same semantics are host-neutral and target-shared."
     },
     {
       "id": "workspace.output.emit",

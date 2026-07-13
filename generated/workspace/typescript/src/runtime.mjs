@@ -114,29 +114,14 @@ function resolveTemplate(template, values) {
   if (!isObject(template)) return template;
   const keys = Object.keys(template);
   if (keys.length === 1 && keys[0] === '$value') return values[String(template.$value)];
-  if (Object.prototype.hasOwnProperty.call(template, '$field')) {
-    const spec = template.$field;
-    const parts = Array.isArray(spec.path) ? spec.path.map(String) : String(spec.path ?? '').split('.').filter(Boolean);
-    let value = values[String(spec.value ?? '')];
-    for (const part of parts) {
-      if (!isObject(value) || !Object.prototype.hasOwnProperty.call(value, part)) throw new RuntimeError(`template $field cannot resolve ${spec.value}.${parts.join('.')}`);
-      value = value[part];
-    }
-    return value;
-  }
   if (keys.length === 1 && keys[0] === '$count') return Array.isArray(values[String(template.$count)]) ? values[String(template.$count)].length : 0;
-  if (Object.prototype.hasOwnProperty.call(template, '$exists_status')) {
-    const spec = template.$exists_status;
-    return Boolean(values[String(spec.value ?? '')]) ? spec.present : spec.missing;
-  }
-  if (Object.prototype.hasOwnProperty.call(template, '$count_status')) {
-    const spec = template.$count_status;
-    const counted = values[String(spec.value ?? '')];
-    return Array.isArray(counted) && counted.length ? spec.present : spec.missing;
-  }
-  if (Object.prototype.hasOwnProperty.call(template, '$join_path')) {
-    const spec = template.$join_path;
-    return join(String(values[String(spec.base ?? '')] ?? ''), String(spec.path ?? '')).replace(/\\/g, '/');
+  if (keys.length === 1 && keys[0] === '$select_by_value') {
+    const spec = template.$select_by_value;
+    if (!isObject(spec) || !isObject(spec.choices)) throw new RuntimeError('template $select_by_value choices must be an object');
+    let selectedKey = String(values[String(spec.value ?? '')] ?? spec.default ?? '');
+    if (!Object.prototype.hasOwnProperty.call(spec.choices, selectedKey)) selectedKey = String(spec.default ?? '');
+    if (!Object.prototype.hasOwnProperty.call(spec.choices, selectedKey)) throw new RuntimeError(`template $select_by_value cannot resolve choice for ${String(spec.value ?? '')}`);
+    return resolveTemplate(spec.choices[selectedKey], values);
   }
   return Object.fromEntries(Object.entries(template).map(([key, value]) => [key, resolveTemplate(value, values)]));
 }
@@ -234,6 +219,20 @@ function assemblePayload(values, args) {
       optional_enable_commands: stringList(fields.optional_enable_commands ?? [], 'payload.assemble fields.optional_enable_commands')
     };
   }
+  if (fields.payload_kind === 'package-resource-manifest') {
+    const manifestFrom = String(fields.manifest_from ?? 'manifest');
+    const manifest = values[manifestFrom] ?? {};
+    if (!isObject(manifest)) throw new RuntimeError(`${manifestFrom} must be an object`);
+    const filesPath = String(fields.files_path ?? 'files');
+    const bundledSkillsPath = String(fields.bundled_skill_files_path ?? 'bundled_skill_files');
+    return {
+      files: manifestPathList(dottedValue(manifest, filesPath) ?? [], `${manifestFrom}.${filesPath}`),
+      default_files: stringList(fields.default_files ?? [], 'payload.assemble fields.default_files'),
+      optional_files: stringList(fields.optional_files ?? [], 'payload.assemble fields.optional_files'),
+      bundled_skill_files: manifestPathList(dottedValue(manifest, bundledSkillsPath) ?? [], `${manifestFrom}.${bundledSkillsPath}`),
+      optional_enable_commands: stringList(fields.optional_enable_commands ?? [], 'payload.assemble fields.optional_enable_commands')
+    };
+  }
   const payload = { dry_run: Boolean(fields.dry_run ?? true), message: String(fields.message ?? '') };
   if (values.target_root !== undefined) payload.target_root = String(values.target_root);
   if (fields.actions_from === 'files') {
@@ -263,6 +262,16 @@ function relativePathList(value, source) {
   });
 }
 
+function manifestPathList(value, source) {
+  if (!Array.isArray(value)) throw new RuntimeError(`${source} must be a list`);
+  return value.map((item) => {
+    if (typeof item === 'string') return item;
+    if (isObject(item) && typeof item.relative_path === 'string') return item.relative_path;
+    if (isObject(item) && typeof item.path === 'string') return item.path;
+    throw new RuntimeError(`${source} entries must be strings or objects with path`);
+  });
+}
+
 function emitOutput(values) {
   const result = values.result;
   if (String(values.format ?? 'text') === 'json') return `${JSON.stringify(result, null, 2)}
@@ -275,6 +284,82 @@ function emitOutput(values) {
   for (const action of (Array.isArray(result.actions) ? result.actions : [])) lines.push(`- ${action.path ?? action.id ?? action.kind}`);
   return `${lines.join('\n').trimEnd()}
 `;
+}
+
+function limitedViewValue(value, limit) {
+  if (!Number.isInteger(limit) || typeof value === 'string') return value;
+  if (Array.isArray(value)) return value.slice(0, Math.max(limit, 0));
+  return value;
+}
+
+function viewPayload(values, args) {
+  const sourceName = String(args.source ?? 'result');
+  if (!Object.prototype.hasOwnProperty.call(values, sourceName)) throw new RuntimeError(`payload.view source value is missing: ${sourceName}`);
+  const fields = stringList(args.fields ?? [], 'payload.view fields');
+  if (args.limits !== undefined && !isObject(args.limits)) throw new RuntimeError('payload.view limits must be an object');
+  const limits = args.limits ?? {};
+  const payload = values[sourceName];
+  const viewed = {
+    kind: String(args.view_kind ?? 'command-generation/payload-view/v1'),
+    source_command: String(args.source_command ?? values.operation_id ?? ''),
+    values: {}
+  };
+  const missing = [];
+  for (const field of fields) {
+    const [found, value] = fieldByPath(payload, field);
+    if (found) viewed.values[field] = limitedViewValue(value, limits[field]);
+    else missing.push(field);
+  }
+  if (missing.length) viewed.missing = missing;
+  return viewed;
+}
+
+function transactionPlan(values, args) {
+  const resourcesFrom = String(args.resources_from ?? 'resources');
+  const rawResources = values[resourcesFrom] ?? args.resources ?? [];
+  if (!Array.isArray(rawResources)) throw new RuntimeError('transaction.plan resources must be a list');
+  const defaultAction = String(args.default_action ?? 'write');
+  const defaultKind = String(args.default_kind ?? 'file');
+  const actions = rawResources.map((item) => {
+    if (typeof item === 'string') return { action: defaultAction, kind: defaultKind, path: validateResourcePath(item) };
+    if (!isObject(item)) throw new RuntimeError('transaction.plan resources must be strings or objects');
+    const rawPath = item.path ?? item.relative_path;
+    if (typeof rawPath !== 'string' || !rawPath) throw new RuntimeError('transaction.plan resource path is required');
+    return {
+      action: String(item.action ?? defaultAction),
+      kind: String(item.kind ?? defaultKind),
+      path: validateResourcePath(rawPath)
+    };
+  });
+  const targetRootValue = String(args.target_root_value ?? 'target_root');
+  return {
+    kind: String(args.plan_kind ?? 'command-generation/transaction-plan/v1'),
+    dry_run: true,
+    target_root: String(values[targetRootValue] ?? ''),
+    schema_ref: String(args.schema_ref ?? ''),
+    actions,
+    mutation_safety: {
+      apply_status: 'package-owned',
+      apply_primitive: String(args.apply_primitive ?? ''),
+      conflict_hooks: stringList(args.conflict_hooks ?? [], 'transaction.plan conflict_hooks'),
+      provenance_hooks: stringList(args.provenance_hooks ?? [], 'transaction.plan provenance_hooks'),
+      rule: 'Generic transaction planning is dry-run only; mutating apply remains an explicit package-domain primitive.'
+    }
+  };
+}
+
+function validateResourcePath(path) {
+  const resourcePath = String(path).replace(/\\/g, '/');
+  const parts = resourcePath.split('/');
+  if (
+    !resourcePath ||
+    resourcePath.startsWith('/') ||
+    /^[A-Za-z]:/.test(parts[0] ?? '') ||
+    parts.some((part) => part === '' || part === '.' || part === '..')
+  ) {
+    throw new RuntimeError(`transaction.plan resource path must be relative and stay inside resources: ${path}`);
+  }
+  return resourcePath;
 }
 
 function executeHostPrimitive(primitive, values, args, operationId) {
@@ -307,8 +392,10 @@ function executePrimitive(primitive, values, args, operationId) {
   if (primitive === 'filesystem.glob') return globFiles(valueRoot(args, values), String(args.pattern ?? '')).map((relative_path) => ({ relative_path }));
   if (primitive === 'json.parse') return JSON.parse(String(values[String(args.source ?? 'registry_text')]));
   if (primitive === 'payload.assemble') return assemblePayload(values, args);
+  if (primitive === 'payload.view') return viewPayload(values, args);
   if (primitive === 'payload.project') return projectPayload(values, args);
   if (primitive === 'output.emit') return emitOutput(values);
+  if (primitive === 'transaction.plan') return transactionPlan(values, args);
   return executeHostPrimitive(primitive, values, args, operationId);
 }
 

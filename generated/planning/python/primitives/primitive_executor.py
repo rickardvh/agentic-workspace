@@ -17,7 +17,7 @@ import json
 import tomllib
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass, field, is_dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
 from .operation_composition import expand_operation_steps, operation_fragments
@@ -113,12 +113,20 @@ def execute_primitive(
         return _toml_table_counts(values=values, arguments=arguments, context=context)
     if primitive == "payload.assemble":
         return _assemble_payload(values=values, arguments=arguments)
+    if primitive == "payload.view":
+        return _view_payload(values=values, arguments=arguments)
     if primitive == "payload.project":
         return _project_payload(values=values, arguments=arguments)
     if primitive == "output.emit":
         return _emit_output(values=values, arguments=arguments)
+    if primitive == "transaction.plan":
+        return _transaction_plan(values=values, arguments=arguments)
     if primitive == "python.function.call":
         return _call_python_function(values=values, arguments=arguments)
+    if primitive == "operation.call":
+        return _call_operation(values=values, arguments=arguments)
+    if primitive == "operation.dispatch":
+        return _dispatch_operation(values=values, arguments=arguments)
     return execute_host_primitive(
         primitive, values=values, arguments=arguments, context=context
     )
@@ -305,6 +313,8 @@ def _assemble_payload(
         return _resolve_template(fields["template"], values=values)
     if fields.get("payload_kind") == "package-file-list":
         return _assemble_package_file_list(values=values, fields=fields)
+    if fields.get("payload_kind") == "package-resource-manifest":
+        return _assemble_package_resource_manifest(values=values, fields=fields)
     actions_from = str(fields.get("actions_from", ""))
     payload: dict[str, Any] = {
         "dry_run": bool(fields.get("dry_run", True)),
@@ -387,6 +397,59 @@ def _assemble_package_file_list(
     }
 
 
+def _assemble_package_resource_manifest(
+    *, values: dict[str, Any], fields: Mapping[str, Any]
+) -> dict[str, Any]:
+    manifest_from = str(fields.get("manifest_from", "manifest"))
+    manifest = values.get(manifest_from, {})
+    if not isinstance(manifest, Mapping):
+        raise PrimitiveExecutionError(f"{manifest_from} must be an object")
+    files_path = str(fields.get("files_path", "files"))
+    bundled_skills_path = str(
+        fields.get("bundled_skill_files_path", "bundled_skill_files")
+    )
+    files = _resolve_dotted_value(manifest, files_path)
+    bundled_skill_files = _resolve_dotted_value(manifest, bundled_skills_path)
+    return {
+        "files": _manifest_path_list(files or [], source=f"{manifest_from}.{files_path}"),
+        "default_files": _string_list(
+            fields.get("default_files", []),
+            source="payload.assemble fields.default_files",
+        ),
+        "optional_files": _string_list(
+            fields.get("optional_files", []),
+            source="payload.assemble fields.optional_files",
+        ),
+        "bundled_skill_files": _manifest_path_list(
+            bundled_skill_files or [],
+            source=f"{manifest_from}.{bundled_skills_path}",
+        ),
+        "optional_enable_commands": _string_list(
+            fields.get("optional_enable_commands", []),
+            source="payload.assemble fields.optional_enable_commands",
+        ),
+    }
+
+
+def _manifest_path_list(value: Any, *, source: str) -> list[str]:
+    if not isinstance(value, list):
+        raise PrimitiveExecutionError(f"{source} must be a list")
+    paths: list[str] = []
+    for item in value:
+        if isinstance(item, str):
+            paths.append(item)
+            continue
+        if isinstance(item, Mapping):
+            raw_path = item.get("relative_path", item.get("path"))
+            if isinstance(raw_path, str):
+                paths.append(raw_path)
+                continue
+        raise PrimitiveExecutionError(
+            f"{source} entries must be strings or objects with path"
+        )
+    return paths
+
+
 def _string_list(value: Any, *, source: str) -> list[str]:
     if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
         raise PrimitiveExecutionError(f"{source} must be a list of strings")
@@ -441,6 +504,29 @@ def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
                 )
             value = value[part]
         return value
+    if "$select_by_value" in template:
+        spec = template["$select_by_value"]
+        if not isinstance(spec, dict):
+            raise PrimitiveExecutionError("template $select_by_value must be an object")
+        choices = spec.get("choices", {})
+        if not isinstance(choices, Mapping):
+            raise PrimitiveExecutionError(
+                "template $select_by_value choices must be an object"
+            )
+        value_name = str(spec.get("value", ""))
+        selected_value = values.get(value_name)
+        selected_key = (
+            _template_choice_key(selected_value)
+            if value_name in values and selected_value is not None
+            else _template_choice_key(spec.get("default", ""))
+        )
+        if selected_key not in choices:
+            selected_key = _template_choice_key(spec.get("default", ""))
+        if selected_key not in choices:
+            raise PrimitiveExecutionError(
+                f"template $select_by_value cannot resolve choice for {value_name!r}"
+            )
+        return _resolve_template(choices[selected_key], values=values)
     if set(template) == {"$count"}:
         counted = values.get(str(template["$count"]), [])
         if not isinstance(counted, Sequence) or isinstance(counted, (str, bytes)):
@@ -482,6 +568,12 @@ def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
     }
 
 
+def _template_choice_key(value: Any) -> str:
+    if isinstance(value, bool):
+        return str(value).lower()
+    return str(value)
+
+
 def _emit_output(
     *, values: dict[str, Any], arguments: dict[str, Any] | None = None
 ) -> str:
@@ -521,6 +613,115 @@ def _emit_output(
         label = action.get("path") or action.get("id") or action.get("kind")
         lines.append(f"- {label}")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def _view_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+    source_name = str(arguments.get("source") or "result")
+    if source_name not in values:
+        raise PrimitiveExecutionError(f"payload.view source value is missing: {source_name!r}")
+    fields = _string_list(arguments.get("fields", []), source="payload.view fields")
+    limits = arguments.get("limits", {})
+    if not isinstance(limits, Mapping):
+        raise PrimitiveExecutionError("payload.view limits must be an object")
+    payload = values[source_name]
+    viewed: dict[str, Any] = {
+        "kind": str(arguments.get("view_kind") or "command-generation/payload-view/v1"),
+        "source_command": str(arguments.get("source_command") or values.get("operation_id") or ""),
+        "values": {},
+    }
+    missing: list[str] = []
+    for field_name in fields:
+        found, value = _field_by_path(payload, field_name)
+        if not found:
+            missing.append(field_name)
+            continue
+        cast(dict[str, Any], viewed["values"])[field_name] = _limited_view_value(
+            _plain_output_result(value), limit=limits.get(field_name)
+        )
+    if missing:
+        viewed["missing"] = missing
+    return viewed
+
+
+def _limited_view_value(value: Any, *, limit: Any) -> Any:
+    if not isinstance(limit, int) or isinstance(value, (str, bytes, bytearray)):
+        return value
+    if isinstance(value, Sequence):
+        return list(value[: max(limit, 0)])
+    return value
+
+
+def _transaction_plan(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+    resources_from = str(arguments.get("resources_from", "resources"))
+    raw_resources = values.get(resources_from, arguments.get("resources", []))
+    if not isinstance(raw_resources, list):
+        raise PrimitiveExecutionError("transaction.plan resources must be a list")
+    actions: list[dict[str, Any]] = []
+    default_action = str(arguments.get("default_action", "write"))
+    default_kind = str(arguments.get("default_kind", "file"))
+    for item in raw_resources:
+        if isinstance(item, str):
+            actions.append(
+                {
+                    "action": default_action,
+                    "kind": default_kind,
+                    "path": _validate_resource_path(item),
+                }
+            )
+            continue
+        if not isinstance(item, Mapping):
+            raise PrimitiveExecutionError(
+                "transaction.plan resources must be strings or objects"
+            )
+        raw_path = item.get("path", item.get("relative_path"))
+        if not isinstance(raw_path, str) or not raw_path:
+            raise PrimitiveExecutionError("transaction.plan resource path is required")
+        resource_path = _validate_resource_path(raw_path)
+        actions.append(
+            {
+                "action": str(item.get("action", default_action)),
+                "kind": str(item.get("kind", default_kind)),
+                "path": resource_path,
+            }
+        )
+    target_root_value = str(arguments.get("target_root_value", "target_root"))
+    plan: dict[str, Any] = {
+        "kind": str(arguments.get("plan_kind", "command-generation/transaction-plan/v1")),
+        "dry_run": True,
+        "target_root": str(values.get(target_root_value, "")),
+        "schema_ref": str(arguments.get("schema_ref", "")),
+        "actions": actions,
+        "mutation_safety": {
+            "apply_status": "package-owned",
+            "apply_primitive": str(arguments.get("apply_primitive", "")),
+            "conflict_hooks": _string_list(
+                arguments.get("conflict_hooks", []),
+                source="transaction.plan conflict_hooks",
+            ),
+            "provenance_hooks": _string_list(
+                arguments.get("provenance_hooks", []),
+                source="transaction.plan provenance_hooks",
+            ),
+            "rule": "Generic transaction planning is dry-run only; mutating apply remains an explicit package-domain primitive.",
+        },
+    }
+    return plan
+
+
+def _validate_resource_path(path: str) -> str:
+    resource_path = path.replace("\\", "/")
+    pure_path = PurePosixPath(resource_path)
+    raw_parts = resource_path.split("/")
+    if (
+        not resource_path
+        or pure_path.is_absolute()
+        or ":" in raw_parts[0]
+        or any(part in {"", ".", ".."} for part in raw_parts)
+    ):
+        raise PrimitiveExecutionError(
+            f"transaction.plan resource path must be relative and stay inside resources: {path!r}"
+        )
+    return resource_path
 
 
 def _project_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
@@ -705,44 +906,91 @@ def _emit_planning_module_report_text(result: dict[str, Any]) -> str:
 
 
 def _call_python_function(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
+    return _call_operation(values=values, arguments=arguments)
+
+
+def _call_operation(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
     import_module = str(arguments.get("import_module", "")).strip()
     function_name = str(arguments.get("function", "")).strip()
     if not import_module or not function_name:
         raise PrimitiveExecutionError(
-            "python.function.call requires import_module and function"
+            "operation.call requires import_module and function"
         )
     try:
         function = getattr(importlib.import_module(import_module), function_name)
     except (ImportError, AttributeError) as exc:
         raise PrimitiveExecutionError(
-            f"python.function.call cannot resolve {import_module}.{function_name}"
+            f"operation.call cannot resolve {import_module}.{function_name}"
         ) from exc
+    positional = _resolve_call_args(values=values, raw_args=arguments.get("args", []))
     kwargs = _resolve_call_kwargs(values=values, raw_kwargs=arguments.get("kwargs", {}))
-    return function(**kwargs)
+    return function(*positional, **kwargs)
+
+
+def _dispatch_operation(*, values: dict[str, Any], arguments: dict[str, Any]) -> Any:
+    raw_branches = arguments.get("branches", [])
+    if not isinstance(raw_branches, Sequence) or isinstance(raw_branches, (str, bytes)):
+        raise PrimitiveExecutionError("operation.dispatch branches must be a sequence")
+    if not raw_branches:
+        raise PrimitiveExecutionError("operation.dispatch requires at least one branch")
+    for index, raw_branch in enumerate(raw_branches):
+        if not isinstance(raw_branch, Mapping):
+            raise PrimitiveExecutionError("operation.dispatch branch must be an object")
+        branch = dict(raw_branch)
+        if not _condition_matches(branch.get("when"), values=values):
+            continue
+        branch.pop("when", None)
+        return _call_operation(values=values, arguments=branch)
+    raise PrimitiveExecutionError("operation.dispatch no branch matched")
+
+
+def _resolve_call_args(*, values: dict[str, Any], raw_args: Any) -> list[Any]:
+    if not isinstance(raw_args, Sequence) or isinstance(raw_args, (str, bytes)):
+        raise PrimitiveExecutionError("operation.call args must be a sequence")
+    return [
+        _resolve_call_argument(values=values, source=source, label=f"arg {index}")
+        for index, source in enumerate(raw_args)
+    ]
 
 
 def _resolve_call_kwargs(*, values: dict[str, Any], raw_kwargs: Any) -> dict[str, Any]:
-    if not isinstance(raw_kwargs, dict):
-        raise PrimitiveExecutionError("python.function.call kwargs must be an object")
+    if not isinstance(raw_kwargs, Mapping):
+        raise PrimitiveExecutionError("operation.call kwargs must be an object")
     kwargs: dict[str, Any] = {}
     for name, source in raw_kwargs.items():
-        if not isinstance(source, dict):
-            kwargs[str(name)] = source
-            continue
-        if "value" in source:
-            value_name = str(source["value"])
-            if value_name not in values:
-                raise PrimitiveExecutionError(
-                    f"python.function.call cannot resolve value {value_name!r}"
-                )
-            kwargs[str(name)] = values[value_name]
-        elif "literal" in source:
-            kwargs[str(name)] = source["literal"]
-        else:
-            raise PrimitiveExecutionError(
-                f"python.function.call kwarg {name!r} must declare value or literal"
-            )
+        kwargs[str(name)] = _resolve_call_argument(
+            values=values, source=source, label=f"kwarg {name!r}"
+        )
     return kwargs
+
+
+def _resolve_call_argument(*, values: dict[str, Any], source: Any, label: str) -> Any:
+    if not isinstance(source, Mapping):
+        return source
+    if "value" in source:
+        return _require_call_value(values, str(source["value"]))
+    if "literal" in source:
+        return source["literal"]
+    if "raw_value" in source:
+        return _require_call_value(values, str(source["raw_value"]))
+    if "string_value" in source or "str_value" in source:
+        value_name = str(source.get("string_value", source.get("str_value", "")))
+        return str(values.get(value_name) or source.get("default", ""))
+    if "bool_value" in source:
+        return bool(values.get(str(source["bool_value"])))
+    if "not_bool_value" in source:
+        return not bool(values.get(str(source["not_bool_value"])))
+    raise PrimitiveExecutionError(
+        f"operation.call {label} must declare value, raw_value, literal, string_value, bool_value, or not_bool_value"
+    )
+
+
+def _require_call_value(values: dict[str, Any], value_name: str) -> Any:
+    if value_name not in values:
+        raise PrimitiveExecutionError(
+            f"operation.call cannot resolve value {value_name!r}"
+        )
+    return values[value_name]
 
 
 def _resolve_dotted_value(payload: Mapping[str, Any], dotted_path: str) -> Any:

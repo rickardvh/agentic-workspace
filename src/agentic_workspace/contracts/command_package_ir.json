@@ -32,6 +32,16 @@
           "owner": "#1626 generated artifact provenance",
           "reason": "The package-owned IR loader accepts the historical Agentic Workspace schema identity and canonicalizes it to command-generation/command-package-ir/v1 before validation and rendering.",
           "migration_path": "Keep host-side proof asserting the canonical command-generation schema after loading; remove this coupling once checked-in AW command-package IR no longer uses the legacy schema identity."
+        },
+        {
+          "id": "workspace-config-output-renderer",
+          "kind": "accepted-target-renderer-boundary",
+          "paths": [
+            "command_generation/targets/python.py"
+          ],
+          "owner": "#2044 representative command semantic migration",
+          "reason": "The Python target renderer owns a generated config_output override so AW can migrate config.report emission out of the source output dispatcher while the config text profiles are still AW-specific payload shapes.",
+          "migration_path": "Replace the AW-specific config_output override with a host-neutral output/view contract once config tiny, compact, full, and selected text profiles are declared as reusable command-generation view specs across targets."
         }
       ]
     },
@@ -466,7 +476,7 @@
             {
               "primitive": "workspace.config.emit",
               "handler": "runtime_handler",
-              "function": "_emit_workspace_operation_output",
+              "function": "_emit_workspace_config_output",
               "import_module": "agentic_workspace.workspace_runtime_primitives"
             }
           ]
@@ -1340,6 +1350,12 @@
                 "selected_output_kind": "agentic-workspace/selected-output/v1",
                 "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
                 "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1"
+              },
+              {
+                "function": "_emit_workspace_config_output",
+                "implementation": "config_output",
+                "selected_output_kind": "agentic-workspace/selected-output/v1",
+                "tiny_config_kind": "agentic-workspace/config-tiny/v1"
               }
             ]
           },

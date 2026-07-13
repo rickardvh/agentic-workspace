@@ -3,7 +3,6 @@
   "$id": "command-generation/command-package-ir.schema.json",
   "title": "Command Generation Command Package IR",
   "description": "Intermediate representation for generating command package metadata and language/runtime adapters.",
-  "x-agentic-workspace-doc-role": "contract-reference",
   "type": "object",
   "required": [
     "schema_version",
@@ -830,7 +829,8 @@
                             "target_root_resolve",
                             "sectioned_payload_select",
                             "json_resource_load",
-                            "json_output_with_source_fallback"
+                            "json_output_with_source_fallback",
+                            "config_output"
                           ]
                         },
                         "generated_root": {
@@ -854,6 +854,10 @@
                           "minLength": 1
                         },
                         "sectioned_payload_kind": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "tiny_config_kind": {
                           "type": "string",
                           "minLength": 1
                         },
@@ -1708,6 +1712,12 @@
             "description": "One accepted positional argument value."
           },
           "description": "Allowed positional argument values."
+        },
+        "type": {
+          "enum": [
+            "integer"
+          ],
+          "description": "Primitive parser coercion used by generated adapters."
         },
         "help": {
           "type": "string",

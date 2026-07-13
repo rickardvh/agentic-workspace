@@ -721,6 +721,18 @@ def test_ordinary_command_migration_inventory_is_current() -> None:
     checker = _load_checker()
 
     assert checker._validate_ordinary_command_migration_inventory() == []
+    inventory = checker.python_runtime_projection_inventory_manifest()
+    config_migration = next(
+        item for item in inventory["ordinary_command_migration"]["representative_migrations"] if item["id"] == "root-config-selected-output"
+    )
+    assert config_migration["generated_runtime_handlers"] == [
+        {
+            "primitive": "workspace.config.emit",
+            "function": "_emit_workspace_config_output",
+            "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+            "implementation": "config_output",
+        }
+    ]
 
 
 def test_ordinary_command_migration_inventory_fails_closed_when_generated_command_missing() -> None:
@@ -736,6 +748,24 @@ def test_ordinary_command_migration_inventory_fails_closed_when_generated_comman
 
     missing_errors = [error for error in errors if "generated_command_module" in error and "does not exist" in error]
     assert len(missing_errors) >= 2
+
+
+def test_ordinary_command_migration_inventory_fails_closed_when_generated_handler_drifts() -> None:
+    errors = _checker_case_errors(
+        """
+        inventory = copy.deepcopy(checker.python_runtime_projection_inventory_manifest())
+        migration = next(
+            item
+            for item in inventory["ordinary_command_migration"]["representative_migrations"]
+            if item["id"] == "root-config-selected-output"
+        )
+        migration["generated_runtime_handlers"][0]["function"] = "_emit_workspace_operation_output"
+        checker.python_runtime_projection_inventory_manifest = lambda: inventory
+        _emit({"errors": checker._validate_ordinary_command_migration_inventory()})
+        """
+    )
+
+    assert any("workspace.config.emit" in error and "_emit_workspace_config_output" in error for error in errors)
 
 
 def test_runtime_semantic_exceptions_registry_is_current() -> None:
