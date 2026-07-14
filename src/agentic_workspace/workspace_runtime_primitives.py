@@ -25508,6 +25508,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "mutation_authority",
                 "proof_expectation",
                 "state_update_policy",
+                "reconciliation_proposal",
                 "next_safe_action",
             )
             if route_decision.get(key) not in (None, "", [], {})

@@ -188,6 +188,7 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
             "mutation_authority",
             "proof_expectation",
             "state_update_policy",
+            "reconciliation_proposal",
             "next_safe_action",
             "binding",
         )
@@ -963,10 +964,10 @@ def _start_payload(
         payload["route_decision"] = route_decision
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
-    task_switch_visible_by_default = route_transition in {"closeout-or-archive", "ask-for-route-decision"} or route_relation in {
-        "bounded-independent",
-        "independent-pending-scope",
-    }
+    task_switch_visible_by_default = (
+        route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"} or route_relation == "bounded-independent"
+    )
+    task_switch_visible_by_default = task_switch_visible_by_default or route_relation == "independent-pending-scope"
     if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default:
         payload["planning_safety_gate"] = planning_safety_gate
     if isinstance(route_decision, dict) and route_transition in {

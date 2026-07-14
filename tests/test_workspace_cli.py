@@ -4490,6 +4490,7 @@ def test_selector_first_gate_projects_authoritative_route_decision() -> None:
                 "allowed_claims": ["bounded-task-progress"],
                 "blocked_claims": ["active-plan-progress"],
                 "mutation_authority": "current-task",
+                "reconciliation_proposal": {"status": "current", "proposal_id": "a" * 20},
                 "proof_expectation": "focused proof",
                 "state_update_policy": "read-only",
                 "next_safe_action": {"action": "perform-bounded-task"},
@@ -4504,6 +4505,7 @@ def test_selector_first_gate_projects_authoritative_route_decision() -> None:
         "allowed_claims": ["bounded-task-progress"],
         "blocked_claims": ["active-plan-progress"],
         "mutation_authority": "current-task",
+        "reconciliation_proposal": {"status": "current", "proposal_id": "a" * 20},
         "proof_expectation": "focused proof",
         "state_update_policy": "read-only",
         "next_safe_action": {"action": "perform-bounded-task"},
@@ -4534,6 +4536,7 @@ def test_compact_start_route_decision_preserves_contract_and_binding() -> None:
             "allowed_claims": ["bounded-task-progress"],
             "blocked_claims": ["active-plan-progress"],
             "mutation_authority": "current-task",
+            "reconciliation_proposal": {"status": "current", "proposal_id": "a" * 20},
             "proof_expectation": "focused proof",
             "state_update_policy": "read-only",
             "next_safe_action": {"action": "perform-bounded-task"},
@@ -4542,6 +4545,7 @@ def test_compact_start_route_decision_preserves_contract_and_binding() -> None:
     )
     assert route["task_relation"] == "bounded-independent"
     assert route["mutation_authority"] == "current-task"
+    assert route["reconciliation_proposal"]["proposal_id"] == "a" * 20
     assert route["next_safe_action"] == {"action": "perform-bounded-task"}
     assert route["binding"] == {"status": "bound", "state_commit": "none"}
 
