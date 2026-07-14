@@ -510,8 +510,8 @@ candidates = []
 
     payload = json.loads(capsys.readouterr().out)
     gate = payload["context"]["planning_safety_gate"]
-    assert gate["gate_result"] == "active-plan-task-switch"
-    assert gate["task_switch_reconciliation"]["status"] == "active"
+    assert gate["gate_result"] == "current-task-scope-inspection-required"
+    assert gate["task_switch_reconciliation"]["status"] == "scope-inspection-required"
     assert "route_acknowledgement" not in gate["task_switch_reconciliation"]
 
 
@@ -5069,7 +5069,7 @@ candidates = []
     )
 
     gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
-    assert gate["gate_result"] == "active-plan-task-switch"
+    assert gate["gate_result"] == "current-task-scope-inspection-required"
     pressure = gate["candidate_pressure"]
     assert pressure["candidate_ids"][:2] == ["issue-2044-runtime-ownership", "issue-2044-ownership-inventory"]
     writer = gate["work_shape_study"]["decision"]["owner_writer"]
