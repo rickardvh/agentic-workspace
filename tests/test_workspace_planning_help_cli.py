@@ -172,7 +172,8 @@ def test_planning_front_door_rewrites_closeout_summary_action_to_top_level(tmp_p
     capsys.readouterr()
     record_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "closeout-command.plan.json"
     record = json.loads(record_path.read_text(encoding="utf-8"))
-    record["active_milestone"]["status"] = "completed"
+    record["lifecycle"] = "closed"
+    record["phase"] = "complete"
     record_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
 
     assert (

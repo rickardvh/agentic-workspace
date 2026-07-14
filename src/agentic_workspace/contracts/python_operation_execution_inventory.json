@@ -92,6 +92,63 @@
       "generic_behavior_audit": "Classified as package-specific-judgment; generated command surfaces own parser and help projection while workspace runtime primitives own the ordinary executor loop, terminal outcome admission, continuation execution, and local-only resume checkpointing."
     },
     {
+      "operation_id": "work-thread.carry-inspect",
+      "program": "agentic-workspace",
+      "command": "work-thread",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/work-thread.carry-inspect.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "decision-point carry ownership inspection",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "work-thread.carry-inspect.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Carry inspection applies package-specific current-work ownership, lifecycle, and ignored-local non-evidence semantics.",
+      "what_would_make_portable_later": "Represent carry ownership and lifecycle projection as schema-backed IR once current-work binding policy is portable.",
+      "generic_behavior_audit": "Generated command surfaces own parser/help; workspace runtime owns exact local carry ownership and lifecycle policy."
+    },
+    {
+      "operation_id": "work-thread.carry-select",
+      "program": "agentic-workspace",
+      "command": "work-thread",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/work-thread.carry-select.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "exact carry selection and atomic local index write",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "work-thread.carry-select.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Carry selection validates exact active ownership and writes ignored-local advisory selection atomically.",
+      "what_would_make_portable_later": "Represent exact carry selection as schema-backed IR once current-work ownership policy is portable.",
+      "generic_behavior_audit": "Generated command surfaces own parser/help; workspace runtime owns exact selection and non-evidence policy."
+    },
+    {
+      "operation_id": "work-thread.carry-prune",
+      "program": "agentic-workspace",
+      "command": "work-thread",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/work-thread.carry-prune.json",
+      "primitive_executor": null,
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "exact-key and context-revision guarded carry lifecycle repair",
+        "output emission mechanics"
+      ],
+      "status": "accepted-hand-owned-runtime-primitive",
+      "conformance_ref": "work-thread.carry-prune.process",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "Carry pruning applies exact selection, optimistic context identity, stale evidence, and cross-context preservation policy.",
+      "what_would_make_portable_later": "Represent guarded local lifecycle repair as schema-backed IR once carry staleness policy is portable.",
+      "generic_behavior_audit": "Generated command surfaces own parser/help; workspace runtime owns exact stale-repair and preservation policy."
+    },
+    {
       "operation_id": "work-thread.prune",
       "program": "agentic-workspace",
       "command": "work-thread",
@@ -1273,6 +1330,22 @@
       "runtime_boundary_reason": "Operation dataflow is generated and executed by codegen-owned run_operation_steps, but Planning lane closeout policy and provenance updates remain package-specific runtime behavior.",
       "what_would_make_portable_later": "Use command-generation#72 to render/prove the operation-call value/default/coercion adapter, then keep only the package semantic mutation primitive as the accepted runtime boundary.",
       "generic_behavior_audit": "#1657 group: value-map plus defaults/coercions. Generated operation IR and codegen-owned run_operation_steps own dataflow; Planning runtime_projection now declares the portable call mapping locally, while the domain primitive still owns mutation/safety/provenance. Portable rendering waits for command-generation#72."
+    },
+    {
+      "operation_id": "planning.owner-select.lifecycle",
+      "program": "agentic-planning",
+      "command": "owner-select",
+      "generated_transport": "generated/planning/python/cli.py",
+      "operation_contract": "operations/planning.owner-select.lifecycle.json",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": ["planning.owner-select.apply", "module-result text/json compatibility formatting"],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.owner-select.lifecycle.process",
+      "domain_runtime_primitive_refs": ["planning.owner-select.apply"],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated operation IR owns dataflow while Planning owns owner selectability, current-work binding, protected-field preservation, rollback, and receipt policy.",
+      "what_would_make_portable_later": "Keep semantic selection policy in Planning; extract only generic atomic JSON/TOML and schema-validation mechanics when portable primitives preserve the same transaction boundary.",
+      "generic_behavior_audit": "Owner selection is a new package-domain primitive; generated Python and TypeScript own parser/dispatch parity and the schema-backed receipt exposes its deterministic result."
     },
     {
       "operation_id": "planning.lane-archive.lifecycle",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys as _sys
+from datetime import UTC, datetime, timedelta
 
 # ruff: noqa: F403,F405
 from pathlib import Path as _Path
@@ -20,6 +21,37 @@ def test_planning_report_defaults_to_tiny_profile(tmp_path: Path, capsys) -> Non
     assert payload["profile"] == "tiny"
     assert "finished_work_inspection" not in payload
     assert payload["detail_commands"]["full"] == "agentic-planning report --target . --verbose --format json"
+    assert set(payload["health_dimensions"]) == {
+        "integrity",
+        "selection",
+        "continuity",
+        "external_reconciliation",
+        "proof_readiness",
+    }
+    assert all(
+        dimension["historical_sources_loaded"] is False
+        for dimension in payload["health_dimensions"].values()
+        if "historical_sources_loaded" in dimension
+    )
+
+
+def test_planning_report_verbose_audit_is_explicit_and_paginated(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    (target / ".git").mkdir(parents=True, exist_ok=True)
+    install_bootstrap(target=target)
+    evidence_root = target / ".agentic-workspace/planning/closeout-evidence"
+    for index in range(3):
+        _write(
+            evidence_root / f"closed-{index}.closeout.json",
+            json.dumps({"kind": "planning-closeout-evidence/v1", "plan_id": f"closed-{index}", "claim_level": "slice"}),
+        )
+
+    assert planning_cli.main(["report", "--target", str(target), "--verbose", "--audit-page-size", "2", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["owner_audit"]["loaded_record_count"] == 2
+    assert payload["owner_audit"]["has_more"] is True
+    assert payload["owner_audit"]["next_cursor"]
 
 
 def test_planning_report_tiny_text_uses_generated_output(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -219,6 +251,153 @@ candidates = [
     assert all(target["safe_to_prune"] is True for target in cleanup_targets)
     assert completed["apply_available"] is True
     assert completed["apply_command"] == "agentic-planning reconcile --apply-safe-prune --format json"
+
+
+def test_external_owner_observations_are_admitted_by_generic_relationship_freshness_and_authority(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    plan_path = tmp_path / ".agentic-workspace/planning/execplans/selected-owner.plan.json"
+    plan = installer_mod._build_execplan_record_from_todo_item(
+        title="Selected owner",
+        item_id="selected-owner",
+        status="active",
+        why_now="Exercise provider-neutral observations.",
+        next_action="Consume admitted generic posture.",
+        done_when="Observation admission remains non-authoritative.",
+    )
+    plan["lifecycle"] = "live"
+    plan["phase"] = "implementation"
+    _write(plan_path, json.dumps(plan, indent=2))
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "selected-owner", title = "Selected owner", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/selected-owner.plan.json", why_now = "test", next_action = "test", done_when = "test" },
+]
+queued_items = []
+""",
+    )
+    observed_at = datetime.now(UTC).replace(microsecond=0)
+
+    def observation(
+        system: str, external_id: str, status_class: str, *, binding: str = "explicit", freshness: str = "current"
+    ) -> dict[str, object]:
+        return {
+            "system": system,
+            "id": external_id,
+            "title": external_id,
+            "status": "closed" if status_class == "completed" else "open",
+            "kind": "change-request",
+            "observation_id": f"{system}:{external_id}:r1",
+            "owner": {"id": external_id, "kind": "change-request", "locator": f"{system}://{external_id}"},
+            "planning_relationship": {
+                "binding": binding,
+                "owner_id": "selected-owner" if binding == "explicit" else "",
+                "owner_ref": ".agentic-workspace/planning/execplans/selected-owner.plan.json" if binding == "explicit" else "",
+                "work_context_id": "default",
+                "evidence_refs": [external_id],
+            },
+            "status_class": status_class,
+            "external_revision": "r1",
+            "observed_at": observed_at.isoformat(),
+            "freshness": {
+                "status": freshness,
+                "observed_at": observed_at.isoformat(),
+                "expires_at": (observed_at + timedelta(hours=24)).isoformat(),
+                "max_age_seconds": 86400,
+            },
+            "blockers": (
+                [{"code": "review", "summary": "Review required", "required_action": "approve"}] if status_class == "blocked" else []
+            ),
+            "evidence_refs": [f"{system}://{external_id}"],
+            "provenance": {
+                "provider_class": system,
+                "resolver_id": f"{system}-fixture",
+                "source_ref": f"{system}://{external_id}",
+                "refresh_id": "fixture-refresh",
+            },
+            "refresh_route": f"refresh-{system}",
+            "availability": "available",
+            "contradictions": [],
+            "provider_detail": {"opaque": system},
+        }
+
+    unavailable = observation("synthetic-review", "SYN-7", "current")
+    unavailable["availability"] = "unavailable"
+    contradicted = observation("synthetic-review", "SYN-8", "current")
+    contradicted["contradictions"] = ["provider revision disagrees with admitted owner revision"]
+    items = [
+        observation("github", "GH-1", "completed"),
+        observation("synthetic-review", "SYN-1", "completed"),
+        observation("synthetic-review", "SYN-2", "blocked"),
+        observation("synthetic-review", "SYN-3", "current", freshness="stale"),
+        observation("synthetic-review", "SYN-4", "current", binding="ambiguous"),
+        observation("synthetic-review", "SYN-5", "current", binding="unrelated"),
+        observation("synthetic-review", "SYN-6", "failed"),
+        unavailable,
+        contradicted,
+    ]
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        items=items,
+    )
+
+    loaded = installer_mod._load_external_intent_evidence(tmp_path)
+    by_id = {item["owner"]["id"]: item for item in loaded["items"]}
+
+    assert (
+        by_id["GH-1"]["admission"]
+        == by_id["SYN-1"]["admission"]
+        == {
+            "state": "externally-completed-awaiting-admission",
+            "reason_code": "external-completion-is-not-planning-proof-or-intent-satisfaction",
+        }
+    )
+    assert by_id["SYN-2"]["admission"]["state"] == "externally-blocked"
+    assert by_id["SYN-3"]["admission"]["state"] == "stale"
+    assert by_id["SYN-4"]["admission"]["state"] == "ambiguous"
+    assert by_id["SYN-5"]["admission"]["state"] == "unrelated"
+    assert by_id["SYN-6"]["admission"]["state"] == "contradicted"
+    assert by_id["SYN-7"]["admission"]["state"] == "unavailable"
+    assert by_id["SYN-8"]["admission"]["state"] == "contradicted"
+    assert loaded["relevant_observation_count"] == 7
+    reconcile = planning_reconcile(target=tmp_path)
+    inputs = reconcile["external_observation_inputs"]
+    assert inputs["mutation_authority"] == "none"
+    assert all("provider_detail" not in item for item in inputs["observations"])
+    assert "#2262" in inputs["proof_boundary"]
+
+
+def test_unmatched_external_backlog_stays_out_of_ordinary_planning_pressure(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    before_state = state_path.read_text(encoding="utf-8")
+    items = [
+        {
+            "system": "synthetic-tracker",
+            "id": f"EXT-{index}",
+            "title": f"Unmatched {index}",
+            "status": "open",
+            "kind": "work-item",
+        }
+        for index in range(1000)
+    ]
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json",
+        items=items,
+    )
+
+    summary = planning_summary(target=tmp_path, profile="full")
+    current = summary["intent_validation_contract"]["current_external_work"]
+
+    assert current["item_count"] == 1000
+    assert current["relevant_observation_count"] == 0
+    assert current["unmatched_backlog_count"] == 1000
+    assert current["admitted_observations"] == []
+    assert current["untracked_open_count"] == 0
+    assert "EXT-999" not in json.dumps(current)
+    assert len(json.dumps(current)) < 2500
+    assert state_path.read_text(encoding="utf-8") == before_state
 
 
 def test_planning_reconcile_applies_only_safe_prune_targets(tmp_path: Path) -> None:

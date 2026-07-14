@@ -1,0 +1,162 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "owner-select",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Never create or overwrite an owner body.",
+    "Local current-work selection is the default; checked-in shared selection requires explicit mode and reason.",
+    "Validate Planning and current-work revisions, owner lifecycle/schema, and lane relationships before writing.",
+    "Rollback all touched surfaces when mutation or receipt validation fails."
+  ],
+  "id": "planning.owner-select.lifecycle",
+  "inputs": [
+    {
+      "name": "owner",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "owner_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "mode",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "reason",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "current_work_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_current_work_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Resolve, validate, and atomically select one existing owner.",
+        "id": "apply_owner_selection",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.owner-select.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the exact delta and schema-backed receipt.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated targets own parser and dispatch parity while Planning owns owner selection policy."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "focused owner-select tests cover preservation, no-op, negative cases, dry-run, rollback, receipt validation, and reconciliation composition",
+    "generated Python and TypeScript commands execute equivalent operation IR"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/planning/execplans/"
+    },
+    {
+      "required": true,
+      "surface": ".agentic-workspace/planning/state.toml"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/lanes/"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/planning/owner-selection.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve, validate, and atomically select one existing owner.",
+      "id": "apply_owner_selection",
+      "uses": "planning.owner-select.apply"
+    },
+    {
+      "description": "Emit the exact delta and schema-backed receipt.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Select an existing Planning owner without creating or overwriting it.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/planning/owner-selection.json",
+      "when": "local mode and not a dry run"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/state.toml",
+      "when": "explicit shared mode and not a dry run"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/planning/owner-selection-receipt.json",
+      "when": "a non-no-op mutation succeeds"
+    }
+  ]
+}

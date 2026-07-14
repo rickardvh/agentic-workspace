@@ -33,12 +33,17 @@ from repo_planning_bootstrap.installer import (
     promote_decomposition_lane_to_lane_record,
     promote_todo_item_to_execplan,
     record_delegation_decision,
+    select_existing_owner,
 )
 
 
 def load_planning_report_operation(values: dict, _arguments: dict, _context) -> dict | str:
     if values.get("verbose"):
-        report = planning_report(target=values.get("target"))
+        report = planning_report(
+            target=values.get("target"),
+            audit_cursor=str(values.get("audit_cursor") or ""),
+            audit_page_size=int(values.get("audit_page_size") or 25),
+        )
         if str(values.get("format") or "text") != "json":
             with contextlib.redirect_stdout(io.StringIO()) as output:
                 _print_report(report)
@@ -92,6 +97,8 @@ def _planning_operation_value(values: dict, source: str, coerce: str = "raw", de
         return bool(values.get(source))
     if coerce == "not_bool":
         return not bool(values.get(source))
+    if coerce == "false":
+        return False
     value = values.get(source)
     if value is None and default is not None:
         return default
@@ -231,6 +238,24 @@ def apply_planning_lane_activate_operation(values: dict, _arguments: dict, _cont
     )
 
 
+def apply_planning_owner_select_operation(values: dict, _arguments: dict, _context):
+    return _call_planning_operation(
+        select_existing_owner,
+        values,
+        positional=(("owner", "str", ""),),
+        keywords=(
+            ("owner_ref", "owner_ref", "str", ""),
+            ("target", "target", "raw", None),
+            ("mode", "mode", "str", "local"),
+            ("reason", "reason", "str", ""),
+            ("current_work_id", "current_work_id", "str", ""),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("expected_current_work_revision", "expect_current_work_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
+    )
+
+
 def apply_planning_lane_close_operation(values: dict, _arguments: dict, _context):
     return _call_planning_operation(
         close_lane_record,
@@ -321,7 +346,7 @@ def apply_planning_closeout_operation(values: dict, _arguments: dict, _context):
             ("proof_from", "proof_from", "str", "last"),
             ("proof_file", "proof_file", "raw", None),
             ("residue_owner", "residue_owner", "raw", None),
-            ("retain_archive", "discard_archive", "not_bool", None),
+            ("retain_archive", "discard_archive", "false", None),
             ("what_happened", "what_happened", "raw", None),
             ("scope_touched", "scope_touched", "raw", None),
             ("changed_surfaces", "changed_surfaces", "raw", None),

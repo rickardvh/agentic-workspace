@@ -1,0 +1,27 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "planning.owner-select.lifecycle.process",
+  "operation_id": "planning.owner-select.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": ["{agentic_planning_cli}", "owner-select", "--owner", "tmp-owner", "--target", ".", "--dry-run", "--format", "json"],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "owner-select-dry-run",
+      "files": {
+        ".git/.keep": "",
+        ".agentic-workspace/planning/execplans/tmp-owner.plan.json": "{\n  \"kind\": \"planning-execplan/v1\",\n  \"id\": \"tmp-owner\",\n  \"title\": \"Tmp Owner\",\n  \"owner_level\": \"slice\",\n  \"lifecycle\": \"live\",\n  \"phase\": \"implementation\",\n  \"revision\": 1,\n  \"intent\": {\"outcome\": \"Select this owner.\", \"non_goals\": []},\n  \"parent\": {\"owner_id\": \"none\", \"contribution\": \"bounded fixture\", \"closure_boundary\": \"slice\"},\n  \"scope\": {\"owned\": [\"fixture\"], \"effects\": []},\n  \"relationships\": {\"selection\": {\"state\": \"unselected\", \"owner\": \"current-work context\"}, \"proof_posture\": {\"state\": \"pending\", \"refs\": []}, \"external_posture\": {\"state\": \"unobserved\", \"refs\": []}},\n  \"references\": [],\n  \"next_action\": \"Run fixture proof.\",\n  \"blockers\": [],\n  \"proof\": {\"claims\": [\"Selection succeeds.\"], \"requirements\": [\"fixture proof\"], \"refs\": []},\n  \"continuation\": {\"owner\": \"none\", \"residual_intent\": \"none\"}\n}\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {"code": 0},
+    "stdout": {"format": "json", "field_assertions": [{"path": ["dry_run"], "equals": true}, {"path": ["operation_receipt", "outcome"], "equals": "dry-run"}]},
+    "stderr": {"allow_non_empty": false},
+    "filesystem": {"allowed_write_paths": [], "required_paths": [".git/.keep"], "forbidden_paths": [".agentic-workspace/local/planning/owner-selection.json"]},
+    "idempotency": {"run_twice": true},
+    "safety": {"no_writes_outside_repo_root": true}
+  }
+}

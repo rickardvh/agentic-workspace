@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/decision_point_carry_inspect_result.schema.json",
+  "title": "Decision-point carry inspect result",
+  "description": "Exact ignored-local carry ownership, lifecycle, and safe recovery projection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "status", "path", "selected_key", "record_count", "active_count", "records", "selection", "safe_recovery", "rule"],
+  "properties": {
+    "kind": {"description": "Versioned result kind.", "const": "agentic-workspace/decision-point-carry-inspect/v1"},
+    "status": {"description": "Whether carry storage and records are present.", "enum": ["present", "not-found", "empty"]},
+    "path": {"description": "Repo-relative ignored-local carry directory.", "const": ".agentic-workspace/local/decision-point-intent"},
+    "selected_key": {"description": "Currently selected exact carry key, or an empty string.", "type": "string"},
+    "record_count": {"description": "Total carry record count.", "type": "integer", "minimum": 0},
+    "active_count": {"description": "Carry records whose lifecycle is active.", "type": "integer", "minimum": 0},
+    "records": {"description": "Exact carry records with ownership and lifecycle facts.", "type": "array", "items": {"type": "object"}},
+    "selection": {"description": "Current supported selection receipt, when present.", "type": "object"},
+    "safe_recovery": {
+      "description": "Copyable exact-selection recovery commands.",
+      "type": "object",
+      "required": ["select", "prune"],
+      "properties": {
+        "select": {"description": "Command template for selecting one carry.", "type": "string"},
+        "prune": {"description": "Command template for pruning a positively stale selected carry.", "type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "rule": {"description": "Safety rule governing exact carry recovery.", "type": "string"}
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

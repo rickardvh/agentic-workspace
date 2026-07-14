@@ -80,7 +80,15 @@ lanes = []
 candidates = []
 """,
     )
-    _write_execplan_record(plan_path, item_id="active-plan", status="in-progress")
+    record = installer_mod._build_execplan_record_from_todo_item(
+        title="Active Plan",
+        item_id="active-plan",
+        status="in-progress",
+        why_now="prove delegation decision recording.",
+        next_action="record the bounded route.",
+        done_when="the route is represented as a typed relationship.",
+    )
+    installer_mod._write_execplan_record(record_path=plan_path, record=record)
 
     result = record_delegation_decision(
         target=tmp_path,
@@ -92,9 +100,10 @@ candidates = []
 
     assert any(action.kind == "updated" and action.path == plan_path for action in result.actions)
     record = json.loads(plan_path.read_text(encoding="utf-8"))
-    assert record["post_decomposition_delegation"]["status"] == "recorded"
-    assert record["post_decomposition_delegation"]["route chosen"] == "keep-local"
-    assert record["delegation_outcome_feedback"]["route skipped reason"] == "tightly coupled root routing and package checker change"
+    assert record["relationships"]["delegation"]["state"] == "recorded"
+    assert record["relationships"]["delegation"]["route"] == "keep-local"
+    assert record["relationships"]["delegation"]["reason"] == "tightly coupled root routing and package checker change"
+    assert record["specialist_contracts"][0]["kind"] == "planning-delegation/v1"
 
 
 def test_delegation_decision_requires_skip_reason_for_keep_local(tmp_path: Path) -> None:
@@ -381,8 +390,8 @@ candidates = []
         next_action="Clarify the product intent and user policy boundaries before implementation.",
         done_when="first implementation slice can be shaped safely.",
     )
-    record["execplan_profile"]["task_shape"] = "epic"
-    record["canonical_core"]["requested_outcome"] = "Clarify product intent and user policy boundaries before implementation."
+    record["specialist_contracts"] = [{"kind": "planning-epic/v1", "target": "GitHub #product-epic", "revision": 1}]
+    record["intent"]["outcome"] = "Clarify product intent and user policy boundaries before implementation."
     installer_mod._write_execplan_record(
         record_path=tmp_path / ".agentic-workspace/planning/execplans/product-epic.plan.json",
         record=record,

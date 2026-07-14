@@ -46,6 +46,24 @@
       "migration_status": "draft-contract-only"
     },
     {
+      "id": "work-thread.carry-inspect",
+      "path": "operations/work-thread.carry-inspect.json",
+      "command": "work-thread",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "work-thread.carry-select",
+      "path": "operations/work-thread.carry-select.json",
+      "command": "work-thread",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "work-thread.carry-prune",
+      "path": "operations/work-thread.carry-prune.json",
+      "command": "work-thread",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "work-thread.select",
       "path": "operations/work-thread.select.json",
       "command": "work-thread",
@@ -367,6 +385,12 @@
       "id": "planning.lane-archive.lifecycle",
       "path": "operations/planning.lane-archive.lifecycle.json",
       "command": "lane-archive",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.owner-select.lifecycle",
+      "path": "operations/planning.owner-select.lifecycle.json",
+      "command": "owner-select",
       "migration_status": "runtime-consumed"
     },
     {

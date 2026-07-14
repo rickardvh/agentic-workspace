@@ -1,0 +1,35 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "work-thread.carry-prune",
+  "command_surface": {"command": "work-thread", "subcommand": "carry-prune", "format_option": "format"},
+  "summary": "Mark one exactly selected stale decision-point carry without archiving its owner.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "key", "source": "cli-option", "required": true},
+    {"name": "expect_context_id", "source": "cli-option", "required": true},
+    {"name": "reason", "source": "cli-option", "required": true},
+    {"name": "dry_run", "source": "cli-option", "required": false},
+    {"name": "format", "source": "cli-option", "required": false}
+  ],
+  "output": {"kind": "text-or-json", "schema_ref": "schemas/decision_point_carry_prune_result.schema.json"},
+  "effects": {"read_only": false, "destructive": true, "idempotent": true, "writes_repo_state": false, "requires_preflight_gate": false},
+  "locality": {"requires_repo": false, "network": "forbidden", "outside_repo_writes": "forbidden"},
+  "reads": [{"surface": ".agentic-workspace/local/decision-point-intent/*.json", "required": false}],
+  "writes": [
+    {"surface": ".agentic-workspace/local/decision-point-intent/<key>.json", "required": true, "when": "mark the exact selected carry stale"},
+    {"surface": ".agentic-workspace/local/decision-point-intent/selection.json", "required": false, "when": "clear the consumed local selection"}
+  ],
+  "steps": [
+    {"id": "resolve_root", "uses": "workspace.target-root.resolve", "description": "Resolve the target root."},
+    {"id": "prune_carry", "uses": "workspace.local-work-thread.prune", "description": "Apply exact-key and context-revision guarded local carry repair."},
+    {"id": "emit_output", "uses": "output.emit", "description": "Emit the prune result and preservation claim."}
+  ],
+  "guards": [
+    "Require prior exact selection, matching context id, and a concrete stale reason.",
+    "Mark only the selected carry stale; preserve every other carry and the Planning owner.",
+    "Dry-run performs no writes."
+  ],
+  "proof": ["operation contract validates against operation.schema.json", "focused carry lifecycle tests prove dry-run, CAS failure, exact prune, and preservation"],
+  "migration_status": "runtime-consumed"
+}

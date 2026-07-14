@@ -3,10 +3,40 @@
   "$id": "agentic-planning/planning-execplan.schema.json",
   "title": "Planning Execplan Record",
   "type": "object",
-  "required": ["kind", "title", "goal", "non_goals", "active_milestone", "validation_commands", "completion_criteria"],
+  "required": ["kind", "title"],
+  "anyOf": [
+    { "required": ["id", "owner_level", "lifecycle", "phase", "revision", "intent", "parent", "scope", "relationships", "next_action", "proof", "continuation"] },
+    { "required": ["execplan_profile", "canonical_core", "goal", "non_goals", "active_milestone", "validation_commands", "completion_criteria"] },
+    { "required": ["goal", "non_goals", "active_milestone", "validation_commands", "completion_criteria"] }
+  ],
   "additionalProperties": false,
   "properties": {
     "kind": { "const": "planning-execplan/v1" },
+    "id": { "type": "string", "minLength": 1 },
+    "owner_level": { "enum": ["slice", "lane", "epic"] },
+    "lifecycle": { "enum": ["planned", "live", "blocked", "closed", "archived", "unknown"] },
+    "phase": { "enum": ["shaping", "implementation", "validation", "closeout", "complete", "unknown"] },
+    "revision": { "type": "integer", "minimum": 1 },
+    "intent": { "$ref": "#/$defs/string_map" },
+    "parent": { "$ref": "#/$defs/string_map" },
+    "scope": { "$ref": "#/$defs/string_map" },
+    "relationships": { "type": "object", "additionalProperties": { "type": "object" } },
+    "next_action": { "type": "string" },
+    "proof": { "type": "object", "additionalProperties": true },
+    "continuation": { "$ref": "#/$defs/string_map" },
+    "specialist_contracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "target"],
+        "properties": {
+          "kind": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "minLength": 1 },
+          "revision": { "type": ["string", "integer"] }
+        }
+      }
+    },
     "decision_point_intent_confirmation_required": { "type": "boolean" },
     "decision_point_intent_confirmation": { "type": "object", "additionalProperties": true },
     "title": { "type": "string" },

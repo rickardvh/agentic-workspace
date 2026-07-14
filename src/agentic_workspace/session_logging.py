@@ -523,7 +523,10 @@ def _session_registry_lock(*, target_root: Path) -> Iterator[None]:
         try:
             lock_path.mkdir()
             break
-        except FileExistsError:
+        except (FileExistsError, PermissionError):
+            # Windows can report an existing directory lock as access denied
+            # while another thread is creating or removing it. Treat that
+            # transient shape as ordinary lock contention.
             try:
                 stale = time.time() - lock_path.stat().st_mtime > 30
             except OSError:

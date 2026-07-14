@@ -30,6 +30,7 @@ from . import planning_lane_create_lifecycle as _command_planning_lane_create_li
 from . import planning_lane_promote_lifecycle as _command_planning_lane_promote_lifecycle
 from . import planning_list_files_report as _command_planning_list_files_report
 from . import planning_new_plan_lifecycle as _command_planning_new_plan_lifecycle
+from . import planning_owner_select_lifecycle as _command_planning_owner_select_lifecycle
 from . import planning_promote_to_plan_lifecycle as _command_planning_promote_to_plan_lifecycle
 from . import planning_prompt_render as _command_planning_prompt_render
 from . import planning_reconcile_report as _command_planning_reconcile_report
@@ -61,6 +62,7 @@ GENERATED_COMMAND_HANDLERS = {
     'planning.lane-promote.lifecycle': _command_planning_lane_promote_lifecycle.run,
     'planning.list-files.report': _command_planning_list_files_report.run,
     'planning.new-plan.lifecycle': _command_planning_new_plan_lifecycle.run,
+    'planning.owner-select.lifecycle': _command_planning_owner_select_lifecycle.run,
     'planning.promote-to-plan.lifecycle': _command_planning_promote_to_plan_lifecycle.run,
     'planning.prompt.render': _command_planning_prompt_render.run,
     'planning.reconcile.report': _command_planning_reconcile_report.run,

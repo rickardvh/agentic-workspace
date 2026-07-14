@@ -76,6 +76,69 @@
       ],
       "recorded_by": "agent",
       "notes": "Owner is the root workspace CLI test suite because the trust question is command-facing setup guidance, not package-local Planning or Memory state semantics."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "verification_proof_decision_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "uv run pytest tests/test_workspace_session_logging.py tests/test_workspace_implement_cli.py packages/planning/tests/test_archive.py -q; uv run pytest tests/test_workspace_cli.py tests/test_generated_tool_conformance.py -q; make test-workspace; make lint-workspace",
+      "changed_paths": [
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_implement_cli.py",
+        "tests/test_workspace_session_logging.py",
+        "tests/test_workspace_planning_help_cli.py",
+        "packages/planning/tests/test_archive.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Issue #2258 adds behavior-class coverage for stable current-work identity, relation classification, owner invalidation and selection, multiple-owner ambiguity, exact carry recovery, closeout preservation, and compact-scaffold compatibility. The tests extend rather than replace the existing workspace and Planning proof owners."
+    },
+    {
+      "requirement_id": "test_evidence_change_decision",
+      "evidence_label": "test_evidence_owner_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "make test-workspace; make test-planning; uv run pytest tests/test_workspace_cli.py -q",
+      "changed_paths": [
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_implement_cli.py",
+        "tests/test_workspace_session_logging.py",
+        "tests/test_workspace_planning_help_cli.py",
+        "packages/planning/tests/test_archive.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Root workspace suites own cross-command identity and recovery behavior; the Planning archive suite owns exact selected-carry closeout semantics. Full workspace and Planning suites passed after focused boundary proof."
+    },
+    {
+      "requirement_id": "subsystem:workspace-cli-runtime",
+      "evidence_label": "workspace_runtime_proof",
+      "status": "satisfied",
+      "source_kind": "command",
+      "command": "uv run pytest tests/test_workspace_cli.py tests/test_generated_tool_conformance.py -q; make test-workspace; make lint-workspace; make typecheck; uv run python scripts/check/run_operation_conformance_tests.py --target all; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
+      "changed_paths": [
+        "src/agentic_workspace/current_work_context.py",
+        "src/agentic_workspace/session_logging.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_implement.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_startup.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Issue #2258 proves the command-facing current-work and carry lifecycle across start, implement, work-thread inspect/select/prune, summary, status/doctor, and Planning closeout. Runtime mirror shape is in sync and all generated operation conformance cases pass."
+    },
+    {
+      "requirement_id": "subsystem:workspace-cli-runtime",
+      "evidence_label": "tiny_surface_compatibility_review",
+      "status": "satisfied",
+      "source_kind": "manual-review",
+      "command": "uv run pytest tests/test_workspace_cli.py tests/test_generated_tool_conformance.py -q; make test-workspace",
+      "changed_paths": [
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "tests/test_workspace_cli.py",
+        "tests/test_workspace_implement_cli.py"
+      ],
+      "recorded_by": "agent",
+      "notes": "Exact carry status is nested under existing current-work/work-thread projections and detailed recovery stays behind work-thread carry-inspect/select/prune. Default start remains forecast-only and does not persist carries; compact start, implement, summary, status, and doctor contracts remain covered by the full workspace suite."
     }
   ]
 }

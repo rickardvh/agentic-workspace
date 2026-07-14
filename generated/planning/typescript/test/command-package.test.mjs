@@ -9,7 +9,7 @@ const commandPackage = JSON.parse(readFileSync(new URL('../resources/command_pac
 const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 test('generated package resource exposes expected commands', () => {
-  const expected = ["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"];
+  const expected = ["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "owner-select", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"];
   assert.deepEqual(commandPackage.commands.map((command) => command.command.name).sort(), expected);
   assert.match(source, /resources\/command_package\.json/);
   assert.doesNotMatch(source, /adapter_id/);

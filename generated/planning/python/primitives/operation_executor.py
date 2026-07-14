@@ -37,6 +37,8 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'target': getattr(args, 'target', None),
                 'format': getattr(args, 'format', 'text'),
                 'verbose': getattr(args, 'verbose', False),
+                'audit_cursor': getattr(args, 'audit_cursor', ''),
+                'audit_page_size': getattr(args, 'audit_page_size', 25),
                 'task': getattr(args, 'task', None),
                 'changed': getattr(args, 'changed', []),
                 'apply_safe_prune': getattr(args, 'apply_safe_prune', False),
@@ -45,6 +47,11 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'apply_lane_reconcile': getattr(args, 'apply_lane_reconcile', False),
                 'item': getattr(args, 'item', ''),
                 'reason': getattr(args, 'reason', ''),
+                'owner': getattr(args, 'owner', ''),
+                'owner_ref': getattr(args, 'owner_ref', ''),
+                'mode': getattr(args, 'mode', 'local'),
+                'current_work_id': getattr(args, 'current_work_id', ''),
+                'expect_current_work_revision': getattr(args, 'expect_current_work_revision', ''),
                 'issue': getattr(args, 'issue', ''),
                 'slug': getattr(args, 'slug', ''),
                 'title': getattr(args, 'title', ''),
@@ -132,6 +139,8 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'target': values.get('target', None),
                 'format': values.get('format', 'text'),
                 'verbose': values.get('verbose', False),
+                'audit_cursor': values.get('audit_cursor', ''),
+                'audit_page_size': values.get('audit_page_size', 25),
                 'task': values.get('task', None),
                 'changed': values.get('changed', []),
                 'apply_safe_prune': values.get('apply_safe_prune', False),
@@ -140,6 +149,11 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'apply_lane_reconcile': values.get('apply_lane_reconcile', False),
                 'item': values.get('item', ''),
                 'reason': values.get('reason', ''),
+                'owner': values.get('owner', ''),
+                'owner_ref': values.get('owner_ref', ''),
+                'mode': values.get('mode', 'local'),
+                'current_work_id': values.get('current_work_id', ''),
+                'expect_current_work_revision': values.get('expect_current_work_revision', ''),
                 'issue': values.get('issue', ''),
                 'slug': values.get('slug', ''),
                 'title': values.get('title', ''),
@@ -236,6 +250,7 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
         'planning.lane-promote.lifecycle',
         'planning.list-files.report',
         'planning.new-plan.lifecycle',
+        'planning.owner-select.lifecycle',
         'planning.promote-to-plan.lifecycle',
         'planning.prompt.render',
         'planning.reconcile.report',
@@ -271,6 +286,7 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
                 'planning.lane-promote.apply': _handle_planning_lane_promote_apply,
                 'planning.lane-activate.apply': _handle_planning_lane_activate_apply,
                 'planning.lane-close.apply': _handle_planning_lane_close_apply,
+                'planning.owner-select.apply': _handle_planning_owner_select_apply,
                 'planning.lane-archive.apply': _handle_planning_lane_archive_apply,
                 'planning.archive-plan.apply': _handle_planning_archive_plan_apply,
                 'planning.closeout.apply': _handle_planning_closeout_apply,
@@ -374,6 +390,12 @@ def _handle_planning_lane_close_apply(values: dict[str, Any], arguments: dict[st
     from .planning_runtime import apply_planning_lane_close_operation
 
     return apply_planning_lane_close_operation(values, arguments, context)
+
+
+def _handle_planning_owner_select_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_owner_select_operation
+
+    return apply_planning_owner_select_operation(values, arguments, context)
 
 
 def _handle_planning_lane_archive_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:

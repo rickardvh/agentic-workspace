@@ -1549,6 +1549,26 @@ def test_checker_treats_closeout_evidence_as_canonical_planning_surface(tmp_path
     assert not [warning for warning in warnings if warning.warning_class == "planning_artifact_freehand"]
 
 
+def test_checker_treats_lane_records_as_canonical_planning_surface(tmp_path: Path) -> None:
+    mod = _load_module(_checker_script_path(), "planning_lane_canonical")
+    _write(
+        tmp_path / ".agentic-workspace/planning/lanes/issue-2279-planning-owner-graph.lane.json",
+        json.dumps(
+            {
+                "kind": "planning-lane/v1",
+                "id": "issue-2279-planning-owner-graph",
+                "title": "Planning owner graph",
+                "active_milestone": "issue-2282-compact-owner-records",
+            },
+            indent=2,
+        ),
+    )
+
+    warnings = mod.gather_planning_warnings(repo_root=tmp_path)
+
+    assert not [warning for warning in warnings if warning.warning_class == "planning_artifact_freehand"]
+
+
 def test_checker_warns_for_noncanonical_planning_records_directory(tmp_path: Path) -> None:
     mod = _load_module(_checker_script_path(), "planning_records_artifacts")
     _write(

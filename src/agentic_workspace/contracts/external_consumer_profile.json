@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:d45174af0cd36546153a553c9c46bc6ff9e1393c8527d5e1ceeb59d420dd439e",
+    "fingerprint": "sha256:30f48d427a32aea9d9f33076b5a2af60ddd546a26864fac2fccb2bba1aea0ba7",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -150,10 +150,10 @@
       },
       "effects": {
         "read_only": false,
-        "destructive": true,
-        "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
       },
       "targets": {
         "python": {
@@ -780,10 +780,10 @@
       },
       "effects": {
         "read_only": false,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "destructive": true,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
       },
       "targets": {
         "python": {
@@ -4932,6 +4932,99 @@
       }
     },
     {
+      "id": "planning.owner-select.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.owner-select.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:70d3530ffc59c4095b90402f47047924e716bc6602b410790ee829d728422611"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-planning",
+          "path": "operations/planning.owner-select.lifecycle.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "path": "resources/operations/planning.owner-select.lifecycle.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "planning-owner-selection-receipt.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/planning/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/planning/typescript"
+        }
+      },
+      "conformance": [
+        "planning.owner-select.lifecycle.process"
+      ],
+      "external_consumption": {
+        "status": "internal",
+        "runtime_exceptions": [
+          {
+            "owner": "planning-bootstrap",
+            "scope": "owner resolution and lifecycle policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.owner-select.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "current-work binding",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.owner-select.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "atomic Planning mutation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.owner-select.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.owner-select.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
       "id": "planning.promote-to-plan.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.promote-to-plan.lifecycle.json",
@@ -5174,7 +5267,7 @@
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.report.report.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:018f238207cbf5f44fa5dbb9c702b614e8d393f0a3442fc8c6e478b86be9734f"
+        "fingerprint": "sha256:e0d35edeb7ec838a2bb5b09ad7553f8f0b0182e0046219c2112214cb1c1150bc"
       },
       "operation_resources": {
         "python": {
@@ -7421,6 +7514,459 @@
       }
     },
     {
+      "id": "work-thread.carry-inspect",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/work-thread.carry-inspect.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:dfe62be41f85426a11be9b1ccecef8a9021d1c7a3884a9d33200ccad8dd8d77a"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/work-thread.carry-inspect.json",
+          "exists": false
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/work-thread.carry-inspect.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "local_work_thread_prune_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "work-thread.prune.process",
+        "work-thread.select.process",
+        "work-thread.carry-inspect.process",
+        "work-thread.carry-select.process",
+        "work-thread.carry-prune.process"
+      ],
+      "external_consumption": {
+        "status": "internal",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry inspect",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry select",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry prune",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only work-thread prune",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "target root validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "work-thread.carry-prune",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/work-thread.carry-prune.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:4fda47d488cd506369c1b686a695bafa1532b8f53a95a32741fbba151f29b9df"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/work-thread.carry-prune.json",
+          "exists": false
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/work-thread.carry-prune.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "local_work_thread_prune_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "work-thread.prune.process",
+        "work-thread.select.process",
+        "work-thread.carry-inspect.process",
+        "work-thread.carry-select.process",
+        "work-thread.carry-prune.process"
+      ],
+      "external_consumption": {
+        "status": "internal",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry inspect",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry select",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry prune",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only work-thread prune",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "target root validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "work-thread.carry-select",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/work-thread.carry-select.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:ed3f47f897969d66e8de4e37f2b66d931356387179aacad064666bb13c2fcccb"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/work-thread.carry-select.json",
+          "exists": false
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/work-thread.carry-select.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "local_work_thread_prune_result.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": true,
+        "writes_repo_state": false,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "work-thread.prune.process",
+        "work-thread.select.process",
+        "work-thread.carry-inspect.process",
+        "work-thread.carry-select.process",
+        "work-thread.carry-prune.process"
+      ],
+      "external_consumption": {
+        "status": "internal",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry inspect",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry select",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry prune",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only work-thread prune",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "target root validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
       "id": "work-thread.prune",
       "owner": "root-workspace",
       "operation_contract": "src/agentic_workspace/contracts/operations/work-thread.prune.json",
@@ -7481,18 +8027,63 @@
       },
       "conformance": [
         "work-thread.prune.process",
-        "work-thread.select.process"
+        "work-thread.select.process",
+        "work-thread.carry-inspect.process",
+        "work-thread.carry-select.process",
+        "work-thread.carry-prune.process"
       ],
       "external_consumption": {
         "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "root-workspace",
+            "scope": "local-only decision-point carry inspect",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry select",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry prune",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
             "scope": "local-only work-thread prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
               "work-thread.prune.process",
-              "work-thread.select.process"
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -7502,7 +8093,10 @@
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
               "work-thread.prune.process",
-              "work-thread.select.process"
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -7512,7 +8106,10 @@
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
               "work-thread.prune.process",
-              "work-thread.select.process"
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
           }
@@ -7581,18 +8178,63 @@
       },
       "conformance": [
         "work-thread.prune.process",
-        "work-thread.select.process"
+        "work-thread.select.process",
+        "work-thread.carry-inspect.process",
+        "work-thread.carry-select.process",
+        "work-thread.carry-prune.process"
       ],
       "external_consumption": {
         "status": "internal",
         "runtime_exceptions": [
           {
             "owner": "root-workspace",
+            "scope": "local-only decision-point carry inspect",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry select",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local-only decision-point carry prune",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "work-thread.prune.process",
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
             "scope": "local-only work-thread prune",
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
               "work-thread.prune.process",
-              "work-thread.select.process"
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -7602,7 +8244,10 @@
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
               "work-thread.prune.process",
-              "work-thread.select.process"
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
           },
@@ -7612,7 +8257,10 @@
             "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
             "proof": [
               "work-thread.prune.process",
-              "work-thread.select.process"
+              "work-thread.select.process",
+              "work-thread.carry-inspect.process",
+              "work-thread.carry-select.process",
+              "work-thread.carry-prune.process"
             ],
             "migration_dependency": "#2044"
           }

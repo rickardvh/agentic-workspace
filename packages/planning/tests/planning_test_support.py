@@ -33,6 +33,7 @@ from repo_planning_bootstrap.installer import (
     planning_report,
     planning_revision,
     planning_summary,
+    planning_summary_query,
     promote_todo_item_to_execplan,
     record_delegation_decision,
     uninstall_bootstrap,
@@ -104,7 +105,7 @@ def _write_execplan_record(
     status: str = "in-progress",
     references: list[dict[str, str]] | None = None,
 ) -> None:
-    record = installer_mod._build_execplan_record_from_todo_item(
+    record = installer_mod._build_legacy_execplan_record_from_todo_item(
         title="Plan Alpha",
         item_id=item_id,
         status=status,

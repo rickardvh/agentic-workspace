@@ -1,6 +1,6 @@
 # External Intent Evidence Contract
 
-This contract defines the optional external-planning evidence payload consumed by planning intent-validation surfaces.
+This contract defines the optional provider-neutral external-owner observation payload consumed by Planning admission, reconciliation, and route surfaces. The legacy external-intent item fields remain a compatibility input to this one contract; they are not a parallel authority.
 
 Use it when a repo has planning evidence outside the checked-in planning state and wants the product to reconcile that evidence without making any external system authoritative.
 
@@ -11,6 +11,9 @@ Use it when a repo has planning evidence outside the checked-in planning state a
 - absence of external evidence must not break summary or report
 - invalid external evidence should reduce trust visibly instead of silently failing
 - ordinary provider refreshes should write ignored local cache, not checked-in history mirrors
+- every observation is an immutable snapshot identified by `observation_id`, `external_revision`, `observed_at`, provenance, and an exact `refresh_route`
+- Planning derives admission and relevance; adapters cannot select, mutate, prove, satisfy, promote, or close a Planning owner
+- unmatched backlog stays in the bounded external-intent cache/query path and is absent from ordinary Planning pressure
 
 ## Artifact Path
 
@@ -41,7 +44,33 @@ Use it when a repo has planning evidence outside the checked-in planning state a
       "parent_id": "",
       "planning_residue_expected": "required",
       "url": "https://example.invalid/owner/repo/issues/251",
-      "source_repository": "owner/repo"
+      "source_repository": "owner/repo",
+      "observation_id": "github:issue:251:2026-04-27T12:00:00Z",
+      "owner": {
+        "id": "#251",
+        "kind": "issue",
+        "locator": "https://example.invalid/owner/repo/issues/251"
+      },
+      "status_class": "current",
+      "external_revision": "2026-04-27T12:00:00Z",
+      "observed_at": "2026-04-27T12:00:00Z",
+      "freshness": {
+        "status": "current",
+        "observed_at": "2026-04-27T12:00:00Z",
+        "expires_at": "2026-04-28T12:00:00Z",
+        "max_age_seconds": 86400
+      },
+      "blockers": [],
+      "evidence_refs": ["https://example.invalid/owner/repo/issues/251"],
+      "provenance": {
+        "provider_class": "github",
+        "resolver_id": "github-gh-cli",
+        "source_ref": "https://example.invalid/owner/repo/issues/251",
+        "refresh_id": "2026-04-27T12:00:00Z"
+      },
+      "refresh_route": "agentic-workspace external-intent refresh-github --issue #251 --storage cache",
+      "availability": "available",
+      "provider_detail": {}
     }
   ]
 }
@@ -63,6 +92,22 @@ Use it when a repo has planning evidence outside the checked-in planning state a
 - `refresh_metadata`: optional compact adapter metadata; consumers may surface it to show whether evidence may be stale
 - provider adapters should keep ordinary refreshes small; for example, a GitHub adapter defaults to open issues and requires explicit `--state all` for closed-history audits
 - `url`, `source_repository`, `labels`, and timestamp fields: optional provider details retained as evidence, not authority
+
+Planning normalizes legacy items into the observation fields above and adds:
+
+- `planning_relationship`: `explicit`, `evidence-backed`, `ambiguous`, or `unrelated`; it never defaults to the only selected owner
+- `admission.state`: `current`, `externally-blocked`, `externally-completed-awaiting-admission`, `contradicted`, `stale`, `unavailable`, `ambiguous`, or `unrelated`
+- `admission.reason_code`: a stable explanation suitable for #2281 reconciliation and #2277 routing
+
+`provider_detail` is opaque and adapter-owned. Planning admission, route, and reconciliation logic must not inspect it.
+
+## Projection and promotion
+
+Ordinary startup, summary, and selected-owner queries project only observations with a fresh explicit or evidence-backed relationship to a selected/live owner. Full unmatched evidence remains available through explicit bounded external-intent queries. A 1,000-item unrelated snapshot must not create durable candidates, owners, or ordinary route pressure.
+
+Promotion is a separate explicit decision. `external-intent refresh-github --apply-planning-candidates` requires one or more `--issue` selections; a broad refresh cannot bulk-create Planning work. Repeated refresh replaces the cache snapshot instead of retaining a second `previous_items` authority, and candidate promotion remains idempotent by stable external reference.
+
+Evidence references supplied by an adapter are observation evidence only. External completion becomes `externally-completed-awaiting-admission`; it does not satisfy Planning intent, AW proof, lane closure, or parent closure.
 
 ## Intended Use
 

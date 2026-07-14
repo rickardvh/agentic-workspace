@@ -1,0 +1,132 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "work-thread",
+    "format_option": "format",
+    "subcommand": "carry-prune"
+  },
+  "effects": {
+    "destructive": true,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Require prior exact selection, matching context id, and a concrete stale reason.",
+    "Mark only the selected carry stale; preserve every other carry and the Planning owner.",
+    "Dry-run performs no writes."
+  ],
+  "id": "work-thread.carry-prune",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "key",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_context_id",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "reason",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "work-thread.carry-prune"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/decision_point_carry_prune_result.schema.json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "focused carry lifecycle tests prove dry-run, CAS failure, exact prune, and preservation"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/decision-point-intent/*.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Apply exact-key and context-revision guarded local carry repair.",
+      "id": "prune_carry",
+      "uses": "workspace.local-work-thread.prune"
+    },
+    {
+      "description": "Emit the prune result and preservation claim.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Mark one exactly selected stale decision-point carry without archiving its owner.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/local/decision-point-intent/<key>.json",
+      "when": "mark the exact selected carry stale"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/decision-point-intent/selection.json",
+      "when": "clear the consumed local selection"
+    }
+  ]
+}

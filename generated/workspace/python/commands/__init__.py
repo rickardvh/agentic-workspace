@@ -42,6 +42,9 @@ from . import summary_report as _command_summary_report
 from . import system_intent_sync as _command_system_intent_sync
 from . import uninstall_lifecycle as _command_uninstall_lifecycle
 from . import upgrade_lifecycle as _command_upgrade_lifecycle
+from . import work_thread_carry_inspect as _command_work_thread_carry_inspect
+from . import work_thread_carry_prune as _command_work_thread_carry_prune
+from . import work_thread_carry_select as _command_work_thread_carry_select
 from . import work_thread_prune as _command_work_thread_prune
 from . import work_thread_select as _command_work_thread_select
 
@@ -78,6 +81,9 @@ GENERATED_COMMAND_HANDLERS = {
     'system-intent.sync': _command_system_intent_sync.run,
     'uninstall.lifecycle': _command_uninstall_lifecycle.run,
     'upgrade.lifecycle': _command_upgrade_lifecycle.run,
+    'work-thread.carry-inspect': _command_work_thread_carry_inspect.run,
+    'work-thread.carry-prune': _command_work_thread_carry_prune.run,
+    'work-thread.carry-select': _command_work_thread_carry_select.run,
     'work-thread.prune': _command_work_thread_prune.run,
     'work-thread.select': _command_work_thread_select.run,
 }

@@ -377,6 +377,99 @@
           ]
         },
         {
+          "help": "Select an existing Planning owner without creating or overwriting it.",
+          "name": "owner-select",
+          "options": [
+            {
+              "default": "",
+              "flags": [
+                "--owner"
+              ],
+              "help": "Stable existing owner id.",
+              "name": "owner"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--owner-ref"
+              ],
+              "help": "Explicit repo-relative existing owner reference.",
+              "name": "owner_ref"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "local",
+                "shared"
+              ],
+              "default": "local",
+              "flags": [
+                "--mode"
+              ],
+              "help": "Selection scope; local is advisory and current-work scoped.",
+              "name": "mode"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--reason"
+              ],
+              "help": "Required reason for explicit shared checked-in selection.",
+              "name": "reason"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--current-work-id"
+              ],
+              "help": "Stable current-work context id; defaults to the local context.",
+              "name": "current_work_id"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--expect-planning-revision"
+              ],
+              "help": "Optimistic Planning revision id.",
+              "name": "expect_planning_revision"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--expect-current-work-revision"
+              ],
+              "help": "Optimistic current-work selection revision.",
+              "name": "expect_current_work_revision"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Return the exact proposed delta without writing files.",
+              "name": "dry_run"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
           "help": "Create a first-class Planning lane record.",
           "name": "lane-create",
           "options": [
@@ -1555,6 +1648,22 @@
               "name": "verbose"
             },
             {
+              "flags": [
+                "--audit-cursor"
+              ],
+              "help": "Opaque cursor returned by a previous audit page.",
+              "name": "audit_cursor"
+            },
+            {
+              "default": 25,
+              "flags": [
+                "--audit-page-size"
+              ],
+              "help": "Maximum closeout records to load for this audit page.",
+              "name": "audit_page_size",
+              "type": "integer"
+            },
+            {
               "choices": [
                 "text",
                 "json"
@@ -2418,6 +2527,141 @@
               ],
               "help": "Optional repository path.",
               "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Inspect decision-point intent carries by exact current-work ownership.",
+          "name": "carry-inspect",
+          "operation_ref": {
+            "id": "work-thread.carry-inspect",
+            "path": "operations/work-thread.carry-inspect.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--key"
+              ],
+              "help": "Optional exact carry key to inspect.",
+              "name": "key"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Select one exact decision-point carry for closeout or stale recovery.",
+          "name": "carry-select",
+          "operation_ref": {
+            "id": "work-thread.carry-select",
+            "path": "operations/work-thread.carry-select.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--key"
+              ],
+              "help": "Exact active carry key to select.",
+              "name": "key",
+              "required": true
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            }
+          ]
+        },
+        {
+          "help": "Mark one exactly selected stale decision-point carry without archiving its owner.",
+          "name": "carry-prune",
+          "operation_ref": {
+            "id": "work-thread.carry-prune",
+            "path": "operations/work-thread.carry-prune.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--key"
+              ],
+              "help": "Exact selected carry key to mark stale.",
+              "name": "key",
+              "required": true
+            },
+            {
+              "flags": [
+                "--expect-context-id"
+              ],
+              "help": "Optimistic current-work context id returned by carry-select.",
+              "name": "expect_context_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Concrete evidence that the selected carry is stale.",
+              "name": "reason",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the exact mutation without changing the carry.",
+              "name": "dry_run"
             },
             {
               "choices": [

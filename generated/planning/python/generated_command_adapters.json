@@ -610,6 +610,40 @@
       },
       "status": "generated"
     },
+    "owner-select": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "owner-select",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.owner-select.lifecycle.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.owner-select.cli",
+      "operation_id": "planning.owner-select.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.owner-select.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "planning-owner-selection-receipt.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
     "promote-to-plan": {
       "command": {
         "command_manifest": "package:planning:cli",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import time
 import tomllib
 from pathlib import Path
 
@@ -90,6 +91,27 @@ candidates = [
     assert payload["selector_inventory"]["available_count"] == 9
     assert payload["selector_inventory"]["exact_select_command"] == "agentic-workspace summary --select <field.path> --format json"
     assert "candidate_lanes" not in payload["roadmap"]
+
+
+def test_workspace_summary_quiet_default_packet_stays_within_four_kib(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+
+    assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
+    output = capsys.readouterr().out
+
+    assert len(output.encode("utf-8")) <= 4096
 
 
 def test_report_closeout_trust_surfaces_memory_decision_packet(tmp_path: Path, capsys) -> None:
@@ -1100,6 +1122,66 @@ candidates = []
     assert payload["selection_cost"]["fallback_profile_loaded"] is False
 
 
+def test_workspace_summary_planning_record_selector_uses_direct_owner_query(tmp_path: Path, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+    from repo_planning_bootstrap import installer as planning_installer
+
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/plan-alpha.plan.json"
+    record = planning_installer._build_legacy_execplan_record_from_todo_item(
+        title="Plan Alpha",
+        item_id="plan-alpha",
+        status="in-progress",
+        why_now="keep selected reads cheap.",
+        next_action="run focused proof.",
+        done_when="the selected read stays query-shaped.",
+    )
+    _write(record_path, json.dumps(record, indent=2) + "\n")
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "plan-alpha", status = "active", surface = ".agentic-workspace/planning/execplans/plan-alpha.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    for index in range(1000):
+        _write(
+            tmp_path / f".agentic-workspace/planning/closeout-evidence/closed-{index}.closeout.json",
+            json.dumps({"kind": "planning-closeout-evidence/v1", "plan_id": f"closed-{index}"}),
+        )
+
+    started = time.perf_counter()
+    exit_code = cli.main(
+        [
+            "summary",
+            "--target",
+            str(tmp_path),
+            "--select",
+            "planning_revision,planning_record,continuation_view",
+            "--format",
+            "json",
+        ]
+    )
+    elapsed = time.perf_counter() - started
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload["values"]["planning_revision"]["kind"] == "planning-revision/v1"
+    assert payload["values"]["planning_record"]["status"] == "present"
+    assert payload["values"]["continuation_view"]["status"] == "present"
+    assert payload["selection_cost"]["profile_loaded"] == "query-shaped-direct"
+    assert payload["selection_cost"]["fallback_profile_loaded"] is False
+    assert payload["selection_cost"]["historical_sources_loaded"] is False
+    assert "execplan-archive" in payload["selection_cost"]["omitted_sources"]
+    assert elapsed < 2.0
+
+
 def test_workspace_summary_completion_task_surfaces_closeout_trust(tmp_path: Path, capsys) -> None:
     install_bootstrap(target=tmp_path)
     _write(
@@ -1401,6 +1483,26 @@ candidates = []
     def fake_run(command, cwd, capture_output, text, encoding, check):
         if command[:3] == ["gh", "repo", "view"]:
             return Result(json.dumps({"nameWithOwner": "acme/project"}))
+        if command[:3] == ["gh", "issue", "view"]:
+            number = int(command[3])
+            titles = {10: "Stale upstream", 11: "Parent intake lane", 12: "Child intake slice"}
+            bodies = {10: "", 11: "## Issue kind\nlane\n", 12: "## Issue kind\nslice\n\nParent: #11\n"}
+            return Result(
+                json.dumps(
+                    {
+                        "number": number,
+                        "title": titles[number],
+                        "state": "CLOSED" if number == 10 else "OPEN",
+                        "url": f"https://github.com/acme/project/issues/{number}",
+                        "labels": [{"name": "priority/high" if number == 11 else "priority/medium"}],
+                        "createdAt": "2026-04-28T00:00:00Z",
+                        "updatedAt": "2026-05-20T00:00:00Z",
+                        "closedAt": "2026-05-20T00:00:00Z" if number == 10 else "",
+                        "body": bodies[number],
+                        "comments": 0,
+                    }
+                )
+            )
         assert command[:3] == ["gh", "issue", "list"]
         assert command[command.index("--state") + 1] == "all"
         return Result(
@@ -1481,6 +1583,26 @@ candidates = [
     def fake_run(command, cwd, capture_output, text, encoding, check):
         if command[:3] == ["gh", "repo", "view"]:
             return Result(json.dumps({"nameWithOwner": "acme/project"}))
+        if command[:3] == ["gh", "issue", "view"]:
+            number = int(command[3])
+            titles = {10: "Stale upstream", 11: "Parent intake lane", 12: "Child intake slice"}
+            bodies = {10: "", 11: "## Issue kind\nlane\n", 12: "## Issue kind\nslice\n\nParent: #11\n"}
+            return Result(
+                json.dumps(
+                    {
+                        "number": number,
+                        "title": titles[number],
+                        "state": "CLOSED" if number == 10 else "OPEN",
+                        "url": f"https://github.com/acme/project/issues/{number}",
+                        "labels": [{"name": "priority/high" if number == 11 else "priority/medium"}],
+                        "createdAt": "2026-04-28T00:00:00Z",
+                        "updatedAt": "2026-05-20T00:00:00Z",
+                        "closedAt": "2026-05-20T00:00:00Z" if number == 10 else "",
+                        "body": bodies[number],
+                        "comments": 0,
+                    }
+                )
+            )
         assert command[:3] == ["gh", "issue", "list"]
         return Result(
             json.dumps(
@@ -1567,6 +1689,12 @@ candidates = [
             "--storage",
             "cache",
             "--apply-planning-candidates",
+            "--issue",
+            "#10",
+            "--issue",
+            "#11",
+            "--issue",
+            "#12",
             "--format",
             "json",
         ]
@@ -1582,12 +1710,71 @@ candidates = [
     assert "github-10-stale" not in candidate_ids
     assert candidate_ids == {"github-11-parent-intake-lane", "github-12-child-intake-slice"}
     cache_payload = json.loads(cache_path.read_text(encoding="utf-8"))
-    assert cache_payload["previous_items"][0]["id"] == "#10"
+    assert "previous_items" not in cache_payload
+    assert all("observation_id" in item for item in cache_payload["items"])
 
     assert cli.main(["report", "--target", str(tmp_path), "--section", "external_work_delta", "--format", "json"]) == 0
     delta = json.loads(capsys.readouterr().out)
-    assert delta["answer"]["status"] == "delta-present"
-    assert delta["answer"]["closed_count"] == 1
+    assert delta["answer"]["status"] == "snapshot-only"
+    assert delta["answer"]["item_count"] == 3
+
+
+def test_external_intent_refresh_requires_explicit_refs_before_candidate_promotion(tmp_path: Path, monkeypatch, capsys) -> None:
+    install_bootstrap(target=tmp_path)
+
+    class Result:
+        def __init__(self, stdout: str) -> None:
+            self.returncode = 0
+            self.stdout = stdout
+            self.stderr = ""
+
+    def fake_run(command, cwd, capture_output, text, encoding, check):
+        if command[:3] == ["gh", "repo", "view"]:
+            return Result(json.dumps({"nameWithOwner": "acme/project"}))
+        assert command[:3] == ["gh", "issue", "list"]
+        return Result(
+            json.dumps(
+                [
+                    {
+                        "number": 77,
+                        "title": "Unselected work",
+                        "state": "OPEN",
+                        "url": "https://github.com/acme/project/issues/77",
+                        "labels": [{"name": "planning"}],
+                        "createdAt": "2026-07-14T00:00:00Z",
+                        "updatedAt": "2026-07-14T00:00:00Z",
+                        "closedAt": "",
+                        "body": "",
+                        "comments": 0,
+                    }
+                ]
+            )
+        )
+
+    monkeypatch.setattr(cli.subprocess, "run", fake_run)
+
+    assert (
+        cli.main(
+            [
+                "external-intent",
+                "refresh-github",
+                "--target",
+                str(tmp_path),
+                "--state",
+                "all",
+                "--apply-planning-candidates",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+
+    assert payload["planning_candidate_apply"]["status"] == "explicit-selection-required"
+    assert "--issue" in payload["planning_candidate_apply"]["reason"]
+    assert state.get("roadmap", {}).get("candidates", []) == []
 
 
 def test_workspace_summary_json_surfaces_external_work_reconciliation(tmp_path: Path, capsys) -> None:

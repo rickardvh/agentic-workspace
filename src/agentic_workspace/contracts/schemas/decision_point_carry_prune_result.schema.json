@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/decision_point_carry_prune_result.schema.json",
+  "title": "Decision-point carry prune result",
+  "description": "Exact-key, context-guarded ignored-local carry prune result.",
+  "type": "object",
+  "required": ["kind", "status", "key", "dry_run"],
+  "properties": {
+    "kind": {"description": "Versioned result kind.", "const": "agentic-workspace/decision-point-carry-prune/v1"},
+    "status": {"description": "Prune operation outcome.", "enum": ["dry-run", "pruned", "noop"]},
+    "key": {"description": "Exact carry key evaluated or pruned.", "type": "string", "minLength": 1},
+    "context_id": {"description": "Expected stable current-work context identity.", "type": "string"},
+    "path": {"description": "Repo-relative carry record path.", "type": "string"},
+    "reason": {"description": "Human-readable evidence that the carry is stale.", "type": "string"},
+    "reason_code": {"description": "Typed stale-reason code stored on the carry lifecycle.", "type": "string"},
+    "dry_run": {"description": "Whether no mutation was performed.", "type": "boolean"},
+    "preservation": {"description": "Statement of unrelated carry and Planning preservation.", "type": "string"},
+    "rule": {"description": "Safety rule governing exact carry pruning.", "type": "string"}
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

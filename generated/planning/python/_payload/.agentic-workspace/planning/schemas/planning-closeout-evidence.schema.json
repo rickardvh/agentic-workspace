@@ -32,6 +32,13 @@
     "retention": {
       "$ref": "#/$defs/string_map"
     },
+    "claim_level": { "enum": ["slice", "lane", "epic"] },
+    "outcome": { "type": "string", "minLength": 1 },
+    "contribution": { "type": "string", "minLength": 1 },
+    "evidence_refs": { "type": "array", "items": { "type": "string" } },
+    "residual": { "$ref": "#/$defs/string_map" },
+    "closure": { "$ref": "#/$defs/string_map" },
+    "revision": { "type": "integer", "minimum": 1 },
     "active_milestone": {
       "$ref": "#/$defs/string_map"
     },

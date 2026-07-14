@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/decision_point_carry_select_result.schema.json",
+  "title": "Decision-point carry select result",
+  "description": "Exact ignored-local carry selection result.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "status", "selected_key", "previous_key", "context_id", "owner_id", "path", "rule"],
+  "properties": {
+    "kind": {"description": "Versioned result kind.", "const": "agentic-workspace/decision-point-carry-select/v1"},
+    "status": {"description": "Selection operation outcome.", "const": "selected"},
+    "selected_key": {"description": "Exact carry key selected for recovery or closeout.", "type": "string", "minLength": 1},
+    "previous_key": {"description": "Previously selected key, or an empty string.", "type": "string"},
+    "context_id": {"description": "Stable current-work context identity bound to the carry.", "type": "string", "minLength": 1},
+    "owner_id": {"description": "Planning owner bound to the selected carry.", "type": "string"},
+    "path": {"description": "Repo-relative supported local selection receipt.", "const": ".agentic-workspace/local/decision-point-intent/selection.json"},
+    "rule": {"description": "Safety rule governing exact carry selection.", "type": "string"}
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

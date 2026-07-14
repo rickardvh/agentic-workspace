@@ -34,6 +34,7 @@ from agentic_workspace.workspace_runtime_core import (
     _active_intent_contract_payload,
     _adaptive_routing_payload,
     _applicable_intent_status_payload,
+    _architecture_principles_forecast_payload,
     _architecture_principles_payload,
     _as_int,
     _assurance_requirements_report_payload,
@@ -71,6 +72,7 @@ from agentic_workspace.workspace_runtime_core import (
     _ownership_payload,
     _package_boundary_payload,
     _parent_intent_status_payload,
+    _persist_decision_point_forecast,
     _plan_delegation_packet_payload,
     _read_changed_surface_text,
     _read_task_text_from_file,
@@ -885,6 +887,22 @@ def _implement_payload(
     subsystem_intents = _list_payload(_as_dict(payload["durable_intent"].get("subsystem_intent")).get("matches"))
     principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
     forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
+    if not forecast_carry and (subsystem_intents or principles) and target_root is not None:
+        committed_forecast = _architecture_principles_forecast_payload(
+            target_root=target_root,
+            planned_paths=normalized_paths,
+            scope_source="implement.changed_paths",
+            cli_invoke=config.cli_invoke,
+        )
+        carry_result = _persist_decision_point_forecast(
+            target_root=target_root,
+            forecast=committed_forecast,
+            task_text=task_text,
+        )
+        if carry_result.get("status") != "not-created":
+            forecast_carry = carry_result
+        elif carry_result:
+            payload["decision_point_intent_carry"] = carry_result
     if subsystem_intents or principles or forecast_carry:
         forecast_identity = _as_dict(forecast_carry.get("forecast_identity"))
         forecast_paths = _normalize_changed_paths(_list_payload(forecast_identity.get("planned_paths")))

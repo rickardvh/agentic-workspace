@@ -535,7 +535,7 @@
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-execplan.schema.json",
       "editable_by_agents": true,
       "generated": false,
-      "notes": "Active execplan records validate against the planning execplan schema.",
+      "notes": "Active owner records validate against the planning execplan schema and use the compact universal kernel.",
       "storage_class": "source-of-truth",
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
@@ -573,7 +573,7 @@
       "schema_or_validator": ".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
       "editable_by_agents": false,
       "generated": false,
-      "notes": "Compact retained closeout records preserve reportable closeout evidence when full execplan archive retention is skipped by size guardrails.",
+      "notes": "New closeout tombstones are capped at 3 KB by the Planning writer; the broader inventory limit preserves bounded compatibility for historical closeout evidence.",
       "storage_class": "historical-audit-distillation",
       "checked_in_justification": "Historical closeout proof retained as distilled evidence when the full archive record is intentionally omitted.",
       "reconstructable_from": [
