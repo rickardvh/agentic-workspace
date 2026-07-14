@@ -146,6 +146,29 @@ from agentic_workspace.workspace_runtime_proof import (
 )
 
 
+def _startup_route_binding(route_decision: dict[str, Any]) -> dict[str, Any]:
+    """Describe whether startup's read-only route forecast can be relied on yet."""
+    transition = str(route_decision.get("required_transition") or "none")
+    next_action = _as_dict(route_decision.get("next_safe_action"))
+    action_text = " ".join(str(next_action.get(field) or "") for field in ("action", "command", "run", "summary")).lower()
+    identity_transition = any(
+        marker in action_text
+        for marker in ("git switch", "checkout", "branch", "worktree", "repository", "--target", "owner-select", "selected owner")
+    )
+    provisional = transition != "none" or identity_transition
+    return {
+        "status": "provisional" if provisional else "bound",
+        "state_commit": "none",
+        "rule": "Startup projects a route only; it never commits selection or carry state before an explicit transition is used.",
+        "invalidate_when": ["branch", "head", "worktree", "target", "current-work", "selected-owner"],
+        "reason": "next-action-may-change-route-identity"
+        if identity_transition
+        else "transition-required"
+        if provisional
+        else "current-identity-observed",
+    }
+
+
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Project startup context to the smallest schema-compatible first-contact answer."""
     immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
@@ -909,13 +932,7 @@ def _start_payload(
     route_decision = planning_safety_gate.get("route_decision", {})
     if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
         route_decision = copy.deepcopy(route_decision)
-        transition = str(route_decision.get("required_transition") or "none")
-        route_decision["binding"] = {
-            "status": "bound" if transition == "none" else "provisional",
-            "state_commit": "none",
-            "rule": "Startup projects a route only; it never commits selection or carry state before an explicit transition is used.",
-            "invalidate_when": ["branch", "head", "worktree", "target", "current-work", "selected-owner"],
-        }
+        route_decision["binding"] = _startup_route_binding(route_decision)
         payload["route_decision"] = route_decision
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""

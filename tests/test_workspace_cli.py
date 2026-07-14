@@ -4504,6 +4504,18 @@ def test_selector_first_gate_projects_authoritative_route_decision() -> None:
     }
 
 
+def test_startup_route_binding_is_provisional_before_identity_transition() -> None:
+    from agentic_workspace.workspace_runtime_startup import _startup_route_binding
+
+    assert (
+        _startup_route_binding({"required_transition": "none", "next_safe_action": {"action": "continue-active-plan"}})["status"] == "bound"
+    )
+    binding = _startup_route_binding({"required_transition": "none", "next_safe_action": {"command": "git switch feature/reconcile"}})
+    assert binding["status"] == "provisional"
+    assert binding["state_commit"] == "none"
+    assert binding["reason"] == "next-action-may-change-route-identity"
+
+
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
