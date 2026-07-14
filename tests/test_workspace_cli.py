@@ -3902,12 +3902,12 @@ candidates = []
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    switch = payload["context"]["planning"]["planning_safety_gate"]["task_switch_reconciliation"]
+    route = payload["context"]["route_decision"]
 
     assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
-    assert switch["status"] == "scope-inspection-required"
-    assert switch["recommended_next_action"] == "inspect-current-task-scope"
-    assert "claim-active-plan-progress" in switch["blocked_claims"]
+    assert route["task_relation"] == "independent-pending-scope"
+    assert route["required_transition"] == "inspect-current-task-scope"
+    assert "claim-active-plan-progress" in route["blocked_claims"]
 
 
 def test_start_reconciles_unrelated_active_plan_with_new_issue_implementation_task(tmp_path: Path, capsys) -> None:
@@ -4156,11 +4156,11 @@ def test_start_keeps_incomplete_active_plan_on_task_switch_route(tmp_path: Path,
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning"]["planning_safety_gate"]
+    route = payload["context"]["route_decision"]
 
     assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
-    assert gate["gate_result"] == "current-task-scope-inspection-required"
-    assert gate["task_switch_reconciliation"]["status"] == "scope-inspection-required"
+    assert route["task_relation"] == "independent-pending-scope"
+    assert route["required_transition"] == "inspect-current-task-scope"
 
 
 def test_implement_acknowledges_current_task_switch_with_return_and_cleanup_routes(tmp_path: Path, capsys) -> None:
@@ -4207,16 +4207,12 @@ candidates = []
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    switch = payload["context"]["planning_safety_gate"]["task_switch_reconciliation"]
-    acknowledgement = switch["route_acknowledgement"]
+    route = payload["context"]["planning_safety_gate"]["route_decision"]
 
-    assert switch["status"] == "current-task-route-acknowledged"
-    assert acknowledgement["status"] == "acknowledged"
-    assert acknowledgement["return_to_active_plan"]["command"] == "agentic-workspace summary --target . --format json"
-    assert acknowledgement["stale_thread_cleanup"]["inspect_command"] == (
-        "agentic-workspace start --target . --select work_threads --format json"
-    )
-    assert "claim-active-plan-progress" in switch["blocked_claims"]
+    assert route["task_relation"] == "bounded-independent"
+    assert route["required_transition"] == "none"
+    assert route["next_safe_action"]["action"] == "prove-current-task"
+    assert "claim-active-plan-progress" in route["blocked_claims"]
 
 
 def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Path, capsys) -> None:
