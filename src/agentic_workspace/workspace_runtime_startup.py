@@ -917,7 +917,13 @@ def _start_payload(
     )
     if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default:
         payload["planning_safety_gate"] = planning_safety_gate
-    if isinstance(route_decision, dict) and route_transition in {"closeout-or-archive", "ask-for-route-decision", "none"}:
+    if isinstance(route_decision, dict) and route_transition in {
+        "closeout-or-archive",
+        "ask-for-route-decision",
+        "inspect-current-task-scope",
+        "reconcile",
+        "none",
+    }:
         next_packet = route_decision.get("next_safe_action", {})
         if isinstance(next_packet, dict):
             evidence_required = (
@@ -2232,7 +2238,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(task_posture_packet, dict) and task_posture_packet:
         selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
     show_state_delta_packets = (
-        str(next_safe_action.get("next_safe_action", "")) != "choose-task-switch-route"
+        str(next_safe_action.get("next_safe_action", "")) not in {"choose-task-switch-route", "inspect-current-task-scope"}
         and not isinstance(payload.get("installed_state_compatibility"), dict)
         and not read_only_compact_default
     )

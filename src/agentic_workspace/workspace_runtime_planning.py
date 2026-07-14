@@ -934,10 +934,8 @@ def _task_switch_reconciliation_payload(
     text = " ".join((task_text or "").lower().split())
     maintenance_markers = ("report", "dogfood", "upgrade", "payload", "config", "doctor", "comment", "review", "status")
     matched_maintenance_markers = [marker for marker in maintenance_markers if marker in text]
-    maintenance_like = bool(matched_maintenance_markers)
     bounded_reflection = _bounded_reflection_reporting_payload(task_text=task_text)
-    classification_basis = "bounded-maintenance-marker-hint" if maintenance_like else "no-maintenance-marker-hint"
-    recommended = "proceed-bounded-repo-maintenance" if maintenance_like else "choose-between-new-task-and-active-plan"
+    recommended = "inspect-current-task-scope"
     mismatch_evidence = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
     shared_refs = [str(ref) for ref in mismatch_evidence.get("shared_refs", []) if str(ref).strip()]
     completed_plan_route = _completed_active_plan_route_payload(
@@ -1099,13 +1097,13 @@ def _task_switch_reconciliation_payload(
         return {"kind": "agentic-workspace/task-switch-reconciliation/v1", "status": "not-applicable"}
     return {
         "kind": "agentic-workspace/task-switch-reconciliation/v1",
-        "status": "active",
-        "summary": "Current task does not explicitly continue the active plan; keep the active plan protected and choose the current-task route deliberately.",
+        "status": "scope-inspection-required",
+        "summary": "Current task does not explicitly continue the active plan. Preserve the selected plan and inspect the current task scope before any mutation.",
         "active_execplan": active_summary.get("active_execplan", ""),
         "intent_conflict_state": "explicit-task-differs-from-active-plan",
         "mismatch_evidence": mismatch_evidence,
-        "current_task_class": "repo-maintenance-or-reporting" if maintenance_like else "new-explicit-task",
-        "classification_basis": classification_basis,
+        "current_task_class": "new-explicit-task",
+        "classification_basis": "explicit-task-without-structured-owner-scope",
         "matched_maintenance_markers": matched_maintenance_markers,
         "classification_inputs": [
             "active_plan_reliance.status=not-needed-for-current-task",
@@ -1114,52 +1112,41 @@ def _task_switch_reconciliation_payload(
             f"maintenance_marker_count={len(matched_maintenance_markers)}",
         ],
         "semantic_boundary": (
-            "Active-plan reliance, task/plan overlap, and maintenance marker matching are low-cost route-choice hints for protecting "
-            "the active plan. They are not authoritative semantic classification, intent satisfaction, or evidence that the active "
-            "plan can be closed."
+            "The task has no structured continuation or owner-scope evidence. Inspect scope before mutation; maintenance markers "
+            "remain non-authoritative diagnostics and cannot select or close the active plan."
         ),
         "recommended_next_action": recommended,
         "next_action_packet": {
-            "action": "choose-task-switch-route",
-            "summary": "Explicit task differs from the active plan. Choose the current-task route deliberately; do not treat old active-plan text as the only safe path.",
-            "command": "",
-            "run": None,
-            "risk": "active-plan-task-switch",
-            "required_inputs": ["current task", "active plan boundary"],
-            "next_proof": "use implement/proof for changed paths if this becomes implementation; otherwise report bounded read-only/maintenance outcome",
+            "action": "inspect-current-task-scope",
+            "summary": "Inspect the current task's concrete scope before mutation; the selected active plan remains protected.",
+            "command": summary_command,
+            "run": summary_command,
+            "risk": "current-task-scope-unresolved",
+            "required_inputs": ["current task", "changed paths or structured owner reference", "active plan boundary"],
+            "next_proof": "supply changed paths to implement/proof before a mutation claim; do not claim active-plan progress",
             "read_first": [summary_command],
             "open_execplan_only_when": "the new task mutates active-plan-owned work or needs active plan ownership changed",
         },
         "safe_routes": [
             {
-                "id": "continue-active-plan",
+                "id": "inspect-current-task-scope",
                 "command": summary_command,
-                "when": "the user intends the existing active plan to remain the current work",
-            },
-            {
-                "id": "proceed-bounded-repo-maintenance",
-                "command": "",
-                "when": "the current task is reporting, dogfooding, payload upgrade, comment handling, or other bounded maintenance",
-            },
-            {
-                "id": "reconcile-active-plan-before-implementation",
-                "command": closeout_command,
-                "when": "the new task would mutate work that conflicts with the active plan or needs its ownership changed",
+                "when": "the task has no structured continuation or changed-path ownership evidence",
             },
         ],
-        "implementation_allowed": True,
+        "implementation_allowed": False,
         "active_plan_protection": {
             "claim_boundary": "Do not claim active-plan progress, completion, or abandonment from this new task.",
             "blocked_claims": ["claim-active-plan-progress", "claim-active-plan-complete", "silently-abandon-active-plan"],
         },
-        "rule": "An unrelated active plan is protected state, not an automatic hard block for explicit bounded maintenance or reporting.",
+        "rule": "An unrelated active plan is protected state. Missing current-task scope requires bounded inspection, not a user-visible internal route choice.",
     }
 
 
 def _acknowledged_current_task_switch_payload(
     task_switch: dict[str, Any], *, changed_paths: list[str], path_classification: dict[str, Any]
 ) -> dict[str, Any]:
-    if task_switch.get("status") != "active" or not changed_paths:
+    if task_switch.get("status") not in {"active", "scope-inspection-required"} or not changed_paths:
         return task_switch
     dirty_shape = str(path_classification.get("dirty_shape") or "")
     if dirty_shape in {"planning-only", "planning-plus-implementation", "implementation-with-archived-planning-residue"}:
@@ -1223,9 +1210,18 @@ def _planning_route_decision_payload(
     completed = status == "completed-active-plan-route"
     bounded = status in {"bounded-reflection-reporting", "current-task-route-acknowledged"}
     ambiguous = status == "active"
+    scope_inspection = status == "scope-inspection-required"
     active_plan_protection = _as_dict(task_switch.get("active_plan_protection"))
     blocked_claims = active_plan_protection.get("blocked_claims") or task_switch.get("blocked_claims") or []
-    transition = "closeout-or-archive" if completed else "ask-for-route-decision" if ambiguous else "none"
+    transition = (
+        "closeout-or-archive"
+        if completed
+        else "ask-for-route-decision"
+        if ambiguous
+        else "inspect-current-task-scope"
+        if scope_inspection
+        else "none"
+    )
     selected_owner_ref = str(task_switch.get("active_execplan") or "")
     decision = {
         "kind": "agentic-planning/route-decision/v1",
@@ -1233,10 +1229,16 @@ def _planning_route_decision_payload(
         if continuing
         else "bounded-independent"
         if bounded
+        else "independent-pending-scope"
+        if scope_inspection
         else "ambiguous"
         if ambiguous
         else "not-applicable",
-        "owner_posture": "completed-residue" if completed else "current" if continuing or bounded or ambiguous else "not-applicable",
+        "owner_posture": "completed-residue"
+        if completed
+        else "current"
+        if continuing or bounded or ambiguous or scope_inspection
+        else "not-applicable",
         "required_transition": transition,
         "selected_owner": selected_owner_ref,
         "selected_owner_identity": {
@@ -1251,9 +1253,9 @@ def _planning_route_decision_payload(
         "reason_codes": [code for code in (status, str(task_switch.get("intent_conflict_state") or "")) if code],
         "allowed_claims": ["bounded-task-progress"] if bounded else ["active-plan-progress"] if continuing else [],
         "blocked_claims": blocked_claims,
-        "implementation_allowed": False if ambiguous or completed else bool(task_switch.get("implementation_allowed")),
+        "implementation_allowed": False if ambiguous or completed or scope_inspection else bool(task_switch.get("implementation_allowed")),
         "mutation_authority": "none"
-        if ambiguous or completed
+        if ambiguous or completed or scope_inspection
         else "current-task"
         if bounded
         else "selected-owner"
@@ -1733,6 +1735,14 @@ def _planning_safety_gate_payload(
         )
         required_next_action = "prove-current-task"
         workflow_sufficient = True
+    elif task_switch_reconciliation.get("status") == "scope-inspection-required":
+        status = "attention"
+        decision = "current-task-scope-inspection-required"
+        reason = str(
+            task_switch_reconciliation.get("summary") or "Current task differs from the active plan; inspect scope before mutation."
+        )
+        required_next_action = "inspect-current-task-scope"
+        workflow_sufficient = True
     elif task_switch_reconciliation.get("status") == "active":
         status = "attention"
         decision = "active-plan-task-switch"
@@ -2030,7 +2040,12 @@ def _planning_safety_gate_payload(
         "delegation_decision_command": active_delegation_requirement.get("command"),
         "active_delegation_requirement": active_delegation_requirement,
         "active_parent_decomposition_requirement": active_parent_decomposition_requirement,
-        "implementation_allowed": workflow_sufficient,
+        "implementation_allowed": workflow_sufficient
+        and (
+            bool(route_decision.get("implementation_allowed"))
+            if route_decision.get("task_relation") not in {None, "", "not-applicable"}
+            else True
+        ),
         "read_only_allowed": read_only_allowance["read_only_allowed"],
         "exploration_allowed": read_only_allowance["exploration_allowed"],
         "allowed_read_only_actions": read_only_allowance["allowed_read_only_actions"],

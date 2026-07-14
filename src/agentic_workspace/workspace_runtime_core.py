@@ -26162,7 +26162,10 @@ def _next_safe_action_packet(
     )
     if skill in {"planning-reporting", "planning-autopilot", "planning-decompose", "planning-new-plan-tighten"}:
         proof_required = True
-    task_switch_route_choice = action == "choose-task-switch-route" and decision == "active-plan-task-switch"
+    task_switch_route_choice = action in {"choose-task-switch-route", "inspect-current-task-scope"} and decision in {
+        "active-plan-task-switch",
+        "current-task-scope-inspection-required",
+    }
     implementation_allowed = not forbidden_actions and (task_switch_route_choice or not skill.startswith("planning"))
     completion_claim_allowed = not forbidden_actions and action not in {"choose-smallest-workflow-shape"}
     gate_result = decision or action
@@ -27818,9 +27821,10 @@ def _startup_skills_projection(
         )
 
     recommended: list[dict[str, Any]] = []
-    state_delta_packets_visible = str(next_safe_action.get("next_safe_action", "")) != "choose-task-switch-route" and not isinstance(
-        payload.get("installed_state_compatibility"), dict
-    )
+    state_delta_packets_visible = str(next_safe_action.get("next_safe_action", "")) not in {
+        "choose-task-switch-route",
+        "inspect-current-task-scope",
+    } and not isinstance(payload.get("installed_state_compatibility"), dict)
     if state_delta_packets_visible and "workspace-operating-loop" in skills_by_id:
         skill = skills_by_id.get("workspace-operating-loop", {})
         state_delta_packets = ["current_decision", "message_economy"]
@@ -27935,6 +27939,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "bounded-reflection-reporting",
         "current-task-route-acknowledged",
         "completed-active-plan-route",
+        "scope-inspection-required",
     }
     compact: dict[str, Any] = {
         "kind": gate.get("kind"),
@@ -27973,7 +27978,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             )
             if active_plan_reliance.get(key) not in (None, "", [], {})
         }
-    if gate.get("implementation_allowed") is False or gate.get("workflow_sufficient") is False:
+    if (gate.get("implementation_allowed") is False or gate.get("workflow_sufficient") is False) and not compact_route:
         compact["read_only_allowed"] = gate.get("read_only_allowed")
         compact["exploration_allowed"] = gate.get("exploration_allowed")
         compact["allowed_read_only_actions"] = gate.get("allowed_read_only_actions")
@@ -28000,6 +28005,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "bounded-reflection-reporting",
         "current-task-route-acknowledged",
         "completed-active-plan-route",
+        "scope-inspection-required",
     }:
         safe_routes = [
             {key: route.get(key) for key in ("id", "command") if isinstance(route, dict) and route.get(key) not in (None, "", [], {})}
@@ -28082,6 +28088,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
         "",
         "absent",
         "no-parent-decomposition-match",
+        "no-parent-decomposition",
     ):
         compact["active_parent_decomposition_requirement"] = active_parent_decomposition_requirement
     hierarchy_owner_requirement = gate.get("hierarchy_owner_requirement")
