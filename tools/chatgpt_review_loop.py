@@ -671,6 +671,8 @@ def _dispatch_all_unlocked(
     updated = _pr_view(root, runner, pr=pr)
     new_head = str(updated.get("headRefOid", ""))
     if new_head == review.head:
+        entries[str(pr)] = {"worktree": worktree.as_posix(), "branch": branch, "repository": _repo_slug(root, runner), "status": "fresh-session-recovery-required"}
+        _save_dispatch(root, registry)
         return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-ended-without-new-head"}
     state = {
         "kind": STATE_KIND,
