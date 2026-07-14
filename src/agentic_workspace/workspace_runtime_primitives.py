@@ -25444,6 +25444,28 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
             compact["changed_path_facts"]["archived_planning_residue"] = {"status": "completed-closeout-residue"}
     if "work_shape_guidance" in gate:
         compact["work_shape_guidance"] = _tiny_work_shape_guidance(gate["work_shape_guidance"])
+    route_decision = gate.get("route_decision")
+    if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
+        compact["route_decision"] = {
+            key: route_decision.get(key)
+            for key in (
+                "kind",
+                "task_relation",
+                "owner_posture",
+                "required_transition",
+                "selected_owner",
+                "selected_owner_identity",
+                "reason_codes",
+                "input_provenance",
+                "allowed_claims",
+                "blocked_claims",
+                "implementation_allowed",
+                "proof_expectation",
+                "state_update_policy",
+                "next_safe_action",
+            )
+            if route_decision.get(key) not in (None, "", [], {})
+        }
     task_switch = gate.get("task_switch_reconciliation")
     if isinstance(task_switch, dict) and task_switch.get("status") in {
         "active",

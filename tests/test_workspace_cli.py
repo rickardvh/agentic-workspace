@@ -4200,6 +4200,40 @@ def test_route_decision_keeps_relation_posture_and_transition_separate() -> None
     assert decision["selected_owner_identity"]["ref"].endswith("issue-2046-lane.plan.json")
 
 
+def test_selector_first_gate_projects_authoritative_route_decision() -> None:
+    from agentic_workspace.workspace_runtime_primitives import _selector_first_planning_safety_gate
+
+    selected = _selector_first_planning_safety_gate(
+        {
+            "kind": "agentic-workspace/planning-safety-gate/v1",
+            "status": "satisfied",
+            "workflow_sufficient": True,
+            "route_decision": {
+                "kind": "agentic-planning/route-decision/v1",
+                "task_relation": "bounded-independent",
+                "owner_posture": "current",
+                "required_transition": "none",
+                "allowed_claims": ["bounded-task-progress"],
+                "blocked_claims": ["active-plan-progress"],
+                "proof_expectation": "focused proof",
+                "state_update_policy": "read-only",
+                "next_safe_action": {"action": "perform-bounded-task"},
+            },
+        }
+    )
+    assert selected["route_decision"] == {
+        "kind": "agentic-planning/route-decision/v1",
+        "task_relation": "bounded-independent",
+        "owner_posture": "current",
+        "required_transition": "none",
+        "allowed_claims": ["bounded-task-progress"],
+        "blocked_claims": ["active-plan-progress"],
+        "proof_expectation": "focused proof",
+        "state_update_policy": "read-only",
+        "next_safe_action": {"action": "perform-bounded-task"},
+    }
+
+
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
