@@ -334,7 +334,11 @@ def _review_prompt(review: Review) -> str:
 
 def _should_keep_watching(results: list[dict[str, Any]]) -> bool:
     waiting_reasons = {"review-pending", "stale-review-rejected"}
-    return any(item.get("status") == "no-op" and item.get("reason") in waiting_reasons for item in results)
+    return any(
+        item.get("status") == "resumed"
+        or (item.get("status") == "no-op" and item.get("reason") in waiting_reasons)
+        for item in results
+    )
 
 
 def poll_one(

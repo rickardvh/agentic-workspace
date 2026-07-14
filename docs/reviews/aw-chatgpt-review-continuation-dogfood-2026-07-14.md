@@ -8,7 +8,9 @@ Automatic merge remains out of scope and unauthorized.
 
 ## Evidence collected
 
-Live trial PR [#2292](https://github.com/rickardvh/agentic-workspace/pull/2292) was created as a draft at `2026-07-14T09:37:04Z`. The controller bound the exact originating Codex session to head `b5cae38c54d0f2563a24fbfc160af4df24ccdad3`, added the opt-in marker, and returned `review-pending` on its first poll. Before starting the background watcher, local capability inspection showed that interactive `codex resume` was the wrong unattended surface; the controller was corrected to use `codex exec resume`. The same readiness pass found that a watcher would continue sleeping after `stop`; the exit condition was narrowed to genuine review-waiting states. An immediate handoff after pushing `cb9a1fde` then observed GitHub's prior head and failed safely; the handoff gained a bounded three-read propagation retry. The live watcher was then explicitly activated with Codex's automation-only hook-trust bypass after confirming that no user-level or enabled-plugin hook source would also be authorized. These are successful manual interventions before any review was consumed, not yet a successful automatic resumption.
+Live trial PR [#2292](https://github.com/rickardvh/agentic-workspace/pull/2292) was created as a draft at `2026-07-14T09:37:04Z`. The controller bound the exact originating Codex session to head `b5cae38c54d0f2563a24fbfc160af4df24ccdad3`, added the opt-in marker, and returned `review-pending` on its first poll. Before starting the background watcher, local capability inspection showed that interactive `codex resume` was the wrong unattended surface; the controller was corrected to use `codex exec resume`. The same readiness pass found that a watcher would continue sleeping after `stop`; the exit condition was narrowed to genuine review-waiting states. An immediate handoff after pushing `cb9a1fde` then observed GitHub's prior head and failed safely; the handoff gained a bounded three-read propagation retry. The live watcher was then explicitly activated with Codex's automation-only hook-trust bypass after confirming that no user-level or enabled-plugin hook source would also be authorized. These are recorded manual interventions in the live trial; automatic resumption is not yet proven.
+
+At `2026-07-14T10:02:10Z`, the external reviewer posted the first real blocked result for head `ad37e10d`. The pre-activation watcher recorded that exact review as handled and attempted the exact session once, but Codex exited 1 before the hook-trust activation. The review also found that a successful `resumed` result would terminate the watcher before reviewing the newly handed-off head. That blocker is now covered by the two-head unattended watch test; the next live reviewed head must prove both activated Stop-hook execution and continued polling.
 
 | Scenario | Evidence | Result |
 | --- | --- | --- |
@@ -20,10 +22,11 @@ Live trial PR [#2292](https://github.com/rickardvh/agentic-workspace/pull/2292) 
 | Branch/head/closed-PR safety | `test_unsafe_repository_states_require_explicit_recovery` | Passed; all require bounded human recovery |
 | Repeated blocker and maximum cycle limits | `test_repeated_blocker_and_cycle_limits_escalate_without_resume` | Passed; both stop before Codex invocation |
 | Dormant Stop hook | `test_hook_mode_is_quiet_until_an_exact_loop_is_explicitly_enabled` | Passed; no GitHub query or opt-in before explicit enablement |
+| Two-head unattended watch | `test_watch_loop_resumes_head_a_then_reviews_head_b_without_restart` | Passed; head A blocker resumes once, Stop-side handoff records head B, and the same watcher consumes head B merge-ready |
 | Windows Stop-hook invocation | Piped a real Stop payload through the checked-in `commandWindows` using the repository `uv run python` runtime | Passed; returned `{\"continue\": true}` and made no GitHub query while disabled |
 | Hook portability | `test_project_stop_hook_uses_repo_runtime_and_has_no_machine_local_path` | Passed; repo-root resolution, bounded timeout, and no checked-in machine path |
 
-Focused run: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 15 passed. Ruff passed after formatting. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
+Focused run: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 16 passed. Ruff passed after formatting. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
 
 Read-only GitHub search used `repo:rickardvh/agentic-workspace is:pr "aw-chatgpt-review"` and returned no PRs. Therefore:
 

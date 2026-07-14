@@ -39,6 +39,7 @@ class FakeRunner(loop.CommandRunner):
         self.commands: list[list[str]] = []
         self.codex_exit = 0
         self.next_handoff_head = ""
+        self.next_review_decision = ""
 
     def run(self, command, *, cwd, env=None):
         command = list(command)
@@ -72,6 +73,15 @@ class FakeRunner(loop.CommandRunner):
                 state = loop._load_state(self.root, 12)
                 state.update(handoff_head=self.next_handoff_head, status="awaiting-review", last_event="handoff-recorded")
                 loop._save_state(self.root, state)
+                self.pr_head = self.next_handoff_head
+                if self.next_review_decision:
+                    self.comments = [
+                        {
+                            "id": "IC_next_head",
+                            "body": marker(head=self.next_handoff_head, decision=self.next_review_decision),
+                            "url": "https://example.test/c/next",
+                        }
+                    ]
             return subprocess.CompletedProcess(command, self.codex_exit, "", "failed" if self.codex_exit else "")
         raise AssertionError(f"unexpected command: {command}")
 
@@ -309,8 +319,48 @@ def test_runtime_state_root_is_covered_by_repo_gitignore() -> None:
 def test_watcher_continues_only_for_review_waiting_states() -> None:
     assert loop._should_keep_watching([{"status": "no-op", "reason": "review-pending"}]) is True
     assert loop._should_keep_watching([{"status": "no-op", "reason": "stale-review-rejected"}]) is True
+    assert loop._should_keep_watching([{"status": "resumed", "new_head": HEAD_B}]) is True
     assert loop._should_keep_watching([{"status": "no-op", "reason": "state-is-stopped"}]) is False
     assert loop._should_keep_watching([{"status": "recovery-required", "event": "resume-failed"}]) is False
+
+
+def test_watch_loop_resumes_head_a_then_reviews_head_b_without_restart(tmp_path: Path, monkeypatch, capsys) -> None:
+    first_review = {
+        "id": "IC_head_a",
+        "body": f"Fix head A\n{marker(head=HEAD_A)}",
+        "url": "https://example.test/c/a",
+    }
+    runner = FakeRunner(tmp_path, comments=[first_review])
+    runner.next_handoff_head = HEAD_B
+    runner.next_review_decision = "merge-ready"
+    state(tmp_path)
+    monkeypatch.setattr(loop.time, "sleep", lambda _seconds: None)
+
+    assert (
+        loop.main(
+            [
+                "poll",
+                "--target",
+                str(tmp_path),
+                "--pr",
+                "12",
+                "--watch",
+                "--interval",
+                "1",
+                "--max-polls",
+                "3",
+                "--bypass-hook-trust",
+            ],
+            runner=runner,
+        )
+        == 0
+    )
+
+    assert loop._load_state(tmp_path, 12)["status"] == "merge-ready"
+    assert sum("resume" in command for command in runner.commands) == 1
+    output = capsys.readouterr().out
+    assert '"status": "resumed"' in output
+    assert '"status": "merge-ready"' in output
 
 
 def test_project_stop_hook_uses_repo_runtime_and_has_no_machine_local_path() -> None:
