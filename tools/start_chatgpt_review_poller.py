@@ -19,7 +19,7 @@ def _is_running(pid: int) -> bool:
     return True
 
 
-def start(root: Path) -> dict[str, object]:
+def start(root: Path, *, max_cycles: int = 3) -> dict[str, object]:
     root = root.resolve()
     state_dir = root / STATE_RELATIVE
     state_dir.mkdir(parents=True, exist_ok=True)
@@ -43,6 +43,8 @@ def start(root: Path) -> dict[str, object]:
         root.as_posix(),
         "--all-open",
         "--watch",
+        "--max-cycles",
+        str(max_cycles),
     ]
     with log.open("a", encoding="utf-8") as stream:
         kwargs: dict[str, object] = {"cwd": root, "stdin": subprocess.DEVNULL, "stdout": stream, "stderr": subprocess.STDOUT}
@@ -58,8 +60,11 @@ def start(root: Path) -> dict[str, object]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Start one detached global ChatGPT review poller for this checkout.")
     parser.add_argument("--target", type=Path, default=Path.cwd())
+    parser.add_argument("--max-cycles", type=int, default=3)
     args = parser.parse_args(argv)
-    print(json.dumps(start(args.target), sort_keys=True))
+    if args.max_cycles < 1:
+        parser.error("--max-cycles must be positive")
+    print(json.dumps(start(args.target, max_cycles=args.max_cycles), sort_keys=True))
     return 0
 
 

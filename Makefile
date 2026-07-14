@@ -1,6 +1,7 @@
 -include .env.local
 
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
+REVIEW_MAX_CYCLES ?= 3
 export UV_CACHE_DIR
 ifeq ($(OS),Windows_NT)
 PYTEST_PARALLEL_ARGS ?= -n 4
@@ -69,7 +70,7 @@ install-hooks:
 setup: sync-all install-hooks
 
 start-review-poller:
-	@$(COMPACT_RUN) --label "review poller" -- uv run python tools/start_chatgpt_review_poller.py --target .
+	@$(COMPACT_RUN) --label "review poller" -- uv run python tools/start_chatgpt_review_poller.py --target . --max-cycles $(REVIEW_MAX_CYCLES)
 
 sync-memory:
 	@$(COMPACT_RUN) --label "sync-memory" -- uv sync --all-packages --group dev
