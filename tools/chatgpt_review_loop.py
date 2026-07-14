@@ -620,6 +620,9 @@ def _dispatch_all_unlocked(
         if any(item["reason"] != "stale-head" for item in rejected) or len(matches) != 1:
             continue
         review = matches[0]
+        entry = entries.get(str(pr))
+        if isinstance(entry, dict) and entry.get("status") == "fresh-session-recovery-required":
+            continue
         if review.decision == "blocked" and review.findings:
             candidates.append((payload, review))
     if not candidates:
