@@ -642,7 +642,10 @@ def _dispatch_all_unlocked(
             return {"status": "recovery-required", "pr_number": pr, "event": "unowned-worktree-exists"}
         removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
         if removed.returncode:
-            return {"status": "recovery-required", "pr_number": pr, "event": "orphan-worktree-cleanup-failed"}
+            try:
+                shutil.rmtree(worktree)
+            except OSError:
+                return {"status": "recovery-required", "pr_number": pr, "event": "orphan-worktree-cleanup-failed"}
     branch = str(payload.get("headRefName", ""))
     if not branch:
         return {"status": "recovery-required", "pr_number": pr, "event": "missing-head-branch"}
