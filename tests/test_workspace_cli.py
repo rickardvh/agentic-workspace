@@ -4178,6 +4178,26 @@ def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Pat
     assert "issue-2045" in plural_lane_switch["mismatch_evidence"]["shared_refs"]
 
 
+def test_route_decision_keeps_relation_posture_and_transition_separate() -> None:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    decision = _planning_route_decision_payload(
+        {
+            "status": "issue-matched-continuation",
+            "active_execplan": ".agentic-workspace/planning/execplans/issue-2046-lane.plan.json",
+            "intent_conflict_state": "explicit-reference-continuation",
+            "implementation_allowed": True,
+            "active_plan_protection": {"blocked_claims": ["silently-close-active-plan"]},
+            "next_action_packet": {"action": "continue-active-plan", "next_proof": "run focused proof"},
+        }
+    )
+
+    assert decision["task_relation"] == "continues-selected-owner"
+    assert decision["owner_posture"] == "current"
+    assert decision["required_transition"] == "none"
+    assert decision["next_safe_action"]["action"] == "continue-active-plan"
+
+
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

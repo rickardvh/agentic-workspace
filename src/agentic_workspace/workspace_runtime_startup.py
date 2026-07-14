@@ -907,6 +907,9 @@ def _start_payload(
     custody_planning = planning_safety_gate.get("custody_planning", {})
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
     task_switch = planning_safety_gate.get("task_switch_reconciliation", {})
+    route_decision = planning_safety_gate.get("route_decision", {})
+    if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
+        payload["route_decision"] = route_decision
     task_switch_visible_by_default = isinstance(task_switch, dict) and task_switch.get("status") in {
         "active",
         "bounded-reflection-reporting",
