@@ -17,6 +17,8 @@ Use this page when you need the canonical command to run, not the broader routin
 | Command | Purpose |
 | --- | --- |
 | `python scripts/check/check_maintainer_surfaces.py` | Run the aggregate maintainer-surface checker directly |
+| `uv run python tools/chatgpt_review_loop.py handoff` | Opt the current pushed PR head into the repo-local external ChatGPT review continuation loop |
+| `uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60` | Run the bounded, model-free local review poller; see [ChatGPT review to Codex continuation](chatgpt-review-continuation.md) |
 | `make format` | Apply Ruff formatting across workspace and packages |
 | `make lint` | Run lint checks across workspace and packages |
 | `make typecheck` | Run type checks across workspace and packages |

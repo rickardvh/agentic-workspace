@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run python \"$(git rev-parse --show-toplevel)/tools/chatgpt_review_loop.py\" handoff --hook",
+            "commandWindows": "uv run python tools/chatgpt_review_loop.py handoff --hook",
+            "timeout": 30,
+            "statusMessage": "Recording external-review handoff"
+          }
+        ]
+      }
+    ]
+  }
+}
