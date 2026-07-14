@@ -27,7 +27,7 @@ Use the opt-in global mode to scan every open PR and dispatch at most one eligib
 uv run python tools/chatgpt_review_loop.py poll --all-open --watch
 ```
 
-It retains one Codex session and one local isolated worktree per PR. A first eligible review creates that pair; a later eligible review resumes the same session. A local exclusive lock keeps two poller invocations from starting concurrent jobs. The dispatcher preserves the exact-head marker, duplicate-review, branch-ownership, and bounded-recovery checks; stale comments never become jobs. Existing `poll` behaviour remains scoped to explicit local handoffs.
+It retains one Codex session and one local isolated worktree per PR. A first eligible review fetches the PR branch, verifies the fetched SHA equals the reviewed SHA, and creates a detached worktree at that exact commit; a later eligible review resumes the same session. A local exclusive lock keeps two poller invocations from starting concurrent jobs. The watcher stays active after empty scans and dispatches, and retires dispatcher-owned worktrees and registry entries when their PR closes. The dispatcher preserves the exact-head marker, duplicate-review, branch-ownership, and bounded-recovery checks; stale comments never become jobs. Existing `poll` behaviour remains scoped to explicit local handoffs.
 
 ## Start a loop
 

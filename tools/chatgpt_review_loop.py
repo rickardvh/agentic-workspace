@@ -397,9 +397,15 @@ def _review_prompt(review: Review) -> str:
 
 
 def _should_keep_watching(results: list[dict[str, Any]]) -> bool:
-    waiting_reasons = {"review-pending", "stale-review-rejected", "state-is-resume-in-progress"}
+    waiting_reasons = {
+        "review-pending",
+        "stale-review-rejected",
+        "state-is-resume-in-progress",
+        "no-eligible-blocked-review",
+        "dispatcher-job-in-progress",
+    }
     return any(
-        item.get("status") == "resumed"
+        item.get("status") in {"resumed", "dispatched"}
         or (item.get("status") == "no-op" and item.get("reason") in waiting_reasons)
         for item in results
     )
@@ -555,6 +561,28 @@ def _worktree_for(root: Path, pr: int, *, worktree_root: Path) -> Path:
     return (worktree_root / f"pr-{pr}").resolve()
 
 
+def _cleanup_closed_dispatches(root: Path, registry: dict[str, Any], *, runner: CommandRunner, worktree_root: Path) -> list[int]:
+    entries = registry["prs"]
+    removed: list[int] = []
+    for key, entry in list(entries.items()):
+        if not isinstance(entry, dict) or not key.isdigit():
+            continue
+        pr = int(key)
+        payload = _pr_view(root, runner, pr=pr, repo=str(entry.get("repository", "")) or None)
+        if payload.get("state") == "OPEN":
+            continue
+        worktree = Path(str(entry.get("worktree", ""))).resolve()
+        if worktree.is_relative_to(worktree_root.resolve()) and worktree.exists():
+            completed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+            if completed.returncode:
+                raise LoopError("worktree-cleanup-failed", completed.stderr.strip() or f"could not remove worktree for closed PR #{pr}")
+        entries.pop(key)
+        removed.append(pr)
+    if removed:
+        _save_dispatch(root, registry)
+    return removed
+
+
 def _dispatch_all_unlocked(
     root: Path,
     *,
@@ -574,6 +602,7 @@ def _dispatch_all_unlocked(
     """
     registry = _load_dispatch(root)
     entries = registry["prs"]
+    retired = _cleanup_closed_dispatches(root, registry, runner=runner, worktree_root=worktree_root)
     candidates: list[tuple[dict[str, Any], Review]] = []
     for payload in _open_prs(root, runner):
         pr = int(payload.get("number", 0))
@@ -587,7 +616,7 @@ def _dispatch_all_unlocked(
         if review.decision == "blocked" and review.findings:
             candidates.append((payload, review))
     if not candidates:
-        return {"status": "no-op", "reason": "no-eligible-blocked-review"}
+        return {"status": "no-op", "reason": "no-eligible-blocked-review", "retired": retired}
 
     payload, review = candidates[0]
     pr = int(payload["number"])
@@ -606,7 +635,13 @@ def _dispatch_all_unlocked(
     branch = str(payload.get("headRefName", ""))
     if not branch:
         return {"status": "recovery-required", "pr_number": pr, "event": "missing-head-branch"}
-    created = runner.run(["git", "worktree", "add", worktree.as_posix(), branch], cwd=root)
+    fetched = runner.run(["git", "fetch", "--no-tags", "origin", branch], cwd=root)
+    if fetched.returncode:
+        raise LoopError("reviewed-head-fetch-failed", fetched.stderr.strip() or f"could not fetch PR #{pr} head branch")
+    fetched_head = _git_value(root, runner, "rev-parse", "FETCH_HEAD")
+    if fetched_head != str(payload["headRefOid"]):
+        raise LoopError("reviewed-head-mismatch", f"fetched branch for PR #{pr} does not equal the reviewed head")
+    created = runner.run(["git", "worktree", "add", "--detach", worktree.as_posix(), fetched_head], cwd=root)
     if created.returncode:
         raise LoopError("worktree-create-failed", created.stderr.strip() or f"could not create worktree for PR #{pr}")
     prompt = _review_prompt(review)
@@ -627,7 +662,13 @@ def _dispatch_all_unlocked(
         existing_only=False,
         runner=runner,
     )
-    entries[str(pr)] = {"worktree": worktree.as_posix(), "session_id": session_id, "branch": branch}
+    entries[str(pr)] = {
+        "worktree": worktree.as_posix(),
+        "session_id": session_id,
+        "branch": branch,
+        "repository": str(payload.get("repository", "")),
+        "reviewed_head": str(payload["headRefOid"]),
+    }
     _save_dispatch(root, registry)
     return {"status": "dispatched", "pr_number": pr, "mode": "fresh", "session_id": session_id}
 
