@@ -412,7 +412,7 @@ def _should_keep_watching(results: list[dict[str, Any]]) -> bool:
         "dispatcher-job-in-progress",
     }
     return any(
-        item.get("status") in {"resumed", "dispatched"}
+        item.get("status") in {"resumed", "dispatched", "recovery-required"}
         or (item.get("status") == "no-op" and item.get("reason") in waiting_reasons)
         for item in results
     )
@@ -638,7 +638,11 @@ def _dispatch_all_unlocked(
 
     worktree = _worktree_for(root, pr, worktree_root=worktree_root)
     if worktree.exists():
-        return {"status": "recovery-required", "pr_number": pr, "event": "unowned-worktree-exists"}
+        if not worktree.is_relative_to(worktree_root.resolve()):
+            return {"status": "recovery-required", "pr_number": pr, "event": "unowned-worktree-exists"}
+        removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+        if removed.returncode:
+            return {"status": "recovery-required", "pr_number": pr, "event": "orphan-worktree-cleanup-failed"}
     branch = str(payload.get("headRefName", ""))
     if not branch:
         return {"status": "recovery-required", "pr_number": pr, "event": "missing-head-branch"}
