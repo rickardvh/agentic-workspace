@@ -3787,27 +3787,13 @@ candidates = []
     assert decision["phase_question"] == "Startup posture?"
     assert decision["next_action"] == "produce-bounded-reflection-report"
     assert decision["absence_states"]["verbose_planning_detail"] == "detail_omitted"
-    gate = payload["context"]["planning"]["planning_safety_gate"]
-    assert gate["label"] == "work gate"
-    assert gate["provenance"] == "planning"
-    assert gate["gate_result"] == "bounded-reflection-reporting"
-    route = gate["route_decision"]
+    assert "planning_safety_gate" not in payload["context"]["planning"]
+    route = payload["context"]["route_decision"]
     assert route["task_relation"] == "bounded-independent"
     assert route["owner_posture"] == "current"
     assert route["required_transition"] == "none"
     assert route["next_safe_action"]["action"] == "produce-bounded-reflection-report"
-    switch = gate["task_switch_reconciliation"]
-    assert switch["status"] == "bounded-reflection-reporting"
-    assert switch["recommended_next_action"] == "produce-bounded-reflection-report"
-    assert route["blocked_claims"] == switch["blocked_claims"]
-    assert switch["detail_selector"] == "planning_safety_gate.task_switch_reconciliation"
-    assert set(switch["safe_route_ids"]) == {
-        "produce-bounded-reflection-report",
-        "inspect-active-plan",
-        "reconcile-active-plan-before-implementation",
-    }
-    assert "claim-active-plan-complete" in switch["blocked_claims"]
-    assert "does not authorize active-plan progress" in switch["claim_boundary"]
+    assert "claim-active-plan-complete" in route["blocked_claims"]
     assert "work_threads" not in payload["context"]
     assert "architecture_principles_forecast" not in payload["context"]
     assert payload["context"]["read_only_response"]["compact_default"] is True
@@ -3860,13 +3846,13 @@ candidates = []
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    switch = payload["context"]["planning"]["planning_safety_gate"]["task_switch_reconciliation"]
+    route = payload["context"]["route_decision"]
 
     _assert_json_payload_under(payload, 9_000, label="dogfooding issue-shaping start payload", sort_keys=False)
     assert payload["next_safe_action"]["next_safe_action"] == "produce-bounded-reflection-report"
-    assert switch["status"] == "bounded-reflection-reporting"
-    assert switch["current_task_class"] == "bounded-dogfooding-issue-shaping"
-    assert "claim-active-plan-progress" in switch["blocked_claims"]
+    assert route["task_relation"] == "bounded-independent"
+    assert route["next_safe_action"]["action"] == "produce-bounded-reflection-report"
+    assert "claim-active-plan-progress" in route["blocked_claims"]
     assert "work_threads" not in payload["context"]
 
 

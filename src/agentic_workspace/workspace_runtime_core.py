@@ -30127,6 +30127,7 @@ def _startup_route_binding(route_decision: dict[str, Any]) -> dict[str, Any]:
         else "current-identity-observed",
     }
 
+
 def _start_tiny_payload_fast(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, config: WorkspaceConfig, startup_template: dict[str, Any]
 ) -> dict[str, Any]:
@@ -30428,9 +30429,7 @@ def _start_tiny_payload_fast(
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
     route_applies = isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1"
     task_switch_visible_by_default = (
-        route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"} or route_relation == "bounded-independent"
-        if route_applies
-        else False
+        route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"} if route_applies else False
     )
     if (
         planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default
