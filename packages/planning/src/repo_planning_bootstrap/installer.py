@@ -2891,6 +2891,22 @@ def _planning_reconciliation_transaction(
         for item in payload.get("active_projection_reconciliation", {}).get("sync_targets", [])
         if isinstance(item, dict) and item.get("safe_to_sync") is True
     ]
+    owner_transitions: list[dict[str, Any]] = []
+    for owner_path in _live_execplan_paths(target_root / PLANNING_MANAGED_ROOT / "execplans"):
+        owner = _load_execplan_record(owner_path) or {}
+        if _execplan_lifecycle(owner) not in {"live", "planned"}:
+            continue
+        proof = owner.get("relationships", {}).get("proof_posture", {}) if isinstance(owner.get("relationships"), dict) else {}
+        proof_state = str(proof.get("state") or "pending") if isinstance(proof, dict) else "pending"
+        owner_transitions.append(
+            {
+                "owner_id": str(owner.get("id") or owner_path.stem),
+                "path": _planning_surface_relative(target_root, owner_path),
+                "transition": "close-slice" if proof_state in {"satisfied", "accepted"} else "blocked",
+                "reason": "admitted-proof-present" if proof_state in {"satisfied", "accepted"} else "proof-admission-required",
+                "proof_posture": proof_state,
+            }
+        )
     operations = [
         *[
             {
@@ -2918,6 +2934,7 @@ def _planning_reconciliation_transaction(
         "external_evidence_status": str(payload.get("external_work_state", {}).get("status") or "absent"),
         "external_evidence_refreshed_at": str(payload.get("external_work_state", {}).get("refreshed_at") or ""),
         "operations": operations,
+        "owner_transitions": owner_transitions,
     }
     computed_id = hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
     proposal_payload = {
@@ -2925,12 +2942,8 @@ def _planning_reconciliation_transaction(
         "proposal_id": computed_id,
         "source": source,
         "operations": operations,
-        "blocked_items": [
-            {
-                "reason": "semantic-closeout-admission-required",
-                "rule": "External observations do not close owners without admitted proof and intent evidence.",
-            }
-        ],
+        "owner_transitions": owner_transitions,
+        "blocked_items": [item for item in owner_transitions if item["transition"] == "blocked"],
         "preserved_invariants": [
             "unrelated live owners",
             "lane and parent closure boundaries",
