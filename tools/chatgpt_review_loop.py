@@ -427,11 +427,11 @@ def poll_one(
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
     command = [
         *shlex.split(codex_command),
-        *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []),
         "-C",
         root.as_posix(),
         "exec",
         "resume",
+        *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []),
         str(state["session_id"]),
         _review_prompt(review),
     ]

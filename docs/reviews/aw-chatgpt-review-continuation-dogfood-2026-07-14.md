@@ -14,6 +14,8 @@ At `2026-07-14T10:02:10Z`, the external reviewer posted the first real blocked r
 
 At `2026-07-14T10:12:19Z`, the reviewer posted a blocked result for head `67c3cce4`. The activated watcher detected it on poll 7 and attempted the exact session, but the process exited 2 and entered bounded recovery. A direct exact-session diagnostic then reached `hook: Stop` and reported `hook: Stop Failed`. Replaying a real Stop payload isolated the fault to `commandWindows`: the nested PowerShell wrapper treated Codex's JSON stdin as pipeline input while evaluating `Join-Path`, corrupting the Python script path. Commit `adeda425` replaced the wrapper with the repo-relative command `uv run python tools/chatgpt_review_loop.py handoff --hook` and preserved bounded resume stderr in local state. A manual exact-session recovery with hook-trust bypass then completed `hook: Stop` successfully and recorded pushed head `adeda425783085561cd034e03f7286b0afcd68f7` at `2026-07-14T10:41:50Z`. This proves the exact-session and Stop-hook path, but the manual recovery is not counted as an automatic resumption.
 
+At `2026-07-14T11:11:12Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AAAABKCV0JQ` for exact head `c0da56018db186b3d2007022ac0931e82ddb9c44`, 27 minutes 39 seconds after handoff. The same watcher remained alive, detected the marker on poll 29, and recorded the third bounded attempt without manual review copying. The retained diagnostic showed that the controller constructed `codex --dangerously-bypass-hook-trust -C ... exec resume`, but Codex CLI 0.144.3 accepts this flag on the `exec resume` subcommand. The invocation exited 2 before session startup. The controller and focused assertion now place the flag after `exec resume`; this review cannot be retried automatically because its attempt key was correctly persisted before launch.
+
 | Scenario | Evidence | Result |
 | --- | --- | --- |
 | Blocked review, exact-session resume, corrective head | `test_blocked_review_resumes_exact_session_once_and_requires_new_handoff` simulates PR #12 at head `aaaa…`, records exact session `1111…`, transports one blocker, launches non-interactive `codex exec resume` with that exact ID, and observes the Stop-side state move to head `bbbb…` | Passed; one automatic resumption and one new handoff |
@@ -28,14 +30,16 @@ At `2026-07-14T10:12:19Z`, the reviewer posted a blocked result for head `67c3cc
 | Windows Stop-hook invocation | Piped a real Stop payload through the direct repo-relative command and then ran an exact-session Codex turn with the reviewed hook enabled | Passed after fixing the PowerShell stdin bug; Codex reported `hook: Stop Completed` and local state recorded corrective head `adeda425…` |
 | Hook portability | `test_project_stop_hook_uses_repo_runtime_and_has_no_machine_local_path` | Passed; repo-root resolution, bounded timeout, and no checked-in machine path |
 
-Focused run: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 16 passed. Ruff passed after formatting. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
+Focused run: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 17 passed. Ruff passed after formatting. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
 
-Live PR #2292 has now supplied two SHA-bound blocked reviews. Therefore:
+Live PR #2292 has now supplied three SHA-bound blocked reviews. Therefore:
 
 - review latency for head `67c3cce4`: 5 minutes 23 seconds from handoff to review;
+- review latency for head `c0da5601`: 27 minutes 39 seconds from handoff to review;
 - successful live automatic resumptions: 0;
 - successful live manual exact-session recoveries: 1;
-- manual interventions in live trials: hook-trust activation, Windows wrapper diagnosis/fix, and one explicit recovery resume;
+- automatic watcher detections: 3;
+- manual interventions in live trials: hook-trust activation, Windows wrapper diagnosis/fix, hook-trust flag placement diagnosis/fix, and one explicit recovery resume;
 - stale/duplicate prevention: deterministic fixtures passed;
 - missed or false blockers: 0 observed across the two live reviews.
 
