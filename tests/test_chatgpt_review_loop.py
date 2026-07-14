@@ -231,6 +231,8 @@ def test_resume_failure_is_not_retried_for_same_comment(tmp_path: Path) -> None:
     second = loop.poll_one(tmp_path, loop._load_state(tmp_path, 12), runner=runner, codex_command="codex")
 
     assert first["event"] == "resume-failed"
+    assert first["diagnostic"] == "failed"
+    assert loop._load_state(tmp_path, 12)["resume_diagnostic"] == "failed"
     assert second == {"pr_number": 12, "status": "no-op", "reason": "state-is-recovery-required"}
     assert sum("resume" in command for command in runner.commands) == 1
 
@@ -371,4 +373,6 @@ def test_project_stop_hook_uses_repo_runtime_and_has_no_machine_local_path() -> 
     assert "uv run python" in handler["command"]
     assert "git rev-parse --show-toplevel" in handler["command"]
     assert "uv run python" in handler["commandWindows"]
+    assert handler["commandWindows"] == "uv run python tools/chatgpt_review_loop.py handoff --hook"
+    assert "powershell" not in handler["commandWindows"].lower()
     assert "ricka" not in json.dumps(handler)

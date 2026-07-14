@@ -436,14 +436,22 @@ def poll_one(
     completed = runner.run(command, cwd=root, env=env)
     latest = _load_state(root, pr)
     if completed.returncode:
+        diagnostic = (completed.stderr or completed.stdout).strip()[-2000:]
         latest.update(
             status="recovery-required",
             last_event="resume-failed",
             recovery="inspect the Codex failure; this exact review will not be retried automatically",
             resume_exit_code=completed.returncode,
+            resume_diagnostic=diagnostic,
         )
         _save_state(root, latest)
-        return {"pr_number": pr, "status": "recovery-required", "event": "resume-failed", "exit_code": completed.returncode}
+        return {
+            "pr_number": pr,
+            "status": "recovery-required",
+            "event": "resume-failed",
+            "exit_code": completed.returncode,
+            "diagnostic": diagnostic,
+        }
     if latest.get("handoff_head") == review.head:
         latest.update(
             status="recovery-required",
