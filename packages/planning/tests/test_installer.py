@@ -620,6 +620,125 @@ candidates = []
     assert repeated["status"] == "already-applied"
 
 
+def test_reconciliation_transaction_closes_merged_owners_and_selects_survivor(tmp_path: Path) -> None:
+    """The ordinary merged-stack path is one preview plus one CAS apply."""
+    install_bootstrap(target=tmp_path)
+    execplans = tmp_path / ".agentic-workspace/planning/execplans"
+    closed_ids = [f"merged-{index}" for index in range(6)]
+    survivor_id = "continue-live"
+    for owner_id in [*closed_ids, survivor_id]:
+        record = installer_mod._build_execplan_record_from_todo_item(
+            title=owner_id,
+            item_id=owner_id,
+            status="active" if owner_id == closed_ids[0] else "next",
+            why_now="Reconciliation fixture.",
+            next_action="Continue owner.",
+            done_when="Owner is reconciled.",
+        )
+        record["lifecycle"] = "live"
+        record["phase"] = "implementation"
+        record.setdefault("relationships", {})["proof_posture"] = {"state": "accepted" if owner_id in closed_ids else "pending"}
+        _write(execplans / f"{owner_id}.plan.json", json.dumps(record, indent=2))
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = [
+  { id = "merged-0", title = "merged-0", maturity = "active", status = "active", surface = ".agentic-workspace/planning/execplans/merged-0.plan.json", why_now = "fixture", next_action = "fixture", done_when = "fixture" },
+]
+queued_items = [
+  { id = "unrelated", title = "unrelated", maturity = "ready", status = "next", surface = "unrelated", why_now = "keep", next_action = "keep", done_when = "keep" },
+]
+""",
+    )
+    observed_at = datetime.now(UTC).replace(microsecond=0)
+    items = []
+    for owner_id in closed_ids:
+        items.append(
+            {
+                "system": "fixture",
+                "id": f"PR-{owner_id}",
+                "title": owner_id,
+                "status": "merged",
+                "kind": "change-request",
+                "observation_id": f"fixture:{owner_id}:merged",
+                "planning_relationship": {
+                    "binding": "explicit",
+                    "owner_id": owner_id,
+                    "owner_ref": f".agentic-workspace/planning/execplans/{owner_id}.plan.json",
+                    "work_context_id": "default",
+                    "evidence_refs": [f"PR-{owner_id}"],
+                },
+                "external_revision": f"merge-{owner_id}",
+                "observed_at": observed_at.isoformat(),
+                "freshness": {
+                    "status": "current",
+                    "observed_at": observed_at.isoformat(),
+                    "expires_at": (observed_at + timedelta(hours=24)).isoformat(),
+                    "max_age_seconds": 86400,
+                },
+                "availability": "available",
+                "provenance": {
+                    "provider_class": "fixture",
+                    "resolver_id": "fixture",
+                    "source_ref": owner_id,
+                    "refresh_id": "fixture-refresh",
+                },
+            }
+        )
+    _write_external_intent_evidence(tmp_path / ".agentic-workspace/planning/external-intent-evidence.json", items=items)
+
+    loaded_external = installer_mod._load_external_intent_evidence(tmp_path)
+    assert loaded_external["status"] == "loaded", loaded_external.get("reason")
+    preview = planning_reconcile(target=tmp_path, preview=True)
+    proposal = preview["proposal"]
+    assert [item["owner_id"] for item in proposal["owner_transitions"] if item["transition"] == "close-slice"] == closed_ids
+    assert proposal["selected_owner"]["owner_id"] == survivor_id
+    assert proposal["source"]["external_evidence_revision"]
+    assert proposal["source"]["proof_revision"]
+
+    stale_proof_record = json.loads((execplans / "merged-0.plan.json").read_text())
+    stale_proof_record["relationships"]["proof_posture"]["state"] = "pending"
+    _write(execplans / "merged-0.plan.json", json.dumps(stale_proof_record, indent=2))
+    stale_proof = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=proposal["proposal_id"],
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+    )
+    assert stale_proof["reason"] == "proposal-stale-or-mismatched"
+    stale_proof_record["relationships"]["proof_posture"]["state"] = "accepted"
+    _write(execplans / "merged-0.plan.json", json.dumps(stale_proof_record, indent=2))
+
+    evidence_path = tmp_path / ".agentic-workspace/planning/external-intent-evidence.json"
+    stale_external_payload = json.loads(evidence_path.read_text())
+    stale_external_payload["items"][0]["external_revision"] = "newer-merge-revision"
+    _write(evidence_path, json.dumps(stale_external_payload, indent=2))
+    stale_external = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=proposal["proposal_id"],
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+    )
+    assert stale_external["reason"] == "proposal-stale-or-mismatched"
+
+    proposal = planning_reconcile(target=tmp_path, preview=True)["proposal"]
+
+    applied = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=proposal["proposal_id"],
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+    )
+    assert applied["status"] == "applied"
+    assert applied["receipt"]["closed_owner_ids"] == closed_ids
+    assert applied["receipt"]["selected_owner"]["owner_id"] == survivor_id
+    assert all(json.loads((execplans / f"{owner_id}.plan.json").read_text())["lifecycle"] == "closed" for owner_id in closed_ids)
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text())
+    assert state["todo"]["active_items"][0]["id"] == survivor_id
+    assert state["todo"]["queued_items"][0]["id"] == "unrelated"
+
+
 def test_planning_reconcile_syncs_stale_active_todo_projection(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
