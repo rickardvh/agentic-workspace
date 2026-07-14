@@ -20,6 +20,8 @@ REVIEW_POLICY = "pr-review-recheck-v1"
 HEAD_SYNC_ATTEMPTS = 3
 STATE_KIND = "agentic-workspace/chatgpt-review-loop-state/v1"
 STATE_RELATIVE = Path(".agentic-workspace/local/chatgpt-review-loop")
+OWNER_ROOT_ENV = "AW_CHATGPT_REVIEW_OWNER_ROOT"
+OWNER_BRANCH_ENV = "AW_CHATGPT_REVIEW_OWNER_BRANCH"
 DISPATCH_STATE = "dispatch.json"
 REVIEW_MARKER_RE = re.compile(
     r"<!-- aw-chatgpt-review pr=(?P<pr>[1-9][0-9]*) "
@@ -236,14 +238,19 @@ def handoff(
             "session-missing", "Codex session identity is required", recovery="run from a Stop hook or pass --session-id explicitly"
         )
     root = _repo_root(cwd, runner)
-    branch = _git_value(root, runner, "branch", "--show-current")
+    owner_root = Path(os.environ.get(OWNER_ROOT_ENV, root.as_posix())).resolve()
+    branch = os.environ.get(OWNER_BRANCH_ENV, "") or _git_value(root, runner, "branch", "--show-current")
     head = _git_value(root, runner, "rev-parse", "HEAD")
+    if existing_only and os.environ.get(OWNER_ROOT_ENV) and not _git_value(root, runner, "branch", "--show-current"):
+        candidates = [item for item in _all_states(owner_root) if item.get("branch") == branch and item.get("session_id") == session_id]
+        if not candidates:
+            return {"kind": STATE_KIND, "status": "handoff-not-enabled", "pr_number": 0, "head": head, "session_bound": False, "opt_in_added": False, "state_path": ""}
     if not branch:
         raise LoopError("detached-head", "handoff does not guess a PR from a detached HEAD")
     if existing_only:
         candidates = [
             item
-            for item in _all_states(root)
+            for item in _all_states(owner_root)
             if item.get("branch") == branch and item.get("session_id") == session_id
         ]
         if not candidates:
@@ -278,8 +285,8 @@ def handoff(
     if payload.get("headRefOid") != head:
         raise LoopError("head-not-pushed", "current HEAD does not match the PR head; push before handoff")
 
-    path = _state_path(root, number)
-    existing = _load_state(root, number) if path.is_file() else None
+    path = _state_path(owner_root, number)
+    existing = _load_state(owner_root, number) if path.is_file() else None
     if existing and existing.get("session_id") != session_id and not replace_session:
         raise LoopError(
             "session-ambiguous",
@@ -312,7 +319,7 @@ def handoff(
         }
     state.update(
         {
-            "repo_root": root.as_posix(),
+            "repo_root": owner_root.as_posix(),
             "repository": repo,
             "pr_number": number,
             "pr_url": str(payload.get("url", "")),
@@ -330,7 +337,7 @@ def handoff(
         state["handoff_at"] = datetime.now(timezone.utc).isoformat()
     state.pop("resume_exit_code", None)
     state.pop("resume_diagnostic", None)
-    _save_state(root, state)
+    _save_state(owner_root, state)
     return {
         "kind": STATE_KIND,
         "status": state["last_event"],
@@ -648,6 +655,8 @@ def _dispatch_all_unlocked(
     command = [*shlex.split(codex_command), "-C", worktree.as_posix(), "exec", "--json", *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []), prompt]
     env = os.environ.copy()
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
+    env[OWNER_ROOT_ENV] = root.as_posix()
+    env[OWNER_BRANCH_ENV] = branch
     completed = runner.run(command, cwd=worktree, env=env)
     if completed.returncode:
         return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-failed"}
@@ -853,8 +862,8 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                 if args.pr:
                     raise LoopError("invalid-selection", "--all-open and --pr cannot be used together")
                 worktree_root = args.worktree_root if args.worktree_root.is_absolute() else root / args.worktree_root
-                last_results = [
-                    dispatch_all(
+                try:
+                    result = dispatch_all(
                         root,
                         runner=runner,
                         codex_command=args.codex_command,
@@ -863,7 +872,9 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                         max_repeated_blockers=args.max_repeated_blockers,
                         bypass_hook_trust=args.bypass_hook_trust,
                     )
-                ]
+                except LoopError as exc:
+                    result = {"status": "recovery-required", "event": exc.code, "recovery": str(exc)}
+                last_results = [result]
             else:
                 states = [_load_state(root, args.pr)] if args.pr else _all_states(root)
                 last_results = [
