@@ -1387,7 +1387,11 @@ def test_local_owner_selection_drives_planning_queries_current_work_and_cache_id
     planning_installer.select_existing_owner("owner-b", target=target, current_work_id="review-thread")
     owner_b_query = planning_installer.planning_summary_query(target=target, selectors=["planning_record"])
     owner_b_summary = planning_installer.planning_summary(target=target, profile="tiny")
-    owner_b_binding = current_work_context.resolve_current_work_context(root=target, task="Continue selected work")
+    owner_b_binding = current_work_context.resolve_current_work_context(
+        root=target,
+        task="Continue selected work",
+        relation_hint="plan-continuation",
+    )
     owner_b_revision = planning_installer.planning_revision(target)
 
     planning_installer.select_existing_owner(
@@ -1398,7 +1402,11 @@ def test_local_owner_selection_drives_planning_queries_current_work_and_cache_id
     )
     owner_c_query = planning_installer.planning_summary_query(target=target, selectors=["planning_record"])
     owner_c_summary = planning_installer.planning_summary(target=target, profile="tiny")
-    owner_c_binding = current_work_context.resolve_current_work_context(root=target, task="Continue selected work")
+    owner_c_binding = current_work_context.resolve_current_work_context(
+        root=target,
+        task="Continue selected work",
+        relation_hint="plan-continuation",
+    )
     owner_c_revision = planning_installer.planning_revision(target)
 
     assert owner_b_query["payload"]["planning_record"]["task"]["id"] == "owner-b"
@@ -1508,12 +1516,21 @@ def test_current_work_binding_fails_closed_for_multiple_live_owners_and_consumes
             }
         ),
     )
-    selected = current_work_context.resolve_current_work_context(root=target, task="Continue the selected owner")
+    unadopted = current_work_context.resolve_current_work_context(root=target, task="Continue the selected owner")
+    selected = current_work_context.resolve_current_work_context(
+        root=target,
+        task="Continue the selected owner",
+        relation_hint="plan-continuation",
+    )
 
     assert ambiguous["status"] == "ambiguous"
     assert ambiguous["plan_id"] == ""
     assert exact["status"] == "bound"
     assert exact["plan_id"] == "issue-3100"
+    assert unadopted["plan_id"] == ""
+    assert unadopted["selected_plan_id"] == "issue-3100"
+    assert unadopted["owner_binding"]["relation"] == "unrelated-bounded"
+    assert unadopted["owner_binding"]["carry_eligible"] is False
     assert selected["status"] == "bound"
     assert selected["plan_id"] == "issue-3100"
     assert selected["owner_binding"]["relation"] == "plan-continuation"

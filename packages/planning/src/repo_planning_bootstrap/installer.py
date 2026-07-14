@@ -3043,7 +3043,11 @@ def _reconcile_external_work_state(*, state: dict[str, Any], external_evidence: 
         *_state_roadmap_candidates(state),
     ]:
         tracked_refs.update(_planning_item_issue_refs(item))
-    items = [item for item in external_evidence.get("items", []) if isinstance(item, dict)]
+    items = [
+        item
+        for item in external_evidence.get("items", [])
+        if isinstance(item, dict) and (bool(item.get("relevant")) or str(item.get("id", "")).strip() in tracked_refs)
+    ]
     open_items = [item for item in items if _external_status_is_open(item.get("status"))]
     closed_items = [item for item in items if _external_status_is_closed(item.get("status"))]
     tracked_open = sum(1 for item in open_items if str(item.get("id", "")).strip() in tracked_refs)
@@ -3062,13 +3066,20 @@ def _reconcile_external_work_state(*, state: dict[str, Any], external_evidence: 
         "snapshot_rule": EXTERNAL_INTENT_SNAPSHOT_RULE,
         "refresh_after_mutation": external_evidence.get("status") == "loaded",
         "refresh_command": EXTERNAL_INTENT_REFRESH_COMMAND,
-        "item_count": external_evidence.get("item_count", len(items)),
-        "open_count": refresh_metadata.get("open_count", len(open_items)),
-        "closed_count": refresh_metadata.get("closed_count", len(closed_items)),
+        "item_count": len(items),
+        "open_count": len(open_items),
+        "closed_count": len(closed_items),
         "tracked_open_count": tracked_open,
         "untracked_open_count": max(0, len(open_items) - tracked_open),
         "relevant_observation_count": external_evidence.get("relevant_observation_count", 0),
         "unmatched_backlog_count": external_evidence.get("unmatched_backlog_count", 0),
+        "backlog_metadata": {
+            "total_item_count": external_evidence.get("item_count", 0),
+            "total_open_count": refresh_metadata.get("open_count", 0),
+            "total_closed_count": refresh_metadata.get("closed_count", 0),
+            "unmatched_count": external_evidence.get("unmatched_backlog_count", 0),
+            "detail_only": True,
+        },
         "admitted_observations": external_evidence.get("admitted_observations", []),
         "generic_route_postures": [
             observation.get("admission", {})

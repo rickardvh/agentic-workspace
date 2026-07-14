@@ -5803,6 +5803,69 @@ def test_more_than_retention_limit_unrelated_starts_create_no_owner_carry(tmp_pa
     assert json.loads(bounded[0].read_text(encoding="utf-8"))["work_binding"]["owner_binding"]["relation"] == "plan-continuation"
 
 
+def test_implement_unreferenced_task_does_not_adopt_local_selected_owner(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_planning_state(tmp_path)
+    _write_architecture_principles(tmp_path)
+    intent_path = tmp_path / ".agentic-workspace/system-intent/intent.toml"
+    intent_path.write_text(
+        intent_path.read_text(encoding="utf-8").replace(
+            "src/agentic_workspace/workspace_runtime*.py",
+            "README.md",
+        ),
+        encoding="utf-8",
+    )
+    _write(tmp_path / "README.md", "# Fixture\n")
+    owner_ref = ".agentic-workspace/planning/execplans/issue-2258.plan.json"
+    _write(
+        tmp_path / owner_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2258",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "references": [{"kind": "issue", "target": "#2258"}],
+            }
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace/local/planning/owner-selection.json",
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "fixture",
+                "selected_owner": {"id": "issue-2258", "ref": owner_ref},
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "README.md",
+                "--task",
+                "Update the README wording",
+                "--select",
+                "decision_point_intent_confirmation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["values"].get("decision_point_intent_confirmation", {}).get("forecast_digest", "") == ""
+    carry_dir = tmp_path / ".agentic-workspace/local/decision-point-intent"
+    assert (list(carry_dir.glob("*.json")) if carry_dir.exists() else []) == []
+
+
 def test_start_prose_does_not_control_carry_and_implement_rebinds_after_branch_switch(tmp_path: Path, capsys) -> None:
     subprocess.run(["git", "init", "-b", "master"], cwd=tmp_path, text=True, capture_output=True, check=True)
     subprocess.run(["git", "config", "user.email", "fixture@example.com"], cwd=tmp_path, check=True)

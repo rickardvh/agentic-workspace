@@ -1529,7 +1529,20 @@ candidates = []
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
-    assert payload["external_work_state"]["open_count"] == 1
+    assert payload["status"] == "clean"
+    assert payload["external_work_state"]["open_count"] == 0
+    assert payload["external_work_state"]["untracked_open_count"] == 0
+    assert payload["external_work_state"]["unmatched_backlog_count"] == 1
+    assert payload["external_work_state"]["backlog_metadata"] == {
+        "total_item_count": 1,
+        "total_open_count": 1,
+        "total_closed_count": 0,
+        "unmatched_count": 1,
+        "detail_only": True,
+    }
+    assert payload["external_observation_inputs"]["observations"] == []
+    assert payload["recommendations"] == ["No reconcile cleanup found from supplied provider-agnostic evidence."]
+    assert "Open external work" not in json.dumps(payload)
     cache_path = tmp_path / ".agentic-workspace/local/cache/external-intent-evidence.json"
     assert cache_path.exists()
     cache_payload = json.loads(cache_path.read_text(encoding="utf-8"))

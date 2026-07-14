@@ -114,7 +114,6 @@ def _task_binding_relation(
     plan_refs: list[str],
     task_refs: list[str],
     relation_hint: str = "",
-    selected_owner: bool = False,
 ) -> tuple[str, str]:
     """Classify owner adoption before any decision-point carry can be written."""
 
@@ -139,8 +138,6 @@ def _task_binding_relation(
         return "plan-continuation", "task has an exact reference to the resolved Planning owner"
     if task_refs and plan_refs and set(task_refs).isdisjoint(plan_refs):
         return "unrelated-bounded", "task references work outside the selected owner"
-    if selected_owner:
-        return "plan-continuation", "supported local owner selection binds the current work context"
     return "unrelated-bounded", "bounded work did not explicitly adopt the selected owner"
 
 
@@ -249,7 +246,6 @@ def resolve_current_work_context(
         plan_refs=plan_refs,
         task_refs=task_refs,
         relation_hint=relation_hint,
-        selected_owner=plan_source == ".agentic-workspace/local/planning/owner-selection.json",
     )
     ambiguous = (len(threads) > 1 and not selected_threads) or bool(conflicts) or relation == "ambiguous" or owner_ambiguous
     adopted_plan_id = plan_id if relation in {"plan-continuation", "plan-mutation"} and not ambiguous else ""

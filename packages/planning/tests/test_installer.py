@@ -447,6 +447,27 @@ def test_unmatched_external_backlog_stays_out_of_ordinary_planning_pressure(tmp_
     assert len(json.dumps(current)) < 2500
     assert state_path.read_text(encoding="utf-8") == before_state
 
+    reconcile = planning_reconcile(target=tmp_path)
+    reconcile_external = reconcile["external_work_state"]
+    assert reconcile["status"] == "clean"
+    assert reconcile_external["item_count"] == 0
+    assert reconcile_external["open_count"] == 0
+    assert reconcile_external["untracked_open_count"] == 0
+    assert reconcile_external["relevant_observation_count"] == 0
+    assert reconcile_external["unmatched_backlog_count"] == 1000
+    assert reconcile_external["backlog_metadata"] == {
+        "total_item_count": 1000,
+        "total_open_count": 1000,
+        "total_closed_count": 0,
+        "unmatched_count": 1000,
+        "detail_only": True,
+    }
+    assert reconcile_external["admitted_observations"] == []
+    assert reconcile["external_observation_inputs"]["observations"] == []
+    assert reconcile["recommendations"] == ["No reconcile cleanup found from supplied provider-agnostic evidence."]
+    assert "EXT-999" not in json.dumps(reconcile)
+    assert len(json.dumps(reconcile)) < 8000
+
 
 def test_planning_reconcile_applies_only_safe_prune_targets(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
