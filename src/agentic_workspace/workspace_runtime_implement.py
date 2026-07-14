@@ -1812,6 +1812,24 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
         projected["proof"]["intent_proof"] = intent_proof
     if isinstance(planning_safety_gate, dict):
         compact_gate = _selector_first_planning_safety_gate(planning_safety_gate)
+        authoritative_route = _as_dict(planning_safety_gate.get("route_decision"))
+        if authoritative_route.get("kind") == "agentic-planning/route-decision/v1":
+            compact_gate["route_decision"] = {
+                key: authoritative_route.get(key)
+                for key in (
+                    "task_relation",
+                    "owner_posture",
+                    "required_transition",
+                    "allowed_claims",
+                    "blocked_claims",
+                    "implementation_allowed",
+                    "mutation_authority",
+                    "proof_expectation",
+                    "state_update_policy",
+                    "next_safe_action",
+                )
+                if authoritative_route.get(key) not in (None, "", [], {})
+            }
         compact_gate.pop("planning_revision", None)
         compact_gate.pop("work_shape_guidance", None)
         if compact_gate.get("status") in {"clear", "satisfied"}:

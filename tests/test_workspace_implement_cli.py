@@ -448,13 +448,11 @@ candidates = []
     assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "enough-for-bounded-implementation"
     gate = payload["context"]["planning_safety_gate"]
     assert gate["gate_result"] == "current-task-route-acknowledged"
-    switch = gate["task_switch_reconciliation"]
-    assert switch["status"] == "current-task-route-acknowledged"
-    assert switch["recommended_next_action"] == "prove-current-task"
-    assert switch["route_acknowledgement"]["status"] == "acknowledged"
-    assert switch["route_acknowledgement"]["route"] == "current-task"
-    assert switch["route_acknowledgement"]["changed_path_count"] == 1
-    assert "claim-active-plan-progress" in switch["blocked_claims"]
+    route = gate["route_decision"]
+    assert route["task_relation"] == "bounded-independent"
+    assert route["required_transition"] == "none"
+    assert route["next_safe_action"]["action"] == "prove-current-task"
+    assert "claim-active-plan-progress" in route["blocked_claims"]
     packet = payload["operating_loop"]
     assert packet["verification"]["state"] == "proof_missing"
     assert packet["closeout_state"] == "blocked_missing_proof"
