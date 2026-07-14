@@ -313,3 +313,52 @@ def resolve_current_work_context(
         "safe_probe": "agentic-workspace start --target . --select work_threads --format json" if ambiguous else "",
         "rule": "Consumers must resolve this binding at use time and must not carry confident issue, PR, task, or plan metadata across invalidating transitions.",
     }
+
+
+def startup_route_identity(*, root: Path, task: str = "") -> dict[str, Any]:
+    """Return the exact live identity a startup route forecast is bound to.
+
+    This is deliberately a small, recomputable precondition rather than durable
+    carry.  A caller that wants to adopt a forecast or mutate Planning must
+    compare it again at that boundary and reject the forecast on any mismatch.
+    """
+    root = root.resolve()
+    context = resolve_current_work_context(root=root, task=task)
+    selected_id, selected_ref = _selected_planning_owner(root)
+    observed = {
+        "target": root.as_posix(),
+        "worktree": str(context.get("worktree") or "."),
+        "branch": str(context.get("branch") or ""),
+        "head": str(context.get("head") or ""),
+        "current_work": str(context.get("id") or ""),
+        "selected_owner": {"id": selected_id, "ref": selected_ref},
+    }
+    fingerprint = hashlib.sha256(json.dumps(observed, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]
+    return {
+        "kind": "agentic-workspace/startup-route-identity/v1",
+        "fingerprint": fingerprint,
+        "observed": observed,
+        "comparison_fields": ["target", "worktree", "branch", "head", "current_work", "selected_owner"],
+        "rule": "A changed field rejects the forecast; re-resolve the authoritative route before adoption or Planning mutation.",
+    }
+
+
+def startup_route_identity_check(*, expected: dict[str, Any], root: Path, task: str = "") -> dict[str, Any]:
+    """Fail closed when a startup route forecast no longer matches live state."""
+    actual = startup_route_identity(root=root, task=task)
+    expected_observed = expected.get("observed") if isinstance(expected, dict) else {}
+    actual_observed = actual["observed"]
+    fields = actual["comparison_fields"]
+    changed = [
+        field for field in fields if not isinstance(expected_observed, dict) or expected_observed.get(field) != actual_observed.get(field)
+    ]
+    return {
+        "kind": "agentic-workspace/startup-route-identity-check/v1",
+        "status": "match" if not changed else "stale-projection-rejected",
+        "expected_fingerprint": str(expected.get("fingerprint") or "") if isinstance(expected, dict) else "",
+        "actual_fingerprint": actual["fingerprint"],
+        "changed_fields": changed,
+        "actual": actual,
+        "action": "adopt-route" if not changed else "re-resolve-route",
+        "rule": "Do not adopt or mutate from a stale startup route projection.",
+    }

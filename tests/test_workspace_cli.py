@@ -4315,6 +4315,8 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
     route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
     assert route["selected_owner"] == selected_ref
     assert route["task_relation"] == "continues-selected-owner"
+    assert route["binding"]["identity"]["observed"]["selected_owner"]["ref"] == selected_ref
+    assert route["binding"]["adoption_guard"]["on_mismatch"] == "reject-stale-projection-and-re-resolve"
 
 
 def test_route_decision_keeps_relation_posture_and_transition_separate() -> None:
@@ -4556,20 +4558,50 @@ def test_selector_first_gate_projects_authoritative_route_decision() -> None:
     }
 
 
-def test_startup_route_binding_is_provisional_before_identity_transition() -> None:
+def test_startup_route_binding_is_provisional_before_identity_transition(tmp_path: Path) -> None:
     from agentic_workspace.workspace_runtime_startup import _startup_route_binding
 
+    _init_git_repo(tmp_path)
+    binding_args = {"target_root": tmp_path, "task_text": "Continue #2281", "cli_invoke": "agentic-workspace"}
+
     assert (
-        _startup_route_binding({"required_transition": "none", "next_safe_action": {"action": "continue-active-plan"}})["status"] == "bound"
+        _startup_route_binding(
+            route_decision={"required_transition": "none", "next_safe_action": {"action": "continue-active-plan"}}, **binding_args
+        )["status"]
+        == "bound"
     )
-    binding = _startup_route_binding({"required_transition": "none", "identity_effects": ["branch"]})
+    binding = _startup_route_binding(route_decision={"required_transition": "none", "identity_effects": ["branch"]}, **binding_args)
     assert binding["status"] == "provisional"
     assert binding["state_commit"] == "none"
     assert binding["reason"] == "structured-identity-transition"
+    assert binding["adoption_guard"]["status"] == "required"
+    assert binding["adoption_guard"]["expected_fingerprint"] == binding["identity"]["fingerprint"]
     assert (
-        _startup_route_binding({"required_transition": "none", "next_safe_action": {"command": "git switch feature/reconcile"}})["status"]
+        _startup_route_binding(
+            route_decision={"required_transition": "none", "next_safe_action": {"command": "git switch feature/reconcile"}}, **binding_args
+        )["status"]
         == "bound"
     )
+
+
+def test_startup_route_identity_rejects_head_change_before_adoption(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import current_work_context
+
+    _init_git_repo(tmp_path)
+    head = {"value": "a" * 40}
+
+    def fake_git(_root: Path, *args: str) -> str:
+        return "main" if args == ("branch", "--show-current") else head["value"] if args == ("rev-parse", "HEAD") else ""
+
+    monkeypatch.setattr(current_work_context, "_git", fake_git)
+    expected = current_work_context.startup_route_identity(root=tmp_path, task="Continue #2281")
+    head["value"] = "b" * 40
+
+    check = current_work_context.startup_route_identity_check(expected=expected, root=tmp_path, task="Continue #2281")
+
+    assert check["status"] == "stale-projection-rejected"
+    assert check["action"] == "re-resolve-route"
+    assert check["changed_fields"] == ["head"]
 
 
 def test_compact_start_route_decision_preserves_contract_and_binding() -> None:

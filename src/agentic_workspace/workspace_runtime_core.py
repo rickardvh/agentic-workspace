@@ -119,7 +119,7 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
-from agentic_workspace.current_work_context import resolve_current_work_context
+from agentic_workspace.current_work_context import resolve_current_work_context, startup_route_identity
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.reporting_support import (
     closeout_claim_boundary_payload,
@@ -30110,16 +30110,30 @@ def _apply_installed_state_fast_start_gate(
     }
 
 
-def _startup_route_binding(route_decision: dict[str, Any]) -> dict[str, Any]:
+def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
     """Describe whether startup's read-only route forecast can be relied on yet."""
     transition = str(route_decision.get("required_transition") or "none")
     identity_effects = [str(effect) for effect in _list_payload(route_decision.get("identity_effects")) if str(effect).strip()]
     provisional = transition != "none" or bool(identity_effects)
+    identity = startup_route_identity(root=target_root, task=str(task_text or ""))
+    rebind_command = _command_with_cli_invoke(
+        command="agentic-workspace start --target . --task <same-task> --format json",
+        cli_invoke=cli_invoke,
+    )
     return {
         "status": "provisional" if provisional else "bound",
         "state_commit": "none",
         "rule": "Startup projects a route only; it never commits selection or carry state before an explicit transition is used.",
         "invalidate_when": ["branch", "head", "worktree", "target", "current-work", "selected-owner"],
+        "identity": identity,
+        "adoption_guard": {
+            "status": "required",
+            "expected_fingerprint": identity["fingerprint"],
+            "comparison_fields": identity["comparison_fields"],
+            "on_mismatch": "reject-stale-projection-and-re-resolve",
+            "rebind_command": rebind_command,
+            "enforced_before": ["route-adoption", "planning-mutation"],
+        },
         "reason": "structured-identity-transition"
         if identity_effects
         else "transition-required"
