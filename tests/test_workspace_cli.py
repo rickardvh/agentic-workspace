@@ -4516,6 +4516,28 @@ def test_startup_route_binding_is_provisional_before_identity_transition() -> No
     assert binding["reason"] == "next-action-may-change-route-identity"
 
 
+def test_compact_start_route_decision_preserves_contract_and_binding() -> None:
+    from agentic_workspace.workspace_runtime_startup import _compact_start_route_decision
+
+    route = _compact_start_route_decision(
+        {
+            "kind": "agentic-planning/route-decision/v1",
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "required_transition": "none",
+            "allowed_claims": ["bounded-task-progress"],
+            "blocked_claims": ["active-plan-progress"],
+            "proof_expectation": "focused proof",
+            "state_update_policy": "read-only",
+            "next_safe_action": {"action": "perform-bounded-task"},
+            "binding": {"status": "bound", "state_commit": "none"},
+        }
+    )
+    assert route["task_relation"] == "bounded-independent"
+    assert route["next_safe_action"] == {"action": "perform-bounded-task"}
+    assert route["binding"] == {"status": "bound", "state_commit": "none"}
+
+
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

@@ -169,6 +169,31 @@ def _startup_route_binding(route_decision: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _compact_start_route_decision(value: Any) -> dict[str, Any]:
+    route = _as_dict(value)
+    if route.get("kind") != "agentic-planning/route-decision/v1":
+        return {}
+    return {
+        key: copy.deepcopy(route[key])
+        for key in (
+            "kind",
+            "task_relation",
+            "owner_posture",
+            "required_transition",
+            "selected_owner",
+            "selected_owner_identity",
+            "allowed_claims",
+            "blocked_claims",
+            "implementation_allowed",
+            "proof_expectation",
+            "state_update_policy",
+            "next_safe_action",
+            "binding",
+        )
+        if route.get(key) not in (None, "", [], {})
+    }
+
+
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Project startup context to the smallest schema-compatible first-contact answer."""
     immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
@@ -246,6 +271,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "active_state_summary": payload["active_state_summary"],
         "planning_revision": payload.get("planning_revision", {}),
         "active_plan_reliance": payload.get("active_plan_reliance", {}),
+        **({"route_decision": _compact_start_route_decision(payload.get("route_decision"))} if payload.get("route_decision") else {}),
         "workflow_sufficiency": payload.get("workflow_sufficiency"),
         **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
         **({"lane_shaping_gate": payload["lane_shaping_gate"]} if "lane_shaping_gate" in payload else {}),
@@ -1712,6 +1738,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             **payload["immediate_next_allowed_action"],
             "read_first": payload["immediate_next_allowed_action"].get("read_first", []),
         },
+        **({"route_decision": _compact_start_route_decision(payload.get("route_decision"))} if payload.get("route_decision") else {}),
         "active_state": _active_state_with_orientation_delta(payload.get("active_state_summary", {}), cli_invoke=cli_invoke),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
