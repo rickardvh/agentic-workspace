@@ -3791,9 +3791,15 @@ candidates = []
     assert gate["label"] == "work gate"
     assert gate["provenance"] == "planning"
     assert gate["gate_result"] == "bounded-reflection-reporting"
+    route = gate["route_decision"]
+    assert route["task_relation"] == "bounded-independent"
+    assert route["owner_posture"] == "current"
+    assert route["required_transition"] == "none"
+    assert route["next_safe_action"]["action"] == "produce-bounded-reflection-report"
     switch = gate["task_switch_reconciliation"]
     assert switch["status"] == "bounded-reflection-reporting"
     assert switch["recommended_next_action"] == "produce-bounded-reflection-report"
+    assert route["blocked_claims"] == switch["blocked_claims"]
     assert switch["detail_selector"] == "planning_safety_gate.task_switch_reconciliation"
     assert set(switch["safe_route_ids"]) == {
         "produce-bounded-reflection-report",
