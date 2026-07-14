@@ -1209,7 +1209,9 @@ def _acknowledged_current_task_switch_payload(
     return acknowledged
 
 
-def _planning_route_decision_payload(task_switch: dict[str, Any], *, planning_revision: dict[str, Any] | None = None) -> dict[str, Any]:
+def _planning_route_decision_payload(
+    task_switch: dict[str, Any], *, planning_revision: dict[str, Any] | None = None, reconciliation_proposal: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """Project the legacy switch result into independent routing dimensions.
 
     Consumers can adopt this stable object without reclassifying task-switch prose;
@@ -1225,7 +1227,7 @@ def _planning_route_decision_payload(task_switch: dict[str, Any], *, planning_re
     blocked_claims = active_plan_protection.get("blocked_claims") or task_switch.get("blocked_claims") or []
     transition = "closeout-or-archive" if completed else "ask-for-route-decision" if ambiguous else "none"
     selected_owner_ref = str(task_switch.get("active_execplan") or "")
-    return {
+    decision = {
         "kind": "agentic-planning/route-decision/v1",
         "task_relation": "continues-selected-owner"
         if continuing
@@ -1261,6 +1263,48 @@ def _planning_route_decision_payload(task_switch: dict[str, Any], *, planning_re
         "state_update_policy": "read-only" if transition == "none" else "explicit-transition-required",
         "next_safe_action": next_packet,
     }
+    proposal = _as_dict(reconciliation_proposal)
+    if proposal.get("status") == "current":
+        decision.update(
+            {
+                "owner_posture": "external-reconciliation-pending",
+                "required_transition": "reconcile",
+                "implementation_allowed": False,
+                "mutation_authority": "reconciliation-proposal",
+                "proof_expectation": "apply the current reconciliation proposal and retain its mutation receipt",
+                "state_update_policy": "reconciliation-apply-required",
+                "next_safe_action": {
+                    "action": "apply-planning-reconciliation-proposal",
+                    "command": proposal.get("apply_command", ""),
+                    "run": proposal.get("apply_command", ""),
+                    "summary": "Apply the current Planning reconciliation proposal after its compare-and-swap check.",
+                },
+            }
+        )
+        decision["reason_codes"] = [*decision["reason_codes"], "current-reconciliation-proposal"]
+        decision["reconciliation_proposal"] = proposal
+    return decision
+
+
+def _current_reconciliation_proposal(*, target_root: Path, planning_revision: dict[str, Any]) -> dict[str, Any]:
+    """Read only a current #2281 proposal summary; compilation remains package-owned."""
+    proposal_root = target_root / ".agentic-workspace/local/planning/reconciliation-proposals"
+    expected_revision = str(_as_dict(planning_revision).get("revision_id") or "")
+    if not proposal_root.is_dir() or not expected_revision:
+        return {"status": "absent"}
+    for path in sorted(proposal_root.glob("*.json"), reverse=True)[:8]:
+        try:
+            proposal = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        source = _as_dict(_as_dict(proposal).get("source"))
+        if source.get("planning_revision") != expected_revision:
+            continue
+        proposal_id = str(_as_dict(proposal).get("proposal_id") or "")
+        apply_command = str(_as_dict(proposal).get("apply_command") or "")
+        if proposal_id and apply_command:
+            return {"status": "current", "proposal_id": proposal_id, "apply_command": apply_command}
+    return {"status": "stale-or-absent"}
 
 
 def _bounded_reflection_reporting_payload(*, task_text: str | None) -> dict[str, Any]:
@@ -1630,7 +1674,11 @@ def _planning_safety_gate_payload(
         changed_paths=changed_paths,
         path_classification=path_classification,
     )
-    route_decision = _planning_route_decision_payload(task_switch_reconciliation, planning_revision=planning_revision)
+    route_decision = _planning_route_decision_payload(
+        task_switch_reconciliation,
+        planning_revision=planning_revision,
+        reconciliation_proposal=_current_reconciliation_proposal(target_root=target_root, planning_revision=planning_revision),
+    )
     closeout_publication_residue = (
         path_classification.get("dirty_shape") == "implementation-with-archived-planning-residue"
         and _as_dict(path_classification.get("archived_planning_residue")).get("status") == "completed-closeout-residue"
