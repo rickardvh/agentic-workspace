@@ -49,13 +49,17 @@ Or keep the local controller running for a bounded number of polls:
 uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60 --bypass-hook-trust
 ```
 
-Polling uses `gh` only. A review is eligible only when its comment contains exactly one well-formed marker whose PR number and 40-character lowercase SHA equal the recorded handoff:
+Polling uses `gh` only. The owner checkout may move to another branch after handoff: blocked-review work runs by default in a disposable detached Git worktree created at the exact reviewed SHA, so unrelated local implementation is not disturbed. Pass `--in-place` only for explicit debugging when the owner checkout is still on the recorded PR branch.
+
+A review is eligible only when its comment contains exactly one well-formed marker whose PR number and 40-character lowercase SHA equal the recorded handoff:
 
 ```text
 <!-- aw-chatgpt-review pr=<number> head=<full-sha> policy=pr-review-recheck-v1 decision=<blocked|merge-ready> -->
 ```
 
-For `blocked`, the controller records `(PR, reviewed SHA, comment ID)` as attempted before starting the non-interactive continuation `codex -C <repo> exec resume <exact-session> <verbatim-findings>`. That exact review cannot automatically resume twice, including after a resume failure. The resumed Codex process inherits a transport guard, while its Stop hook only records a newly pushed handoff; neither termination path starts another poller. A successful cycle therefore requires a corrective push with a new head.
+For `blocked`, the controller records `(PR, reviewed SHA, comment ID)` as attempted, creates a detached worktree beside the owner checkout, and starts `codex -C <worktree> exec resume <exact-session> <verbatim-findings>`. The prompt tells the resumed session to push its detached corrective commit to the recorded PR branch with `git push origin HEAD:<branch>`. Inherited owner-root and owner-branch bindings let the worktree's Stop hook update the original gitignored loop state without reading or changing the owner checkout.
+
+After the resumed CLI exits, the controller removes the temporary worktree even when the resume fails. A cleanup failure is retained in state and requires explicit recovery. That exact review cannot automatically resume twice, including after a resume or worktree failure. The resumed Codex process inherits a transport guard, while its Stop hook only records a newly pushed handoff; neither termination path starts another poller. A successful cycle therefore requires a corrective push with a new head.
 
 For `merge-ready`, the controller records readiness and stops. It never invokes `gh pr merge` or changes ready/draft state; the human retains merge authority.
 
@@ -75,7 +79,7 @@ uv run python tools/chatgpt_review_loop.py cleanup --pr 123
 
 Use `recover` only after a human has fixed the reported malformed or ambiguous GitHub state. It does not remove a handled-review key or retry a failed exact review. After a resume failure or a session that ended without a corrective push, inspect the exact session, push a new head, and run a new handoff. `stop` or `cleanup` also ends a bounded watcher on its next poll; `cleanup` removes only the gitignored local state record and does not change the PR or its comments.
 
-The controller reports explicit recovery for a closed PR, changed local or remote branch, an unrecorded remote head, a missing/ambiguous session, malformed or multiple matching markers, missing blocked findings, resume failure, no new handoff, maximum cycles, and repeated identical blockers. Stale-SHA reviews are visible no-ops and never resume Codex.
+The controller reports explicit recovery for a closed PR, an in-place local branch change, a changed remote branch, an unrecorded remote head, a missing/ambiguous session, malformed or multiple matching markers, missing blocked findings, worktree creation or cleanup failure, resume failure, no new handoff, maximum cycles, and repeated identical blockers. Stale-SHA reviews are visible no-ops and never resume Codex.
 
 ## Validation and current evidence boundary
 

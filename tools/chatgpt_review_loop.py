@@ -20,6 +20,8 @@ REVIEW_POLICY = "pr-review-recheck-v1"
 HEAD_SYNC_ATTEMPTS = 3
 STATE_KIND = "agentic-workspace/chatgpt-review-loop-state/v1"
 STATE_RELATIVE = Path(".agentic-workspace/local/chatgpt-review-loop")
+OWNER_ROOT_ENV = "AW_CHATGPT_REVIEW_OWNER_ROOT"
+OWNER_BRANCH_ENV = "AW_CHATGPT_REVIEW_OWNER_BRANCH"
 REVIEW_MARKER_RE = re.compile(
     r"<!-- aw-chatgpt-review pr=(?P<pr>[1-9][0-9]*) "
     r"head=(?P<head>[0-9a-f]{40}) policy=pr-review-recheck-v1 "
@@ -192,6 +194,8 @@ def handoff(
     replace_session: bool,
     existing_only: bool,
     runner: CommandRunner,
+    state_root: Path | None = None,
+    expected_branch: str = "",
 ) -> dict[str, Any]:
     session_id = session_id.strip()
     if not session_id:
@@ -199,16 +203,14 @@ def handoff(
             "session-missing", "Codex session identity is required", recovery="run from a Stop hook or pass --session-id explicitly"
         )
     root = _repo_root(cwd, runner)
-    branch = _git_value(root, runner, "branch", "--show-current")
+    owner_root = _repo_root(state_root or cwd, runner)
+    current_branch = _git_value(root, runner, "branch", "--show-current")
+    branch = expected_branch.strip() or current_branch
     head = _git_value(root, runner, "rev-parse", "HEAD")
     if not branch:
         raise LoopError("detached-head", "handoff does not guess a PR from a detached HEAD")
     if existing_only:
-        candidates = [
-            item
-            for item in _all_states(root)
-            if item.get("branch") == branch and item.get("session_id") == session_id
-        ]
+        candidates = [item for item in _all_states(owner_root) if item.get("branch") == branch and item.get("session_id") == session_id]
         if not candidates:
             return {
                 "kind": STATE_KIND,
@@ -241,8 +243,8 @@ def handoff(
     if payload.get("headRefOid") != head:
         raise LoopError("head-not-pushed", "current HEAD does not match the PR head; push before handoff")
 
-    path = _state_path(root, number)
-    existing = _load_state(root, number) if path.is_file() else None
+    path = _state_path(owner_root, number)
+    existing = _load_state(owner_root, number) if path.is_file() else None
     if existing and existing.get("session_id") != session_id and not replace_session:
         raise LoopError(
             "session-ambiguous",
@@ -271,11 +273,11 @@ def handoff(
             "head": head,
             "session_bound": True,
             "opt_in_added": False,
-            "state_path": path.relative_to(root).as_posix(),
+            "state_path": path.relative_to(owner_root).as_posix(),
         }
     state.update(
         {
-            "repo_root": root.as_posix(),
+            "repo_root": owner_root.as_posix(),
             "repository": repo,
             "pr_number": number,
             "pr_url": str(payload.get("url", "")),
@@ -293,7 +295,7 @@ def handoff(
         state["handoff_at"] = datetime.now(timezone.utc).isoformat()
     state.pop("resume_exit_code", None)
     state.pop("resume_diagnostic", None)
-    _save_state(root, state)
+    _save_state(owner_root, state)
     return {
         "kind": STATE_KIND,
         "status": state["last_event"],
@@ -301,7 +303,7 @@ def handoff(
         "head": head,
         "session_bound": True,
         "opt_in_added": opted_in,
-        "state_path": path.relative_to(root).as_posix(),
+        "state_path": path.relative_to(owner_root).as_posix(),
     }
 
 
@@ -349,22 +351,61 @@ def _recover(state: dict[str, Any], root: Path, *, event: str, recovery: str) ->
     return {"pr_number": state["pr_number"], "status": "recovery-required", "event": event, "recovery": recovery}
 
 
-def _review_prompt(review: Review) -> str:
+def _review_prompt(review: Review, *, branch: str, isolated: bool) -> str:
+    worktree_instruction = (
+        f"You are running in a temporary detached Git worktree. Commit the corrective changes and push them with "
+        f"`git push origin HEAD:{branch}`. Do not switch or modify the owner checkout. "
+        if isolated
+        else ""
+    )
     return (
         f"External ChatGPT review found blockers for PR #{review.pr} at exact head {review.head}.\n\n"
         f"Review comment: {review.url or review.comment_id}\n\n"
         f"Actionable findings (transported verbatim; not reinterpreted):\n{review.findings}\n\n"
-        "Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
+        f"{worktree_instruction}Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook "
+        "record the next handoff. "
         "Do not merge from this continuation."
     )
+
+
+def _resume_worktree_path(root: Path, *, pr: int, cycle: int, head: str) -> Path:
+    parent = root.parent / f".{root.name}-chatgpt-review-worktrees"
+    return parent / f"pr-{pr}-cycle-{cycle}-{head[:8]}"
+
+
+def _create_resume_worktree(root: Path, state: dict[str, Any], runner: CommandRunner) -> Path:
+    path = _resume_worktree_path(
+        root,
+        pr=int(state["pr_number"]),
+        cycle=int(state["cycles"]),
+        head=str(state["handoff_head"]),
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    completed = runner.run(
+        ["git", "worktree", "add", "--detach", path.as_posix(), str(state["handoff_head"])],
+        cwd=root,
+    )
+    if completed.returncode:
+        detail = completed.stderr.strip() or completed.stdout.strip() or f"exit {completed.returncode}"
+        raise LoopError("worktree-create-failed", f"could not create isolated review worktree: {detail}")
+    return path
+
+
+def _remove_resume_worktree(root: Path, path: Path, runner: CommandRunner) -> str:
+    completed = runner.run(["git", "worktree", "remove", "--force", path.as_posix()], cwd=root)
+    if completed.returncode:
+        return completed.stderr.strip() or completed.stdout.strip() or f"exit {completed.returncode}"
+    try:
+        path.parent.rmdir()
+    except OSError:
+        pass
+    return ""
 
 
 def _should_keep_watching(results: list[dict[str, Any]]) -> bool:
     waiting_reasons = {"review-pending", "stale-review-rejected", "state-is-resume-in-progress"}
     return any(
-        item.get("status") == "resumed"
-        or (item.get("status") == "no-op" and item.get("reason") in waiting_reasons)
-        for item in results
+        item.get("status") == "resumed" or (item.get("status") == "no-op" and item.get("reason") in waiting_reasons) for item in results
     )
 
 
@@ -375,6 +416,7 @@ def poll_one(
     runner: CommandRunner,
     codex_command: str,
     bypass_hook_trust: bool = False,
+    isolated_worktree: bool = True,
 ) -> dict[str, Any]:
     pr = int(state["pr_number"])
     if state.get("status") != "awaiting-review":
@@ -382,7 +424,7 @@ def poll_one(
     state["hook_trust_mode"] = "automation-bypass" if bypass_hook_trust else "persisted-trust-required"
     _save_state(root, state)
     current_branch = _git_value(root, runner, "branch", "--show-current")
-    if current_branch != state.get("branch"):
+    if not isolated_worktree and current_branch != state.get("branch"):
         return _recover(state, root, event="branch-changed", recovery="return to the recorded branch or stop and clean up this loop")
     payload = _pr_view(root, runner, pr=pr, repo=str(state["repository"]))
     if payload.get("state") != "OPEN":
@@ -450,18 +492,47 @@ def poll_one(
 
     env = os.environ.copy()
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
+    worktree = root
+    if isolated_worktree:
+        try:
+            worktree = _create_resume_worktree(root, state, runner)
+        except LoopError as exc:
+            return _recover(
+                state,
+                root,
+                event=exc.code,
+                recovery="inspect Git worktree state; this exact review will not be retried automatically",
+            )
+        env[OWNER_ROOT_ENV] = root.as_posix()
+        env[OWNER_BRANCH_ENV] = str(state["branch"])
+        state.update(resume_worktree=worktree.as_posix(), resume_worktree_status="active")
+        _save_state(root, state)
     command = [
         *shlex.split(codex_command),
         "-C",
-        root.as_posix(),
+        worktree.as_posix(),
         "exec",
         "resume",
         *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []),
         str(state["session_id"]),
-        _review_prompt(review),
+        _review_prompt(review, branch=str(state["branch"]), isolated=isolated_worktree),
     ]
-    completed = runner.run(command, cwd=root, env=env)
+    cleanup_diagnostic = ""
+    try:
+        completed = runner.run(command, cwd=worktree, env=env)
+    finally:
+        if isolated_worktree:
+            cleanup_diagnostic = _remove_resume_worktree(root, worktree, runner)
     latest = _load_state(root, pr)
+    if isolated_worktree:
+        latest["last_resume_worktree"] = worktree.as_posix()
+        latest["resume_worktree_status"] = "cleanup-failed" if cleanup_diagnostic else "removed"
+        latest.pop("resume_worktree", None)
+        if cleanup_diagnostic:
+            latest["resume_worktree_diagnostic"] = cleanup_diagnostic[-2000:]
+        else:
+            latest.pop("resume_worktree_diagnostic", None)
+        _save_state(root, latest)
     if completed.returncode:
         diagnostic = (completed.stderr or completed.stdout).strip()[-2000:]
         latest.update(
@@ -478,6 +549,19 @@ def poll_one(
             "event": "resume-failed",
             "exit_code": completed.returncode,
             "diagnostic": diagnostic,
+        }
+    if cleanup_diagnostic:
+        latest.update(
+            status="recovery-required",
+            last_event="worktree-cleanup-failed",
+            recovery="remove the recorded temporary worktree, then explicitly recover the loop",
+        )
+        _save_state(root, latest)
+        return {
+            "pr_number": pr,
+            "status": "recovery-required",
+            "event": "worktree-cleanup-failed",
+            "diagnostic": cleanup_diagnostic[-2000:],
         }
     if latest.get("handoff_head") == review.head:
         latest.update(
@@ -504,9 +588,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Repo-local deterministic ChatGPT-review-to-Codex continuation transport.")
     sub = parser.add_subparsers(dest="command", required=True)
     handoff_parser = sub.add_parser("handoff", help="Record one pushed PR head and exact Codex session without waiting.")
-    handoff_parser.add_argument(
-        "--hook", action="store_true", help="Read Stop hook JSON and update only an explicitly enabled loop."
-    )
+    handoff_parser.add_argument("--hook", action="store_true", help="Read Stop hook JSON and update only an explicitly enabled loop.")
     handoff_parser.add_argument("--session-id", default=os.environ.get("CODEX_THREAD_ID", ""))
     handoff_parser.add_argument("--target", type=Path, default=Path.cwd())
     handoff_parser.add_argument("--pr", type=int)
@@ -521,6 +603,11 @@ def _parser() -> argparse.ArgumentParser:
     poll_parser.add_argument("--interval", type=int, default=60)
     poll_parser.add_argument("--max-polls", type=int, default=60)
     poll_parser.add_argument("--codex-command", default=os.environ.get("AW_CHATGPT_REVIEW_CODEX", "codex"))
+    poll_parser.add_argument(
+        "--in-place",
+        action="store_true",
+        help="Resume in the owner checkout instead of the default disposable detached worktree.",
+    )
     poll_parser.add_argument(
         "--bypass-hook-trust",
         action="store_true",
@@ -544,6 +631,8 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
     try:
         if args.command == "handoff":
             cwd, session_id = _hook_input() if args.hook else (args.target.resolve(), args.session_id)
+            state_root = Path(os.environ[OWNER_ROOT_ENV]).resolve() if args.hook and os.environ.get(OWNER_ROOT_ENV) else None
+            expected_branch = os.environ.get(OWNER_BRANCH_ENV, "") if args.hook else ""
             if args.max_cycles < 1 or args.max_repeated_blockers < 1:
                 raise LoopError("invalid-limit", "cycle and repeated-blocker limits must be positive")
             result = handoff(
@@ -555,6 +644,8 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                 replace_session=args.replace_session,
                 existing_only=args.hook,
                 runner=runner,
+                state_root=state_root,
+                expected_branch=expected_branch,
             )
             if args.hook:
                 hook_result: dict[str, Any] = {"continue": True}
@@ -616,6 +707,7 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                     runner=runner,
                     codex_command=args.codex_command,
                     bypass_hook_trust=args.bypass_hook_trust,
+                    isolated_worktree=not args.in_place,
                 )
                 for state in states
                 if "pr_number" in state

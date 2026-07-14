@@ -67,16 +67,37 @@ class FakeRunner(loop.CommandRunner):
         self.codex_exit = 0
         self.next_handoff_head = ""
         self.next_review_decision = ""
+        self.detached_paths: set[Path] = set()
+        self.invocations: list[tuple[list[str], Path, dict[str, str] | None]] = []
+        self.worktree_add_exit = 0
+        self.worktree_remove_exit = 0
 
     def run(self, command, *, cwd, env=None):
         command = list(command)
         self.commands.append(command)
+        cwd = Path(cwd)
+        self.invocations.append((command, cwd, env))
         if command[:3] == ["git", "rev-parse", "--show-toplevel"]:
-            return subprocess.CompletedProcess(command, 0, str(self.root), "")
+            return subprocess.CompletedProcess(command, 0, str(cwd), "")
         if command[:3] == ["git", "branch", "--show-current"]:
-            return subprocess.CompletedProcess(command, 0, self.branch, "")
+            branch = "" if cwd in self.detached_paths else self.branch
+            return subprocess.CompletedProcess(command, 0, branch, "")
         if command[:3] == ["git", "rev-parse", "HEAD"]:
             return subprocess.CompletedProcess(command, 0, self.head, "")
+        if command[:3] == ["git", "worktree", "add"]:
+            if self.worktree_add_exit:
+                return subprocess.CompletedProcess(command, self.worktree_add_exit, "", "add failed")
+            worktree = Path(command[4])
+            worktree.mkdir(parents=True)
+            self.detached_paths.add(worktree)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:3] == ["git", "worktree", "remove"]:
+            if self.worktree_remove_exit:
+                return subprocess.CompletedProcess(command, self.worktree_remove_exit, "", "remove failed")
+            worktree = Path(command[4])
+            worktree.rmdir()
+            self.detached_paths.discard(worktree)
+            return subprocess.CompletedProcess(command, 0, "", "")
         if command[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(command, 0, json.dumps({"nameWithOwner": "owner/repo"}), "")
         if command[:3] == ["gh", "pr", "view"]:
@@ -249,6 +270,36 @@ def test_stop_handoff_preserves_explicitly_configured_limits(tmp_path: Path) -> 
     assert refreshed["max_repeated_blockers"] == 4
 
 
+def test_detached_worktree_stop_handoff_updates_owner_state(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    worktree = tmp_path / "isolated-review"
+    worktree.mkdir()
+    runner.detached_paths.add(worktree)
+    runner.head = HEAD_B
+    runner.pr_head = HEAD_B
+    state(tmp_path, status="resume-in-progress", cycles=1)
+
+    result = loop.handoff(
+        cwd=worktree,
+        session_id=SESSION,
+        pr=None,
+        max_cycles=3,
+        max_repeated_blockers=2,
+        replace_session=False,
+        existing_only=True,
+        runner=runner,
+        state_root=tmp_path,
+        expected_branch=runner.branch,
+    )
+
+    refreshed = loop._load_state(tmp_path, 12)
+    assert result["status"] == "handoff-recorded"
+    assert refreshed["repo_root"] == tmp_path.as_posix()
+    assert refreshed["branch"] == runner.branch
+    assert refreshed["handoff_head"] == HEAD_B
+    assert refreshed["status"] == "awaiting-review"
+
+
 def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_path: Path) -> None:
     review = {"id": "IC_blocked_91", "body": f"- fix the race\n{marker()}", "url": "https://example.test/c/91"}
     runner = FakeRunner(tmp_path, comments=[review])
@@ -264,18 +315,30 @@ def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_
         "review_key": f"12:{HEAD_A}:IC_blocked_91",
     }
     resume = next(command for command in runner.commands if "resume" in command)
+    resume_worktree = Path(resume[2])
     assert resume[:5] == [
         "codex",
         "-C",
-        tmp_path.as_posix(),
+        resume_worktree.as_posix(),
         "exec",
         "resume",
     ]
+    assert resume_worktree != tmp_path
+    assert resume_worktree.parent == tmp_path.parent / f".{tmp_path.name}-chatgpt-review-worktrees"
     assert resume[5] == "--dangerously-bypass-hook-trust"
     assert resume[6] == SESSION
     assert "fix the race" in resume[7]
+    assert f"git push origin HEAD:{runner.branch}" in resume[7]
+    resume_invocation = next(item for item in runner.invocations if "resume" in item[0])
+    assert resume_invocation[1] == resume_worktree
+    assert resume_invocation[2][loop.OWNER_ROOT_ENV] == tmp_path.as_posix()
+    assert resume_invocation[2][loop.OWNER_BRANCH_ENV] == runner.branch
+    assert [command[:3] for command in runner.commands].count(["git", "worktree", "add"]) == 1
+    assert [command[:3] for command in runner.commands].count(["git", "worktree", "remove"]) == 1
+    assert not resume_worktree.exists()
     assert loop._load_state(tmp_path, 12)["handled_reviews"] == [f"12:{HEAD_A}:IC_blocked_91"]
     assert loop._load_state(tmp_path, 12)["hook_trust_mode"] == "automation-bypass"
+    assert loop._load_state(tmp_path, 12)["resume_worktree_status"] == "removed"
 
 
 def test_new_handoff_clears_stale_resume_failure_diagnostics(tmp_path: Path) -> None:
@@ -317,6 +380,47 @@ def test_resume_failure_is_not_retried_for_same_comment(tmp_path: Path) -> None:
     assert sum("resume" in command for command in runner.commands) == 1
 
 
+def test_worktree_cleanup_failure_requires_recovery(tmp_path: Path) -> None:
+    review = {"databaseId": 97, "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    runner.next_handoff_head = HEAD_B
+    runner.worktree_remove_exit = 1
+
+    result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
+
+    assert result["event"] == "worktree-cleanup-failed"
+    refreshed = loop._load_state(tmp_path, 12)
+    assert refreshed["status"] == "recovery-required"
+    assert refreshed["resume_worktree_status"] == "cleanup-failed"
+    assert refreshed["resume_worktree_diagnostic"] == "remove failed"
+
+
+def test_worktree_creation_failure_requires_recovery_without_resume(tmp_path: Path) -> None:
+    review = {"databaseId": 99, "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    runner.worktree_add_exit = 1
+
+    result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
+
+    assert result["event"] == "worktree-create-failed"
+    assert loop._load_state(tmp_path, 12)["status"] == "recovery-required"
+    assert not any("resume" in command for command in runner.commands)
+
+
+def test_isolated_resume_does_not_require_owner_checkout_on_pr_branch(tmp_path: Path) -> None:
+    review = {"databaseId": 98, "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    runner.branch = "unrelated-local-work"
+    runner.pr_branch = "codex/issue-2290"
+    runner.next_handoff_head = HEAD_B
+
+    result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
+
+    assert result["status"] == "resumed"
+    assert result["new_head"] == HEAD_B
+    assert sum("resume" in command for command in runner.commands) == 1
+
+
 def test_merge_ready_records_readiness_without_merging(tmp_path: Path) -> None:
     review = {"databaseId": 93, "body": marker(decision="merge-ready"), "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
@@ -341,7 +445,13 @@ def test_unsafe_repository_states_require_explicit_recovery(tmp_path: Path, muta
     runner = FakeRunner(tmp_path)
     mutation(runner)
 
-    result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
+    result = loop.poll_one(
+        tmp_path,
+        state(tmp_path),
+        runner=runner,
+        codex_command="codex",
+        isolated_worktree=event != "branch-changed",
+    )
 
     assert result["status"] == "recovery-required"
     assert result["event"] == event

@@ -1682,6 +1682,18 @@
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
     },
     {
+      "pattern": ".codex/hooks.json",
+      "format": "json",
+      "owner": "developer-tooling",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "Codex lifecycle hook loader plus tests/test_chatgpt_review_loop.py",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Project-local Codex lifecycle automation is host-repo tooling and is not shipped package runtime state.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
+    },
+    {
       "pattern": ".github/ISSUE_TEMPLATE/*.yml",
       "format": "yml",
       "owner": "github-integration",
