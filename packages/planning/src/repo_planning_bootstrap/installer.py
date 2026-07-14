@@ -435,16 +435,21 @@ def planning_revision(target: str | Path | None = None) -> dict[str, Any]:
     target_root = resolve_target_root(target)
     state_path = target_root / PLANNING_STATE_PATH
     state = _read_state_from_toml(target_root) or {}
-    active_items = _state_active_items(state) if isinstance(state, dict) else []
-    active_item = active_items[0] if active_items else {}
-    active_execplan_path = _active_execplan_record_path_from_state(target_root)
+    resolution = _selected_owner_resolution(target_root)
+    active_item = _selected_owner_active_item(target_root=target_root, state=state, resolution=resolution)
+    active_execplan_path = resolution.get("path") if isinstance(resolution.get("path"), Path) else None
     active_execplan_relative = _planning_surface_relative(target_root, active_execplan_path) if active_execplan_path is not None else ""
     active_item_id = str(active_item.get("id", "")).strip() if isinstance(active_item, dict) else ""
     active_item_surface = _active_execplan_reference(active_item) if isinstance(active_item, dict) else ""
+    selection_path = target_root / PLANNING_OWNER_SELECTION_PATH
     components = {
         "kind": "planning-revision/v1",
         "state_path": PLANNING_STATE_PATH.as_posix(),
         "state_hash": _short_file_hash(state_path),
+        "selection_source": str(resolution.get("source", "none")),
+        "selection_path": PLANNING_OWNER_SELECTION_PATH.as_posix(),
+        "selection_hash": _short_file_hash(selection_path),
+        "selection_current_work_id": str(resolution.get("current_work_id", "")),
         "active_execplan": active_execplan_relative,
         "active_execplan_hash": _short_file_hash(active_execplan_path) if active_execplan_path is not None else "missing",
         "active_item_id": active_item_id,
@@ -1961,8 +1966,10 @@ def _selected_owner_query_payload(*, target_root: Path) -> dict[str, Any]:
     backlog are deliberately outside this resolver's dependency set.
     """
     state = _read_state_from_toml(target_root) or {}
-    active_items = _state_active_items(state)
-    active_path = _active_execplan_record_path_from_state(target_root)
+    resolution = _selected_owner_resolution(target_root)
+    active_item = _selected_owner_active_item(target_root=target_root, state=state, resolution=resolution)
+    active_items = [active_item] if active_item else []
+    active_path = resolution.get("path") if isinstance(resolution.get("path"), Path) else None
     active_execplans: list[dict[str, str]] = []
     if active_path is not None and active_path.is_file():
         active_execplans.append(
@@ -2063,6 +2070,8 @@ def planning_summary_query(
                 "invalidation_provenance": {
                     "planning_revision": revision_id,
                     "state_hash": revision.get("state_hash", ""),
+                    "selection_hash": revision.get("selection_hash", ""),
+                    "selection_source": revision.get("selection_source", ""),
                     "selected_owner_hash": revision.get("active_execplan_hash", ""),
                 },
             },
@@ -3008,19 +3017,89 @@ def _reconcile_lane_children(*, target_root: Path, lane_id: str, apply: bool, dr
     }
 
 
+def _reconcile_completed_execplans(target_root: Path) -> list[dict[str, Any]]:
+    execplan_dir = target_root / PLANNING_MANAGED_ROOT / "execplans"
+    completed: list[dict[str, Any]] = []
+    for path in _live_execplan_paths(execplan_dir):
+        status = _execplan_status(path)
+        if status not in {"complete", "completed", "done", "closed"}:
+            continue
+        completed.append(
+            {
+                "path": _planning_surface_relative(target_root, path),
+                "id": str((_load_execplan_record(path) or {}).get("id", "")).strip(),
+                "status": status,
+            }
+        )
+    return completed
+
+
+def _reconcile_external_work_state(*, state: dict[str, Any], external_evidence: dict[str, Any]) -> dict[str, Any]:
+    tracked_refs: set[str] = set()
+    for item in [
+        *_state_active_items(state),
+        *_state_queued_items(state),
+        *_state_roadmap_lanes(state),
+        *_state_roadmap_candidates(state),
+    ]:
+        tracked_refs.update(_planning_item_issue_refs(item))
+    items = [item for item in external_evidence.get("items", []) if isinstance(item, dict)]
+    open_items = [item for item in items if _external_status_is_open(item.get("status"))]
+    closed_items = [item for item in items if _external_status_is_closed(item.get("status"))]
+    tracked_open = sum(1 for item in open_items if str(item.get("id", "")).strip() in tracked_refs)
+    refresh_metadata = external_evidence.get("refresh_metadata", {})
+    if not isinstance(refresh_metadata, dict):
+        refresh_metadata = {}
+    return {
+        "status": external_evidence.get("status", "absent"),
+        "path": external_evidence.get("path", ""),
+        "storage": external_evidence.get("storage", ""),
+        "kind": external_evidence.get("kind", "planning-external-intent-evidence/v1"),
+        "systems": external_evidence.get("systems", []),
+        "refreshed_at": external_evidence.get("refreshed_at", ""),
+        "refresh_metadata": refresh_metadata,
+        "trust_scope": "snapshot",
+        "snapshot_rule": EXTERNAL_INTENT_SNAPSHOT_RULE,
+        "refresh_after_mutation": external_evidence.get("status") == "loaded",
+        "refresh_command": EXTERNAL_INTENT_REFRESH_COMMAND,
+        "item_count": external_evidence.get("item_count", len(items)),
+        "open_count": refresh_metadata.get("open_count", len(open_items)),
+        "closed_count": refresh_metadata.get("closed_count", len(closed_items)),
+        "tracked_open_count": tracked_open,
+        "untracked_open_count": max(0, len(open_items) - tracked_open),
+        "relevant_observation_count": external_evidence.get("relevant_observation_count", 0),
+        "unmatched_backlog_count": external_evidence.get("unmatched_backlog_count", 0),
+        "admitted_observations": external_evidence.get("admitted_observations", []),
+        "generic_route_postures": [
+            observation.get("admission", {})
+            for observation in external_evidence.get("admitted_observations", [])
+            if isinstance(observation, dict)
+        ],
+        "projection_rule": external_evidence.get("projection_rule", ""),
+        "authority_boundary": external_evidence.get("authority_boundary", ""),
+        "provider_rule": "Core planning only consumes provider-agnostic external work evidence; host-specific trackers belong in optional adapters.",
+        "reason": external_evidence.get("reason", ""),
+    }
+
+
 def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
-    summary = planning_summary(target=target_root, profile="full")
-    intent_validation = summary.get("intent_validation_contract", {})
-    current_external_work = intent_validation.get("current_external_work", {})
-    historical_audit_references = intent_validation.get("historical_audit_references", {})
-    completed_execplans = list(summary.get("execplans", {}).get("completed_execplans", []))
     external_evidence = _load_external_intent_evidence(target_root)
+    completed_execplans = _reconcile_completed_execplans(target_root)
     external_items_by_id = {
         str(item.get("id", "")).strip(): item
         for item in external_evidence.get("items", [])
         if isinstance(item, dict) and str(item.get("id", "")).strip()
     }
     state = _read_state_from_toml(target_root) or {}
+    current_external_work = _reconcile_external_work_state(state=state, external_evidence=external_evidence)
+    historical_audit_references = {
+        "status": "not-loaded",
+        "source_count": 0,
+        "sources": [],
+        "item_count": 0,
+        "rule": "Reconciliation preview does not load historical closeouts or reviews; use the explicit paginated Planning audit report.",
+        "detail_command": "agentic-planning report --verbose --audit-page-size 25 --format json",
+    }
     roadmap = state.get("roadmap", {})
     lanes = roadmap.get("lanes", []) if isinstance(roadmap, dict) else []
     candidates = roadmap.get("candidates", []) if isinstance(roadmap, dict) else []
@@ -3073,10 +3152,15 @@ def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
         target_root=target_root,
         external_items_by_id=external_items_by_id,
     )
+    selected_query = planning_summary_query(
+        target=target_root,
+        selectors=["planning_record", "continuation_view", "planning_revision"],
+    )
+    selected_summary = selected_query.get("payload", {}) if selected_query.get("status") == "present" else {}
     active_projection_sync_targets = _active_projection_sync_targets(
         target_root=target_root,
         state=state,
-        summary=summary,
+        summary=selected_summary,
     )
 
     recommendations: list[str] = []
@@ -3142,6 +3226,23 @@ def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
         },
         "target_root": str(target_root),
         "status": status,
+        "dependency_scope": {
+            "kind": "planning-reconcile-dependency-scope/v1",
+            "loaded": [
+                PLANNING_STATE_PATH.as_posix(),
+                str(planning_revision(target_root).get("active_execplan", "")),
+                str(external_evidence.get("path", "")),
+                ".agentic-workspace/planning/decompositions/*.decomposition.json",
+            ],
+            "omitted": [
+                ".agentic-workspace/planning/closeout-evidence/**",
+                ".agentic-workspace/planning/execplans/archive/**",
+                ".agentic-workspace/planning/reviews/**",
+                "finished-work-evidence",
+            ],
+            "historical_sources_loaded": False,
+            "rule": "Preview compiles only reconciliation dependencies; historical audit is an explicit paginated route.",
+        },
         "completed_work_reconciliation": {
             "kind": "planning-completed-work-reconciliation/v1",
             "status": "stale-artifacts" if stale_artifact_count else "clean",
@@ -4457,25 +4558,20 @@ def _planning_summary_tiny_fast(*, target_root: Path) -> dict[str, Any]:
             )
         roadmap_lanes = _roadmap_candidate_lanes(target_root / "ROADMAP.md")
         roadmap_candidates = _roadmap_candidates(target_root / "ROADMAP.md")
-    execplan_dir = target_root / ".agentic-workspace" / "planning" / "execplans"
+    resolution = _selected_owner_resolution(target_root)
+    selected_item = _selected_owner_active_item(target_root=target_root, state=state, resolution=resolution)
+    if selected_item:
+        active_items = [selected_item]
     lane_projection = _planning_lane_projection(target_root=target_root)
     active_execplans: list[dict[str, str]] = []
-    if execplan_dir.exists():
-        seen_stems: set[str] = set()
-        plan_files: list[Path] = []
-        for path in sorted(execplan_dir.glob("*.plan.json")):
-            if path.name == "TEMPLATE.plan.json":
-                continue
-            seen_stems.add(path.name[: -len(".plan.json")])
-            plan_files.append(path)
-        for path in sorted(execplan_dir.glob("*.md")):
-            if path.name in {"README.md", "TEMPLATE.md"} or path.stem in seen_stems:
-                continue
-            plan_files.append(path)
-        for path in plan_files:
-            status = _execplan_status(path)
-            if status and status not in {"completed", "done", "closed", "planned", "pending", "not-started"}:
-                active_execplans.append({"path": path.relative_to(target_root).as_posix(), "status": status})
+    selected_path = resolution.get("path")
+    if isinstance(selected_path, Path) and selected_path.is_file():
+        active_execplans.append(
+            {
+                "path": _planning_surface_relative(target_root, selected_path),
+                "status": _execplan_status(selected_path),
+            }
+        )
     planning_warnings = _planning_lane_surface_warnings(target_root=target_root, lane_projection=lane_projection)
     planning_warnings.extend(_planning_state_v1_warnings(target_root=target_root, state=state if state else None))
     planning_surface_health = _planning_surface_health(planning_warnings)
@@ -11485,7 +11581,12 @@ def select_existing_owner(
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             existing_selection = {}
     state_noop = mode == "local" or proposed_state == state
-    selection_noop = existing_selection == selection if mode == "local" else proposed_state == state
+    semantic_selection_fields = ("kind", "mode", "current_work_id", "selected_owner", "reason")
+    selection_noop = (
+        all(existing_selection.get(field) == selection.get(field) for field in semantic_selection_fields)
+        if mode == "local"
+        else proposed_state == state
+    )
     no_op = state_noop and selection_noop
     proposed_state_hash = hashlib.sha256(("\n".join(_state_to_toml_lines(proposed_state)) + "\n").encode("utf-8")).hexdigest()[:16]
 
@@ -12735,7 +12836,7 @@ def intake_planning_artifact(
     return result
 
 
-def _active_execplan_record_path_from_state(target_root: Path) -> Path | None:
+def _shared_active_execplan_record_path_from_state(target_root: Path) -> Path | None:
     state = _read_state_from_toml(target_root)
     todo = state.get("todo") if isinstance(state, dict) else None
     active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
@@ -12750,6 +12851,112 @@ def _active_execplan_record_path_from_state(target_root: Path) -> Path | None:
     if len(active_plans) == 1:
         return active_plans[0]
     return None
+
+
+def _local_owner_selection(target_root: Path) -> dict[str, Any]:
+    selection_path = target_root / PLANNING_OWNER_SELECTION_PATH
+    try:
+        selection = json.loads(selection_path.read_text(encoding="utf-8-sig"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {}
+    if not isinstance(selection, dict) or str(selection.get("kind", "")).strip() != "agentic-planning/owner-selection/v1":
+        return {}
+    if str(selection.get("mode", "local")).strip().lower() != "local":
+        return {}
+    selected = selection.get("selected_owner", {})
+    if not isinstance(selected, dict):
+        return {}
+    owner_id = str(selected.get("id", "")).strip()
+    owner_ref = str(selected.get("ref", "")).strip()
+    if not owner_id or not owner_ref:
+        return {}
+    owner_path = (target_root / owner_ref).resolve()
+    try:
+        owner_path.relative_to(target_root.resolve())
+    except ValueError:
+        return {}
+    record = _load_execplan_record(owner_path)
+    if record is None or str(record.get("id", "")).strip() != owner_id:
+        return {}
+    lifecycle = _execplan_lifecycle(record)
+    phase = _execplan_phase(record)
+    if lifecycle not in {"live", "planned"} or phase in {"complete", "completed", "closeout", "closed", "archived"}:
+        return {}
+    return {
+        "source": "local",
+        "path": owner_path,
+        "record": record,
+        "owner_id": owner_id,
+        "owner_ref": _planning_surface_relative(target_root, owner_path),
+        "current_work_id": str(selection.get("current_work_id", "")).strip(),
+    }
+
+
+def _selected_owner_resolution(target_root: Path) -> dict[str, Any]:
+    """Resolve one authoritative owner: valid local selection, then shared state."""
+    local = _local_owner_selection(target_root)
+    if local:
+        return local
+    shared_path = _shared_active_execplan_record_path_from_state(target_root)
+    if shared_path is None:
+        return {"source": "none", "path": None, "record": {}, "owner_id": "", "owner_ref": "", "current_work_id": ""}
+    record = _load_execplan_record(shared_path) or {}
+    owner_ref = _planning_surface_relative(target_root, shared_path)
+    state = _read_state_from_toml(target_root) or {}
+    indexed = next(
+        (item for item in _state_active_items(state) if _active_execplan_reference(item) == owner_ref),
+        {},
+    )
+    return {
+        "source": "shared",
+        "path": shared_path,
+        "record": record,
+        "owner_id": str(record.get("id") or indexed.get("id") or "").strip(),
+        "owner_ref": owner_ref,
+        "current_work_id": "",
+    }
+
+
+def _selected_owner_active_item(
+    *,
+    target_root: Path,
+    state: dict[str, Any],
+    resolution: dict[str, Any],
+) -> dict[str, Any]:
+    owner_id = str(resolution.get("owner_id", "")).strip()
+    owner_ref = str(resolution.get("owner_ref", "")).strip()
+    if not owner_id or not owner_ref:
+        return {}
+    candidates = [*_state_active_items(state), *_state_queued_items(state)]
+    for raw in candidates:
+        if str(raw.get("id", "")).strip() == owner_id or _active_execplan_reference(raw) == owner_ref:
+            selected = copy.deepcopy(raw)
+            selected["id"] = owner_id
+            selected["surface"] = owner_ref
+            selected["status"] = "active"
+            return selected
+    record = resolution.get("record", {}) if isinstance(resolution.get("record"), dict) else {}
+    intent = record.get("intent", {}) if isinstance(record.get("intent"), dict) else {}
+    return {
+        "id": owner_id,
+        "title": str(record.get("title", "")).strip(),
+        "surface": owner_ref,
+        "status": "active",
+        "maturity": "active",
+        "why_now": str(intent.get("requested_outcome", "")).strip(),
+        "refs": [
+            str(entry.get("target", "")).strip()
+            for entry in record.get("references", [])
+            if isinstance(entry, dict) and str(entry.get("target", "")).strip()
+        ],
+    }
+
+
+def _active_execplan_record_path_from_state(target_root: Path) -> Path | None:
+    """Compatibility name for the authoritative selected-owner resolver."""
+    resolution = _selected_owner_resolution(target_root)
+    path = resolution.get("path")
+    return path if isinstance(path, Path) else None
 
 
 def record_delegation_decision(

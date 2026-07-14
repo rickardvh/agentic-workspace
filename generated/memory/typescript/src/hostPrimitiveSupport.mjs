@@ -936,20 +936,63 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
-function planningRevision(targetRoot, state) {
-  const statePath = join(targetRoot, '.agentic-workspace/planning/state.toml');
+function selectedPlanningOwner(targetRoot, state) {
+  const selectionPath = join(targetRoot, '.agentic-workspace/local/planning/owner-selection.json');
+  if (existsSync(selectionPath)) {
+    try {
+      const selection = JSON.parse(readText(selectionPath));
+      const selected = isObject(selection?.selected_owner) ? selection.selected_owner : {};
+      const ownerRef = String(selected.ref ?? '').replace(/\\/g, '/');
+      const ownerPath = resolve(targetRoot, ownerRef);
+      const rel = relative(targetRoot, ownerPath);
+      const record = ownerRef && !rel.startsWith('..') && !isAbsolute(rel) ? JSON.parse(readText(ownerPath)) : null;
+      const lifecycle = String(record?.lifecycle ?? '').toLowerCase();
+      const phase = String(record?.phase ?? '').toLowerCase();
+      if (
+        selection?.kind === 'agentic-planning/owner-selection/v1'
+        && String(selection.mode ?? 'local').toLowerCase() === 'local'
+        && String(selected.id ?? '')
+        && isObject(record)
+        && String(record.id ?? '') === String(selected.id)
+        && ['live', 'planned'].includes(lifecycle)
+        && !['complete', 'completed', 'closeout', 'closed', 'archived'].includes(phase)
+      ) {
+        return { source: 'local', path: ownerPath, ref: rel.replace(/\\/g, '/'), record, current_work_id: String(selection.current_work_id ?? '') };
+      }
+    } catch { /* invalid local selection falls back to shared state */ }
+  }
   const activeItems = Array.isArray(state?.todo?.active_items) ? state.todo.active_items : [];
   const activeItem = isObject(activeItems[0]) ? activeItems[0] : {};
   const surface = String(activeItem.surface ?? activeItem.path ?? activeItem.execplan ?? '');
-  const activePath = surface ? join(targetRoot, surface) : '';
+  if (!surface) return { source: 'none', path: '', ref: '', record: {}, current_work_id: '' };
+  const activePath = join(targetRoot, surface);
+  let record = {};
+  try { record = JSON.parse(readText(activePath)); } catch { record = {}; }
+  return { source: 'shared', path: activePath, ref: surface, record, current_work_id: '' };
+}
+
+function planningRevision(targetRoot, state) {
+  const statePath = join(targetRoot, '.agentic-workspace/planning/state.toml');
+  const selectionPath = join(targetRoot, '.agentic-workspace/local/planning/owner-selection.json');
+  const selected = selectedPlanningOwner(targetRoot, state);
+  const stateItems = [
+    ...(Array.isArray(state?.todo?.active_items) ? state.todo.active_items : []),
+    ...(Array.isArray(state?.todo?.queued_items) ? state.todo.queued_items : []),
+  ];
+  const indexedItem = stateItems.find((item) => isObject(item) && (String(item.id ?? '') === String(selected.record?.id ?? '') || String(item.surface ?? '') === selected.ref));
+  const activeItem = isObject(indexedItem) ? indexedItem : { id: selected.record?.id ?? '', surface: selected.ref };
   const components = {
     kind: 'planning-revision/v1',
     state_path: '.agentic-workspace/planning/state.toml',
     state_hash: shortFileHash(statePath),
-    active_execplan: surface,
-    active_execplan_hash: activePath ? shortFileHash(activePath) : 'missing',
+    selection_source: selected.source,
+    selection_path: '.agentic-workspace/local/planning/owner-selection.json',
+    selection_hash: shortFileHash(selectionPath),
+    selection_current_work_id: selected.current_work_id,
+    active_execplan: selected.ref,
+    active_execplan_hash: selected.path ? shortFileHash(selected.path) : 'missing',
     active_item_id: String(activeItem.id ?? ''),
-    active_item_surface: surface,
+    active_item_surface: String(activeItem.surface ?? activeItem.path ?? activeItem.execplan ?? selected.ref),
   };
   return { ...components, revision_id: createHash('sha256').update(stableJson(components)).digest('hex').slice(0, 16) };
 }
@@ -1069,7 +1112,10 @@ function planningOwnerSelectResult(values, operationId) {
   if (existsSync(selectionPath)) {
     try { existingSelection = JSON.parse(readText(selectionPath)); } catch { existingSelection = null; }
   }
-  const noOp = mode === 'local' ? stableJson(existingSelection) === stableJson(selection) : stableJson(proposedState) === stableJson(state);
+  const semanticSelectionFields = ['kind', 'mode', 'current_work_id', 'selected_owner', 'reason'];
+  const noOp = mode === 'local'
+    ? semanticSelectionFields.every((field) => stableJson(existingSelection?.[field]) === stableJson(selection[field]))
+    : stableJson(proposedState) === stableJson(state);
   const buildReceipt = (outcome, afterPlanning, afterCurrent) => ({
     kind: 'agentic-planning/owner-selection-receipt/v1',
     operation: 'planning.owner-select.lifecycle',

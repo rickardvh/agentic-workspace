@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import sys as _sys
+import time
 from datetime import UTC, datetime, timedelta
+from pathlib import Path as _Path
+from statistics import median
 
 # ruff: noqa: F403,F405
-from pathlib import Path as _Path
-
 _sys.path.insert(0, str(_Path(__file__).resolve().parent))
 from planning_test_support import *
 
@@ -71,6 +72,53 @@ def test_planning_report_tiny_text_uses_generated_output(tmp_path: Path, monkeyp
     assert "Health:" in text
     assert "Status:" in text
     assert "Next action:" in text
+
+
+def test_reconcile_preview_is_history_independent_and_never_compiles_full_summary(tmp_path: Path, monkeypatch) -> None:
+    install_bootstrap(target=tmp_path)
+    installer_mod._PLANNING_SELECTED_OWNER_CACHE.clear()
+    original_glob = Path.glob
+
+    def reject_history_glob(path: Path, pattern: str):
+        assert "closeout-evidence" not in path.as_posix(), "reconcile preview traversed closeout history"
+        return original_glob(path, pattern)
+
+    monkeypatch.setattr(Path, "glob", reject_history_glob)
+    monkeypatch.setattr(
+        installer_mod,
+        "planning_summary",
+        lambda **_kwargs: pytest.fail("reconcile preview compiled the broad Planning summary"),
+    )
+
+    empty_history_samples = []
+    for _ in range(7):
+        installer_mod._PLANNING_SELECTED_OWNER_CACHE.clear()
+        started = time.perf_counter()
+        preview = planning_reconcile(target=tmp_path)
+        empty_history_samples.append(time.perf_counter() - started)
+
+    evidence_root = tmp_path / ".agentic-workspace/planning/closeout-evidence"
+    for index in range(1000):
+        _write(
+            evidence_root / f"closed-{index}.closeout.json",
+            json.dumps({"kind": "planning-closeout-evidence/v1", "plan_id": f"closed-{index}", "claim_level": "slice"}),
+        )
+
+    historical_samples = []
+    for _ in range(7):
+        installer_mod._PLANNING_SELECTED_OWNER_CACHE.clear()
+        started = time.perf_counter()
+        preview = planning_reconcile(target=tmp_path)
+        historical_samples.append(time.perf_counter() - started)
+
+    assert preview["dependency_scope"]["historical_sources_loaded"] is False
+    assert preview["historical_audit_references"]["status"] == "not-loaded"
+    empty_median = median(empty_history_samples)
+    historical_median = median(historical_samples)
+    assert historical_median <= max(empty_median * 1.2, empty_median + 0.010), (
+        "reconciliation preview exceeded the 20% history-independence budget: "
+        f"empty={empty_median:.6f}s history_1000={historical_median:.6f}s"
+    )
 
 
 def test_upgrade_bootstrap_is_idempotent_for_bundled_skills(tmp_path: Path) -> None:

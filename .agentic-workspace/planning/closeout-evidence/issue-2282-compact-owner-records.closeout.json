@@ -18,13 +18,14 @@
     "sha256:cfa0c1c080957e75919d58bc35e6f99a5df4929a3f1e081df55c0647912044a0"
   ],
   "residual": {
-    "status": "open",
+    "status": "parent-continuation-only",
+    "scope": "parent #2279; the child issue #2282 has no residual intent",
     "owner": "issue-2279-planning-owner-graph"
   },
   "closure": {
     "authority": "planning closeout writer",
     "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
-    "reopen_trigger": "Reopen when issue-2279-planning-owner-graph activates a fresh bounded slice."
+    "reopen_trigger": "Reopen #2282 only if live owner records or closeout residue cease to be compact and proportional."
   },
   "revision": 3,
   "active_milestone": {
@@ -34,21 +35,25 @@
     "validation proof": "sha256:cfa0c1c080957e75919d58bc35e6f99a5df4929a3f1e081df55c0647912044a0"
   },
   "intent_satisfaction": {
-    "was original intent fully satisfied?": "no",
-    "unsolved intent passed to": "issue-2279-planning-owner-graph"
+    "intent scope": "child issue #2282",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Compact typed live-owner records and proportional closeout tombstones are implemented with size and history-independence proof.",
+    "unsolved intent passed to": "none"
   },
   "closure_check": {
-    "closeout scope": "slice",
-    "larger-intent status": "open",
-    "closure decision": "archive-but-keep-lane-open",
-    "reopen trigger": "Reopen when issue-2279-planning-owner-graph activates a fresh bounded slice."
+    "closeout scope": "child issue #2282",
+    "issue-intent status": "satisfied",
+    "larger-parent-intent status": "open under #2279",
+    "closure decision": "archive-and-close",
+    "parent continuation owner": "issue-2279-planning-owner-graph",
+    "reopen trigger": "Live owner records or closeout residue cease to be compact and proportional."
   },
   "execution_summary": {
     "outcome delivered": "Live Planning owners are compact and typed; completed owners leave proportional residue and stay off ordinary read paths.",
-    "follow-on routed to": "issue-2279-planning-owner-graph"
+    "follow-on routed to": "parent #2279 only; no residual child intent"
   },
   "execution_run": {
     "changed surfaces": "packages/planning; root command contracts; generated Planning/workspace projections; installed Planning schemas.",
-    "next step": "continue from issue-2279-planning-owner-graph"
+    "next step": "continue parent #2279 independently of the satisfied child issue"
   }
 }

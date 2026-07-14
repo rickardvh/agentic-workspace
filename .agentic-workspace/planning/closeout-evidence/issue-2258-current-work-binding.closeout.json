@@ -18,13 +18,14 @@
     "sha256:592f6bab361ea057aaed7009965e3a820b0235b384f43a2f17cbde9e0cc8f2bf"
   ],
   "residual": {
-    "status": "open",
-    "owner": "issue-2276-external-owner-observations"
+    "status": "parent-continuation-only",
+    "scope": "parent #2279 only",
+    "owner": "issue-2279-planning-owner-graph"
   },
   "closure": {
     "authority": "planning closeout writer",
     "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
-    "reopen_trigger": "Reopen when issue-2276-external-owner-observations activates a fresh bounded slice."
+    "reopen_trigger": "Reopen #2258 only if current-work ownership or decision-point carry binding regresses."
   },
   "revision": 2,
   "active_milestone": {
@@ -34,21 +35,25 @@
     "validation proof": "sha256:592f6bab361ea057aaed7009965e3a820b0235b384f43a2f17cbde9e0cc8f2bf"
   },
   "intent_satisfaction": {
-    "was original intent fully satisfied?": "no",
-    "unsolved intent passed to": "issue-2276-external-owner-observations"
+    "intent scope": "child issue #2258",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Proof covers owner binding and exact carry recovery.",
+    "unsolved intent passed to": "none"
   },
   "closure_check": {
-    "closeout scope": "slice",
-    "larger-intent status": "open",
-    "closure decision": "archive-but-keep-lane-open",
-    "reopen trigger": "Reopen when issue-2276-external-owner-observations activates a fresh bounded slice."
+    "closeout scope": "child issue #2258",
+    "issue-intent status": "satisfied",
+    "larger-parent-intent status": "open: #2279",
+    "closure decision": "archive-and-close",
+    "parent continuation owner": "issue-2279-planning-owner-graph",
+    "reopen trigger": "Current-work ownership or decision-point carry binding regresses."
   },
   "execution_summary": {
     "outcome delivered": "#2258 now provides stable, stack-aware, selectable current-work ownership and exact, non-destructive decision-point carry recovery across startup, implement, summary/status/doctor, work-thread, and Planning closeout.",
-    "follow-on routed to": "issue-2276-external-owner-observations"
+    "follow-on routed to": "parent #2279 only"
   },
   "execution_run": {
     "changed surfaces": "src/agentic_workspace current-work/runtime/contracts; generated/workspace command packages; packages/planning closeout; workspace and Planning tests.",
-    "next step": "continue from issue-2276-external-owner-observations"
+    "next step": "continue parent #2279"
   }
 }

@@ -18,13 +18,14 @@
     "sha256:e97b531f095f12b4aa4c29d62ba3e8aedfed3e651d10e741dace22d5f1980d93"
   ],
   "residual": {
-    "status": "open",
-    "owner": "https://github.com/rickardvh/agentic-workspace/issues/2258"
+    "status": "parent-continuation-only",
+    "scope": "parent #2279 only",
+    "owner": "issue-2279-planning-owner-graph"
   },
   "closure": {
     "authority": "planning closeout writer",
     "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
-    "reopen_trigger": "Reopen when https://github.com/rickardvh/agentic-workspace/issues/2258 activates a fresh bounded slice."
+    "reopen_trigger": "Reopen #2278 only if selecting an existing owner stops controlling the selected-owner read path."
   },
   "revision": 2,
   "active_milestone": {
@@ -34,21 +35,25 @@
     "validation proof": "sha256:e97b531f095f12b4aa4c29d62ba3e8aedfed3e651d10e741dace22d5f1980d93"
   },
   "intent_satisfaction": {
-    "was original intent fully satisfied?": "no",
-    "unsolved intent passed to": "https://github.com/rickardvh/agentic-workspace/issues/2258"
+    "intent scope": "child issue #2278",
+    "was original intent fully satisfied?": "yes",
+    "evidence of intent satisfaction": "Proof covers authoritative local/shared selection.",
+    "unsolved intent passed to": "none"
   },
   "closure_check": {
-    "closeout scope": "slice",
-    "larger-intent status": "open",
-    "closure decision": "archive-but-keep-lane-open",
-    "reopen trigger": "Reopen when https://github.com/rickardvh/agentic-workspace/issues/2258 activates a fresh bounded slice."
+    "closeout scope": "child issue #2278",
+    "issue-intent status": "satisfied",
+    "larger-parent-intent status": "open: #2279",
+    "closure decision": "archive-and-close",
+    "parent continuation owner": "issue-2279-planning-owner-graph",
+    "reopen trigger": "Existing-owner selection stops controlling current-work or selected-owner queries."
   },
   "execution_summary": {
     "outcome delivered": "Existing owners can be selected locally by default or explicitly in shared state through one narrow idempotent revision-guarded operation with schema-backed receipts and target parity.",
-    "follow-on routed to": "https://github.com/rickardvh/agentic-workspace/issues/2258"
+    "follow-on routed to": "parent #2279 only"
   },
   "execution_run": {
     "changed surfaces": "packages/planning owner-select runtime/contracts/tests; src/agentic_workspace command/operation/conformance/runtime inventories; generated planning/workspace Python and TypeScript projections.",
-    "next step": "continue from https://github.com/rickardvh/agentic-workspace/issues/2258"
+    "next step": "continue parent #2279"
   }
 }

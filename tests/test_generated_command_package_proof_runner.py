@@ -10,7 +10,13 @@ import sys
 import tomllib
 from pathlib import Path
 
-from repo_planning_bootstrap.installer import planning_record_schema_findings, planning_revision
+from repo_planning_bootstrap.installer import (
+    create_execplan_scaffold,
+    install_bootstrap,
+    planning_record_schema_findings,
+    planning_revision,
+    select_existing_owner,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = Path(__file__).resolve().parents[1] / "scripts" / "check" / "run_generated_command_package_proof.py"
@@ -178,6 +184,42 @@ def test_generated_typescript_planning_new_plan_enforces_revision_guard(tmp_path
     assert payload["reason_code"] == "planning-revision-mismatch"
     assert payload["current_planning_revision"] == current_revision
     assert not (tmp_path / ".agentic-workspace/planning/execplans/second.plan.json").exists()
+
+
+def test_generated_typescript_revision_guard_matches_local_selected_owner_identity(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_execplan_scaffold(plan_id="owner-a", title="Owner A", target=tmp_path, activate=True)
+    create_execplan_scaffold(plan_id="owner-b", title="Owner B", target=tmp_path)
+    selected = select_existing_owner("owner-b", target=tmp_path, current_work_id="review-thread")
+    assert not selected.reason_code
+    current_revision = planning_revision(tmp_path)["revision_id"]
+
+    completed = subprocess.run(
+        [
+            "node",
+            str(REPO_ROOT / "generated/planning/typescript/src/cli.mjs"),
+            "new-plan",
+            "--id",
+            "second",
+            "--title",
+            "Second",
+            "--queue",
+            "--expect-planning-revision",
+            "stale",
+            "--target",
+            str(tmp_path),
+            "--format",
+            "json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    payload = json.loads(completed.stdout)
+    assert payload["outcome"] == "blocked"
+    assert payload["reason_code"] == "planning-revision-mismatch"
+    assert payload["current_planning_revision"] == current_revision
 
 
 def test_generated_typescript_workspace_new_plan_attaches_active_lane_and_blocks_invalid_owner(tmp_path: Path) -> None:

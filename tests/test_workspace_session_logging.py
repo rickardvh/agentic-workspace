@@ -1315,16 +1315,101 @@ def test_current_work_owner_binding_classifies_adoption_read_only_unrelated_tran
     cases = {
         ("Continue #2258", ""): ("plan-continuation", True, "issue-2258"),
         ("Execute the active child under #2279", ""): ("plan-continuation", True, "issue-2258"),
-        ("Tighten #2258", ""): ("plan-mutation", True, "issue-2258"),
-        ("Review #3100", ""): ("read-only", False, ""),
+        ("Tighten #2258", "plan-mutation"): ("plan-mutation", True, "issue-2258"),
+        ("Review #3100", "read-only"): ("read-only", False, ""),
         ("Implement #3100", ""): ("unrelated-bounded", False, ""),
-        ("Switch branch then continue #2258", ""): ("provisional-transition", False, ""),
-        ("Adopt the selected owner", ""): ("ambiguous", False, ""),
+        ("Switch branch then continue #2258", "provisional-transition"): ("provisional-transition", False, ""),
+        ("Adopt the selected owner", ""): ("unrelated-bounded", False, ""),
     }
     for (task, relation_hint), expected in cases.items():
         binding = current_work_context.resolve_current_work_context(root=target, task=task, relation_hint=relation_hint)
         owner = binding["owner_binding"]
         assert (owner["relation"], owner["carry_eligible"], binding["plan_id"]) == expected
+
+
+def test_current_work_owner_binding_counts_candidate_owners_not_matching_refs(tmp_path: Path, monkeypatch) -> None:
+    target = _target(tmp_path)
+    owner_ref = ".agentic-workspace/planning/execplans/issue-2258.plan.json"
+    _write(
+        target / ".agentic-workspace/planning/state.toml",
+        (f'schema_version = 1\n[todo]\nactive_items = [{{ id = "issue-2258", refs = ["#2258", "#2279"], surface = "{owner_ref}" }}]\n'),
+    )
+    _write(
+        target / owner_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2258",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "parent": {"owner_id": "issue-2279"},
+                "references": [{"kind": "issue", "target": "#2258"}, {"kind": "issue", "target": "#2279"}],
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        current_work_context,
+        "_git",
+        lambda _root, *args: "main" if args == ("branch", "--show-current") else "head-a",
+    )
+
+    binding = current_work_context.resolve_current_work_context(
+        root=target,
+        task="Continue child #2258 under parent #2279",
+    )
+
+    assert binding["status"] == "bound"
+    assert binding["plan_id"] == "issue-2258"
+    assert binding["owner_binding"]["relation"] == "plan-continuation"
+    assert binding["owner_binding"]["carry_eligible"] is True
+
+
+def test_local_owner_selection_drives_planning_queries_current_work_and_cache_identity(tmp_path: Path, monkeypatch) -> None:
+    from repo_planning_bootstrap import installer as planning_installer
+
+    target = _target(tmp_path)
+    planning_installer.install_bootstrap(target=target)
+    for owner_id, activate in (("owner-a", True), ("owner-b", False), ("owner-c", False)):
+        result = planning_installer.create_execplan_scaffold(
+            plan_id=owner_id,
+            title=owner_id.upper(),
+            target=target,
+            activate=activate,
+        )
+        assert not [action for action in result.actions if action.kind == "manual review"]
+    monkeypatch.setattr(
+        current_work_context,
+        "_git",
+        lambda _root, *args: "main" if args == ("branch", "--show-current") else "head-a",
+    )
+    planning_installer._PLANNING_SELECTED_OWNER_CACHE.clear()
+
+    planning_installer.select_existing_owner("owner-b", target=target, current_work_id="review-thread")
+    owner_b_query = planning_installer.planning_summary_query(target=target, selectors=["planning_record"])
+    owner_b_summary = planning_installer.planning_summary(target=target, profile="tiny")
+    owner_b_binding = current_work_context.resolve_current_work_context(root=target, task="Continue selected work")
+    owner_b_revision = planning_installer.planning_revision(target)
+
+    planning_installer.select_existing_owner(
+        "owner-c",
+        target=target,
+        current_work_id="review-thread",
+        expected_planning_revision=owner_b_revision["revision_id"],
+    )
+    owner_c_query = planning_installer.planning_summary_query(target=target, selectors=["planning_record"])
+    owner_c_summary = planning_installer.planning_summary(target=target, profile="tiny")
+    owner_c_binding = current_work_context.resolve_current_work_context(root=target, task="Continue selected work")
+    owner_c_revision = planning_installer.planning_revision(target)
+
+    assert owner_b_query["payload"]["planning_record"]["task"]["id"] == "owner-b"
+    assert owner_b_summary["todo"]["active_items"][0]["id"] == "owner-b"
+    assert owner_b_binding["plan_id"] == "owner-b"
+    assert owner_c_query["payload"]["planning_record"]["task"]["id"] == "owner-c"
+    assert owner_c_summary["todo"]["active_items"][0]["id"] == "owner-c"
+    assert owner_c_binding["plan_id"] == "owner-c"
+    assert owner_c_query["query_diagnostics"]["cache"]["status"] == "miss"
+    assert owner_b_revision["revision_id"] != owner_c_revision["revision_id"]
+    assert owner_b_revision["selection_hash"] != owner_c_revision["selection_hash"]
 
 
 def test_current_work_owner_identity_deduplicates_wording_and_head_revision(tmp_path: Path, monkeypatch) -> None:

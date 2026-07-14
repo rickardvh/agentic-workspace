@@ -27,7 +27,11 @@ def _selected_planning_owner(root: Path) -> tuple[str, str]:
         selection = json.loads(selection_path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError, UnicodeDecodeError):
         return "", ""
-    selected = selection.get("selected_owner", {}) if isinstance(selection, dict) else {}
+    if not isinstance(selection, dict) or str(selection.get("kind") or "") != "agentic-planning/owner-selection/v1":
+        return "", ""
+    if str(selection.get("mode") or "local").strip().lower() != "local":
+        return "", ""
+    selected = selection.get("selected_owner", {})
     owner_id = str(selected.get("id") or "").strip() if isinstance(selected, dict) else ""
     owner_ref = str(selected.get("ref") or "").strip() if isinstance(selected, dict) else ""
     if not owner_id or not owner_ref:
@@ -40,7 +44,9 @@ def _selected_planning_owner(root: Path) -> tuple[str, str]:
         return "", ""
     if not isinstance(record, dict) or str(record.get("id") or "").strip() != owner_id:
         return "", ""
-    if str(record.get("lifecycle") or "").strip().lower() not in {"live", "blocked"}:
+    lifecycle = str(record.get("lifecycle") or "").strip().lower()
+    phase = str(record.get("phase") or "").strip().lower()
+    if lifecycle not in {"live", "planned"} or phase in {"complete", "completed", "closeout", "closed", "archived"}:
         return "", ""
     return owner_id, owner_ref
 
@@ -126,28 +132,15 @@ def _task_binding_relation(
             return "ambiguous", "unsupported explicit relation hint"
         return normalized_hint, "explicit typed current-work relation"
     lowered = task.lower().strip()
-    if re.search(
-        r"\b(?:switch|change|checkout|move)\b.{0,48}\b(?:branch|worktree|repository|repo|target|owner(?: selection)?)\b",
-        lowered,
-    ):
-        return "provisional-transition", "task begins with an invalidating current-work transition"
     explicit_plan_text = bool(plan_id and plan_id.lower() in lowered)
     matching_ref = bool(set(task_refs).intersection(plan_refs))
     explicit_adoption = explicit_plan_text or matching_ref
-    if len(set(task_refs).intersection(plan_refs)) > 1:
-        return "ambiguous", "task matches more than one owner reference"
     if explicit_adoption:
-        if re.search(r"\b(?:tighten|update|modify|repair|reconcile|close|archive|reshape)\b", lowered):
-            return "plan-mutation", "task mutates or reassesses the selected owner"
-        return "plan-continuation", "task references the selected owner or its parent lane"
-    if re.match(r"^(?:review|inspect|report|explain|audit|summari[sz]e|check status)\b", lowered):
-        return "read-only", "task is an informational or review route without owner adoption"
-    if selected_owner and re.search(r"\b(?:selected|current) owner\b", lowered):
-        return "plan-continuation", "task explicitly continues the supported current-work owner selection"
-    if re.search(r"\b(?:selected|current|active) owner\b", lowered) and not task_refs:
-        return "ambiguous", "task names an owner role without an exact owner reference"
+        return "plan-continuation", "task has an exact reference to the resolved Planning owner"
     if task_refs and plan_refs and set(task_refs).isdisjoint(plan_refs):
         return "unrelated-bounded", "task references work outside the selected owner"
+    if selected_owner:
+        return "plan-continuation", "supported local owner selection binds the current work context"
     return "unrelated-bounded", "bounded work did not explicitly adopt the selected owner"
 
 

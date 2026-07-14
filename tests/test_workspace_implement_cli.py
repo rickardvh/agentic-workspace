@@ -5803,7 +5803,7 @@ def test_more_than_retention_limit_unrelated_starts_create_no_owner_carry(tmp_pa
     assert json.loads(bounded[0].read_text(encoding="utf-8"))["work_binding"]["owner_binding"]["relation"] == "plan-continuation"
 
 
-def test_pre_transition_start_writes_no_carry_and_implement_rebinds_after_branch_switch(tmp_path: Path, capsys) -> None:
+def test_start_prose_does_not_control_carry_and_implement_rebinds_after_branch_switch(tmp_path: Path, capsys) -> None:
     subprocess.run(["git", "init", "-b", "master"], cwd=tmp_path, text=True, capture_output=True, check=True)
     subprocess.run(["git", "config", "user.email", "fixture@example.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "Fixture"], cwd=tmp_path, check=True)
@@ -5833,8 +5833,9 @@ def test_pre_transition_start_writes_no_carry_and_implement_rebinds_after_branch
         == 0
     )
     projected = json.loads(capsys.readouterr().out)["values"]["work_threads"]["decision_point_carry_status"]
-    assert projected["relation"] == "provisional-transition"
-    assert projected["carry_eligible"] is False
+    assert projected["relation"] == "plan-continuation"
+    assert projected["carry_eligible"] is True
+    assert projected["commit_state"] == "commit-on-use"
     carry_dir = tmp_path / ".agentic-workspace/local/decision-point-intent"
     assert (list(carry_dir.glob("*.json")) if carry_dir.exists() else []) == []
 
