@@ -337,10 +337,19 @@ def _should_keep_watching(results: list[dict[str, Any]]) -> bool:
     return any(item.get("status") == "no-op" and item.get("reason") in waiting_reasons for item in results)
 
 
-def poll_one(root: Path, state: dict[str, Any], *, runner: CommandRunner, codex_command: str) -> dict[str, Any]:
+def poll_one(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    runner: CommandRunner,
+    codex_command: str,
+    bypass_hook_trust: bool = False,
+) -> dict[str, Any]:
     pr = int(state["pr_number"])
     if state.get("status") != "awaiting-review":
         return {"pr_number": pr, "status": "no-op", "reason": f"state-is-{state.get('status', 'unknown')}"}
+    state["hook_trust_mode"] = "automation-bypass" if bypass_hook_trust else "persisted-trust-required"
+    _save_state(root, state)
     current_branch = _git_value(root, runner, "branch", "--show-current")
     if current_branch != state.get("branch"):
         return _recover(state, root, event="branch-changed", recovery="return to the recorded branch or stop and clean up this loop")
@@ -412,6 +421,7 @@ def poll_one(root: Path, state: dict[str, Any], *, runner: CommandRunner, codex_
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
     command = [
         *shlex.split(codex_command),
+        *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []),
         "-C",
         root.as_posix(),
         "exec",
@@ -472,6 +482,11 @@ def _parser() -> argparse.ArgumentParser:
     poll_parser.add_argument("--interval", type=int, default=60)
     poll_parser.add_argument("--max-polls", type=int, default=60)
     poll_parser.add_argument("--codex-command", default=os.environ.get("AW_CHATGPT_REVIEW_CODEX", "codex"))
+    poll_parser.add_argument(
+        "--bypass-hook-trust",
+        action="store_true",
+        help="Activate reviewed hooks for resumed Codex automation without persisted /hooks trust.",
+    )
 
     for name in ("status", "stop", "cleanup"):
         item = sub.add_parser(name)
@@ -556,7 +571,15 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
         for index in range(polls):
             states = [_load_state(root, args.pr)] if args.pr else _all_states(root)
             last_results = [
-                poll_one(root, state, runner=runner, codex_command=args.codex_command) for state in states if "pr_number" in state
+                poll_one(
+                    root,
+                    state,
+                    runner=runner,
+                    codex_command=args.codex_command,
+                    bypass_hook_trust=args.bypass_hook_trust,
+                )
+                for state in states
+                if "pr_number" in state
             ]
             _emit({"kind": STATE_KIND, "status": "poll-complete", "poll": index + 1, "results": last_results})
             if not args.watch or not _should_keep_watching(last_results):

@@ -15,6 +15,8 @@ Install `git`, an authenticated `gh`, and a `codex` CLI that can resume the orig
 
 Project hooks run only after the repository `.codex` layer and the exact hook definition are trusted. Inspect and trust it with `/hooks` in Codex. Codex hashes hook definitions, so review the hook again after it changes. The hook receives the exact `session_id` and `cwd` on standard input; the script does not inspect transcripts or store credentials.
 
+Persistent `/hooks` trust is preferred. For bounded unattended automation after all active hook sources have been reviewed, `poll --bypass-hook-trust` passes Codex's explicit `--dangerously-bypass-hook-trust` only to the exact resumed invocation and records `hook_trust_mode: automation-bypass` in local state. The flag authorizes every enabled hook in that invocation, so do not use it before checking user, project, and enabled-plugin hook sources.
+
 The Stop hook is dormant until a loop is explicitly enabled. It only updates an existing state record for the same branch and exact session, returns within 30 seconds, and never waits for review or starts the poller.
 
 ## Start a loop
@@ -44,7 +46,7 @@ uv run python tools/chatgpt_review_loop.py poll
 Or keep the local controller running for a bounded number of polls:
 
 ```powershell
-uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60
+uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60 --bypass-hook-trust
 ```
 
 Polling uses `gh` only. A review is eligible only when its comment contains exactly one well-formed marker whose PR number and 40-character lowercase SHA equal the recorded handoff:

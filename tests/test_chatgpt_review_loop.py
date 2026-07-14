@@ -188,7 +188,7 @@ def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_
     runner.next_handoff_head = HEAD_B
     initial = state(tmp_path)
 
-    result = loop.poll_one(tmp_path, initial, runner=runner, codex_command="codex")
+    result = loop.poll_one(tmp_path, initial, runner=runner, codex_command="codex", bypass_hook_trust=True)
 
     assert result == {
         "pr_number": 12,
@@ -197,10 +197,18 @@ def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_
         "review_key": f"12:{HEAD_A}:IC_blocked_91",
     }
     resume = next(command for command in runner.commands if "resume" in command)
-    assert resume[:5] == ["codex", "-C", tmp_path.as_posix(), "exec", "resume"]
-    assert resume[5] == SESSION
-    assert "fix the race" in resume[6]
+    assert resume[:6] == [
+        "codex",
+        "--dangerously-bypass-hook-trust",
+        "-C",
+        tmp_path.as_posix(),
+        "exec",
+        "resume",
+    ]
+    assert resume[6] == SESSION
+    assert "fix the race" in resume[7]
     assert loop._load_state(tmp_path, 12)["handled_reviews"] == [f"12:{HEAD_A}:IC_blocked_91"]
+    assert loop._load_state(tmp_path, 12)["hook_trust_mode"] == "automation-bypass"
 
 
 def test_resume_failure_is_not_retried_for_same_comment(tmp_path: Path) -> None:
