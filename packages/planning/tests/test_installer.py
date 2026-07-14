@@ -805,6 +805,58 @@ queued_items = [
     assert state["todo"]["queued_items"][0]["id"] == "unrelated"
 
 
+def test_reconciliation_transaction_is_safe_and_useful_without_external_provider(tmp_path: Path) -> None:
+    """Local owner/proof facts can restore selection without inferring completion."""
+    install_bootstrap(target=tmp_path)
+    execplans = tmp_path / ".agentic-workspace/planning/execplans"
+    for owner_id in ("local-current", "local-other"):
+        record = installer_mod._build_execplan_record_from_todo_item(
+            title=owner_id,
+            item_id=owner_id,
+            status="active" if owner_id == "local-current" else "next",
+            why_now="Local-only reconciliation fixture.",
+            next_action="Continue local owner.",
+            done_when="Owner is reconciled.",
+        )
+        record["lifecycle"] = "live"
+        record["phase"] = "implementation"
+        record.setdefault("relationships", {})["proof_posture"] = {"state": "accepted"}
+        _write(execplans / f"{owner_id}.plan.json", json.dumps(record, indent=2))
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """
+[todo]
+active_items = []
+queued_items = []
+""",
+    )
+
+    preview = planning_reconcile(target=tmp_path, preview=True)["proposal"]
+    assert preview["source"]["external_evidence_status"] == "absent"
+    assert [(item["owner_id"], item["transition"], item["reason"]) for item in preview["owner_transitions"]] == [
+        ("local-current", "remain-live", "no-admitted-completion"),
+        ("local-other", "remain-live", "no-admitted-completion"),
+    ]
+    assert preview["semantic_delta"]["closed_owner_ids"] == []
+    assert preview["selected_owner"]["owner_id"] == "local-current"
+
+    applied = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=preview["proposal_id"],
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+    )
+    assert applied["status"] == "applied"
+    assert applied["receipt"]["claims_authorized"] == []
+    assert applied["receipt"]["selected_owner"]["owner_id"] == "local-current"
+    assert all(
+        json.loads((execplans / f"{owner_id}.plan.json").read_text())["lifecycle"] == "live"
+        for owner_id in ("local-current", "local-other")
+    )
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text())
+    assert state["todo"]["active_items"][0]["id"] == "local-current"
+
+
 def test_planning_reconcile_syncs_stale_active_todo_projection(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
