@@ -30110,6 +30110,23 @@ def _apply_installed_state_fast_start_gate(
     }
 
 
+def _startup_route_binding(route_decision: dict[str, Any]) -> dict[str, Any]:
+    """Describe whether startup's read-only route forecast can be relied on yet."""
+    transition = str(route_decision.get("required_transition") or "none")
+    identity_effects = [str(effect) for effect in _list_payload(route_decision.get("identity_effects")) if str(effect).strip()]
+    provisional = transition != "none" or bool(identity_effects)
+    return {
+        "status": "provisional" if provisional else "bound",
+        "state_commit": "none",
+        "rule": "Startup projects a route only; it never commits selection or carry state before an explicit transition is used.",
+        "invalidate_when": ["branch", "head", "worktree", "target", "current-work", "selected-owner"],
+        "reason": "structured-identity-transition"
+        if identity_effects
+        else "transition-required"
+        if provisional
+        else "current-identity-observed",
+    }
+
 def _start_tiny_payload_fast(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, config: WorkspaceConfig, startup_template: dict[str, Any]
 ) -> dict[str, Any]:

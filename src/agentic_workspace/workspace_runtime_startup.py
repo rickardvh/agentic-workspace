@@ -149,20 +149,15 @@ from agentic_workspace.workspace_runtime_proof import (
 def _startup_route_binding(route_decision: dict[str, Any]) -> dict[str, Any]:
     """Describe whether startup's read-only route forecast can be relied on yet."""
     transition = str(route_decision.get("required_transition") or "none")
-    next_action = _as_dict(route_decision.get("next_safe_action"))
-    action_text = " ".join(str(next_action.get(field) or "") for field in ("action", "command", "run", "summary")).lower()
-    identity_transition = any(
-        marker in action_text
-        for marker in ("git switch", "checkout", "branch", "worktree", "repository", "--target", "owner-select", "selected owner")
-    )
-    provisional = transition != "none" or identity_transition
+    identity_effects = [str(effect) for effect in _list_payload(route_decision.get("identity_effects")) if str(effect).strip()]
+    provisional = transition != "none" or bool(identity_effects)
     return {
         "status": "provisional" if provisional else "bound",
         "state_commit": "none",
         "rule": "Startup projects a route only; it never commits selection or carry state before an explicit transition is used.",
         "invalidate_when": ["branch", "head", "worktree", "target", "current-work", "selected-owner"],
-        "reason": "next-action-may-change-route-identity"
-        if identity_transition
+        "reason": "structured-identity-transition"
+        if identity_effects
         else "transition-required"
         if provisional
         else "current-identity-observed",

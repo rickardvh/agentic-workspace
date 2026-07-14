@@ -4518,10 +4518,14 @@ def test_startup_route_binding_is_provisional_before_identity_transition() -> No
     assert (
         _startup_route_binding({"required_transition": "none", "next_safe_action": {"action": "continue-active-plan"}})["status"] == "bound"
     )
-    binding = _startup_route_binding({"required_transition": "none", "next_safe_action": {"command": "git switch feature/reconcile"}})
+    binding = _startup_route_binding({"required_transition": "none", "identity_effects": ["branch"]})
     assert binding["status"] == "provisional"
     assert binding["state_commit"] == "none"
-    assert binding["reason"] == "next-action-may-change-route-identity"
+    assert binding["reason"] == "structured-identity-transition"
+    assert (
+        _startup_route_binding({"required_transition": "none", "next_safe_action": {"command": "git switch feature/reconcile"}})["status"]
+        == "bound"
+    )
 
 
 def test_compact_start_route_decision_preserves_contract_and_binding() -> None:
