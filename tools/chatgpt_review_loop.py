@@ -626,6 +626,12 @@ def _dispatch_all_unlocked(
         if any(item["reason"] != "stale-head" for item in rejected) or len(matches) != 1:
             continue
         review = matches[0]
+        entry = entries.get(str(pr))
+        if isinstance(entry, dict) and _state_path(root, pr).is_file():
+            # A completed or exhausted session must release the global serial
+            # slot.  Only an awaiting session owns the next dispatch for its PR.
+            if _load_state(root, pr).get("status") != "awaiting-review":
+                continue
         if review.decision == "blocked" and review.findings:
             candidates.append((payload, review))
     if not candidates:
@@ -950,6 +956,10 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
             if not args.watch or not _should_keep_watching(last_results):
                 break
             if index + 1 < polls:
+                # A foreground Codex job has already ended. Immediately release
+                # the serial slot to the next eligible PR; only idle scans wait.
+                if args.all_open and result.get("status") == "dispatched":
+                    continue
                 time.sleep(args.interval)
         else:
             _emit(

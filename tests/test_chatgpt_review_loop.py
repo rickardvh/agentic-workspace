@@ -214,6 +214,34 @@ def test_global_dispatch_refuses_a_second_concurrent_job(tmp_path: Path) -> None
     assert result == {"status": "no-op", "reason": "dispatcher-job-in-progress"}
 
 
+def test_global_dispatch_skips_pr_with_exhausted_session(tmp_path: Path) -> None:
+    review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    worktree = tmp_path / "worktrees" / "pr-12"
+    worktree.mkdir(parents=True)
+    state(tmp_path, status="recovery-required")
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        if list(command)[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps([{"number": 12, "headRefName": runner.branch, "headRefOid": HEAD_A, "comments": [review], "url": "u"}]),
+                "",
+            )
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+    assert (
+        loop.dispatch_all(
+            tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=10, max_repeated_blockers=2
+        )["reason"]
+        == "no-eligible-blocked-review"
+    )
+
+
 def test_fresh_global_dispatch_fetches_and_detaches_at_reviewed_head(tmp_path: Path, monkeypatch) -> None:
     review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
