@@ -3909,6 +3909,7 @@ candidates = []
     gate = payload["context"]["planning"]["planning_safety_gate"]
     assert gate["gate_result"] == "current-task-scope-inspection-required"
     assert gate["implementation_allowed"] is False
+    assert payload["action_signals"]["implementation_allowed"] is False
     switch = gate["task_switch_reconciliation"]
     assert switch["current_task_class"] == "new-explicit-task"
     assert switch["recommended_next_action"] == "inspect-current-task-scope"
