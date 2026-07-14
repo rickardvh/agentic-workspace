@@ -50,7 +50,16 @@ class Review:
 
 class CommandRunner:
     def run(self, command: Sequence[str], *, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(_resolved_command(command), cwd=cwd, env=env, text=True, capture_output=True, check=False)
+        return subprocess.run(
+            _resolved_command(command),
+            cwd=cwd,
+            env=env,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            capture_output=True,
+            check=False,
+        )
 
     def json(self, command: Sequence[str], *, cwd: Path) -> Any:
         completed = self.run(command, cwd=cwd)

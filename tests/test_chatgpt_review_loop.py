@@ -37,6 +37,22 @@ def test_windows_command_resolution_uses_pathed_shell_shim(monkeypatch) -> None:
     assert loop._resolved_command(["tools/codex.exe", "exec"], windows=True)[0] == "tools/codex.exe"
 
 
+def test_command_runner_decodes_output_as_utf8(tmp_path: Path, monkeypatch) -> None:
+    observed = {}
+
+    def fake_run(command, **kwargs):
+        observed.update(kwargs)
+        return subprocess.CompletedProcess(command, 0, "ok", "")
+
+    monkeypatch.setattr(loop.subprocess, "run", fake_run)
+
+    completed = loop.CommandRunner().run(["gh", "version"], cwd=tmp_path)
+
+    assert completed.stdout == "ok"
+    assert observed["encoding"] == "utf-8"
+    assert observed["errors"] == "replace"
+
+
 class FakeRunner(loop.CommandRunner):
     def __init__(self, root: Path, *, comments: list[dict] | None = None) -> None:
         self.root = root

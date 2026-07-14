@@ -20,6 +20,8 @@ At `2026-07-14T12:08:53Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AA
 
 After pushing the executable-resolution fix, a manual exact-session handoff probe started Codex CLI 0.144.3 and loaded the recorded session, but the account usage limit rejected the model turn before `Stop` could run. This is an external proof blocker rather than another transport defect. The pushed head can be recorded without model execution, but no further blocked review should be consumed until exact-session usage is available again.
 
+At `2026-07-14T13:02:55Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AAAABKDPBtw` for exact head `31f6924443b3ba4b071f920541f4fcc6f0cdcc6f`, 17 minutes 3 seconds after handoff. The loop was deliberately stopped at review time. When the user explicitly restarted it, the first re-arm failed before changing state because Python decoded `gh`'s UTF-8 review JSON with the Windows CP-1252 default. Explicit UTF-8 decoding with replacement for undecodable diagnostic bytes fixed the boundary and 19 focused tests passed. The next controller poll persisted the review attempt and successfully started this exact Codex session through the resolved CLI 0.144.3 shim at `2026-07-14T13:07:44Z`. No review text was copied manually. This is the first successful controller-triggered live exact-session resumption, but it followed a manual loop restart and in-place decoding repair, so it does not prove uninterrupted watcher continuity.
+
 | Scenario | Evidence | Result |
 | --- | --- | --- |
 | Blocked review, exact-session resume, corrective head | `test_blocked_review_resumes_exact_session_once_and_requires_new_handoff` simulates PR #12 at head `aaaa…`, records exact session `1111…`, transports one blocker, launches non-interactive `codex exec resume` with that exact ID, and observes the Stop-side state move to head `bbbb…` | Passed; one automatic resumption and one new handoff |
@@ -34,17 +36,19 @@ After pushing the executable-resolution fix, a manual exact-session handoff prob
 | Windows Stop-hook invocation | Piped a real Stop payload through the direct repo-relative command and then ran an exact-session Codex turn with the reviewed hook enabled | Passed after fixing the PowerShell stdin bug; Codex reported `hook: Stop Completed` and local state recorded corrective head `adeda425…` |
 | Hook portability | `test_project_stop_hook_uses_repo_runtime_and_has_no_machine_local_path` | Passed; repo-root resolution, bounded timeout, and no checked-in machine path |
 
-Focused run: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 18 passed. Ruff passed after formatting. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
+Focused run: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 19 passed. Ruff passed after formatting. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
 
-Live PR #2292 has now supplied four SHA-bound blocked reviews. Therefore:
+Live PR #2292 has now supplied five SHA-bound blocked reviews. Therefore:
 
 - review latency for head `67c3cce4`: 5 minutes 23 seconds from handoff to review;
 - review latency for head `c0da5601`: 27 minutes 39 seconds from handoff to review;
 - review latency for head `8570580e`: 25 minutes 52 seconds from handoff to review;
-- successful live automatic resumptions: 0;
+- review latency for head `31f69244`: 17 minutes 3 seconds from handoff to review;
+- successful live controller-triggered exact-session resumptions: 1;
+- successful fully unattended review-to-corrective-head cycles: 0;
 - successful live manual exact-session recoveries: 1;
-- automatic watcher detections: 3; one additional review required a foreground watcher restart;
-- manual interventions in live trials: hook-trust activation, Windows wrapper diagnosis/fix, hook-trust flag placement diagnosis/fix, Windows executable-resolution diagnosis/fix, two watcher restarts, and one explicit recovery resume;
+- automatic watcher detections: 3; two additional reviews required a foreground watcher restart;
+- manual interventions in live trials: hook-trust activation, Windows wrapper diagnosis/fix, hook-trust flag placement diagnosis/fix, Windows executable-resolution diagnosis/fix, UTF-8 decoding diagnosis/fix, three watcher restarts, and one explicit recovery resume;
 - stale/duplicate prevention: deterministic fixtures passed;
 - missed or false blockers: 0 observed across the two live reviews.
 
