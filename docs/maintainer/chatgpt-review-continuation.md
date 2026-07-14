@@ -19,6 +19,10 @@ Persistent `/hooks` trust is preferred. For bounded unattended automation after 
 
 The Stop hook is dormant until a loop is explicitly enabled. It only updates an existing state record for the same branch and exact session, returns within 30 seconds, and never waits for review or starts the poller.
 
+## Global serial dispatcher (work in progress)
+
+The next controller mode scans open PRs and dispatches at most one eligible blocked review at a time. It will retain one Codex session and one isolated worktree per PR, creating that pair for a first eligible review and resuming the same session for later reviews. The dispatcher must preserve the existing exact-head marker, duplicate-review, branch-ownership, and bounded-recovery checks; it must not turn stale comments into jobs.
+
 ## Start a loop
 
 1. Work in the exact Codex session that owns the PR.
