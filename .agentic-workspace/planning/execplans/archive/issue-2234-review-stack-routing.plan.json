@@ -50,8 +50,8 @@
       "Clean stack plus reusable proof routes to closeout while preserving parent boundaries.",
       "Stale stack state routes to refresh before readiness claims."
     ],
-    "continuation_owner": "none",
-    "closeout_decision": "pending"
+    "continuation_owner": ".agentic-workspace/planning/state.toml queued roadmap",
+    "closeout_decision": "archive-but-keep-lane-open"
   },
   "goal": [
     "Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing."
@@ -64,13 +64,14 @@
       "outcome": "Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing.",
       "constraints": "Keep scope bounded to existing PR comment attention, proof reuse, and startup presentation surfaces; do not build a separate review workflow.",
       "latitude": "Exact packet shape, compact projection fields, and focused tests for the review-stack routing contract.",
-      "escalation": "Escalate when a correct fix requires live GitHub writes, CI orchestration, parent-issue auto-close, or broad planning framework changes."
+      "escalation": "Escalate when a correct fix requires live GitHub writes, CI orchestration, parent-issue auto-close, or broad planning framework changes.",
+      "proof": "GitHub PR #2250 merged at 3ded592c after required checks passed; master pulled to e9b88323."
     },
     "execution": {
       "milestone": "issue-2234-review-stack-routing",
-      "status": "active",
-      "next_step": "Commit the validated change and open the #2234 PR.",
-      "proof": "Focused and broad AW-selected workspace proof passed."
+      "status": "completed",
+      "next_step": "Continue via .agentic-workspace/planning/state.toml queued roadmap.",
+      "proof": "GitHub PR #2250 merged at 3ded592c after required checks passed; master pulled to e9b88323."
     },
     "scope": {
       "touched": [
@@ -86,13 +87,13 @@
   },
   "intent_continuity": {
     "larger intended outcome": "Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing.",
-    "this slice completes the larger intended outcome": "yes",
-    "continuation surface": "none"
+    "this slice completes the larger intended outcome": "no",
+    "continuation surface": ".agentic-workspace/planning/state.toml queued roadmap"
   },
   "required_continuation": {
-    "required follow-on for the larger intended outcome": "no",
-    "owner surface": "none",
-    "activation trigger": "none"
+    "required follow-on for the larger intended outcome": "yes",
+    "owner surface": ".agentic-workspace/planning/state.toml queued roadmap",
+    "activation trigger": "when the continuation owner promotes the next slice"
   },
   "iterative_follow_through": {
     "what this slice enabled": "none yet",
@@ -100,7 +101,7 @@
     "discovered implications": "none yet",
     "proof achieved now": "broad-proof-passed",
     "validation still needed": "none before PR packaging",
-    "next likely slice": "continue the current milestone until the completion criteria are met"
+    "next likely slice": "Continue via .agentic-workspace/planning/state.toml queued roadmap."
   },
   "intent_interpretation": {
     "literal request": "Issue 2234 review stack routing continuity",
@@ -138,7 +139,7 @@
     "escalate when": "A correct fix requires live GitHub writes, CI orchestration, parent-issue auto-close, or broad planning framework changes."
   },
   "post_decomposition_delegation": {
-    "status": "pending",
+    "status": "closed-with-continuation-routed",
     "decision rule": "After this slice is bounded, decide whether direct work, read-only exploration, implementation handoff, validation handoff, or stronger review improves quality or saves tokens safely.",
     "route candidates": "keep-local|delegate-exploration|delegate-implementation|delegate-validation|escalate-review|no-safe-route",
     "required evidence": "slice id, route, reason, quality risk, token-saving class, read-first refs, write scope, proof burden, stop conditions, and return contract"
@@ -152,7 +153,7 @@
   "references": [],
   "active_milestone": {
     "id": "issue-2234-review-stack-routing",
-    "status": "active",
+    "status": "completed",
     "scope": "Review-stack continuity packet and compact startup routing for existing PR comment/proof reuse surfaces.",
     "ready": "ready",
     "blocked": "none",
@@ -187,79 +188,79 @@
     "Issue 2234 review stack routing continuity is implemented, validated, and closed out honestly."
   ],
   "execution_run": {
-    "run status": "implemented-focused-proof-passed",
+    "run status": "completed",
     "executor": "Codex",
     "handoff source": "agentic-planning new-plan",
-    "what happened": "Added review_stack_continuity to PR comment attention, mirrored it through runtime primitives, and projected the compact phase through startup context/action signals.",
-    "scope touched": "Existing PR comment attention, proof reuse guidance, startup projection, and focused CLI tests.",
-    "changed surfaces": "workspace_runtime_core.py, workspace_runtime_primitives.py, workspace_runtime_startup.py, tests/test_workspace_cli.py, active planning state.",
-    "validations run": "Focused PR comment/proof reuse/runtime mirror pytest and ruff passed.",
-    "result for continuation": "Continue with AW implement-selected validation, then commit and open the #2234 PR.",
-    "next step": "Run AW implement-selected validation, then commit and open the #2234 PR if proof stays green."
+    "what happened": "Merged #2234 review stack routing slice into master.",
+    "scope touched": ".agentic-workspace/planning/execplans/issue-2234-review-stack-routing.plan.json; src/agentic_workspace/review_stack_transitions.py; src/agentic_workspace/workspace_runtime_core.py; tests/test_workspace_cli.py",
+    "changed surfaces": "Merged PR #2250",
+    "validations run": "GitHub PR #2250 merged at 3ded592c after required checks passed; master pulled to e9b88323.",
+    "result for continuation": "continue from .agentic-workspace/planning/state.toml queued roadmap",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/state.toml queued roadmap"
   },
   "finished_run_review": {
-    "review status": "self-reviewed-focused",
-    "scope respected": "yes",
-    "proof status": "broad-proof-passed",
-    "intent served": "yes, startup now exposes review correction, proof, proof reuse closeout, and refresh phases.",
+    "review status": "complete",
+    "scope respected": "PR #2250 is merged; no open PR review remains for this slice.",
+    "proof status": "passed",
+    "intent served": "yes for slice; parent remains open via .agentic-workspace/planning/state.toml queued roadmap",
     "config compliance": "AW startup, payload sync, active plan creation, and plan update performed.",
     "misinterpretation risk": "low",
-    "follow-on decision": "complete after PR creation"
+    "follow-on decision": ".agentic-workspace/planning/state.toml queued roadmap"
   },
   "delegation_outcome_feedback": {
-    "route chosen": "pending",
-    "route skipped reason": "pending",
-    "expected savings": "pending",
-    "actual friction": "pending",
-    "proof result": "pending",
-    "quality concern": "pending",
-    "decomposition adjustment": "pending"
+    "route chosen": "not-delegated",
+    "route skipped reason": "No delegation route was recorded; prepare-closeout normalized archive-only residue.",
+    "expected savings": "none recorded",
+    "actual friction": "none recorded",
+    "proof result": "yes; planning closeout recorded explicit proof input.",
+    "quality concern": "none recorded",
+    "decomposition adjustment": "larger intent remains routed through the continuation owner"
   },
   "proof_report": {
-    "validation proof": "uv run pytest tests/test_workspace_cli.py -k \"pr_comment_attention or proof_reuse_guidance or runtime_mirror_consistency\" -q; uv run ruff check src/agentic_workspace/workspace_runtime_core.py src/agentic_workspace/workspace_runtime_primitives.py src/agentic_workspace/workspace_runtime_startup.py tests/test_workspace_cli.py; make test-workspace; make lint-workspace; uv run python scripts/run_agentic_workspace.py summary --target . --format json; uv run python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json; uv run pytest tests/test_workspace_cli.py -q; make typecheck; uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
-    "proof achieved now": "broad-proof-passed",
-    "evidence for \"proof achieved\" state": "Focused pytest passed; ruff passed; make test-workspace passed; make lint-workspace passed; AW summary passed; planning doctor passed with scoped planning healthy and only pre-existing global payload advisories; full tests/test_workspace_cli.py passed 190 tests; make typecheck passed; runtime mirror consistency reported shape_in_sync."
+    "validation proof": "GitHub PR #2250 merged at 3ded592c after required checks passed; master pulled to e9b88323.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "GitHub PR #2250 merged at 3ded592c after required checks passed; master pulled to e9b88323."
   },
   "intent_satisfaction": {
     "original intent": "Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing.",
-    "was original intent fully satisfied?": "yes, pending PR publication",
-    "evidence of intent satisfaction": "review_stack_continuity packet includes dependency order, current PR, affected slice, proof manifest, proof reuse status, next action, and closeout route; startup projects it compactly and action_signals include review_stack_phase.",
-    "unsolved intent passed to": "none yet"
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "GitHub PR #2250 merged at 3ded592c after required checks passed; master pulled to e9b88323.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml queued roadmap"
   },
   "execution_summary": {
-    "outcome delivered": "implementation and validation complete; PR pending",
-    "validation confirmed": "focused and broad AW-selected proof passed",
-    "follow-on routed to": "none yet",
-    "post-work posterity capture": "pending",
-    "knowledge promoted (Memory/Docs/Config)": "none",
-    "resume from": "current milestone"
+    "outcome delivered": "Slice is landed on master; parent roadmap remains queued separately.",
+    "validation confirmed": "GitHub PR #2250 merged at 3ded592c after required checks passed; master pulled to e9b88323.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml queued roadmap",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/state.toml queued roadmap",
+    "knowledge promoted (Memory/Docs/Config)": "none"
   },
   "durable_residue": {
-    "status": "none",
-    "learned constraint": "none yet",
-    "motivation worth preserving": "none yet",
-    "canonical owner now": "none",
-    "promotion trigger": "none",
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/state.toml queued roadmap.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/state.toml queued roadmap rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml queued roadmap",
+    "promotion trigger": "when the routed closeout residue is acted on",
     "retention after promotion": "retain"
   },
   "task_intent_promotion": {
-    "decision": "pending",
+    "decision": "do-not-promote",
     "accepted values": "do-not-promote|memory|subsystem-intent|system-intent|refine-existing-intent|supersede-existing-intent",
-    "evidence source": "",
-    "target scope": "",
-    "proposed durable intent": "",
+    "evidence source": "archive-plan --prepare-closeout",
+    "target scope": ".agentic-workspace/planning/state.toml queued roadmap",
+    "proposed durable intent": "Future agents should continue from .agentic-workspace/planning/state.toml queued roadmap rather than rediscover this closeout residue.",
     "confidence": "low",
     "needs review": true,
-    "owner surface": ""
+    "owner surface": ".agentic-workspace/planning/state.toml queued roadmap"
   },
   "closure_check": {
-    "slice status": "validated-pr-pending",
-    "larger-intent status": "pending",
-    "closure decision": "pending",
-    "accepted values": "Accepted values: slice status = complete|completed|bounded slice complete; larger-intent status = closed|complete|completed for archive-and-close or open|partial|unfinished for archive-but-keep-lane-open; closure decision = archive-and-close|archive-but-keep-lane-open. Prefer `agentic-planning archive-plan <plan> --prepare-closeout` before hand-editing closeout fields.",
-    "why this decision is honest": "",
-    "evidence carried forward": "",
-    "reopen trigger": ""
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "GitHub PR #2250 merged at 3ded592c after required checks passed; master pulled to e9b88323.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml queued roadmap activates a fresh bounded slice."
   },
   "improvement_signal_review": {
     "status": "not_checked",
@@ -279,12 +280,24 @@
     "signals fixed": [],
     "signals routed": [],
     "signals dismissed": [],
-    "next owner": ""
+    "next owner": "agent closeout reflection"
   },
   "closeout_distillation": {
     "buckets": {
-      "discard": [],
-      "continuation": [],
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/state.toml queued roadmap",
+          "owner": ".agentic-workspace/planning/state.toml queued roadmap",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
       "memory": [],
       "config_check": [],
       "docs": [],
@@ -293,5 +306,153 @@
   },
   "drift_log": [
     "2026-07-13: Scaffolded by agentic-planning new-plan."
-  ]
+  ],
+  "memory_learning_capture": {
+    "status": "reviewed",
+    "memory consult recommended?": "review startup/report memory_consult",
+    "memory notes read": "not recorded",
+    "future agents should not rediscover": "yes",
+    "decision": "route_to_planning",
+    "target": ".agentic-workspace/planning/state.toml queued roadmap",
+    "reason": "Derived from durable_residue during closeout preparation."
+  },
+  "decision_point_intent_confirmation": {
+    "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
+    "phase": "closeout",
+    "status": "unresolved",
+    "forecast_digest": "",
+    "source_revisions": {},
+    "implementation_confirmation": {},
+    "proof_confirmation": {},
+    "same_forecast_consumed": false,
+    "carry_selection": "ambiguous-plan-binding",
+    "carry_candidates": [
+      {
+        "path": ".agentic-workspace/local/decision-point-intent/3aaf0c6834b62083.json",
+        "work_binding": {
+          "branch": "agent/2234-review-stack-routing",
+          "context_id": "2335f8cee34401be",
+          "key": "3aaf0c6834b62083",
+          "plan_id": "issue-2234-review-stack-routing",
+          "pr_ref": "#2250",
+          "status": "bound",
+          "task": "Resume P0 PR review work for #2044 stack; continue addressing PR #2250 review comment for #2234",
+          "thread_id": ""
+        },
+        "lifecycle": {
+          "created_at": "2026-07-13T08:48:54+00:00",
+          "retention_limit": 8,
+          "state": "active",
+          "updated_at": "2026-07-13T08:48:54+00:00"
+        }
+      },
+      {
+        "path": ".agentic-workspace/local/decision-point-intent/751d433cd223c8d9.json",
+        "work_binding": {
+          "branch": "agent/2234-review-stack-routing",
+          "context_id": "bea259860b781875",
+          "key": "751d433cd223c8d9",
+          "plan_id": "issue-2234-review-stack-routing",
+          "pr_ref": "",
+          "status": "bound",
+          "task": "planning closeout should preserve durable intent",
+          "thread_id": ""
+        },
+        "lifecycle": {
+          "created_at": "2026-07-13T08:55:31+00:00",
+          "retention_limit": 8,
+          "state": "active",
+          "updated_at": "2026-07-13T08:55:31+00:00"
+        }
+      },
+      {
+        "path": ".agentic-workspace/local/decision-point-intent/7b0f08e263ef8046.json",
+        "work_binding": {
+          "branch": "agent/2234-review-stack-routing",
+          "context_id": "a51445442b180bc6",
+          "key": "7b0f08e263ef8046",
+          "plan_id": "issue-2234-review-stack-routing",
+          "pr_ref": "#2250",
+          "status": "bound",
+          "task": "Address PR #2250 review comment for #2234: make review-stack routing executable and proof-backed",
+          "thread_id": ""
+        },
+        "lifecycle": {
+          "created_at": "2026-07-13T08:39:02+00:00",
+          "retention_limit": 8,
+          "state": "active",
+          "updated_at": "2026-07-13T08:39:02+00:00"
+        }
+      }
+    ],
+    "safe_recovery": "Rerun the same archive-plan command with --decision-point-carry-key <listed work_binding.key>; selection is exact and does not mutate other active carries."
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "clarification-required",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "ask-human",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [],
+      "blocked_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": ".agentic-workspace/planning/state.toml queued roadmap",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": "Decision-point intent confirmation is missing or unresolved."
+    },
+    "continuation": {
+      "owner_surface": ".agentic-workspace/planning/state.toml queued roadmap",
+      "created_or_required": true,
+      "reason": "Decision-point intent confirmation is missing or unresolved."
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "generated_closeout": {
+    "status": "generated",
+    "source": "archive-plan --prepare-closeout",
+    "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Make AW carry stacked-PR review phase continuity from startup through correction, proof, proof reuse, and closeout routing.\nIntent satisfied: no\nArchive decision: archive-but-keep-lane-open\nProof: GitHub PR #2250 merged at 3ded592c after required checks passed; master pulled to e9b88323.\nChanged surfaces: Merged PR #2250\nDurable residue: planning (.agentic-workspace/planning/state.toml queued roadmap)\nMemory learning: route_to_planning\nFollow-up: .agentic-workspace/planning/state.toml queued roadmap\nCompletion gate: clarification-required\nCompletion claim allowed: partial-progress"
+  }
 }

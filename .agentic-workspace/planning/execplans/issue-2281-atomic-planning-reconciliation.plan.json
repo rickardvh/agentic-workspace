@@ -1,0 +1,67 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2281-atomic-planning-reconciliation",
+  "title": "Issue 2281 atomic Planning reconciliation transaction",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "shaping",
+  "revision": 1,
+  "intent": {
+    "outcome": "https://github.com/rickardvh/agentic-workspace/issues/2281",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2281",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "Fill in the concrete files before implementation starts."
+    ],
+    "effects": []
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2281",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2281",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Fill in execution bounds, touched paths, and validation before implementation starts.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Issue 2281 atomic Planning reconciliation transaction is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "Fill in the narrowest command that proves the promoted work."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": []
+}

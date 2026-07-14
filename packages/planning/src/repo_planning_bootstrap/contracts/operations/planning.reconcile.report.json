@@ -32,7 +32,31 @@
       "description": "Preview safe-prune application without writing repo state."
     },
     {"name": "lane", "source": "cli-option", "required": false},
-    {"name": "apply_lane_reconcile", "source": "cli-option", "required": false}
+    {"name": "apply_lane_reconcile", "source": "cli-option", "required": false},
+    {
+      "name": "preview",
+      "source": "cli-option",
+      "required": false,
+      "description": "Compile and persist a reusable reconciliation proposal without mutating Planning state."
+    },
+    {
+      "name": "apply",
+      "source": "cli-option",
+      "required": false,
+      "description": "Apply a previously previewed reconciliation proposal."
+    },
+    {
+      "name": "proposal",
+      "source": "cli-option",
+      "required": false,
+      "description": "Exact proposal identity returned by the reconciliation preview."
+    },
+    {
+      "name": "expected_planning_revision",
+      "source": "cli-option",
+      "required": false,
+      "description": "Compare-and-swap Planning revision required when applying a proposal."
+    }
   ],
   "output": {
     "kind": "text-or-json"
@@ -65,6 +89,11 @@
       "surface": ".agentic-workspace/planning/decompositions/",
       "required": false,
       "when": "--apply-safe-prune removes exact safe_to_prune decomposition records"
+    },
+    {
+      "surface": ".agentic-workspace/local/planning/reconciliation-{proposals,receipts}/",
+      "required": false,
+      "when": "a preview records a reusable proposal or apply records its idempotence receipt"
     }
   ],
   "ir_plan": {
@@ -110,12 +139,14 @@
   ],
   "guards": [
     "--apply-safe-prune must only mutate targets already present in cleanup_targets with safe_to_prune=true.",
-    "--dry-run must not write repo state."
+    "--dry-run must not write repo state.",
+    "--apply requires the exact proposal id and expected Planning revision returned by preview."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
     "process conformance remains compatible",
-    "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior"
+    "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior",
+    "proposal/apply tests cover revision guards, idempotence, and transaction rollback"
   ],
   "migration_status": "runtime-consumed"
 }

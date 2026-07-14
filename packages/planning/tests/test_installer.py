@@ -550,6 +550,76 @@ candidates = [
     assert state["roadmap"]["candidates"] == []
 
 
+def test_reconciliation_transaction_previews_applies_and_is_idempotent(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    _write(
+        state_path,
+        """
+[todo]
+active_items = []
+queued_items = []
+
+[roadmap]
+lanes = [
+  { id = "closed-lane", title = "Closed lane", priority = "first", issues = ["EXT-1"], outcome = "Done.", reason = "Done.", promotion_signal = "None.", suggested_first_slice = "None." },
+]
+candidates = []
+""",
+    )
+    _write_external_intent_evidence(
+        tmp_path / ".agentic-workspace/planning/external-intent-evidence.json",
+        items=[
+            {
+                "system": "manual",
+                "id": "EXT-1",
+                "title": "Closed elsewhere",
+                "status": "resolved",
+                "kind": "lane",
+                "parent_id": "",
+                "planning_residue_expected": "optional",
+            }
+        ],
+    )
+
+    preview = planning_reconcile(target=tmp_path)
+    assert preview["status"] == "attention-needed"
+    transaction = planning_reconcile(target=tmp_path, preview=True)
+    assert transaction["status"] == "preview"
+    proposal = transaction["proposal"]
+    assert proposal["operations"][0]["kind"] == "safe-prune"
+    proposal_id = proposal["proposal_id"]
+    revision = planning_revision(tmp_path)["revision_id"]
+
+    stale = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=proposal_id,
+        expected_planning_revision="stale",
+    )
+    assert stale["status"] == "blocked"
+    assert stale["reason"] == "planning-revision-mismatch"
+    assert tomllib.loads(state_path.read_text(encoding="utf-8"))["roadmap"]["lanes"]
+
+    applied = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=proposal_id,
+        expected_planning_revision=revision,
+    )
+    assert applied["status"] == "applied"
+    assert applied["receipt"]["apply_result"]["applied_count"] == 1
+    assert tomllib.loads(state_path.read_text(encoding="utf-8"))["roadmap"]["lanes"] == []
+
+    repeated = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=proposal_id,
+        expected_planning_revision=revision,
+    )
+    assert repeated["status"] == "already-applied"
+
+
 def test_planning_reconcile_syncs_stale_active_todo_projection(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"

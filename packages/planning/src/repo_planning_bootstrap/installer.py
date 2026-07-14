@@ -41,6 +41,8 @@ PLANNING_EXTERNAL_INTENT_CACHE_PATH = Path(".agentic-workspace") / "local" / "ca
 PLANNING_PROOF_RECEIPT_PATH = Path(".agentic-workspace") / "local" / "proof-receipts" / "last.json"
 PLANNING_OWNER_SELECTION_PATH = Path(".agentic-workspace") / "local" / "planning" / "owner-selection.json"
 PLANNING_OWNER_SELECTION_RECEIPT_PATH = Path(".agentic-workspace") / "local" / "planning" / "owner-selection-receipt.json"
+PLANNING_RECONCILIATION_PROPOSAL_ROOT = Path(".agentic-workspace") / "local" / "planning" / "reconciliation-proposals"
+PLANNING_RECONCILIATION_RECEIPT_ROOT = Path(".agentic-workspace") / "local" / "planning" / "reconciliation-receipts"
 PLANNING_FINISHED_WORK_EVIDENCE_PATH = PLANNING_MANAGED_ROOT / "finished-work-evidence.json"
 PLANNING_CLOSEOUT_EVIDENCE_ROOT = PLANNING_MANAGED_ROOT / "closeout-evidence"
 PLANNING_SCHEMA_ROOT = PLANNING_MANAGED_ROOT / "schemas"
@@ -2808,9 +2810,22 @@ def planning_reconcile(
     dry_run: bool = False,
     lane: str = "",
     apply_lane_reconcile: bool = False,
+    preview: bool = False,
+    apply: bool = False,
+    proposal: str = "",
+    expected_planning_revision: str = "",
 ) -> dict[str, Any]:
     target_root = resolve_target_root(target)
     payload = _planning_reconcile_payload(target_root)
+    if preview or apply or proposal:
+        return _planning_reconciliation_transaction(
+            target_root=target_root,
+            payload=payload,
+            apply=apply,
+            proposal_id=proposal,
+            expected_planning_revision=expected_planning_revision,
+            dry_run=dry_run,
+        )
     if lane or apply_lane_reconcile:
         payload["lane_child_reconciliation"] = _reconcile_lane_children(
             target_root=target_root,
@@ -2835,6 +2850,184 @@ def planning_reconcile(
             "command": "agentic-planning reconcile --format json",
         }
     return payload
+
+
+def _planning_reconciliation_transaction(
+    *,
+    target_root: Path,
+    payload: dict[str, Any],
+    apply: bool,
+    proposal_id: str,
+    expected_planning_revision: str,
+    dry_run: bool,
+) -> dict[str, Any]:
+    """Compile and apply the existing safe reconciliation primitives as one CAS transaction.
+
+    The proposal intentionally contains only operations that the existing reconcile
+    surface has already classified as safe.  Semantic closeout remains blocked until
+    a dedicated closeout admission can supply intent and proof evidence.
+    """
+    if apply and proposal_id.strip():
+        requested_id = proposal_id.strip()
+        if not re.fullmatch(r"[0-9a-f]{20}", requested_id):
+            return {"kind": "agentic-planning/reconciliation-transaction/v1", "status": "blocked", "reason": "invalid-proposal-id"}
+        existing_receipt_path = target_root / PLANNING_RECONCILIATION_RECEIPT_ROOT / f"{requested_id}.json"
+        if existing_receipt_path.is_file():
+            receipt = json.loads(existing_receipt_path.read_text(encoding="utf-8"))
+            return {
+                "kind": "agentic-planning/reconciliation-transaction/v1",
+                "status": "already-applied",
+                "receipt": receipt,
+            }
+    revision = planning_revision(target_root)
+    planning_revision_id = str(revision.get("revision_id") or "")
+    cleanup_targets = [
+        copy.deepcopy(item)
+        for item in payload.get("completed_work_reconciliation", {}).get("cleanup_targets", [])
+        if isinstance(item, dict) and item.get("safe_to_prune") is True
+    ]
+    sync_targets = [
+        copy.deepcopy(item)
+        for item in payload.get("active_projection_reconciliation", {}).get("sync_targets", [])
+        if isinstance(item, dict) and item.get("safe_to_sync") is True
+    ]
+    operations = [
+        *[
+            {
+                "kind": "safe-prune",
+                "id": str(item.get("id") or ""),
+                "path": str(item.get("path") or ""),
+                "owned_fields": [str(item.get("surface") or "")],
+                "target": item,
+            }
+            for item in cleanup_targets
+        ],
+        *[
+            {
+                "kind": "sync-active-projection",
+                "id": str(item.get("id") or ""),
+                "path": str(item.get("path") or ""),
+                "owned_fields": [str(item.get("surface") or "")],
+                "target": item,
+            }
+            for item in sync_targets
+        ],
+    ]
+    source = {
+        "planning_revision": planning_revision_id,
+        "external_evidence_status": str(payload.get("external_work_state", {}).get("status") or "absent"),
+        "external_evidence_refreshed_at": str(payload.get("external_work_state", {}).get("refreshed_at") or ""),
+        "operations": operations,
+    }
+    computed_id = hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+    proposal_payload = {
+        "kind": "agentic-planning/reconciliation-proposal/v1",
+        "proposal_id": computed_id,
+        "source": source,
+        "operations": operations,
+        "blocked_items": [
+            {
+                "reason": "semantic-closeout-admission-required",
+                "rule": "External observations do not close owners without admitted proof and intent evidence.",
+            }
+        ],
+        "preserved_invariants": [
+            "unrelated live owners",
+            "lane and parent closure boundaries",
+            "current-work local selection",
+            "external observations remain non-authoritative for intent satisfaction",
+        ],
+        "apply_command": (
+            f"{_workspace_cli_invoke(target_root)} planning reconcile --apply --proposal {computed_id} "
+            f"--expect-planning-revision {planning_revision_id} --target . --format json"
+        ),
+    }
+    proposal_path = target_root / PLANNING_RECONCILIATION_PROPOSAL_ROOT / f"{computed_id}.json"
+    receipt_path = target_root / PLANNING_RECONCILIATION_RECEIPT_ROOT / f"{computed_id}.json"
+    if not apply:
+        if not dry_run:
+            proposal_path.parent.mkdir(parents=True, exist_ok=True)
+            proposal_path.write_text(json.dumps(proposal_payload, indent=2) + "\n", encoding="utf-8", newline="\n")
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "status": "preview",
+            "proposal": proposal_payload,
+            "proposal_path": _planning_surface_relative(target_root, proposal_path),
+            "dry_run": dry_run,
+        }
+    if not proposal_id.strip():
+        return {"kind": "agentic-planning/reconciliation-transaction/v1", "status": "blocked", "reason": "proposal-required"}
+    if proposal_id.strip() != computed_id:
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "status": "blocked",
+            "reason": "proposal-stale-or-mismatched",
+            "expected_proposal": computed_id,
+        }
+    if expected_planning_revision.strip() != planning_revision_id:
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "status": "blocked",
+            "reason": "planning-revision-mismatch",
+            "expected_planning_revision": expected_planning_revision.strip(),
+            "actual_planning_revision": planning_revision_id,
+        }
+    touched = [target_root / PLANNING_STATE_PATH]
+    touched.extend(target_root / str(item.get("path")) for item in cleanup_targets if str(item.get("path") or ""))
+    touched.append(receipt_path)
+    apply_box: dict[str, Any] = {}
+
+    def write_transaction() -> None:
+        apply_box.update(
+            _apply_reconcile_safe_prune(
+                target_root=target_root,
+                cleanup_targets=cleanup_targets,
+                projection_sync_targets=sync_targets,
+                dry_run=False,
+            )
+        )
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        receipt = {
+            "kind": "agentic-planning/reconciliation-receipt/v1",
+            "proposal_id": computed_id,
+            "planning_revision_before": planning_revision_id,
+            "operations": operations,
+            "changed_fields": sorted({field for operation in operations for field in operation["owned_fields"] if field}),
+            "preserved_invariants": proposal_payload["preserved_invariants"],
+            "apply_result": apply_box,
+        }
+        receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+    if dry_run:
+        preview = _apply_reconcile_safe_prune(
+            target_root=target_root,
+            cleanup_targets=cleanup_targets,
+            projection_sync_targets=sync_targets,
+            dry_run=True,
+        )
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "status": "dry-run",
+            "proposal": proposal_payload,
+            "apply_result": preview,
+        }
+    try:
+        _apply_planning_writes_atomically(touched, write_transaction)
+    except OSError as exc:
+        return {
+            "kind": "agentic-planning/reconciliation-transaction/v1",
+            "status": "rolled-back",
+            "reason": str(exc),
+            "proposal": proposal_payload,
+        }
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    return {
+        "kind": "agentic-planning/reconciliation-transaction/v1",
+        "status": "applied",
+        "proposal": proposal_payload,
+        "receipt": receipt,
+        "post_apply": _planning_reconcile_payload(target_root),
+    }
 
 
 def _reconcile_lane_children(*, target_root: Path, lane_id: str, apply: bool, dry_run: bool) -> dict[str, Any]:

@@ -69,6 +69,10 @@ def load_planning_reconcile_operation(values: dict, _arguments: dict, _context) 
         dry_run=bool(values.get("dry_run")),
         lane=str(values.get("lane") or ""),
         apply_lane_reconcile=bool(values.get("apply_lane_reconcile")),
+        preview=bool(values.get("preview")),
+        apply=bool(values.get("apply")),
+        proposal=str(values.get("proposal") or ""),
+        expected_planning_revision=str(values.get("expected_planning_revision") or ""),
     )
 
 

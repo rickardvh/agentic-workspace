@@ -1764,7 +1764,7 @@ const commandDefinitions = [
   },
   {
     "interface": {
-      "help": "Read-only reconcile report.",
+      "help": "Preview or apply bounded Planning reconciliation transactions.",
       "name": "reconcile",
       "options": [
         {
@@ -1816,6 +1816,36 @@ const commandDefinitions = [
           ],
           "help": "Apply the reported child-outcome delta without closing the parent lane.",
           "name": "apply_lane_reconcile"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--preview"
+          ],
+          "help": "Compile a reusable reconciliation proposal without mutating Planning state.",
+          "name": "preview"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--apply"
+          ],
+          "help": "Apply the exact reconciliation proposal guarded by --proposal and --expect-planning-revision.",
+          "name": "apply"
+        },
+        {
+          "flags": [
+            "--proposal"
+          ],
+          "help": "Proposal id returned by --preview.",
+          "name": "proposal"
+        },
+        {
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Planning revision returned by --preview and required by --apply.",
+          "name": "expected_planning_revision"
         }
       ]
     },
