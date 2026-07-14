@@ -266,6 +266,8 @@ def handoff(
     )
     if not same_handoff:
         state["handoff_at"] = datetime.now(timezone.utc).isoformat()
+    state.pop("resume_exit_code", None)
+    state.pop("resume_diagnostic", None)
     _save_state(root, state)
     return {
         "kind": STATE_KIND,

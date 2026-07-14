@@ -221,6 +221,29 @@ def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_
     assert loop._load_state(tmp_path, 12)["hook_trust_mode"] == "automation-bypass"
 
 
+def test_new_handoff_clears_stale_resume_failure_diagnostics(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    existing = state(tmp_path, status="recovery-required", resume_exit_code=2, resume_diagnostic="old failure")
+    loop._save_state(tmp_path, existing)
+
+    result = loop.handoff(
+        cwd=tmp_path,
+        session_id=SESSION,
+        pr=12,
+        max_cycles=3,
+        max_repeated_blockers=2,
+        replace_session=False,
+        existing_only=False,
+        runner=runner,
+    )
+
+    refreshed = loop._load_state(tmp_path, 12)
+    assert result["status"] == "handoff-noop"
+    assert refreshed["status"] == "awaiting-review"
+    assert "resume_exit_code" not in refreshed
+    assert "resume_diagnostic" not in refreshed
+
+
 def test_resume_failure_is_not_retried_for_same_comment(tmp_path: Path) -> None:
     review = {"databaseId": 92, "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
