@@ -315,7 +315,7 @@ def handoff(
             "head": head,
             "session_bound": True,
             "opt_in_added": False,
-            "state_path": path.relative_to(root).as_posix(),
+            "state_path": path.relative_to(owner_root).as_posix(),
         }
     state.update(
         {
@@ -345,7 +345,7 @@ def handoff(
         "head": head,
         "session_bound": True,
         "opt_in_added": opted_in,
-        "state_path": path.relative_to(root).as_posix(),
+        "state_path": path.relative_to(owner_root).as_posix(),
     }
 
 
@@ -425,23 +425,26 @@ def poll_one(
     runner: CommandRunner,
     codex_command: str,
     bypass_hook_trust: bool = False,
+    state_root: Path | None = None,
+    isolated_worktree: bool = False,
 ) -> dict[str, Any]:
+    owner_root = state_root or root
     pr = int(state["pr_number"])
     if state.get("status") != "awaiting-review":
         return {"pr_number": pr, "status": "no-op", "reason": f"state-is-{state.get('status', 'unknown')}"}
     state["hook_trust_mode"] = "automation-bypass" if bypass_hook_trust else "persisted-trust-required"
-    _save_state(root, state)
+    _save_state(owner_root, state)
     current_branch = _git_value(root, runner, "branch", "--show-current")
-    if current_branch != state.get("branch"):
-        return _recover(state, root, event="branch-changed", recovery="return to the recorded branch or stop and clean up this loop")
+    if not isolated_worktree and current_branch != state.get("branch"):
+        return _recover(state, owner_root, event="branch-changed", recovery="return to the recorded branch or stop and clean up this loop")
     payload = _pr_view(root, runner, pr=pr, repo=str(state["repository"]))
     if payload.get("state") != "OPEN":
-        return _recover(state, root, event="pr-closed", recovery="inspect the closed PR, then stop or clean up the local loop")
+        return _recover(state, owner_root, event="pr-closed", recovery="inspect the closed PR, then stop or clean up the local loop")
     if payload.get("headRefName") != state.get("branch"):
-        return _recover(state, root, event="remote-branch-changed", recovery="inspect PR head ownership; do not guess a replacement branch")
+        return _recover(state, owner_root, event="remote-branch-changed", recovery="inspect PR head ownership; do not guess a replacement branch")
     if payload.get("headRefOid") != state.get("handoff_head"):
         return _recover(
-            state, root, event="unrecorded-head", recovery="run handoff from the exact owning Codex session at the new pushed head"
+            state, owner_root, event="unrecorded-head", recovery="run handoff from the exact owning Codex session at the new pushed head"
         )
 
     matches, rejected = parse_reviews(_comments_from_pr(payload), expected_pr=pr, expected_head=str(state["handoff_head"]))
@@ -449,45 +452,45 @@ def poll_one(
     if malformed:
         return _recover(
             state,
-            root,
+            owner_root,
             event="malformed-review",
             recovery="repair or remove the malformed review comment, then use recover --action continue-waiting",
         )
     if len(matches) > 1:
         return _recover(
             state,
-            root,
+            owner_root,
             event="ambiguous-reviews",
             recovery="leave one authoritative matching review, then use recover --action continue-waiting",
         )
     if not matches:
         event = "stale-review-rejected" if rejected else "review-pending"
         state.update(last_event=event, recovery="")
-        _save_state(root, state)
+        _save_state(owner_root, state)
         return {"pr_number": pr, "status": "no-op", "reason": event, "rejected": rejected}
 
     review = matches[0]
     handled = state.setdefault("handled_reviews", [])
     if review.key in handled:
         state.update(last_event="review-already-handled", recovery="")
-        _save_state(root, state)
+        _save_state(owner_root, state)
         return {"pr_number": pr, "status": "no-op", "reason": "review-already-handled", "review_key": review.key}
     if review.decision == "merge-ready":
         handled.append(review.key)
         state.update(status="merge-ready", last_event="merge-ready-recorded", recovery="Human retains merge authority.")
-        _save_state(root, state)
+        _save_state(owner_root, state)
         return {"pr_number": pr, "status": "merge-ready", "merged": False, "review_key": review.key}
     if not review.findings:
-        return _recover(state, root, event="missing-findings", recovery="the reviewer must post actionable findings with a blocked marker")
+        return _recover(state, owner_root, event="missing-findings", recovery="the reviewer must post actionable findings with a blocked marker")
     if int(state.get("cycles", 0)) >= int(state.get("max_cycles", 3)):
-        return _recover(state, root, event="max-cycles-exceeded", recovery="human review is required before another continuation")
+        return _recover(state, owner_root, event="max-cycles-exceeded", recovery="human review is required before another continuation")
 
     fingerprint = hashlib.sha256(review.findings.encode("utf-8")).hexdigest()
     fingerprints = state.setdefault("blocker_fingerprints", {})
     repeated = int(fingerprints.get(fingerprint, 0)) + 1
     if repeated > int(state.get("max_repeated_blockers", 2)):
         return _recover(
-            state, root, event="repeated-blocker-threshold", recovery="the same blocker recurred; human intervention is required"
+            state, owner_root, event="repeated-blocker-threshold", recovery="the same blocker recurred; human intervention is required"
         )
 
     # Persist the attempt before launching Codex. A Stop hook or process crash cannot
@@ -496,10 +499,13 @@ def poll_one(
     fingerprints[fingerprint] = repeated
     state["cycles"] = int(state.get("cycles", 0)) + 1
     state.update(status="resume-in-progress", last_event="resume-attempt-recorded", recovery="")
-    _save_state(root, state)
+    _save_state(owner_root, state)
 
     env = os.environ.copy()
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
+    if isolated_worktree:
+        env[OWNER_ROOT_ENV] = owner_root.as_posix()
+        env[OWNER_BRANCH_ENV] = str(state["branch"])
     command = [
         *shlex.split(codex_command),
         "-C",
@@ -511,7 +517,7 @@ def poll_one(
         _review_prompt(review),
     ]
     completed = runner.run(command, cwd=root, env=env)
-    latest = _load_state(root, pr)
+    latest = _load_state(owner_root, pr)
     if completed.returncode:
         diagnostic = (completed.stderr or completed.stdout).strip()[-2000:]
         latest.update(
@@ -521,7 +527,7 @@ def poll_one(
             resume_exit_code=completed.returncode,
             resume_diagnostic=diagnostic,
         )
-        _save_state(root, latest)
+        _save_state(owner_root, latest)
         return {
             "pr_number": pr,
             "status": "recovery-required",
@@ -535,7 +541,7 @@ def poll_one(
             last_event="resume-ended-without-new-handoff",
             recovery="inspect the exact Codex session; push a corrective head and run handoff before continuing",
         )
-        _save_state(root, latest)
+        _save_state(owner_root, latest)
         return {"pr_number": pr, "status": "recovery-required", "event": "resume-ended-without-new-handoff"}
     return {"pr_number": pr, "status": "resumed", "new_head": latest.get("handoff_head"), "review_key": review.key}
 
@@ -620,9 +626,6 @@ def _dispatch_all_unlocked(
         if any(item["reason"] != "stale-head" for item in rejected) or len(matches) != 1:
             continue
         review = matches[0]
-        entry = entries.get(str(pr))
-        if isinstance(entry, dict) and entry.get("status") == "fresh-session-recovery-required":
-            continue
         if review.decision == "blocked" and review.findings:
             candidates.append((payload, review))
     if not candidates:
@@ -633,11 +636,26 @@ def _dispatch_all_unlocked(
     entry = entries.get(str(pr))
     if isinstance(entry, dict):
         worktree = Path(str(entry.get("worktree", "")))
-        if not worktree.is_dir():
-            return {"status": "recovery-required", "pr_number": pr, "event": "worktree-missing"}
-        state = _load_state(worktree, pr)
-        result = poll_one(worktree, state, runner=runner, codex_command=codex_command, bypass_hook_trust=bypass_hook_trust)
-        return {"status": "dispatched", "pr_number": pr, "mode": "resume", "result": result}
+        state_path = _state_path(root, pr)
+        if worktree.is_dir() and state_path.is_file():
+            state = _load_state(root, pr)
+            result = poll_one(
+                worktree,
+                state,
+                runner=runner,
+                codex_command=codex_command,
+                bypass_hook_trust=bypass_hook_trust,
+                state_root=root,
+                isolated_worktree=True,
+            )
+            return {"status": "dispatched", "pr_number": pr, "mode": "resume", "result": result}
+        # Old failed fresh sessions had no durable state/session binding.  Their
+        # detached worktree cannot be resumed safely, so retire it and start one
+        # new, recorded session below.
+        if worktree.is_dir():
+            runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+        entries.pop(str(pr), None)
+        _save_dispatch(root, registry)
 
     worktree = _worktree_for(root, pr, worktree_root=worktree_root)
     if worktree.exists():
@@ -674,9 +692,37 @@ def _dispatch_all_unlocked(
     updated = _pr_view(root, runner, pr=pr)
     new_head = str(updated.get("headRefOid", ""))
     if new_head == review.head:
-        entries[str(pr)] = {"worktree": worktree.as_posix(), "branch": branch, "repository": _repo_slug(root, runner), "status": "fresh-session-recovery-required"}
+        # A fresh Codex session may finish before it pushes.  Preserve that exact
+        # session and the reviewed head so the next serial dispatch resumes it
+        # instead of suppressing this PR forever.
+        state = {
+            "kind": STATE_KIND,
+            "repo_root": root.as_posix(),
+            "repository": _repo_slug(root, runner),
+            "pr_number": pr,
+            "pr_url": str(updated.get("url", "")),
+            "branch": branch,
+            "handoff_head": review.head,
+            "session_id": session_id,
+            "max_cycles": max_cycles,
+            "max_repeated_blockers": max_repeated_blockers,
+            "handled_reviews": [],
+            "blocker_fingerprints": {},
+            "cycles": 0,
+            "status": "awaiting-review",
+            "last_event": "fresh-session-awaiting-resume",
+            "recovery": "",
+        }
+        _save_state(root, state)
+        entries[str(pr)] = {
+            "worktree": worktree.as_posix(),
+            "session_id": session_id,
+            "branch": branch,
+            "repository": str(payload.get("repository", "")),
+            "reviewed_head": review.head,
+        }
         _save_dispatch(root, registry)
-        return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-ended-without-new-head"}
+        return {"status": "dispatched", "pr_number": pr, "mode": "fresh", "session_id": session_id, "awaiting_resume": True}
     state = {
         "kind": STATE_KIND,
         "repo_root": root.as_posix(),
@@ -697,7 +743,7 @@ def _dispatch_all_unlocked(
     }
     _save_state(root, state)
     entries[str(pr)] = {
-        "worktree": root.as_posix(),
+        "worktree": worktree.as_posix(),
         "session_id": session_id,
         "branch": branch,
         "repository": str(payload.get("repository", "")),

@@ -255,6 +255,42 @@ def test_fresh_global_dispatch_fetches_and_detaches_at_reviewed_head(tmp_path: P
     )
 
 
+def test_fresh_global_dispatch_records_per_pr_resume_state_when_no_head_is_pushed(tmp_path: Path) -> None:
+    review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        command = list(command)
+        if command[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps([{"number": 12, "headRefName": runner.branch, "headRefOid": HEAD_A, "comments": [review], "url": "u"}]),
+                "",
+            )
+        if command[:3] == ["git", "fetch", "--no-tags"]:
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command == ["git", "rev-parse", "FETCH_HEAD"]:
+            return subprocess.CompletedProcess(command, 0, HEAD_A, "")
+        if command[:3] == ["git", "worktree", "add"]:
+            Path(command[-2]).mkdir(parents=True)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if "exec" in command and "--json" in command:
+            return subprocess.CompletedProcess(command, 0, '{"thread_id":"fresh-session"}\n', "")
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+    result = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=10, max_repeated_blockers=2
+    )
+
+    assert result["awaiting_resume"] is True
+    saved = loop._load_state(tmp_path, 12)
+    assert (saved["session_id"], saved["handoff_head"], saved["cycles"], saved["max_cycles"]) == ("fresh-session", HEAD_A, 0, 10)
+    assert saved["status"] == "awaiting-review"
+
+
 def test_handoff_is_idempotent_adds_opt_in_and_rejects_session_guessing(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
 
