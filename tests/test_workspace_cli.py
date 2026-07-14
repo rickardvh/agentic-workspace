@@ -3916,6 +3916,28 @@ candidates = []
     assert switch["detail_selector"] == "planning_safety_gate.task_switch_reconciliation"
     assert switch["safe_route_ids"] == ["inspect-current-task-scope"]
 
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement parser cache eviction for issue routing",
+                "--select",
+                "planning_route_decision",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected = json.loads(capsys.readouterr().out)
+    route = selected["values"]["planning_route_decision"]
+    assert route["task_relation"] == "independent-pending-scope"
+    assert route["required_transition"] == "inspect-current-task-scope"
+    assert route["implementation_allowed"] is False
+
 
 def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)

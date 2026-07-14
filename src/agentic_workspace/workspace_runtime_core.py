@@ -27370,6 +27370,39 @@ def _selector_requests(select: str | None, key: str) -> bool:
     return any(token == key or token.startswith(f"{key}.") for token in _selector_tokens(select))
 
 
+def _summary_planning_route_decision_payload(*, target_root: Path, task_text: str | None, changed_paths: list[str]) -> dict[str, Any]:
+    """Project the Planning-owned route decision for an explicit summary task."""
+    if not str(task_text or "").strip():
+        return {
+            "kind": "agentic-planning/route-decision/v1",
+            "status": "not-applicable",
+            "reason": "A task is required to classify a Planning route.",
+        }
+    normalized_changed_paths = _normalize_changed_paths(changed_paths)
+    config = _load_workspace_config(target_root=target_root)
+    execution_posture = _execution_posture_payload(
+        config=config,
+        changed_paths=normalized_changed_paths,
+        task_text=task_text,
+        target_root=target_root,
+    )
+    gate = _planning_safety_gate_payload(
+        target_root=target_root,
+        config=config,
+        changed_paths=normalized_changed_paths,
+        task_text=task_text,
+        execution_posture=execution_posture,
+    )
+    route_decision = gate.get("route_decision") if isinstance(gate, dict) else None
+    if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
+        return copy.deepcopy(route_decision)
+    return {
+        "kind": "agentic-planning/route-decision/v1",
+        "status": "unavailable",
+        "reason": "Planning safety did not provide a route decision.",
+    }
+
+
 def _select_summary_payload(
     *, target_root: Path, select: str, task_text: str | None, changed_paths: list[str], planning_summary: Any, cli_invoke: str
 ) -> dict[str, Any]:
@@ -27418,6 +27451,12 @@ def _select_summary_payload(
             changed_paths=changed_paths,
             cli_invoke=cli_invoke,
         )
+        if _selector_requests(select, "planning_route_decision"):
+            tiny_summary["planning_route_decision"] = _summary_planning_route_decision_payload(
+                target_root=target_root,
+                task_text=task_text,
+                changed_paths=changed_paths,
+            )
         if _selector_requests(select, "fresh_session_digest"):
             tiny_summary["fresh_session_digest"] = _fresh_session_digest_payload(
                 target_root=target_root,
@@ -27444,6 +27483,12 @@ def _select_summary_payload(
             changed_paths=changed_paths,
             cli_invoke=cli_invoke,
         )
+        if _selector_requests(select, "planning_route_decision"):
+            full_summary["planning_route_decision"] = _summary_planning_route_decision_payload(
+                target_root=target_root,
+                task_text=task_text,
+                changed_paths=changed_paths,
+            )
         if _selector_requests(select, "fresh_session_digest"):
             full_summary["fresh_session_digest"] = _fresh_session_digest_payload(
                 target_root=target_root,
