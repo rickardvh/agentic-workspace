@@ -1504,6 +1504,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                             "active_planning_present",
                             "issue_refs",
                             "implementation_allowed",
+                            "route_decision",
                             "task_switch_reconciliation",
                         )
                         if key in planning_gate
@@ -1523,6 +1524,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                         )
                         if key in task_switch
                     },
+                    "route_decision": planning_gate.get("route_decision", {}),
                     "rule": scope.get("rule", ""),
                 },
                 "strict_closeout_gate": value.get("strict_closeout_gate", {}),
