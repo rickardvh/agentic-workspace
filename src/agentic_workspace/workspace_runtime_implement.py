@@ -1819,11 +1819,8 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
             candidate_pressure = _as_dict(compact_gate.get("candidate_pressure"))
             custody_planning = _as_dict(compact_gate.get("custody_planning"))
             issue_scope_evidence = _as_dict(compact_gate.get("issue_scope_evidence"))
-            task_switch_reconciliation = _as_dict(compact_gate.get("task_switch_reconciliation"))
             route_decision = _as_dict(compact_gate.get("route_decision"))
-            keep_active_plan_reliance = (
-                active_plan_reliance.get("permission_claim") != "direct-work-no-active-plan" and not task_switch_reconciliation
-            )
+            keep_active_plan_reliance = active_plan_reliance.get("permission_claim") != "direct-work-no-active-plan" and not route_decision
             changed_path_facts = _as_dict(compact_gate.get("changed_path_facts"))
             compact_changed_path_facts = {
                 key: changed_path_facts.get(key)
@@ -1851,15 +1848,12 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     "delegation_decision_required",
                     "custody_planning",
                     "route_decision",
-                    "task_switch_reconciliation",
                     "detail_selector",
                 )
                 if key in compact_gate
             }
             if not custody_planning:
                 compact_gate.pop("custody_planning", None)
-            if not task_switch_reconciliation:
-                compact_gate.pop("task_switch_reconciliation", None)
             if not route_decision:
                 compact_gate.pop("route_decision", None)
             if compact_changed_path_facts:

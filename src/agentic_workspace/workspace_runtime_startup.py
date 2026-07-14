@@ -906,7 +906,6 @@ def _start_payload(
     payload["active_plan_reliance"] = planning_safety_gate.get("active_plan_reliance", {})
     custody_planning = planning_safety_gate.get("custody_planning", {})
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
-    task_switch = planning_safety_gate.get("task_switch_reconciliation", {})
     route_decision = planning_safety_gate.get("route_decision", {})
     if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
         payload["route_decision"] = route_decision
@@ -930,7 +929,7 @@ def _start_payload(
                 ["completed active-plan route accepted or dismissed"]
                 if route_transition == "closeout-or-archive"
                 else ["active-plan claim boundary preserved"]
-                if route_relation == "bounded-independent" and str(task_switch.get("status") or "") == "bounded-reflection-reporting"
+                if route_relation == "bounded-independent"
                 else ["current-task proof", "active-plan claim boundary preserved"]
                 if route_relation == "bounded-independent"
                 else ["current-task route chosen without claiming active-plan progress"]

@@ -27707,18 +27707,40 @@ def _start_tiny_payload_fast(
     payload["active_plan_reliance"] = planning_safety_gate.get("active_plan_reliance", {})
     custody_planning = planning_safety_gate.get("custody_planning", {})
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
-    if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies:
+    route_decision = planning_safety_gate.get("route_decision", {})
+    if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
+        route_decision = copy.deepcopy(route_decision)
+        payload["route_decision"] = route_decision
+    route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
+    route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
+    route_applies = isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1"
+    task_switch_visible_by_default = (
+        route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"} or route_relation == "bounded-independent"
+        if route_applies
+        else False
+    )
+    if (
+        planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default
+    ) and route_transition != "inspect-current-task-scope":
         payload["planning_safety_gate"] = planning_safety_gate
-    task_switch = planning_safety_gate.get("task_switch_reconciliation", {})
-    if isinstance(task_switch, dict) and task_switch.get("status") == "active":
-        next_packet = task_switch.get("next_action_packet", {})
+    if route_applies and (route_transition != "none" or route_relation == "bounded-independent"):
+        next_packet = route_decision.get("next_safe_action", {})
         if isinstance(next_packet, dict):
+            evidence_required = (
+                ["completed active-plan route accepted or dismissed"]
+                if route_transition == "closeout-or-archive"
+                else ["active-plan claim boundary preserved"]
+                if route_relation == "bounded-independent"
+                else ["current-task proof", "active-plan claim boundary preserved"]
+                if route_relation == "bounded-independent"
+                else ["current-task route chosen without claiming active-plan progress"]
+            )
             payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
                 surface="start",
                 decision=planning_safety_gate["decision"],
                 reason=planning_safety_gate["reason"],
                 required_next_action=planning_safety_gate["required_next_action"],
-                evidence_required=["current-task route chosen without claiming active-plan progress"],
+                evidence_required=evidence_required,
             )
             payload["immediate_next_allowed_action"] = next_packet
     intent_acknowledgement = _intent_acknowledgement_payload(
