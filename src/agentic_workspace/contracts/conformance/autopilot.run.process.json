@@ -10,7 +10,7 @@
       "--target",
       ".",
       "--executor-command",
-      "uv run python -c \"print('Done.')\"",
+      "python -c \"print('Done.')\"",
       "--format",
       "json"
     ],

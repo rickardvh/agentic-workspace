@@ -36,6 +36,7 @@
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-lane.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-owner-selection-receipt.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json"
     ],
     "installed_paths": [
@@ -61,6 +62,7 @@
       ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
       ".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
       ".agentic-workspace/planning/schemas/planning-lane.schema.json",
+      ".agentic-workspace/planning/schemas/planning-owner-selection-receipt.schema.json",
       ".agentic-workspace/planning/schemas/planning-review.schema.json"
     ]
   },
@@ -255,6 +257,13 @@
     {
       "source_path": "generated/planning/python/operations/planning.intake-artifact.lifecycle.json",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.intake-artifact.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/planning/python/operations/planning.owner-select.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.owner-select.lifecycle.json",
       "classification": "maintainer/development only",
       "owner": "generated operation projection",
       "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
@@ -510,6 +519,13 @@
       "classification": "core daily-operation planning",
       "owner": "planning package payload",
       "rationale": "Schema for review records so optional review artifacts remain machine-validatable when present."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-owner-selection-receipt.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-owner-selection-receipt.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for exact owner-selection mutation receipts consumed by reconciliation, review, and closeout without a broad bookkeeping proof pass."
     },
     {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/upstream-task-intake.md",
@@ -829,6 +845,13 @@
     {
       "source_path": "generated/planning/python/commands/planning_lane_close_lifecycle.py",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_lane_close_lifecycle.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command module projection",
+      "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."
+    },
+    {
+      "source_path": "generated/planning/python/commands/planning_owner_select_lifecycle.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_owner_select_lifecycle.py",
       "classification": "maintainer/development only",
       "owner": "generated command module projection",
       "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."

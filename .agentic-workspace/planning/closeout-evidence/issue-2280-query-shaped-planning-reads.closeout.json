@@ -1,0 +1,54 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 2280 query-shaped Planning reads",
+  "plan_id": "issue-2280-query-shaped-planning-reads",
+  "created_at": "2026-07-14T06:24:01.376722+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2280-query-shaped-planning-reads.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2280-query-shaped-planning-reads.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "compact closeout tombstone",
+    "ordinary_route": "report --section closeout_report --format json"
+  },
+  "claim_level": "slice",
+  "outcome": "GitHub #2280 is satisfied as one bounded child slice: ordinary Planning orientation/current-state reads are query-shaped and budgeted, while historical evidence remains explicitly paginated.",
+  "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2280",
+  "evidence_refs": [
+    "sha256:a4a201bdb8a1954f9d553092934c40a82660d5fd0edae266a9d65a1a3850efe2"
+  ],
+  "residual": {
+    "status": "closed",
+    "owner": "archive"
+  },
+  "closure": {
+    "authority": "planning closeout writer",
+    "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "reopen_trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "revision": 3,
+  "active_milestone": {
+    "status": "completed"
+  },
+  "proof_report": {
+    "validation proof": "sha256:a4a201bdb8a1954f9d553092934c40a82660d5fd0edae266a9d65a1a3850efe2"
+  },
+  "intent_satisfaction": {
+    "was original intent fully satisfied?": "yes",
+    "unsolved intent passed to": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "execution_summary": {
+    "outcome delivered": "GitHub #2280 is satisfied as one bounded child slice: ordinary Planning orientation/current-state reads are query-shaped and budgeted, while historical evidence remains explicitly paginated.",
+    "follow-on routed to": "none"
+  },
+  "execution_run": {
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/installer.py; packages/planning/README.md; packages/planning/tests/planning_test_support.py; packages/planning/tests/test_archive.py; packages/planning/tests/test_installer.py; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; tests/test_workspace_summary_cli.py; tests/test_workspace_cli.py",
+    "next step": "no active planning work remains"
+  }
+}

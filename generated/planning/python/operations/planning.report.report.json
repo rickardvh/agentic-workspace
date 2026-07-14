@@ -28,6 +28,16 @@
       "source": "cli-option"
     },
     {
+      "name": "audit_cursor",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "audit_page_size",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "format",
       "required": false,
       "source": "cli-option"

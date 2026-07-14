@@ -21963,6 +21963,11 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         state = "closed" if bool(issue.get("closed")) else "open"
     labels = _github_label_names(issue.get("labels"))
     body = str(issue.get("body", "") or "")
+    updated_at = str(issue.get("updatedAt", "")).strip()
+    locator = str(issue.get("url", "")).strip()
+    observation_revision = updated_at or str(issue.get("closedAt", "") or "").strip() or f"github-issue-{issue_number}"
+    observed_time = _parse_external_intent_timestamp(updated_at)
+    expires_at = (observed_time + timedelta(hours=24)).replace(microsecond=0).isoformat() if observed_time else ""
     return {
         "system": "github",
         "id": f"#{issue_number}",
@@ -21973,13 +21978,36 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         "reopens": _infer_external_issue_reopens(body),
         "planning_residue_expected": _github_planning_residue_expected(labels),
         "negative_invariants": _infer_external_issue_negative_invariants(body=body, comments=issue.get("comments")),
-        "url": str(issue.get("url", "")).strip(),
+        "url": locator,
         "source_repository": repo,
         "labels": labels,
         "created_at": str(issue.get("createdAt", "")).strip(),
-        "updated_at": str(issue.get("updatedAt", "")).strip(),
+        "updated_at": updated_at,
         "closed_at": str(issue.get("closedAt", "") or "").strip(),
         "comments_count": _github_comments_count(issue.get("comments")),
+        "observation_id": f"github:issue:{issue_number}:{observation_revision}",
+        "owner": {"id": f"#{issue_number}", "kind": "issue", "locator": locator or f"github:{repo}:issue:{issue_number}"},
+        "status_class": "completed" if state == "closed" else "current",
+        "external_revision": observation_revision,
+        "observed_at": updated_at or "unknown",
+        "freshness": {
+            "status": "current" if observed_time else "unknown",
+            "observed_at": updated_at,
+            "expires_at": expires_at,
+            "max_age_seconds": 86400,
+        },
+        "blockers": [],
+        "evidence_refs": [locator] if locator else [],
+        "provenance": {
+            "provider_class": "github",
+            "resolver_id": "github-gh-cli",
+            "source_ref": locator or f"github:{repo}:issue:{issue_number}",
+            "refresh_id": observation_revision,
+        },
+        "refresh_route": f"agentic-workspace external-intent refresh-github --target . --issue #{issue_number} --storage cache --format json",
+        "availability": "available",
+        "contradictions": [],
+        "provider_detail": {"repository": repo, "labels": labels, "comments_count": _github_comments_count(issue.get("comments"))},
     }
 
 
@@ -22043,7 +22071,7 @@ def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> li
     evidence: list[dict[str, Any]] = []
     for number in _declared_lane_pull_request_numbers(target_root=target_root):
         raw_pr = _run_gh_json(
-            ["pr", "view", str(number), "--repo", repo, "--json", "number,title,state,url"],
+            ["pr", "view", str(number), "--repo", repo, "--json", "number,title,state,url,updatedAt,mergedAt,closedAt"],
             cwd=target_root,
         )
         if not isinstance(raw_pr, dict) or raw_pr.get("number") is None:
@@ -22055,6 +22083,9 @@ def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> li
                 "title": str(raw_pr.get("title", "")).strip(),
                 "state": str(raw_pr.get("state", "")).strip().lower(),
                 "url": str(raw_pr.get("url", "")).strip(),
+                "updated_at": str(raw_pr.get("updatedAt", "")).strip(),
+                "merged_at": str(raw_pr.get("mergedAt", "") or "").strip(),
+                "closed_at": str(raw_pr.get("closedAt", "") or "").strip(),
             }
         )
     return evidence
@@ -22483,6 +22514,13 @@ def _parse_external_intent_timestamp(value: object) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
+def _external_intent_expiry(value: object) -> str:
+    observed_at = _parse_external_intent_timestamp(value)
+    if observed_at is None:
+        return ""
+    return (observed_at + timedelta(hours=24)).replace(microsecond=0).isoformat()
+
+
 def _checked_in_planning_issue_refs(target_root: Path) -> set[str]:
     planning_root = target_root / ".agentic-workspace" / "planning"
     if not planning_root.exists():
@@ -22623,6 +22661,33 @@ def _refresh_github_external_intent_evidence(
             "parent_id": "",
             "reopens": [],
             "planning_residue_expected": "optional",
+            "observation_id": f"github:pull-request:{pr['number']}:{pr['updated_at'] or pr['state']}",
+            "owner": {
+                "id": f"PR #{pr['number']}",
+                "kind": "pull-request",
+                "locator": pr["url"] or f"github:{resolved_repo}:pull-request:{pr['number']}",
+            },
+            "status_class": "completed" if pr["state"] in {"closed", "merged"} else "current",
+            "external_revision": pr["updated_at"] or pr["state"],
+            "observed_at": pr["updated_at"] or "unknown",
+            "freshness": {
+                "status": "current" if pr["updated_at"] else "unknown",
+                "observed_at": pr["updated_at"],
+                "expires_at": _external_intent_expiry(pr["updated_at"]),
+                "max_age_seconds": 86400,
+            },
+            "blockers": [],
+            "evidence_refs": [pr["url"]] if pr["url"] else [],
+            "provenance": {
+                "provider_class": "github",
+                "resolver_id": "github-gh-cli",
+                "source_ref": pr["url"] or f"github:{resolved_repo}:pull-request:{pr['number']}",
+                "refresh_id": pr["updated_at"] or pr["state"],
+            },
+            "refresh_route": f"gh pr view {pr['number']} --repo {resolved_repo}",
+            "availability": "available",
+            "contradictions": [],
+            "provider_detail": {"repository": resolved_repo, "merged_at": pr["merged_at"], "closed_at": pr["closed_at"]},
         }
         for pr in pull_requests
     )
@@ -22667,9 +22732,7 @@ def _refresh_github_external_intent_evidence(
         "refresh_metadata": refresh_metadata,
         "items": items,
     }
-    previous_items = [item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)]
-    if previous_items:
-        next_payload["previous_items"] = previous_items
+    # One refresh replaces one immutable snapshot; do not retain a parallel full-history authority.
     if cache_compaction is not None:
         next_payload["refresh_metadata"]["cache_compaction"] = cache_compaction
     issue_items = [item for item in items if item.get("kind") != "pull-request"]
@@ -22692,15 +22755,22 @@ def _refresh_github_external_intent_evidence(
     planning_candidate_apply = (
         _append_planning_candidate_rows(
             target_root=target_root,
-            candidates=planning_candidate_suggestions["candidates"],
+            candidates=[
+                candidate
+                for candidate in planning_candidate_suggestions["candidates"]
+                if any(ref in normalized_issue_refs for ref in _issue_refs_from_text(str(candidate.get("refs") or "")))
+            ],
             dry_run=dry_run,
         )
-        if apply_planning_candidates
+        if apply_planning_candidates and normalized_issue_refs
         else {
-            "status": "not-requested",
+            "status": "explicit-selection-required" if apply_planning_candidates else "not-requested",
             "path": ".agentic-workspace/planning/state.toml",
             "applied_count": 0,
             "candidate_ids": [],
+            "reason": "Promotion requires --issue so refresh cannot bulk-create durable Planning candidates."
+            if apply_planning_candidates
+            else "",
         }
     )
     return {
@@ -24841,6 +24911,22 @@ def _select_summary_payload(
             "rule": "planning_revision is served from the cheap revision primitive without loading broad summary detail.",
         }
         return selected
+    requested_roots = {field.split(".", 1)[0] for field in requested_fields}
+    direct_owner_fields = {
+        "planning_revision",
+        "planning_record",
+        "active_contract",
+        "resumable_contract",
+        "continuation_view",
+    }
+    if requested_fields and requested_roots <= direct_owner_fields:
+        from repo_planning_bootstrap.installer import planning_summary_query
+
+        query = planning_summary_query(target=target_root, selectors=requested_fields)
+        if query.get("status") == "present":
+            selected = _select_payload_fields(query["payload"], select=select, source_command="summary")
+            selected["selection_cost"] = query["query_diagnostics"]
+            return selected
     tiny_summary = planning_summary(target=target_root.as_posix(), profile="tiny", task_text=task_text, changed_paths=changed_paths)
     if isinstance(tiny_summary, dict):
         tiny_summary["memory_consult"] = (
@@ -25007,6 +25093,10 @@ def _attach_summary_task_posture_packet(
     changed_paths: list[str],
     cli_invoke: str,
 ) -> None:
+    summary["decision_point_carry_status"] = _workspace_runtime_core._decision_point_carry_status(
+        target_root=target_root,
+        task_text=task_text,
+    )
     config = _load_workspace_config(target_root=target_root)
     active_planning_record = _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root)
     workflow_obligations = _workflow_obligations_report_payload(
@@ -28594,13 +28684,10 @@ def _tiny_memory_consult_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     _ = config
     return {
         "kind": "agentic-workspace/memory-consult/v1",
-        "protocol": "Memory Consultation / Anti-Rediscovery",
         "status": "recommended",
-        "consultation_state": "checked-with-matches",
         "read_first": [".agentic-workspace/memory/repo/index.md"],
         "do_not_bulk_read": True,
-        "why": "Start with the Memory index, then load only route-matched durable notes when the task or changed paths justify them.",
-        "selection_rule": "load only manifest- or index-routed durable notes from touched files or explicit surfaces",
+        "rule": "Read the index, then only route-matched notes; use report detail for consultation diagnostics.",
     }
 
 
@@ -41590,6 +41677,8 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
     )
     if reuse_context is not None:
         record_projection_reuse(root=target_root, operation="doctor", query=reuse_query, context=reuse_context, payload=payload)
+    if command_name in {"doctor", "status"}:
+        payload["decision_point_carry_status"] = _workspace_runtime_core._decision_point_carry_status(target_root=target_root)
     if select:
         payload = _select_payload_fields(payload, select=select, source_command=command_name)
     _emit_payload(payload=payload, format_name=args.format)

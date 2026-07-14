@@ -930,22 +930,238 @@ function stableJson(value) {
   return JSON.stringify(value);
 }
 
-function planningRevision(targetRoot, state) {
-  const statePath = join(targetRoot, '.agentic-workspace/planning/state.toml');
+function selectedPlanningOwner(targetRoot, state) {
+  const selectionPath = join(targetRoot, '.agentic-workspace/local/planning/owner-selection.json');
+  if (existsSync(selectionPath)) {
+    try {
+      const selection = JSON.parse(readText(selectionPath));
+      const selected = isObject(selection?.selected_owner) ? selection.selected_owner : {};
+      const ownerRef = String(selected.ref ?? '').replace(/\\/g, '/');
+      const ownerPath = resolve(targetRoot, ownerRef);
+      const rel = relative(targetRoot, ownerPath);
+      const record = ownerRef && !rel.startsWith('..') && !isAbsolute(rel) ? JSON.parse(readText(ownerPath)) : null;
+      const lifecycle = String(record?.lifecycle ?? '').toLowerCase();
+      const phase = String(record?.phase ?? '').toLowerCase();
+      if (
+        selection?.kind === 'agentic-planning/owner-selection/v1'
+        && String(selection.mode ?? 'local').toLowerCase() === 'local'
+        && String(selected.id ?? '')
+        && isObject(record)
+        && String(record.id ?? '') === String(selected.id)
+        && ['live', 'planned'].includes(lifecycle)
+        && !['complete', 'completed', 'closeout', 'closed', 'archived'].includes(phase)
+      ) {
+        return { source: 'local', path: ownerPath, ref: rel.replace(/\\/g, '/'), record, current_work_id: String(selection.current_work_id ?? '') };
+      }
+    } catch { /* invalid local selection falls back to shared state */ }
+  }
   const activeItems = Array.isArray(state?.todo?.active_items) ? state.todo.active_items : [];
   const activeItem = isObject(activeItems[0]) ? activeItems[0] : {};
   const surface = String(activeItem.surface ?? activeItem.path ?? activeItem.execplan ?? '');
-  const activePath = surface ? join(targetRoot, surface) : '';
+  if (!surface) return { source: 'none', path: '', ref: '', record: {}, current_work_id: '' };
+  const activePath = join(targetRoot, surface);
+  let record = {};
+  try { record = JSON.parse(readText(activePath)); } catch { record = {}; }
+  return { source: 'shared', path: activePath, ref: surface, record, current_work_id: '' };
+}
+
+function planningRevision(targetRoot, state) {
+  const statePath = join(targetRoot, '.agentic-workspace/planning/state.toml');
+  const selectionPath = join(targetRoot, '.agentic-workspace/local/planning/owner-selection.json');
+  const selected = selectedPlanningOwner(targetRoot, state);
+  const stateItems = [
+    ...(Array.isArray(state?.todo?.active_items) ? state.todo.active_items : []),
+    ...(Array.isArray(state?.todo?.queued_items) ? state.todo.queued_items : []),
+  ];
+  const indexedItem = stateItems.find((item) => isObject(item) && (String(item.id ?? '') === String(selected.record?.id ?? '') || String(item.surface ?? '') === selected.ref));
+  const activeItem = isObject(indexedItem) ? indexedItem : { id: selected.record?.id ?? '', surface: selected.ref };
   const components = {
     kind: 'planning-revision/v1',
     state_path: '.agentic-workspace/planning/state.toml',
     state_hash: shortFileHash(statePath),
-    active_execplan: surface,
-    active_execplan_hash: activePath ? shortFileHash(activePath) : 'missing',
+    selection_source: selected.source,
+    selection_path: '.agentic-workspace/local/planning/owner-selection.json',
+    selection_hash: shortFileHash(selectionPath),
+    selection_current_work_id: selected.current_work_id,
+    active_execplan: selected.ref,
+    active_execplan_hash: selected.path ? shortFileHash(selected.path) : 'missing',
     active_item_id: String(activeItem.id ?? ''),
-    active_item_surface: surface,
+    active_item_surface: String(activeItem.surface ?? activeItem.path ?? activeItem.execplan ?? selected.ref),
   };
   return { ...components, revision_id: createHash('sha256').update(stableJson(components)).digest('hex').slice(0, 16) };
+}
+
+function planningOwnerSelectResult(values, operationId) {
+  const result = lifecycleResult(values, operationId);
+  const targetRoot = result.target_root;
+  const ownerId = String(values.owner ?? '').trim();
+  const ownerRefInput = String(values.owner_ref ?? '').trim().replace(/\\/g, '/');
+  const mode = String(values.mode ?? 'local');
+  const reason = String(values.reason ?? '').trim();
+  const workId = String(values.current_work_id ?? '').trim() || 'default';
+  const stateOwner = '.agentic-workspace/planning/state.toml';
+  const selectionOwner = '.agentic-workspace/local/planning/owner-selection.json';
+  const receiptOwner = '.agentic-workspace/local/planning/owner-selection-receipt.json';
+  const statePath = join(targetRoot, stateOwner);
+  const selectionPath = join(targetRoot, selectionOwner);
+  const receiptPath = join(targetRoot, receiptOwner);
+  const state = existsSync(statePath) ? parsePlanningState(readText(statePath)) : {};
+  const beforePlanning = planningRevision(targetRoot, state);
+  const beforeCurrentWork = shortFileHash(selectionPath);
+  const cliInvoke = String(workspaceConfig({ target: targetRoot }).workspace?.cli_invoke ?? 'agentic-workspace');
+  const refuse = (reasonCode, path, detail, recovery = '') => {
+    result.actions = [{ kind: 'manual review', path, detail }];
+    result.reason_code = reasonCode;
+    result.recovery_command = recovery || null;
+    return finalizeMutationOutcome(result);
+  };
+  if (!['local', 'shared'].includes(mode)) return refuse('unsupported-selection-mode', selectionOwner, '--mode must be local or shared');
+  if (mode === 'shared' && !reason) return refuse('shared-selection-reason-required', stateOwner, 'shared selection requires --reason');
+  if ((!ownerId && !ownerRefInput) || (ownerId && ownerRefInput)) return refuse('owner-identity-required', '.agentic-workspace/planning/execplans', 'provide --owner or --owner-ref, not both');
+  const expectedPlanning = String(values.expect_planning_revision ?? '').trim();
+  if (expectedPlanning && expectedPlanning !== beforePlanning.revision_id) {
+    return refuse('planning-revision-mismatch', stateOwner, 'planning revision changed before mutation; refresh planning context', `${cliInvoke} summary --target . --format json`);
+  }
+  const expectedCurrent = String(values.expect_current_work_revision ?? '').trim();
+  if (expectedCurrent && expectedCurrent !== beforeCurrentWork) {
+    return refuse('stale-current-work-revision', selectionOwner, `current-work revision changed: expected ${expectedCurrent}, found ${beforeCurrentWork}`, `${cliInvoke} planning owner-select --owner ${ownerId} --target . --dry-run --format json`);
+  }
+  const execplanRoot = join(targetRoot, '.agentic-workspace/planning/execplans');
+  let candidateRefs = [];
+  if (ownerRefInput) {
+    const candidate = resolve(targetRoot, ownerRefInput);
+    const rel = relative(targetRoot, candidate);
+    if (rel.startsWith('..') || isAbsolute(rel)) return refuse('owner-not-found', ownerRefInput, 'owner reference escapes the target repository');
+    candidateRefs = [rel.replace(/\\/g, '/')];
+  } else if (existsSync(execplanRoot)) {
+    candidateRefs = listFiles(execplanRoot).filter((path) => path.endsWith('.plan.json')).map((path) => `.agentic-workspace/planning/execplans/${path}`);
+  }
+  const matches = [];
+  const rejected = [];
+  for (const ref of candidateRefs) {
+    const path = join(targetRoot, ref);
+    try {
+      const record = JSON.parse(readText(path));
+      if (!isObject(record) || record.kind !== 'planning-execplan/v1') {
+        rejected.push(`${ref}: not a canonical execplan owner`);
+        continue;
+      }
+      if (ownerRefInput || String(record.id ?? '') === ownerId) matches.push({ ref, path, record });
+    } catch (error) {
+      rejected.push(`${ref}: unreadable (${error.message})`);
+    }
+  }
+  if (matches.length !== 1) {
+    return refuse(matches.length ? 'owner-ambiguous' : 'owner-not-found', '.agentic-workspace/planning/execplans', `owner resolution matched ${matches.length} owners${rejected.length ? `; bounded candidates: ${rejected.slice(0, 5).join('; ')}` : ''}`, `${cliInvoke} planning owner-select --owner-ref <repo-relative-plan.json> --target . --dry-run --format json`);
+  }
+  const selected = matches[0];
+  const lifecycle = String(selected.record.lifecycle ?? 'unknown').toLowerCase();
+  const phase = String(selected.record.phase ?? 'unknown').toLowerCase();
+  const requiredOwnerFields = ['kind', 'id', 'title', 'owner_level', 'lifecycle', 'phase', 'revision', 'intent', 'parent', 'scope', 'relationships', 'references', 'next_action', 'blockers', 'proof', 'continuation'];
+  const missingOwnerFields = requiredOwnerFields.filter((field) => !Object.prototype.hasOwnProperty.call(selected.record, field));
+  if (missingOwnerFields.length || !['live', 'planned'].includes(lifecycle) || ['complete', 'completed', 'closeout', 'closed', 'archived'].includes(phase)) {
+    return refuse('owner-not-selectable', selected.ref, `lifecycle '${lifecycle}' or phase '${phase}' is not selectable`, `${cliInvoke} summary --target . --format json`);
+  }
+  const parentId = String(selected.record.parent?.owner_id ?? '').trim();
+  if (parentId && parentId !== 'none') {
+    const laneRef = `.agentic-workspace/planning/lanes/${parentId.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}.lane.json`;
+    try {
+      const lane = JSON.parse(readText(join(targetRoot, laneRef)));
+      const ownerSlices = Array.isArray(lane.slice_sequence) ? lane.slice_sequence.filter((item) => isObject(item) && String(item.id ?? '') === String(selected.record.id ?? '')) : [];
+      const declaredRef = String(ownerSlices[0]?.execplan_ref ?? ownerSlices[0]?.execplan ?? '');
+      if (ownerSlices.length !== 1 || (declaredRef && declaredRef !== selected.ref)) return refuse('owner-not-selectable', selected.ref, `parent lane '${parentId}' does not map this owner exactly`, `${cliInvoke} summary --target . --format json`);
+    } catch (error) {
+      return refuse('owner-not-selectable', selected.ref, `parent lane '${parentId}' is absent or invalid`, `${cliInvoke} summary --target . --format json`);
+    }
+  }
+  const selection = {
+    kind: 'agentic-planning/owner-selection/v1',
+    mode,
+    current_work_id: workId,
+    selected_owner: { id: String(selected.record.id), ref: selected.ref },
+    planning_revision: beforePlanning.revision_id,
+    reason,
+  };
+  let proposedState = JSON.parse(JSON.stringify(state));
+  let changedFields = ['local.current_work.selected_owner'];
+  if (mode === 'shared') {
+    proposedState.todo = isObject(proposedState.todo) ? proposedState.todo : {};
+    const active = Array.isArray(proposedState.todo.active_items) ? proposedState.todo.active_items : [];
+    const queued = Array.isArray(proposedState.todo.queued_items) ? proposedState.todo.queued_items : [];
+    let selectedItem = null;
+    const remaining = [];
+    for (const item of [...active, ...queued]) {
+      const matchesOwner = isObject(item) && (String(item.id ?? '') === selection.selected_owner.id || String(item.surface ?? '') === selected.ref);
+      if (matchesOwner) {
+        if (selectedItem) return refuse('owner-index-ambiguous', stateOwner, `owner '${selection.selected_owner.id}' has multiple state index entries`);
+        selectedItem = { ...item };
+      } else if (isObject(item)) remaining.push({ ...item, status: 'next', maturity: 'ready' });
+    }
+    selectedItem = selectedItem ?? { id: selection.selected_owner.id, title: String(selected.record.title ?? selection.selected_owner.id), surface: selected.ref, why_now: selected.ref, owner_role: 'implementation', review_role: 'validation', handoff_ready: true, next_action: String(selected.record.next_action ?? 'Continue the selected owner.'), done_when: String(selected.record.proof?.claims?.[0] ?? 'Selected owner acceptance and proof are satisfied.'), proof: "Use the selected owner's proof contract." };
+    proposedState.todo.active_items = [{ ...selectedItem, status: 'active', maturity: 'active', surface: selected.ref }];
+    proposedState.todo.queued_items = remaining;
+    changedFields = ['todo.active_items', 'todo.queued_items'];
+  }
+  let existingSelection = null;
+  if (existsSync(selectionPath)) {
+    try { existingSelection = JSON.parse(readText(selectionPath)); } catch { existingSelection = null; }
+  }
+  const semanticSelectionFields = ['kind', 'mode', 'current_work_id', 'selected_owner', 'reason'];
+  const noOp = mode === 'local'
+    ? semanticSelectionFields.every((field) => stableJson(existingSelection?.[field]) === stableJson(selection[field]))
+    : stableJson(proposedState) === stableJson(state);
+  const buildReceipt = (outcome, afterPlanning, afterCurrent) => ({
+    kind: 'agentic-planning/owner-selection-receipt/v1',
+    operation: 'planning.owner-select.lifecycle',
+    outcome,
+    mode,
+    work_context: { id: workId, revision_before: beforeCurrentWork, revision_after: afterCurrent },
+    selected_owner: selection.selected_owner,
+    preconditions: { expected_planning_revision: expectedPlanning, expected_current_work_revision: expectedCurrent, owner_lifecycle: lifecycle, owner_phase: phase },
+    changed_fields: outcome === 'no-op' ? [] : changedFields,
+    preserved_invariants: ['owner body', 'roadmap', 'decompositions', 'lane records', 'unrelated local work contexts'],
+    revisions: { planning_before: beforePlanning.revision_id, planning_after: afterPlanning.revision_id },
+    validation_outcome: 'passed',
+    verification_command: `${cliInvoke} planning owner-select --owner-ref ${selected.ref} --target . --dry-run --format json`,
+  });
+  if (noOp) {
+    result.operation_receipt = buildReceipt('no-op', beforePlanning, beforeCurrentWork);
+    result.actions = [{ kind: 'no-op', path: selected.ref, detail: 'requested owner is already selected; no file was rewritten' }];
+    return finalizeMutationOutcome(result);
+  }
+  if (result.dry_run) {
+    result.operation_receipt = buildReceipt('dry-run', beforePlanning, 'proposed');
+    result.actions = [
+      { kind: 'would update', path: mode === 'local' ? selectionOwner : stateOwner, detail: `select '${selection.selected_owner.id}'` },
+      { kind: 'would preserve', path: selected.ref, detail: 'owner body; roadmap; decompositions; lane records; unrelated local work contexts' },
+    ];
+    return finalizeMutationOutcome(result);
+  }
+  const backups = new Map([[statePath, existsSync(statePath) ? readFileSync(statePath) : null], [selectionPath, existsSync(selectionPath) ? readFileSync(selectionPath) : null], [receiptPath, existsSync(receiptPath) ? readFileSync(receiptPath) : null]]);
+  try {
+    if (mode === 'local') {
+      mkdirSync(dirname(selectionPath), { recursive: true });
+      writeFileSync(selectionPath, `${JSON.stringify(selection, null, 2)}\n`, 'utf8');
+    } else {
+      mkdirSync(dirname(statePath), { recursive: true });
+      writeFileSync(statePath, renderPlanningState(proposedState), 'utf8');
+    }
+    const receipt = buildReceipt('selected', planningRevision(targetRoot, proposedState), shortFileHash(selectionPath));
+    mkdirSync(dirname(receiptPath), { recursive: true });
+    writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
+    result.operation_receipt = receipt;
+  } catch (error) {
+    for (const [path, bytes] of backups.entries()) {
+      if (bytes === null) rmSync(path, { force: true });
+      else { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, bytes); }
+    }
+    return refuse('owner-selection-rolled-back', mode === 'local' ? selectionOwner : stateOwner, `owner selection rolled back after write failure: ${error.message}`);
+  }
+  result.actions = [
+    { kind: 'updated', path: mode === 'local' ? selectionOwner : stateOwner, detail: `selected existing owner '${selection.selected_owner.id}' in ${mode} mode` },
+    { kind: 'receipt', path: receiptOwner, detail: 'schema-backed owner-selection mutation receipt' },
+  ];
+  return finalizeMutationOutcome(result);
 }
 
 function unsupportedMutationResult(values, message) {
@@ -1055,6 +1271,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'planning.handoff.load') return { kind: 'planning-handoff/v1', target_root: resolve(String(values.target ?? '.')), message: 'Planning handoff' };
   if (primitive === 'planning.verify-payload.load') return { ...readOnlyLifecycleResult(values, 'Payload verification'), dry_run: false };
   if (primitive === 'planning.new-plan.apply') return planningNewPlanResult(values, operationId);
+  if (primitive === 'planning.owner-select.apply') return planningOwnerSelectResult(values, operationId);
   if (['planning.install.apply', 'planning.init.apply', 'planning.adopt.apply', 'planning.upgrade.apply'].includes(primitive)) {
     const result = lifecycleResult(values, operationId);
     result.actions = applyPayloadCopy(values);

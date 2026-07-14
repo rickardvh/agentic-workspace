@@ -1,0 +1,111 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "work-thread",
+    "format_option": "format",
+    "subcommand": "carry-select"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Select exactly one active carry key.",
+    "Selection is local advisory state and never selects or archives a Planning owner."
+  ],
+  "id": "work-thread.carry-select",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "key",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "work-thread.carry-select"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/decision_point_carry_select_result.schema.json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "focused carry lifecycle tests prove exact selection and preservation"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/decision-point-intent/*.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Validate and select one exact local carry.",
+      "id": "select_carry",
+      "uses": "workspace.local-work-thread.select"
+    },
+    {
+      "description": "Emit the exact selection result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Select one exact ignored-local decision-point carry for closeout or stale recovery.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/local/decision-point-intent/selection.json",
+      "when": "select an exact active carry atomically"
+    }
+  ]
+}

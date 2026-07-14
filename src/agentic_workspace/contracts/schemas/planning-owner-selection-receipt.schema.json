@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/planning-owner-selection-receipt.schema.json",
+  "title": "Planning owner selection receipt",
+  "description": "Receipt for an atomic local or shared Planning owner selection.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "operation", "outcome", "mode", "work_context", "selected_owner", "preconditions", "changed_fields", "preserved_invariants", "revisions", "validation_outcome", "verification_command"],
+  "properties": {
+    "kind": {"description": "Versioned receipt kind.", "const": "agentic-planning/owner-selection-receipt/v1"},
+    "operation": {"description": "Lifecycle operation that emitted the receipt.", "const": "planning.owner-select.lifecycle"},
+    "outcome": {"description": "Selection operation outcome.", "enum": ["selected", "no-op", "dry-run"]},
+    "mode": {"description": "Whether selection changed ignored-local or checked-in shared state.", "enum": ["local", "shared"]},
+    "work_context": {
+      "description": "Current-work context revision transition.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "revision_before", "revision_after"],
+      "properties": {
+        "id": {"description": "Stable current-work context identity.", "type": "string", "minLength": 1},
+        "revision_before": {"description": "Context revision before selection.", "type": "string", "minLength": 1},
+        "revision_after": {"description": "Context revision after selection.", "type": "string", "minLength": 1}
+      }
+    },
+    "selected_owner": {
+      "description": "Planning owner selected by the operation.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ref"],
+      "properties": {
+        "id": {"description": "Selected Planning owner identifier.", "type": "string", "minLength": 1},
+        "ref": {"description": "Repo-relative selected execplan path.", "type": "string", "pattern": "^\\.agentic-workspace/planning/execplans/.+\\.plan\\.json$"}
+      }
+    },
+    "preconditions": {
+      "description": "Optimistic-concurrency and owner-lifecycle preconditions.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expected_planning_revision", "expected_current_work_revision", "owner_lifecycle", "owner_phase"],
+      "properties": {
+        "expected_planning_revision": {"description": "Required Planning revision before mutation.", "type": "string"},
+        "expected_current_work_revision": {"description": "Required current-work revision before mutation.", "type": "string"},
+        "owner_lifecycle": {"description": "Selected owner's admissible lifecycle.", "enum": ["live", "planned"]},
+        "owner_phase": {"description": "Selected owner's current phase.", "type": "string", "minLength": 1}
+      }
+    },
+    "changed_fields": {"description": "Canonical fields changed by selection.", "type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "preserved_invariants": {"description": "Owner-graph invariants preserved by selection.", "type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true},
+    "revisions": {
+      "description": "Planning revision transition.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planning_before", "planning_after"],
+      "properties": {
+        "planning_before": {"description": "Planning revision before selection.", "type": "string", "minLength": 1},
+        "planning_after": {"description": "Planning revision after selection.", "type": "string", "minLength": 1}
+      }
+    },
+    "validation_outcome": {"description": "Post-write validation outcome.", "const": "passed"},
+    "verification_command": {"description": "Copyable command that verifies the selected owner.", "type": "string", "minLength": 1}
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

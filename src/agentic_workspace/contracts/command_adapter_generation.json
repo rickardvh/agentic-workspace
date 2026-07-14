@@ -4020,6 +4020,25 @@
       ]
     },
     {
+      "id": "planning.owner-select.cli",
+      "status": "generated",
+      "command": {"program": "agentic-planning", "name": "owner-select", "command_manifest": "package:planning:cli", "option_group_manifest": "cli_option_groups.json"},
+      "operation_ref": {"id": "planning.owner-select.lifecycle", "registry": "operation_contracts.json", "path": "operations/planning.owner-select.lifecycle.json"},
+      "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["planning.owner-select.apply", "output.emit"]},
+      "schemas": {"input": [], "output": ["planning-owner-selection-receipt.schema.json"]},
+      "effect_hints": {"read_only": false, "destructive": false, "idempotent": true, "writes_repo_state": true, "requires_preflight_gate": false},
+      "projection_hints": {
+        "universal_fields": ["command.name", "command.options", "operation_ref.id", "runtime_binding.primitive_refs", "effect_hints", "conformance_refs"],
+        "adapter_specific_fields": [{"kind": "process-cli", "fields": ["program", "argument rendering", "help rendering", "exit-code rendering"]}]
+      },
+      "generation_boundary": {
+        "contract_owns": ["visible command name", "option shape", "help and usage text source", "operation id", "effect/read/write hints", "conformance refs"],
+        "generated_adapter_owns": ["parser and usage wiring", "argument normalization", "dispatch wiring"],
+        "runtime_owns": ["owner lifecycle and lane validation", "current-work binding", "atomic mutation and receipt validation"]
+      },
+      "conformance_refs": ["planning.owner-select.lifecycle.process"]
+    },
+    {
       "id": "planning.lane-archive.cli",
       "status": "generated",
       "command": {
@@ -5629,10 +5648,10 @@
       },
       "effect_hints": {
         "read_only": false,
-        "destructive": false,
-        "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "destructive": true,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
       },
       "projection_hints": {
         "universal_fields": [
@@ -5682,6 +5701,93 @@
       ]
     },
     {
+      "id": "autopilot.run.cli",
+      "status": "generated",
+      "command": {
+        "program": "agentic-workspace",
+        "name": "autopilot",
+        "command_manifest": "cli_commands.json",
+        "option_group_manifest": "cli_option_groups.json"
+      },
+      "operation_ref": {
+        "id": "autopilot.run",
+        "registry": "operation_contracts.json",
+        "path": "operations/autopilot.run.json"
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "workspace.final-response.admission",
+          "workspace.final-response.admission",
+          "workspace.final-response.continuation.execute",
+          "workspace.final-response.admission",
+          "workspace.local-chat-checkpoint.write",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "final_response_admission_result.schema.json"
+        ]
+      },
+      "effect_hints": {
+        "read_only": false,
+        "destructive": true,
+        "idempotent": false,
+        "writes_repo_state": true,
+        "requires_preflight_gate": true
+      },
+      "projection_hints": {
+        "universal_fields": [
+          "command.name",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ],
+        "adapter_specific_fields": [
+          {
+            "kind": "process-cli",
+            "fields": [
+              "program",
+              "argument rendering",
+              "help rendering",
+              "exit-code rendering"
+            ]
+          }
+        ]
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command name",
+          "argument and option shape",
+          "operation id",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into the operation input shape",
+          "dispatch wiring from command id to runtime binding"
+        ],
+        "runtime_owns": [
+          "ordinary autopilot executor invocation",
+          "terminal outcome contract evaluation",
+          "host continuation command execution",
+          "local-only checkpoint write",
+          "output emission"
+        ]
+      },
+      "conformance_refs": [
+        "autopilot.run.process"
+      ]
+    },
+    {
       "id": "work-thread.prune.cli",
       "status": "generated",
       "command": {
@@ -5691,7 +5797,10 @@
         "option_group_manifest": "cli_option_groups.json",
         "subcommands": [
           "select",
-          "prune"
+          "prune",
+          "carry-inspect",
+          "carry-select",
+          "carry-prune"
         ]
       },
       "operation_ref": {
@@ -5760,13 +5869,19 @@
         "runtime_owns": [
           "local-only work-thread select",
           "local-only work-thread prune",
+          "local-only decision-point carry inspect",
+          "local-only decision-point carry select",
+          "local-only decision-point carry prune",
           "target root validation",
           "output emission"
         ]
       },
       "conformance_refs": [
         "work-thread.prune.process",
-        "work-thread.select.process"
+        "work-thread.select.process",
+        "work-thread.carry-inspect.process",
+        "work-thread.carry-select.process",
+        "work-thread.carry-prune.process"
       ]
     },
     {

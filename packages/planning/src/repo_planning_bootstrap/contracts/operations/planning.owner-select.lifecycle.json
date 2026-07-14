@@ -1,0 +1,56 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.owner-select.lifecycle",
+  "command_surface": {"program": "agentic-planning", "command": "owner-select", "format_option": "format"},
+  "summary": "Select an existing Planning owner without creating or overwriting it.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {"name": "owner", "source": "cli-option", "required": false},
+    {"name": "owner_ref", "source": "cli-option", "required": false},
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "mode", "source": "cli-option", "required": false},
+    {"name": "reason", "source": "cli-option", "required": false},
+    {"name": "current_work_id", "source": "cli-option", "required": false},
+    {"name": "expect_planning_revision", "source": "cli-option", "required": false},
+    {"name": "expect_current_work_revision", "source": "cli-option", "required": false},
+    {"name": "dry_run", "source": "cli-option", "required": false},
+    {"name": "format", "source": "cli-option", "required": false}
+  ],
+  "output": {"kind": "module-result"},
+  "effects": {"read_only": false, "destructive": false, "idempotent": true, "writes_repo_state": true, "requires_preflight_gate": false},
+  "locality": {"requires_repo": true, "network": "forbidden", "outside_repo_writes": "forbidden"},
+  "reads": [
+    {"surface": ".agentic-workspace/planning/execplans/", "required": true},
+    {"surface": ".agentic-workspace/planning/state.toml", "required": true},
+    {"surface": ".agentic-workspace/planning/lanes/", "required": false},
+    {"surface": ".agentic-workspace/local/planning/owner-selection.json", "required": false}
+  ],
+  "writes": [
+    {"surface": ".agentic-workspace/local/planning/owner-selection.json", "required": false, "when": "local mode and not a dry run"},
+    {"surface": ".agentic-workspace/planning/state.toml", "required": false, "when": "explicit shared mode and not a dry run"},
+    {"surface": ".agentic-workspace/local/planning/owner-selection-receipt.json", "required": false, "when": "a non-no-op mutation succeeds"}
+  ],
+  "steps": [
+    {"id": "apply_owner_selection", "uses": "planning.owner-select.apply", "description": "Resolve, validate, and atomically select one existing owner."},
+    {"id": "emit_output", "uses": "output.emit", "description": "Emit the exact delta and schema-backed receipt."}
+  ],
+  "guards": [
+    "Never create or overwrite an owner body.",
+    "Local current-work selection is the default; checked-in shared selection requires explicit mode and reason.",
+    "Validate Planning and current-work revisions, owner lifecycle/schema, and lane relationships before writing.",
+    "Rollback all touched surfaces when mutation or receipt validation fails."
+  ],
+  "proof": [
+    "focused owner-select tests cover preservation, no-op, negative cases, dry-run, rollback, receipt validation, and reconciliation composition",
+    "generated Python and TypeScript commands execute equivalent operation IR"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Generated targets own parser and dispatch parity while Planning owns owner selection policy.",
+    "steps": [
+      {"id": "apply_owner_selection", "uses": "planning.owner-select.apply", "description": "Resolve, validate, and atomically select one existing owner.", "arguments": {}, "outputs": ["result"], "on_error": "emit_usage_error"},
+      {"id": "emit_output", "uses": "output.emit", "description": "Emit the exact delta and schema-backed receipt.", "arguments": {}, "outputs": ["emitted"], "on_error": "emit_usage_error"}
+    ]
+  }
+}

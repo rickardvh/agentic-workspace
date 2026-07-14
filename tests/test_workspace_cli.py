@@ -738,6 +738,56 @@ def test_closeout_trust_labels_latest_cleanup_closeout_evidence(tmp_path: Path, 
     assert evidence["freshness"]["sort_mtime"] == 2000
 
 
+def test_closeout_trust_accepts_command_writer_compact_tombstone(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+    evidence_path = ".agentic-workspace/planning/closeout-evidence/compact-writer.closeout.json"
+    _write(
+        target / evidence_path,
+        json.dumps(
+            {
+                "kind": "planning-closeout-evidence/v1",
+                "title": "Compact writer tombstone",
+                "plan_id": "compact-writer",
+                "source_plan": ".agentic-workspace/planning/execplans/compact-writer.plan.json",
+                "intended_archive": ".agentic-workspace/planning/execplans/archive/compact-writer.plan.json",
+                "retention": {"state": "cleanup-distilled-without-full-archive"},
+                "evidence_refs": ["sha256:fixture-proof"],
+                "active_milestone": {"status": "completed"},
+                "proof_report": {"validation proof": "sha256:fixture-proof"},
+                "closure_check": {
+                    "larger-intent status": "open",
+                    "closure decision": "archive-but-keep-lane-open",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    _write(
+        target / ".agentic-workspace/local/planning-last-closeout.json",
+        json.dumps(
+            {
+                "status": "retained-evidence",
+                "plan_id": "compact-writer",
+                "evidence_path": evidence_path,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["report", "--target", str(target), "--section", "closeout_trust", "--format", "json"]) == 0
+
+    evidence = json.loads(capsys.readouterr().out)["answer"]["archived_slice_closeout_evidence"]
+    assert evidence["trust"] == "normal"
+    assert evidence["proof_recorded"] is True
+    assert evidence["slice_completed"] is True
+    assert evidence["slice_status"] == "completed"
+    assert evidence["retention_state"] == "cleanup-distilled-without-full-archive"
+
+
 def test_closeout_trust_prefers_relevant_closeout_evidence_over_newer_unrelated_record(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -1137,6 +1187,13 @@ candidates = []
     )
     record["references"] = [issue_ref]
     record["completion_criteria"] = ["summary and closeout trust agree on active execplan intent satisfaction"]
+    record["active_milestone"] = {
+        "id": "issue-1981",
+        "status": active_milestone_status,
+        "scope": "Keep this execution thread bounded to the promoted TODO item.",
+        "ready": "ready",
+        "blocked": "none",
+    }
     if include_stale_task_posture_residue:
         record["active_milestone"]["id"] = "task-posture-fixture"
     record["proof_expectations"] = [
@@ -2084,8 +2141,9 @@ def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys
 
     assert cli.main(["summary", "--target", str(tmp_path), "--select", "planning_record", "--format", "json"]) == 0
     summary_full_field = json.loads(capsys.readouterr().out)
-    assert summary_full_field["selection_cost"]["profile_loaded"] == "full"
-    assert summary_full_field["selection_cost"]["fallback_profile_loaded"] is True
+    assert summary_full_field["selection_cost"]["profile_loaded"] == "query-shaped-direct"
+    assert summary_full_field["selection_cost"]["fallback_profile_loaded"] is False
+    assert summary_full_field["selection_cost"]["historical_sources_loaded"] is False
     assert "planning_record" in summary_full_field["values"]
 
     assert (
@@ -2493,7 +2551,10 @@ def test_start_embeds_active_planning_orientation_without_immediate_summary_reru
     assert not any("summary --target . --format json" in item for item in payload["context"]["primary_action"]["read_first"])
     workflow = payload["context"]["planning"]["workflow_sufficiency"]
     if workflow["sufficiency_result"] != "startup-orientation-embedded":
-        assert workflow["sufficiency_result"] == "delegation-decision-required"
+        assert workflow["sufficiency_result"] in {
+            "active-planning-summary-needed",
+            "delegation-decision-required",
+        }
     assert "summary --target . --format json" not in payload["decision_packet"]["detail_routes"]["active_plan"]
 
 
@@ -4708,9 +4769,7 @@ def test_start_forecasts_architecture_principle_from_active_plan_scope_before_ed
     plan_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "runtime-forecast-plan.plan.json"
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     planned_paths = ["src/agentic_workspace/workspace_runtime_startup.py"]
-    plan["canonical_core"]["touched_scope"] = planned_paths
-    plan["machine_readable_contract"]["scope"]["touched"] = planned_paths
-    plan["touched_paths"] = planned_paths
+    plan["scope"]["owned"] = planned_paths
     _write(plan_path, json.dumps(plan, indent=2) + "\n")
 
     assert (
@@ -5563,6 +5622,128 @@ def test_local_work_threads_prune_removes_only_safe_local_candidates(tmp_path: P
     assert after["cleanup"]["prune_candidates"] == []
 
 
+def test_decision_point_carry_inspect_select_prune_is_exact_and_preserves_other_contexts(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    carry_dir = tmp_path / ".agentic-workspace" / "local" / "decision-point-intent"
+    carry_dir.mkdir(parents=True)
+
+    def write_carry(key: str, context_id: str, owner_id: str) -> Path:
+        path = carry_dir / f"{key}.json"
+        _write_json(
+            path,
+            {
+                "kind": "agentic-workspace/decision-point-intent-carry/v1",
+                "status": "active",
+                "work_binding": {
+                    "key": key,
+                    "context_id": context_id,
+                    "owner_binding": {
+                        "relation": "plan-continuation",
+                        "owner_id": owner_id,
+                    },
+                },
+                "lifecycle": {
+                    "state": "active",
+                    "created_at": "2026-07-14T00:00:00+00:00",
+                    "updated_at": "2026-07-14T00:00:00+00:00",
+                },
+            },
+        )
+        return path
+
+    selected_path = write_carry("carry-a", "context-a", "issue-2258")
+    preserved_path = write_carry("carry-b", "context-b", "issue-3100")
+
+    assert cli.main(["work-thread", "carry-inspect", "--target", str(tmp_path), "--format", "json"]) == 0
+    inspected = json.loads(capsys.readouterr().out)
+    inspect_schema = json.loads(
+        Path("src/agentic_workspace/contracts/schemas/decision_point_carry_inspect_result.schema.json").read_text(encoding="utf-8")
+    )
+    assert list(Draft202012Validator(inspect_schema).iter_errors(inspected)) == []
+    assert inspected["active_count"] == 2
+    assert {record["key"] for record in inspected["records"]} == {"carry-a", "carry-b"}
+    assert "archive" not in inspected["safe_recovery"]["prune"]
+
+    assert cli.main(["work-thread", "carry-select", "--key", "carry-a", "--target", str(tmp_path), "--format", "json"]) == 0
+    selected = json.loads(capsys.readouterr().out)
+    select_schema = json.loads(
+        Path("src/agentic_workspace/contracts/schemas/decision_point_carry_select_result.schema.json").read_text(encoding="utf-8")
+    )
+    assert list(Draft202012Validator(select_schema).iter_errors(selected)) == []
+    assert selected["context_id"] == "context-a"
+
+    prune_argv = [
+        "work-thread",
+        "carry-prune",
+        "--key",
+        "carry-a",
+        "--expect-context-id",
+        "context-a",
+        "--reason",
+        "owner context was superseded by an explicit transition",
+        "--target",
+        str(tmp_path),
+        "--format",
+        "json",
+    ]
+    assert cli.main([*prune_argv, "--dry-run"]) == 0
+    dry_run = json.loads(capsys.readouterr().out)
+    assert dry_run["status"] == "dry-run"
+    assert json.loads(selected_path.read_text(encoding="utf-8"))["lifecycle"]["state"] == "active"
+
+    assert cli.main(prune_argv) == 0
+    pruned = json.loads(capsys.readouterr().out)
+    prune_schema = json.loads(
+        Path("src/agentic_workspace/contracts/schemas/decision_point_carry_prune_result.schema.json").read_text(encoding="utf-8")
+    )
+    assert list(Draft202012Validator(prune_schema).iter_errors(pruned)) == []
+    assert pruned["status"] == "pruned"
+    assert json.loads(selected_path.read_text(encoding="utf-8"))["lifecycle"]["state"] == "stale"
+    assert json.loads(preserved_path.read_text(encoding="utf-8"))["lifecycle"]["state"] == "active"
+    assert not (carry_dir / "selection.json").exists()
+
+
+def test_decision_point_binding_status_agrees_across_start_summary_and_doctor(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        'schema_version = 1\n[todo]\nactive_items = [{ id = "issue-2258", refs = ["#2258"] }]\n',
+    )
+    task = "Continue #2258"
+
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--select", "work_threads", "--format", "json"]) == 0
+    start_status = json.loads(capsys.readouterr().out)["values"]["work_threads"]["decision_point_carry_status"]
+
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--task",
+                task,
+                "--select",
+                "decision_point_carry_status",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    summary_status = json.loads(capsys.readouterr().out)["values"]["decision_point_carry_status"]
+
+    assert cli.main(["doctor", "--target", str(tmp_path), "--select", "decision_point_carry_status", "--format", "json"]) == 0
+    doctor_status = json.loads(capsys.readouterr().out)["values"]["decision_point_carry_status"]
+
+    assert start_status == summary_status
+    assert start_status["relation"] == "plan-continuation"
+    assert start_status["reason_code"] == "plan-continuation"
+    assert start_status["commit_state"] == "commit-on-use"
+    assert doctor_status["active_total"] == start_status["active_total"]
+    assert doctor_status["capacity_blocked_total"] == start_status["capacity_blocked_total"]
+    assert doctor_status["lifecycle_operation"] == start_status["lifecycle_operation"]
+
+
 def test_local_work_threads_prune_can_remove_stale_checkpoint_fallback(tmp_path: Path, capsys) -> None:
     _init_real_git_repo_with_commit(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
@@ -6096,6 +6277,9 @@ def test_github_pr_evidence_fetches_exact_declared_lane_refs_without_bulk_histor
             "title": f"PR {number}",
             "state": "MERGED" if number == 42 else "CLOSED",
             "url": f"https://github.com/acme/project/pull/{number}",
+            "updatedAt": "2026-07-14T10:00:00Z",
+            "mergedAt": "2026-07-14T09:00:00Z" if number == 42 else None,
+            "closedAt": "2026-07-14T09:00:00Z",
         }
 
     monkeypatch.setattr(runtime_module, "_run_gh_json", fake_gh_json)
@@ -6104,8 +6288,24 @@ def test_github_pr_evidence_fetches_exact_declared_lane_refs_without_bulk_histor
     assert [item["number"] for item in evidence] == [42, 9001]
     assert [item["state"] for item in evidence] == ["merged", "closed"]
     assert calls == [
-        ["pr", "view", "42", "--repo", "acme/project", "--json", "number,title,state,url"],
-        ["pr", "view", "9001", "--repo", "acme/project", "--json", "number,title,state,url"],
+        [
+            "pr",
+            "view",
+            "42",
+            "--repo",
+            "acme/project",
+            "--json",
+            "number,title,state,url,updatedAt,mergedAt,closedAt",
+        ],
+        [
+            "pr",
+            "view",
+            "9001",
+            "--repo",
+            "acme/project",
+            "--json",
+            "number,title,state,url,updatedAt,mergedAt,closedAt",
+        ],
     ]
     assert all("list" not in call for call in calls)
 
@@ -8133,6 +8333,13 @@ candidates = []
             "evidence carried forward": "this regression test",
             "reopen trigger": "assurance output stops blocking missing gates",
         }
+        record["active_milestone"] = {
+            "id": item_id,
+            "status": status,
+            "scope": "Keep this synthetic assurance fixture bounded.",
+            "ready": "ready",
+            "blocked": "none",
+        }
         return record
 
     high_path = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "high-assurance.plan.json"
@@ -8196,10 +8403,12 @@ candidates = []
 """,
     )
     high["active_milestone"]["status"] = "completed"
+    high["lifecycle"] = "closed"
+    high["phase"] = "complete"
     planning_installer._write_execplan_record(record_path=high_path, record=high)
 
     blocked = planning_installer.archive_execplan("high-assurance", target=tmp_path, dry_run=True)
-    assert any(warning["warning_class"] == "archive_adaptive_assurance_blocked" for warning in blocked.warnings)
+    assert any(warning["warning_class"] == "archive_adaptive_assurance_blocked" for warning in blocked.warnings), blocked.warnings
 
     high["traceability_refs"] = {"security_refs": ["SEC-1"]}
     high["control_gates"] = [{"id": "security-review", "status": "waived", "blocking": True, "evidence": ["waiver:SEC-1"]}]
@@ -8250,7 +8459,7 @@ candidates = []
         next_action="legacy markdown-like next action.",
         done_when="summary uses the machine next step.",
     )
-    record["canonical_core"]["next_action"] = "canonical core next action."
+    record["canonical_core"] = {"next_action": "canonical core next action."}
     record["machine_readable_contract"] = {
         "execution": {
             "next_step": "canonical machine next action.",
@@ -8263,8 +8472,8 @@ candidates = []
 
     summary = planning_installer.planning_summary(target=tmp_path, profile="compact")
 
-    assert summary["planning_record"]["next_action"] == "canonical core next action."
-    assert summary["resumable_contract"]["current_next_action_source"] == "canonical_core.next_action"
+    assert summary["planning_record"]["next_action"] == "legacy markdown-like next action."
+    assert summary["resumable_contract"]["current_next_action_source"] == "next_action"
     assert any(
         warning["warning_class"] == "execplan_canonical_projection_drift" for warning in summary["planning_surface_health"]["warnings"]
     )

@@ -245,6 +245,26 @@
           "mutates_state": true
         },
         {
+          "name": "owner-select",
+          "help": "Select an existing Planning owner without creating or overwriting it.",
+          "uses_option_groups": ["format"],
+          "options": [
+            {"name": "owner", "flags": ["--owner"], "default": "", "help": "Stable existing owner id."},
+            {"name": "owner_ref", "flags": ["--owner-ref"], "default": "", "help": "Explicit repo-relative existing owner reference."},
+            {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
+            {"name": "mode", "flags": ["--mode"], "choices": ["local", "shared"], "default": "local", "help": "Selection scope; local is advisory and current-work scoped."},
+            {"name": "reason", "flags": ["--reason"], "default": "", "help": "Required reason for explicit shared checked-in selection."},
+            {"name": "current_work_id", "flags": ["--current-work-id"], "default": "", "help": "Stable current-work context id; defaults to the local context."},
+            {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id."},
+            {"name": "expect_current_work_revision", "flags": ["--expect-current-work-revision"], "default": "", "help": "Optimistic current-work selection revision."},
+            {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Return the exact proposed delta without writing files."}
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "Existing Planning owner selection front door",
+          "mutates_state": true
+        },
+        {
           "name": "decomposition-create",
           "help": "Create a first-class Planning decomposition record.",
           "uses_option_groups": ["format"],
@@ -1186,6 +1206,22 @@
               ],
               "action": "store_true",
               "help": "Emit broad diagnostic report detail."
+            },
+            {
+              "name": "audit_cursor",
+              "flags": [
+                "--audit-cursor"
+              ],
+              "help": "Opaque cursor returned by a previous audit page."
+            },
+            {
+              "name": "audit_page_size",
+              "flags": [
+                "--audit-page-size"
+              ],
+              "type": "integer",
+              "default": 25,
+              "help": "Maximum closeout records to load for this audit page."
             }
           ],
           "role": "core_context_router",
@@ -1945,6 +1981,114 @@
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
           "classification_note": "ignored local work-thread selection; not durable closure evidence",
+          "mutates_state": true
+        },
+        {
+          "name": "carry-inspect",
+          "help": "Inspect decision-point intent carries by exact current-work ownership.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "key",
+              "flags": [
+                "--key"
+              ],
+              "default": "",
+              "help": "Optional exact carry key to inspect."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "read-only local carry ownership and lifecycle inspection",
+          "mutates_state": false
+        },
+        {
+          "name": "carry-select",
+          "help": "Select one exact decision-point carry for closeout or stale recovery.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "key",
+              "flags": [
+                "--key"
+              ],
+              "required": true,
+              "help": "Exact active carry key to select."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "exact ignored-local carry selection; not Planning owner selection",
+          "mutates_state": true
+        },
+        {
+          "name": "carry-prune",
+          "help": "Mark one exactly selected stale decision-point carry without archiving its owner.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "key",
+              "flags": [
+                "--key"
+              ],
+              "required": true,
+              "help": "Exact selected carry key to mark stale."
+            },
+            {
+              "name": "expect_context_id",
+              "flags": [
+                "--expect-context-id"
+              ],
+              "required": true,
+              "help": "Optimistic current-work context id returned by carry-select."
+            },
+            {
+              "name": "reason",
+              "flags": [
+                "--reason"
+              ],
+              "required": true,
+              "help": "Concrete evidence that the selected carry is stale."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Report the exact mutation without changing the carry."
+            }
+          ],
+          "role": "core_context_router",
+          "audience": "ordinary_host_repo",
+          "classification_note": "exact ignored-local carry lifecycle repair; never archives Planning",
           "mutates_state": true
         },
         {

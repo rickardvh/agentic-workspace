@@ -1,0 +1,25 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "work-thread.carry-select",
+  "command_surface": {"command": "work-thread", "subcommand": "carry-select", "format_option": "format"},
+  "summary": "Select one exact ignored-local decision-point carry for closeout or stale recovery.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "key", "source": "cli-option", "required": true},
+    {"name": "format", "source": "cli-option", "required": false}
+  ],
+  "output": {"kind": "text-or-json", "schema_ref": "schemas/decision_point_carry_select_result.schema.json"},
+  "effects": {"read_only": false, "destructive": false, "idempotent": true, "writes_repo_state": false, "requires_preflight_gate": false},
+  "locality": {"requires_repo": false, "network": "forbidden", "outside_repo_writes": "forbidden"},
+  "reads": [{"surface": ".agentic-workspace/local/decision-point-intent/*.json", "required": false}],
+  "writes": [{"surface": ".agentic-workspace/local/decision-point-intent/selection.json", "required": true, "when": "select an exact active carry atomically"}],
+  "steps": [
+    {"id": "resolve_root", "uses": "workspace.target-root.resolve", "description": "Resolve the target root."},
+    {"id": "select_carry", "uses": "workspace.local-work-thread.select", "description": "Validate and select one exact local carry."},
+    {"id": "emit_output", "uses": "output.emit", "description": "Emit the exact selection result."}
+  ],
+  "guards": ["Select exactly one active carry key.", "Selection is local advisory state and never selects or archives a Planning owner."],
+  "proof": ["operation contract validates against operation.schema.json", "focused carry lifecycle tests prove exact selection and preservation"],
+  "migration_status": "runtime-consumed"
+}

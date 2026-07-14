@@ -958,6 +958,18 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; lane lifecycle mutation is explicit package-domain runtime behavior."
     },
     {
+      "id": "planning.owner-select.apply",
+      "summary": "Select an existing Planning owner with revision guards, exact delta, and an atomic receipt.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Owner lifecycle, lane relationships, current-work binding, and Planning index policy remain package-domain behavior.",
+      "conformance_ref": "planning.owner-select.lifecycle.process",
+      "migration_path": "Keep semantic owner selection in Planning while generated targets own parser and operation dispatch parity.",
+      "generic_behavior_audit": "The receipt schema and operation IR expose deterministic boundaries; owner selectability and protected Planning fields remain Planning policy."
+    },
+    {
       "id": "planning.lane-archive.apply",
       "summary": "Archive a closed lane record and remove its live state projection.",
       "kind": "planning-runtime",

@@ -124,34 +124,14 @@ def test_promote_todo_item_to_execplan_scaffolds_plan_and_updates_todo(tmp_path:
     record = json.loads(record_path.read_text(encoding="utf-8"))
     todo_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     assert record["kind"] == "planning-execplan/v1"
-    assert record["execplan_profile"]["task_shape"] == "bounded"
-    assert "canonical_core" in record["execplan_profile"]["required_core"]
-    assert record["canonical_core"]["requested_outcome"] == "this thread needs a bounded execution contract."
-    assert record["canonical_core"]["next_action"] == "sketch the first implementation step."
-    assert record["canonical_core"]["proof_expectations"] == ["Fill in the narrowest command that proves the promoted work."]
-    assert record["active_milestone"]["id"] == "direct-item"
-    assert record["intent_continuity"]["this slice completes the larger intended outcome"] == "yes"
-    assert record["intent_continuity"]["continuation surface"] == "none"
-    assert record["required_continuation"]["required follow-on for the larger intended outcome"] == "no"
-    assert record["iterative_follow_through"]["proof achieved now"] == "pending"
-    assert record["intent_interpretation"]["inferred intended outcome"] == "this thread needs a bounded execution contract."
-    assert record["context_budget"]["tiny resumability note"] == "sketch the first implementation step."
-    assert record["execution_run"]["run status"] == "not-run-yet"
-    assert record["finished_run_review"]["review status"] == "pending"
-    assert record["improvement_signal_review"]["status"] == "not_checked"
-    assert "no_signal_found" in record["improvement_signal_review"]["accepted statuses"]
-    assert record["improvement_signal_review"]["source"] == "operating_posture"
-    assert "smoothness/helpfulness gaps" in record["improvement_signal_review"]["guidance"]
-    assert record["improvement_signal_review"]["owner classes"] == [
-        "issue",
-        "Memory",
-        "Planning",
-        "docs/checks/contracts",
-        "direct fix",
-        "dismissed with reason",
-    ]
-    assert record["improvement_signal_review"]["ordinary output cap"] == 3
-    assert record["delegated_judgment"]["requested outcome"] == "this thread needs a bounded execution contract."
+    assert record["owner_level"] == "slice"
+    assert record["lifecycle"] == "live"
+    assert record["intent"]["outcome"] == "this thread needs a bounded execution contract."
+    assert record["next_action"] == "sketch the first implementation step."
+    assert record["proof"]["requirements"] == ["Fill in the narrowest command that proves the promoted work."]
+    assert record["id"] == "direct-item"
+    assert record["continuation"]["owner"] == "none"
+    assert record["specialist_contracts"] == []
     assert installer_mod.planning_record_schema_findings(record_path) == []
     assert "Surface: .agentic-workspace/planning/execplans/direct-item.md" in todo_text
     assert "Next Action:" not in todo_text
@@ -186,11 +166,8 @@ candidates = []
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     summary = planning_summary(target=tmp_path)
     assert record["kind"] == "planning-execplan/v1"
-    assert record["active_milestone"]["id"] == "compact-item"
-    assert record["delegated_judgment"]["requested outcome"] == "this thread needs the package command to dogfood compact state."
-    assert record["context_budget"]["pre-work config pull"] == (
-        "Use compact config/startup/summary outputs before opening raw planning or routing files."
-    )
+    assert record["id"] == "compact-item"
+    assert record["intent"]["outcome"] == "this thread needs the package command to dogfood compact state."
     assert 'kind = "agentic-planning-state"' in state_text
     assert 'schema_version = "planning-state/v1"' in state_text
     assert 'maturity = "active"' in state_text
@@ -247,8 +224,8 @@ candidates = []
     assert state_item["status"] == "active"
     assert state_item["surface"] == ".agentic-workspace/planning/execplans/typed-item.plan.json"
     assert summary["planning_surface_health"]["status"] == "clean"
-    assert summary["planning_record"]["execplan_profile"]["task_shape"] == "delegation"
-    assert summary["planning_record"]["canonical_core"]["next_action"] == "promote the typed item."
+    assert summary["planning_record"]["specialist_contracts"][0]["kind"] == "planning-delegation/v1"
+    assert summary["planning_record"]["next_action"] == "promote the typed item."
     assert summary["todo"]["active_items"][0]["handoff_ready"] is True
     assert summary["todo"]["active_items"][0]["maturity"] == "active"
     assert any(action.kind == "created" and action.path == record_path for action in result.actions)
@@ -278,7 +255,7 @@ execplans = []
     state_text = (tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8")
     summary = planning_summary(target=tmp_path)
     assert record["kind"] == "planning-execplan/v1"
-    assert record["context_budget"]["tiny resumability note"] == "promote the work item."
+    assert record["next_action"] == "promote the work item."
     assert "[active]" in state_text
     assert "work_items = []" in state_text
     assert 'path = ".agentic-workspace/planning/execplans/work-item.plan.json"' in state_text
@@ -321,8 +298,8 @@ candidates = []
     record = json.loads(record_path.read_text(encoding="utf-8"))
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
     summary = planning_summary(target=tmp_path)
-    assert record["context_budget"]["tiny resumability note"] == "Add a command path."
-    assert record["delegated_judgment"]["requested outcome"] == "Manual active state is easy to get subtly wrong."
+    assert record["next_action"] == "Add a command path."
+    assert record["intent"]["outcome"] == "Manual active state is easy to get subtly wrong."
     assert state["roadmap"]["lanes"] == []
     assert state["active"]["execplans"][0]["id"] == "safer-promotion"
     assert state["active"]["execplans"][0]["path"] == ".agentic-workspace/planning/execplans/safer-promotion.plan.json"
@@ -389,13 +366,10 @@ def test_promote_to_plan_supports_decomposition_lane(tmp_path: Path) -> None:
     assert active["surface"] == ".agentic-workspace/planning/execplans/safety-slice.plan.json"
 
     plan = json.loads((tmp_path / ".agentic-workspace" / "planning" / "execplans" / "safety-slice.plan.json").read_text(encoding="utf-8"))
-    assert "JSON/text" in plan["canonical_core"]["next_action"]
-    assert plan["parent_acceptance"]["original_intent"] == "Prevent broad work from bypassing planning."
-    assert plan["parent_acceptance"]["current_slice"] == "Represent JSON/text planning behavior in schema-valid promoted work."
-    assert plan["parent_acceptance"]["residual_parent_intent"] == "runtime closeout proof remains."
-    assert plan["parent_acceptance"]["proof_boundary"] == "slice-only"
-    assert plan["intent_continuity"]["this slice completes the larger intended outcome"] == "no"
-    assert plan["required_continuation"]["required follow-on for the larger intended outcome"] == "yes"
+    assert "JSON/text" in plan["next_action"]
+    assert plan["parent"]["contribution"] == "Adds schema-valid promoted work behavior."
+    assert plan["parent"]["closure_boundary"] == "slice-only"
+    assert plan["continuation"]["residual_intent"] == "runtime closeout proof remains."
 
     decomposition = json.loads(decomposition_path.read_text(encoding="utf-8"))
     schema_path = (
@@ -885,10 +859,157 @@ def test_planning_cli_new_plan_creates_valid_active_scaffold(tmp_path: Path, cap
     )
     assert record_path.exists()
     assert not installer_mod.planning_record_schema_findings(record_path)
+    record = json.loads(record_path.read_text(encoding="utf-8"))
+    assert record["lifecycle"] == "live"
+    assert record["phase"] == "shaping"
+    assert record["relationships"]["selection"]["state"] == "unselected"
+    assert record["relationships"]["proof_posture"]["state"] == "pending"
+    assert record["relationships"]["external_posture"]["state"] == "unobserved"
+    assert record["specialist_contracts"] == []
+    assert "delegated_judgment" not in record
+    assert "adaptive_assurance" not in record
+    assert "architecture_decision_promotion" not in record
+    assert record_path.stat().st_size <= 6000
 
     summary = planning_summary(target=tmp_path, profile="compact")
     assert summary["todo"]["active_items"][0]["id"] == "plan-alpha"
     assert summary["execplans"]["active_execplans"][0]["path"].endswith("plan-alpha.plan.json")
+
+
+def test_compact_owner_rejects_unknown_lifecycle_and_phase(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    record = installer_mod._build_execplan_record_from_todo_item(
+        title="Invalid owner",
+        item_id="invalid-owner",
+        status="active",
+        why_now="exercise closed-set validation",
+        next_action="none",
+        done_when="never",
+    )
+    record["lifecycle"] = "accidentally-active"
+    record["phase"] = "mystery"
+    path = tmp_path / ".agentic-workspace/planning/execplans/invalid-owner.plan.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(record), encoding="utf-8")
+
+    findings = installer_mod.planning_record_schema_findings(path)
+    assert any("lifecycle" in finding for finding in findings)
+    assert any("phase" in finding for finding in findings)
+
+
+def test_legacy_execplan_remains_readable_without_unknown_status_becoming_live(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    record = installer_mod._build_legacy_execplan_record_from_todo_item(
+        title="Legacy owner",
+        item_id="legacy-owner",
+        status="surprise-state",
+        why_now="preserve legacy intent",
+        next_action="continue safely",
+        done_when="legacy migration is bounded",
+    )
+    path = tmp_path / ".agentic-workspace/planning/execplans/legacy-owner.plan.json"
+    installer_mod._write_execplan_record(record_path=path, record=record)
+
+    assert not installer_mod.planning_record_schema_findings(path)
+    assert installer_mod._execplan_status(path) == "unknown"
+    assert installer_mod._execplan_is_live(path) is False
+
+
+def test_upgrade_migrates_legacy_live_owner_without_losing_continuation_contract(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    record_path = tmp_path / ".agentic-workspace/planning/execplans/legacy-live.plan.json"
+    legacy = installer_mod._build_legacy_execplan_record_from_todo_item(
+        title="Legacy live",
+        item_id="legacy-live",
+        status="in-progress",
+        why_now="Preserve the intended outcome.",
+        next_action="Continue the current implementation.",
+        done_when="The proof boundary passes.",
+    )
+    legacy["canonical_core"]["touched_scope"] = ["packages/planning/src/owner.py"]
+    legacy["canonical_core"]["proof_expectations"] = ["uv run pytest tests/test_owner.py -q"]
+    legacy["canonical_core"]["continuation_owner"] = "GitHub #2279"
+    legacy["required_continuation"] = {
+        "required follow-on for the larger intended outcome": "yes",
+        "owner surface": "GitHub #2279",
+        "activation trigger": "child closes",
+    }
+    installer_mod._write_execplan_record(record_path=record_path, record=legacy)
+
+    result = upgrade_bootstrap(target=tmp_path)
+    migrated = json.loads(record_path.read_text(encoding="utf-8"))
+
+    assert any(action.kind == "migrated" and action.path == record_path for action in result.actions)
+    assert migrated["lifecycle"] == "live"
+    assert migrated["phase"] == "implementation"
+    assert migrated["intent"]["outcome"] == "Preserve the intended outcome."
+    assert migrated["next_action"] == "Continue the current implementation."
+    assert migrated["scope"]["owned"] == ["packages/planning/src/owner.py"]
+    assert migrated["proof"]["requirements"] == ["uv run pytest tests/test_owner.py -q"]
+    assert migrated["continuation"] == {
+        "owner": "GitHub #2279",
+        "residual_intent": "yes",
+        "activation_trigger": "child closes",
+    }
+    assert not installer_mod.planning_record_schema_findings(record_path)
+
+
+def test_upgrade_leaves_completed_history_and_template_outside_live_migration(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    completed_path = tmp_path / ".agentic-workspace/planning/execplans/completed-owner.plan.json"
+    completed = installer_mod._build_legacy_execplan_record_from_todo_item(
+        title="Completed owner",
+        item_id="completed-owner",
+        status="completed",
+        why_now="preserve historical compatibility",
+        next_action="none",
+        done_when="already complete",
+    )
+    installer_mod._write_execplan_record(record_path=completed_path, record=completed)
+    before = completed_path.read_text(encoding="utf-8")
+
+    result = upgrade_bootstrap(target=tmp_path)
+
+    assert completed_path.read_text(encoding="utf-8") == before
+    assert not any(action.kind == "migrated" and action.path.name == "TEMPLATE.plan.json" for action in result.actions)
+
+
+def test_compact_owner_scenarios_keep_specialist_state_optional_and_typed() -> None:
+    high_assurance = installer_mod._build_execplan_record_from_todo_item(
+        title="High assurance owner",
+        item_id="high-assurance-owner",
+        status="active",
+        why_now="prove a protected boundary",
+        next_action="run the assurance proof",
+        done_when="the protected boundary passes",
+        source_fields={"adaptive_assurance": {"level": "high"}},
+    )
+    delegated = installer_mod._build_execplan_record_from_todo_item(
+        title="Delegated owner",
+        item_id="delegated-owner",
+        status="active",
+        why_now="route a bounded implementation",
+        next_action="select the delegate route",
+        done_when="the delegate return contract passes",
+        source_fields={"owner_role": "implementation"},
+    )
+    blocked = installer_mod._build_execplan_record_from_todo_item(
+        title="Blocked owner",
+        item_id="blocked-owner",
+        status="blocked",
+        why_now="wait on an explicit dependency",
+        next_action="resume when the dependency lands",
+        done_when="the dependency is resolved",
+    )
+
+    assert high_assurance["specialist_contracts"] == [
+        {"kind": "planning-high-assurance/v1", "target": "planning://high-assurance/high-assurance-owner", "revision": 1}
+    ]
+    assert delegated["specialist_contracts"][0]["kind"] == "planning-delegation/v1"
+    assert delegated["relationships"]["delegation"]["state"] == "pending"
+    assert blocked["lifecycle"] == "blocked"
+    assert blocked["phase"] == "shaping"
+    assert blocked["specialist_contracts"] == []
 
 
 def test_planning_cli_new_plan_queue_creates_schema_clean_ready_item(tmp_path: Path, capsys) -> None:
@@ -1166,32 +1287,16 @@ def test_planning_cli_new_plan_prep_only_scopes_to_planning_surfaces(tmp_path: P
     assert any("--verbose --format json" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
     assert any("prep-only route" in action["detail"] and "manual JSON tightening" in action["detail"] for action in payload["actions"])
     assert any("after summary verification, stop" in action["detail"] for action in payload["actions"] if action["kind"] == "next")
-    assert record["immediate_next_action"] == [
-        "Run agentic-workspace summary --target . --verbose --format json, confirm the planning state is clean, then stop without product scaffolding."
+    assert record["next_action"] == (
+        "Run agentic-workspace summary --target . --verbose --format json, confirm the planning state is clean, "
+        "then stop without product scaffolding."
+    )
+    assert record["specialist_contracts"] == [
+        {"kind": "planning-mode/prep-only", "target": ".agentic-workspace/planning/state.toml", "revision": 1}
     ]
-    assert record["machine_readable_contract"]["planning_mode"]["prep_only"] is True
-    assert "task_intent_promotion" not in record
-    assert record["machine_readable_contract"]["planning_mode"]["halt_after_summary"] is True
-    assert "HALT: prep-only mode active" in record["machine_readable_contract"]["planning_mode"]["halt_instruction"]
-    assert "Do not manually tighten" in record["machine_readable_contract"]["planning_mode"]["halt_instruction"]
-    assert "PLANNING_STATE" in record["machine_readable_contract"]["planning_mode"]["halt_instruction"]
-    assert record["machine_readable_contract"]["planning_mode"]["minimal_success_criteria"] == [
-        "prep-only execplan registered in Planning state",
-        "agentic-workspace summary --target . --verbose --format json exits successfully",
-        "only canonical Planning surfaces changed",
-    ]
-    assert "defer during prep-only" in record["machine_readable_contract"]["planning_mode"]["manual_tightening_policy"]
-    assert ".agentic-workspace/planning/state.toml" in record["machine_readable_contract"]["planning_mode"]["allowed_outputs"]
-    assert "PLANNING_STATE" in record["machine_readable_contract"]["planning_mode"]["forbidden_outputs"]
-    assert "src" in record["machine_readable_contract"]["planning_mode"]["forbidden_outputs"]
-    assert record["control_gates"][0]["id"] == "prep-only-halt"
-    assert record["control_gates"][0]["blocking"] is True
-    assert record["control_gates"][0]["evidence"] == ["agentic-workspace summary --target . --verbose --format json"]
-    assert record["execution_bounds"]["stop before touching"].startswith("README, PLANNING_STATE, HANDOFF, SLICES")
-    assert "src/" in record["execution_bounds"]["stop before touching"]
-    assert record["execution_bounds"]["required validation commands"] == "agentic-workspace summary --target . --verbose --format json"
-    assert "ad hoc JSON validation loops" in record["execution_bounds"]["manual JSON validation"]
-    assert record["touched_paths"] == [
+    assert record["proof"]["requirements"] == ["agentic-workspace summary --target . --verbose --format json"]
+    assert "product" in record["intent"]["non_goals"][0]
+    assert record["scope"]["owned"] == [
         ".agentic-workspace/planning/state.toml",
         ".agentic-workspace/planning/execplans/",
         ".agentic-workspace/planning/decompositions/",
@@ -1349,11 +1454,8 @@ candidates = [
         )
     )
 
-    assert record["canonical_core"]["requested_outcome"] == (
-        "Resolve #1687: Promote external-intent candidates with issue-specific plan intent."
-    )
-    assert "Open prioritized upstream issue" not in record["canonical_core"]["requested_outcome"]
-    assert record["machine_readable_contract"]["intent"]["outcome"] == record["canonical_core"]["requested_outcome"]
+    assert record["intent"]["outcome"] == ("Resolve #1687: Promote external-intent candidates with issue-specific plan intent.")
+    assert "Open prioritized upstream issue" not in record["intent"]["outcome"]
 
 
 def test_planning_summary_continuation_view_prefers_fresh_execplan_over_stale_todo(tmp_path: Path) -> None:

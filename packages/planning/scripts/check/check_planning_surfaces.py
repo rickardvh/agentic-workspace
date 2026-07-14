@@ -329,9 +329,19 @@ def _foreign_pm_shape_warnings(record_path: Path) -> list[PlanningWarning]:
     if not isinstance(payload, dict) or payload.get("kind") != "planning-execplan/v1":
         return []
     found = sorted(str(key) for key in payload if str(key) in GENERIC_PM_EXECPLAN_FIELDS)
-    required_missing = [
-        field for field in ("goal", "non_goals", "active_milestone", "validation_commands", "completion_criteria") if field not in payload
-    ]
+    compact_owner = all(
+        field in payload
+        for field in ("id", "owner_level", "lifecycle", "phase", "intent", "parent", "scope", "relationships", "proof", "continuation")
+    )
+    required_missing = (
+        []
+        if compact_owner
+        else [
+            field
+            for field in ("goal", "non_goals", "active_milestone", "validation_commands", "completion_criteria")
+            if field not in payload
+        ]
+    )
     if not found and not required_missing:
         return []
     parts = []
@@ -534,6 +544,7 @@ def _freehand_planning_artifact_warnings(*, repo_root: Path) -> list[PlanningWar
         planning_root / "execplans",
         planning_root / "decompositions",
         planning_root / "reviews",
+        planning_root / "lanes",
         planning_root / "evidence",
         planning_root / "closeout-evidence",
         planning_root / "schemas",
@@ -685,7 +696,7 @@ def _unsupported_state_activation_shape_warnings(state: dict[str, object] | None
                         "but current planning state expects item objects in `todo.active_items` or `todo.queued_items`. "
                         "Do not delete `state.toml` as the first recovery step; preserve the evidence and make the "
                         "smallest schema-preserving correction. Recover with "
-                        "`agentic-planning new-plan --id <id> --title <title> --activate` "
+                        "`agentic-planning owner-select --owner-ref .agentic-workspace/planning/execplans/<plan>.plan.json --mode shared --reason <reason> --dry-run` "
                         "or migrate the reference to a supported item object."
                     ),
                 )

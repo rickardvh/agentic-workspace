@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
-const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.decomposition-create.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.lane-activate.lifecycle", "planning.lane-archive.lifecycle", "planning.lane-close.lifecycle", "planning.lane-create.lifecycle", "planning.lane-promote.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
+const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "owner-select", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
+const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.decomposition-create.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.lane-activate.lifecycle", "planning.lane-archive.lifecycle", "planning.lane-close.lifecycle", "planning.lane-create.lifecycle", "planning.lane-promote.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.owner-select.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -1190,6 +1190,106 @@ const commandDefinitions = [
   },
   {
     "interface": {
+      "help": "Select an existing Planning owner without creating or overwriting it.",
+      "name": "owner-select",
+      "options": [
+        {
+          "default": "",
+          "flags": [
+            "--owner"
+          ],
+          "help": "Stable existing owner id.",
+          "name": "owner"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--owner-ref"
+          ],
+          "help": "Explicit repo-relative existing owner reference.",
+          "name": "owner_ref"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "local",
+            "shared"
+          ],
+          "default": "local",
+          "flags": [
+            "--mode"
+          ],
+          "help": "Selection scope; local is advisory and current-work scoped.",
+          "name": "mode"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--reason"
+          ],
+          "help": "Required reason for explicit shared checked-in selection.",
+          "name": "reason"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--current-work-id"
+          ],
+          "help": "Stable current-work context id.",
+          "name": "current_work_id"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Optimistic Planning revision id.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-current-work-revision"
+          ],
+          "help": "Optimistic current-work selection revision.",
+          "name": "expect_current_work_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Return the exact proposed delta without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "owner-select",
+    "operation_ref": {
+      "id": "planning.owner-select.lifecycle",
+      "path": "operations/planning.owner-select.lifecycle.json"
+    }
+  },
+  {
+    "interface": {
       "arguments": [
         {
           "help": "Lane id to close.",
@@ -1744,6 +1844,22 @@ const commandDefinitions = [
           ],
           "help": "Emit broad diagnostic output for debugging or audit detail.",
           "name": "verbose"
+        },
+        {
+          "flags": [
+            "--audit-cursor"
+          ],
+          "help": "Opaque cursor returned by a previous audit page.",
+          "name": "audit_cursor"
+        },
+        {
+          "default": 25,
+          "flags": [
+            "--audit-page-size"
+          ],
+          "help": "Maximum closeout records to load for this audit page.",
+          "name": "audit_page_size",
+          "type": "integer"
         },
         {
           "choices": [

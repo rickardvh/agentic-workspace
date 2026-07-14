@@ -1,0 +1,24 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "work-thread.carry-inspect",
+  "command_surface": {"command": "work-thread", "subcommand": "carry-inspect", "format_option": "format"},
+  "summary": "Inspect ignored-local decision-point carries by exact current-work ownership and lifecycle.",
+  "classification": "read-only-report",
+  "inputs": [
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "key", "source": "cli-option", "required": false},
+    {"name": "format", "source": "cli-option", "required": false}
+  ],
+  "output": {"kind": "text-or-json", "schema_ref": "schemas/decision_point_carry_inspect_result.schema.json"},
+  "effects": {"read_only": true, "destructive": false, "idempotent": true, "writes_repo_state": false, "requires_preflight_gate": false},
+  "locality": {"requires_repo": false, "network": "forbidden", "outside_repo_writes": "forbidden"},
+  "reads": [{"surface": ".agentic-workspace/local/decision-point-intent/*.json", "required": false}],
+  "writes": [],
+  "steps": [
+    {"id": "resolve_root", "uses": "workspace.target-root.resolve", "description": "Resolve the target root."},
+    {"id": "emit_output", "uses": "output.emit", "description": "Emit exact local carry ownership and lifecycle."}
+  ],
+  "guards": ["Ignore local selection metadata when enumerating carries.", "Inspection never archives Planning or proves completion."],
+  "proof": ["operation contract validates against operation.schema.json", "focused carry lifecycle tests prove exact inspection and no writes"],
+  "migration_status": "runtime-consumed"
+}

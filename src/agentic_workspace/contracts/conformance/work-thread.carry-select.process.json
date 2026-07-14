@@ -1,0 +1,79 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "work-thread.carry-select.process",
+  "operation_id": "work-thread.carry-select",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "work-thread",
+      "carry-select",
+      "--key",
+      "carry-a",
+      "--target",
+      ".",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "active-carry",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n",
+        ".agentic-workspace/local/decision-point-intent/carry-a.json": "{\"kind\":\"agentic-workspace/decision-point-intent-carry/v1\",\"status\":\"active\",\"work_binding\":{\"key\":\"carry-a\",\"context_id\":\"context-a\",\"owner_binding\":{\"relation\":\"plan-continuation\",\"owner_id\":\"issue-2258\"}},\"lifecycle\":{\"state\":\"active\",\"created_at\":\"2026-07-14T00:00:00+00:00\",\"updated_at\":\"2026-07-14T00:00:00+00:00\"}}"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "agentic-workspace/decision-point-carry-select/v1"
+        },
+        {
+          "path": [
+            "selected_key"
+          ],
+          "equals": "carry-a"
+        },
+        {
+          "path": [
+            "context_id"
+          ],
+          "equals": "context-a"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [
+        ".agentic-workspace/local/decision-point-intent/selection.json"
+      ],
+      "required_paths": [
+        ".git/.keep",
+        "README.md",
+        ".agentic-workspace/local/decision-point-intent/carry-a.json",
+        ".agentic-workspace/local/decision-point-intent/selection.json"
+      ],
+      "forbidden_paths": []
+    },
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

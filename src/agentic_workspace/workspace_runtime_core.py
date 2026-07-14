@@ -18598,6 +18598,7 @@ def _note_glob_matches(*, changed_paths: list[str], patterns: Any) -> list[dict[
 def _active_plan_touched_scope_paths(active_planning_record: Any) -> list[str]:
     record = _as_dict(active_planning_record)
     candidate_values: list[Any] = [
+        _as_dict(record.get("scope")).get("owned"),
         _as_dict(record.get("canonical_core")).get("touched_scope"),
         _as_dict(_as_dict(record.get("machine_readable_contract")).get("scope")).get("touched"),
         record.get("touched_paths"),
@@ -18957,21 +18958,231 @@ def _architecture_principles_forecast_payload(
 
 
 _DECISION_POINT_FORECAST_DIR = Path(".agentic-workspace/local/decision-point-intent")
+_DECISION_POINT_SELECTION_FILE = "selection.json"
+
+
+def _decision_point_carry_records(*, target_root: Path) -> list[tuple[Path, dict[str, Any]]]:
+    carry_dir = target_root / _DECISION_POINT_FORECAST_DIR
+    records: list[tuple[Path, dict[str, Any]]] = []
+    for path in sorted(carry_dir.glob("*.json")) if carry_dir.is_dir() else []:
+        if path.name == _DECISION_POINT_SELECTION_FILE:
+            continue
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if isinstance(loaded, dict) and loaded.get("kind") == "agentic-workspace/decision-point-intent-carry/v1":
+            records.append((path, loaded))
+    return records
+
+
+def _decision_point_carry_selection(*, target_root: Path) -> dict[str, Any]:
+    path = target_root / _DECISION_POINT_FORECAST_DIR / _DECISION_POINT_SELECTION_FILE
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _inspect_decision_point_carries(*, target_root: Path, key: str = "") -> dict[str, Any]:
+    selected = _decision_point_carry_selection(target_root=target_root)
+    selected_key = str(selected.get("selected_key") or "").strip()
+    requested_key = key.strip()
+    records: list[dict[str, Any]] = []
+    for path, record in _decision_point_carry_records(target_root=target_root):
+        binding = _as_dict(record.get("work_binding"))
+        record_key = str(binding.get("key") or path.stem).strip()
+        if requested_key and record_key != requested_key:
+            continue
+        lifecycle = _as_dict(record.get("lifecycle"))
+        owner_binding = _as_dict(binding.get("owner_binding"))
+        records.append(
+            {
+                "key": record_key,
+                "path": path.relative_to(target_root).as_posix(),
+                "status": str(record.get("status") or lifecycle.get("state") or "unknown"),
+                "lifecycle_state": str(lifecycle.get("state") or "unknown"),
+                "context_id": str(binding.get("context_id") or ""),
+                "owner_id": str(owner_binding.get("owner_id") or binding.get("plan_id") or ""),
+                "relation": str(owner_binding.get("relation") or binding.get("relation") or "unknown"),
+                "selected": record_key == selected_key,
+                "updated_at": str(lifecycle.get("updated_at") or ""),
+            }
+        )
+    active = [record for record in records if record["lifecycle_state"] == "active"]
+    return {
+        "kind": "agentic-workspace/decision-point-carry-inspect/v1",
+        "status": "present" if records else "not-found" if requested_key else "empty",
+        "path": _DECISION_POINT_FORECAST_DIR.as_posix(),
+        "selected_key": selected_key,
+        "record_count": len(records),
+        "active_count": len(active),
+        "records": records,
+        "selection": selected,
+        "safe_recovery": {
+            "select": "agentic-workspace work-thread carry-select --key <key> --target . --format json",
+            "prune": (
+                "agentic-workspace work-thread carry-prune --key <key> --expect-context-id <context_id> "
+                "--reason <why-stale> --target . --dry-run --format json"
+            ),
+        },
+        "rule": "Inspect reports exact local carry ownership and lifecycle without treating plan archival as carry recovery.",
+    }
+
+
+def _decision_point_carry_status(*, target_root: Path, task_text: str | None = None) -> dict[str, Any]:
+    binding = _decision_point_binding(target_root=target_root, task_text=task_text)
+    owner_binding = _as_dict(binding.get("owner_binding"))
+    records = _decision_point_carry_records(target_root=target_root)
+    active = [record for _path, record in records if str(_as_dict(record.get("lifecycle")).get("state") or "active") == "active"]
+    capacity = [record for _path, record in records if str(record.get("status") or "") == "capacity-blocked"]
+    context_id = str(binding.get("context_id") or "")
+    active_for_context = [record for record in active if str(_as_dict(record.get("work_binding")).get("context_id") or "") == context_id]
+    selection = _decision_point_carry_selection(target_root=target_root)
+    status = (
+        "capacity-blocked"
+        if capacity
+        else "active"
+        if active_for_context
+        else "eligible-on-use"
+        if owner_binding.get("carry_eligible")
+        else "not-eligible"
+    )
+    return {
+        "kind": "agentic-workspace/decision-point-carry-status/v1",
+        "status": status,
+        "reason_code": str(owner_binding.get("reason_code") or "ambiguous"),
+        "relation": str(owner_binding.get("relation") or "ambiguous"),
+        "owner_id": str(owner_binding.get("owner_id") or ""),
+        "context_id": context_id,
+        "carry_eligible": bool(owner_binding.get("carry_eligible")),
+        "commit_state": str(owner_binding.get("commit_state") or "commit-on-use"),
+        "active_for_context": len(active_for_context),
+        "active_total": len(active),
+        "capacity_blocked_total": len(capacity),
+        "selected_key": str(selection.get("selected_key") or ""),
+        "lifecycle_operation": "agentic-workspace work-thread carry-inspect --target . --format json",
+        "rule": "Startup projects; stateful use commits; summary, doctor, and closeout consume the same binding reason and exact local selection.",
+    }
+
+
+def _select_decision_point_carry(*, target_root: Path, key: str) -> dict[str, Any]:
+    selected_key = key.strip()
+    if not selected_key:
+        raise WorkspaceUsageError("work-thread carry-select requires --key")
+    matches = []
+    for path, record in _decision_point_carry_records(target_root=target_root):
+        binding = _as_dict(record.get("work_binding"))
+        if str(binding.get("key") or path.stem).strip() == selected_key and _as_dict(record.get("lifecycle")).get("state") == "active":
+            matches.append((path, record))
+    if len(matches) != 1:
+        raise WorkspaceUsageError(
+            f"Decision-point carry key {selected_key!r} matched {len(matches)} active records; run work-thread carry-inspect first."
+        )
+    _path, record = matches[0]
+    binding = _as_dict(record.get("work_binding"))
+    selection_path = target_root / _DECISION_POINT_FORECAST_DIR / _DECISION_POINT_SELECTION_FILE
+    previous = _decision_point_carry_selection(target_root=target_root)
+    now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    selection = {
+        "kind": "agentic-workspace/decision-point-carry-selection/v1",
+        "selected_key": selected_key,
+        "context_id": str(binding.get("context_id") or ""),
+        "owner_id": str(_as_dict(binding.get("owner_binding")).get("owner_id") or binding.get("plan_id") or ""),
+        "selected_at": now,
+    }
+    selection_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = selection_path.with_name(f"{selection_path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        temporary.write_text(json.dumps(selection, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        os.replace(temporary, selection_path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return {
+        "kind": "agentic-workspace/decision-point-carry-select/v1",
+        "status": "selected",
+        "selected_key": selected_key,
+        "previous_key": str(previous.get("selected_key") or ""),
+        "context_id": selection["context_id"],
+        "owner_id": selection["owner_id"],
+        "path": selection_path.relative_to(target_root).as_posix(),
+        "rule": "Selection is exact, local, and advisory; it does not archive or close the Planning owner.",
+    }
+
+
+def _prune_decision_point_carry(*, target_root: Path, key: str, expected_context_id: str, reason: str, dry_run: bool) -> dict[str, Any]:
+    selected_key = key.strip()
+    expected_context = expected_context_id.strip()
+    stale_reason = reason.strip()
+    if not selected_key or not expected_context or not stale_reason:
+        raise WorkspaceUsageError("work-thread carry-prune requires --key, --expect-context-id, and --reason")
+    selection = _decision_point_carry_selection(target_root=target_root)
+    if str(selection.get("selected_key") or "") != selected_key:
+        raise WorkspaceUsageError("Select the exact carry with work-thread carry-select before pruning it.")
+    if str(selection.get("context_id") or "") != expected_context:
+        raise WorkspaceUsageError("Selected carry context changed; inspect and select again before pruning.")
+    matches = []
+    for path, record in _decision_point_carry_records(target_root=target_root):
+        binding = _as_dict(record.get("work_binding"))
+        if str(binding.get("key") or path.stem).strip() == selected_key:
+            matches.append((path, record))
+    if len(matches) != 1:
+        raise WorkspaceUsageError(f"Decision-point carry key {selected_key!r} matched {len(matches)} records; no carry was changed.")
+    path, record = matches[0]
+    binding = _as_dict(record.get("work_binding"))
+    if str(binding.get("context_id") or "") != expected_context:
+        raise WorkspaceUsageError("Carry context changed after selection; inspect and select again before pruning.")
+    lifecycle = _as_dict(record.get("lifecycle"))
+    if lifecycle.get("state") != "active":
+        return {
+            "kind": "agentic-workspace/decision-point-carry-prune/v1",
+            "status": "noop",
+            "key": selected_key,
+            "reason_code": "carry-not-active",
+            "dry_run": dry_run,
+        }
+    if not dry_run:
+        lifecycle.update(
+            {
+                "state": "stale",
+                "updated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+                "stale_reason": stale_reason,
+            }
+        )
+        record["lifecycle"] = lifecycle
+        path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        (target_root / _DECISION_POINT_FORECAST_DIR / _DECISION_POINT_SELECTION_FILE).unlink(missing_ok=True)
+    return {
+        "kind": "agentic-workspace/decision-point-carry-prune/v1",
+        "status": "dry-run" if dry_run else "pruned",
+        "key": selected_key,
+        "context_id": expected_context,
+        "path": path.relative_to(target_root).as_posix(),
+        "reason": stale_reason,
+        "dry_run": dry_run,
+        "preservation": "Every non-selected carry and the live Planning owner were preserved.",
+        "rule": "Prune marks only the exact selected stale carry; it never archives a plan or deletes another context.",
+    }
 
 
 def _decision_point_binding(*, target_root: Path, task_text: str | None) -> dict[str, Any]:
     context = resolve_current_work_context(root=target_root, task=str(task_text or ""))
+    owner_binding = _as_dict(context.get("owner_binding"))
     basis = {
+        "context_id": context.get("id", ""),
         "branch": context.get("branch", ""),
-        "task": context.get("task", ""),
         "plan_id": context.get("plan_id", ""),
-        "pr_ref": context.get("pr_ref", ""),
         "thread_id": context.get("thread_id", ""),
+        "relation": owner_binding.get("relation", "ambiguous"),
     }
     return {
         **basis,
         "context_id": context.get("id", ""),
         "status": context.get("status", "unknown"),
+        "task": context.get("task", ""),
+        "selected_plan_id": context.get("selected_plan_id", ""),
+        "owner_binding": owner_binding,
         "key": hashlib.sha256(json.dumps(basis, sort_keys=True).encode()).hexdigest()[:16],
     }
 
@@ -18983,8 +19194,15 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
     if target_root is None or not identity or not (identity.get("system_principle_ids") or identity.get("subsystem_intent_ids")):
         return {}
     binding = _decision_point_binding(target_root=target_root, task_text=task_text)
-    if binding["status"] == "ambiguous":
-        return {}
+    owner_binding = _as_dict(binding.get("owner_binding"))
+    if binding["status"] == "ambiguous" or not owner_binding.get("carry_eligible"):
+        return {
+            "kind": "agentic-workspace/decision-point-intent-carry/v1",
+            "status": "not-created",
+            "reason_code": owner_binding.get("reason_code", "ambiguous"),
+            "work_binding": binding,
+            "safe_recovery": "Resolve or explicitly adopt one current-work owner, then rerun the stateful command.",
+        }
     source_revisions: dict[str, str] = {}
     for relative in _list_payload(identity.get("authoritative_sources")):
         path = target_root / str(relative)
@@ -18997,20 +19215,16 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
         target_path = carry_dir / f"{binding['key']}.json"
         active_paths = []
         active_bindings = []
-        for candidate_path in carry_dir.glob("*.json"):
-            try:
-                candidate = json.loads(candidate_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                continue
+        for candidate_path, candidate in _decision_point_carry_records(target_root=target_root):
             candidate_binding = _as_dict(candidate.get("work_binding"))
             if (
-                candidate_binding.get("plan_id") == binding.get("plan_id")
+                candidate_binding.get("context_id") == binding.get("context_id")
                 and _as_dict(candidate.get("lifecycle")).get("state", "active") == "active"
             ):
                 active_paths.append(candidate_path)
                 active_bindings.append(candidate_binding)
         if target_path not in active_paths and len(active_paths) >= 8:
-            capacity_path = carry_dir / f"capacity-{hashlib.sha256(str(binding.get('plan_id', '')).encode()).hexdigest()[:16]}.json"
+            capacity_path = carry_dir / f"capacity-{hashlib.sha256(str(binding.get('context_id', '')).encode()).hexdigest()[:16]}.json"
             blocked = {
                 "kind": "agentic-workspace/decision-point-intent-carry/v1",
                 "status": "capacity-blocked",
@@ -19022,14 +19236,17 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
                 "lifecycle": {"state": "capacity-blocked", "created_at": now, "updated_at": now, "retention_limit": 8},
                 "capacity_candidates": active_bindings,
                 "safe_recovery": (
-                    f"Run agentic-planning archive-plan {binding.get('plan_id')} --target . "
-                    "--prune-decision-point-carry-key <capacity_candidates.key> --apply-cleanup --format json, then rerun start; "
-                    "the command works while the plan is active and preserves every other active carry."
+                    "Run agentic-workspace work-thread carry-inspect --target . --format json, then use carry-select "
+                    "and carry-prune with the exact key and context id; do not archive the live owner."
                 ),
             }
             capacity_path.write_text(json.dumps(blocked, indent=2, sort_keys=True) + "\n", encoding="utf-8")
             return blocked
-        superseded = sorted(carry_dir.glob("*.json"), key=lambda candidate: candidate.stat().st_mtime, reverse=True)
+        superseded = sorted(
+            [path for path, _record in _decision_point_carry_records(target_root=target_root)],
+            key=lambda candidate: candidate.stat().st_mtime,
+            reverse=True,
+        )
         for old_path in superseded[8:]:
             try:
                 old = json.loads(old_path.read_text(encoding="utf-8"))
@@ -19039,6 +19256,13 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
                 old_path.unlink(missing_ok=True)
     except OSError:
         return {}
+    path = carry_dir / f"{binding['key']}.json"
+    existing: dict[str, Any] = {}
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+        existing = loaded if isinstance(loaded, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        pass
     record = {
         "kind": "agentic-workspace/decision-point-intent-carry/v1",
         "forecast_identity": identity,
@@ -19047,9 +19271,13 @@ def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict
         "emitted_forecast": forecast,
         "phase_confirmations": {},
         "work_binding": binding,
-        "lifecycle": {"state": "active", "created_at": now, "updated_at": now, "retention_limit": 8},
+        "lifecycle": {
+            "state": "active",
+            "created_at": _as_dict(existing.get("lifecycle")).get("created_at", now),
+            "updated_at": now,
+            "retention_limit": 8,
+        },
     }
-    path = carry_dir / f"{binding['key']}.json"
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(record, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -21512,8 +21740,12 @@ def _report_closeout_trust_payload(
             )
             if value
         ).lower()
-        proof_recorded = any(marker in proof_text for marker in ("passed", "yes", "satisfied", "achieved", "complete"))
-        slice_status = str(closure_check.get("slice status") or "").strip().lower()
+        evidence_refs = [str(value).strip() for value in _list_payload(archived_record.get("evidence_refs")) if str(value).strip()]
+        proof_recorded = bool(evidence_refs) or any(
+            marker in proof_text for marker in ("passed", "yes", "satisfied", "achieved", "complete")
+        )
+        active_milestone = _as_dict(archived_record.get("active_milestone"))
+        slice_status = str(closure_check.get("slice status") or active_milestone.get("status") or "").strip().lower()
         closure_decision = str(closure_check.get("closure decision") or "").strip().lower()
         slice_completed = slice_status in {"complete", "completed", "done", "closed", "satisfied"}
         command_owned = evidence_source.get("authority") in {"archived-planning-evidence", "retained-closeout-evidence"}
@@ -21551,7 +21783,7 @@ def _report_closeout_trust_payload(
             "source": evidence_source,
             "proof_recorded": proof_recorded,
             "slice_completed": slice_completed,
-            "slice_status": closure_check.get("slice status", ""),
+            "slice_status": slice_status,
             "closure_decision": closure_check.get("closure decision", ""),
             "parent_intent_status": closure_check.get("larger-intent status", ""),
             "parent_closure_blocked": parent_closure_blocked,
@@ -23298,6 +23530,7 @@ def _closeout_planning_record_for_report(
                     "path": selected.relative_to(target_resolved).as_posix(),
                     "source_plan": str(payload.get("source_plan") or context.get("source_plan") or ""),
                     "intended_archive": str(payload.get("intended_archive") or ""),
+                    "retention_state": str(_as_dict(payload.get("retention")).get("state") or ""),
                     "relationship": "current-slice",
                     "relevance": {"status": "relevant", "relationship": "current-slice", "plan_id": context.get("plan_id", "")},
                     "selection": {
@@ -24177,6 +24410,11 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         state = "closed" if bool(issue.get("closed")) else "open"
     labels = _github_label_names(issue.get("labels"))
     body = str(issue.get("body", "") or "")
+    updated_at = str(issue.get("updatedAt", "")).strip()
+    locator = str(issue.get("url", "")).strip()
+    observation_revision = updated_at or str(issue.get("closedAt", "") or "").strip() or f"github-issue-{issue_number}"
+    observed_time = _parse_external_intent_timestamp(updated_at)
+    expires_at = (observed_time + timedelta(hours=24)).replace(microsecond=0).isoformat() if observed_time else ""
     return {
         "system": "github",
         "id": f"#{issue_number}",
@@ -24187,13 +24425,40 @@ def _github_issue_to_external_intent_item(*, issue: dict[str, Any], repo: str) -
         "reopens": _infer_external_issue_reopens(body),
         "planning_residue_expected": _github_planning_residue_expected(labels),
         "negative_invariants": _infer_external_issue_negative_invariants(body=body, comments=issue.get("comments")),
-        "url": str(issue.get("url", "")).strip(),
+        "url": locator,
         "source_repository": repo,
         "labels": labels,
         "created_at": str(issue.get("createdAt", "")).strip(),
-        "updated_at": str(issue.get("updatedAt", "")).strip(),
+        "updated_at": updated_at,
         "closed_at": str(issue.get("closedAt", "") or "").strip(),
         "comments_count": _github_comments_count(issue.get("comments")),
+        "observation_id": f"github:issue:{issue_number}:{observation_revision}",
+        "owner": {"id": f"#{issue_number}", "kind": "issue", "locator": locator or f"github:{repo}:issue:{issue_number}"},
+        "status_class": "completed" if state == "closed" else "current",
+        "external_revision": observation_revision,
+        "observed_at": updated_at or "unknown",
+        "freshness": {
+            "status": "current" if observed_time else "unknown",
+            "observed_at": updated_at,
+            "expires_at": expires_at,
+            "max_age_seconds": 86400,
+        },
+        "blockers": [],
+        "evidence_refs": [locator] if locator else [],
+        "provenance": {
+            "provider_class": "github",
+            "resolver_id": "github-gh-cli",
+            "source_ref": locator or f"github:{repo}:issue:{issue_number}",
+            "refresh_id": observation_revision,
+        },
+        "refresh_route": f"agentic-workspace external-intent refresh-github --target . --issue #{issue_number} --storage cache --format json",
+        "availability": "available",
+        "contradictions": [],
+        "provider_detail": {
+            "repository": repo,
+            "labels": labels,
+            "comments_count": _github_comments_count(issue.get("comments")),
+        },
     }
 
 
@@ -24257,7 +24522,7 @@ def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> li
     evidence: list[dict[str, Any]] = []
     for number in _declared_lane_pull_request_numbers(target_root=target_root):
         raw_pr = _run_gh_json(
-            ["pr", "view", str(number), "--repo", repo, "--json", "number,title,state,url"],
+            ["pr", "view", str(number), "--repo", repo, "--json", "number,title,state,url,updatedAt,mergedAt,closedAt"],
             cwd=target_root,
         )
         if not isinstance(raw_pr, dict) or raw_pr.get("number") is None:
@@ -24269,6 +24534,9 @@ def _github_current_pull_request_evidence(*, target_root: Path, repo: str) -> li
                 "title": str(raw_pr.get("title", "")).strip(),
                 "state": str(raw_pr.get("state", "")).strip().lower(),
                 "url": str(raw_pr.get("url", "")).strip(),
+                "updated_at": str(raw_pr.get("updatedAt", "")).strip(),
+                "merged_at": str(raw_pr.get("mergedAt", "") or "").strip(),
+                "closed_at": str(raw_pr.get("closedAt", "") or "").strip(),
             }
         )
     return evidence
@@ -24697,6 +24965,13 @@ def _parse_external_intent_timestamp(value: object) -> datetime | None:
     return parsed.astimezone(timezone.utc)
 
 
+def _external_intent_expiry(value: object) -> str:
+    observed_at = _parse_external_intent_timestamp(value)
+    if observed_at is None:
+        return ""
+    return (observed_at + timedelta(hours=24)).replace(microsecond=0).isoformat()
+
+
 def _checked_in_planning_issue_refs(target_root: Path) -> set[str]:
     planning_root = target_root / ".agentic-workspace" / "planning"
     if not planning_root.exists():
@@ -24837,6 +25112,37 @@ def _refresh_github_external_intent_evidence(
             "parent_id": "",
             "reopens": [],
             "planning_residue_expected": "optional",
+            "observation_id": f"github:pull-request:{pr['number']}:{pr['updated_at'] or pr['state']}",
+            "owner": {
+                "id": f"PR #{pr['number']}",
+                "kind": "pull-request",
+                "locator": pr["url"] or f"github:{resolved_repo}:pull-request:{pr['number']}",
+            },
+            "status_class": "completed" if pr["state"] in {"closed", "merged"} else "current",
+            "external_revision": pr["updated_at"] or pr["state"],
+            "observed_at": pr["updated_at"] or "unknown",
+            "freshness": {
+                "status": "current" if pr["updated_at"] else "unknown",
+                "observed_at": pr["updated_at"],
+                "expires_at": _external_intent_expiry(pr["updated_at"]),
+                "max_age_seconds": 86400,
+            },
+            "blockers": [],
+            "evidence_refs": [pr["url"]] if pr["url"] else [],
+            "provenance": {
+                "provider_class": "github",
+                "resolver_id": "github-gh-cli",
+                "source_ref": pr["url"] or f"github:{resolved_repo}:pull-request:{pr['number']}",
+                "refresh_id": pr["updated_at"] or pr["state"],
+            },
+            "refresh_route": f"gh pr view {pr['number']} --repo {resolved_repo}",
+            "availability": "available",
+            "contradictions": [],
+            "provider_detail": {
+                "repository": resolved_repo,
+                "merged_at": pr["merged_at"],
+                "closed_at": pr["closed_at"],
+            },
         }
         for pr in pull_requests
     )
@@ -24881,9 +25187,8 @@ def _refresh_github_external_intent_evidence(
         "refresh_metadata": refresh_metadata,
         "items": items,
     }
-    previous_items = [item for item in _list_payload(previous_payload.get("items")) if isinstance(item, dict)]
-    if previous_items:
-        next_payload["previous_items"] = previous_items
+    # A refresh replaces one immutable snapshot. Retaining the full previous payload here
+    # would create a second observation authority and make cache cost grow with refreshes.
     if cache_compaction is not None:
         next_payload["refresh_metadata"]["cache_compaction"] = cache_compaction
     issue_items = [item for item in items if item.get("kind") != "pull-request"]
@@ -24906,15 +25211,22 @@ def _refresh_github_external_intent_evidence(
     planning_candidate_apply = (
         _append_planning_candidate_rows(
             target_root=target_root,
-            candidates=planning_candidate_suggestions["candidates"],
+            candidates=[
+                candidate
+                for candidate in planning_candidate_suggestions["candidates"]
+                if any(ref in normalized_issue_refs for ref in _issue_refs_from_text(str(candidate.get("refs") or "")))
+            ],
             dry_run=dry_run,
         )
-        if apply_planning_candidates
+        if apply_planning_candidates and normalized_issue_refs
         else {
-            "status": "not-requested",
+            "status": "explicit-selection-required" if apply_planning_candidates else "not-requested",
             "path": ".agentic-workspace/planning/state.toml",
             "applied_count": 0,
             "candidate_ids": [],
+            "reason": (
+                "Promotion requires --issue so refresh cannot bulk-create durable Planning candidates." if apply_planning_candidates else ""
+            ),
         }
     )
     return {
@@ -27074,6 +27386,22 @@ def _select_summary_payload(
             "rule": "planning_revision is served from the cheap revision primitive without loading broad summary detail.",
         }
         return selected
+    requested_roots = {field.split(".", 1)[0] for field in requested_fields}
+    direct_owner_fields = {
+        "planning_revision",
+        "planning_record",
+        "active_contract",
+        "resumable_contract",
+        "continuation_view",
+    }
+    if requested_fields and requested_roots <= direct_owner_fields:
+        from repo_planning_bootstrap.installer import planning_summary_query
+
+        query = planning_summary_query(target=target_root, selectors=requested_fields)
+        if query.get("status") == "present":
+            selected = _select_payload_fields(query["payload"], select=select, source_command="summary")
+            selected["selection_cost"] = query["query_diagnostics"]
+            return selected
     tiny_summary = planning_summary(target=target_root.as_posix(), profile="tiny", task_text=task_text, changed_paths=changed_paths)
     if isinstance(tiny_summary, dict):
         tiny_summary["memory_consult"] = (
@@ -27240,6 +27568,10 @@ def _attach_summary_task_posture_packet(
     changed_paths: list[str],
     cli_invoke: str,
 ) -> None:
+    summary["decision_point_carry_status"] = _decision_point_carry_status(
+        target_root=target_root,
+        task_text=task_text,
+    )
     config = _load_workspace_config(target_root=target_root)
     active_planning_record = _raw_active_planning_record_for_closeout(planning_record={}, target_root=target_root)
     workflow_obligations = _workflow_obligations_report_payload(
@@ -29980,9 +30312,12 @@ def _start_tiny_payload_fast(
             scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
-        carry_result = _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast, task_text=task_text)
-        if carry_result.get("status") == "capacity-blocked":
-            payload["decision_point_intent_carry"] = carry_result
+        architecture_forecast["commit_policy"] = {
+            "state": "provisional",
+            "commit_on": ["stateful action", "explicit checkpoint"],
+            "invalidate_on": ["branch", "worktree", "repository", "target", "current-work", "selected-owner"],
+            "rule": "Startup projects intent but does not create decision-point carry residue.",
+        }
         if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"}:
             payload["architecture_principles_forecast"] = architecture_forecast
     vague_orientation = _vague_outcome_orientation_payload(task_text=task_text, cli_invoke=config.cli_invoke)
@@ -31104,13 +31439,10 @@ def _tiny_memory_consult_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     _ = config
     return {
         "kind": "agentic-workspace/memory-consult/v1",
-        "protocol": "Memory Consultation / Anti-Rediscovery",
         "status": "recommended",
-        "consultation_state": "checked-with-matches",
         "read_first": [".agentic-workspace/memory/repo/index.md"],
         "do_not_bulk_read": True,
-        "why": "Start with the Memory index, then load only route-matched durable notes when the task or changed paths justify them.",
-        "selection_rule": "load only manifest- or index-routed durable notes from touched files or explicit surfaces",
+        "rule": "Read the index, then only route-matched notes; use report detail for consultation diagnostics.",
     }
 
 
@@ -33326,6 +33658,7 @@ def _local_work_threads_projection(*, target_root: Path, cli_invoke: str, task_t
         "unreadable": unreadable,
         "selected_thread": selected_thread,
         "current_work_context": current_work_context,
+        "decision_point_carry_status": _decision_point_carry_status(target_root=target_root, task_text=task_text),
         "current_matches": current_matches[:5],
         "stale_threads": stale_threads[:5],
         "checkpoint_bridge": checkpoint_bridge,
@@ -44070,6 +44403,30 @@ def _run_work_thread_prune_adapter(args: argparse.Namespace) -> int:
         )
         _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
         return 0
+    if work_thread_command == "carry-inspect":
+        payload = _inspect_decision_point_carries(
+            target_root=target_root,
+            key=str(getattr(args, "key", "") or ""),
+        )
+        _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
+        return 0
+    if work_thread_command == "carry-select":
+        payload = _select_decision_point_carry(
+            target_root=target_root,
+            key=str(getattr(args, "key", "") or ""),
+        )
+        _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
+        return 0
+    if work_thread_command == "carry-prune":
+        payload = _prune_decision_point_carry(
+            target_root=target_root,
+            key=str(getattr(args, "key", "") or ""),
+            expected_context_id=str(getattr(args, "expect_context_id", "") or ""),
+            reason=str(getattr(args, "reason", "") or ""),
+            dry_run=bool(getattr(args, "dry_run", False)),
+        )
+        _emit_payload(payload=payload, format_name=getattr(args, "format", "text"))
+        return 0
     if work_thread_command != "prune":
         raise WorkspaceUsageError(f"Unsupported work-thread command: {work_thread_command}")
     payload = _prune_local_work_threads(
@@ -44440,6 +44797,8 @@ def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
         compact_status=_diagnostic_profile(args, default="tiny") == "tiny" and not detail_selector_requested,
         module_scope_explicit=bool(getattr(args, "modules", None)),
     )
+    if command_name in {"doctor", "status"}:
+        payload["decision_point_carry_status"] = _decision_point_carry_status(target_root=target_root)
     if select:
         payload = _select_payload_fields(payload, select=select, source_command=command_name)
     _emit_payload(payload=payload, format_name=args.format)

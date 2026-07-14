@@ -1,5 +1,44 @@
 {
   "adapters_by_command": {
+    "autopilot": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "autopilot",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace"
+      },
+      "conformance_refs": [
+        "autopilot.run.process"
+      ],
+      "effect_hints": {
+        "destructive": true,
+        "idempotent": false,
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
+      },
+      "id": "autopilot.run.cli",
+      "operation_id": "autopilot.run",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "workspace.final-response.admission",
+          "workspace.final-response.admission",
+          "workspace.final-response.continuation.execute",
+          "workspace.final-response.admission",
+          "workspace.local-chat-checkpoint.write",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "final_response_admission_result.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
     "checkpoint": {
       "command": {
         "command_manifest": "cli_commands.json",
@@ -201,11 +240,11 @@
         "final-response.admit.process"
       ],
       "effect_hints": {
-        "destructive": false,
-        "idempotent": true,
+        "destructive": true,
+        "idempotent": false,
         "read_only": false,
-        "requires_preflight_gate": false,
-        "writes_repo_state": false
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
       },
       "id": "final-response.admit.cli",
       "operation_id": "final-response.admit",
@@ -1021,12 +1060,18 @@
         "program": "agentic-workspace",
         "subcommands": [
           "select",
-          "prune"
+          "prune",
+          "carry-inspect",
+          "carry-select",
+          "carry-prune"
         ]
       },
       "conformance_refs": [
         "work-thread.prune.process",
-        "work-thread.select.process"
+        "work-thread.select.process",
+        "work-thread.carry-inspect.process",
+        "work-thread.carry-select.process",
+        "work-thread.carry-prune.process"
       ],
       "effect_hints": {
         "destructive": true,

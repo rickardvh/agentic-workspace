@@ -91,7 +91,6 @@ from agentic_workspace.workspace_runtime_core import (
     _ordinary_decision_packet,
     _package_boundary_payload,
     _parent_intent_status_payload,
-    _persist_decision_point_forecast,
     _pre_test_evidence_guardrail_payload,
     _prep_only_handoff_payload,
     _read_only_response_posture_payload,
@@ -866,9 +865,12 @@ def _start_payload(
             scope_source=forecast_scope_source or "missing_planned_scope",
             cli_invoke=config.cli_invoke,
         )
-        carry_result = _persist_decision_point_forecast(target_root=target_root, forecast=architecture_forecast, task_text=task_text)
-        if carry_result.get("status") == "capacity-blocked":
-            payload["decision_point_intent_carry"] = carry_result
+        architecture_forecast["commit_policy"] = {
+            "state": "provisional",
+            "commit_on": ["stateful action", "explicit checkpoint"],
+            "invalidate_on": ["branch", "worktree", "repository", "target", "current-work", "selected-owner"],
+            "rule": "Startup projects intent but does not create decision-point carry residue.",
+        }
         if architecture_forecast.get("status") in {"provisional-match", "needs-planned-scope"} or architecture_forecast.get(
             "relevant_intent"
         ):

@@ -34,6 +34,24 @@
       "adapter_kind": "process"
     },
     {
+      "id": "work-thread.carry-inspect.process",
+      "operation_id": "work-thread.carry-inspect",
+      "path": "conformance/work-thread.carry-inspect.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "work-thread.carry-select.process",
+      "operation_id": "work-thread.carry-select",
+      "path": "conformance/work-thread.carry-select.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "work-thread.carry-prune.process",
+      "operation_id": "work-thread.carry-prune",
+      "path": "conformance/work-thread.carry-prune.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "session-log.manage.process",
       "operation_id": "session-log.manage",
       "path": "conformance/session-log.manage.process.json",
@@ -373,6 +391,12 @@
       "id": "planning.lane-archive.lifecycle.dry-run.process",
       "operation_id": "planning.lane-archive.lifecycle",
       "path": "conformance/planning.lane-archive.lifecycle.dry-run.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.owner-select.lifecycle.process",
+      "operation_id": "planning.owner-select.lifecycle",
+      "path": "conformance/planning.owner-select.lifecycle.process.json",
       "adapter_kind": "process"
     },
     {

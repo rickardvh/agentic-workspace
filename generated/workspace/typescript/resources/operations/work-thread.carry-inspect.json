@@ -1,0 +1,100 @@
+{
+  "classification": "read-only-report",
+  "command_surface": {
+    "command": "work-thread",
+    "format_option": "format",
+    "subcommand": "carry-inspect"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": true,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Ignore local selection metadata when enumerating carries.",
+    "Inspection never archives Planning or proves completion."
+  ],
+  "id": "work-thread.carry-inspect",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "key",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "work-thread.carry-inspect"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/decision_point_carry_inspect_result.schema.json"
+  },
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "focused carry lifecycle tests prove exact inspection and no writes"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/decision-point-intent/*.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Emit exact local carry ownership and lifecycle.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Inspect ignored-local decision-point carries by exact current-work ownership and lifecycle.",
+  "writes": []
+}
