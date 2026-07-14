@@ -386,12 +386,12 @@ def _recover(state: dict[str, Any], root: Path, *, event: str, recovery: str) ->
     return {"pr_number": state["pr_number"], "status": "recovery-required", "event": event, "recovery": recovery}
 
 
-def _review_prompt(review: Review) -> str:
+def _review_prompt(review: Review, *, branch: str = "") -> str:
     return (
         f"External ChatGPT review found blockers for PR #{review.pr} at exact head {review.head}.\n\n"
         f"Review comment: {review.url or review.comment_id}\n\n"
         f"Actionable findings (transported verbatim; not reinterpreted):\n{review.findings}\n\n"
-        "Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
+        f"{'You are detached: push with git push origin HEAD:' + branch + '. ' if branch else ''}Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
         "Do not merge from this continuation."
     )
 
@@ -644,7 +644,7 @@ def _dispatch_all_unlocked(
     created = runner.run(["git", "worktree", "add", "--detach", worktree.as_posix(), fetched_head], cwd=root)
     if created.returncode:
         raise LoopError("worktree-create-failed", created.stderr.strip() or f"could not create worktree for PR #{pr}")
-    prompt = _review_prompt(review)
+    prompt = _review_prompt(review, branch=branch)
     command = [*shlex.split(codex_command), "-C", worktree.as_posix(), "exec", "--json", *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []), prompt]
     env = os.environ.copy()
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
@@ -652,18 +652,31 @@ def _dispatch_all_unlocked(
     if completed.returncode:
         return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-failed"}
     session_id = _session_id_from_jsonl(completed.stdout)
-    handoff(
-        cwd=worktree,
-        session_id=session_id,
-        pr=pr,
-        max_cycles=max_cycles,
-        max_repeated_blockers=max_repeated_blockers,
-        replace_session=False,
-        existing_only=False,
-        runner=runner,
-    )
+    updated = _pr_view(root, runner, pr=pr)
+    new_head = str(updated.get("headRefOid", ""))
+    if new_head == review.head:
+        return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-ended-without-new-head"}
+    state = {
+        "kind": STATE_KIND,
+        "repo_root": root.as_posix(),
+        "repository": _repo_slug(root, runner),
+        "pr_number": pr,
+        "pr_url": str(updated.get("url", "")),
+        "branch": branch,
+        "handoff_head": new_head,
+        "session_id": session_id,
+        "max_cycles": max_cycles,
+        "max_repeated_blockers": max_repeated_blockers,
+        "handled_reviews": [review.key],
+        "blocker_fingerprints": {},
+        "cycles": 1,
+        "status": "awaiting-review",
+        "last_event": "fresh-handoff-recorded",
+        "recovery": "",
+    }
+    _save_state(root, state)
     entries[str(pr)] = {
-        "worktree": worktree.as_posix(),
+        "worktree": root.as_posix(),
         "session_id": session_id,
         "branch": branch,
         "repository": str(payload.get("repository", "")),

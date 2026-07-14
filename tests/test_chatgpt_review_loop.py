@@ -239,6 +239,7 @@ def test_fresh_global_dispatch_fetches_and_detaches_at_reviewed_head(tmp_path: P
             Path(command[-2]).mkdir(parents=True)
             return subprocess.CompletedProcess(command, 0, "", "")
         if "exec" in command and "--json" in command:
+            runner.pr_head = HEAD_B
             return subprocess.CompletedProcess(command, 0, '{"thread_id":"fresh-session"}\n', "")
         return original_run(command, cwd=cwd, env=env)
 
