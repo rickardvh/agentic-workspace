@@ -4217,6 +4217,24 @@ def test_route_decision_fails_closed_for_genuine_ambiguity() -> None:
     assert decision["blocked_claims"] == ["claim-active-plan-progress", "silently-abandon-active-plan"]
 
 
+def test_route_decision_uses_current_reconciliation_proposal_without_recompiling_it() -> None:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    decision = _planning_route_decision_payload(
+        {"status": "issue-matched-continuation", "next_action_packet": {"action": "continue-active-plan"}},
+        reconciliation_proposal={
+            "status": "current",
+            "proposal_id": "a" * 20,
+            "apply_command": "agentic-workspace planning reconcile --apply --proposal " + "a" * 20,
+        },
+    )
+
+    assert decision["required_transition"] == "reconcile"
+    assert decision["mutation_authority"] == "reconciliation-proposal"
+    assert decision["reconciliation_proposal"]["proposal_id"] == "a" * 20
+    assert decision["next_safe_action"]["command"].endswith("a" * 20)
+
+
 def test_selector_first_gate_projects_authoritative_route_decision() -> None:
     from agentic_workspace.workspace_runtime_primitives import _selector_first_planning_safety_gate
 
