@@ -908,6 +908,14 @@ def _start_payload(
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
     route_decision = planning_safety_gate.get("route_decision", {})
     if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
+        route_decision = copy.deepcopy(route_decision)
+        transition = str(route_decision.get("required_transition") or "none")
+        route_decision["binding"] = {
+            "status": "bound" if transition == "none" else "provisional",
+            "state_commit": "none",
+            "rule": "Startup projects a route only; it never commits selection or carry state before an explicit transition is used.",
+            "invalidate_when": ["branch", "head", "worktree", "target", "current-work", "selected-owner"],
+        }
         payload["route_decision"] = route_decision
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
