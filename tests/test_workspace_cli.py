@@ -3906,15 +3906,28 @@ candidates = []
     _assert_json_payload_under(payload, 12_000, label="active-plan issue start payload", sort_keys=False)
     assert payload["decision_packet"]["next_action"] == "inspect-current-task-scope"
     assert payload["decision_packet"]["absence_states"]["full_selector_inventory"] == "hidden_behind_detail_route"
-    gate = payload["context"]["planning"]["planning_safety_gate"]
-    assert gate["gate_result"] == "current-task-scope-inspection-required"
-    assert gate["implementation_allowed"] is False
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement parser cache eviction for issue routing",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    assert route["task_relation"] == "independent-pending-scope"
+    assert route["required_transition"] == "inspect-current-task-scope"
+    assert route["implementation_allowed"] is False
     assert payload["action_signals"]["implementation_allowed"] is False
-    switch = gate["task_switch_reconciliation"]
-    assert switch["current_task_class"] == "new-explicit-task"
-    assert switch["recommended_next_action"] == "inspect-current-task-scope"
-    assert switch["detail_selector"] == "planning_safety_gate.task_switch_reconciliation"
-    assert switch["safe_route_ids"] == ["inspect-current-task-scope"]
+    assert route["next_safe_action"]["action"] == "inspect-current-task-scope"
 
     assert (
         cli.main(
