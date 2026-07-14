@@ -1813,10 +1813,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(planning_safety_gate, dict):
         compact_gate = _selector_first_planning_safety_gate(planning_safety_gate)
         authoritative_route = _as_dict(planning_safety_gate.get("route_decision"))
-        if authoritative_route.get("kind") == "agentic-planning/route-decision/v1" and authoritative_route.get("task_relation") not in {
-            "",
-            "not-applicable",
-        }:
+        if authoritative_route.get("kind") == "agentic-planning/route-decision/v1" and compact_gate.get("status") != "clear":
             compact_gate["route_decision"] = {
                 key: authoritative_route.get(key)
                 for key in (
