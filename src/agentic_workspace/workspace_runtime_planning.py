@@ -1209,7 +1209,7 @@ def _acknowledged_current_task_switch_payload(
     return acknowledged
 
 
-def _planning_route_decision_payload(task_switch: dict[str, Any]) -> dict[str, Any]:
+def _planning_route_decision_payload(task_switch: dict[str, Any], *, planning_revision: dict[str, Any] | None = None) -> dict[str, Any]:
     """Project the legacy switch result into independent routing dimensions.
 
     Consumers can adopt this stable object without reclassifying task-switch prose;
@@ -1221,6 +1221,7 @@ def _planning_route_decision_payload(task_switch: dict[str, Any]) -> dict[str, A
     completed = status == "completed-active-plan-route"
     bounded = status in {"bounded-reflection-reporting", "current-task-route-acknowledged"}
     ambiguous = status == "active"
+    selected_owner_ref = str(task_switch.get("active_execplan") or "")
     return {
         "kind": "agentic-planning/route-decision/v1",
         "task_relation": "continues-selected-owner"
@@ -1232,7 +1233,16 @@ def _planning_route_decision_payload(task_switch: dict[str, Any]) -> dict[str, A
         else "not-applicable",
         "owner_posture": "completed-residue" if completed else "current" if continuing or bounded or ambiguous else "not-applicable",
         "required_transition": "closeout-or-archive" if completed else "ask-for-route-decision" if ambiguous else "none",
-        "selected_owner": str(task_switch.get("active_execplan") or ""),
+        "selected_owner": selected_owner_ref,
+        "selected_owner_identity": {
+            "ref": selected_owner_ref,
+            "revision": str(_as_dict(planning_revision).get("revision_id") or _as_dict(planning_revision).get("revision") or ""),
+        },
+        "input_provenance": {
+            "task_relation": "task-switch-reconciliation.structured-reference-and-boundary-evidence",
+            "owner_posture": "active-owner-lifecycle-and-task-switch-evidence",
+            "required_transition": "route-decision-policy; detailed reconciliation remains owned by planning reconcile",
+        },
         "reason_codes": [status, str(task_switch.get("intent_conflict_state") or "")],
         "allowed_claims": ["bounded-task-progress"] if bounded else ["active-plan-progress"] if continuing else [],
         "blocked_claims": _as_dict(task_switch.get("active_plan_protection")).get("blocked_claims", []),
@@ -1610,7 +1620,7 @@ def _planning_safety_gate_payload(
         changed_paths=changed_paths,
         path_classification=path_classification,
     )
-    route_decision = _planning_route_decision_payload(task_switch_reconciliation)
+    route_decision = _planning_route_decision_payload(task_switch_reconciliation, planning_revision=planning_revision)
     closeout_publication_residue = (
         path_classification.get("dirty_shape") == "implementation-with-archived-planning-residue"
         and _as_dict(path_classification.get("archived_planning_residue")).get("status") == "completed-closeout-residue"

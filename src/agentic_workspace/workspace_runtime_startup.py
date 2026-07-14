@@ -910,29 +910,23 @@ def _start_payload(
     route_decision = planning_safety_gate.get("route_decision", {})
     if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
         payload["route_decision"] = route_decision
-    task_switch_visible_by_default = isinstance(task_switch, dict) and task_switch.get("status") in {
-        "active",
-        "bounded-reflection-reporting",
-        "current-task-route-acknowledged",
-        "completed-active-plan-route",
-    }
+    route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
+    route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
+    task_switch_visible_by_default = (
+        route_transition in {"closeout-or-archive", "ask-for-route-decision"} or route_relation == "bounded-independent"
+    )
     if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default:
         payload["planning_safety_gate"] = planning_safety_gate
-    if isinstance(task_switch, dict) and task_switch.get("status") in {
-        "active",
-        "bounded-reflection-reporting",
-        "current-task-route-acknowledged",
-        "completed-active-plan-route",
-    }:
-        next_packet = task_switch.get("next_action_packet", {})
+    if isinstance(route_decision, dict) and route_transition in {"closeout-or-archive", "ask-for-route-decision", "none"}:
+        next_packet = route_decision.get("next_safe_action", {})
         if isinstance(next_packet, dict):
             evidence_required = (
                 ["completed active-plan route accepted or dismissed"]
-                if task_switch.get("status") == "completed-active-plan-route"
+                if route_transition == "closeout-or-archive"
                 else ["active-plan claim boundary preserved"]
-                if task_switch.get("status") == "bounded-reflection-reporting"
+                if route_relation == "bounded-independent" and str(task_switch.get("status") or "") == "bounded-reflection-reporting"
                 else ["current-task proof", "active-plan claim boundary preserved"]
-                if task_switch.get("status") == "current-task-route-acknowledged"
+                if route_relation == "bounded-independent"
                 else ["current-task route chosen without claiming active-plan progress"]
             )
             payload["workflow_sufficiency"] = _workflow_sufficiency_payload(

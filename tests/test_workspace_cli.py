@@ -4196,6 +4196,8 @@ def test_route_decision_keeps_relation_posture_and_transition_separate() -> None
     assert decision["owner_posture"] == "current"
     assert decision["required_transition"] == "none"
     assert decision["next_safe_action"]["action"] == "continue-active-plan"
+    assert decision["input_provenance"]["required_transition"].endswith("planning reconcile")
+    assert decision["selected_owner_identity"]["ref"].endswith("issue-2046-lane.plan.json")
 
 
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:
