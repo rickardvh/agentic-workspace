@@ -60,6 +60,7 @@ For `blocked`, the controller records `(PR, reviewed SHA, comment ID)` as attemp
 For `merge-ready`, the controller records readiness and stops. It never invokes `gh pr merge` or changes ready/draft state; the human retains merge authority.
 
 After a successful blocked-review continuation records a new handoff head, the same bounded watcher keeps running and polls that head. It exits only on merge-ready, recovery, explicit stop/cleanup, or the configured poll limit; no manual watcher restart is needed between review cycles.
+The watcher may also be started while an exact-session resume is already in progress. It waits for that resume's Stop handoff instead of treating the transient `resume-in-progress` state as terminal.
 
 ## Inspect, stop, recover, and clean up
 

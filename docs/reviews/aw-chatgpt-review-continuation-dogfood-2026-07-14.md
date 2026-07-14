@@ -2,7 +2,7 @@
 
 ## Decision
 
-The deterministic repo-local transport is implemented and active on draft PR #2292. A live exact-session resume and project Stop-hook completion are now proven, but final issue #2290 satisfaction is not yet claimed: the successful Stop event was a manual recovery after the automatic invocation exposed a broken Windows hook wrapper. The next external review must still prove the complete unattended review-to-corrective-head cycle.
+The deterministic repo-local transport is implemented and active on draft PR #2292. The controller has now triggered the exact originating session twice, and a project Stop-hook completion is proven, but final issue #2290 satisfaction is not yet claimed: no controller-triggered resume has yet completed the corrective-head handoff and subsequent review under one uninterrupted watcher. The current resumed turn is the live boundary for that proof.
 
 Automatic merge remains out of scope and unauthorized.
 
@@ -22,6 +22,8 @@ After pushing the executable-resolution fix, a manual exact-session handoff prob
 
 At `2026-07-14T13:02:55Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AAAABKDPBtw` for exact head `31f6924443b3ba4b071f920541f4fcc6f0cdcc6f`, 17 minutes 3 seconds after handoff. The loop was deliberately stopped at review time. When the user explicitly restarted it, the first re-arm failed before changing state because Python decoded `gh`'s UTF-8 review JSON with the Windows CP-1252 default. Explicit UTF-8 decoding with replacement for undecodable diagnostic bytes fixed the boundary and 19 focused tests passed. The next controller poll persisted the review attempt and successfully started this exact Codex session through the resolved CLI 0.144.3 shim at `2026-07-14T13:07:44Z`. No review text was copied manually. This is the first successful controller-triggered live exact-session resumption, but it followed a manual loop restart and in-place decoding repair, so it does not prove uninterrupted watcher continuity.
 
+At `2026-07-14T13:19:45Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AAAABKDYkSA` for exact head `ce6c6699bc473e9e4c37abbd6cd7204e8f949619`, 5 minutes 59 seconds after the Stop hook recorded that head. A one-shot controller poll persisted the sixth review attempt and started this exact session through the resolved Codex CLI at `2026-07-14T13:43:15Z`; no review text was copied manually. Process inspection showed that the active parent was `poll` rather than `poll --watch`. It also exposed a continuity race: starting the bounded watcher during the resumed turn would immediately stop on the transient `resume-in-progress` state, before this turn's Stop hook could record its corrective head. The watcher now treats that state as waiting, so it can be activated during the in-flight turn and remain present for the Stop handoff and subsequent review. This second controller-triggered resume is not counted as a complete cycle until that corrective head and subsequent review are observed.
+
 | Scenario | Evidence | Result |
 | --- | --- | --- |
 | Blocked review, exact-session resume, corrective head | `test_blocked_review_resumes_exact_session_once_and_requires_new_handoff` simulates PR #12 at head `aaaa…`, records exact session `1111…`, transports one blocker, launches non-interactive `codex exec resume` with that exact ID, and observes the Stop-side state move to head `bbbb…` | Passed; one automatic resumption and one new handoff |
@@ -36,7 +38,7 @@ At `2026-07-14T13:02:55Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AA
 | Windows Stop-hook invocation | Piped a real Stop payload through the direct repo-relative command and then ran an exact-session Codex turn with the reviewed hook enabled | Passed after fixing the PowerShell stdin bug; Codex reported `hook: Stop Completed` and local state recorded corrective head `adeda425…` |
 | Hook portability | `test_project_stop_hook_uses_repo_runtime_and_has_no_machine_local_path` | Passed; repo-root resolution, bounded timeout, and no checked-in machine path |
 
-Focused run: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 19 passed. Ruff passed after formatting. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
+Focused run after the current continuity adjustment: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 20 passed. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
 
 Live PR #2292 has now supplied five SHA-bound blocked reviews. Therefore:
 
@@ -44,11 +46,12 @@ Live PR #2292 has now supplied five SHA-bound blocked reviews. Therefore:
 - review latency for head `c0da5601`: 27 minutes 39 seconds from handoff to review;
 - review latency for head `8570580e`: 25 minutes 52 seconds from handoff to review;
 - review latency for head `31f69244`: 17 minutes 3 seconds from handoff to review;
-- successful live controller-triggered exact-session resumptions: 1;
+- review latency for head `ce6c6699`: 5 minutes 59 seconds from handoff to review;
+- successful live controller-triggered exact-session resumptions: 2;
 - successful fully unattended review-to-corrective-head cycles: 0;
 - successful live manual exact-session recoveries: 1;
-- automatic watcher detections: 3; two additional reviews required a foreground watcher restart;
-- manual interventions in live trials: hook-trust activation, Windows wrapper diagnosis/fix, hook-trust flag placement diagnosis/fix, Windows executable-resolution diagnosis/fix, UTF-8 decoding diagnosis/fix, three watcher restarts, and one explicit recovery resume;
+- automatic watcher detections: 3; three additional reviews used a foreground poll or watcher restart;
+- manual interventions in live trials: hook-trust activation, Windows wrapper diagnosis/fix, hook-trust flag placement diagnosis/fix, Windows executable-resolution diagnosis/fix, UTF-8 decoding diagnosis/fix, four foreground poll/watcher activations, and one explicit recovery resume;
 - stale/duplicate prevention: deterministic fixtures passed;
 - missed or false blockers: 0 observed across the two live reviews.
 

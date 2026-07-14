@@ -371,9 +371,35 @@ def test_runtime_state_root_is_covered_by_repo_gitignore() -> None:
 def test_watcher_continues_only_for_review_waiting_states() -> None:
     assert loop._should_keep_watching([{"status": "no-op", "reason": "review-pending"}]) is True
     assert loop._should_keep_watching([{"status": "no-op", "reason": "stale-review-rejected"}]) is True
+    assert loop._should_keep_watching([{"status": "no-op", "reason": "state-is-resume-in-progress"}]) is True
     assert loop._should_keep_watching([{"status": "resumed", "new_head": HEAD_B}]) is True
     assert loop._should_keep_watching([{"status": "no-op", "reason": "state-is-stopped"}]) is False
     assert loop._should_keep_watching([{"status": "recovery-required", "event": "resume-failed"}]) is False
+
+
+def test_watch_started_during_resume_waits_for_stop_handoff(tmp_path: Path, monkeypatch, capsys) -> None:
+    runner = FakeRunner(tmp_path)
+    state(tmp_path, status="resume-in-progress", last_event="resume-attempt-recorded")
+
+    def record_stop_handoff(_seconds: int) -> None:
+        current = loop._load_state(tmp_path, 12)
+        current.update(status="awaiting-review", last_event="handoff-recorded")
+        loop._save_state(tmp_path, current)
+
+    monkeypatch.setattr(loop.time, "sleep", record_stop_handoff)
+
+    assert (
+        loop.main(
+            ["poll", "--target", str(tmp_path), "--pr", "12", "--watch", "--interval", "1", "--max-polls", "2"],
+            runner=runner,
+        )
+        == 0
+    )
+
+    output = capsys.readouterr().out
+    assert '"reason": "state-is-resume-in-progress"' in output
+    assert '"reason": "review-pending"' in output
+    assert sum(command[:3] == ["gh", "pr", "view"] for command in runner.commands) == 1
 
 
 def test_watch_loop_resumes_head_a_then_reviews_head_b_without_restart(tmp_path: Path, monkeypatch, capsys) -> None:
