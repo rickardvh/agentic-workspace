@@ -67,7 +67,7 @@ uv run python tools/chatgpt_review_loop.py recover --pr 123 --action continue-wa
 uv run python tools/chatgpt_review_loop.py cleanup --pr 123
 ```
 
-Use `recover` only after a human has fixed the reported malformed or ambiguous GitHub state. It does not remove a handled-review key or retry a failed exact review. After a resume failure or a session that ended without a corrective push, inspect the exact session, push a new head, and run a new handoff. `cleanup` removes only the gitignored local state record; it does not change the PR or its comments.
+Use `recover` only after a human has fixed the reported malformed or ambiguous GitHub state. It does not remove a handled-review key or retry a failed exact review. After a resume failure or a session that ended without a corrective push, inspect the exact session, push a new head, and run a new handoff. `stop` or `cleanup` also ends a bounded watcher on its next poll; `cleanup` removes only the gitignored local state record and does not change the PR or its comments.
 
 The controller reports explicit recovery for a closed PR, changed local or remote branch, an unrecorded remote head, a missing/ambiguous session, malformed or multiple matching markers, missing blocked findings, resume failure, no new handoff, maximum cycles, and repeated identical blockers. Stale-SHA reviews are visible no-ops and never resume Codex.
 

@@ -276,6 +276,13 @@ def test_runtime_state_root_is_covered_by_repo_gitignore() -> None:
     assert ".agentic-workspace/local/" in gitignore
 
 
+def test_watcher_continues_only_for_review_waiting_states() -> None:
+    assert loop._should_keep_watching([{"status": "no-op", "reason": "review-pending"}]) is True
+    assert loop._should_keep_watching([{"status": "no-op", "reason": "stale-review-rejected"}]) is True
+    assert loop._should_keep_watching([{"status": "no-op", "reason": "state-is-stopped"}]) is False
+    assert loop._should_keep_watching([{"status": "recovery-required", "event": "resume-failed"}]) is False
+
+
 def test_project_stop_hook_uses_repo_runtime_and_has_no_machine_local_path() -> None:
     hooks = json.loads((_SCRIPT.parents[1] / ".codex" / "hooks.json").read_text(encoding="utf-8"))
     handler = hooks["hooks"]["Stop"][0]["hooks"][0]

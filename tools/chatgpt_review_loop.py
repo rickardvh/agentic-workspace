@@ -326,6 +326,11 @@ def _review_prompt(review: Review) -> str:
     )
 
 
+def _should_keep_watching(results: list[dict[str, Any]]) -> bool:
+    waiting_reasons = {"review-pending", "stale-review-rejected"}
+    return any(item.get("status") == "no-op" and item.get("reason") in waiting_reasons for item in results)
+
+
 def poll_one(root: Path, state: dict[str, Any], *, runner: CommandRunner, codex_command: str) -> dict[str, Any]:
     pr = int(state["pr_number"])
     if state.get("status") != "awaiting-review":
@@ -548,7 +553,7 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                 poll_one(root, state, runner=runner, codex_command=args.codex_command) for state in states if "pr_number" in state
             ]
             _emit({"kind": STATE_KIND, "status": "poll-complete", "poll": index + 1, "results": last_results})
-            if not args.watch or not any(item.get("status") == "no-op" for item in last_results):
+            if not args.watch or not _should_keep_watching(last_results):
                 break
             if index + 1 < polls:
                 time.sleep(args.interval)
