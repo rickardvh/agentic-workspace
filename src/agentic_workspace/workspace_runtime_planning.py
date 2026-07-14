@@ -1245,6 +1245,7 @@ def _planning_route_decision_payload(
             "ref": selected_owner_ref,
             "revision": str(_as_dict(planning_revision).get("revision_id") or _as_dict(planning_revision).get("revision") or ""),
         },
+        "identity_effects": [],
         "input_provenance": {
             "task_relation": "task-switch-reconciliation.structured-reference-and-boundary-evidence",
             "owner_posture": "active-owner-lifecycle-and-task-switch-evidence",
