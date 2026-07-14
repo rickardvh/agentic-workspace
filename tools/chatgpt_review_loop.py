@@ -6,6 +6,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -49,7 +50,7 @@ class Review:
 
 class CommandRunner:
     def run(self, command: Sequence[str], *, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(command, cwd=cwd, env=env, text=True, capture_output=True, check=False)
+        return subprocess.run(_resolved_command(command), cwd=cwd, env=env, text=True, capture_output=True, check=False)
 
     def json(self, command: Sequence[str], *, cwd: Path) -> Any:
         completed = self.run(command, cwd=cwd)
@@ -63,7 +64,18 @@ class CommandRunner:
 
 
 def _emit(payload: dict[str, Any], *, error: bool = False) -> None:
-    print(json.dumps(payload, indent=2, sort_keys=True), file=sys.stderr if error else sys.stdout)
+    print(json.dumps(payload, indent=2, sort_keys=True), file=sys.stderr if error else sys.stdout, flush=True)
+
+
+def _resolved_command(command: Sequence[str], *, windows: bool | None = None) -> list[str]:
+    resolved = list(command)
+    is_windows = os.name == "nt" if windows is None else windows
+    if not resolved or not is_windows or any(separator in resolved[0] for separator in ("/", "\\")):
+        return resolved
+    executable = shutil.which(resolved[0])
+    if executable:
+        resolved[0] = executable
+    return resolved
 
 
 def _repo_root(cwd: Path, runner: CommandRunner) -> Path:

@@ -26,6 +26,17 @@ def marker(*, pr: int = 12, head: str = HEAD_A, decision: str = "blocked") -> st
     return f"<!-- aw-chatgpt-review pr={pr} head={head} policy=pr-review-recheck-v1 decision={decision} -->"
 
 
+def test_windows_command_resolution_uses_pathed_shell_shim(monkeypatch) -> None:
+    monkeypatch.setattr(loop.shutil, "which", lambda command: "tools/codex.CMD" if command == "codex" else None)
+
+    assert loop._resolved_command(["codex", "exec", "resume"], windows=True) == [
+        "tools/codex.CMD",
+        "exec",
+        "resume",
+    ]
+    assert loop._resolved_command(["tools/codex.exe", "exec"], windows=True)[0] == "tools/codex.exe"
+
+
 class FakeRunner(loop.CommandRunner):
     def __init__(self, root: Path, *, comments: list[dict] | None = None) -> None:
         self.root = root

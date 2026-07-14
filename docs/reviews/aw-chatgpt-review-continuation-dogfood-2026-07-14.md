@@ -16,6 +16,8 @@ At `2026-07-14T10:12:19Z`, the reviewer posted a blocked result for head `67c3cc
 
 At `2026-07-14T11:11:12Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AAAABKCV0JQ` for exact head `c0da56018db186b3d2007022ac0931e82ddb9c44`, 27 minutes 39 seconds after handoff. The same watcher remained alive, detected the marker on poll 29, and recorded the third bounded attempt without manual review copying. The retained diagnostic showed that the controller constructed `codex --dangerously-bypass-hook-trust -C ... exec resume`, but Codex CLI 0.144.3 accepts this flag on the `exec resume` subcommand. The invocation exited 2 before session startup. The controller and focused assertion now place the flag after `exec resume`; this review cannot be retried automatically because its attempt key was correctly persisted before launch.
 
+At `2026-07-14T12:08:53Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AAAABKCyeEQ` for exact head `8570580e57eca13697ddd024ccea2dcf4e780e92`, 25 minutes 52 seconds after handoff. The background watcher had disappeared after its last state write at `2026-07-14T11:46:33Z`, without a terminal state or any flushed redirected output, so a human restarted one foreground poll. That poll detected and deduplicated the review but still exited 2. The retained diagnostic and an executable-resolution probe found a Windows PATH split: interactive PowerShell resolved `codex` to the Node-installed `codex.ps1` shim (CLI 0.144.3), while Python `subprocess.run(["codex", ...])` bypassed the PATHEXT shim and launched a later desktop `codex.exe` (CLI 0.130.0-alpha.5) that does not support hook-trust bypass. The runner now resolves bare Windows executables with `shutil.which` before launch, selecting the same `codex.CMD` shim and 0.144.3 package as the shell. Controller output is also flushed so a normally running or exiting watcher leaves immediate poll evidence. The review cannot be retried because its attempt was correctly persisted before process launch.
+
 | Scenario | Evidence | Result |
 | --- | --- | --- |
 | Blocked review, exact-session resume, corrective head | `test_blocked_review_resumes_exact_session_once_and_requires_new_handoff` simulates PR #12 at head `aaaa…`, records exact session `1111…`, transports one blocker, launches non-interactive `codex exec resume` with that exact ID, and observes the Stop-side state move to head `bbbb…` | Passed; one automatic resumption and one new handoff |
@@ -30,16 +32,17 @@ At `2026-07-14T11:11:12Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AA
 | Windows Stop-hook invocation | Piped a real Stop payload through the direct repo-relative command and then ran an exact-session Codex turn with the reviewed hook enabled | Passed after fixing the PowerShell stdin bug; Codex reported `hook: Stop Completed` and local state recorded corrective head `adeda425…` |
 | Hook portability | `test_project_stop_hook_uses_repo_runtime_and_has_no_machine_local_path` | Passed; repo-root resolution, bounded timeout, and no checked-in machine path |
 
-Focused run: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 17 passed. Ruff passed after formatting. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
+Focused run: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 18 passed. Ruff passed after formatting. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
 
-Live PR #2292 has now supplied three SHA-bound blocked reviews. Therefore:
+Live PR #2292 has now supplied four SHA-bound blocked reviews. Therefore:
 
 - review latency for head `67c3cce4`: 5 minutes 23 seconds from handoff to review;
 - review latency for head `c0da5601`: 27 minutes 39 seconds from handoff to review;
+- review latency for head `8570580e`: 25 minutes 52 seconds from handoff to review;
 - successful live automatic resumptions: 0;
 - successful live manual exact-session recoveries: 1;
-- automatic watcher detections: 3;
-- manual interventions in live trials: hook-trust activation, Windows wrapper diagnosis/fix, hook-trust flag placement diagnosis/fix, and one explicit recovery resume;
+- automatic watcher detections: 3; one additional review required a foreground watcher restart;
+- manual interventions in live trials: hook-trust activation, Windows wrapper diagnosis/fix, hook-trust flag placement diagnosis/fix, Windows executable-resolution diagnosis/fix, two watcher restarts, and one explicit recovery resume;
 - stale/duplicate prevention: deterministic fixtures passed;
 - missed or false blockers: 0 observed across the two live reviews.
 
