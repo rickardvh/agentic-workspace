@@ -4533,6 +4533,7 @@ def test_compact_start_route_decision_preserves_contract_and_binding() -> None:
             "required_transition": "none",
             "allowed_claims": ["bounded-task-progress"],
             "blocked_claims": ["active-plan-progress"],
+            "mutation_authority": "current-task",
             "proof_expectation": "focused proof",
             "state_update_policy": "read-only",
             "next_safe_action": {"action": "perform-bounded-task"},
@@ -4540,6 +4541,7 @@ def test_compact_start_route_decision_preserves_contract_and_binding() -> None:
         }
     )
     assert route["task_relation"] == "bounded-independent"
+    assert route["mutation_authority"] == "current-task"
     assert route["next_safe_action"] == {"action": "perform-bounded-task"}
     assert route["binding"] == {"status": "bound", "state_commit": "none"}
 

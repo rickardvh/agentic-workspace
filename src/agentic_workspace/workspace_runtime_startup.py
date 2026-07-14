@@ -185,6 +185,7 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
             "allowed_claims",
             "blocked_claims",
             "implementation_allowed",
+            "mutation_authority",
             "proof_expectation",
             "state_update_policy",
             "next_safe_action",
