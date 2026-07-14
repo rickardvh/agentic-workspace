@@ -4255,6 +4255,68 @@ def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Pat
     assert "issue-2045" in plural_lane_switch["mismatch_evidence"]["shared_refs"]
 
 
+def test_start_route_honors_local_selected_planning_owner(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    shared_ref = ".agentic-workspace/planning/execplans/issue-2290.plan.json"
+    selected_ref = ".agentic-workspace/planning/execplans/issue-2281.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """schema_version = 1
+
+[todo]
+active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-workspace/planning/execplans/issue-2290.plan.json", refs = ["#2290"] }]
+""",
+    )
+    _write(
+        tmp_path / shared_ref,
+        json.dumps({"kind": "planning-execplan/v1", "id": "issue-2290", "lifecycle": "live", "phase": "implementation"}),
+    )
+    _write(
+        tmp_path / selected_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2281",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "references": [{"kind": "issue", "target": "#2281"}],
+            }
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace/local/planning/owner-selection.json",
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "isolated-stack",
+                "selected_owner": {"id": "issue-2281", "ref": selected_ref},
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #2281 reconciliation",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    assert route["selected_owner"] == selected_ref
+    assert route["task_relation"] == "continues-selected-owner"
+
+
 def test_route_decision_keeps_relation_posture_and_transition_separate() -> None:
     from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
 

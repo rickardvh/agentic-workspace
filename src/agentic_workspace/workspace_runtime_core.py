@@ -30791,7 +30791,15 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     active_execplans = active.get("execplans", []) if isinstance(active, dict) else []
     active_execplans = active_execplans if isinstance(active_execplans, list) else []
     active_execplan = None
-    if active_items and isinstance(active_items[0], dict):
+    # Local selection is an exact, validated current-work binding.  Startup
+    # packets must use it before the shared state's first active item so an
+    # isolated worktree cannot inherit another thread's owner.
+    from agentic_workspace.current_work_context import _selected_planning_owner
+
+    _selected_id, selected_ref = _selected_planning_owner(target_root)
+    if selected_ref:
+        active_execplan = selected_ref
+    elif active_items and isinstance(active_items[0], dict):
         active_execplan = active_items[0].get("surface")
     if active_execplan is None and active_execplans and isinstance(active_execplans[0], dict):
         active_execplan = active_execplans[0].get("path")
