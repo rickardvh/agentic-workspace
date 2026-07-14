@@ -24,6 +24,8 @@ At `2026-07-14T13:02:55Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AA
 
 At `2026-07-14T13:19:45Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AAAABKDYkSA` for exact head `ce6c6699bc473e9e4c37abbd6cd7204e8f949619`, 5 minutes 59 seconds after the Stop hook recorded that head. A one-shot controller poll persisted the sixth review attempt and started this exact session through the resolved Codex CLI at `2026-07-14T13:43:15Z`; no review text was copied manually. Process inspection showed that the active parent was `poll` rather than `poll --watch`. It also exposed a continuity race: starting the bounded watcher during the resumed turn would immediately stop on the transient `resume-in-progress` state, before this turn's Stop hook could record its corrective head. The watcher now treats that state as waiting, so it can be activated during the in-flight turn and remain present for the Stop handoff and subsequent review. This second controller-triggered resume is not counted as a complete cycle until that corrective head and subsequent review are observed.
 
+At `2026-07-14T14:13:54Z`, the same bounded watcher detected blocked comment `IC_kwDOR6cWrs8AAAABKD7PkQ` for exact head `11be25345322c66ca8f66ea178228623a823d6ff`, 6 minutes 38 seconds after handoff, persisted cycle 7, and resumed this exact session without a restart or copied review text. The review exposed that automatic Stop handoffs replaced explicit loop limits with hook parser defaults. The controller now preserves existing `max_cycles` and `max_repeated_blockers` during hook-only handoffs, while explicit maintainer handoffs retain authority to change them. The live state remains explicitly armed at 10 cycles, above the persisted count of 7. This third controller-triggered resume is the first detected by a watcher that remained active from the prior corrective handoff; the cycle is not counted complete until this turn pushes a new head, its Stop hook records that head, and the same watcher observes the subsequent review.
+
 | Scenario | Evidence | Result |
 | --- | --- | --- |
 | Blocked review, exact-session resume, corrective head | `test_blocked_review_resumes_exact_session_once_and_requires_new_handoff` simulates PR #12 at head `aaaa…`, records exact session `1111…`, transports one blocker, launches non-interactive `codex exec resume` with that exact ID, and observes the Stop-side state move to head `bbbb…` | Passed; one automatic resumption and one new handoff |
@@ -35,22 +37,24 @@ At `2026-07-14T13:19:45Z`, the reviewer posted blocked comment `IC_kwDOR6cWrs8AA
 | Repeated blocker and maximum cycle limits | `test_repeated_blocker_and_cycle_limits_escalate_without_resume` | Passed; both stop before Codex invocation |
 | Dormant Stop hook | `test_hook_mode_is_quiet_until_an_exact_loop_is_explicitly_enabled` | Passed; no GitHub query or opt-in before explicit enablement |
 | Two-head unattended watch | `test_watch_loop_resumes_head_a_then_reviews_head_b_without_restart` | Passed; head A blocker resumes once, Stop-side handoff records head B, and the same watcher consumes head B merge-ready |
+| Stop handoff limit preservation | `test_stop_handoff_preserves_explicitly_configured_limits` starts at cycle 7 with explicit limits 10/4, then runs a hook-only handoff with parser defaults 3/2 | Passed; cycle count and configured limits remain 7, 10, and 4 |
 | Windows Stop-hook invocation | Piped a real Stop payload through the direct repo-relative command and then ran an exact-session Codex turn with the reviewed hook enabled | Passed after fixing the PowerShell stdin bug; Codex reported `hook: Stop Completed` and local state recorded corrective head `adeda425…` |
 | Hook portability | `test_project_stop_hook_uses_repo_runtime_and_has_no_machine_local_path` | Passed; repo-root resolution, bounded timeout, and no checked-in machine path |
 
-Focused run after the current continuity adjustment: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 20 passed. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
+Focused run after the current limit-preservation adjustment: `uv run pytest tests/test_chatgpt_review_loop.py -q` → 21 passed. Runtime state is below `.agentic-workspace/local/`, which is already covered by `.gitignore` and was confirmed with `git check-ignore`.
 
-Live PR #2292 has now supplied five SHA-bound blocked reviews. Therefore:
+Live PR #2292 has now supplied seven SHA-bound blocked reviews. Therefore:
 
 - review latency for head `67c3cce4`: 5 minutes 23 seconds from handoff to review;
 - review latency for head `c0da5601`: 27 minutes 39 seconds from handoff to review;
 - review latency for head `8570580e`: 25 minutes 52 seconds from handoff to review;
 - review latency for head `31f69244`: 17 minutes 3 seconds from handoff to review;
 - review latency for head `ce6c6699`: 5 minutes 59 seconds from handoff to review;
-- successful live controller-triggered exact-session resumptions: 2;
+- review latency for head `11be2534`: 6 minutes 38 seconds from handoff to review;
+- successful live controller-triggered exact-session resumptions: 3;
 - successful fully unattended review-to-corrective-head cycles: 0;
 - successful live manual exact-session recoveries: 1;
-- automatic watcher detections: 3; three additional reviews used a foreground poll or watcher restart;
+- automatic watcher detections: 4; three additional reviews used a foreground poll or watcher restart;
 - manual interventions in live trials: hook-trust activation, Windows wrapper diagnosis/fix, hook-trust flag placement diagnosis/fix, Windows executable-resolution diagnosis/fix, UTF-8 decoding diagnosis/fix, four foreground poll/watcher activations, and one explicit recovery resume;
 - stale/duplicate prevention: deterministic fixtures passed;
 - missed or false blockers: 0 observed across the two live reviews.

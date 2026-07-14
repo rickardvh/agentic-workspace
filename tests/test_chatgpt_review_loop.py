@@ -219,6 +219,36 @@ def test_handoff_bounded_retry_absorbs_github_head_propagation(tmp_path: Path, m
     assert sum(command[:3] == ["gh", "pr", "view"] for command in runner.commands) == 2
 
 
+def test_stop_handoff_preserves_explicitly_configured_limits(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    existing = state(
+        tmp_path,
+        status="resume-in-progress",
+        cycles=7,
+        max_cycles=10,
+        max_repeated_blockers=4,
+    )
+    loop._save_state(tmp_path, existing)
+
+    result = loop.handoff(
+        cwd=tmp_path,
+        session_id=SESSION,
+        pr=None,
+        max_cycles=3,
+        max_repeated_blockers=2,
+        replace_session=False,
+        existing_only=True,
+        runner=runner,
+    )
+
+    refreshed = loop._load_state(tmp_path, 12)
+    assert result["status"] == "handoff-noop"
+    assert refreshed["status"] == "awaiting-review"
+    assert refreshed["cycles"] == 7
+    assert refreshed["max_cycles"] == 10
+    assert refreshed["max_repeated_blockers"] == 4
+
+
 def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_path: Path) -> None:
     review = {"id": "IC_blocked_91", "body": f"- fix the race\n{marker()}", "url": "https://example.test/c/91"}
     runner = FakeRunner(tmp_path, comments=[review])

@@ -61,6 +61,7 @@ For `merge-ready`, the controller records readiness and stops. It never invokes 
 
 After a successful blocked-review continuation records a new handoff head, the same bounded watcher keeps running and polls that head. It exits only on merge-ready, recovery, explicit stop/cleanup, or the configured poll limit; no manual watcher restart is needed between review cycles.
 The watcher may also be started while an exact-session resume is already in progress. It waits for that resume's Stop handoff instead of treating the transient `resume-in-progress` state as terminal.
+Automatic Stop-hook handoffs preserve the loop's configured cycle and repeated-blocker limits. Change those limits only with an explicit maintainer `handoff`; hook parser defaults never replace an enabled loop's budget.
 
 ## Inspect, stop, recover, and clean up
 

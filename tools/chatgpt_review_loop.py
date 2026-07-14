@@ -258,6 +258,10 @@ def handoff(
         "blocker_fingerprints": {},
         "cycles": 0,
     }
+    configured_max_cycles = int(state.get("max_cycles", max_cycles)) if existing_only else max_cycles
+    configured_max_repeated_blockers = (
+        int(state.get("max_repeated_blockers", max_repeated_blockers)) if existing_only else max_repeated_blockers
+    )
     same_handoff = state.get("handoff_head") == head and state.get("session_id") == session_id
     if existing_only and same_handoff and state.get("status") in {"stopped", "merge-ready"}:
         return {
@@ -278,8 +282,8 @@ def handoff(
             "branch": branch,
             "handoff_head": head,
             "session_id": session_id,
-            "max_cycles": max_cycles,
-            "max_repeated_blockers": max_repeated_blockers,
+            "max_cycles": configured_max_cycles,
+            "max_repeated_blockers": configured_max_repeated_blockers,
             "status": "awaiting-review",
             "last_event": "handoff-noop" if same_handoff else "handoff-recorded",
             "recovery": "",
