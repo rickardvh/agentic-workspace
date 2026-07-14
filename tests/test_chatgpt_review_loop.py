@@ -151,6 +151,69 @@ def test_marker_parser_accepts_only_exact_pr_and_full_sha() -> None:
     assert {item["reason"] for item in rejected} == {"stale-head", "malformed-or-multiple-markers", "pr-mismatch"}
 
 
+def test_fresh_session_json_requires_one_durable_identity() -> None:
+    assert loop._session_id_from_jsonl('{"type":"thread.started","thread_id":"fresh-12"}\n') == "fresh-12"
+    with pytest.raises(loop.LoopError, match="did not report one session"):
+        loop._session_id_from_jsonl('{"session_id":"one"}\n{"thread_id":"two"}\n')
+
+
+def test_global_dispatch_does_not_start_when_no_exact_blocked_review(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path, comments=[{"id": "old", "body": marker(head=HEAD_B), "url": "u"}])
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        if list(command)[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps(
+                    [
+                        {
+                            "number": 12,
+                            "state": "OPEN",
+                            "headRefName": runner.branch,
+                            "headRefOid": HEAD_A,
+                            "body": "",
+                            "comments": runner.comments,
+                            "url": "https://example.test/pr/12",
+                        }
+                    ]
+                ),
+                "",
+            )
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+    result = loop.dispatch_all(
+        tmp_path,
+        runner=runner,
+        codex_command="codex",
+        worktree_root=tmp_path / "worktrees",
+        max_cycles=3,
+        max_repeated_blockers=2,
+    )
+
+    assert result == {"status": "no-op", "reason": "no-eligible-blocked-review"}
+    assert not any(command[:3] == ["git", "worktree", "add"] for command in runner.commands)
+
+
+def test_global_dispatch_refuses_a_second_concurrent_job(tmp_path: Path) -> None:
+    lock = tmp_path / loop.STATE_RELATIVE / "dispatch.lock"
+    lock.parent.mkdir(parents=True)
+    lock.write_text("other", encoding="utf-8")
+
+    result = loop.dispatch_all(
+        tmp_path,
+        runner=FakeRunner(tmp_path),
+        codex_command="codex",
+        worktree_root=tmp_path / "worktrees",
+        max_cycles=3,
+        max_repeated_blockers=2,
+    )
+
+    assert result == {"status": "no-op", "reason": "dispatcher-job-in-progress"}
+
+
 def test_handoff_is_idempotent_adds_opt_in_and_rejects_session_guessing(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
 

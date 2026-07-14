@@ -20,6 +20,7 @@ REVIEW_POLICY = "pr-review-recheck-v1"
 HEAD_SYNC_ATTEMPTS = 3
 STATE_KIND = "agentic-workspace/chatgpt-review-loop-state/v1"
 STATE_RELATIVE = Path(".agentic-workspace/local/chatgpt-review-loop")
+DISPATCH_STATE = "dispatch.json"
 REVIEW_MARKER_RE = re.compile(
     r"<!-- aw-chatgpt-review pr=(?P<pr>[1-9][0-9]*) "
     r"head=(?P<head>[0-9a-f]{40}) policy=pr-review-recheck-v1 "
@@ -166,9 +167,45 @@ def _all_states(root: Path) -> list[dict[str, Any]]:
     return states
 
 
+def _dispatch_path(root: Path) -> Path:
+    return root / STATE_RELATIVE / DISPATCH_STATE
+
+
+def _load_dispatch(root: Path) -> dict[str, Any]:
+    path = _dispatch_path(root)
+    if not path.is_file():
+        return {"kind": STATE_KIND, "prs": {}}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise LoopError("dispatch-state-invalid", f"global dispatcher state is unreadable: {path}") from exc
+    if payload.get("kind") != STATE_KIND or not isinstance(payload.get("prs"), dict):
+        raise LoopError("dispatch-state-invalid", "global dispatcher state has the wrong contract")
+    return payload
+
+
+def _save_dispatch(root: Path, payload: dict[str, Any]) -> None:
+    path = _dispatch_path(root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
 def _comments_from_pr(payload: dict[str, Any]) -> list[dict[str, Any]]:
     comments = payload.get("comments", [])
     return [item for item in comments if isinstance(item, dict)] if isinstance(comments, list) else []
+
+
+def _open_prs(root: Path, runner: CommandRunner) -> list[dict[str, Any]]:
+    payload = runner.json(
+        ["gh", "pr", "list", "--state", "open", "--limit", "100", "--json", "number,state,headRefName,headRefOid,body,comments,url"],
+        cwd=root,
+    )
+    if not isinstance(payload, list) or not all(isinstance(item, dict) for item in payload):
+        raise LoopError("pr-list-invalid", "gh returned an invalid open PR list")
+    return sorted(payload, key=lambda item: int(item.get("number", 0)))
 
 
 def _ensure_opt_in(root: Path, runner: CommandRunner, payload: dict[str, Any]) -> bool:
@@ -490,6 +527,143 @@ def poll_one(
     return {"pr_number": pr, "status": "resumed", "new_head": latest.get("handoff_head"), "review_key": review.key}
 
 
+def _session_id_from_jsonl(output: str) -> str:
+    """Extract the one durable Codex session identity from `codex exec --json` output."""
+    candidates: set[str] = set()
+    for line in output.splitlines():
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        stack: list[Any] = [item]
+        while stack:
+            value = stack.pop()
+            if isinstance(value, dict):
+                for key, child in value.items():
+                    if key in {"session_id", "thread_id", "threadId"} and isinstance(child, str) and child.strip():
+                        candidates.add(child.strip())
+                    else:
+                        stack.append(child)
+            elif isinstance(value, list):
+                stack.extend(value)
+    if len(candidates) != 1:
+        raise LoopError("session-unavailable", "fresh Codex job did not report one session identity")
+    return candidates.pop()
+
+
+def _worktree_for(root: Path, pr: int, *, worktree_root: Path) -> Path:
+    return (worktree_root / f"pr-{pr}").resolve()
+
+
+def _dispatch_all_unlocked(
+    root: Path,
+    *,
+    runner: CommandRunner,
+    codex_command: str,
+    worktree_root: Path,
+    max_cycles: int,
+    max_repeated_blockers: int,
+    bypass_hook_trust: bool = False,
+) -> dict[str, Any]:
+    """Run at most one eligible blocked review across every open PR.
+
+    The registry is deliberately local and records the owning session/worktree per
+    PR.  Existing PRs are resumed; a first review creates one worktree and starts
+    one fresh Codex session there.  A later poll never creates a second job while
+    that PR has a recorded in-progress session.
+    """
+    registry = _load_dispatch(root)
+    entries = registry["prs"]
+    candidates: list[tuple[dict[str, Any], Review]] = []
+    for payload in _open_prs(root, runner):
+        pr = int(payload.get("number", 0))
+        head = str(payload.get("headRefOid", ""))
+        if pr < 1 or not re.fullmatch(r"[0-9a-f]{40}", head):
+            continue
+        matches, rejected = parse_reviews(_comments_from_pr(payload), expected_pr=pr, expected_head=head)
+        if any(item["reason"] != "stale-head" for item in rejected) or len(matches) != 1:
+            continue
+        review = matches[0]
+        if review.decision == "blocked" and review.findings:
+            candidates.append((payload, review))
+    if not candidates:
+        return {"status": "no-op", "reason": "no-eligible-blocked-review"}
+
+    payload, review = candidates[0]
+    pr = int(payload["number"])
+    entry = entries.get(str(pr))
+    if isinstance(entry, dict):
+        worktree = Path(str(entry.get("worktree", "")))
+        if not worktree.is_dir():
+            return {"status": "recovery-required", "pr_number": pr, "event": "worktree-missing"}
+        state = _load_state(worktree, pr)
+        result = poll_one(worktree, state, runner=runner, codex_command=codex_command, bypass_hook_trust=bypass_hook_trust)
+        return {"status": "dispatched", "pr_number": pr, "mode": "resume", "result": result}
+
+    worktree = _worktree_for(root, pr, worktree_root=worktree_root)
+    if worktree.exists():
+        return {"status": "recovery-required", "pr_number": pr, "event": "unowned-worktree-exists"}
+    branch = str(payload.get("headRefName", ""))
+    if not branch:
+        return {"status": "recovery-required", "pr_number": pr, "event": "missing-head-branch"}
+    created = runner.run(["git", "worktree", "add", worktree.as_posix(), branch], cwd=root)
+    if created.returncode:
+        raise LoopError("worktree-create-failed", created.stderr.strip() or f"could not create worktree for PR #{pr}")
+    prompt = _review_prompt(review)
+    command = [*shlex.split(codex_command), "-C", worktree.as_posix(), "exec", "--json", *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []), prompt]
+    env = os.environ.copy()
+    env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
+    completed = runner.run(command, cwd=worktree, env=env)
+    if completed.returncode:
+        return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-failed"}
+    session_id = _session_id_from_jsonl(completed.stdout)
+    handoff(
+        cwd=worktree,
+        session_id=session_id,
+        pr=pr,
+        max_cycles=max_cycles,
+        max_repeated_blockers=max_repeated_blockers,
+        replace_session=False,
+        existing_only=False,
+        runner=runner,
+    )
+    entries[str(pr)] = {"worktree": worktree.as_posix(), "session_id": session_id, "branch": branch}
+    _save_dispatch(root, registry)
+    return {"status": "dispatched", "pr_number": pr, "mode": "fresh", "session_id": session_id}
+
+
+def dispatch_all(
+    root: Path,
+    *,
+    runner: CommandRunner,
+    codex_command: str,
+    worktree_root: Path,
+    max_cycles: int,
+    max_repeated_blockers: int,
+    bypass_hook_trust: bool = False,
+) -> dict[str, Any]:
+    """Serialize all global scans, including the foreground Codex job they launch."""
+    lock = root / STATE_RELATIVE / "dispatch.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with lock.open("x", encoding="utf-8") as handle:
+            handle.write(str(os.getpid()))
+    except FileExistsError:
+        return {"status": "no-op", "reason": "dispatcher-job-in-progress"}
+    try:
+        return _dispatch_all_unlocked(
+            root,
+            runner=runner,
+            codex_command=codex_command,
+            worktree_root=worktree_root,
+            max_cycles=max_cycles,
+            max_repeated_blockers=max_repeated_blockers,
+            bypass_hook_trust=bypass_hook_trust,
+        )
+    finally:
+        lock.unlink(missing_ok=True)
+
+
 def _hook_input() -> tuple[Path, str]:
     try:
         payload = json.load(sys.stdin)
@@ -520,6 +694,19 @@ def _parser() -> argparse.ArgumentParser:
     poll_parser.add_argument("--watch", action="store_true")
     poll_parser.add_argument("--interval", type=int, default=60)
     poll_parser.add_argument("--max-polls", type=int, default=60)
+    poll_parser.add_argument(
+        "--all-open",
+        action="store_true",
+        help="Scan every open PR and dispatch at most one exact-head blocked review per poll.",
+    )
+    poll_parser.add_argument(
+        "--worktree-root",
+        type=Path,
+        default=Path(".agentic-workspace/local/chatgpt-review-worktrees"),
+        help="Local root that owns one isolated worktree for each globally dispatched PR.",
+    )
+    poll_parser.add_argument("--max-cycles", type=int, default=3)
+    poll_parser.add_argument("--max-repeated-blockers", type=int, default=2)
     poll_parser.add_argument("--codex-command", default=os.environ.get("AW_CHATGPT_REVIEW_CODEX", "codex"))
     poll_parser.add_argument(
         "--bypass-hook-trust",
@@ -604,22 +791,38 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
             return 0
 
         polls = args.max_polls if args.watch else 1
-        if polls < 1 or args.interval < 1:
+        if polls < 1 or args.interval < 1 or args.max_cycles < 1 or args.max_repeated_blockers < 1:
             raise LoopError("invalid-limit", "poll limits and interval must be positive")
         last_results: list[dict[str, Any]] = []
         for index in range(polls):
-            states = [_load_state(root, args.pr)] if args.pr else _all_states(root)
-            last_results = [
-                poll_one(
-                    root,
-                    state,
-                    runner=runner,
-                    codex_command=args.codex_command,
-                    bypass_hook_trust=args.bypass_hook_trust,
-                )
-                for state in states
-                if "pr_number" in state
-            ]
+            if args.all_open:
+                if args.pr:
+                    raise LoopError("invalid-selection", "--all-open and --pr cannot be used together")
+                worktree_root = args.worktree_root if args.worktree_root.is_absolute() else root / args.worktree_root
+                last_results = [
+                    dispatch_all(
+                        root,
+                        runner=runner,
+                        codex_command=args.codex_command,
+                        worktree_root=worktree_root,
+                        max_cycles=args.max_cycles,
+                        max_repeated_blockers=args.max_repeated_blockers,
+                        bypass_hook_trust=args.bypass_hook_trust,
+                    )
+                ]
+            else:
+                states = [_load_state(root, args.pr)] if args.pr else _all_states(root)
+                last_results = [
+                    poll_one(
+                        root,
+                        state,
+                        runner=runner,
+                        codex_command=args.codex_command,
+                        bypass_hook_trust=args.bypass_hook_trust,
+                    )
+                    for state in states
+                    if "pr_number" in state
+                ]
             _emit({"kind": STATE_KIND, "status": "poll-complete", "poll": index + 1, "results": last_results})
             if not args.watch or not _should_keep_watching(last_results):
                 break
