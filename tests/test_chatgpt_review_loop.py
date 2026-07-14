@@ -510,7 +510,7 @@ def test_watcher_continues_only_for_review_waiting_states() -> None:
     assert loop._should_keep_watching([{"status": "no-op", "reason": "no-eligible-blocked-review"}]) is True
     assert loop._should_keep_watching([{"status": "dispatched", "pr_number": 12}]) is True
     assert loop._should_keep_watching([{"status": "no-op", "reason": "state-is-stopped"}]) is False
-    assert loop._should_keep_watching([{"status": "recovery-required", "event": "resume-failed"}]) is False
+    assert loop._should_keep_watching([{"status": "recovery-required", "event": "resume-failed"}]) is True
 
 
 def test_global_watch_waits_after_empty_scan_then_dispatches(tmp_path: Path, monkeypatch, capsys) -> None:
