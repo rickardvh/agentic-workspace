@@ -53,7 +53,7 @@ Polling uses `gh` only. A review is eligible only when its comment contains exac
 <!-- aw-chatgpt-review pr=<number> head=<full-sha> policy=pr-review-recheck-v1 decision=<blocked|merge-ready> -->
 ```
 
-For `blocked`, the controller records `(PR, reviewed SHA, comment ID)` as attempted before starting `codex resume --cd <repo> <exact-session> <verbatim-findings>`. That exact review cannot automatically resume twice, including after a resume failure. The resumed Codex process inherits a transport guard, while its Stop hook only records a newly pushed handoff; neither termination path starts another poller. A successful cycle therefore requires a corrective push with a new head.
+For `blocked`, the controller records `(PR, reviewed SHA, comment ID)` as attempted before starting the non-interactive continuation `codex -C <repo> exec resume <exact-session> <verbatim-findings>`. That exact review cannot automatically resume twice, including after a resume failure. The resumed Codex process inherits a transport guard, while its Stop hook only records a newly pushed handoff; neither termination path starts another poller. A successful cycle therefore requires a corrective push with a new head.
 
 For `merge-ready`, the controller records readiness and stops. It never invokes `gh pr merge` or changes ready/draft state; the human retains merge authority.
 

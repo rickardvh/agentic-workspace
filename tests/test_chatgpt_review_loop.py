@@ -143,6 +143,8 @@ def test_handoff_is_idempotent_adds_opt_in_and_rejects_session_guessing(tmp_path
     assert sum(command[:3] == ["gh", "pr", "comment"] for command in runner.commands) == 1
     saved = loop._load_state(tmp_path, 12)
     assert (saved["session_id"], saved["handoff_head"]) == (SESSION, HEAD_A)
+    assert saved["handoff_at"]
+    assert saved["updated_at"]
 
     with pytest.raises(loop.LoopError, match="different exact Codex session") as error:
         loop.handoff(
@@ -173,9 +175,9 @@ def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_
         "review_key": f"12:{HEAD_A}:IC_blocked_91",
     }
     resume = next(command for command in runner.commands if "resume" in command)
-    assert resume[:4] == ["codex", "resume", "--cd", tmp_path.as_posix()]
-    assert resume[4] == SESSION
-    assert "fix the race" in resume[5]
+    assert resume[:5] == ["codex", "-C", tmp_path.as_posix(), "exec", "resume"]
+    assert resume[5] == SESSION
+    assert "fix the race" in resume[6]
     assert loop._load_state(tmp_path, 12)["handled_reviews"] == [f"12:{HEAD_A}:IC_blocked_91"]
 
 

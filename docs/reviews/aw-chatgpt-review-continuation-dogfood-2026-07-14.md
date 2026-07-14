@@ -8,9 +8,11 @@ Automatic merge remains out of scope and unauthorized.
 
 ## Evidence collected
 
+Live trial PR [#2292](https://github.com/rickardvh/agentic-workspace/pull/2292) was created as a draft at `2026-07-14T09:37:04Z`. The controller bound the exact originating Codex session to head `b5cae38c54d0f2563a24fbfc160af4df24ccdad3`, added the opt-in marker, and returned `review-pending` on its first poll. Before starting the background watcher, local capability inspection showed that interactive `codex resume` was the wrong unattended surface; the controller was corrected to use `codex exec resume`. This is a successful manual intervention before any review was consumed, not yet a successful automatic resumption.
+
 | Scenario | Evidence | Result |
 | --- | --- | --- |
-| Blocked review, exact-session resume, corrective head | `test_blocked_review_resumes_exact_session_once_and_requires_new_handoff` simulates PR #12 at head `aaaa…`, records exact session `1111…`, transports one blocker, launches `codex resume` with that exact ID, and observes the Stop-side state move to head `bbbb…` | Passed; one automatic resumption and one new handoff |
+| Blocked review, exact-session resume, corrective head | `test_blocked_review_resumes_exact_session_once_and_requires_new_handoff` simulates PR #12 at head `aaaa…`, records exact session `1111…`, transports one blocker, launches non-interactive `codex exec resume` with that exact ID, and observes the Stop-side state move to head `bbbb…` | Passed; one automatic resumption and one new handoff |
 | Already attempted review | `test_resume_failure_is_not_retried_for_same_comment` persists the `(PR, SHA, comment ID)` attempt before a failing resume and polls again | Passed; one invocation, then explicit recovery/no-op |
 | Stale review | `test_stale_review_is_a_visible_noop` supplies a valid marker for a different full SHA | Passed; visible `stale-review-rejected`, zero resumes |
 | Malformed and wrong-PR markers | `test_marker_parser_accepts_only_exact_pr_and_full_sha` covers truncated SHA, PR mismatch, and exact-match parsing | Passed; only the exact PR/full-SHA marker is eligible |

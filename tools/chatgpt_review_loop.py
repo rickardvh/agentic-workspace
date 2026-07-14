@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -109,6 +110,7 @@ def _state_path(root: Path, pr: int) -> Path:
 def _save_state(root: Path, state: dict[str, Any]) -> None:
     path = _state_path(root, int(state["pr_number"]))
     path.parent.mkdir(parents=True, exist_ok=True)
+    state["updated_at"] = datetime.now(timezone.utc).isoformat()
     temporary = path.with_suffix(".tmp")
     temporary.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     temporary.replace(path)
@@ -256,6 +258,8 @@ def handoff(
             "recovery": "",
         }
     )
+    if not same_handoff:
+        state["handoff_at"] = datetime.now(timezone.utc).isoformat()
     _save_state(root, state)
     return {
         "kind": STATE_KIND,
@@ -395,7 +399,15 @@ def poll_one(root: Path, state: dict[str, Any], *, runner: CommandRunner, codex_
 
     env = os.environ.copy()
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
-    command = [*shlex.split(codex_command), "resume", "--cd", root.as_posix(), str(state["session_id"]), _review_prompt(review)]
+    command = [
+        *shlex.split(codex_command),
+        "-C",
+        root.as_posix(),
+        "exec",
+        "resume",
+        str(state["session_id"]),
+        _review_prompt(review),
+    ]
     completed = runner.run(command, cwd=root, env=env)
     latest = _load_state(root, pr)
     if completed.returncode:
