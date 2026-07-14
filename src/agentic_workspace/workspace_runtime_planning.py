@@ -848,7 +848,7 @@ def _retrofit_active_owner_commands(*, config: WorkspaceConfig, planning_revisio
     }
 
 
-def _task_switch_reconciliation_payload(
+def _planning_route_evidence_payload(
     *,
     active_planning_present: bool,
     active_plan_reliance: dict[str, Any],
@@ -857,6 +857,12 @@ def _task_switch_reconciliation_payload(
     config: WorkspaceConfig,
     planning_revision: dict[str, Any],
 ) -> dict[str, Any]:
+    """Collect bounded, structured Planning evidence for route resolution.
+
+    This producer does not expose a consumer action contract.  The route
+    resolver below is the only surface that converts these facts into route
+    dimensions, claims, authority, and a next action.
+    """
     if not active_planning_present:
         return {"kind": "agentic-workspace/task-switch-reconciliation/v1", "status": "not-applicable"}
     summary_command = _command_with_cli_invoke(command="agentic-workspace summary --target . --format json", cli_invoke=config.cli_invoke)
@@ -1197,22 +1203,21 @@ def _acknowledged_current_task_switch_payload(
 
 
 def _planning_route_decision_payload(
-    task_switch: dict[str, Any], *, planning_revision: dict[str, Any] | None = None, reconciliation_proposal: dict[str, Any] | None = None
+    route_evidence: dict[str, Any],
+    *,
+    planning_revision: dict[str, Any] | None = None,
+    reconciliation_proposal: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Project the legacy switch result into independent routing dimensions.
-
-    Consumers can adopt this stable object without reclassifying task-switch prose;
-    the legacy packet remains present while the migration is underway.
-    """
-    status = str(task_switch.get("status") or "not-applicable")
-    next_packet = _as_dict(task_switch.get("next_action_packet"))
+    """Derive the one consumer-neutral route contract from structured evidence."""
+    status = str(route_evidence.get("status") or "not-applicable")
+    next_packet = _as_dict(route_evidence.get("next_action_packet"))
     continuing = status == "issue-matched-continuation"
     completed = status == "completed-active-plan-route"
     bounded = status in {"bounded-reflection-reporting", "current-task-route-acknowledged"}
     ambiguous = status == "active"
     scope_inspection = status == "scope-inspection-required"
-    active_plan_protection = _as_dict(task_switch.get("active_plan_protection"))
-    blocked_claims = active_plan_protection.get("blocked_claims") or task_switch.get("blocked_claims") or []
+    active_plan_protection = _as_dict(route_evidence.get("active_plan_protection"))
+    blocked_claims = active_plan_protection.get("blocked_claims") or route_evidence.get("blocked_claims") or []
     transition = (
         "closeout-or-archive"
         if completed
@@ -1222,7 +1227,7 @@ def _planning_route_decision_payload(
         if scope_inspection
         else "none"
     )
-    selected_owner_ref = str(task_switch.get("active_execplan") or "")
+    selected_owner_ref = str(route_evidence.get("active_execplan") or "")
     decision = {
         "kind": "agentic-planning/route-decision/v1",
         "task_relation": "continues-selected-owner"
@@ -1247,14 +1252,16 @@ def _planning_route_decision_payload(
         },
         "identity_effects": [],
         "input_provenance": {
-            "task_relation": "task-switch-reconciliation.structured-reference-and-boundary-evidence",
-            "owner_posture": "active-owner-lifecycle-and-task-switch-evidence",
+            "task_relation": "planning-route-evidence.structured-reference-and-boundary-evidence",
+            "owner_posture": "active-owner-lifecycle-and-route-evidence",
             "required_transition": "route-decision-policy; detailed reconciliation remains owned by planning reconcile",
         },
-        "reason_codes": [code for code in (status, str(task_switch.get("intent_conflict_state") or "")) if code],
+        "reason_codes": [code for code in (status, str(route_evidence.get("intent_conflict_state") or "")) if code],
         "allowed_claims": ["bounded-task-progress"] if bounded else ["active-plan-progress"] if continuing else [],
         "blocked_claims": blocked_claims,
-        "implementation_allowed": False if ambiguous or completed or scope_inspection else bool(task_switch.get("implementation_allowed")),
+        "implementation_allowed": False
+        if ambiguous or completed or scope_inspection
+        else bool(route_evidence.get("implementation_allowed")),
         "mutation_authority": "none"
         if ambiguous or completed or scope_inspection
         else "current-task"
@@ -1287,6 +1294,11 @@ def _planning_route_decision_payload(
         decision["reason_codes"] = [*decision["reason_codes"], "current-reconciliation-proposal"]
         decision["reconciliation_proposal"] = proposal
     return decision
+
+
+def _task_switch_reconciliation_payload(**kwargs: Any) -> dict[str, Any]:
+    """Compatibility diagnostic alias; ordinary consumers must use route_decision."""
+    return _planning_route_evidence_payload(**kwargs)
 
 
 def _current_reconciliation_proposal(*, target_root: Path, planning_revision: dict[str, Any]) -> dict[str, Any]:
@@ -1664,7 +1676,7 @@ def _planning_safety_gate_payload(
         planning_revision=planning_revision,
         cli_invoke=config.cli_invoke,
     )
-    task_switch_reconciliation = _task_switch_reconciliation_payload(
+    route_evidence = _planning_route_evidence_payload(
         active_planning_present=active_planning_present,
         active_plan_reliance=active_plan_reliance,
         active_summary=active_summary,
@@ -1672,13 +1684,13 @@ def _planning_safety_gate_payload(
         config=config,
         planning_revision=planning_revision,
     )
-    task_switch_reconciliation = _acknowledged_current_task_switch_payload(
-        task_switch_reconciliation,
+    route_evidence = _acknowledged_current_task_switch_payload(
+        route_evidence,
         changed_paths=changed_paths,
         path_classification=path_classification,
     )
     route_decision = _planning_route_decision_payload(
-        task_switch_reconciliation,
+        route_evidence,
         planning_revision=planning_revision,
         reconciliation_proposal=_current_reconciliation_proposal(target_root=target_root, planning_revision=planning_revision),
     )
@@ -1711,43 +1723,36 @@ def _planning_safety_gate_payload(
         reason = "The active execplan is a slice with a recorded parent lane, but no first-class lane owner artifact exists."
         required_next_action = "create-or-promote-lane-owner"
         workflow_sufficient = False
-    elif task_switch_reconciliation.get("status") == "completed-active-plan-route":
+    elif route_evidence.get("status") == "completed-active-plan-route":
         status = "attention"
         decision = "archive-or-retire-completed-plan"
-        reason = str(
-            task_switch_reconciliation.get("summary") or "The active execplan appears complete and should be routed to archive or retire."
-        )
+        reason = str(route_evidence.get("summary") or "The active execplan appears complete and should be routed to archive or retire.")
         required_next_action = "archive-or-retire-completed-plan"
         workflow_sufficient = True
-    elif task_switch_reconciliation.get("status") == "bounded-reflection-reporting":
+    elif route_evidence.get("status") == "bounded-reflection-reporting":
         status = "satisfied"
         decision = "bounded-reflection-reporting"
         reason = str(
-            task_switch_reconciliation.get("summary")
-            or "Bounded reflection/reporting may proceed while preserving active-plan claim boundaries."
+            route_evidence.get("summary") or "Bounded reflection/reporting may proceed while preserving active-plan claim boundaries."
         )
         required_next_action = "produce-bounded-reflection-report"
         workflow_sufficient = True
-    elif task_switch_reconciliation.get("status") == "current-task-route-acknowledged":
+    elif route_evidence.get("status") == "current-task-route-acknowledged":
         status = "satisfied"
         decision = "current-task-route-acknowledged"
-        reason = str(
-            task_switch_reconciliation.get("summary") or "Current task route is acknowledged; active-plan state remains protected."
-        )
+        reason = str(route_evidence.get("summary") or "Current task route is acknowledged; active-plan state remains protected.")
         required_next_action = "prove-current-task"
         workflow_sufficient = True
-    elif task_switch_reconciliation.get("status") == "scope-inspection-required":
+    elif route_evidence.get("status") == "scope-inspection-required":
         status = "attention"
         decision = "current-task-scope-inspection-required"
-        reason = str(
-            task_switch_reconciliation.get("summary") or "Current task differs from the active plan; inspect scope before mutation."
-        )
+        reason = str(route_evidence.get("summary") or "Current task differs from the active plan; inspect scope before mutation.")
         required_next_action = "inspect-current-task-scope"
         workflow_sufficient = True
-    elif task_switch_reconciliation.get("status") == "active":
+    elif route_evidence.get("status") == "active":
         status = "attention"
         decision = "active-plan-task-switch"
-        reason = str(task_switch_reconciliation.get("summary") or "Current task differs from the active plan; choose a safe task route.")
+        reason = str(route_evidence.get("summary") or "Current task differs from the active plan; choose a safe task route.")
         required_next_action = "choose-task-switch-route"
         workflow_sufficient = True
     elif active_planning_present:
@@ -1956,7 +1961,7 @@ def _planning_safety_gate_payload(
         "active_planning_present": active_planning_present,
         "planning_revision": planning_revision,
         "active_plan_reliance": active_plan_reliance,
-        "task_switch_reconciliation": task_switch_reconciliation,
+        "task_switch_reconciliation": route_evidence,
         "route_decision": route_decision,
         "active_state_summary": active_summary,
         "issue_refs": issue_refs,
