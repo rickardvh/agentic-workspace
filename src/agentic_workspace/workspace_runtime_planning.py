@@ -1221,6 +1221,9 @@ def _planning_route_decision_payload(task_switch: dict[str, Any], *, planning_re
     completed = status == "completed-active-plan-route"
     bounded = status in {"bounded-reflection-reporting", "current-task-route-acknowledged"}
     ambiguous = status == "active"
+    active_plan_protection = _as_dict(task_switch.get("active_plan_protection"))
+    blocked_claims = active_plan_protection.get("blocked_claims") or task_switch.get("blocked_claims") or []
+    transition = "closeout-or-archive" if completed else "ask-for-route-decision" if ambiguous else "none"
     selected_owner_ref = str(task_switch.get("active_execplan") or "")
     return {
         "kind": "agentic-planning/route-decision/v1",
@@ -1232,7 +1235,7 @@ def _planning_route_decision_payload(task_switch: dict[str, Any], *, planning_re
         if ambiguous
         else "not-applicable",
         "owner_posture": "completed-residue" if completed else "current" if continuing or bounded or ambiguous else "not-applicable",
-        "required_transition": "closeout-or-archive" if completed else "ask-for-route-decision" if ambiguous else "none",
+        "required_transition": transition,
         "selected_owner": selected_owner_ref,
         "selected_owner_identity": {
             "ref": selected_owner_ref,
@@ -1243,12 +1246,19 @@ def _planning_route_decision_payload(task_switch: dict[str, Any], *, planning_re
             "owner_posture": "active-owner-lifecycle-and-task-switch-evidence",
             "required_transition": "route-decision-policy; detailed reconciliation remains owned by planning reconcile",
         },
-        "reason_codes": [status, str(task_switch.get("intent_conflict_state") or "")],
+        "reason_codes": [code for code in (status, str(task_switch.get("intent_conflict_state") or "")) if code],
         "allowed_claims": ["bounded-task-progress"] if bounded else ["active-plan-progress"] if continuing else [],
-        "blocked_claims": _as_dict(task_switch.get("active_plan_protection")).get("blocked_claims", []),
-        "implementation_allowed": bool(task_switch.get("implementation_allowed")),
+        "blocked_claims": blocked_claims,
+        "implementation_allowed": False if ambiguous or completed else bool(task_switch.get("implementation_allowed")),
+        "mutation_authority": "none"
+        if ambiguous or completed
+        else "current-task"
+        if bounded
+        else "selected-owner"
+        if continuing
+        else "none",
         "proof_expectation": str(next_packet.get("next_proof") or ""),
-        "state_update_policy": "read-only" if not completed else "explicit-transition-required",
+        "state_update_policy": "read-only" if transition == "none" else "explicit-transition-required",
         "next_safe_action": next_packet,
     }
 

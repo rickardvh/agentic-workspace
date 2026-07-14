@@ -4200,6 +4200,23 @@ def test_route_decision_keeps_relation_posture_and_transition_separate() -> None
     assert decision["selected_owner_identity"]["ref"].endswith("issue-2046-lane.plan.json")
 
 
+def test_route_decision_fails_closed_for_genuine_ambiguity() -> None:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    decision = _planning_route_decision_payload(
+        {
+            "status": "active",
+            "implementation_allowed": True,
+            "blocked_claims": ["claim-active-plan-progress", "silently-abandon-active-plan"],
+            "next_action_packet": {"action": "choose-task-switch-route", "next_proof": "route decision evidence"},
+        }
+    )
+    assert decision["required_transition"] == "ask-for-route-decision"
+    assert decision["implementation_allowed"] is False
+    assert decision["mutation_authority"] == "none"
+    assert decision["blocked_claims"] == ["claim-active-plan-progress", "silently-abandon-active-plan"]
+
+
 def test_selector_first_gate_projects_authoritative_route_decision() -> None:
     from agentic_workspace.workspace_runtime_primitives import _selector_first_planning_safety_gate
 
