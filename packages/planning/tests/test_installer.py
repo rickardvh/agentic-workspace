@@ -620,13 +620,14 @@ candidates = []
     assert repeated["status"] == "already-applied"
 
 
-def test_reconciliation_transaction_closes_merged_owners_and_selects_survivor(tmp_path: Path) -> None:
+def test_reconciliation_transaction_closes_merged_owners_and_selects_survivor(tmp_path: Path, monkeypatch) -> None:
     """The ordinary merged-stack path is one preview plus one CAS apply."""
     install_bootstrap(target=tmp_path)
     execplans = tmp_path / ".agentic-workspace/planning/execplans"
     closed_ids = [f"merged-{index}" for index in range(6)]
     survivor_id = "continue-live"
-    for owner_id in [*closed_ids, survivor_id]:
+    ambiguous_id = "ambiguous-owner"
+    for owner_id in [*closed_ids, ambiguous_id, survivor_id]:
         record = installer_mod._build_execplan_record_from_todo_item(
             title=owner_id,
             item_id=owner_id,
@@ -686,6 +687,38 @@ queued_items = [
                 },
             }
         )
+    items.append(
+        {
+            "system": "fixture",
+            "id": "PR-ambiguous-owner",
+            "title": ambiguous_id,
+            "status": "merged",
+            "kind": "change-request",
+            "observation_id": "fixture:ambiguous-owner:merged",
+            "planning_relationship": {
+                "binding": "ambiguous",
+                "owner_id": ambiguous_id,
+                "owner_ref": f".agentic-workspace/planning/execplans/{ambiguous_id}.plan.json",
+                "work_context_id": "default",
+                "evidence_refs": ["PR-ambiguous-owner"],
+            },
+            "external_revision": "ambiguous-r1",
+            "observed_at": observed_at.isoformat(),
+            "freshness": {
+                "status": "current",
+                "observed_at": observed_at.isoformat(),
+                "expires_at": (observed_at + timedelta(hours=24)).isoformat(),
+                "max_age_seconds": 86400,
+            },
+            "availability": "available",
+            "provenance": {
+                "provider_class": "fixture",
+                "resolver_id": "fixture",
+                "source_ref": ambiguous_id,
+                "refresh_id": "fixture-refresh",
+            },
+        }
+    )
     _write_external_intent_evidence(tmp_path / ".agentic-workspace/planning/external-intent-evidence.json", items=items)
 
     loaded_external = installer_mod._load_external_intent_evidence(tmp_path)
@@ -693,6 +726,9 @@ queued_items = [
     preview = planning_reconcile(target=tmp_path, preview=True)
     proposal = preview["proposal"]
     assert [item["owner_id"] for item in proposal["owner_transitions"] if item["transition"] == "close-slice"] == closed_ids
+    assert [(item["owner_id"], item["reason"]) for item in proposal["blocked_items"]] == [
+        (ambiguous_id, "external-owner-relationship-ambiguous")
+    ]
     assert proposal["selected_owner"]["owner_id"] == survivor_id
     assert proposal["source"]["external_evidence_revision"]
     assert proposal["source"]["proof_revision"]
@@ -724,6 +760,21 @@ queued_items = [
 
     proposal = planning_reconcile(target=tmp_path, preview=True)["proposal"]
 
+    first_owner_before_rollback = (execplans / "merged-0.plan.json").read_bytes()
+    monkeypatch.setattr(
+        installer_mod, "_write_state_to_toml", lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("fixture write failure"))
+    )
+    rolled_back = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        proposal=proposal["proposal_id"],
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+    )
+    assert rolled_back["status"] == "rolled-back"
+    assert (execplans / "merged-0.plan.json").read_bytes() == first_owner_before_rollback
+    assert not list((tmp_path / ".agentic-workspace/local/planning/reconciliation-receipts").glob("*.json"))
+    monkeypatch.undo()
+
     applied = planning_reconcile(
         target=tmp_path,
         apply=True,
@@ -734,6 +785,7 @@ queued_items = [
     assert applied["receipt"]["closed_owner_ids"] == closed_ids
     assert applied["receipt"]["selected_owner"]["owner_id"] == survivor_id
     assert all(json.loads((execplans / f"{owner_id}.plan.json").read_text())["lifecycle"] == "closed" for owner_id in closed_ids)
+    assert json.loads((execplans / f"{ambiguous_id}.plan.json").read_text())["lifecycle"] == "live"
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text())
     assert state["todo"]["active_items"][0]["id"] == survivor_id
     assert state["todo"]["queued_items"][0]["id"] == "unrelated"

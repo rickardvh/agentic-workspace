@@ -2893,8 +2893,12 @@ def _planning_reconciliation_transaction(
         if isinstance(item, dict) and item.get("safe_to_sync") is True
     ]
     external = _load_external_intent_evidence(target_root)
-    admitted_observations = [
-        copy.deepcopy(item) for item in external.get("items", []) if isinstance(item, dict) and item.get("relevant") is True
+    owner_observations = [
+        copy.deepcopy(item)
+        for item in external.get("items", [])
+        if isinstance(item, dict)
+        and isinstance(item.get("planning_relationship"), dict)
+        and (str(item["planning_relationship"].get("owner_id") or "") or str(item["planning_relationship"].get("owner_ref") or ""))
     ]
     owner_transitions: list[dict[str, Any]] = []
     for owner_path in _live_execplan_paths(target_root / PLANNING_MANAGED_ROOT / "execplans"):
@@ -2907,7 +2911,7 @@ def _planning_reconciliation_transaction(
         owner_ref = _planning_surface_relative(target_root, owner_path)
         observations = [
             item
-            for item in admitted_observations
+            for item in owner_observations
             if isinstance(item.get("planning_relationship"), dict)
             and (
                 str(item["planning_relationship"].get("owner_id") or "") == owner_id
@@ -2985,9 +2989,9 @@ def _planning_reconciliation_transaction(
                     "evidence": item["observation_ids"],
                 }
             )
-    external_revision = hashlib.sha256(
-        json.dumps(admitted_observations, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()[:20]
+    external_revision = hashlib.sha256(json.dumps(owner_observations, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[
+        :20
+    ]
     proof_revision = hashlib.sha256(
         json.dumps(
             [{"owner_id": item["owner_id"], "proof_posture": item["proof_posture"]} for item in owner_transitions],
@@ -3104,9 +3108,9 @@ def _planning_reconciliation_transaction(
             "changed_fields": sorted({field for operation in operations for field in operation["owned_fields"] if field}),
             "closed_owner_ids": closed_owner_ids,
             "selected_owner": selected_owner,
-            "admitted_observations": [
+            "owner_observations": [
                 {key: item.get(key) for key in ("observation_id", "external_revision", "admission", "planning_relationship")}
-                for item in admitted_observations
+                for item in owner_observations
             ],
             "claims_authorized": [f"slice:{owner_id}" for owner_id in closed_owner_ids],
             "proof": {"revision": proof_revision, "reused_for": closed_owner_ids},
@@ -3130,7 +3134,7 @@ def _planning_reconciliation_transaction(
         }
     try:
         _apply_planning_writes_atomically(touched, write_transaction)
-    except OSError as exc:
+    except Exception as exc:
         return {
             "kind": "agentic-planning/reconciliation-transaction/v1",
             "status": "rolled-back",
