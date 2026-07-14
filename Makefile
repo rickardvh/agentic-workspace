@@ -19,7 +19,7 @@ COMPACT_RUN = uv run python scripts/check/run_compact_command.py
 	verify verify-workspace verify-memory verify-planning verify-verification \
 	memory-freshness memory-freshness-strict recurring-friction-ledger planning-surfaces planning-surfaces-strict structured-file-inventory package-artifact-duplicates agent-aids source-payload-operational-install source-payload-operational-install-strict maintainer-surfaces maintainer-surfaces-strict render-agent-docs render-schema-reference render-command-packages schema-reference-docs absolute-paths \
 	generated-command-packages generated-command-packages-docker \
-	check check-memory check-planning check-verification check-all
+	check check-memory check-planning check-verification check-all start-review-poller
 
 help:
 	@echo "Available targets:"
@@ -58,6 +58,7 @@ help:
 	@echo "  check-planning       Run package-local checks for packages/planning."
 	@echo "  check-verification   Run package-local checks for packages/verification."
 	@echo "  check-all            Run checks for imported packages."
+	@echo "  start-review-poller  Start one detached global PR-review poller for this checkout."
 
 sync-all:
 	@$(COMPACT_RUN) --label "sync-all" -- uv sync --all-packages --all-groups
@@ -66,6 +67,9 @@ install-hooks:
 	uv run python scripts/install_git_hooks.py
 
 setup: sync-all install-hooks
+
+start-review-poller:
+	@$(COMPACT_RUN) --label "review poller" -- uv run python tools/start_chatgpt_review_poller.py --target .
 
 sync-memory:
 	@$(COMPACT_RUN) --label "sync-memory" -- uv sync --all-packages --group dev
