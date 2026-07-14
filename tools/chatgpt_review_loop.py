@@ -16,6 +16,7 @@ from typing import Any, Sequence
 
 OPT_IN_MARKER = "<!-- aw-chatgpt-review:enabled -->"
 REVIEW_POLICY = "pr-review-recheck-v1"
+HEAD_SYNC_ATTEMPTS = 3
 STATE_KIND = "agentic-workspace/chatgpt-review-loop-state/v1"
 STATE_RELATIVE = Path(".agentic-workspace/local/chatgpt-review-loop")
 REVIEW_MARKER_RE = re.compile(
@@ -211,6 +212,11 @@ def handoff(
         raise LoopError("pr-not-open", f"PR #{number} is not open")
     if payload.get("headRefName") != branch:
         raise LoopError("branch-changed", f"current branch {branch!r} does not match PR head branch {payload.get('headRefName')!r}")
+    for _ in range(HEAD_SYNC_ATTEMPTS - 1):
+        if payload.get("headRefOid") == head:
+            break
+        time.sleep(1)
+        payload = _pr_view(root, runner, pr=number, repo=repo)
     if payload.get("headRefOid") != head:
         raise LoopError("head-not-pushed", "current HEAD does not match the PR head; push before handoff")
 

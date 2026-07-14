@@ -32,6 +32,7 @@ class FakeRunner(loop.CommandRunner):
         self.branch = "codex/issue-2290"
         self.head = HEAD_A
         self.pr_head = HEAD_A
+        self.pr_heads: list[str] = []
         self.pr_branch = self.branch
         self.pr_state = "OPEN"
         self.comments = comments or []
@@ -51,11 +52,12 @@ class FakeRunner(loop.CommandRunner):
         if command[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(command, 0, json.dumps({"nameWithOwner": "owner/repo"}), "")
         if command[:3] == ["gh", "pr", "view"]:
+            pr_head = self.pr_heads.pop(0) if self.pr_heads else self.pr_head
             payload = {
                 "number": 12,
                 "state": self.pr_state,
                 "headRefName": self.pr_branch,
-                "headRefOid": self.pr_head,
+                "headRefOid": pr_head,
                 "body": "",
                 "comments": self.comments,
                 "url": "https://example.test/pr/12",
@@ -158,6 +160,26 @@ def test_handoff_is_idempotent_adds_opt_in_and_rejects_session_guessing(tmp_path
             runner=runner,
         )
     assert error.value.code == "session-ambiguous"
+
+
+def test_handoff_bounded_retry_absorbs_github_head_propagation(tmp_path: Path, monkeypatch) -> None:
+    runner = FakeRunner(tmp_path)
+    runner.pr_heads = [HEAD_B, HEAD_A]
+    monkeypatch.setattr(loop.time, "sleep", lambda _seconds: None)
+
+    result = loop.handoff(
+        cwd=tmp_path,
+        session_id=SESSION,
+        pr=12,
+        max_cycles=3,
+        max_repeated_blockers=2,
+        replace_session=False,
+        existing_only=False,
+        runner=runner,
+    )
+
+    assert result["status"] == "handoff-recorded"
+    assert sum(command[:3] == ["gh", "pr", "view"] for command in runner.commands) == 2
 
 
 def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_path: Path) -> None:
