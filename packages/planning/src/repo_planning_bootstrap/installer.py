@@ -2989,6 +2989,14 @@ def _planning_reconciliation_transaction(
                     "evidence": item["observation_ids"],
                 }
             )
+    semantic_delta = {
+        "closed_owner_ids": [item["owner_id"] for item in owner_transitions if item["transition"] == "close-slice"],
+        "retained_owner_ids": [item["owner_id"] for item in owner_transitions if item["transition"] == "remain-live"],
+        "blocked_owner_ids": [item["owner_id"] for item in owner_transitions if item["transition"] == "blocked"],
+        "selected_owner_id": str(selected_owner.get("owner_id") or "") if selected_owner else "",
+        "owner_fields": ["lifecycle", "phase", "revision"],
+        "selection_fields": ["todo.active_items", "todo.queued_items"] if selected_owner else [],
+    }
     external_revision = hashlib.sha256(json.dumps(owner_observations, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[
         :20
     ]
@@ -3007,6 +3015,7 @@ def _planning_reconciliation_transaction(
         "external_evidence_refreshed_at": str(external.get("refreshed_at") or ""),
         "operations": operations,
         "owner_transitions": owner_transitions,
+        "semantic_delta": semantic_delta,
     }
     computed_id = hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
     proposal_payload = {
@@ -3016,6 +3025,7 @@ def _planning_reconciliation_transaction(
         "operations": operations,
         "owner_transitions": owner_transitions,
         "blocked_items": [item for item in owner_transitions if item["transition"] == "blocked"],
+        "semantic_delta": semantic_delta,
         "selected_owner": selected_owner,
         "preserved_invariants": [
             "unrelated live owners",
@@ -3114,6 +3124,7 @@ def _planning_reconciliation_transaction(
             ],
             "claims_authorized": [f"slice:{owner_id}" for owner_id in closed_owner_ids],
             "proof": {"revision": proof_revision, "reused_for": closed_owner_ids},
+            "semantic_delta": semantic_delta,
             "preserved_invariants": proposal_payload["preserved_invariants"],
             "apply_result": apply_box,
         }
@@ -3131,6 +3142,7 @@ def _planning_reconciliation_transaction(
             "status": "dry-run",
             "proposal": proposal_payload,
             "apply_result": preview,
+            "semantic_delta": semantic_delta,
         }
     try:
         _apply_planning_writes_atomically(touched, write_transaction)

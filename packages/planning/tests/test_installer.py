@@ -732,6 +732,19 @@ queued_items = [
     assert proposal["selected_owner"]["owner_id"] == survivor_id
     assert proposal["source"]["external_evidence_revision"]
     assert proposal["source"]["proof_revision"]
+    assert proposal["semantic_delta"]["closed_owner_ids"] == closed_ids
+    assert proposal["semantic_delta"]["blocked_owner_ids"] == [ambiguous_id]
+    assert proposal["semantic_delta"]["selected_owner_id"] == survivor_id
+    dry_run = planning_reconcile(
+        target=tmp_path,
+        apply=True,
+        dry_run=True,
+        proposal=proposal["proposal_id"],
+        expected_planning_revision=planning_revision(tmp_path)["revision_id"],
+    )
+    assert dry_run["status"] == "dry-run"
+    assert dry_run["semantic_delta"] == proposal["semantic_delta"]
+    assert json.loads((execplans / "merged-0.plan.json").read_text())["lifecycle"] == "live"
 
     stale_proof_record = json.loads((execplans / "merged-0.plan.json").read_text())
     stale_proof_record["relationships"]["proof_posture"]["state"] = "pending"
@@ -784,6 +797,7 @@ queued_items = [
     assert applied["status"] == "applied"
     assert applied["receipt"]["closed_owner_ids"] == closed_ids
     assert applied["receipt"]["selected_owner"]["owner_id"] == survivor_id
+    assert applied["receipt"]["semantic_delta"] == proposal["semantic_delta"]
     assert all(json.loads((execplans / f"{owner_id}.plan.json").read_text())["lifecycle"] == "closed" for owner_id in closed_ids)
     assert json.loads((execplans / f"{ambiguous_id}.plan.json").read_text())["lifecycle"] == "live"
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text())
