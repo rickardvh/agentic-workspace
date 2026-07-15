@@ -231,36 +231,43 @@ def test_fresh_session_json_requires_one_durable_identity() -> None:
         loop._session_id_from_jsonl('{"session_id":"one"}\n{"thread_id":"two"}\n')
 
 
-def test_resume_creation_reclaims_managed_orphan_when_git_remove_fails(tmp_path: Path) -> None:
+def test_resume_reuses_owned_worktree_and_updates_it_to_recorded_handoff(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
-    existing = state(tmp_path, cycles=1)
-    worktree = loop._resume_worktree_path(tmp_path, existing)
+    existing = state(tmp_path, handoff_head=HEAD_A, cycles=1)
+    worktree = tmp_path / "worktrees" / "pr-12"
     worktree.mkdir(parents=True)
-    (worktree / "leftover.txt").write_text("stale", encoding="utf-8")
+    runner.head = HEAD_B
     original_run = runner.run
 
     def run(command, *, cwd, env=None):
         command = list(command)
-        runner.commands.append(command)
-        if command[:3] == ["git", "worktree", "remove"]:
-            return subprocess.CompletedProcess(command, 1, "", "stale registration")
-        if command == ["git", "worktree", "prune"]:
+        if command[:3] == ["git", "checkout", "--detach"]:
+            runner.commands.append(command)
+            assert cwd == worktree
+            assert command[-1] == HEAD_A
             return subprocess.CompletedProcess(command, 0, "", "")
-        if command[:3] == ["git", "worktree", "add"]:
-            assert not worktree.exists()
-            worktree.mkdir(parents=True)
-            return subprocess.CompletedProcess(command, 0, "", "")
-        runner.commands.pop()
         return original_run(command, cwd=cwd, env=env)
 
     runner.run = run
 
-    assert loop._create_resume_worktree(tmp_path, existing, runner) == worktree
-    assert [command[:3] for command in runner.commands[-3:]] == [
-        ["git", "worktree", "remove"],
-        ["git", "worktree", "prune"],
-        ["git", "worktree", "add"],
-    ]
+    loop._prepare_owned_worktree(worktree, existing, runner)
+
+    assert runner.commands[-1] == ["git", "checkout", "--detach", HEAD_A]
+    assert not any(command[:3] == ["git", "worktree", "add"] for command in runner.commands)
+
+
+def test_explicit_worktree_replacement_retires_owned_checkout_and_state(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    state(tmp_path, status="recovery-required", last_event="owned-worktree-missing")
+    worktree = tmp_path / "worktrees" / "pr-12"
+    worktree.mkdir(parents=True)
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
+
+    assert loop.main(["recover", "--target", tmp_path.as_posix(), "--pr", "12", "--action", "replace-worktree"], runner=runner) == 0
+
+    assert not worktree.exists()
+    assert not loop._state_path(tmp_path, 12).exists()
+    assert loop._load_dispatch(tmp_path)["prs"] == {}
 
 
 def test_global_dispatch_does_not_start_when_no_exact_blocked_review(tmp_path: Path) -> None:
@@ -661,7 +668,7 @@ def test_detached_fresh_stop_hook_binds_precreated_owner_state(tmp_path: Path, m
     assert loop._load_state(tmp_path, 12)["session_id"] == SESSION
 
 
-def test_global_dispatch_detached_stop_hook_push_resume_and_cleanup(tmp_path: Path, monkeypatch) -> None:
+def test_global_dispatch_retains_one_owned_worktree_through_resume_then_retires_it_on_close(tmp_path: Path, monkeypatch) -> None:
     first_review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[first_review])
     worktree_root = tmp_path / "worktrees"
@@ -728,6 +735,8 @@ def test_global_dispatch_detached_stop_hook_push_resume_and_cleanup(tmp_path: Pa
     )
     assert first["session_id"] == "fresh-session"
     assert loop._load_state(tmp_path, 12)["handoff_head"] == HEAD_B
+    assert worktree_root / "pr-12" == Path(loop._load_dispatch(tmp_path)["prs"]["12"]["worktree"])
+    assert (worktree_root / "pr-12").is_dir()
 
     runner.comments = [{"id": "resume", "body": f"Fix the follow-up\n{marker(head=HEAD_B)}", "url": "u"}]
     resumed = loop.dispatch_all(
@@ -735,15 +744,17 @@ def test_global_dispatch_detached_stop_hook_push_resume_and_cleanup(tmp_path: Pa
     )
     assert resumed["mode"] == "resume"
     assert seen[0] == ("fresh", worktree_root / "pr-12")
-    assert seen[1][0] == "resume"
-    assert seen[1][1] != tmp_path
-    assert "resume-worktrees" in seen[1][1].as_posix()
+    assert seen[1] == ("resume", worktree_root / "pr-12")
     assert loop._load_state(tmp_path, 12)["session_id"] == "fresh-session"
+    assert (worktree_root / "pr-12").is_dir()
+    assert len([command for command in runner.commands if command[:3] == ["git", "worktree", "add"]]) == 1
+    assert not any(command[:3] == ["git", "worktree", "remove"] for command in runner.commands)
 
     runner.pr_state = "CLOSED"
     loop.dispatch_all(tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2)
     assert not loop._state_path(tmp_path, 12).exists()
     assert loop._load_dispatch(tmp_path)["prs"] == {}
+    assert not (worktree_root / "pr-12").exists()
 
 
 @pytest.mark.parametrize(("exit_code", "event"), [(7, "fresh-session-failed"), (0, "fresh-session-unbound")])

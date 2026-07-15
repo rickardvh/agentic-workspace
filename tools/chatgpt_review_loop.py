@@ -591,45 +591,24 @@ def _should_keep_watching(results: list[dict[str, Any]]) -> bool:
     )
 
 
-def _resume_worktree_path(root: Path, state: dict[str, Any]) -> Path:
-    return root / STATE_RELATIVE / "resume-worktrees" / f"pr-{state['pr_number']}-cycle-{state['cycles']}-{str(state['handoff_head'])[:8]}"
+def _prepare_owned_worktree(worktree: Path, state: dict[str, Any], runner: CommandRunner) -> None:
+    """Reuse the PR-owned checkout at the exact handoff head.
 
-
-def _create_resume_worktree(root: Path, state: dict[str, Any], runner: CommandRunner) -> Path:
-    worktree = _resume_worktree_path(root, state)
-    worktree.parent.mkdir(parents=True, exist_ok=True)
-    if worktree.exists():
-        cleanup = _remove_resume_worktree(root, worktree, runner)
-        if cleanup:
-            raise LoopError("orphan-worktree-cleanup-failed", cleanup)
-    created = runner.run(["git", "worktree", "add", "--detach", worktree.as_posix(), str(state["handoff_head"])], cwd=root)
-    if created.returncode:
-        raise LoopError("worktree-create-failed", created.stderr.strip() or "could not create resume worktree")
-    return worktree
-
-
-def _remove_worktree(root: Path, worktree: Path, runner: CommandRunner) -> str:
-    removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
-    return removed.stderr.strip() or removed.stdout.strip() if removed.returncode else ""
-
-
-def _remove_resume_worktree(root: Path, worktree: Path, runner: CommandRunner) -> str:
-    """Reclaim one dispatcher-owned resume worktree, including stale Windows residue."""
-    managed_root = (root / STATE_RELATIVE / "resume-worktrees").resolve()
-    candidate = worktree.resolve()
-    if not candidate.is_relative_to(managed_root):
-        return f"refusing to remove unmanaged resume worktree {candidate}"
-    removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
-    if worktree.exists():
-        try:
-            shutil.rmtree(worktree)
-        except OSError as exc:
-            return str(exc)
-    if removed.returncode:
-        pruned = runner.run(["git", "worktree", "prune"], cwd=root)
-        if pruned.returncode:
-            return pruned.stderr.strip() or pruned.stdout.strip() or "could not prune stale resume worktree metadata"
-    return ""
+    The dispatcher owns this worktree for the full lifetime of the open PR.  In
+    particular, a resume must not create a throwaway checkout or inspect the
+    owner's branch checkout to find its commit.
+    """
+    if not worktree.is_dir():
+        raise LoopError("owned-worktree-missing", f"recorded worktree is missing: {worktree}")
+    expected_head = str(state["handoff_head"])
+    if _git_value(worktree, runner, "rev-parse", "HEAD") == expected_head:
+        return
+    updated = runner.run(["git", "checkout", "--detach", expected_head], cwd=worktree)
+    if updated.returncode:
+        raise LoopError(
+            "owned-worktree-update-failed",
+            updated.stderr.strip() or f"could not update owned worktree to recorded handoff {expected_head}",
+        )
 
 
 def poll_one(
@@ -641,6 +620,7 @@ def poll_one(
     bypass_hook_trust: bool = False,
     state_root: Path | None = None,
     isolated_worktree: bool = False,
+    owned_worktree: Path | None = None,
 ) -> dict[str, Any]:
     owner_root = state_root or root
     pr = int(state["pr_number"])
@@ -648,7 +628,7 @@ def poll_one(
         return {"pr_number": pr, "status": "no-op", "reason": f"state-is-{state.get('status', 'unknown')}"}
     state["hook_trust_mode"] = "automation-bypass" if bypass_hook_trust else "persisted-trust-required"
     _save_state(owner_root, state)
-    current_branch = _git_value(root, runner, "branch", "--show-current")
+    current_branch = _git_value(root, runner, "branch", "--show-current") if not isolated_worktree else ""
     if not isolated_worktree and current_branch != state.get("branch"):
         return _recover(state, owner_root, event="branch-changed", recovery="return to the recorded branch or stop and clean up this loop")
     payload = _pr_view(root, runner, pr=pr, repo=str(state["repository"]))
@@ -719,10 +699,13 @@ def poll_one(
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
     worktree = root
     if isolated_worktree:
+        if owned_worktree is None:
+            return _recover(state, owner_root, event="owned-worktree-unavailable", recovery="restore or explicitly replace the recorded PR worktree")
         try:
-            worktree = _create_resume_worktree(owner_root, state, runner)
+            worktree = owned_worktree
+            _prepare_owned_worktree(worktree, state, runner)
         except LoopError as exc:
-            return _recover(state, owner_root, event=exc.code, recovery="inspect Git worktree state before retrying")
+            return _recover(state, owner_root, event=exc.code, recovery="inspect or explicitly replace the recorded PR worktree before retrying")
         env[OWNER_ROOT_ENV] = owner_root.as_posix()
         env[OWNER_BRANCH_ENV] = str(state["branch"])
     command = [
@@ -735,13 +718,8 @@ def poll_one(
         str(state["session_id"]),
         "-",
     ]
-    try:
-        completed = runner.run_interactive(command, cwd=worktree, env=env, input_text=_review_prompt(review))
-    finally:
-        cleanup = _remove_resume_worktree(owner_root, worktree, runner) if isolated_worktree else ""
+    completed = runner.run_interactive(command, cwd=worktree, env=env, input_text=_review_prompt(review))
     latest = _load_state(owner_root, pr)
-    if cleanup:
-        return _recover(latest, owner_root, event="worktree-cleanup-failed", recovery=cleanup[-2000:])
     if completed.returncode:
         diagnostic = (completed.stderr or completed.stdout).strip()[-2000:]
         latest.update(
@@ -935,6 +913,7 @@ def _dispatch_all_unlocked(
                 codex_command=codex_command,
                 bypass_hook_trust=bypass_hook_trust,
                 isolated_worktree=True,
+                owned_worktree=worktree,
             )
             return {"status": "dispatched", "pr_number": pr, "mode": "resume", "result": result}
         # Old failed fresh sessions had no durable state/session binding.  Their
@@ -997,9 +976,6 @@ def _dispatch_all_unlocked(
     env[OWNER_ROOT_ENV] = root.as_posix()
     env[OWNER_BRANCH_ENV] = branch
     completed = runner.run_interactive(command, cwd=worktree, env=env, input_text=prompt)
-    cleanup = _remove_worktree(root, worktree, runner)
-    if cleanup:
-        return {"status": "recovery-required", "pr_number": pr, "event": "worktree-cleanup-failed", "diagnostic": cleanup[-2000:]}
     if completed.returncode:
         bound = _load_state(root, pr)
         bound.update(
@@ -1227,7 +1203,12 @@ def _parser() -> argparse.ArgumentParser:
     recover_parser = sub.add_parser("recover", help="Explicitly re-arm polling after a human resolves bounded recovery state.")
     recover_parser.add_argument("--target", type=Path, default=Path.cwd())
     recover_parser.add_argument("--pr", type=int, required=True)
-    recover_parser.add_argument("--action", choices=["continue-waiting"], required=True)
+    recover_parser.add_argument(
+        "--action",
+        choices=["continue-waiting", "replace-worktree"],
+        required=True,
+        help="Rearm the session, or retire its owned checkout so the next dispatch starts a replacement session.",
+    )
     reset_parser = sub.add_parser("reset-cycles", help="Reset attempt and repetition budgets for every open PR.")
     reset_parser.add_argument("--target", type=Path, default=Path.cwd())
     return parser
@@ -1304,6 +1285,24 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
             state = _load_state(root, args.pr)
             if state.get("status") != "recovery-required":
                 raise LoopError("recovery-not-required", f"PR #{args.pr} is not in recovery-required state")
+            if args.action == "replace-worktree":
+                registry = _load_dispatch(root)
+                entry = registry["prs"].get(str(args.pr))
+                worktree = Path(str(entry.get("worktree", ""))).resolve() if isinstance(entry, dict) else None
+                if worktree is not None and worktree.exists():
+                    if worktree.name != f"pr-{args.pr}":
+                        raise LoopError("unowned-worktree", f"refusing to replace unexpected worktree {worktree}")
+                    removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+                    if removed.returncode:
+                        raise LoopError(
+                            "worktree-replacement-failed",
+                            removed.stderr.strip() or f"could not remove worktree for PR #{args.pr}",
+                        )
+                registry["prs"].pop(str(args.pr), None)
+                _save_dispatch(root, registry)
+                _state_path(root, args.pr).unlink(missing_ok=True)
+                _emit({"kind": STATE_KIND, "status": "worktree-replacement-ready", "pr_number": args.pr})
+                return 0
             state.update(status="awaiting-review", last_event="human-recovery-confirmed", recovery="")
             _save_state(root, state)
             _emit({"kind": STATE_KIND, "status": "awaiting-review", "pr_number": args.pr})
