@@ -853,6 +853,39 @@ def _dispatch_all_unlocked(
     return {"status": "dispatched", "pr_number": pr, "mode": "fresh", "session_id": session_id}
 
 
+def _process_is_running(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def _acquire_dispatch_lock(lock: Path) -> bool:
+    """Acquire the global dispatch lock, reclaiming only a dead owner's lock."""
+    try:
+        with lock.open("x", encoding="utf-8") as handle:
+            handle.write(str(os.getpid()))
+        return True
+    except FileExistsError:
+        try:
+            owner = int(lock.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            return False
+        if _process_is_running(owner):
+            return False
+        try:
+            lock.unlink()
+        except OSError:
+            return False
+        try:
+            with lock.open("x", encoding="utf-8") as handle:
+                handle.write(str(os.getpid()))
+            return True
+        except FileExistsError:
+            return False
+
+
 def dispatch_all(
     root: Path,
     *,
@@ -866,10 +899,7 @@ def dispatch_all(
     """Serialize all global scans, including the foreground Codex job they launch."""
     lock = root / STATE_RELATIVE / "dispatch.lock"
     lock.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with lock.open("x", encoding="utf-8") as handle:
-            handle.write(str(os.getpid()))
-    except FileExistsError:
+    if not _acquire_dispatch_lock(lock):
         return {"status": "no-op", "reason": "dispatcher-job-in-progress"}
     try:
         return _dispatch_all_unlocked(

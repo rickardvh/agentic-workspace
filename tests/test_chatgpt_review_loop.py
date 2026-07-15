@@ -202,10 +202,11 @@ def test_global_dispatch_does_not_start_when_no_exact_blocked_review(tmp_path: P
     assert not any(command[:3] == ["git", "worktree", "add"] for command in runner.commands)
 
 
-def test_global_dispatch_refuses_a_second_concurrent_job(tmp_path: Path) -> None:
+def test_global_dispatch_refuses_a_live_concurrent_job(tmp_path: Path, monkeypatch) -> None:
     lock = tmp_path / loop.STATE_RELATIVE / "dispatch.lock"
     lock.parent.mkdir(parents=True)
-    lock.write_text("other", encoding="utf-8")
+    lock.write_text("123", encoding="utf-8")
+    monkeypatch.setattr(loop, "_process_is_running", lambda pid: pid == 123)
 
     result = loop.dispatch_all(
         tmp_path,
@@ -217,6 +218,34 @@ def test_global_dispatch_refuses_a_second_concurrent_job(tmp_path: Path) -> None
     )
 
     assert result == {"status": "no-op", "reason": "dispatcher-job-in-progress"}
+
+
+def test_global_dispatch_reclaims_a_dead_dispatch_lock(tmp_path: Path, monkeypatch) -> None:
+    lock = tmp_path / loop.STATE_RELATIVE / "dispatch.lock"
+    lock.parent.mkdir(parents=True)
+    lock.write_text("123", encoding="utf-8")
+    monkeypatch.setattr(loop, "_process_is_running", lambda pid: False)
+    runner = FakeRunner(tmp_path)
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        if list(command)[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(command, 0, "[]", "")
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+
+    result = loop.dispatch_all(
+        tmp_path,
+        runner=runner,
+        codex_command="codex",
+        worktree_root=tmp_path / "worktrees",
+        max_cycles=3,
+        max_repeated_blockers=2,
+    )
+
+    assert result == {"status": "no-op", "reason": "no-eligible-blocked-review", "retired": []}
+    assert not lock.exists()
 
 
 def test_global_dispatch_skips_pr_with_human_only_recovery(tmp_path: Path) -> None:
