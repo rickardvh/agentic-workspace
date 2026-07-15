@@ -564,6 +564,7 @@ AUTO_RECOVERY_EVENTS = frozenset(
         "resume-failed",
         "resume-ended-without-new-handoff",
         "orphaned-resume",
+        "orphaned-fresh-session",
         "worktree-create-failed",
         "orphan-worktree-cleanup-failed",
     }
@@ -927,6 +928,27 @@ def _dispatch_all_unlocked(
                     recovery_review_key=review.key,
                 )
                 _save_state(root, existing)
+            if existing.get("status") == "fresh-session-in-progress":
+                # A fresh job has no session identity until its Stop hook binds
+                # one.  Once the dispatcher lock has been reclaimed, that job
+                # is orphaned: retire its owned worktree and permit exactly one
+                # replacement fresh job for the same review.
+                if review.key in existing.get("automatic_recovery_reviews", []):
+                    existing.update(
+                        status="recovery-required",
+                        last_event="orphaned-fresh-session-recovery-exhausted",
+                        recovery="the replacement fresh job was also interrupted; inspect or explicitly recover the recorded worktree",
+                        recovery_review_key=review.key,
+                    )
+                else:
+                    existing.update(
+                        status="recovery-required",
+                        last_event="orphaned-fresh-session",
+                        recovery="the watcher will retire the orphaned fresh worktree and launch one replacement fresh job",
+                        recovery_review_key=review.key,
+                        recovery_mode="fresh",
+                    )
+                _save_state(root, existing)
             if existing.get("status") == "recovery-required":
                 if not _automatic_recovery_available(existing, review_key=review.key):
                     continue
@@ -939,6 +961,7 @@ def _dispatch_all_unlocked(
     payload, review = candidates[0]
     pr = int(payload["number"])
     entry = entries.get(str(pr))
+    fresh_recovery_reviews: list[str] = []
     if isinstance(entry, dict):
         worktree = Path(str(entry.get("worktree", "")))
         state_path = _state_path(root, pr)
@@ -949,24 +972,44 @@ def _dispatch_all_unlocked(
             ):
                 return {"status": "no-op", "reason": "automatic-recovery-unavailable", "pr_number": pr}
             state = _load_state(root, pr)
-            _emit({"kind": STATE_KIND, "status": "job-started", "pr_number": pr, "mode": "resume"})
-            result = poll_one(
-                root,
-                state,
-                runner=runner,
-                codex_command=codex_command,
-                bypass_hook_trust=bypass_hook_trust,
-                isolated_worktree=True,
-                owned_worktree=worktree,
-            )
-            return {"status": "dispatched", "pr_number": pr, "mode": "resume", "result": result}
-        # Old failed fresh sessions had no durable state/session binding.  Their
-        # detached worktree cannot be resumed safely, so retire it and start one
-        # new, recorded session below.
-        if worktree.is_dir():
-            runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
-        entries.pop(str(pr), None)
-        _save_dispatch(root, registry)
+            if state.get("recovery_mode") == "fresh":
+                # No exact session exists to resume.  Remove this dispatcher-
+                # owned checkout before creating the single bounded replacement
+                # below; retain the recovery budget on the new durable state.
+                if worktree.is_dir():
+                    removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+                    if removed.returncode:
+                        return _recover(
+                            state,
+                            root,
+                            event="orphan-fresh-worktree-cleanup-failed",
+                            recovery="inspect or explicitly remove the orphaned fresh worktree before retrying",
+                        )
+                fresh_recovery_reviews = list(state.get("automatic_recovery_reviews", []))
+                state_path.unlink(missing_ok=True)
+                entries.pop(str(pr), None)
+                _save_dispatch(root, registry)
+                entry = None
+            else:
+                _emit({"kind": STATE_KIND, "status": "job-started", "pr_number": pr, "mode": "resume"})
+                result = poll_one(
+                    root,
+                    state,
+                    runner=runner,
+                    codex_command=codex_command,
+                    bypass_hook_trust=bypass_hook_trust,
+                    isolated_worktree=True,
+                    owned_worktree=worktree,
+                )
+                return {"status": "dispatched", "pr_number": pr, "mode": "resume", "result": result}
+        if entry is not None:
+            # Old failed fresh sessions had no durable state/session binding.  Their
+            # detached worktree cannot be resumed safely, so retire it and start one
+            # new, recorded session below.
+            if worktree.is_dir():
+                runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+            entries.pop(str(pr), None)
+            _save_dispatch(root, registry)
 
     worktree = _worktree_for(root, pr, worktree_root=worktree_root)
     if worktree.exists():
@@ -1002,6 +1045,7 @@ def _dispatch_all_unlocked(
             "max_repeated_blockers": max_repeated_blockers, "handled_reviews": [],
             "blocker_fingerprints": {}, "cycles": 0, "status": "fresh-session-in-progress",
             "last_event": "fresh-session-bound", "recovery": "", "prompt_transport": PROMPT_TRANSPORT,
+            "automatic_recovery_reviews": fresh_recovery_reviews,
         },
     )
     entries[str(pr)] = {"worktree": worktree.as_posix(), "branch": branch, "repository": _repo_slug(root, runner)}
@@ -1066,6 +1110,7 @@ def _dispatch_all_unlocked(
             "status": "awaiting-review",
             "last_event": "fresh-session-awaiting-resume",
             "recovery": "",
+            "automatic_recovery_reviews": list(bound.get("automatic_recovery_reviews", [])),
         }
         _save_state(root, state)
         entries[str(pr)] = {
@@ -1094,6 +1139,7 @@ def _dispatch_all_unlocked(
         "status": "awaiting-review",
         "last_event": "fresh-handoff-recorded",
         "recovery": "",
+        "automatic_recovery_reviews": list(bound.get("automatic_recovery_reviews", [])),
     }
     _save_state(root, state)
     entries[str(pr)] = {

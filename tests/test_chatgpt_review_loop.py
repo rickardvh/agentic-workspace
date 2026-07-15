@@ -687,6 +687,78 @@ def test_detached_fresh_stop_hook_binds_precreated_owner_state(tmp_path: Path, m
     assert loop._load_state(tmp_path, 12)["session_id"] == SESSION
 
 
+def test_interrupted_fresh_dispatch_is_recovered_once_then_resumes_the_recorded_session(tmp_path: Path) -> None:
+    review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    worktree_root = tmp_path / "worktrees"
+    original_run = runner.run
+    attempts: list[tuple[str, Path, str]] = []
+
+    def run(command, *, cwd, env=None):
+        command = list(command)
+        if command[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps(
+                    [{"number": 12, "headRefName": runner.branch, "headRefOid": runner.pr_head, "comments": runner.comments, "url": "u"}]
+                ),
+                "",
+            )
+        if command[:3] == ["git", "fetch", "--no-tags"]:
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command == ["git", "rev-parse", "FETCH_HEAD"]:
+            return subprocess.CompletedProcess(command, 0, runner.pr_head, "")
+        if command[:3] == ["git", "worktree", "add"]:
+            runner.commands.append(command)
+            Path(command[-2]).mkdir(parents=True)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        return original_run(command, cwd=cwd, env=env)
+
+    def run_interactive(command, *, cwd, env=None, input_text=""):
+        command = list(command)
+        mode = "resume" if "resume" in command else "fresh"
+        attempts.append((mode, cwd, command[-2] if mode == "resume" else ""))
+        runner.commands.append(command)
+        if len(attempts) == 1:
+            raise KeyboardInterrupt("watcher terminated during fresh job")
+        if mode == "fresh":
+            saved = loop._load_state(tmp_path, 12)
+            saved.update(session_id="replacement-session", status="awaiting-review", last_event="handoff-recorded")
+            loop._save_state(tmp_path, saved)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+    runner.run_interactive = run_interactive
+    with pytest.raises(KeyboardInterrupt, match="terminated"):
+        loop.dispatch_all(
+            tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+        )
+
+    assert loop._load_state(tmp_path, 12)["status"] == "fresh-session-in-progress"
+    recovered = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+    )
+    assert recovered["mode"] == "fresh"
+    saved = loop._load_state(tmp_path, 12)
+    assert saved["session_id"] == "replacement-session"
+    assert saved["automatic_recovery_reviews"] == [f"12:{HEAD_A}:fresh"]
+
+    runner.next_handoff_head = HEAD_B
+    resumed = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+    )
+    assert resumed["mode"] == "resume"
+    assert attempts == [
+        ("fresh", worktree_root / "pr-12", ""),
+        ("fresh", worktree_root / "pr-12", ""),
+        ("resume", worktree_root / "pr-12", "replacement-session"),
+    ]
+    assert sum(command[:3] == ["git", "worktree", "add"] for command in runner.commands) == 2
+    assert sum(command[:3] == ["git", "worktree", "remove"] for command in runner.commands) == 1
+
+
 def test_global_dispatch_retains_one_owned_worktree_through_resume_then_retires_it_on_close(tmp_path: Path, monkeypatch) -> None:
     first_review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[first_review])
