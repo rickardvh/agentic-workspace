@@ -17,7 +17,17 @@ Project hooks run only after the repository `.codex` layer and the exact hook de
 
 Persistent `/hooks` trust is preferred. For bounded unattended automation after all active hook sources have been reviewed, `poll --bypass-hook-trust` passes Codex's explicit `--dangerously-bypass-hook-trust` only to the exact resumed invocation and records `hook_trust_mode: automation-bypass` in local state. The flag authorizes every enabled hook in that invocation, so do not use it before checking user, project, and enabled-plugin hook sources.
 
-The Stop hook is dormant until a loop is explicitly enabled. It only updates an existing state record for the same branch and exact session, returns within 30 seconds, and never waits for review or starts the poller.
+The Stop hook is dormant until a loop is explicitly enabled. It only updates an existing state record for the same branch and exact session; in a detached fresh worktree, it may bind the one pre-created `fresh-session-in-progress` record before applying that exact-session rule. It returns within 30 seconds and never waits for review or starts the poller.
+
+## Global serial dispatcher
+
+Use the opt-in global mode to scan every open PR and dispatch at most one eligible blocked review:
+
+```powershell
+uv run python tools/chatgpt_review_loop.py poll --all-open --watch
+```
+
+It retains one Codex session and one local isolated worktree per PR. A first eligible review fetches the PR branch, verifies the fetched SHA equals the reviewed SHA, and creates a detached worktree at that exact commit; a later eligible review resumes the same session. A local exclusive lock keeps two poller invocations from starting concurrent jobs. The watcher stays active after empty scans and dispatches, and retires dispatcher-owned worktrees and registry entries when their PR closes. The dispatcher preserves the exact-head marker, duplicate-review, branch-ownership, and bounded-recovery checks; stale comments never become jobs. Existing `poll` behaviour remains scoped to explicit local handoffs.
 
 ## Start a loop
 
@@ -49,6 +59,8 @@ Or keep the local controller running for a bounded number of polls:
 uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60 --bypass-hook-trust
 ```
 
+For the serial all-open controller, use `make start-review-poller REVIEW_MAX_CYCLES=10`. It starts at most one job at a time, stores the cycle budget per PR, and is idempotent while its recorded process is alive.
+
 Polling uses `gh` only. A review is eligible only when its comment contains exactly one well-formed marker whose PR number and 40-character lowercase SHA equal the recorded handoff:
 
 ```text
@@ -56,6 +68,8 @@ Polling uses `gh` only. A review is eligible only when its comment contains exac
 ```
 
 For `blocked`, the controller records `(PR, reviewed SHA, comment ID)` as attempted before starting the non-interactive continuation `codex -C <repo> exec resume <exact-session> <verbatim-findings>`. That exact review cannot automatically resume twice, including after a resume failure. The resumed Codex process inherits a transport guard, while its Stop hook only records a newly pushed handoff; neither termination path starts another poller. A successful cycle therefore requires a corrective push with a new head.
+
+The all-open controller fetches and verifies the reviewed SHA before fresh execution. Fresh and later resume jobs run in detached worktrees; owner-local state is pre-bound before the first Stop hook, and every temporary worktree is removed after its job exits. A fresh job that exits nonzero or never receives that binding remains in terminal local recovery and suppresses redispatch of the same review until a human explicitly recovers or cleans it up. Closing a tracked PR also retires its local state and worktree.
 
 For `merge-ready`, the controller records readiness and stops. It never invokes `gh pr merge` or changes ready/draft state; the human retains merge authority.
 
