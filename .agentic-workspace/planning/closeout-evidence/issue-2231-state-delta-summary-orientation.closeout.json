@@ -1,0 +1,194 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 2231 state-delta summary orientation",
+  "plan_id": "issue-2231-state-delta-summary-orientation",
+  "created_at": "2026-07-13T21:42:42.565643+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2231-state-delta-summary-orientation.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2231-state-delta-summary-orientation.plan.json",
+  "retention": {
+    "state": "archive-retention-skipped",
+    "reason": "retained archive would exceed the structured-file inventory max_bytes guardrail; closing after distillation instead",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive is omitted or skipped."
+  },
+  "active_milestone": {
+    "id": "issue-2231-state-delta-summary-orientation",
+    "status": "completed",
+    "scope": "Summary reuse and startup orientation for #2231.",
+    "ready": "ready-for-pr",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Create a bounded plan for Issue 2231 state-delta summary orientation.",
+    "hard constraints": "Keep scope bounded to the promoted TODO item and its stated touched paths.",
+    "agent may decide locally": "Bounded decomposition, touched-path narrowing, validation tightening, and plan-local residue routing.",
+    "escalate when": "A better-looking fix changes the requested outcome, owned surface, time horizon, or meaningful validation story."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "GitHub #2231 and AW active plan",
+    "what happened": "Merged #2231 summary orientation slice into master.",
+    "scope touched": ".agentic-workspace/planning/execplans/issue-2231-state-delta-summary-orientation.plan.json; src/agentic_workspace/projection_reuse.py; src/agentic_workspace/workspace_runtime_startup.py; tests/test_workspace_projection_reuse.py; tests/test_workspace_summary_cli.py",
+    "changed surfaces": "Merged PR #2252",
+    "validations run": "GitHub PR #2252 merged at f2d44252 after required checks passed; master pulled to e9b88323.",
+    "result for continuation": "continue from .agentic-workspace/planning/state.toml queued roadmap",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/state.toml queued roadmap"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "PR #2252 is merged; no open PR review remains for this slice.",
+    "proof status": "passed",
+    "intent served": "yes for slice; parent remains open via .agentic-workspace/planning/state.toml queued roadmap",
+    "config compliance": "manual references inspected; workspace-cli-runtime high-assurance proof satisfied.",
+    "misinterpretation risk": "low; parent #1969 remains open outside this slice.",
+    "follow-on decision": ".agentic-workspace/planning/state.toml queued roadmap"
+  },
+  "proof_report": {
+    "validation proof": "GitHub PR #2252 merged at f2d44252 after required checks passed; master pulled to e9b88323.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "GitHub PR #2252 merged at f2d44252 after required checks passed; master pulled to e9b88323."
+  },
+  "intent_satisfaction": {
+    "original intent": "Make repeated equivalent summary emit an unchanged-projection delta before rebuilding full output, and make startup carry active-planning orientation so an immediate unchanged summary is unnecessary.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "GitHub PR #2252 merged at f2d44252 after required checks passed; master pulled to e9b88323.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml queued roadmap"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "GitHub PR #2252 merged at f2d44252 after required checks passed; master pulled to e9b88323.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml queued roadmap activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/state.toml queued roadmap.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/state.toml queued roadmap rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml queued roadmap",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Slice is landed on master; parent roadmap remains queued separately.",
+    "validation confirmed": "GitHub PR #2252 merged at f2d44252 after required checks passed; master pulled to e9b88323.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml queued roadmap",
+    "post-work posterity capture": "No Memory capture; baseline-only route, no route-specific note matched.",
+    "resume from": ".agentic-workspace/planning/state.toml queued roadmap",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "Local command output and transient proof logs.",
+          "owner": "",
+          "source": "closeout_distillation"
+        },
+        {
+          "summary": "Summary reuse added; active-planning startup orientation embedded; duplicate startup required commands deduplicated.",
+          "owner": "",
+          "source": "improvement_signal_review.signals fixed"
+        },
+        {
+          "summary": "No Memory note needed; behavior is now covered by tests.",
+          "owner": "",
+          "source": "improvement_signal_review.signals dismissed"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": "Draft PR review/CI; continue next P0 issue.",
+          "owner": "",
+          "source": "closeout_distillation"
+        }
+      ],
+      "memory": [
+        {
+          "summary": "none",
+          "owner": "Memory",
+          "source": "execution_summary"
+        }
+      ],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "clarification-required",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "ask-human",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [],
+      "blocked_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": ".agentic-workspace/planning/state.toml queued roadmap",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": "Decision-point intent confirmation is missing or unresolved."
+    },
+    "continuation": {
+      "owner_surface": ".agentic-workspace/planning/state.toml queued roadmap",
+      "created_or_required": true,
+      "reason": "Decision-point intent confirmation is missing or unresolved."
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "decision_point_intent_confirmation": {
+    "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
+    "phase": "closeout",
+    "status": "unresolved",
+    "forecast_digest": "",
+    "source_revisions": {},
+    "same_forecast_consumed": false
+  }
+}

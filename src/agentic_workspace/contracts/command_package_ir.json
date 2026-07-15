@@ -10940,7 +10940,7 @@
           },
           "interface": {
             "name": "reconcile",
-            "help": "Read-only reconcile report.",
+            "help": "Preview or apply bounded Planning reconciliation transactions.",
             "options": [
               {
                 "name": "target",
@@ -10987,6 +10987,28 @@
                 "flags": ["--apply-lane-reconcile"],
                 "action": "store_true",
                 "help": "Apply the reported child-outcome delta without closing the parent lane."
+              },
+              {
+                "name": "preview",
+                "flags": ["--preview"],
+                "action": "store_true",
+                "help": "Compile a reusable reconciliation proposal without mutating Planning state."
+              },
+              {
+                "name": "apply",
+                "flags": ["--apply"],
+                "action": "store_true",
+                "help": "Apply the exact reconciliation proposal guarded by --proposal and --expect-planning-revision."
+              },
+              {
+                "name": "proposal",
+                "flags": ["--proposal"],
+                "help": "Proposal id returned by --preview."
+              },
+              {
+                "name": "expected_planning_revision",
+                "flags": ["--expect-planning-revision"],
+                "help": "Planning revision returned by --preview and required by --apply."
               }
             ]
           },

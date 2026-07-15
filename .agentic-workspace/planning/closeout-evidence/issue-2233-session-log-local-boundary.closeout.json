@@ -1,0 +1,178 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 2233 session log local boundary",
+  "plan_id": "issue-2233-session-log-local-boundary",
+  "created_at": "2026-07-13T21:47:23.033092+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2233-session-log-local-boundary.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2233-session-log-local-boundary.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "retained closeout evidence",
+    "ordinary_route": "agentic-workspace summary --format json or report --section closeout_report --format json",
+    "trust_rule": "When this record exists, agents should trust it as the closeout handoff surface without inspecting the omitted full execplan archive.",
+    "rule": "Retained closeout evidence preserves reportable closeout facts when the full execplan archive is omitted or skipped."
+  },
+  "active_milestone": {
+    "id": "issue-2233-session-log-local-boundary",
+    "status": "completed",
+    "scope": "Session-log local diagnostic boundary and generated command metadata.",
+    "ready": "ready",
+    "blocked": "none",
+    "optional_deps": "none"
+  },
+  "delegated_judgment": {
+    "requested outcome": "Remove obsolete promotion/share-safety framing from ordinary session-log surfaces and replace it with a local-only non-authoritative diagnostic boundary.",
+    "hard constraints": "Do not build a promotion/privacy subsystem, redact or rewrite raw local capture by default, or treat manual human handoff as AW-owned.",
+    "agent may decide locally": "Exact local-boundary metadata shape, generated command wording, and focused regression coverage for status, prelude, index, export, and analysis.",
+    "escalate when": "A correct fix requires changing the local override config contract, removing path normalization compatibility, or introducing a managed transfer workflow."
+  },
+  "execution_run": {
+    "run status": "completed",
+    "executor": "Codex",
+    "handoff source": "agentic-planning new-plan",
+    "what happened": "Merged #2233 session log local boundary slice into master.",
+    "scope touched": ".agentic-workspace/planning/execplans/issue-2233-session-log-local-boundary.plan.json; src/agentic_workspace/session_logging.py; tests/test_workspace_session_logging.py",
+    "changed surfaces": "Merged PR #2251",
+    "validations run": "GitHub PR #2251 merged at 5279ef0a after required checks passed; master pulled to e9b88323.",
+    "result for continuation": "continue from .agentic-workspace/planning/state.toml queued roadmap",
+    "next step": "promote the next bounded slice from .agentic-workspace/planning/state.toml queued roadmap"
+  },
+  "finished_run_review": {
+    "review status": "complete",
+    "scope respected": "PR #2251 is merged; no open PR review remains for this slice.",
+    "proof status": "passed",
+    "intent served": "yes for slice; parent remains open via .agentic-workspace/planning/state.toml queued roadmap",
+    "config compliance": "AW startup, payload sync, active plan switch, focused proof, and generated package update performed.",
+    "misinterpretation risk": "low",
+    "follow-on decision": ".agentic-workspace/planning/state.toml queued roadmap"
+  },
+  "proof_report": {
+    "validation proof": "GitHub PR #2251 merged at 5279ef0a after required checks passed; master pulled to e9b88323.",
+    "proof achieved now": "yes; planning closeout recorded explicit proof input.",
+    "evidence for \"proof achieved\" state": "GitHub PR #2251 merged at 5279ef0a after required checks passed; master pulled to e9b88323."
+  },
+  "intent_satisfaction": {
+    "original intent": "Remove obsolete promotion/share-safety framing from ordinary session-log surfaces and replace it with a local-only non-authoritative diagnostic boundary.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "GitHub PR #2251 merged at 5279ef0a after required checks passed; master pulled to e9b88323.",
+    "unsolved intent passed to": ".agentic-workspace/planning/state.toml queued roadmap"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "slice status": "completed",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "why this decision is honest": "planning closeout accepted a slice claim with intent-status satisfied.",
+    "evidence carried forward": "GitHub PR #2251 merged at 5279ef0a after required checks passed; master pulled to e9b88323.",
+    "reopen trigger": "Reopen when .agentic-workspace/planning/state.toml queued roadmap activates a fresh bounded slice."
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Closeout routed planning residue to .agentic-workspace/planning/state.toml queued roadmap.",
+    "motivation worth preserving": "Future agents should continue from .agentic-workspace/planning/state.toml queued roadmap rather than rediscover this closeout residue.",
+    "canonical owner now": ".agentic-workspace/planning/state.toml queued roadmap",
+    "promotion trigger": "when the routed closeout residue is acted on",
+    "retention after promotion": "retain"
+  },
+  "execution_summary": {
+    "outcome delivered": "Slice is landed on master; parent roadmap remains queued separately.",
+    "validation confirmed": "GitHub PR #2251 merged at 5279ef0a after required checks passed; master pulled to e9b88323.",
+    "follow-on routed to": ".agentic-workspace/planning/state.toml queued roadmap",
+    "post-work posterity capture": "archive closeout distillation",
+    "resume from": ".agentic-workspace/planning/state.toml queued roadmap",
+    "knowledge promoted (Memory/Docs/Config)": "none"
+  },
+  "closeout_distillation": {
+    "buckets": {
+      "discard": [
+        {
+          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "owner": "discard",
+          "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
+        }
+      ],
+      "continuation": [
+        {
+          "summary": ".agentic-workspace/planning/state.toml queued roadmap",
+          "owner": ".agentic-workspace/planning/state.toml queued roadmap",
+          "source": "execution_summary.follow-on routed to"
+        }
+      ],
+      "memory": [],
+      "config_check": [],
+      "docs": [],
+      "issue_follow_up": []
+    }
+  },
+  "completion_gate": {
+    "kind": "agentic-workspace/completion-gate/v1",
+    "status": "clarification-required",
+    "active_intent_satisfied": false,
+    "human_accepted_partial": false,
+    "claim_level_requested": "full-intent-complete",
+    "claim_level_allowed": "partial-progress",
+    "required_next_action": "ask-human",
+    "claim_authorization": {
+      "kind": "agentic-workspace/claim-authorization/v1",
+      "allowed_claim_classes": [],
+      "blocked_claim_classes": [
+        "partial_progress",
+        "slice_complete",
+        "lane_complete",
+        "parent_complete",
+        "full_intent_complete",
+        "issue_closure"
+      ],
+      "closure_actions": [],
+      "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
+      "diagnostics": {
+        "unsafe_claim_examples": [
+          "done",
+          "implemented",
+          "complete",
+          "finished",
+          "all",
+          "full intent complete"
+        ],
+        "diagnostic_only": true
+      }
+    },
+    "residual_intent": ".agentic-workspace/planning/state.toml queued roadmap",
+    "self_review": {
+      "question": "Does the delivered work satisfy the active human intent?",
+      "answer": "no",
+      "reason": "Decision-point intent confirmation is missing or unresolved."
+    },
+    "continuation": {
+      "owner_surface": ".agentic-workspace/planning/state.toml queued roadmap",
+      "created_or_required": true,
+      "reason": "Decision-point intent confirmation is missing or unresolved."
+    },
+    "authority_boundary": {
+      "aw_owns": [
+        "forcing the transition rule",
+        "blocking unsupported structured claim classes and closure actions",
+        "routing continuation"
+      ],
+      "agent_owns": [
+        "semantic satisfaction judgment",
+        "evidence interpretation",
+        "next implementation decisions"
+      ],
+      "human_owns": [
+        "accepting narrower scope",
+        "changing intent",
+        "accepting unresolved residual intent"
+      ]
+    }
+  },
+  "decision_point_intent_confirmation": {
+    "kind": "agentic-workspace/decision-point-intent-confirmation/v1",
+    "phase": "closeout",
+    "status": "unresolved",
+    "forecast_digest": "",
+    "source_revisions": {},
+    "same_forecast_consumed": false
+  }
+}
