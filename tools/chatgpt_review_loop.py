@@ -560,6 +560,10 @@ def _resume_worktree_path(root: Path, state: dict[str, Any]) -> Path:
 def _create_resume_worktree(root: Path, state: dict[str, Any], runner: CommandRunner) -> Path:
     worktree = _resume_worktree_path(root, state)
     worktree.parent.mkdir(parents=True, exist_ok=True)
+    if worktree.exists():
+        cleanup = _remove_resume_worktree(root, worktree, runner)
+        if cleanup:
+            raise LoopError("orphan-worktree-cleanup-failed", cleanup)
     created = runner.run(["git", "worktree", "add", "--detach", worktree.as_posix(), str(state["handoff_head"])], cwd=root)
     if created.returncode:
         raise LoopError("worktree-create-failed", created.stderr.strip() or "could not create resume worktree")
@@ -569,6 +573,25 @@ def _create_resume_worktree(root: Path, state: dict[str, Any], runner: CommandRu
 def _remove_worktree(root: Path, worktree: Path, runner: CommandRunner) -> str:
     removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
     return removed.stderr.strip() or removed.stdout.strip() if removed.returncode else ""
+
+
+def _remove_resume_worktree(root: Path, worktree: Path, runner: CommandRunner) -> str:
+    """Reclaim one dispatcher-owned resume worktree, including stale Windows residue."""
+    managed_root = (root / STATE_RELATIVE / "resume-worktrees").resolve()
+    candidate = worktree.resolve()
+    if not candidate.is_relative_to(managed_root):
+        return f"refusing to remove unmanaged resume worktree {candidate}"
+    removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+    if worktree.exists():
+        try:
+            shutil.rmtree(worktree)
+        except OSError as exc:
+            return str(exc)
+    if removed.returncode:
+        pruned = runner.run(["git", "worktree", "prune"], cwd=root)
+        if pruned.returncode:
+            return pruned.stderr.strip() or pruned.stdout.strip() or "could not prune stale resume worktree metadata"
+    return ""
 
 
 def poll_one(
@@ -677,7 +700,7 @@ def poll_one(
     try:
         completed = runner.run_interactive(command, cwd=worktree, env=env, input_text=_review_prompt(review))
     finally:
-        cleanup = _remove_worktree(owner_root, worktree, runner) if isolated_worktree else ""
+        cleanup = _remove_resume_worktree(owner_root, worktree, runner) if isolated_worktree else ""
     latest = _load_state(owner_root, pr)
     if cleanup:
         return _recover(latest, owner_root, event="worktree-cleanup-failed", recovery=cleanup[-2000:])

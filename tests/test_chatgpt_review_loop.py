@@ -230,6 +230,38 @@ def test_fresh_session_json_requires_one_durable_identity() -> None:
         loop._session_id_from_jsonl('{"session_id":"one"}\n{"thread_id":"two"}\n')
 
 
+def test_resume_creation_reclaims_managed_orphan_when_git_remove_fails(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    existing = state(tmp_path, cycles=1)
+    worktree = loop._resume_worktree_path(tmp_path, existing)
+    worktree.mkdir(parents=True)
+    (worktree / "leftover.txt").write_text("stale", encoding="utf-8")
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        command = list(command)
+        runner.commands.append(command)
+        if command[:3] == ["git", "worktree", "remove"]:
+            return subprocess.CompletedProcess(command, 1, "", "stale registration")
+        if command == ["git", "worktree", "prune"]:
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:3] == ["git", "worktree", "add"]:
+            assert not worktree.exists()
+            worktree.mkdir(parents=True)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        runner.commands.pop()
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+
+    assert loop._create_resume_worktree(tmp_path, existing, runner) == worktree
+    assert [command[:3] for command in runner.commands[-3:]] == [
+        ["git", "worktree", "remove"],
+        ["git", "worktree", "prune"],
+        ["git", "worktree", "add"],
+    ]
+
+
 def test_global_dispatch_does_not_start_when_no_exact_blocked_review(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path, comments=[{"id": "old", "body": marker(head=HEAD_B), "url": "u"}])
     original_run = runner.run
