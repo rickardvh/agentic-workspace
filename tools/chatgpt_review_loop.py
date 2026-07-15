@@ -104,13 +104,39 @@ class CommandRunner:
             kwargs["close_fds"] = True
         resolved = _resolved_command(command)
         if os.name == "nt":
-            # CREATE_NEW_CONSOLE creates the window, but a .CMD shim can retain
-            # the watcher's inherited standard handles. Bind both output
-            # streams explicitly to the screen buffer of the new console.
-            inner = f"{subprocess.list2cmdline(resolved)} 1>CONOUT$ 2>&1"
-            resolved = [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/s", "/c", inner]
+            # A relay in the new console prevents .CMD shims from retaining the
+            # watcher's handles and restores Windows newline translation that
+            # direct CONOUT$ redirection bypasses.
+            resolved = [sys.executable, str(Path(__file__).resolve()), "_console-run", *resolved]
         completed = subprocess.run(resolved, **kwargs)
         return subprocess.CompletedProcess(command, completed.returncode, "", "")
+
+
+def _console_run(command: Sequence[str]) -> int:
+    """Stream one child through this process's console with native newlines."""
+    if not command:
+        return 2
+    prompt = sys.stdin.read()
+    console = open("CONOUT$", "w", encoding="utf-8", errors="replace", buffering=1)  # noqa: PTH123
+    try:
+        process = subprocess.Popen(
+            list(command),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        assert process.stdin is not None and process.stdout is not None
+        process.stdin.write(prompt)
+        process.stdin.close()
+        for line in process.stdout:
+            console.write(line.replace("\r\n", "\n").replace("\r", "\n"))
+            console.flush()
+        return process.wait()
+    finally:
+        console.close()
 
 
 def _emit(payload: dict[str, Any], *, error: bool = False) -> None:
@@ -1151,7 +1177,10 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = None) -> int:
-    args = _parser().parse_args(list(argv) if argv is not None else None)
+    effective_argv = list(sys.argv[1:] if argv is None else argv)
+    if effective_argv[:1] == ["_console-run"]:
+        return _console_run(effective_argv[1:])
+    args = _parser().parse_args(effective_argv)
     runner = runner or CommandRunner()
     try:
         if args.command == "poll":

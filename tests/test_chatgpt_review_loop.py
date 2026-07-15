@@ -68,8 +68,9 @@ def test_interactive_codex_job_uses_a_background_console_on_windows(tmp_path: Pa
     assert completed.returncode == 0
     assert observed["input"] == "line one\nline two"
     if loop.os.name == "nt":
-        assert observed["command"][:4] == [loop.os.environ.get("COMSPEC", "cmd.exe"), "/d", "/s", "/c"]
-        assert observed["command"][4].endswith("1>CONOUT$ 2>&1")
+        assert observed["command"][:3] == [loop.sys.executable, str(loop.Path(loop.__file__).resolve()), "_console-run"]
+        assert loop.Path(observed["command"][-3]).stem.lower() == "codex"
+        assert observed["command"][-2:] == ["exec", "-"]
         assert observed["creationflags"] & loop.subprocess.CREATE_NEW_CONSOLE
         assert observed["startupinfo"].wShowWindow == getattr(loop.subprocess, "SW_SHOWMINNOACTIVE", 7)
         assert observed["close_fds"] is True
