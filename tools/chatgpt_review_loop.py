@@ -102,7 +102,14 @@ class CommandRunner:
             startupinfo.wShowWindow = getattr(subprocess, "SW_SHOWMINNOACTIVE", 7)
             kwargs["startupinfo"] = startupinfo
             kwargs["close_fds"] = True
-        completed = subprocess.run(_resolved_command(command), **kwargs)
+        resolved = _resolved_command(command)
+        if os.name == "nt":
+            # CREATE_NEW_CONSOLE creates the window, but a .CMD shim can retain
+            # the watcher's inherited standard handles. Bind both output
+            # streams explicitly to the screen buffer of the new console.
+            inner = f"{subprocess.list2cmdline(resolved)} 1>CONOUT$ 2>&1"
+            resolved = [os.environ.get("COMSPEC", "cmd.exe"), "/d", "/s", "/c", inner]
+        completed = subprocess.run(resolved, **kwargs)
         return subprocess.CompletedProcess(command, completed.returncode, "", "")
 
 
