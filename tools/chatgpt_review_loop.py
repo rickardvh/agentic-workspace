@@ -515,7 +515,15 @@ def parse_reviews(comments: list[dict[str, Any]], *, expected_pr: int, expected_
     return matches, rejected
 
 
-AUTO_RECOVERY_EVENTS = frozenset({"resume-failed", "resume-ended-without-new-handoff", "orphaned-resume"})
+AUTO_RECOVERY_EVENTS = frozenset(
+    {
+        "resume-failed",
+        "resume-ended-without-new-handoff",
+        "orphaned-resume",
+        "worktree-create-failed",
+        "orphan-worktree-cleanup-failed",
+    }
+)
 
 
 def _queue_automatic_recovery(state: dict[str, Any], root: Path, *, review_key: str = "") -> bool:

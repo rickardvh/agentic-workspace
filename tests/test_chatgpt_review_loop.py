@@ -865,6 +865,16 @@ def test_resume_failure_gets_one_automatic_recovery_for_same_comment(tmp_path: P
     assert sum("resume" in command for command in runner.commands) == 2
 
 
+def test_orphaned_worktree_failure_gets_one_automatic_recovery(tmp_path: Path) -> None:
+    recovery_key = f"12:{HEAD_A}:blocked"
+    state(tmp_path, status="recovery-required", last_event="worktree-create-failed", recovery_review_key=recovery_key)
+
+    assert loop._queue_automatic_recovery(loop._load_state(tmp_path, 12), tmp_path, review_key=recovery_key) is True
+    recovered = loop._load_state(tmp_path, 12)
+    assert recovered["status"] == "awaiting-review"
+    assert recovered["automatic_recovery_reviews"] == [recovery_key]
+
+
 def test_merge_ready_records_readiness_without_merging(tmp_path: Path) -> None:
     review = {"databaseId": 93, "body": marker(decision="merge-ready"), "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
