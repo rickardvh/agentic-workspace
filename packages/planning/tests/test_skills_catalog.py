@@ -90,3 +90,18 @@ def test_bundled_skills_catalog_readme_matches_registry_ids() -> None:
     registry_ids = [entry["id"] for entry in registry_payload["skills"]]
 
     assert readme_ids == registry_ids
+
+
+def test_bundled_skill_resource_dependencies_are_declared_and_resolvable() -> None:
+    skills_root = Path(__file__).resolve().parents[1] / "skills"
+    registry_payload = json.loads((skills_root / "REGISTRY.json").read_text(encoding="utf-8"))
+    resources = registry_payload.get("resources", {})
+
+    assert isinstance(resources, dict)
+    for skill in registry_payload["skills"]:
+        for resource_id in skill.get("required_resources", []):
+            assert resource_id in resources, f"{skill['id']} references unknown resource {resource_id}"
+            resource = resources[resource_id]
+            package_path = resource.get("package_path")
+            assert package_path, f"{resource_id} lacks a package-owned resource path"
+            assert (skills_root / package_path).is_file(), f"{resource_id} is missing from the package"
