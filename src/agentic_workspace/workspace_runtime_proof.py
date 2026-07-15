@@ -32,6 +32,7 @@ from agentic_workspace.proof_receipt_admission import (
     proof_command_admission,
     proof_receipt_admission,
 )
+from agentic_workspace.proof_subject import classify_proof_subject
 from agentic_workspace.runtime_source_review import runtime_source_edit_review_for_changed_paths
 from agentic_workspace.runtime_symbol_working_set import runtime_symbol_working_set_for_changed_paths
 from agentic_workspace.workspace_runtime_core import (
@@ -812,19 +813,39 @@ def _proof_receipt_reconciliation_payload(
             receipt for receipt in command_receipts if _proof_receipt_path_scope_matches(receipt=receipt, changed_paths=changed_paths)
         ]
         admissions = [(receipt, proof_receipt_admission(receipt)) for receipt in scoped_receipts]
-        accepted_receipt = next((receipt for receipt, admission in admissions if admission["proof_sufficient"]), None)
+        accepted_receipt = next(
+            (
+                receipt
+                for receipt, admission in admissions
+                if admission["proof_sufficient"]
+                and (
+                    not isinstance(receipt.get("proof_subject"), dict)
+                    or classify_proof_subject(target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=command)[
+                        "status"
+                    ]
+                    == "reusable"
+                )
+            ),
+            None,
+        )
         failed_receipt = next((receipt for receipt, admission in admissions if admission["result_class"] == "failed"), None)
         non_sufficient = next(
             ((receipt, admission) for receipt, admission in admissions if admission["result_class"] in {"skipped", "waived"}),
             None,
         )
         if accepted_receipt is not None:
+            subject_freshness = classify_proof_subject(
+                target_root=target_root, receipt=accepted_receipt, changed_paths=changed_paths, command=command
+            )
             state = {
                 "command": command,
                 "evidence_state": "accepted",
                 "diagnostic": "passed receipt accepted",
                 "receipt": _proof_receipt_summary(accepted_receipt),
+                "subject_freshness": subject_freshness,
             }
+            if not isinstance(accepted_receipt.get("proof_subject"), dict):
+                state["receipt_match"] = "legacy-migration"
         elif aggregate_receipt is not None:
             state = {
                 "command": command,
