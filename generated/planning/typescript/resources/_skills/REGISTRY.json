@@ -2,6 +2,12 @@
   "schema_version": "skill-registry.v1",
   "owner": "agentic-planning",
   "source_kind": "bundled-package-skills",
+  "resources": {
+    "planning-review-template": {
+      "path": ".agentic-workspace/planning/reviews/TEMPLATE.review.json",
+      "package_path": "../bootstrap/.agentic-workspace/planning/reviews/TEMPLATE.review.json"
+    }
+  },
   "skills": [
     {
       "id": "bootstrap-upgrade",
@@ -265,6 +271,7 @@
       "path": "planning-review-pass/SKILL.md",
       "scope": "bundled",
       "stability": "package-managed",
+      "required_resources": ["planning-review-template"],
       "summary": "run a bounded review pass and capture compact findings under .agentic-workspace/planning/reviews",
       "activation_hints": {
         "verbs": ["review", "audit", "inspect", "check", "perform"],
