@@ -4523,6 +4523,9 @@ class RegisteredSkill:
     summary: str
     activation_hints: SkillActivationHints
     registration: str
+    required_resources: tuple[str, ...] = ()
+    availability: str = "available"
+    blocked_reasons: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -51011,11 +51014,11 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
         warn_for_missing_registry_entries = False
         if registry_file.exists():
             source_state = "registry"
-            loaded_from_registry = _load_registered_skills(source=source, registry_file=registry_file)
+            loaded_from_registry = _load_registered_skills(source=source, registry_file=registry_file, target_root=target_root)
             warn_for_missing_registry_entries = True
         elif package_registry_file is not None:
             source_state = "package-registry"
-            loaded_from_registry = _load_registered_skills(source=source, registry_file=package_registry_file)
+            loaded_from_registry = _load_registered_skills(source=source, registry_file=package_registry_file, target_root=target_root)
         for skill in loaded_from_registry:
             skill_exists = (target_root / skill.path).exists()
             if (not skill_exists) and source_state == "package-registry" and package_skills_root is not None:
@@ -51100,9 +51103,14 @@ def _package_skill_registry_file(source: SkillCatalogSource) -> Path | None:
     return registry_file if registry_file.exists() else None
 
 
-def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) -> list[RegisteredSkill]:
+def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path, target_root: Path) -> list[RegisteredSkill]:
     payload = json.loads(registry_file.read_text(encoding="utf-8"))
     entries = payload.get("skills", [])
+    resource_paths = {
+        str(resource_id): Path(str(resource.get("path", "")))
+        for resource_id, resource in (payload.get("resources", {}) or {}).items()
+        if isinstance(resource, dict) and str(resource.get("path", "")).strip()
+    }
     skills: list[RegisteredSkill] = []
     for raw in entries:
         if not isinstance(raw, dict):
@@ -51111,6 +51119,12 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) 
         activation_hints = raw.get("activation_hints", {})
         if not isinstance(activation_hints, dict):
             activation_hints = {}
+        required_resources = tuple(str(value).strip() for value in raw.get("required_resources", []) if str(value).strip())
+        blocked_reasons = tuple(
+            f"missing-resource:{resource_id}"
+            for resource_id in required_resources
+            if resource_id not in resource_paths or not (target_root / resource_paths[resource_id]).is_file()
+        )
         skills.append(
             RegisteredSkill(
                 skill_id=str(raw.get("id", "")).strip(),
@@ -51128,6 +51142,9 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) 
                     when=tuple((str(value).strip() for value in activation_hints.get("when", []) if str(value).strip())),
                 ),
                 registration="explicit",
+                required_resources=required_resources,
+                availability="blocked" if blocked_reasons else "available",
+                blocked_reasons=blocked_reasons,
             )
         )
     return [skill for skill in skills if skill.skill_id and skill.path.as_posix()]
@@ -51150,6 +51167,9 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
             "when": list(skill.activation_hints.when),
         },
         "registration": skill.registration,
+        "required_resources": list(skill.required_resources),
+        "availability": skill.availability,
+        "blocked_reasons": list(skill.blocked_reasons),
     }
 
 
@@ -51192,6 +51212,8 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
     task_tokens = set(_skill_match_tokens(task_text))
     recommendations: list[SkillRecommendation] = []
     for skill in skills:
+        if skill.availability != "available":
+            continue
         score = 0
         hint_score = 0
         reasons: list[str] = []

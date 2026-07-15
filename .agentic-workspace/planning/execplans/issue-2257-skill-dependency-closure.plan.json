@@ -1,0 +1,77 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2257-skill-dependency-closure",
+  "title": "Issue 2257 routed skill dependency closure",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 1,
+  "intent": {
+    "outcome": "https://github.com/rickardvh/agentic-workspace/issues/2257",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2257",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "tests/test_workspace_skills_cli.py"
+    ],
+    "effects": [
+      "Add registry-declared resource dependency identities and resolve them before ordinary skill recommendation.",
+      "Expose unavailable skills with stable blocked reasons instead of advertising them as executable."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2257",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2257",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Extend the shared dependency resolver into doctor, module/operation capability checks, and package-profile fixtures before issue closeout.",
+  "blockers": [
+    "No blocker; this draft slice covers resource dependencies in catalog routing. Doctor and full lifecycle closure remain required before closing #2257."
+  ],
+  "proof": {
+    "claims": [
+      "Issue 2257 routed skill dependency closure is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run --active pytest tests/test_workspace_skills_cli.py -q",
+      "make lint-workspace"
+    ],
+    "refs": [
+      "uv run --active pytest tests/test_workspace_skills_cli.py -q: 27 passed",
+      "uv run --active pytest tests/test_workspace_cli.py -q: 213 passed",
+      "make lint-workspace: passed",
+      "make typecheck: passed"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2257-skill-dependency-closure",
+    "residual_intent": "Add doctor consumption, module/operation dependencies, package-profile closure fixtures, and build-time registry validation before issue closure."
+  },
+  "specialist_contracts": []
+}

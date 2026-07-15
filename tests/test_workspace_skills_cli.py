@@ -262,6 +262,50 @@ def test_skills_command_recommends_planning_autopilot_for_active_milestone_task(
     assert any("phrase match" in reason for reason in payload["recommendations"][0]["reasons"])
 
 
+def test_registered_skill_dependency_closure_blocks_unresolved_resource(tmp_path: Path) -> None:
+    registry = tmp_path / "REGISTRY.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "resources": {"review-contract": {"path": ".agentic-workspace/reviews/contract.json"}},
+                "skills": [
+                    {
+                        "id": "review-pass",
+                        "path": "review-pass/SKILL.md",
+                        "summary": "run the bounded review pass",
+                        "required_resources": ["review-contract"],
+                        "activation_hints": {"verbs": ["review"]},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source = workspace_runtime_core.SkillCatalogSource(
+        name="fixture",
+        registry_path=Path("REGISTRY.json"),
+        skills_root=Path("skills"),
+        owner="fixture",
+        source_kind="fixture",
+        default_scope="bundled",
+        default_stability="fixture",
+    )
+
+    skills = workspace_runtime_core._load_registered_skills(source=source, registry_file=registry, target_root=tmp_path)
+
+    assert skills[0].availability == "blocked"
+    assert skills[0].blocked_reasons == ("missing-resource:review-contract",)
+    assert workspace_runtime_core._recommend_skills(task_text="run a review", skills=skills) == []
+
+    contract = tmp_path / ".agentic-workspace" / "reviews" / "contract.json"
+    contract.parent.mkdir(parents=True)
+    contract.write_text("{}", encoding="utf-8")
+    available = workspace_runtime_core._load_registered_skills(source=source, registry_file=registry, target_root=tmp_path)
+
+    assert available[0].availability == "available"
+    assert workspace_runtime_core._recommend_skills(task_text="run a review", skills=available)[0].skill.skill_id == "review-pass"
+
+
 def test_skills_command_select_returns_compact_recommendations_without_inventory(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
