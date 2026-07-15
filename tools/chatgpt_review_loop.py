@@ -254,6 +254,12 @@ def handoff(
             if item.get("branch") == branch and item.get("session_id") == session_id
         ]
         if not candidates:
+            candidates = [
+                item
+                for item in _all_states(owner_root)
+                if item.get("branch") == branch and item.get("status") == "fresh-session-in-progress"
+            ]
+        if not candidates:
             return {
                 "kind": STATE_KIND,
                 "status": "handoff-not-enabled",
@@ -287,7 +293,7 @@ def handoff(
 
     path = _state_path(owner_root, number)
     existing = _load_state(owner_root, number) if path.is_file() else None
-    if existing and existing.get("session_id") != session_id and not replace_session:
+    if existing and existing.get("session_id") not in {"", session_id} and not replace_session:
         raise LoopError(
             "session-ambiguous",
             f"PR #{number} is already bound to a different exact Codex session",
@@ -686,6 +692,21 @@ def _dispatch_all_unlocked(
     if created.returncode:
         raise LoopError("worktree-create-failed", created.stderr.strip() or f"could not create worktree for PR #{pr}")
     prompt = _review_prompt(review, branch=branch)
+    # Bind owner-local state before the detached fresh session starts. Its Stop
+    # hook is the first point at which Codex exposes the session identity.
+    _save_state(
+        root,
+        {
+            "kind": STATE_KIND, "repo_root": root.as_posix(), "repository": _repo_slug(root, runner),
+            "pr_number": pr, "pr_url": str(payload.get("url", "")), "branch": branch,
+            "handoff_head": review.head, "session_id": "", "max_cycles": max_cycles,
+            "max_repeated_blockers": max_repeated_blockers, "handled_reviews": [],
+            "blocker_fingerprints": {}, "cycles": 0, "status": "fresh-session-in-progress",
+            "last_event": "fresh-session-bound", "recovery": "",
+        },
+    )
+    entries[str(pr)] = {"worktree": worktree.as_posix(), "branch": branch, "repository": _repo_slug(root, runner)}
+    _save_dispatch(root, registry)
     command = [*shlex.split(codex_command), "-C", worktree.as_posix(), "exec", "--json", *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []), prompt]
     env = os.environ.copy()
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
