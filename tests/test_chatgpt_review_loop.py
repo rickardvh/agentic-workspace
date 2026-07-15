@@ -425,6 +425,59 @@ def test_global_dispatch_launches_one_recovery_resume(tmp_path: Path, monkeypatc
     assert seen["automatic_recovery_reviews"] == [f"12:{HEAD_A}:blocked"]
 
 
+def test_global_scan_consumes_recovery_only_for_selected_pr(tmp_path: Path, monkeypatch) -> None:
+    review_12 = {"id": "blocked-12", "body": f"Fix 12\n{marker(pr=12)}", "url": "u12"}
+    review_13 = {"id": "blocked-13", "body": f"Fix 13\n{marker(pr=13)}", "url": "u13"}
+    runner = FakeRunner(tmp_path)
+    first = state(
+        tmp_path,
+        status="recovery-required",
+        last_event="resume-failed",
+        recovery_review_key=f"12:{HEAD_A}:blocked-12",
+        handled_reviews=[f"12:{HEAD_A}:blocked-12"],
+        prompt_transport=loop.PROMPT_TRANSPORT,
+    )
+    second = dict(first)
+    second.update(
+        pr_number=13,
+        pr_url="https://example.test/pr/13",
+        recovery_review_key=f"13:{HEAD_A}:blocked-13",
+        handled_reviews=[f"13:{HEAD_A}:blocked-13"],
+    )
+    loop._save_state(tmp_path, second)
+    loop._save_dispatch(
+        tmp_path,
+        {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": "unused-12"}, "13": {"worktree": "unused-13"}}},
+    )
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        if list(command)[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps(
+                    [
+                        {"number": 12, "headRefName": runner.branch, "headRefOid": HEAD_A, "comments": [review_12], "url": "u12"},
+                        {"number": 13, "headRefName": runner.branch, "headRefOid": HEAD_A, "comments": [review_13], "url": "u13"},
+                    ]
+                ),
+                "",
+            )
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+    monkeypatch.setattr(loop, "poll_one", lambda *args, **kwargs: {"pr_number": 12, "status": "resumed"})
+
+    result = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=10, max_repeated_blockers=2
+    )
+
+    assert result["pr_number"] == 12
+    assert loop._load_state(tmp_path, 12)["automatic_recovery_reviews"] == [f"12:{HEAD_A}:blocked-12"]
+    assert loop._load_state(tmp_path, 13).get("automatic_recovery_reviews", []) == []
+
+
 def test_global_dispatch_rearms_legacy_truncated_prompt_without_charging_budget(tmp_path: Path, monkeypatch) -> None:
     review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
@@ -914,6 +967,36 @@ def test_orphaned_worktree_failure_gets_one_automatic_recovery(tmp_path: Path) -
     recovered = loop._load_state(tmp_path, 12)
     assert recovered["status"] == "awaiting-review"
     assert recovered["automatic_recovery_reviews"] == [recovery_key]
+
+
+def test_reset_open_pr_cycles_clears_attempt_and_repeat_budgets(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    existing = state(
+        tmp_path,
+        cycles=7,
+        blocker_fingerprints={"same": 2},
+        automatic_recovery_reviews=[f"12:{HEAD_A}:blocked"],
+    )
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        if list(command)[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps([{"number": 12, "headRefName": runner.branch, "headRefOid": HEAD_A, "comments": [], "url": "u"}]),
+                "",
+            )
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+
+    assert loop.reset_open_pr_cycles(tmp_path, runner) == [12]
+    reset = loop._load_state(tmp_path, 12)
+    assert reset["cycles"] == 0
+    assert reset["blocker_fingerprints"] == {}
+    assert reset["automatic_recovery_reviews"] == []
+    assert reset["handled_reviews"] == existing["handled_reviews"]
 
 
 def test_merge_ready_records_readiness_without_merging(tmp_path: Path) -> None:

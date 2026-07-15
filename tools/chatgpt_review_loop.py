@@ -533,14 +533,10 @@ def _queue_automatic_recovery(state: dict[str, Any], root: Path, *, review_key: 
     review it had claimed, but never repeatedly: that review key is recorded
     before re-arming, and all other recovery-required states remain human-only.
     """
-    if state.get("status") != "recovery-required" or state.get("last_event") not in AUTO_RECOVERY_EVENTS:
-        return False
     key = review_key or str(state.get("recovery_review_key", ""))
-    if not key:
+    if not _automatic_recovery_available(state, review_key=key):
         return False
     recovered = state.setdefault("automatic_recovery_reviews", [])
-    if key in recovered:
-        return False
     handled = state.setdefault("handled_reviews", [])
     state["handled_reviews"] = [item for item in handled if item != key]
     recovered.append(key)
@@ -552,6 +548,16 @@ def _queue_automatic_recovery(state: dict[str, Any], root: Path, *, review_key: 
     )
     _save_state(root, state)
     return True
+
+
+def _automatic_recovery_available(state: dict[str, Any], *, review_key: str = "") -> bool:
+    key = review_key or str(state.get("recovery_review_key", ""))
+    return bool(
+        state.get("status") == "recovery-required"
+        and state.get("last_event") in AUTO_RECOVERY_EVENTS
+        and key
+        and key not in state.get("automatic_recovery_reviews", [])
+    )
 
 
 def _recover(state: dict[str, Any], root: Path, *, event: str, recovery: str) -> dict[str, Any]:
@@ -900,7 +906,7 @@ def _dispatch_all_unlocked(
                 )
                 _save_state(root, existing)
             if existing.get("status") == "recovery-required":
-                if not _queue_automatic_recovery(existing, root, review_key=review.key):
+                if not _automatic_recovery_available(existing, review_key=review.key):
                     continue
             elif existing.get("status") != "awaiting-review":
                 continue
@@ -915,6 +921,11 @@ def _dispatch_all_unlocked(
         worktree = Path(str(entry.get("worktree", "")))
         state_path = _state_path(root, pr)
         if state_path.is_file():
+            state = _load_state(root, pr)
+            if state.get("status") == "recovery-required" and not _queue_automatic_recovery(
+                state, root, review_key=review.key
+            ):
+                return {"status": "no-op", "reason": "automatic-recovery-unavailable", "pr_number": pr}
             state = _load_state(root, pr)
             _emit({"kind": STATE_KIND, "status": "job-started", "pr_number": pr, "mode": "resume"})
             result = poll_one(
@@ -1138,6 +1149,25 @@ def dispatch_all(
         lock.unlink(missing_ok=True)
 
 
+def reset_open_pr_cycles(root: Path, runner: CommandRunner) -> list[int]:
+    """Reset per-PR attempt and repetition budgets without changing job ownership."""
+    open_prs = {int(item["number"]) for item in _open_prs(root, runner) if int(item.get("number", 0)) > 0}
+    reset: list[int] = []
+    for pr in sorted(open_prs):
+        if not _state_path(root, pr).is_file():
+            continue
+        state = _load_state(root, pr)
+        state.update(
+            cycles=0,
+            blocker_fingerprints={},
+            automatic_recovery_reviews=[],
+            last_budget_reset_at=datetime.now(timezone.utc).isoformat(),
+        )
+        _save_state(root, state)
+        reset.append(pr)
+    return reset
+
+
 def _hook_input() -> tuple[Path, str]:
     try:
         payload = json.load(sys.stdin)
@@ -1198,6 +1228,8 @@ def _parser() -> argparse.ArgumentParser:
     recover_parser.add_argument("--target", type=Path, default=Path.cwd())
     recover_parser.add_argument("--pr", type=int, required=True)
     recover_parser.add_argument("--action", choices=["continue-waiting"], required=True)
+    reset_parser = sub.add_parser("reset-cycles", help="Reset attempt and repetition budgets for every open PR.")
+    reset_parser.add_argument("--target", type=Path, default=Path.cwd())
     return parser
 
 
@@ -1238,6 +1270,10 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
             return 0
 
         root = _repo_root(args.target.resolve(), runner)
+        if args.command == "reset-cycles":
+            reset = reset_open_pr_cycles(root, runner)
+            _emit({"kind": STATE_KIND, "status": "cycles-reset", "prs": reset})
+            return 0
         if args.command == "status":
             states = [_load_state(root, args.pr)] if args.pr else _all_states(root)
             _emit({"kind": STATE_KIND, "status": "inspected", "states": states})
