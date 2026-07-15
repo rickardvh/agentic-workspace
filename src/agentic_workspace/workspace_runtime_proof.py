@@ -359,7 +359,6 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                     ),
                 ),
                 placeholders={"paths": _list_payload(payload.get("selector", {}).get("changed"))},
-                purpose="verbose proof drill-down for changed paths",
             )
             if include_intent_proof:
                 next_decision["intent_proof"] = _compact_tiny_intent_proof(answer["intent_proof"])
@@ -466,7 +465,6 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                     cli_invoke=cli_invoke,
                 ),
                 placeholders={"paths": _list_payload(payload.get("selector", {}).get("changed"))},
-                purpose="verbose proof drill-down for changed paths",
             ),
         }
         return _guidance_with_cli_invoke(value=next_payload, cli_invoke=cli_invoke)
@@ -483,7 +481,6 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
         "command_template": _command_template_payload(
             command=_command_with_cli_invoke(command="agentic-workspace proof --changed <paths> --format json", cli_invoke=cli_invoke),
             placeholders={"paths": []},
-            purpose="proof selection after changed paths are known",
         ),
         "required_commands": [],
         "warnings": [],
@@ -491,7 +488,7 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
     }
 
 
-def _command_template_payload(*, command: Any, placeholders: dict[str, Any], purpose: str) -> dict[str, Any]:
+def _command_template_payload(*, command: Any, placeholders: dict[str, Any]) -> dict[str, Any]:
     template = str(command or "").strip()
     return {
         "kind": "agentic-workspace/command-template/v1",
@@ -499,7 +496,6 @@ def _command_template_payload(*, command: Any, placeholders: dict[str, Any], pur
         "runnable": False,
         "placeholders": placeholders,
         "instantiation_required": [name for name, value in placeholders.items() if value in (None, "", [])],
-        "purpose": purpose,
         "rule": "Substitute placeholders before running.",
     }
 
