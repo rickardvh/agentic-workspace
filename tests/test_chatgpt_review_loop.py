@@ -324,6 +324,27 @@ def test_fresh_global_dispatch_records_per_pr_resume_state_when_no_head_is_pushe
     assert saved["status"] == "awaiting-review"
 
 
+def test_detached_fresh_stop_hook_binds_precreated_owner_state(tmp_path: Path, monkeypatch) -> None:
+    runner = FakeRunner(tmp_path)
+    state(tmp_path, session_id="", status="fresh-session-in-progress")
+    monkeypatch.setenv(loop.OWNER_ROOT_ENV, tmp_path.as_posix())
+    monkeypatch.setenv(loop.OWNER_BRANCH_ENV, runner.branch)
+
+    result = loop.handoff(
+        cwd=tmp_path,
+        session_id=SESSION,
+        pr=None,
+        max_cycles=10,
+        max_repeated_blockers=2,
+        replace_session=False,
+        existing_only=True,
+        runner=runner,
+    )
+
+    assert result["status"] == "handoff-recorded"
+    assert loop._load_state(tmp_path, 12)["session_id"] == SESSION
+
+
 def test_handoff_is_idempotent_adds_opt_in_and_rejects_session_guessing(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
 
