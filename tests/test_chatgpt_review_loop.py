@@ -318,7 +318,7 @@ def test_global_dispatch_skips_pr_with_human_only_recovery(tmp_path: Path) -> No
     runner = FakeRunner(tmp_path, comments=[review])
     worktree = tmp_path / "worktrees" / "pr-12"
     worktree.mkdir(parents=True)
-    state(tmp_path, status="recovery-required", last_event="max-cycles-exceeded")
+    state(tmp_path, status="recovery-required", last_event="max-cycles-exceeded", prompt_transport=loop.PROMPT_TRANSPORT)
     loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
     original_run = runner.run
 
@@ -356,6 +356,7 @@ def test_global_dispatch_launches_one_recovery_resume(tmp_path: Path, monkeypatc
         last_event=last_event,
         recovery_review_key=f"12:{HEAD_A}:blocked",
         handled_reviews=[f"12:{HEAD_A}:blocked"],
+        prompt_transport=loop.PROMPT_TRANSPORT,
     )
     loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
     original_run = runner.run
@@ -386,6 +387,50 @@ def test_global_dispatch_launches_one_recovery_resume(tmp_path: Path, monkeypatc
     assert seen["status"] == "awaiting-review"
     assert seen["handled_reviews"] == []
     assert seen["automatic_recovery_reviews"] == [f"12:{HEAD_A}:blocked"]
+
+
+def test_global_dispatch_rearms_legacy_truncated_prompt_without_charging_budget(tmp_path: Path, monkeypatch) -> None:
+    review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    state(
+        tmp_path,
+        status="recovery-required",
+        last_event="resume-failed",
+        cycles=2,
+        handled_reviews=[f"12:{HEAD_A}:blocked"],
+        automatic_recovery_reviews=[f"12:{HEAD_A}:blocked"],
+        blocker_fingerprints={"old": 2},
+    )
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": "unused"}}})
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        if list(command)[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps([{"number": 12, "headRefName": runner.branch, "headRefOid": HEAD_A, "comments": [review], "url": "u"}]),
+                "",
+            )
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+    seen = {}
+    monkeypatch.setattr(
+        loop,
+        "poll_one",
+        lambda root, recovered_state, **kwargs: seen.update(recovered_state) or {"pr_number": 12, "status": "resumed"},
+    )
+
+    loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=10, max_repeated_blockers=2
+    )
+
+    assert seen["prompt_transport"] == loop.PROMPT_TRANSPORT
+    assert seen["cycles"] == 0
+    assert seen["handled_reviews"] == []
+    assert seen["automatic_recovery_reviews"] == []
+    assert seen["blocker_fingerprints"] == {}
 
 
 def test_fresh_global_dispatch_fetches_and_detaches_at_reviewed_head(tmp_path: Path, monkeypatch) -> None:

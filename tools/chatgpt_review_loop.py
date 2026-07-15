@@ -23,6 +23,7 @@ STATE_RELATIVE = Path(".agentic-workspace/local/chatgpt-review-loop")
 OWNER_ROOT_ENV = "AW_CHATGPT_REVIEW_OWNER_ROOT"
 OWNER_BRANCH_ENV = "AW_CHATGPT_REVIEW_OWNER_BRANCH"
 DISPATCH_STATE = "dispatch.json"
+PROMPT_TRANSPORT = "stdin-v1"
 REVIEW_MARKER_RE = re.compile(
     r"<!-- aw-chatgpt-review pr=(?P<pr>[1-9][0-9]*) "
     r"head=(?P<head>[0-9a-f]{40}) policy=pr-review-recheck-v1 "
@@ -643,7 +644,7 @@ def poll_one(
     handled.append(review.key)
     fingerprints[fingerprint] = repeated
     state["cycles"] = int(state.get("cycles", 0)) + 1
-    state.update(status="resume-in-progress", last_event="resume-attempt-recorded", recovery="")
+    state.update(status="resume-in-progress", last_event="resume-attempt-recorded", recovery="", prompt_transport=PROMPT_TRANSPORT)
     _save_state(owner_root, state)
 
     env = os.environ.copy()
@@ -792,6 +793,23 @@ def _dispatch_all_unlocked(
             # slot. A recoverable failed resume gets exactly one automatic
             # recovery job; other recovery states remain explicitly human-owned.
             existing = _load_state(root, pr)
+            if existing.get("status") == "recovery-required" and existing.get("prompt_transport") != PROMPT_TRANSPORT:
+                # Every argv-based multiline prompt on Windows was truncated.
+                # Rearm that invalid history once under the durable stdin
+                # transport without charging the PR's cycle/repetition budget.
+                existing.update(
+                    status="awaiting-review",
+                    last_event="legacy-prompt-transport-rearmed",
+                    recovery="",
+                    prompt_transport=PROMPT_TRANSPORT,
+                    cycles=0,
+                    blocker_fingerprints={},
+                    handled_reviews=[item for item in existing.get("handled_reviews", []) if item != review.key],
+                    automatic_recovery_reviews=[
+                        item for item in existing.get("automatic_recovery_reviews", []) if item != review.key
+                    ],
+                )
+                _save_state(root, existing)
             if existing.get("status") == "resume-in-progress":
                 # Acquiring the dispatcher lock proves no review job is still
                 # running. Recover an attempt orphaned by watcher termination.
