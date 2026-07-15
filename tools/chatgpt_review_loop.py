@@ -309,6 +309,43 @@ def _save_state(root: Path, state: dict[str, Any]) -> None:
     temporary.replace(path)
 
 
+def _record_job_terminal(
+    state: dict[str, Any],
+    *,
+    mode: str,
+    worktree: Path,
+    start_head: str,
+    exit_code: int,
+    disposition: str,
+    event: str,
+    proof_status: str = "unreported",
+    diagnostic: str = "",
+) -> None:
+    """Persist the one machine-readable disposition for a launched job.
+
+    A Codex exit code is transport evidence, not proof that the agent validated
+    or pushed its change.  Keeping that distinction in the state file makes a
+    later recovery deterministic and prevents callers from treating a remote
+    head change as the normal success signal.
+    """
+    state["terminal_result"] = {
+        "kind": "agentic-workspace/chatgpt-review-job-result/v1",
+        "pr_number": int(state["pr_number"]),
+        "session_id": str(state.get("session_id", "")),
+        "worktree": worktree.as_posix(),
+        "starting_head": start_head,
+        "ending_head": str(state.get("handoff_head", "")),
+        "mode": mode,
+        "exit_code": exit_code,
+        "proof_status": proof_status,
+        "push_status": "recorded" if state.get("handoff_head") != start_head else "unreported",
+        "disposition": disposition,
+        "event": event,
+        "diagnostic": diagnostic[-2000:],
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 def _load_state(root: Path, pr: int) -> dict[str, Any]:
     path = _state_path(root, pr)
     if not path.is_file():
@@ -775,6 +812,10 @@ def poll_one(
             resume_exit_code=completed.returncode,
             resume_diagnostic=diagnostic,
         )
+        _record_job_terminal(
+            latest, mode="resume", worktree=worktree, start_head=review.head,
+            exit_code=completed.returncode, disposition="failed", event="resume-failed", diagnostic=diagnostic,
+        )
         _save_state(owner_root, latest)
         return {
             "pr_number": pr,
@@ -790,8 +831,17 @@ def poll_one(
             recovery="the watcher will launch one recovery resume for this exact review; inspect it if that recovery also ends without a handoff",
             recovery_review_key=review.key,
         )
+        _record_job_terminal(
+            latest, mode="resume", worktree=worktree, start_head=review.head,
+            exit_code=0, disposition="unreported", event="resume-ended-without-new-handoff",
+        )
         _save_state(owner_root, latest)
         return {"pr_number": pr, "status": "recovery-required", "event": "resume-ended-without-new-handoff"}
+    _record_job_terminal(
+        latest, mode="resume", worktree=worktree, start_head=review.head,
+        exit_code=0, disposition="handoff-recorded", event="resume-completed",
+    )
+    _save_state(owner_root, latest)
     return {"pr_number": pr, "status": "resumed", "new_head": latest.get("handoff_head"), "review_key": review.key}
 
 
@@ -1066,12 +1116,17 @@ def _dispatch_all_unlocked(
     completed = runner.run_interactive(command, cwd=worktree, env=env, input_text=prompt)
     if completed.returncode:
         bound = _load_state(root, pr)
+        diagnostic = (completed.stderr or completed.stdout).strip()[-2000:]
         bound.update(
             status="recovery-required",
             last_event="fresh-session-failed",
             recovery="fresh Codex session failed; inspect the exact job and explicitly recover or clean up before redispatching this review",
             fresh_exit_code=completed.returncode,
-            fresh_diagnostic=(completed.stderr or completed.stdout).strip()[-2000:],
+            fresh_diagnostic=diagnostic,
+        )
+        _record_job_terminal(
+            bound, mode="fresh", worktree=worktree, start_head=review.head,
+            exit_code=completed.returncode, disposition="failed", event="fresh-session-failed", diagnostic=diagnostic,
         )
         _save_state(root, bound)
         _save_dispatch(root, registry)
@@ -1083,6 +1138,10 @@ def _dispatch_all_unlocked(
             status="recovery-required",
             last_event="fresh-session-unbound",
             recovery="fresh Codex session ended without a Stop-hook binding; inspect the job and explicitly recover or clean up before redispatching this review",
+        )
+        _record_job_terminal(
+            bound, mode="fresh", worktree=worktree, start_head=review.head,
+            exit_code=0, disposition="unbound", event="fresh-session-unbound",
         )
         _save_state(root, bound)
         _save_dispatch(root, registry)

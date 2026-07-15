@@ -1019,6 +1019,23 @@ def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_
     assert loop._load_state(tmp_path, 12)["hook_trust_mode"] == "automation-bypass"
 
 
+def test_resume_persists_a_machine_readable_terminal_result(tmp_path: Path) -> None:
+    review = {"id": "IC_terminal", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    runner.next_handoff_head = HEAD_B
+
+    loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
+
+    terminal = loop._load_state(tmp_path, 12)["terminal_result"]
+    assert terminal["kind"] == "agentic-workspace/chatgpt-review-job-result/v1"
+    assert terminal["pr_number"] == 12
+    assert terminal["session_id"] == SESSION
+    assert terminal["starting_head"] == HEAD_A
+    assert terminal["ending_head"] == HEAD_B
+    assert terminal["disposition"] == "handoff-recorded"
+    assert terminal["proof_status"] == "unreported"
+
+
 def test_new_handoff_clears_stale_resume_failure_diagnostics(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
     existing = state(tmp_path, status="recovery-required", resume_exit_code=2, resume_diagnostic="old failure")
