@@ -29,6 +29,7 @@ REVIEW_MARKER_RE = re.compile(
     r"decision=(?P<decision>blocked|merge-ready) -->"
 )
 _LOG_STREAM: TextIO | None = None
+_COMPACT_CONSOLE = False
 
 
 class LoopError(RuntimeError):
@@ -91,9 +92,47 @@ class CommandRunner:
 
 def _emit(payload: dict[str, Any], *, error: bool = False) -> None:
     rendered = json.dumps(payload, indent=2, sort_keys=True)
-    print(rendered, file=sys.stderr if error else sys.stdout, flush=True)
+    console_output = _compact_console_event(payload) if _COMPACT_CONSOLE else rendered
+    if console_output:
+        print(console_output, file=sys.stderr if error else sys.stdout, flush=True)
     if _LOG_STREAM is not None:
         print(rendered, file=_LOG_STREAM, flush=True)
+
+
+def _compact_console_event(payload: dict[str, Any]) -> str:
+    timestamp = datetime.now().astimezone().strftime("%H:%M:%S")
+    status = str(payload.get("status", "event"))
+    pr = payload.get("pr_number")
+    prefix = f"[{timestamp}]" + (f" PR #{pr}" if pr else "")
+    if status == "job-started":
+        return f"{prefix} {payload.get('mode', 'review')} job started"
+    if status == "poll-complete":
+        lines: list[str] = []
+        for result in payload.get("results", []):
+            if not isinstance(result, dict) or result.get("status") == "no-op":
+                continue
+            result_pr = result.get("pr_number")
+            result_prefix = f"[{timestamp}]" + (f" PR #{result_pr}" if result_pr else "")
+            if result.get("status") == "dispatched":
+                nested = result.get("result", {})
+                if isinstance(nested, dict) and nested.get("status") == "recovery-required":
+                    lines.append(f"{result_prefix} job ended: {nested.get('event', 'recovery required')}")
+                elif isinstance(nested, dict) and nested.get("status") == "resumed":
+                    lines.append(f"{result_prefix} job completed with handoff {str(nested.get('new_head', ''))[:8]}")
+                elif result.get("awaiting_resume"):
+                    lines.append(f"{result_prefix} fresh session saved; resume pending")
+                else:
+                    lines.append(f"{result_prefix} {result.get('mode', 'review')} job completed")
+            elif result.get("status") == "recovery-required":
+                lines.append(f"{result_prefix} recovery required: {result.get('event', 'unknown')}")
+            else:
+                lines.append(f"{result_prefix} {result.get('status')}")
+        return "\n".join(lines)
+    if status == "error":
+        return f"{prefix} ERROR {payload.get('code', '')}: {payload.get('message', '')}"
+    if status == "max-polls-reached":
+        return f"{prefix} watcher stopped after reaching its poll limit"
+    return f"{prefix} {status}"
 
 
 def _configure_log(path: Path | None) -> None:
@@ -106,11 +145,13 @@ def _configure_log(path: Path | None) -> None:
 
 def _configure_console_output(*, windows: bool | None = None) -> None:
     """Bind watcher output to its newly allocated Windows console."""
+    global _COMPACT_CONSOLE
     if not (os.name == "nt" if windows is None else windows):
         return
     console = open("CONOUT$", "w", encoding="utf-8", errors="replace", buffering=1)  # noqa: PTH123
     sys.stdout = console
     sys.stderr = console
+    _COMPACT_CONSOLE = True
 
 
 def _resolved_command(command: Sequence[str], *, windows: bool | None = None) -> list[str]:
@@ -427,7 +468,7 @@ def parse_reviews(comments: list[dict[str, Any]], *, expected_pr: int, expected_
     return matches, rejected
 
 
-AUTO_RECOVERY_EVENTS = frozenset({"resume-failed", "resume-ended-without-new-handoff"})
+AUTO_RECOVERY_EVENTS = frozenset({"resume-failed", "resume-ended-without-new-handoff", "orphaned-resume"})
 
 
 def _queue_automatic_recovery(state: dict[str, Any], root: Path, *, review_key: str = "") -> bool:
@@ -736,6 +777,16 @@ def _dispatch_all_unlocked(
             # slot. A recoverable failed resume gets exactly one automatic
             # recovery job; other recovery states remain explicitly human-owned.
             existing = _load_state(root, pr)
+            if existing.get("status") == "resume-in-progress":
+                # Acquiring the dispatcher lock proves no review job is still
+                # running. Recover an attempt orphaned by watcher termination.
+                existing.update(
+                    status="recovery-required",
+                    last_event="orphaned-resume",
+                    recovery="the watcher will launch one recovery resume for the interrupted job",
+                    recovery_review_key=review.key,
+                )
+                _save_state(root, existing)
             if existing.get("status") == "recovery-required":
                 if not _queue_automatic_recovery(existing, root, review_key=review.key):
                     continue

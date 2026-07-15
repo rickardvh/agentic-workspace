@@ -74,13 +74,35 @@ def test_interactive_codex_job_uses_a_background_console_on_windows(tmp_path: Pa
 def test_watcher_console_output_rebinds_stdout_and_stderr(monkeypatch) -> None:
     stream = io.StringIO()
     monkeypatch.setattr(loop, "open", lambda *args, **kwargs: stream, raising=False)
-    old_stdout, old_stderr = loop.sys.stdout, loop.sys.stderr
+    old_stdout, old_stderr, old_compact = loop.sys.stdout, loop.sys.stderr, loop._COMPACT_CONSOLE
     try:
         loop._configure_console_output(windows=True)
         assert loop.sys.stdout is stream
         assert loop.sys.stderr is stream
     finally:
         loop.sys.stdout, loop.sys.stderr = old_stdout, old_stderr
+        loop._COMPACT_CONSOLE = old_compact
+
+
+def test_compact_console_suppresses_noop_poll_and_summarizes_jobs() -> None:
+    assert (
+        loop._compact_console_event({"status": "poll-complete", "results": [{"status": "no-op", "reason": "no-eligible-blocked-review"}]})
+        == ""
+    )
+    message = loop._compact_console_event(
+        {
+            "status": "poll-complete",
+            "results": [
+                {
+                    "status": "dispatched",
+                    "pr_number": 12,
+                    "mode": "resume",
+                    "result": {"status": "recovery-required", "event": "resume-ended-without-new-handoff"},
+                }
+            ],
+        }
+    )
+    assert "PR #12 job ended: resume-ended-without-new-handoff" in message
 
 
 class FakeRunner(loop.CommandRunner):
@@ -309,15 +331,19 @@ def test_global_dispatch_skips_pr_with_human_only_recovery(tmp_path: Path) -> No
     )
 
 
-def test_global_dispatch_launches_one_recovery_resume(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize(
+    ("initial_status", "last_event"),
+    [("recovery-required", "resume-failed"), ("resume-in-progress", "resume-attempt-recorded")],
+)
+def test_global_dispatch_launches_one_recovery_resume(tmp_path: Path, monkeypatch, initial_status: str, last_event: str) -> None:
     review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
     worktree = tmp_path / "worktrees" / "pr-12"
     worktree.mkdir(parents=True)
     state(
         tmp_path,
-        status="recovery-required",
-        last_event="resume-failed",
+        status=initial_status,
+        last_event=last_event,
         recovery_review_key=f"12:{HEAD_A}:blocked",
         handled_reviews=[f"12:{HEAD_A}:blocked"],
     )
