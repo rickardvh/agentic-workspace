@@ -262,7 +262,7 @@ def test_skills_command_recommends_planning_autopilot_for_active_milestone_task(
     assert any("phrase match" in reason for reason in payload["recommendations"][0]["reasons"])
 
 
-def test_registered_skill_dependency_closure_blocks_unresolved_resource(tmp_path: Path) -> None:
+def test_registered_skill_dependency_closure_blocks_unresolved_resource(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     registry = tmp_path / "REGISTRY.json"
     registry.write_text(
         json.dumps(
@@ -290,12 +290,19 @@ def test_registered_skill_dependency_closure_blocks_unresolved_resource(tmp_path
         default_scope="bundled",
         default_stability="fixture",
     )
+    skill_file = tmp_path / "skills" / "review-pass" / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text("# Review pass\n", encoding="utf-8")
 
     skills = workspace_runtime_core._load_registered_skills(source=source, registry_file=registry, target_root=tmp_path)
 
     assert skills[0].availability == "blocked"
     assert skills[0].blocked_reasons == ("missing-resource:review-contract",)
     assert workspace_runtime_core._recommend_skills(task_text="run a review", skills=skills) == []
+    monkeypatch.setattr(workspace_runtime_core, "_skill_catalog_sources", lambda: (source,))
+    assert workspace_runtime_core._skill_dependency_warnings(target_root=tmp_path) == [
+        "skill 'review-pass' is blocked: missing-resource:review-contract"
+    ]
 
     contract = tmp_path / ".agentic-workspace" / "reviews" / "contract.json"
     contract.parent.mkdir(parents=True)

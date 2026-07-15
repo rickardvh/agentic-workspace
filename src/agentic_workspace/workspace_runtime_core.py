@@ -9430,6 +9430,8 @@ def _run_lifecycle_command(
     )
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
+    skill_dependency_warnings = _skill_dependency_warnings(target_root=target_root) if command_name == "doctor" else []
+    warnings.extend(skill_dependency_warnings)
     selected_set = set(selected_modules)
     enabled_set = set(config.enabled_modules)
     installed_set = {entry.name for entry in registry if entry.installed}
@@ -9466,6 +9468,7 @@ def _run_lifecycle_command(
         "warnings": warnings,
         "placeholders": placeholders,
         "stale_generated_surfaces": stale_generated_surfaces,
+        "skill_dependency_warnings": skill_dependency_warnings,
         "registry": [
             {
                 "name": entry.name,
@@ -50967,6 +50970,13 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
         "agent_aid_warnings": aid_warnings,
         "sources": sources,
     }
+
+
+def _skill_dependency_warnings(*, target_root: Path) -> list[str]:
+    skills, _, _ = _discover_registered_skills(target_root=target_root)
+    return [
+        f"skill '{skill.skill_id}' is blocked: {', '.join(skill.blocked_reasons)}" for skill in skills if skill.availability == "blocked"
+    ]
 
 
 def _recommend_agent_aids(*, task_text: str, aids: list[dict[str, Any]]) -> list[dict[str, Any]]:
