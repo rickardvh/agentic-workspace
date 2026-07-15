@@ -159,6 +159,64 @@ def test_pr_comment_delta_keeps_ready_recheck_summaries_informational() -> None:
     assert proof_hint.startswith("No local proof required")
 
 
+def test_pr_comment_delta_uses_structured_blocker_before_next_action_prose() -> None:
+    module = _load_module()
+
+    category, reason, proof_hint = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": (
+                "decision: blocked\n"
+                "unresolved: The PR remains a draft and the PR Semver Label workflow is stale.\n"
+                "next_action: Update `scripts/github/pr_comment_delta.py` and then mark the PR ready.\n"
+                "<!-- aw-chatgpt-review decision=blocked -->"
+            ),
+        }
+    )
+
+    assert category == "ci_label_only_issue"
+    assert "structured blocked" in reason
+    assert proof_hint.startswith("Inspect PR checks/metadata")
+
+
+def test_pr_comment_delta_keeps_structured_source_blockers_actionable() -> None:
+    module = _load_module()
+
+    category, _, proof_hint = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": (
+                "decision: blocked\n"
+                "unresolved: Update scripts/github/pr_comment_delta.py and add a focused regression test.\n"
+                "next_action: Mark the PR ready after the proof passes.\n"
+                "<!-- aw-chatgpt-review decision=blocked -->"
+            ),
+        }
+    )
+
+    assert category == "actionable_code_doc_body_change"
+    assert "source and test surfaces" in proof_hint
+
+
+def test_pr_comment_delta_marks_inconsistent_structured_status_ambiguous() -> None:
+    module = _load_module()
+
+    category, reason, _ = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": (
+                "decision: blocked\n"
+                "unresolved: PR draft state remains.\n"
+                "next_action: Mark ready.\n"
+                "<!-- aw-chatgpt-review decision=ready -->"
+            ),
+        }
+    )
+
+    assert category == "ambiguous_needs_human"
+    assert "inconsistent" in reason
+
+
 def test_pr_comment_delta_filters_seen_comment_urls(tmp_path: Path) -> None:
     module = _load_module()
     baseline = tmp_path / "baseline.json"

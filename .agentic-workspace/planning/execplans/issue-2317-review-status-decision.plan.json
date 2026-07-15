@@ -1,0 +1,78 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2317-review-status-decision",
+  "title": "Issue 2317 review status decision classification",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "proof",
+  "revision": 1,
+  "intent": {
+    "outcome": "https://github.com/rickardvh/agentic-workspace/issues/2317",
+    "non_goals": [
+      "Leave adjacent backlog or follow-on work out of this plan."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2317",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "scripts/github/pr_comment_delta.py",
+      "tests/test_pr_comment_delta.py"
+    ],
+    "effects": [
+      "Classify structured ChatGPT review-status comments from their decision and unresolved blocker before interpreting free-form next_action prose.",
+      "Keep source-change classification for structured source blockers and preserve an ambiguous fallback for missing or inconsistent structured signals."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2317",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2317",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Publish the stacked draft PR with the broad-suite timeout disclosed; await an explicit rerun or CI evidence before full closeout.",
+  "blockers": [
+    "make test-workspace exceeded the local five-minute command timeout without emitting a test failure."
+  ],
+  "proof": {
+    "claims": [
+      "Issue 2317 review status decision classification is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run --active pytest tests/test_pr_comment_delta.py -q",
+      "make lint-workspace",
+      "make test-workspace (required broad gate; timed out after 304 seconds without output)"
+    ],
+    "refs": [
+      "uv run --active pytest tests/test_pr_comment_delta.py -q: 13 passed",
+      "make lint-workspace: passed",
+      "make typecheck: passed",
+      "manual obligation verification:test_evidence_decision: reviewed docs/maintainer/testing-strategy.md, docs/maintainer/test-knowledge-inventory.md, and packages/verification/src/repo_verification_bootstrap/runtime_primitives.py; focused regression is behavior-class coverage for review-status classification."
+    ]
+  },
+  "continuation": {
+    "owner": "verification",
+    "residual_intent": "Obtain a completed broad-suite result before claiming full issue closure."
+  },
+  "specialist_contracts": []
+}
