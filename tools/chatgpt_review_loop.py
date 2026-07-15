@@ -31,6 +31,8 @@ REVIEW_MARKER_RE = re.compile(
 )
 _LOG_STREAM: TextIO | None = None
 _COMPACT_CONSOLE = False
+_CODEX_MESSAGE_ROLES = {"codex", "user"}
+_CODEX_TOOL_ROLES = {"exec", "analysis", "commentary", "tool"}
 
 
 class LoopError(RuntimeError):
@@ -112,8 +114,35 @@ class CommandRunner:
         return subprocess.CompletedProcess(command, completed.returncode, "", "")
 
 
+def _console_job_output(lines: Sequence[str]) -> list[str]:
+    """Keep Codex conversation readable while collapsing noisy tool transcripts."""
+    rendered: list[str] = []
+    mode = "tool"
+    tool_announced = False
+    for raw in lines:
+        line = raw.replace("\r\n", "\n").replace("\r", "\n").rstrip("\n")
+        marker = line.strip().lower()
+        if marker in _CODEX_MESSAGE_ROLES:
+            mode = "message"
+            tool_announced = False
+            rendered.append(marker)
+            continue
+        if marker in _CODEX_TOOL_ROLES:
+            mode = "tool"
+            tool_announced = False
+            continue
+        if mode == "message":
+            rendered.append(line)
+            continue
+        if line.strip() and not tool_announced:
+            summary = " ".join(line.split())
+            rendered.append(f"[tool] {summary[:240]}")
+            tool_announced = True
+    return rendered
+
+
 def _console_run(command: Sequence[str]) -> int:
-    """Stream one child through this process's console with native newlines."""
+    """Stream concise Codex conversation through this process's console."""
     if not command:
         return 2
     prompt = sys.stdin.read()
@@ -131,8 +160,21 @@ def _console_run(command: Sequence[str]) -> int:
         assert process.stdin is not None and process.stdout is not None
         process.stdin.write(prompt)
         process.stdin.close()
-        for line in process.stdout:
-            console.write(line.replace("\r\n", "\n").replace("\r", "\n"))
+        mode = "tool"
+        tool_announced = False
+        for raw in process.stdout:
+            line = raw.replace("\r\n", "\n").replace("\r", "\n").rstrip("\n")
+            marker = line.strip().lower()
+            if marker in _CODEX_MESSAGE_ROLES:
+                mode, tool_announced = "message", False
+                console.write(marker + "\n")
+            elif marker in _CODEX_TOOL_ROLES:
+                mode, tool_announced = "tool", False
+            elif mode == "message":
+                console.write(line + "\n")
+            elif line.strip() and not tool_announced:
+                console.write("[tool] " + " ".join(line.split())[:240] + "\n")
+                tool_announced = True
             console.flush()
         return process.wait()
     finally:

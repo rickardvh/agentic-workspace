@@ -110,6 +110,26 @@ def test_compact_console_suppresses_noop_poll_and_summarizes_jobs() -> None:
     assert "PR #12 job ended: resume-ended-without-new-handoff" in message
 
 
+def test_console_job_output_keeps_agent_messages_and_collapses_tool_transcripts() -> None:
+    assert loop._console_job_output(
+        [
+            "codex\n",
+            "I will inspect the watcher.\n",
+            "exec\n",
+            '"pwsh" -Command "Get-Content tools/chatgpt_review_loop.py"\n',
+            "very large command output that must not be printed\n",
+            "codex\n",
+            "The command succeeded.\n",
+        ]
+    ) == [
+        "codex",
+        "I will inspect the watcher.",
+        '[tool] "pwsh" -Command "Get-Content tools/chatgpt_review_loop.py"',
+        "codex",
+        "The command succeeded.",
+    ]
+
+
 class FakeRunner(loop.CommandRunner):
     def __init__(self, root: Path, *, comments: list[dict] | None = None) -> None:
         self.root = root
