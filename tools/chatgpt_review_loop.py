@@ -328,6 +328,7 @@ def _record_job_terminal(
     later recovery deterministic and prevents callers from treating a remote
     head change as the normal success signal.
     """
+    previous = state.get("terminal_result") if isinstance(state.get("terminal_result"), dict) else {}
     state["terminal_result"] = {
         "kind": "agentic-workspace/chatgpt-review-job-result/v1",
         "pr_number": int(state["pr_number"]),
@@ -337,13 +338,35 @@ def _record_job_terminal(
         "ending_head": str(state.get("handoff_head", "")),
         "mode": mode,
         "exit_code": exit_code,
-        "proof_status": proof_status,
-        "push_status": "recorded" if state.get("handoff_head") != start_head else "unreported",
+        "proof_status": previous.get("proof_status") if proof_status == "unreported" and previous.get("proof_status") else proof_status,
+        "proof_commands": previous.get("proof_commands", []),
+        "push_status": previous.get("push_status") or ("recorded" if state.get("handoff_head") != start_head else "unreported"),
         "disposition": disposition,
         "event": event,
         "diagnostic": diagnostic[-2000:],
         "recorded_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+def report_job_result(*, cwd: Path, session_id: str, proof_status: str, proof_command: str, push_status: str, runner: CommandRunner) -> dict[str, Any]:
+    """Record agent-supplied proof/push evidence for the exact owning session."""
+    root = _repo_root(cwd, runner)
+    owner_root = Path(os.environ.get(OWNER_ROOT_ENV, root.as_posix())).resolve()
+    candidates = [item for item in _all_states(owner_root) if item.get("session_id") == session_id]
+    if len(candidates) != 1:
+        raise LoopError("job-result-session-ambiguous", "job result requires exactly one bound owning session")
+    state = candidates[0]
+    previous = state.get("terminal_result") if isinstance(state.get("terminal_result"), dict) else {}
+    state["terminal_result"] = {
+        **previous,
+        "kind": "agentic-workspace/chatgpt-review-job-result/v1",
+        "pr_number": int(state["pr_number"]), "session_id": session_id,
+        "worktree": root.as_posix(), "proof_status": proof_status,
+        "proof_commands": [proof_command] if proof_command else [], "push_status": push_status,
+        "reported_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _save_state(owner_root, state)
+    return state["terminal_result"]
 
 
 def _load_state(root: Path, pr: int) -> dict[str, Any]:
@@ -654,7 +677,7 @@ def _review_prompt(review: Review, *, branch: str = "") -> str:
         f"Review comment: {review.url or review.comment_id}\n\n"
         f"Actionable findings (transported verbatim; not reinterpreted):\n{review.findings}\n\n"
         f"{'You are detached: push with git push origin HEAD:' + branch + '. ' if branch else ''}Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
-        "Do not merge from this continuation."
+        "After proof and push, record their exact outcomes with `python tools/chatgpt_review_loop.py job-result --session-id $CODEX_THREAD_ID --proof-status passed|failed --proof-command \"<command>\" --push-status passed|failed`. Do not merge from this continuation."
     )
 
 
@@ -837,6 +860,18 @@ def poll_one(
         )
         _save_state(owner_root, latest)
         return {"pr_number": pr, "status": "recovery-required", "event": "resume-ended-without-new-handoff"}
+    terminal = latest.get("terminal_result") if isinstance(latest.get("terminal_result"), dict) else {}
+    if terminal.get("proof_status") != "passed" or terminal.get("push_status") != "passed":
+        latest.update(
+            status="recovery-required", last_event="handoff-proof-unreported",
+            recovery="the job pushed a handoff without a passed proof-and-push result; resume the exact session and report it",
+        )
+        _record_job_terminal(
+            latest, mode="resume", worktree=worktree, start_head=review.head,
+            exit_code=0, disposition="proof-unreported", event="handoff-proof-unreported",
+        )
+        _save_state(owner_root, latest)
+        return {"pr_number": pr, "status": "recovery-required", "event": "handoff-proof-unreported"}
     _record_job_terminal(
         latest, mode="resume", worktree=worktree, start_head=review.head,
         exit_code=0, disposition="handoff-recorded", event="resume-completed",
@@ -1325,6 +1360,13 @@ def _parser() -> argparse.ArgumentParser:
     handoff_parser.add_argument("--max-repeated-blockers", type=int, default=2)
     handoff_parser.add_argument("--replace-session", action="store_true")
 
+    result_parser = sub.add_parser("job-result", help="Record proof and push evidence for one bound review job.")
+    result_parser.add_argument("--target", type=Path, default=Path.cwd())
+    result_parser.add_argument("--session-id", default=os.environ.get("CODEX_THREAD_ID", ""))
+    result_parser.add_argument("--proof-status", choices=["passed", "failed"], required=True)
+    result_parser.add_argument("--proof-command", default="")
+    result_parser.add_argument("--push-status", choices=["passed", "failed"], required=True)
+
     poll_parser = sub.add_parser("poll", help="Poll with gh and resume only exact blocked handoffs.")
     poll_parser.add_argument("--target", type=Path, default=Path.cwd())
     poll_parser.add_argument("--pr", type=int)
@@ -1405,6 +1447,13 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
                 _emit(hook_result)
             else:
                 _emit(result)
+            return 0
+        if args.command == "job-result":
+            result = report_job_result(
+                cwd=args.target.resolve(), session_id=args.session_id.strip(), proof_status=args.proof_status,
+                proof_command=args.proof_command, push_status=args.push_status, runner=runner,
+            )
+            _emit(result)
             return 0
 
         root = _repo_root(args.target.resolve(), runner)

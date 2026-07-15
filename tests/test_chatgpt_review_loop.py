@@ -181,6 +181,7 @@ class FakeRunner(loop.CommandRunner):
             if self.next_handoff_head:
                 state = loop._load_state(self.root, 12)
                 state.update(handoff_head=self.next_handoff_head, status="awaiting-review", last_event="handoff-recorded")
+                state["terminal_result"] = {"proof_status": "passed", "push_status": "passed"}
                 loop._save_state(self.root, state)
                 self.pr_head = self.next_handoff_head
                 if self.next_review_decision:
@@ -1034,7 +1035,7 @@ def test_resume_persists_a_machine_readable_terminal_result(tmp_path: Path) -> N
     assert terminal["starting_head"] == HEAD_A
     assert terminal["ending_head"] == HEAD_B
     assert terminal["disposition"] == "handoff-recorded"
-    assert terminal["proof_status"] == "unreported"
+    assert terminal["proof_status"] == "passed"
 
 
 def test_new_handoff_clears_stale_resume_failure_diagnostics(tmp_path: Path) -> None:
