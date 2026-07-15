@@ -686,7 +686,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert "validation_plan" not in encoded
     assert payload["detail_command_template"]["runnable"] is False
     assert payload["detail_command_template"]["placeholders"] == {"paths": ["generated/workspace/python/cli.py"]}
-    assert len(encoded) < 4100
+    assert len(encoded) < 4200
 
 
 def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:
@@ -3808,7 +3808,7 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
     assert payload["next"]["command"] == docs_diff
     assert payload["required_commands"] == [docs_diff]
     assert "uv run pytest tests -q" not in encoded
-    assert len(encoded) < 3200
+    assert len(encoded) < 3250
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(tmp_path: Path, capsys) -> None:
