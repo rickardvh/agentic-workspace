@@ -313,6 +313,38 @@ def test_registered_skill_dependency_closure_blocks_unresolved_resource(tmp_path
     assert workspace_runtime_core._recommend_skills(task_text="run a review", skills=available)[0].skill.skill_id == "review-pass"
 
 
+def test_registered_skill_dependency_closure_accepts_package_owned_resource(tmp_path: Path) -> None:
+    target = tmp_path / "target"
+    target.mkdir()
+    package_root = tmp_path / "package"
+    registry = package_root / "REGISTRY.json"
+    registry.parent.mkdir()
+    registry.write_text(
+        json.dumps(
+            {
+                "resources": {"review-contract": {"path": "resources/review-contract.json"}},
+                "skills": [{"id": "review-pass", "path": "review-pass/SKILL.md", "required_resources": ["review-contract"]}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (package_root / "resources").mkdir()
+    (package_root / "resources" / "review-contract.json").write_text("{}", encoding="utf-8")
+    source = workspace_runtime_core.SkillCatalogSource(
+        name="package-fixture",
+        registry_path=Path("REGISTRY.json"),
+        skills_root=Path("skills"),
+        owner="fixture",
+        source_kind="fixture",
+        default_scope="bundled",
+        default_stability="fixture",
+    )
+
+    skills = workspace_runtime_core._load_registered_skills(source=source, registry_file=registry, target_root=target)
+
+    assert skills[0].availability == "available"
+
+
 def test_skills_command_select_returns_compact_recommendations_without_inventory(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

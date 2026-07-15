@@ -51133,7 +51133,11 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path, 
         blocked_reasons = tuple(
             f"missing-resource:{resource_id}"
             for resource_id in required_resources
-            if resource_id not in resource_paths or not (target_root / resource_paths[resource_id]).is_file()
+            if resource_id not in resource_paths
+            or not any(
+                candidate.is_file()
+                for candidate in (target_root / resource_paths[resource_id], registry_file.parent / resource_paths[resource_id])
+            )
         )
         skills.append(
             RegisteredSkill(
