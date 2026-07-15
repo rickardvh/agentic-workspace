@@ -469,6 +469,47 @@ def test_global_dispatch_rearms_legacy_truncated_prompt_without_charging_budget(
     assert seen["blocker_fingerprints"] == {}
 
 
+def test_global_dispatch_reconciles_remote_head_when_stop_hook_misses(tmp_path: Path) -> None:
+    old_review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[old_review])
+    runner.pr_head = HEAD_B
+    state(tmp_path, status="recovery-required", last_event="resume-ended-without-new-handoff", handoff_head=HEAD_A)
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": "unused"}}})
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        if list(command)[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps(
+                    [
+                        {
+                            "number": 12,
+                            "headRefName": runner.branch,
+                            "headRefOid": HEAD_B,
+                            "comments": [old_review],
+                            "url": "u",
+                        }
+                    ]
+                ),
+                "",
+            )
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+
+    result = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=10, max_repeated_blockers=2
+    )
+
+    assert result["status"] == "no-op"
+    reconciled = loop._load_state(tmp_path, 12)
+    assert reconciled["handoff_head"] == HEAD_B
+    assert reconciled["status"] == "awaiting-review"
+    assert reconciled["last_event"] == "remote-handoff-reconciled"
+
+
 def test_fresh_global_dispatch_fetches_and_detaches_at_reviewed_head(tmp_path: Path, monkeypatch) -> None:
     review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])

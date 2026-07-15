@@ -843,13 +843,30 @@ def _dispatch_all_unlocked(
         head = str(payload.get("headRefOid", ""))
         if pr < 1 or not re.fullmatch(r"[0-9a-f]{40}", head):
             continue
+        entry = entries.get(str(pr))
+        if isinstance(entry, dict) and _state_path(root, pr).is_file():
+            existing = _load_state(root, pr)
+            prior_head = str(existing.get("handoff_head", ""))
+            if prior_head and prior_head != head and existing.get("branch") == payload.get("headRefName"):
+                # The exact PR branch is authoritative when a resumed job
+                # pushed successfully but its Stop hook failed to persist the
+                # handoff locally. Reconcile before looking for a review of the
+                # new head so the serial lane does not stall on stale state.
+                existing.update(
+                    handoff_head=head,
+                    status="awaiting-review",
+                    last_event="remote-handoff-reconciled",
+                    recovery="",
+                    resume_exit_code=0,
+                    resume_diagnostic="",
+                )
+                _save_state(root, existing)
         matches, rejected = parse_reviews(_comments_from_pr(payload), expected_pr=pr, expected_head=head)
         if any(item["reason"] != "stale-head" for item in rejected) or len(matches) != 1:
             continue
         review = matches[0]
         if review.decision != "blocked" or not review.findings:
             continue
-        entry = entries.get(str(pr))
         if isinstance(entry, dict) and _state_path(root, pr).is_file():
             # A completed or exhausted session must release the global serial
             # slot. A recoverable failed resume gets exactly one automatic
