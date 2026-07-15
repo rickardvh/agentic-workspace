@@ -1,6 +1,6 @@
 # ChatGPT Review to Codex Continuation
 
-This repo-local maintainer loop transports external ChatGPT PR review findings back to the exact Codex session that handed off the reviewed head. It does not review code, invoke a model while polling, reinterpret review decisions, mark a PR ready, or merge.
+This repo-local maintainer loop transports actionable external PR review findings, failed CI checks, and merge conflicts back to the exact Codex session that handed off the reviewed head. It does not review code, invoke a model while polling, reinterpret review decisions, mark a PR ready, or merge.
 
 The implementation is intentionally outside shipped Agentic Workspace runtime and payload surfaces:
 

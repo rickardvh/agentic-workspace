@@ -288,7 +288,7 @@ def _pr_view(root: Path, runner: CommandRunner, *, pr: int | None = None, repo: 
         *([str(pr)] if pr else []),
         *(["--repo", repo] if repo else []),
         "--json",
-        "number,state,headRefName,headRefOid,body,comments,url",
+        "number,state,headRefName,headRefOid,body,comments,url,mergeable,mergeStateStatus,statusCheckRollup",
     ]
     payload = runner.json(command, cwd=root)
     if not isinstance(payload, dict):
@@ -519,7 +519,7 @@ def _comments_from_pr(payload: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _open_prs(root: Path, runner: CommandRunner) -> list[dict[str, Any]]:
     payload = runner.json(
-        ["gh", "pr", "list", "--state", "open", "--limit", "100", "--json", "number,state,headRefName,headRefOid,body,comments,url"],
+        ["gh", "pr", "list", "--state", "open", "--limit", "100", "--json", "number,state,headRefName,headRefOid,body,comments,url,mergeable,mergeStateStatus,statusCheckRollup"],
         cwd=root,
     )
     if not isinstance(payload, list) or not all(isinstance(item, dict) for item in payload):
@@ -704,6 +704,26 @@ def parse_reviews(comments: list[dict[str, Any]], *, expected_pr: int, expected_
     return matches, rejected
 
 
+def _system_trigger(payload: dict[str, Any], *, pr: int, head: str) -> Review | None:
+    """Return one deterministic actionable CI/conflict trigger for this head."""
+    findings: list[str] = []
+    if str(payload.get("mergeable", "")).upper() == "CONFLICTING" or str(payload.get("mergeStateStatus", "")).upper() == "DIRTY":
+        findings.append("The PR has merge conflicts. Rebase or merge the base branch, resolve the conflicts, run the relevant proof, and push the result.")
+    failed = {"FAILURE", "FAILED", "TIMED_OUT", "CANCELLED", "ACTION_REQUIRED", "STARTUP_FAILURE"}
+    for check in payload.get("statusCheckRollup", []):
+        if not isinstance(check, dict) or str(check.get("conclusion", "")).upper() not in failed:
+            continue
+        name = str(check.get("name") or check.get("context") or "unnamed check")
+        conclusion = str(check.get("conclusion")).lower()
+        details = str(check.get("detailsUrl") or check.get("url") or "")
+        findings.append(f"CI check `{name}` concluded `{conclusion}`.{(' Inspect ' + details + '.') if details else ''}")
+    if not findings:
+        return None
+    text = "\n".join(findings)
+    fingerprint = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+    return Review(comment_id=f"system:{fingerprint}", pr=pr, head=head, decision="blocked", findings=text, url="")
+
+
 AUTO_RECOVERY_EVENTS = frozenset(
     {
         "resume-failed",
@@ -767,10 +787,11 @@ def _recover(state: dict[str, Any], root: Path, *, event: str, recovery: str) ->
 
 
 def _review_prompt(review: Review, *, branch: str = "") -> str:
+    source = "external review" if not review.comment_id.startswith("system:") else "PR CI or mergeability"
     return (
-        f"External ChatGPT review found blockers for PR #{review.pr} at exact head {review.head}.\n\n"
-        f"Review comment: {review.url or review.comment_id}\n\n"
-        f"Actionable findings (transported verbatim; not reinterpreted):\n{review.findings}\n\n"
+        f"{source} found actionable blockers for PR #{review.pr} at exact head {review.head}.\n\n"
+        f"Source: {review.url or review.comment_id}\n\n"
+        f"Required work:\n{review.findings}\n\n"
         f"{'You are detached: push with git push origin HEAD:' + branch + '. ' if branch else ''}Address these findings, run the appropriate proof, push a new head, and let the repo Stop hook record the next handoff. "
         "After proof and push, record their exact outcomes with `python tools/chatgpt_review_loop.py job-result --session-id $CODEX_THREAD_ID --proof-status passed|failed --proof-command \"<command>\" --proof-exit-code <exit> --push-status passed|failed`. Do not merge from this continuation."
     )
@@ -857,13 +878,15 @@ def poll_one(
             event="ambiguous-reviews",
             recovery="leave one authoritative matching review, then use recover --action continue-waiting",
         )
-    if not matches:
-        event = "stale-review-rejected" if rejected else "review-pending"
-        state.update(last_event=event, recovery="")
-        _save_state(owner_root, state)
-        return {"pr_number": pr, "status": "no-op", "reason": event, "rejected": rejected}
-
-    review = matches[0]
+    if len(matches) == 1:
+        review = matches[0]
+    else:
+        review = _system_trigger(payload, pr=pr, head=str(state["handoff_head"]))
+        if review is None:
+            event = "stale-review-rejected" if rejected else "review-pending"
+            state.update(last_event=event, recovery="")
+            _save_state(owner_root, state)
+            return {"pr_number": pr, "status": "no-op", "reason": event, "rejected": rejected}
     handled = state.setdefault("handled_reviews", [])
     if review.key in handled:
         state.update(last_event="review-already-handled", recovery="")
@@ -1067,10 +1090,10 @@ def _dispatch_all_unlocked(
                 )
                 _save_state(root, existing)
         matches, rejected = parse_reviews(_comments_from_pr(payload), expected_pr=pr, expected_head=head)
-        if any(item["reason"] != "stale-head" for item in rejected) or len(matches) != 1:
+        if any(item["reason"] != "stale-head" for item in rejected) or len(matches) > 1:
             continue
-        review = matches[0]
-        if review.decision != "blocked" or not review.findings:
+        review = matches[0] if matches else _system_trigger(payload, pr=pr, head=head)
+        if review is None or review.decision != "blocked" or not review.findings:
             continue
         if isinstance(entry, dict) and _state_path(root, pr).is_file():
             # A completed or exhausted session must release the global serial

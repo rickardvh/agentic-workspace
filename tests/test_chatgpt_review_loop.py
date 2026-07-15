@@ -260,6 +260,23 @@ def test_marker_parser_accepts_only_exact_pr_and_full_sha() -> None:
     assert {item["reason"] for item in rejected} == {"stale-head", "malformed-or-multiple-markers", "pr-mismatch"}
 
 
+def test_system_trigger_reports_failed_ci_and_merge_conflict_for_exact_head() -> None:
+    trigger = loop._system_trigger(
+        {
+            "mergeable": "CONFLICTING",
+            "statusCheckRollup": [{"name": "unit", "conclusion": "FAILURE", "detailsUrl": "https://example.test/check"}],
+        },
+        pr=12,
+        head=HEAD_A,
+    )
+
+    assert trigger is not None
+    assert trigger.key.startswith(f"12:{HEAD_A}:system:")
+    assert "merge conflicts" in trigger.findings
+    assert "CI check `unit` concluded `failure`" in trigger.findings
+    assert "PR CI or mergeability" in loop._review_prompt(trigger)
+
+
 def test_fresh_session_json_requires_one_durable_identity() -> None:
     assert loop._session_id_from_jsonl('{"type":"thread.started","thread_id":"fresh-12"}\n') == "fresh-12"
     with pytest.raises(loop.LoopError, match="did not report one session"):
