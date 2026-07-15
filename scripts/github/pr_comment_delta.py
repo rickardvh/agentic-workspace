@@ -33,6 +33,8 @@ ACTIONABLE_CATEGORIES = (
     "pr_metadata_body_only_change",
     "ci_label_only_issue",
 )
+_STRUCTURED_REVIEW_FIELD_RE = re.compile(r"(?mi)^(decision|unresolved|next_action)\s*:\s*(.+?)\s*$")
+_STRUCTURED_REVIEW_MARKER_RE = re.compile(r"<!--\s*aw-chatgpt-review\b[^>]*\bdecision=([a-z_-]+)", re.IGNORECASE)
 
 
 def _parse_timestamp(value: str | None) -> datetime | None:
@@ -216,6 +218,66 @@ def _is_positive_review_summary(body: str) -> bool:
     return ready_signal and not unresolved_signal
 
 
+def _classify_structured_review_status(body: str) -> tuple[str, str, str] | None:
+    fields = {name.lower(): value.strip() for name, value in _STRUCTURED_REVIEW_FIELD_RE.findall(body)}
+    marker = _STRUCTURED_REVIEW_MARKER_RE.search(body)
+    marker_decision = marker.group(1).lower() if marker else ""
+    if not fields and not marker_decision:
+        return None
+
+    decision = fields.get("decision", "").lower()
+    unresolved = fields.get("unresolved")
+    if not decision or unresolved is None or (marker_decision and marker_decision != decision):
+        return (
+            "ambiguous_needs_human",
+            "structured review-status signal is missing required fields or is inconsistent",
+            "Inspect the structured review status manually before editing or treating next_action prose as a local blocker.",
+        )
+
+    unresolved_lower = unresolved.lower()
+    if decision == "ready":
+        if _requests_source_change(unresolved) or any(token in unresolved_lower for token in ("blocked", "remaining blocker")):
+            return (
+                "ambiguous_needs_human",
+                "structured ready decision conflicts with its unresolved blocker summary",
+                "Resolve the inconsistent structured review status before acting on next_action prose.",
+            )
+        return (
+            "informational_no_local_change",
+            "structured review status explicitly reports readiness with no unresolved local blocker",
+            "No local proof required unless a later review reopens a blocker.",
+        )
+    if decision != "blocked":
+        return (
+            "ambiguous_needs_human",
+            "structured review status uses an unsupported decision",
+            "Classify manually before interpreting next_action prose as a local change request.",
+        )
+    if _requests_source_change(unresolved):
+        return (
+            "actionable_code_doc_body_change",
+            "structured blocked review status identifies a source or test change",
+            "Inspect the referenced source and test surfaces; run focused proof for the changed behavior.",
+        )
+    if any(token in unresolved_lower for token in ("ci", "check", "workflow", "label", "draft", "mergeable")):
+        return (
+            "ci_label_only_issue",
+            "structured blocked review status identifies CI, labels, draft state, or mergeability",
+            "Inspect PR checks/metadata; run local proof only if CI points to a reproducible failure.",
+        )
+    if any(token in unresolved_lower for token in ("pr body", "pull request body", "description", "title", "close #", "closes #", "closing #")):
+        return (
+            "pr_metadata_body_only_change",
+            "structured blocked review status identifies PR metadata or closure text",
+            "Update PR metadata/body only; no source proof unless the body is generated from checked-in files.",
+        )
+    return (
+        "ambiguous_needs_human",
+        "structured blocked review status does not identify a recognized blocker type",
+        "Classify the unresolved blocker manually before acting on next_action prose.",
+    )
+
+
 def _classify(item: dict[str, Any]) -> tuple[str, str, str]:
     body = _text(item.get("body"))
     lower = body.lower()
@@ -232,6 +294,9 @@ def _classify(item: dict[str, Any]) -> tuple[str, str, str]:
             "inline review comment anchors to a changed file",
             f"Inspect {path}; run focused tests or `agentic-workspace proof --changed {path} --format json`.",
         )
+    structured_status = _classify_structured_review_status(body)
+    if structured_status is not None:
+        return structured_status
     if _is_positive_review_summary(body):
         return (
             "informational_no_local_change",

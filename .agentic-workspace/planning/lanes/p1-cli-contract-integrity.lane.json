@@ -25,9 +25,17 @@
       "execplan_ref": ".agentic-workspace/planning/execplans/issue-2318-review-owner-env.plan.json",
       "depends_on": [],
       "purpose_for_lane": "Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work."
+    },
+    {
+      "id": "issue-2317-review-status-decision",
+      "title": "Issue 2317 review status decision classification",
+      "status": "active",
+      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2317-review-status-decision.plan.json",
+      "depends_on": [],
+      "purpose_for_lane": "Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work."
     }
   ],
-  "current_slice": "issue-2318-review-owner-env",
+  "current_slice": "issue-2317-review-status-decision",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Require focused startup and generated-package tests plus the full workspace CLI suite and required CI coverage.",
   "proof_aggregation": {
