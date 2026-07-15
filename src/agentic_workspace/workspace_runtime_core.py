@@ -119,7 +119,12 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
-from agentic_workspace.current_work_context import resolve_current_work_context
+from agentic_workspace.current_work_context import (
+    resolve_current_work_context,
+    startup_route_fingerprint_check,
+    startup_route_identity,
+    startup_route_identity_check,
+)
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.reporting_support import (
     closeout_claim_boundary_payload,
@@ -19187,12 +19192,41 @@ def _decision_point_binding(*, target_root: Path, task_text: str | None) -> dict
     }
 
 
-def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict[str, Any], task_text: str | None = None) -> dict[str, Any]:
+def _persist_decision_point_forecast(
+    *,
+    target_root: Path | None,
+    forecast: dict[str, Any],
+    task_text: str | None = None,
+    expected_route_identity: dict[str, Any] | None = None,
+    expected_route_fingerprint: str = "",
+) -> dict[str, Any]:
     """Persist exactly the pre-edit forecast emitted to the actor."""
 
     identity = _as_dict(forecast.get("forecast_identity"))
     if target_root is None or not identity or not (identity.get("system_principle_ids") or identity.get("subsystem_intent_ids")):
         return {}
+    if expected_route_fingerprint:
+        fingerprint_check = startup_route_fingerprint_check(
+            expected_fingerprint=expected_route_fingerprint, root=target_root, task=str(task_text or "")
+        )
+        if fingerprint_check["status"] != "match":
+            return {
+                "kind": "agentic-workspace/decision-point-intent-carry/v1",
+                "status": "not-created",
+                "reason_code": "stale-startup-route-identity",
+                "route_identity_check": fingerprint_check,
+                "safe_recovery": "Rerun start to re-resolve the authoritative route, then retry the stateful command.",
+            }
+    if expected_route_identity:
+        route_check = startup_route_identity_check(expected=expected_route_identity, root=target_root, task=str(task_text or ""))
+        if route_check["status"] != "match":
+            return {
+                "kind": "agentic-workspace/decision-point-intent-carry/v1",
+                "status": "not-created",
+                "reason_code": "stale-startup-route-identity",
+                "route_identity_check": route_check,
+                "safe_recovery": "Rerun start to re-resolve the authoritative route, then retry the stateful command.",
+            }
     binding = _decision_point_binding(target_root=target_root, task_text=task_text)
     owner_binding = _as_dict(binding.get("owner_binding"))
     if binding["status"] == "ambiguous" or not owner_binding.get("carry_eligible"):
@@ -30110,6 +30144,38 @@ def _apply_installed_state_fast_start_gate(
     }
 
 
+def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
+    """Describe whether startup's read-only route forecast can be relied on yet."""
+    transition = str(route_decision.get("required_transition") or "none")
+    identity_effects = [str(effect) for effect in _list_payload(route_decision.get("identity_effects")) if str(effect).strip()]
+    provisional = transition != "none" or bool(identity_effects)
+    identity = startup_route_identity(root=target_root, task=str(task_text or ""))
+    rebind_command = _command_with_cli_invoke(
+        command="agentic-workspace start --target . --task <same-task> --format json",
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "status": "provisional" if provisional else "bound",
+        "state_commit": "none",
+        "rule": "Startup projects a route only; it never commits selection or carry state before an explicit transition is used.",
+        "invalidate_when": ["branch", "head", "worktree", "target", "current-work", "selected-owner"],
+        "identity": identity,
+        "adoption_guard": {
+            "status": "required",
+            "expected_fingerprint": identity["fingerprint"],
+            "comparison_fields": identity["comparison_fields"],
+            "on_mismatch": "reject-stale-projection-and-re-resolve",
+            "rebind_command": rebind_command,
+            "enforced_before": ["route-adoption", "planning-mutation"],
+        },
+        "reason": "structured-identity-transition"
+        if identity_effects
+        else "transition-required"
+        if provisional
+        else "current-identity-observed",
+    }
+
+
 def _start_tiny_payload_fast(
     *, target_root: Path, changed_paths: list[str], task_text: str | None, config: WorkspaceConfig, startup_template: dict[str, Any]
 ) -> dict[str, Any]:
@@ -30411,9 +30477,7 @@ def _start_tiny_payload_fast(
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
     route_applies = isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1"
     task_switch_visible_by_default = (
-        route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"} or route_relation == "bounded-independent"
-        if route_applies
-        else False
+        route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"} if route_applies else False
     )
     if (
         planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default
@@ -30775,7 +30839,15 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     active_execplans = active.get("execplans", []) if isinstance(active, dict) else []
     active_execplans = active_execplans if isinstance(active_execplans, list) else []
     active_execplan = None
-    if active_items and isinstance(active_items[0], dict):
+    # Local selection is an exact, validated current-work binding.  Startup
+    # packets must use it before the shared state's first active item so an
+    # isolated worktree cannot inherit another thread's owner.
+    from agentic_workspace.current_work_context import _selected_planning_owner
+
+    _selected_id, selected_ref = _selected_planning_owner(target_root)
+    if selected_ref:
+        active_execplan = selected_ref
+    elif active_items and isinstance(active_items[0], dict):
         active_execplan = active_items[0].get("surface")
     if active_execplan is None and active_execplans and isinstance(active_execplans[0], dict):
         active_execplan = active_execplans[0].get("path")

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from agentic_workspace.config import DEFAULT_CLI_INVOKE, WORKSPACE_CONFIG_PATH, WORKSPACE_LOCAL_CONFIG_PATH, WorkspaceConfig
+from agentic_workspace.current_work_context import startup_route_identity
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -146,6 +147,81 @@ from agentic_workspace.workspace_runtime_proof import (
 )
 
 
+def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
+    """Describe whether startup's read-only route forecast can be relied on yet."""
+    transition = str(route_decision.get("required_transition") or "none")
+    identity_effects = [str(effect) for effect in _list_payload(route_decision.get("identity_effects")) if str(effect).strip()]
+    provisional = transition != "none" or bool(identity_effects)
+    identity = startup_route_identity(root=target_root, task=str(task_text or ""))
+    rebind_command = _command_with_cli_invoke(
+        command="agentic-workspace start --target . --task <same-task> --format json",
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "status": "provisional" if provisional else "bound",
+        "state_commit": "none",
+        "rule": "Startup projects a route only; it never commits selection or carry state before an explicit transition is used.",
+        "invalidate_when": ["branch", "head", "worktree", "target", "current-work", "selected-owner"],
+        "identity": identity,
+        "adoption_guard": {
+            "status": "required",
+            "expected_fingerprint": identity["fingerprint"],
+            "comparison_fields": identity["comparison_fields"],
+            "on_mismatch": "reject-stale-projection-and-re-resolve",
+            "rebind_command": rebind_command,
+            "enforced_before": ["route-adoption", "planning-mutation"],
+        },
+        "reason": "structured-identity-transition"
+        if identity_effects
+        else "transition-required"
+        if provisional
+        else "current-identity-observed",
+    }
+
+
+def _compact_start_route_decision(value: Any) -> dict[str, Any]:
+    route = _as_dict(value)
+    if route.get("kind") != "agentic-planning/route-decision/v1":
+        return {}
+    compact = {
+        key: copy.deepcopy(route[key])
+        for key in (
+            "kind",
+            "task_relation",
+            "owner_posture",
+            "required_transition",
+            "selected_owner",
+            "selected_owner_identity",
+            "allowed_claims",
+            "blocked_claims",
+            "implementation_allowed",
+            "mutation_authority",
+            "proof_expectation",
+            "state_update_policy",
+            "reconciliation_proposal",
+            "next_safe_action",
+            "binding",
+        )
+        if route.get(key) not in (None, "", [], {})
+    }
+    binding = _as_dict(compact.get("binding"))
+    identity = _as_dict(binding.get("identity"))
+    guard = _as_dict(binding.get("adoption_guard"))
+    if identity or guard:
+        compact["binding"] = {
+            key: copy.deepcopy(binding[key]) for key in ("status", "state_commit", "reason") if binding.get(key) not in (None, "", [], {})
+        }
+        if identity.get("fingerprint"):
+            compact["binding"]["identity"] = {"fingerprint": identity["fingerprint"]}
+        if guard:
+            compact["binding"]["adoption_guard"] = {
+                key: copy.deepcopy(guard[key])
+                for key in ("status", "expected_fingerprint", "on_mismatch")
+                if guard.get(key) not in (None, "", [], {})
+            }
+    return compact
+
+
 def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Project startup context to the smallest schema-compatible first-contact answer."""
     immediate = copy.deepcopy(payload["immediate_next_allowed_action"])
@@ -223,6 +299,7 @@ def _tiny_start_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "active_state_summary": payload["active_state_summary"],
         "planning_revision": payload.get("planning_revision", {}),
         "active_plan_reliance": payload.get("active_plan_reliance", {}),
+        **({"route_decision": _compact_start_route_decision(payload.get("route_decision"))} if payload.get("route_decision") else {}),
         "workflow_sufficiency": payload.get("workflow_sufficiency"),
         **({"planning_safety_gate": payload["planning_safety_gate"]} if "planning_safety_gate" in payload else {}),
         **({"lane_shaping_gate": payload["lane_shaping_gate"]} if "lane_shaping_gate" in payload else {}),
@@ -908,13 +985,18 @@ def _start_payload(
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
     route_decision = planning_safety_gate.get("route_decision", {})
     if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
+        route_decision = copy.deepcopy(route_decision)
+        route_decision["binding"] = _startup_route_binding(
+            route_decision=route_decision,
+            target_root=target_root,
+            task_text=task_text,
+            cli_invoke=config.cli_invoke,
+        )
+        planning_safety_gate["route_decision"] = route_decision
         payload["route_decision"] = route_decision
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
-    task_switch_visible_by_default = route_transition in {"closeout-or-archive", "ask-for-route-decision"} or route_relation in {
-        "bounded-independent",
-        "independent-pending-scope",
-    }
+    task_switch_visible_by_default = route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"}
     if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default:
         payload["planning_safety_gate"] = planning_safety_gate
     if isinstance(route_decision, dict) and route_transition in {
@@ -1429,13 +1511,24 @@ def _hydrate_selected_start_advisory_payloads(
         payload["repo_posture"] = _repo_posture_payload(config=config, surface="start", compact=False)
     if _selector_requests(select, "planning_safety_gate"):
         execution_posture = _execution_posture_payload(config=config, changed_paths=[], task_text=task_text, target_root=target_root)
-        payload["planning_safety_gate"] = _planning_safety_gate_payload(
+        gate = _planning_safety_gate_payload(
             target_root=target_root,
             config=config,
             changed_paths=[],
             task_text=task_text,
             execution_posture=execution_posture,
         )
+        route = _as_dict(gate.get("route_decision"))
+        if route.get("kind") == "agentic-planning/route-decision/v1":
+            route = copy.deepcopy(route)
+            route["binding"] = _startup_route_binding(
+                route_decision=route,
+                target_root=target_root,
+                task_text=task_text,
+                cli_invoke=config.cli_invoke,
+            )
+            gate["route_decision"] = route
+        payload["planning_safety_gate"] = gate
     if _selector_requests(select, "issue_reference_intent"):
         gate = payload.get("planning_safety_gate")
         if not isinstance(gate, dict):
@@ -1687,6 +1780,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             **payload["immediate_next_allowed_action"],
             "read_first": payload["immediate_next_allowed_action"].get("read_first", []),
         },
+        **({"route_decision": _compact_start_route_decision(payload.get("route_decision"))} if payload.get("route_decision") else {}),
         "active_state": _active_state_with_orientation_delta(payload.get("active_state_summary", {}), cli_invoke=cli_invoke),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",

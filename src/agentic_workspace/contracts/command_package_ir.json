@@ -4883,6 +4883,13 @@
                 "help": "Optional repo-local file containing task text; use this instead of repeating long task prompts."
               },
               {
+                "name": "startup_route_fingerprint",
+                "flags": [
+                  "--startup-route-fingerprint"
+                ],
+                "help": "Optional fingerprint emitted by start; stale identities are rebound before implement commits carry."
+              },
+              {
                 "name": "select",
                 "flags": [
                   "--select"

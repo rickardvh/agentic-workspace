@@ -25508,6 +25508,7 @@ def _selector_first_planning_safety_gate(gate: Any) -> dict[str, Any]:
                 "mutation_authority",
                 "proof_expectation",
                 "state_update_policy",
+                "reconciliation_proposal",
                 "next_safe_action",
             )
             if route_decision.get(key) not in (None, "", [], {})
@@ -27715,9 +27716,7 @@ def _start_tiny_payload_fast(
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
     route_applies = isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1"
     task_switch_visible_by_default = (
-        route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"} or route_relation == "bounded-independent"
-        if route_applies
-        else False
+        route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"} if route_applies else False
     )
     if (
         planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default
@@ -28072,7 +28071,15 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     active_execplans = active.get("execplans", []) if isinstance(active, dict) else []
     active_execplans = active_execplans if isinstance(active_execplans, list) else []
     active_execplan = None
-    if active_items and isinstance(active_items[0], dict):
+    # Local selection is an exact, validated current-work binding.  Startup
+    # packets must use it before the shared state's first active item so an
+    # isolated worktree cannot inherit another thread's owner.
+    from agentic_workspace.current_work_context import _selected_planning_owner
+
+    _selected_id, selected_ref = _selected_planning_owner(target_root)
+    if selected_ref:
+        active_execplan = selected_ref
+    elif active_items and isinstance(active_items[0], dict):
         active_execplan = active_items[0].get("surface")
     if active_execplan is None and active_execplans and isinstance(active_execplans[0], dict):
         active_execplan = active_execplans[0].get("path")

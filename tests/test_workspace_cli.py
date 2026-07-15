@@ -3787,21 +3787,13 @@ candidates = []
     assert decision["phase_question"] == "Startup posture?"
     assert decision["next_action"] == "produce-bounded-reflection-report"
     assert decision["absence_states"]["verbose_planning_detail"] == "detail_omitted"
-    gate = payload["context"]["planning"]["planning_safety_gate"]
-    assert gate["label"] == "work gate"
-    assert gate["provenance"] == "planning"
-    assert gate["gate_result"] == "bounded-reflection-reporting"
-    switch = gate["task_switch_reconciliation"]
-    assert switch["status"] == "bounded-reflection-reporting"
-    assert switch["recommended_next_action"] == "produce-bounded-reflection-report"
-    assert switch["detail_selector"] == "planning_safety_gate.task_switch_reconciliation"
-    assert set(switch["safe_route_ids"]) == {
-        "produce-bounded-reflection-report",
-        "inspect-active-plan",
-        "reconcile-active-plan-before-implementation",
-    }
-    assert "claim-active-plan-complete" in switch["blocked_claims"]
-    assert "does not authorize active-plan progress" in switch["claim_boundary"]
+    assert "planning_safety_gate" not in payload["context"]["planning"]
+    route = payload["context"]["route_decision"]
+    assert route["task_relation"] == "bounded-independent"
+    assert route["owner_posture"] == "current"
+    assert route["required_transition"] == "none"
+    assert route["next_safe_action"]["action"] == "produce-bounded-reflection-report"
+    assert "claim-active-plan-complete" in route["blocked_claims"]
     assert "work_threads" not in payload["context"]
     assert "architecture_principles_forecast" not in payload["context"]
     assert payload["context"]["read_only_response"]["compact_default"] is True
@@ -3854,13 +3846,13 @@ candidates = []
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    switch = payload["context"]["planning"]["planning_safety_gate"]["task_switch_reconciliation"]
+    route = payload["context"]["route_decision"]
 
     _assert_json_payload_under(payload, 9_000, label="dogfooding issue-shaping start payload", sort_keys=False)
     assert payload["next_safe_action"]["next_safe_action"] == "produce-bounded-reflection-report"
-    assert switch["status"] == "bounded-reflection-reporting"
-    assert switch["current_task_class"] == "bounded-dogfooding-issue-shaping"
-    assert "claim-active-plan-progress" in switch["blocked_claims"]
+    assert route["task_relation"] == "bounded-independent"
+    assert route["next_safe_action"]["action"] == "produce-bounded-reflection-report"
+    assert "claim-active-plan-progress" in route["blocked_claims"]
     assert "work_threads" not in payload["context"]
 
 
@@ -3910,12 +3902,12 @@ candidates = []
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    switch = payload["context"]["planning"]["planning_safety_gate"]["task_switch_reconciliation"]
+    route = payload["context"]["route_decision"]
 
     assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
-    assert switch["status"] == "scope-inspection-required"
-    assert switch["recommended_next_action"] == "inspect-current-task-scope"
-    assert "claim-active-plan-progress" in switch["blocked_claims"]
+    assert route["task_relation"] == "independent-pending-scope"
+    assert route["required_transition"] == "inspect-current-task-scope"
+    assert "claim-active-plan-progress" in route["blocked_claims"]
 
 
 def test_start_reconciles_unrelated_active_plan_with_new_issue_implementation_task(tmp_path: Path, capsys) -> None:
@@ -4164,11 +4156,11 @@ def test_start_keeps_incomplete_active_plan_on_task_switch_route(tmp_path: Path,
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning"]["planning_safety_gate"]
+    route = payload["context"]["route_decision"]
 
     assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
-    assert gate["gate_result"] == "current-task-scope-inspection-required"
-    assert gate["task_switch_reconciliation"]["status"] == "scope-inspection-required"
+    assert route["task_relation"] == "independent-pending-scope"
+    assert route["required_transition"] == "inspect-current-task-scope"
 
 
 def test_implement_acknowledges_current_task_switch_with_return_and_cleanup_routes(tmp_path: Path, capsys) -> None:
@@ -4215,16 +4207,12 @@ candidates = []
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    switch = payload["context"]["planning_safety_gate"]["task_switch_reconciliation"]
-    acknowledgement = switch["route_acknowledgement"]
+    route = payload["context"]["planning_safety_gate"]["route_decision"]
 
-    assert switch["status"] == "current-task-route-acknowledged"
-    assert acknowledgement["status"] == "acknowledged"
-    assert acknowledgement["return_to_active_plan"]["command"] == "agentic-workspace summary --target . --format json"
-    assert acknowledgement["stale_thread_cleanup"]["inspect_command"] == (
-        "agentic-workspace start --target . --select work_threads --format json"
-    )
-    assert "claim-active-plan-progress" in switch["blocked_claims"]
+    assert route["task_relation"] == "bounded-independent"
+    assert route["required_transition"] == "none"
+    assert route["next_safe_action"]["action"] == "prove-current-task"
+    assert "claim-active-plan-progress" in route["blocked_claims"]
 
 
 def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Path, capsys) -> None:
@@ -4265,6 +4253,70 @@ def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Pat
     )
     assert plural_lane_switch["status"] == "issue-matched-continuation"
     assert "issue-2045" in plural_lane_switch["mismatch_evidence"]["shared_refs"]
+
+
+def test_start_route_honors_local_selected_planning_owner(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    shared_ref = ".agentic-workspace/planning/execplans/issue-2290.plan.json"
+    selected_ref = ".agentic-workspace/planning/execplans/issue-2281.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """schema_version = 1
+
+[todo]
+active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-workspace/planning/execplans/issue-2290.plan.json", refs = ["#2290"] }]
+""",
+    )
+    _write(
+        tmp_path / shared_ref,
+        json.dumps({"kind": "planning-execplan/v1", "id": "issue-2290", "lifecycle": "live", "phase": "implementation"}),
+    )
+    _write(
+        tmp_path / selected_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2281",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "references": [{"kind": "issue", "target": "#2281"}],
+            }
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace/local/planning/owner-selection.json",
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "isolated-stack",
+                "selected_owner": {"id": "issue-2281", "ref": selected_ref},
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #2281 reconciliation",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    assert route["selected_owner"] == selected_ref
+    assert route["task_relation"] == "continues-selected-owner"
+    assert route["binding"]["identity"]["observed"]["selected_owner"]["ref"] == selected_ref
+    assert route["binding"]["adoption_guard"]["on_mismatch"] == "reject-stale-projection-and-re-resolve"
 
 
 def test_route_decision_keeps_relation_posture_and_transition_separate() -> None:
@@ -4484,6 +4536,7 @@ def test_selector_first_gate_projects_authoritative_route_decision() -> None:
                 "allowed_claims": ["bounded-task-progress"],
                 "blocked_claims": ["active-plan-progress"],
                 "mutation_authority": "current-task",
+                "reconciliation_proposal": {"status": "current", "proposal_id": "a" * 20},
                 "proof_expectation": "focused proof",
                 "state_update_policy": "read-only",
                 "next_safe_action": {"action": "perform-bounded-task"},
@@ -4498,10 +4551,164 @@ def test_selector_first_gate_projects_authoritative_route_decision() -> None:
         "allowed_claims": ["bounded-task-progress"],
         "blocked_claims": ["active-plan-progress"],
         "mutation_authority": "current-task",
+        "reconciliation_proposal": {"status": "current", "proposal_id": "a" * 20},
         "proof_expectation": "focused proof",
         "state_update_policy": "read-only",
         "next_safe_action": {"action": "perform-bounded-task"},
     }
+
+
+def test_startup_route_binding_is_provisional_before_identity_transition(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_startup import _startup_route_binding
+
+    _init_git_repo(tmp_path)
+    binding_args = {"target_root": tmp_path, "task_text": "Continue #2281", "cli_invoke": "agentic-workspace"}
+
+    assert (
+        _startup_route_binding(
+            route_decision={"required_transition": "none", "next_safe_action": {"action": "continue-active-plan"}}, **binding_args
+        )["status"]
+        == "bound"
+    )
+    binding = _startup_route_binding(route_decision={"required_transition": "none", "identity_effects": ["branch"]}, **binding_args)
+    assert binding["status"] == "provisional"
+    assert binding["state_commit"] == "none"
+    assert binding["reason"] == "structured-identity-transition"
+    assert binding["adoption_guard"]["status"] == "required"
+    assert binding["adoption_guard"]["expected_fingerprint"] == binding["identity"]["fingerprint"]
+    assert (
+        _startup_route_binding(
+            route_decision={"required_transition": "none", "next_safe_action": {"command": "git switch feature/reconcile"}}, **binding_args
+        )["status"]
+        == "bound"
+    )
+
+
+def test_startup_route_identity_rejects_head_change_before_adoption(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import current_work_context
+
+    _init_git_repo(tmp_path)
+    head = {"value": "a" * 40}
+
+    def fake_git(_root: Path, *args: str) -> str:
+        return "main" if args == ("branch", "--show-current") else head["value"] if args == ("rev-parse", "HEAD") else ""
+
+    monkeypatch.setattr(current_work_context, "_git", fake_git)
+    expected = current_work_context.startup_route_identity(root=tmp_path, task="Continue #2281")
+    head["value"] = "b" * 40
+
+    check = current_work_context.startup_route_identity_check(expected=expected, root=tmp_path, task="Continue #2281")
+
+    assert check["status"] == "stale-projection-rejected"
+    assert check["action"] == "re-resolve-route"
+    assert check["changed_fields"] == ["head"]
+
+
+def test_decision_point_carry_rejects_stale_startup_route_before_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import current_work_context
+    from agentic_workspace.workspace_runtime_core import _persist_decision_point_forecast
+
+    _init_git_repo(tmp_path)
+    head = {"value": "a" * 40}
+
+    def fake_git(_root: Path, *args: str) -> str:
+        return "main" if args == ("branch", "--show-current") else head["value"] if args == ("rev-parse", "HEAD") else ""
+
+    monkeypatch.setattr(current_work_context, "_git", fake_git)
+    expected = current_work_context.startup_route_identity(root=tmp_path, task="Continue #2281")
+    head["value"] = "b" * 40
+
+    result = _persist_decision_point_forecast(
+        target_root=tmp_path,
+        task_text="Continue #2281",
+        expected_route_identity=expected,
+        forecast={"forecast_identity": {"system_principle_ids": ["workspace-runtime"], "authoritative_sources": []}},
+    )
+
+    assert result["status"] == "not-created"
+    assert result["reason_code"] == "stale-startup-route-identity"
+    assert result["route_identity_check"]["changed_fields"] == ["head"]
+    assert not (tmp_path / ".agentic-workspace/local/decision-point-intent").exists()
+
+
+def test_implement_rejects_stale_startup_fingerprint_before_any_state_write(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agentic_workspace import current_work_context
+
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_cli_architecture_principles(tmp_path)
+    _write_decision_point_subsystem_intent(tmp_path)
+    changed_path = "src/agentic_workspace/workspace_runtime_implement.py"
+    _write(tmp_path / changed_path, "VALUE = 1\n")
+    head = {"value": "a" * 40}
+
+    def fake_git(_root: Path, *args: str) -> str:
+        return "main" if args == ("branch", "--show-current") else head["value"] if args == ("rev-parse", "HEAD") else ""
+
+    monkeypatch.setattr(current_work_context, "_git", fake_git)
+    task = f"Update {changed_path}"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--select", "planning_safety_gate", "--format", "json"]) == 0
+    startup = json.loads(capsys.readouterr().out)
+    fingerprint = startup["values"]["planning_safety_gate"]["route_decision"]["binding"]["identity"]["fingerprint"]
+    head["value"] = "b" * 40
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed_path,
+                "--task",
+                task,
+                "--startup-route-fingerprint",
+                fingerprint,
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    rebind = payload["startup_route_rebind"]
+    assert rebind["status"] == "stale-projection-rejected"
+    assert rebind["route_identity_check"]["actual"]["observed"]["head"] == "b" * 40
+    assert rebind["authoritative_route"]["kind"] == "agentic-planning/route-decision/v1"
+    assert "Rerun start" in rebind["safe_recovery"]
+    assert "Rerun start" in payload["next_allowed_action"]
+    assert not (tmp_path / ".agentic-workspace/local/decision-point-intent").exists()
+
+
+def test_compact_start_route_decision_preserves_contract_and_binding() -> None:
+    from agentic_workspace.workspace_runtime_startup import _compact_start_route_decision
+
+    route = _compact_start_route_decision(
+        {
+            "kind": "agentic-planning/route-decision/v1",
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "required_transition": "none",
+            "allowed_claims": ["bounded-task-progress"],
+            "blocked_claims": ["active-plan-progress"],
+            "mutation_authority": "current-task",
+            "reconciliation_proposal": {"status": "current", "proposal_id": "a" * 20},
+            "proof_expectation": "focused proof",
+            "state_update_policy": "read-only",
+            "next_safe_action": {"action": "perform-bounded-task"},
+            "binding": {"status": "bound", "state_commit": "none"},
+        }
+    )
+    assert route["task_relation"] == "bounded-independent"
+    assert route["mutation_authority"] == "current-task"
+    assert route["reconciliation_proposal"]["proposal_id"] == "a" * 20
+    assert route["next_safe_action"] == {"action": "perform-bounded-task"}
+    assert route["binding"] == {"status": "bound", "state_commit": "none"}
 
 
 def test_start_low_risk_docs_task_keeps_checkpoint_detail_selector_only(tmp_path: Path, capsys) -> None:

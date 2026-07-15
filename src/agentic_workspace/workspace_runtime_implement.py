@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from agentic_workspace.config import WorkspaceUsageError
+from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -179,6 +180,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
         include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
         include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
+        startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
     )
     payload = full_payload
     if profile == "tiny":
@@ -635,6 +637,7 @@ def _implement_payload(
     include_verification: bool = True,
     include_routine_work_context: bool = True,
     include_reuse_pressure: bool = True,
+    startup_route_fingerprint: str = "",
 ) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -887,7 +890,26 @@ def _implement_payload(
     subsystem_intents = _list_payload(_as_dict(payload["durable_intent"].get("subsystem_intent")).get("matches"))
     principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
     forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
-    if not forecast_carry and (subsystem_intents or principles) and target_root is not None:
+    stale_startup_route = False
+    if (subsystem_intents or principles or forecast_carry) and startup_route_fingerprint and target_root is not None:
+        route_identity = startup_route_identity(root=target_root, task=str(task_text or ""))
+        fingerprint_check = startup_route_fingerprint_check(
+            expected_fingerprint=startup_route_fingerprint, root=target_root, task=str(task_text or "")
+        )
+        if fingerprint_check["status"] != "match":
+            stale_startup_route = True
+            payload["startup_route_rebind"] = {
+                "status": "stale-projection-rejected",
+                "expected_fingerprint": startup_route_fingerprint,
+                "actual_fingerprint": route_identity["fingerprint"],
+                "route_identity_check": fingerprint_check,
+                "authoritative_route": planning_safety_gate.get("route_decision", {}),
+                "safe_recovery": "Rerun start, adopt its newly projected route packet, then retry implement.",
+                "rule": "Implement does not write carry or decision confirmation state from a stale startup projection.",
+            }
+            payload["next_allowed_action"] = "Rerun start, adopt its newly projected route packet, then retry implement."
+    if not stale_startup_route and not forecast_carry and (subsystem_intents or principles) and target_root is not None:
+        route_identity = startup_route_identity(root=target_root, task=str(task_text or ""))
         committed_forecast = _architecture_principles_forecast_payload(
             target_root=target_root,
             planned_paths=normalized_paths,
@@ -898,12 +920,14 @@ def _implement_payload(
             target_root=target_root,
             forecast=committed_forecast,
             task_text=task_text,
+            expected_route_identity=route_identity,
+            expected_route_fingerprint=startup_route_fingerprint,
         )
         if carry_result.get("status") != "not-created":
             forecast_carry = carry_result
         elif carry_result:
             payload["decision_point_intent_carry"] = carry_result
-    if subsystem_intents or principles or forecast_carry:
+    if not stale_startup_route and (subsystem_intents or principles or forecast_carry):
         forecast_identity = _as_dict(forecast_carry.get("forecast_identity"))
         forecast_paths = _normalize_changed_paths(_list_payload(forecast_identity.get("planned_paths")))
         actual_basis = {
@@ -1813,10 +1837,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(planning_safety_gate, dict):
         compact_gate = _selector_first_planning_safety_gate(planning_safety_gate)
         authoritative_route = _as_dict(planning_safety_gate.get("route_decision"))
-        if authoritative_route.get("kind") == "agentic-planning/route-decision/v1" and authoritative_route.get("task_relation") not in {
-            "",
-            "not-applicable",
-        }:
+        if authoritative_route.get("kind") == "agentic-planning/route-decision/v1" and compact_gate.get("status") != "clear":
             compact_gate["route_decision"] = {
                 key: authoritative_route.get(key)
                 for key in (
