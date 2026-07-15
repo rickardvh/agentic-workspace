@@ -21608,6 +21608,7 @@ def _report_closeout_trust_payload(
             "changed_paths": normalized_changed_paths,
             "claim_classes": ["local_pr_complete", "slice_complete"],
             "planning_safety_gate": _selector_first_planning_safety_gate(planning_safety_gate),
+            "route_decision": _as_dict(planning_safety_gate.get("route_decision")),
             "rule": (
                 "This scope supports only local PR or current-slice completion claims with proof; it does not authorize "
                 "leaf issue, lane, parent issue, full-intent, or issue-closure claims."

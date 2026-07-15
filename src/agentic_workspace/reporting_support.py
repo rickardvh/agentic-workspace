@@ -1459,6 +1459,8 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
             scope = scope if isinstance(scope, dict) else {}
             planning_gate = scope.get("planning_safety_gate", {})
             planning_gate = planning_gate if isinstance(planning_gate, dict) else {}
+            route_decision = scope.get("route_decision", planning_gate.get("route_decision", {}))
+            route_decision = route_decision if isinstance(route_decision, dict) else {}
             task_switch = scope.get("task_switch_reconciliation", {})
             task_switch = task_switch if isinstance(task_switch, dict) else {}
             proof = value.get("proof", {})
@@ -1509,6 +1511,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                         )
                         if key in planning_gate
                     },
+                    "route_decision": route_decision,
                     "task_switch_reconciliation": {
                         key: task_switch.get(key)
                         for key in (
@@ -1524,7 +1527,6 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                         )
                         if key in task_switch
                     },
-                    "route_decision": planning_gate.get("route_decision", {}),
                     "rule": scope.get("rule", ""),
                 },
                 "strict_closeout_gate": value.get("strict_closeout_gate", {}),

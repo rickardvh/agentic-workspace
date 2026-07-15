@@ -1853,6 +1853,63 @@ def test_closeout_trust_composes_current_task_closeout_for_ordinary_changed_scop
     assert "do not authorize active-plan progress, leaf issue completion" in current["rule"]
 
 
+def test_closeout_handoff_projects_the_planning_route_decision(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "state.toml",
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "active-plan", title = "Unrelated active plan", status = "active", surface = ".agentic-workspace/planning/execplans/active-plan.plan.json" },
+]
+queued_items = []
+
+[roadmap]
+lanes = []
+candidates = []
+""",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "planning" / "execplans" / "active-plan.plan.json",
+        json.dumps({"id": "active-plan", "title": "Unrelated active plan"}),
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--section",
+                "closeout_trust",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--task",
+                "Implement a focused runtime report fix",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    route = json.loads(capsys.readouterr().out)["answer"]["current_task_closeout"]["scope"]["route_decision"]
+
+    assert route["kind"] == "agentic-planning/route-decision/v1"
+    assert (route["task_relation"], route["owner_posture"], route["required_transition"]) == (
+        "bounded-independent",
+        "current",
+        "none",
+    )
+    assert route["mutation_authority"] == "current-task"
+    assert route["next_safe_action"]["action"] == "prove-current-task"
+
+
 def test_closeout_trust_preserves_current_task_manual_proof_obligations(tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch) -> None:
     import agentic_workspace.workspace_runtime_core as runtime_core
 
