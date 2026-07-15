@@ -51131,7 +51131,7 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path, 
             activation_hints = {}
         required_resources = tuple(str(value).strip() for value in raw.get("required_resources", []) if str(value).strip())
         blocked_reasons = tuple(
-            f"missing-resource:{resource_id}"
+            f"unknown-resource:{resource_id}" if resource_id not in resource_paths else f"missing-resource:{resource_id}"
             for resource_id in required_resources
             if resource_id not in resource_paths
             or not any(

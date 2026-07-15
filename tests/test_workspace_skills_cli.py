@@ -345,6 +345,27 @@ def test_registered_skill_dependency_closure_accepts_package_owned_resource(tmp_
     assert skills[0].availability == "available"
 
 
+def test_registered_skill_dependency_closure_marks_unknown_resource_identity(tmp_path: Path) -> None:
+    registry = tmp_path / "REGISTRY.json"
+    registry.write_text(
+        json.dumps({"skills": [{"id": "review-pass", "path": "review-pass/SKILL.md", "required_resources": ["unknown"]}]}),
+        encoding="utf-8",
+    )
+    source = workspace_runtime_core.SkillCatalogSource(
+        name="fixture",
+        registry_path=Path("REGISTRY.json"),
+        skills_root=Path("skills"),
+        owner="fixture",
+        source_kind="fixture",
+        default_scope="bundled",
+        default_stability="fixture",
+    )
+
+    skills = workspace_runtime_core._load_registered_skills(source=source, registry_file=registry, target_root=tmp_path)
+
+    assert skills[0].blocked_reasons == ("unknown-resource:unknown",)
+
+
 def test_skills_command_select_returns_compact_recommendations_without_inventory(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
