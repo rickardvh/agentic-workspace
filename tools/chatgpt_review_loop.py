@@ -878,10 +878,13 @@ def poll_one(
             event="ambiguous-reviews",
             recovery="leave one authoritative matching review, then use recover --action continue-waiting",
         )
-    if len(matches) == 1:
+    system_review = _system_trigger(payload, pr=pr, head=str(state["handoff_head"]))
+    if system_review is not None:
+        review = system_review
+    elif len(matches) == 1:
         review = matches[0]
     else:
-        review = _system_trigger(payload, pr=pr, head=str(state["handoff_head"]))
+        review = None
         if review is None:
             event = "stale-review-rejected" if rejected else "review-pending"
             state.update(last_event=event, recovery="")
@@ -1118,7 +1121,7 @@ def _dispatch_all_unlocked(
         matches, rejected = parse_reviews(_comments_from_pr(payload), expected_pr=pr, expected_head=head)
         if any(item["reason"] != "stale-head" for item in rejected) or len(matches) > 1:
             continue
-        review = matches[0] if matches else _system_trigger(payload, pr=pr, head=head)
+        review = _system_trigger(payload, pr=pr, head=head) or (matches[0] if matches else None)
         if review is None or review.decision != "blocked" or not review.findings:
             continue
         if isinstance(entry, dict) and _state_path(root, pr).is_file():
