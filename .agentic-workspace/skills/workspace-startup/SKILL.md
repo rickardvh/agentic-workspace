@@ -24,6 +24,15 @@ Use the configured AW invocation exposed by the repo adapter, config, or compact
 6. Load specialized subskills only for routed intent/shape, proof, setup, or fallback/reference needs.
 7. Before claiming completion, reconcile intent, proof, residue, issue/PR closure, and next owner separately.
 
+## Planning Route Contract
+
+When startup exposes `planning_safety_gate.route_decision`, consume that object as the authoritative Planning route. Do not independently reclassify task-switch prose or choose from legacy route menus.
+
+- Follow its `next_safe_action`, `required_transition`, `implementation_allowed`, `mutation_authority`, claim boundaries, proof expectation, and state-update policy together.
+- A `required_transition = none` route is read-only Planning orientation by default: do not create carry, owner-selection, or route-residue state merely because startup ran.
+- If `route_decision.binding.status` is `provisional`, perform the named branch/worktree/repository/target/owner transition first, then rerun startup before any Planning mutation or route adoption.
+- Ask for user direction only when the route reports genuine ambiguity or missing authority; a bounded independent route may proceed while preserving the selected owner’s claim boundary.
+
 ## Subskill Routes
 
 - `workspace-intent-discovery`: ambiguous human intent, vague outcome prompts, or direct/bounded/lane/epic work-shape decisions.

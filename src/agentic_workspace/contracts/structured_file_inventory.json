@@ -167,6 +167,18 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": ".codex/hooks.json",
+      "format": "json",
+      "owner": "developer-integration",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "tools/chatgpt_review_loop.py hook-input parser plus tests/test_chatgpt_review_loop.py",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Repository-local Stop hook invokes the deterministic external-review handoff transport.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "The repository-level hook contract is shared platform configuration required to record review handoffs consistently."
+    },
+    {
       "pattern": ".agentic-workspace/config.toml",
       "format": "toml",
       "owner": "workspace-config",
@@ -1680,6 +1692,18 @@
       "notes": "Workspace fixture JSON is test data.",
       "storage_class": "diagnostic-fixture",
       "checked_in_justification": "Test fixture or checkout diagnostic data used to prove behavior, not package runtime authority."
+    },
+    {
+      "pattern": ".codex/hooks.json",
+      "format": "json",
+      "owner": "developer-tooling",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "Codex lifecycle hook loader plus tests/test_chatgpt_review_loop.py",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Project-local Codex lifecycle automation is host-repo tooling and is not shipped package runtime state.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
     },
     {
       "pattern": ".github/ISSUE_TEMPLATE/*.yml",

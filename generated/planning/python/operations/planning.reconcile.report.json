@@ -14,7 +14,8 @@
   },
   "guards": [
     "--apply-safe-prune must only mutate targets already present in cleanup_targets with safe_to_prune=true.",
-    "--dry-run must not write repo state."
+    "--dry-run must not write repo state.",
+    "--apply requires the exact proposal id and expected Planning revision returned by preview."
   ],
   "id": "planning.reconcile.report",
   "inputs": [
@@ -47,6 +48,30 @@
     },
     {
       "name": "apply_lane_reconcile",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Compile and persist a reusable reconciliation proposal without mutating Planning state.",
+      "name": "preview",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Apply a previously previewed reconciliation proposal.",
+      "name": "apply",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Exact proposal identity returned by the reconciliation preview.",
+      "name": "proposal",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "description": "Compare-and-swap Planning revision required when applying a proposal.",
+      "name": "expected_planning_revision",
       "required": false,
       "source": "cli-option"
     }
@@ -87,7 +112,8 @@
   "proof": [
     "operation contract validates against operation.schema.json",
     "process conformance remains compatible",
-    "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior"
+    "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior",
+    "proposal/apply tests cover revision guards, idempotence, and transaction rollback"
   ],
   "reads": [
     {
@@ -124,6 +150,11 @@
       "required": false,
       "surface": ".agentic-workspace/planning/decompositions/",
       "when": "--apply-safe-prune removes exact safe_to_prune decomposition records"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/planning/reconciliation-{proposals,receipts}/",
+      "when": "a preview records a reusable proposal or apply records its idempotence receipt"
     }
   ]
 }

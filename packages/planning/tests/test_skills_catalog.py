@@ -56,6 +56,8 @@ def test_bundled_skills_catalog_lists_core_and_review_skills() -> None:
     assert "routing wrapper" in lifecycle_skill.read_text(encoding="utf-8")
     assert "owns parent/lane/slice structure" in decompose_skill.read_text(encoding="utf-8")
     assert "owns compact projection" in reporting_skill.read_text(encoding="utf-8")
+    assert "planning_route_decision" in reporting_skill.read_text(encoding="utf-8")
+    assert "do not rebuild a task-switch classification" in reporting_skill.read_text(encoding="utf-8")
     autopilot_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-autopilot")
     review_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-review-pass")
     reporting_entry = next(entry for entry in registry_payload["skills"] if entry["id"] == "planning-reporting")
