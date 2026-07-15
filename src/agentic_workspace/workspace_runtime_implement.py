@@ -180,6 +180,7 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         include_verification=(profile != "tiny" or verification_selected or routine_work_context_selected),
         include_routine_work_context=(profile != "tiny" or routine_work_context_selected),
         include_reuse_pressure=(profile != "tiny" or reuse_pressure_selected),
+        startup_route_fingerprint=str(getattr(args, "startup_route_fingerprint", "") or ""),
     )
     payload = full_payload
     if profile == "tiny":
@@ -636,6 +637,7 @@ def _implement_payload(
     include_verification: bool = True,
     include_routine_work_context: bool = True,
     include_reuse_pressure: bool = True,
+    startup_route_fingerprint: str = "",
 ) -> dict[str, Any]:
     implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
     normalized_paths = _normalize_changed_paths(changed_paths)
@@ -890,6 +892,13 @@ def _implement_payload(
     forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
     if not forecast_carry and (subsystem_intents or principles) and target_root is not None:
         route_identity = startup_route_identity(root=target_root, task=str(task_text or ""))
+        if startup_route_fingerprint and startup_route_fingerprint != route_identity["fingerprint"]:
+            payload["startup_route_rebind"] = {
+                "status": "re-resolved-after-stale-projection",
+                "expected_fingerprint": startup_route_fingerprint,
+                "actual_fingerprint": route_identity["fingerprint"],
+                "rule": "Implement recomputed the authoritative route in the live identity before committing state.",
+            }
         committed_forecast = _architecture_principles_forecast_payload(
             target_root=target_root,
             planned_paths=normalized_paths,

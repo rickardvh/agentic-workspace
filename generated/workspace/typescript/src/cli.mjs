@@ -3157,6 +3157,13 @@ const commandDefinitions = [
         },
         {
           "flags": [
+            "--startup-route-fingerprint"
+          ],
+          "help": "Optional fingerprint emitted by start; stale identities are rebound before implement commits carry.",
+          "name": "startup_route_fingerprint"
+        },
+        {
+          "flags": [
             "--select"
           ],
           "help": "Return only comma-separated top-level or dotted JSON fields from the implementer context. Prefer this when one or a few fields are needed.",
