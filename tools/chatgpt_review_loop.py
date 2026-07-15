@@ -421,8 +421,8 @@ def report_job_result(*, cwd: Path, session_id: str, proof_status: str, proof_co
                 continue
             if item.get("session_id") == session_id or attempt.get("session_id") == session_id:
                 matches.append(item)
-            elif item.get("status") == "fresh-session-in-progress" and not item.get("session_id") and not attempt.get("session_id"):
-                # This is the first authoritative identity boundary for a fresh job.
+            elif item.get("status") in {"fresh-session-in-progress", "resume-in-progress"} and not item.get("session_id") and not attempt.get("session_id"):
+                # This is the first authoritative identity boundary for a launched job.
                 matches.append(item)
         return matches
 

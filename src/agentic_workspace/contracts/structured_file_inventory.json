@@ -1730,6 +1730,18 @@
       "checked_in_justification": "Host repository tooling metadata consumed by the external platform or developer tools."
     },
     {
+      "pattern": ".codex/hooks.json",
+      "format": "json",
+      "owner": "developer-tooling",
+      "status": "source-checkout-diagnostic",
+      "schema_or_validator": "Codex hooks configuration",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Codex Stop-hook configuration records the external-review handoff command.",
+      "storage_class": "platform-tooling",
+      "checked_in_justification": "Host repository tooling metadata consumed by the Codex runtime."
+    },
+    {
       "pattern": ".github/release.yml",
       "format": "yml",
       "owner": "github-integration",

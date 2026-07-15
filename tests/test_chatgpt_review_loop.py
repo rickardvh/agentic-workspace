@@ -1180,6 +1180,8 @@ def test_job_result_is_exactly_once_and_requires_a_complete_result(tmp_path: Pat
     runner = FakeRunner(tmp_path)
     saved = state(tmp_path, status="resume-in-progress")
     loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    saved["session_id"] = ""
+    saved["job_attempt"]["session_id"] = ""
     loop._save_state(tmp_path, saved)
 
     loop.report_job_result(

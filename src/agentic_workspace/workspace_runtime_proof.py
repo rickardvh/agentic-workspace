@@ -359,7 +359,6 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                     ),
                 ),
                 placeholders={"paths": _list_payload(payload.get("selector", {}).get("changed"))},
-                purpose="verbose proof drill-down for changed paths",
             )
             if include_intent_proof:
                 next_decision["intent_proof"] = _compact_tiny_intent_proof(answer["intent_proof"])
@@ -466,7 +465,6 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
                     cli_invoke=cli_invoke,
                 ),
                 placeholders={"paths": _list_payload(payload.get("selector", {}).get("changed"))},
-                purpose="verbose proof drill-down for changed paths",
             ),
         }
         return _guidance_with_cli_invoke(value=next_payload, cli_invoke=cli_invoke)
@@ -483,7 +481,6 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
         "command_template": _command_template_payload(
             command=_command_with_cli_invoke(command="agentic-workspace proof --changed <paths> --format json", cli_invoke=cli_invoke),
             placeholders={"paths": []},
-            purpose="proof selection after changed paths are known",
         ),
         "required_commands": [],
         "warnings": [],
@@ -491,7 +488,7 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
     }
 
 
-def _command_template_payload(*, command: Any, placeholders: dict[str, Any], purpose: str) -> dict[str, Any]:
+def _command_template_payload(*, command: Any, placeholders: dict[str, Any]) -> dict[str, Any]:
     template = str(command or "").strip()
     return {
         "kind": "agentic-workspace/command-template/v1",
@@ -499,7 +496,6 @@ def _command_template_payload(*, command: Any, placeholders: dict[str, Any], pur
         "runnable": False,
         "placeholders": placeholders,
         "instantiation_required": [name for name, value in placeholders.items() if value in (None, "", [])],
-        "purpose": purpose,
         "rule": "Substitute placeholders before running.",
     }
 
@@ -634,17 +630,27 @@ def _proof_receipt_aggregate_matches(*, receipt: dict[str, Any], required_comman
     return False, "receipt is not for this selected proof set"
 
 
-def _proof_receipt_freshness_decision(
-    *, target_root: Path, receipt: dict[str, Any], command: str, changed_paths: list[str], admission: dict[str, Any]
-) -> dict[str, Any]:
-    """Apply the sole sufficiency boundary for direct and aggregate receipts."""
+def _receipt_subject_freshness(*, target_root: Path, receipt: dict[str, Any], changed_paths: list[str], command: str) -> dict[str, Any]:
+    """Classify every receipt form through its recorded proof subject.
 
-    subject_freshness = classify_proof_subject(target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=command)
-    return {
-        "accepted": bool(admission["proof_sufficient"]) and subject_freshness["status"] == "reusable",
-        "subject_freshness": subject_freshness,
-        "rule": "Only passed receipts with a reusable proof subject satisfy selected proof; legacy and non-reusable subjects remain visible but require a rerun.",
-    }
+    Aggregate receipts have a set-level recorded command, but their freshness
+    still governs each selected command they are offered to satisfy.  Preserve
+    the selected command as the smallest useful rerun when the set-level
+    subject cannot be reused.
+    """
+
+    recorded_command = str(receipt.get("command") or "").strip() or command
+    freshness = dict(
+        classify_proof_subject(
+            target_root=target_root,
+            receipt=receipt,
+            changed_paths=changed_paths,
+            command=recorded_command,
+        )
+    )
+    if freshness.get("status") != "reusable":
+        freshness["minimum_rerun_command"] = command
+    return freshness
 
 
 def _proof_requirement_tier_for_command(command: str, *, selected: dict[str, Any]) -> str:
@@ -768,9 +774,9 @@ def _proof_receipt_reconciliation_payload(
         "non_blocking_selected_count": max(0, len(required_commands) - len(blocking_commands)),
         "selected_proof_identity": selected_identity,
         "rule": (
-            "Passed receipts satisfy proof only when their dependency-scoped subject is reusable. Aggregate receipts also "
-            "require matching selected proof identity or proof_commands; legacy and non-reusable receipts remain visible "
-            "but unsatisfied."
+            "Receipts are accepted only for exact command matches, reusable proof subjects, and passed results; "
+            "aggregate receipts may satisfy the selected proof set when they carry matching selected proof identity or "
+            "proof_commands. Optional/environmental proof is reported outside the blocking receipt count."
         ),
     }
     if target_root is None:
@@ -806,39 +812,34 @@ def _proof_receipt_reconciliation_payload(
         if rejected_latest:
             payload["rejected_latest_receipt"] = rejected_latest
         return payload
-    aggregate_receipts = []
-    for receipt in receipt_records:
-        admission = proof_receipt_admission(receipt)
-        aggregate_matches, aggregate_reason = _proof_receipt_aggregate_matches(receipt=receipt, required_commands=blocking_commands)
-        if not admission["proof_sufficient"] or not aggregate_matches:
-            continue
-        freshness = _proof_receipt_freshness_decision(
-            target_root=target_root,
-            receipt=receipt,
-            command=str(receipt.get("command") or "").strip(),
-            changed_paths=changed_paths,
-            admission=admission,
-        )
-        aggregate_receipts.append((receipt, aggregate_reason, freshness))
-    accepted_aggregate = next((item for item in aggregate_receipts if item[2]["accepted"]), None)
-    aggregate_match_reason = accepted_aggregate[1] if accepted_aggregate is not None else ""
+    aggregate_receipts = [
+        receipt
+        for receipt in receipt_records
+        if proof_receipt_admission(receipt)["proof_sufficient"]
+        and _proof_receipt_aggregate_matches(receipt=receipt, required_commands=blocking_commands)[0]
+    ]
     for command in blocking_commands:
         state: dict[str, Any]
         command_receipts = [receipt for receipt in receipt_records if str(receipt.get("command") or "").strip() == command]
         admissions = [(receipt, proof_receipt_admission(receipt)) for receipt in command_receipts]
-        freshness_decisions = [
-            (
-                receipt,
-                admission,
-                _proof_receipt_freshness_decision(
-                    target_root=target_root, receipt=receipt, command=command, changed_paths=changed_paths, admission=admission
-                ),
-            )
+        subject_decisions = [
+            (receipt, _receipt_subject_freshness(target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=command))
             for receipt, admission in admissions
+            if admission["proof_sufficient"]
         ]
         accepted_receipt = next(
-            ((receipt, freshness) for receipt, _admission, freshness in freshness_decisions if freshness["accepted"]),
+            (receipt for receipt, freshness in subject_decisions if freshness["status"] == "reusable"),
             None,
+        )
+        aggregate_decisions = [
+            (receipt, _receipt_subject_freshness(target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=command))
+            for receipt in aggregate_receipts
+        ]
+        aggregate_receipt = next((receipt for receipt, freshness in aggregate_decisions if freshness["status"] == "reusable"), None)
+        aggregate_match_reason = (
+            _proof_receipt_aggregate_matches(receipt=aggregate_receipt, required_commands=blocking_commands)[1]
+            if aggregate_receipt is not None
+            else ""
         )
         failed_receipt = next((receipt for receipt, admission in admissions if admission["result_class"] == "failed"), None)
         non_sufficient = next(
@@ -846,33 +847,29 @@ def _proof_receipt_reconciliation_payload(
             None,
         )
         if accepted_receipt is not None:
-            receipt, freshness = accepted_receipt
+            subject_freshness = _receipt_subject_freshness(
+                target_root=target_root, receipt=accepted_receipt, changed_paths=changed_paths, command=command
+            )
             state = {
                 "command": command,
                 "evidence_state": "accepted",
                 "diagnostic": "passed receipt accepted",
-                "receipt": _proof_receipt_summary(receipt),
-                "subject_freshness": freshness["subject_freshness"],
+                "receipt": _proof_receipt_summary(accepted_receipt),
+                "subject_freshness": subject_freshness,
             }
-        elif accepted_aggregate is not None:
-            aggregate_receipt, _reason, freshness = accepted_aggregate
+            if not isinstance(accepted_receipt.get("proof_subject"), dict):
+                state["receipt_match"] = "legacy-migration"
+        elif aggregate_receipt is not None:
+            subject_freshness = _receipt_subject_freshness(
+                target_root=target_root, receipt=aggregate_receipt, changed_paths=changed_paths, command=command
+            )
             state = {
                 "command": command,
                 "evidence_state": "accepted",
                 "diagnostic": aggregate_match_reason,
                 "receipt": _proof_receipt_summary(aggregate_receipt),
                 "receipt_match": "aggregate-selected-proof",
-                "subject_freshness": freshness["subject_freshness"],
-            }
-        elif aggregate_receipts:
-            aggregate_receipt, _reason, freshness = aggregate_receipts[0]
-            state = {
-                "command": command,
-                "evidence_state": "record-stale-untrusted",
-                "diagnostic": "aggregate receipt cannot satisfy dependency-scoped freshness",
-                "receipt": _proof_receipt_summary(aggregate_receipt),
-                "receipt_match": "aggregate-selected-proof",
-                "subject_freshness": freshness["subject_freshness"],
+                "subject_freshness": subject_freshness,
             }
         elif failed_receipt is not None:
             state = {
@@ -892,15 +889,21 @@ def _proof_receipt_reconciliation_payload(
                 "result_class": result_class,
                 "proof_sufficient": False,
             }
-        elif freshness_decisions:
-            receipt, _admission, freshness = freshness_decisions[0]
+        elif subject_decisions or aggregate_decisions:
+            receipt_candidates = subject_decisions or aggregate_decisions
+            receipt, subject_freshness = receipt_candidates[0]
+            freshness = str(subject_freshness.get("status") or "unverifiable")
             state = {
                 "command": command,
-                "evidence_state": "record-stale-untrusted",
-                "diagnostic": "receipt cannot satisfy dependency-scoped freshness",
+                "evidence_state": f"subject-{freshness}",
+                "diagnostic": ", ".join(str(reason) for reason in subject_freshness.get("reasons", []) if str(reason))
+                or "proof subject is not reusable",
                 "receipt": _proof_receipt_summary(receipt),
-                "subject_freshness": freshness["subject_freshness"],
+                "subject_freshness": subject_freshness,
+                "minimum_rerun_command": str(subject_freshness.get("minimum_rerun_command") or command),
             }
+            if not subject_decisions:
+                state["receipt_match"] = "aggregate-selected-proof"
         elif command_receipts:
             state = {"command": command, "evidence_state": "record-stale-untrusted", "diagnostic": "receipt admission unavailable"}
         else:

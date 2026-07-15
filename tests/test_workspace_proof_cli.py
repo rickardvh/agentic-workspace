@@ -3,8 +3,6 @@ from __future__ import annotations
 # ruff: noqa: F403,F405
 from tests.workspace_cli_support import *
 
-from agentic_workspace.proof_subject import build_proof_subject
-
 
 def _write_repo_local_proof_target(target: Path) -> None:
     _init_git_repo(target)
@@ -688,7 +686,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert "validation_plan" not in encoded
     assert payload["detail_command_template"]["runnable"] is False
     assert payload["detail_command_template"]["placeholders"] == {"paths": ["generated/workspace/python/cli.py"]}
-    assert len(encoded) < 4200
+    assert len(encoded) < 4100
 
 
 def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:
@@ -1270,6 +1268,8 @@ agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test
 
 
 def test_proof_changed_closeout_summary_preserves_learned_route_receipt(tmp_path: Path, capsys) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+
     _init_git_repo(tmp_path)
     _write(tmp_path / "src" / "app.py", "print('ok')\n")
     _write(
@@ -1280,39 +1280,39 @@ def test_proof_changed_closeout_summary_preserves_learned_route_receipt(tmp_path
 agentic-workspace-proof-route: {"state":"confirmed","intent_type":"behavior-test","candidate_command":"python -m compileall src","source":"memory","confidence":"high","requires_live_confirmation":false,"scope":"src","owner":"Memory","provenance":"manual verification passed on 2026-06-02","learned_at":"2026-06-02"}
 """,
     )
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": "python -m compileall src",
+        "result": "passed",
+        "changed_paths": ["src/app.py"],
+        "recorded_at": "2026-07-06T10:00:00Z",
+    }
+    receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=receipt["changed_paths"], command=receipt["command"])
     _write(
         tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json",
-        json.dumps(
-            {
-                "kind": "agentic-workspace/proof-receipt/v1",
-                "command": "python -m compileall src",
-                "result": "passed",
-                "changed_paths": ["src/app.py"],
-                "recorded_at": "2026-07-06T10:00:00Z",
-            }
-        ),
+        json.dumps(receipt),
     )
 
     assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", "src/app.py", "--format", "json"]) == 0
 
     answer = json.loads(capsys.readouterr().out)["answer"]
     summary = answer["proof_closeout_summary"]
-    assert summary["status"] == "not-yet-sufficient"
+    assert summary["status"] == "sufficient-recorded"
     assert summary["changed_paths"] == ["src/app.py"]
     assert summary["route"]["source"] == "memory"
     assert summary["route"]["maturity"] == "learned-confirmed"
     assert summary["proof_results"] == [
         {
             "command": "python -m compileall src",
-            "result": "missing",
-            "receipt_state": "record-stale-untrusted",
+            "result": "passed",
+            "receipt_state": "accepted",
             "execution_state": "missing",
-            "evidence_source": "missing",
+            "evidence_source": "proof-receipt",
         }
     ]
-    assert summary["remaining_gaps"]
+    assert summary["remaining_gaps"] == []
     assert any(line.startswith("Route:") and "learned-confirmed" in line for line in summary["pr_validation_lines"])
-    assert any(line.startswith("Remaining gaps:") for line in summary["pr_validation_lines"])
+    assert any(line == "Remaining gaps: none known." for line in summary["pr_validation_lines"])
 
 
 def test_proof_closeout_treats_conservative_route_maturity_as_advisory_after_accepted_receipt() -> None:
@@ -1378,6 +1378,8 @@ def test_proof_closeout_keeps_conservative_maturity_blocking_without_route_autho
 
 
 def test_proof_cli_accepts_covering_receipts_for_authoritative_conservative_route(tmp_path: Path, capsys) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+
     _init_git_repo(tmp_path)
     _write(tmp_path / "Makefile", "test:\n\tpytest\n\nlint:\n\truff check .\n")
     _write(tmp_path / "llms.txt", "proof route fixture\n")
@@ -1386,19 +1388,20 @@ def test_proof_cli_accepts_covering_receipts_for_authoritative_conservative_rout
     first = json.loads(capsys.readouterr().out)["answer"]
     commands = first["required_commands"]
     receipts = [
-        json.dumps(
-            {
-                "kind": "agentic-workspace/proof-receipt/v1",
-                "command": command,
-                "result": "passed",
-                "changed_paths": ["llms.txt"],
-                "recorded_at": f"2026-07-10T10:00:0{index}Z",
-                "proof_subject": build_proof_subject(target_root=tmp_path, changed_paths=["llms.txt"], command=command),
-            }
-        )
+        {
+            "kind": "agentic-workspace/proof-receipt/v1",
+            "command": command,
+            "result": "passed",
+            "changed_paths": ["llms.txt"],
+            "recorded_at": f"2026-07-10T10:00:0{index}Z",
+        }
         for index, command in enumerate(commands)
     ]
-    _write(tmp_path / ".agentic-workspace/local/proof-receipts/history.jsonl", "\n".join(receipts) + "\n")
+    for receipt in receipts:
+        receipt["proof_subject"] = build_proof_subject(
+            target_root=tmp_path, changed_paths=receipt["changed_paths"], command=receipt["command"]
+        )
+    _write(tmp_path / ".agentic-workspace/local/proof-receipts/history.jsonl", "\n".join(json.dumps(item) for item in receipts) + "\n")
 
     assert cli.main(["proof", "--target", str(tmp_path), "--changed", "llms.txt", "--format", "json"]) == 0
     summary = json.loads(capsys.readouterr().out)["proof_closeout_summary"]
@@ -1533,25 +1536,24 @@ def test_every_bridge_result_is_admissible_but_only_passed_satisfies_proof() -> 
 
 @pytest.mark.parametrize(
     ("result", "expected_state"),
-    [("passed", "record-stale-untrusted"), ("failed", "recorded-failed"), ("skipped", "recorded-skipped"), ("waived", "recorded-waived")],
+    [("passed", "accepted"), ("failed", "recorded-failed"), ("skipped", "recorded-skipped"), ("waived", "recorded-waived")],
 )
 def test_every_bridge_result_reconciles_through_admission_contract(tmp_path: Path, result: str, expected_state: str) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
     from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
 
     receipt_path = tmp_path / ".agentic-workspace/local/proof-receipts/last.json"
     receipt_path.parent.mkdir(parents=True)
-    receipt_path.write_text(
-        json.dumps(
-            {
-                "kind": "agentic-workspace/proof-receipt/v1",
-                "command": "make test",
-                "result": result,
-                "recorded_at": "2026-07-11T10:00:00+00:00",
-                "changed_paths": ["src/example.py"],
-            }
-        ),
-        encoding="utf-8",
-    )
+    _write(tmp_path / "src/example.py", "example\n")
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": "make test",
+        "result": result,
+        "recorded_at": "2026-07-11T10:00:00+00:00",
+        "changed_paths": ["src/example.py"],
+    }
+    receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=receipt["changed_paths"], command=receipt["command"])
+    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
 
     reconciliation = _proof_receipt_reconciliation_payload(
         target_root=tmp_path,
@@ -1561,8 +1563,7 @@ def test_every_bridge_result_reconciles_through_admission_contract(tmp_path: Pat
     )
     state = reconciliation["commands"][0]
     assert state["evidence_state"] == expected_state
-    if result == "passed":
-        assert state["subject_freshness"]["status"] == "unverifiable"
+    assert state["evidence_state"] != "record-stale-untrusted"
     if result in {"skipped", "waived"}:
         assert state["proof_sufficient"] is False
         assert state["result_class"] == result
@@ -2969,10 +2970,12 @@ def test_proof_receipt_admission_rejects_missing_scope_and_consumers_ignore_it(t
 
 
 def test_reconciliation_selects_newest_admitted_history_when_latest_file_is_rejected(tmp_path: Path) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
     from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
 
     receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
     receipt_dir.mkdir(parents=True)
+    _write(tmp_path / "src/agentic_workspace/workspace_runtime_proof.py", "fixture\n")
     admitted = {
         "kind": "agentic-workspace/proof-receipt/v1",
         "command": "make test-workspace",
@@ -2980,6 +2983,9 @@ def test_reconciliation_selects_newest_admitted_history_when_latest_file_is_reje
         "recorded_at": "2026-07-11T08:00:00+00:00",
         "changed_paths": ["src/agentic_workspace/workspace_runtime_proof.py"],
     }
+    admitted["proof_subject"] = build_proof_subject(
+        target_root=tmp_path, changed_paths=admitted["changed_paths"], command=admitted["command"]
+    )
     older = {**admitted, "result": "failed", "recorded_at": "2026-07-11T07:00:00+00:00"}
     rejected = {**admitted, "command": "make <target>", "recorded_at": "2026-07-11T09:00:00+00:00"}
     (receipt_dir / "history.jsonl").write_text("\n".join(json.dumps(item) for item in (older, admitted)) + "\n", encoding="utf-8")
@@ -2992,8 +2998,9 @@ def test_reconciliation_selects_newest_admitted_history_when_latest_file_is_reje
         selected_commands=[],
     )
 
-    assert reconciliation["status"] == "attention"
-    assert reconciliation["commands"][0]["evidence_state"] == "recorded-failed"
+    assert reconciliation["status"] == "accepted"
+    assert reconciliation["receipt"]["recorded_at"] == admitted["recorded_at"]
+    assert reconciliation["receipt"]["command"] == "make test-workspace"
     assert reconciliation["rejected_latest_receipt"]["status"] == "rejected-untrusted"
     assert reconciliation["rejected_latest_receipt"]["admission_reason"] == "unresolved-command-template"
     assert reconciliation["receipt_history"]["record_count"] == 2
@@ -3005,10 +3012,12 @@ def test_reconciliation_selects_newest_admitted_history_when_latest_file_is_reje
 )
 @pytest.mark.parametrize("with_history", [True, False])
 def test_damaged_latest_receipt_does_not_poison_admitted_history(tmp_path: Path, latest_text: str, reason: str, with_history: bool) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
     from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
 
     receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
     receipt_dir.mkdir(parents=True)
+    _write(tmp_path / "src/agentic_workspace/workspace_runtime_proof.py", "fixture\n")
     admitted = {
         "kind": "agentic-workspace/proof-receipt/v1",
         "command": "make test-workspace",
@@ -3016,6 +3025,9 @@ def test_damaged_latest_receipt_does_not_poison_admitted_history(tmp_path: Path,
         "recorded_at": "2026-07-11T08:00:00+00:00",
         "changed_paths": ["src/agentic_workspace/workspace_runtime_proof.py"],
     }
+    admitted["proof_subject"] = build_proof_subject(
+        target_root=tmp_path, changed_paths=admitted["changed_paths"], command=admitted["command"]
+    )
     if with_history:
         (receipt_dir / "history.jsonl").write_text(json.dumps(admitted) + "\n", encoding="utf-8")
     (receipt_dir / "last.json").write_text(latest_text, encoding="utf-8")
@@ -3029,8 +3041,8 @@ def test_damaged_latest_receipt_does_not_poison_admitted_history(tmp_path: Path,
 
     assert reconciliation["rejected_latest_receipt"]["admission_reason"] == reason
     if with_history:
-        assert reconciliation["status"] == "attention"
-        assert reconciliation["commands"][0]["subject_freshness"]["status"] == "unverifiable"
+        assert reconciliation["status"] == "accepted"
+        assert reconciliation["receipt"]["command"] == "make test-workspace"
     else:
         assert reconciliation["status"] == "not-recorded"
         assert "receipt" not in reconciliation
@@ -3273,8 +3285,11 @@ def test_proof_changed_reconciles_receipt_history_without_duplicate_runs(tmp_pat
 
 
 def test_proof_changed_accepts_aggregate_receipt_for_selected_proof_set(tmp_path: Path, capsys) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+
     _write_repo_local_proof_target(tmp_path)
     receipt_dir = tmp_path / ".agentic-workspace" / "local" / "proof-receipts"
+    _write(tmp_path / "src/agentic_workspace/workspace_runtime_proof.py", "# aggregate fixture\n")
     receipt = {
         "kind": "agentic-workspace/proof-receipt/v1",
         "command": "selected proof set",
@@ -3284,6 +3299,11 @@ def test_proof_changed_accepts_aggregate_receipt_for_selected_proof_set(tmp_path
         "proof_commands": ["make test-workspace", "make typecheck"],
         "plan_id": "aggregate-proof",
     }
+    receipt["proof_subject"] = build_proof_subject(
+        target_root=tmp_path,
+        changed_paths=receipt["changed_paths"],
+        command=receipt["command"],
+    )
     _write(receipt_dir / "last.json", json.dumps(receipt, indent=2))
     _write(receipt_dir / "history.jsonl", json.dumps(receipt, sort_keys=True) + "\n")
 
@@ -3306,77 +3326,112 @@ def test_proof_changed_accepts_aggregate_receipt_for_selected_proof_set(tmp_path
     answer = json.loads(capsys.readouterr().out)["answer"]
     reconciliation = answer["proof_receipt_reconciliation"]
     states = {item["command"]: item for item in reconciliation["commands"]}
-    assert reconciliation["status"] == "attention"
-    assert reconciliation["accepted_count"] == 0
-    assert states["make test-workspace"]["subject_freshness"]["status"] == "unverifiable"
-    assert answer["proof_receipt_bridge"]["status"] == "action-required"
+    assert reconciliation["status"] == "accepted"
+    assert reconciliation["accepted_count"] == 2
+    assert states["make test-workspace"]["receipt_match"] == "aggregate-selected-proof"
+    assert states["make typecheck"]["diagnostic"] == "aggregate proof_commands receipt accepted"
+    assert answer["proof_receipt_bridge"]["status"] == "complete"
+    assert answer["proof_execution_evidence"]["status"] == "recorded-and-accepted"
 
 
-def test_reconciliation_rejects_stale_aggregate_subject(tmp_path: Path) -> None:
-    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+def test_proof_changed_rejects_stale_aggregate_subject(tmp_path: Path, capsys) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
 
-    source = tmp_path / "src" / "example.py"
-    _write(source, "VALUE = 1\n")
+    _write_repo_local_proof_target(tmp_path)
+    source = tmp_path / "src/agentic_workspace/workspace_runtime_proof.py"
+    _write(source, "before\n")
     receipt = {
         "kind": "agentic-workspace/proof-receipt/v1",
         "command": "selected proof set",
         "result": "passed",
-        "recorded_at": "2026-07-15T10:00:00+00:00",
-        "changed_paths": ["src/example.py"],
-        "proof_commands": ["make test"],
-        "proof_subject": build_proof_subject(target_root=tmp_path, changed_paths=["src/example.py"], command="selected proof set"),
+        "recorded_at": "2026-07-09T00:00:00+00:00",
+        "changed_paths": ["src/agentic_workspace/workspace_runtime_proof.py"],
+        "proof_commands": ["make test-workspace", "make typecheck"],
     }
-    receipt_path = tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
-    receipt_path.parent.mkdir(parents=True)
-    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
-    _write(source, "VALUE = 2\n")
+    receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=receipt["changed_paths"], command=receipt["command"])
+    receipt_dir = tmp_path / ".agentic-workspace" / "local" / "proof-receipts"
+    _write(receipt_dir / "history.jsonl", json.dumps(receipt) + "\n")
+    _write(source, "after\n")
 
-    reconciliation = _proof_receipt_reconciliation_payload(
-        target_root=tmp_path, required_commands=["make test"], changed_paths=["src/example.py"], selected_commands=[]
+    assert (
+        cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", str(receipt["changed_paths"][0]), "--format", "json"]) == 0
     )
 
-    assert reconciliation["status"] == "attention"
-    state = reconciliation["commands"][0]
-    assert state["evidence_state"] == "record-stale-untrusted"
-    assert state["subject_freshness"]["status"] == "stale"
+    states = {item["command"]: item for item in json.loads(capsys.readouterr().out)["answer"]["proof_receipt_reconciliation"]["commands"]}
+    state = states["make test-workspace"]
+    assert state["evidence_state"] == "subject-stale"
+    assert state["receipt_match"] == "aggregate-selected-proof"
+    assert state["minimum_rerun_command"] == "make test-workspace"
 
 
 @pytest.mark.parametrize(
-    ("subject", "expected_status"),
-    [(None, "unverifiable"), ("independent", "partially-reusable"), ("incompatible", "incompatible")],
+    ("subject", "changed_path", "expected_status"),
+    [
+        ("declared", "src/b.py", "partially-reusable"),
+        ("incompatible", "src/a.py", "incompatible"),
+        ("legacy", "src/a.py", "unverifiable"),
+    ],
 )
-def test_reconciliation_surfaces_non_reusable_subject_states(tmp_path: Path, subject: str | None, expected_status: str) -> None:
+def test_proof_changed_reports_nonreusable_direct_subject_states(
+    tmp_path: Path, capsys, subject: str, changed_path: str, expected_status: str
+) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+
+    _write_repo_local_proof_target(tmp_path)
+    _write(tmp_path / "src/a.py", "a\n")
+    _write(tmp_path / "src/b.py", "b\n")
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": "make test-workspace",
+        "result": "passed",
+        "recorded_at": "2026-07-09T00:00:00+00:00",
+        "changed_paths": ["src/a.py"],
+    }
+    if subject != "legacy":
+        receipt["proof_subject"] = build_proof_subject(
+            target_root=tmp_path, changed_paths=receipt["changed_paths"], command=receipt["command"]
+        )
+    if subject == "incompatible":
+        receipt["proof_subject"]["claim_classes"] = ["documentation-review"]
+    receipt_dir = tmp_path / ".agentic-workspace" / "local" / "proof-receipts"
+    _write(receipt_dir / "history.jsonl", json.dumps(receipt) + "\n")
+
+    assert cli.main(["proof", "--verbose", "--target", str(tmp_path), "--changed", changed_path, "--format", "json"]) == 0
+
+    state = {item["command"]: item for item in json.loads(capsys.readouterr().out)["answer"]["proof_receipt_reconciliation"]["commands"]}[
+        "make test-workspace"
+    ]
+    assert state["evidence_state"] == f"subject-{expected_status}"
+    assert state["minimum_rerun_command"] == "make test-workspace"
+
+
+def test_reconciliation_selects_reusable_history_before_newer_stale_subject(tmp_path: Path) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
     from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
 
-    _write(tmp_path / "src" / "stored.py", "STORED = 1\n")
-    _write(tmp_path / "src" / "current.py", "CURRENT = 1\n")
-    receipt = {
+    source = tmp_path / "src/app.py"
+    _write(source, "reusable\n")
+    older = {
         "kind": "agentic-workspace/proof-receipt/v1",
         "command": "make test",
         "result": "passed",
-        "recorded_at": "2026-07-15T10:00:00+00:00",
-        "changed_paths": ["src/stored.py"],
+        "recorded_at": "2026-07-09T00:00:00+00:00",
+        "changed_paths": ["src/app.py"],
     }
-    if subject == "independent":
-        receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=["src/stored.py"], command="make test")
-    elif subject == "incompatible":
-        receipt["proof_subject"] = build_proof_subject(
-            target_root=tmp_path,
-            changed_paths=["src/current.py"],
-            command="make test",
-            claim_classes=["manual-review"],
-        )
-    receipt_path = tmp_path / ".agentic-workspace" / "local" / "proof-receipts" / "last.json"
-    receipt_path.parent.mkdir(parents=True)
-    receipt_path.write_text(json.dumps(receipt), encoding="utf-8")
+    older["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=older["changed_paths"], command="make test")
+    _write(source, "stale\n")
+    newer = {**older, "recorded_at": "2026-07-10T00:00:00+00:00"}
+    newer["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=newer["changed_paths"], command="make test")
+    _write(source, "reusable\n")
+    receipt_dir = tmp_path / ".agentic-workspace" / "local" / "proof-receipts"
+    _write(receipt_dir / "history.jsonl", "\n".join(json.dumps(item) for item in (older, newer)) + "\n")
 
     reconciliation = _proof_receipt_reconciliation_payload(
-        target_root=tmp_path, required_commands=["make test"], changed_paths=["src/current.py"], selected_commands=[]
+        target_root=tmp_path, required_commands=["make test"], changed_paths=["src/app.py"]
     )
 
-    state = reconciliation["commands"][0]
-    assert state["evidence_state"] == "record-stale-untrusted"
-    assert state["subject_freshness"]["status"] == expected_status
+    assert reconciliation["status"] == "accepted"
+    assert reconciliation["commands"][0]["receipt"]["recorded_at"] == older["recorded_at"]
 
 
 def test_proof_requirement_tiers_keep_environmental_probes_non_blocking() -> None:
@@ -3453,8 +3508,58 @@ def test_proof_changed_marks_receipt_stale_for_changed_path_mismatch(tmp_path: P
 
     answer = json.loads(capsys.readouterr().out)["answer"]
     states = {item["command"]: item for item in answer["proof_receipt_reconciliation"]["commands"]}
-    assert states["make test-workspace"]["evidence_state"] == "record-stale-untrusted"
-    assert states["make test-workspace"]["diagnostic"] == "receipt cannot satisfy dependency-scoped freshness"
+    assert states["make test-workspace"]["evidence_state"] == "subject-unverifiable"
+    assert states["make test-workspace"]["subject_freshness"]["reasons"] == ["incomplete-subject-identity"]
+
+
+def test_proof_changed_reports_dependency_scoped_staleness_and_minimum_rerun(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    source = tmp_path / "src/agentic_workspace/workspace_runtime_proof.py"
+    _write(source, "before\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--record-receipt",
+                "--receipt-command",
+                "make test-workspace",
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    _write(source, "after\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    states = {item["command"]: item for item in json.loads(capsys.readouterr().out)["answer"]["proof_receipt_reconciliation"]["commands"]}
+    state = states["make test-workspace"]
+    assert state["evidence_state"] == "subject-stale"
+    assert state["subject_freshness"]["reasons"] == ["dependency-input-changed"]
+    assert state["minimum_rerun_command"] == "make test-workspace"
 
 
 def test_proof_changed_selector_routes_installed_docs_to_docs_review(tmp_path: Path, capsys) -> None:
@@ -3877,7 +3982,7 @@ def test_proof_tiny_readme_profile_keeps_docs_only_validation_light(capsys) -> N
     assert payload["next"]["command"] == docs_diff
     assert payload["required_commands"] == [docs_diff]
     assert "uv run pytest tests -q" not in encoded
-    assert len(encoded) < 3250
+    assert len(encoded) < 3200
 
 
 def test_proof_changed_selector_flags_direct_cli_edits(tmp_path: Path, capsys) -> None:
