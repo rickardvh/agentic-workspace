@@ -448,13 +448,11 @@ candidates = []
     assert payload["context"]["workflow_sufficiency"]["sufficiency_result"] == "enough-for-bounded-implementation"
     gate = payload["context"]["planning_safety_gate"]
     assert gate["gate_result"] == "current-task-route-acknowledged"
-    switch = gate["task_switch_reconciliation"]
-    assert switch["status"] == "current-task-route-acknowledged"
-    assert switch["recommended_next_action"] == "prove-current-task"
-    assert switch["route_acknowledgement"]["status"] == "acknowledged"
-    assert switch["route_acknowledgement"]["route"] == "current-task"
-    assert switch["route_acknowledgement"]["changed_path_count"] == 1
-    assert "claim-active-plan-progress" in switch["blocked_claims"]
+    route = gate["route_decision"]
+    assert route["task_relation"] == "bounded-independent"
+    assert route["required_transition"] == "none"
+    assert route["next_safe_action"]["action"] == "prove-current-task"
+    assert "claim-active-plan-progress" in route["blocked_claims"]
     packet = payload["operating_loop"]
     assert packet["verification"]["state"] == "proof_missing"
     assert packet["closeout_state"] == "blocked_missing_proof"
@@ -510,8 +508,8 @@ candidates = []
 
     payload = json.loads(capsys.readouterr().out)
     gate = payload["context"]["planning_safety_gate"]
-    assert gate["gate_result"] == "active-plan-task-switch"
-    assert gate["task_switch_reconciliation"]["status"] == "active"
+    assert gate["gate_result"] == "current-task-scope-inspection-required"
+    assert gate["task_switch_reconciliation"]["status"] == "scope-inspection-required"
     assert "route_acknowledgement" not in gate["task_switch_reconciliation"]
 
 
@@ -5069,7 +5067,7 @@ candidates = []
     )
 
     gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
-    assert gate["gate_result"] == "active-plan-task-switch"
+    assert gate["gate_result"] == "current-task-scope-inspection-required"
     pressure = gate["candidate_pressure"]
     assert pressure["candidate_ids"][:2] == ["issue-2044-runtime-ownership", "issue-2044-ownership-inventory"]
     writer = gate["work_shape_study"]["decision"]["owner_writer"]

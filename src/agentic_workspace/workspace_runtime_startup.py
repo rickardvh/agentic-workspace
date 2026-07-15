@@ -906,30 +906,33 @@ def _start_payload(
     payload["active_plan_reliance"] = planning_safety_gate.get("active_plan_reliance", {})
     custody_planning = planning_safety_gate.get("custody_planning", {})
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
-    task_switch = planning_safety_gate.get("task_switch_reconciliation", {})
-    task_switch_visible_by_default = isinstance(task_switch, dict) and task_switch.get("status") in {
-        "active",
-        "bounded-reflection-reporting",
-        "current-task-route-acknowledged",
-        "completed-active-plan-route",
+    route_decision = planning_safety_gate.get("route_decision", {})
+    if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
+        payload["route_decision"] = route_decision
+    route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
+    route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
+    task_switch_visible_by_default = route_transition in {"closeout-or-archive", "ask-for-route-decision"} or route_relation in {
+        "bounded-independent",
+        "independent-pending-scope",
     }
     if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default:
         payload["planning_safety_gate"] = planning_safety_gate
-    if isinstance(task_switch, dict) and task_switch.get("status") in {
-        "active",
-        "bounded-reflection-reporting",
-        "current-task-route-acknowledged",
-        "completed-active-plan-route",
+    if isinstance(route_decision, dict) and route_transition in {
+        "closeout-or-archive",
+        "ask-for-route-decision",
+        "inspect-current-task-scope",
+        "reconcile",
+        "none",
     }:
-        next_packet = task_switch.get("next_action_packet", {})
+        next_packet = route_decision.get("next_safe_action", {})
         if isinstance(next_packet, dict):
             evidence_required = (
                 ["completed active-plan route accepted or dismissed"]
-                if task_switch.get("status") == "completed-active-plan-route"
+                if route_transition == "closeout-or-archive"
                 else ["active-plan claim boundary preserved"]
-                if task_switch.get("status") == "bounded-reflection-reporting"
+                if route_relation == "bounded-independent"
                 else ["current-task proof", "active-plan claim boundary preserved"]
-                if task_switch.get("status") == "current-task-route-acknowledged"
+                if route_relation == "bounded-independent"
                 else ["current-task route chosen without claiming active-plan progress"]
             )
             payload["workflow_sufficiency"] = _workflow_sufficiency_payload(
@@ -1680,7 +1683,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             if compact_workflow.get(key) not in (None, "", [], {})
         }
     context: dict[str, Any] = {
-        "primary_action": payload["immediate_next_allowed_action"],
+        "primary_action": {
+            **payload["immediate_next_allowed_action"],
+            "read_first": payload["immediate_next_allowed_action"].get("read_first", []),
+        },
         "active_state": _active_state_with_orientation_delta(payload.get("active_state_summary", {}), cli_invoke=cli_invoke),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
@@ -2235,7 +2241,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
     if isinstance(task_posture_packet, dict) and task_posture_packet:
         selected["task_posture_packet"] = _compact_task_posture_packet_projection(task_posture_packet)
     show_state_delta_packets = (
-        str(next_safe_action.get("next_safe_action", "")) != "choose-task-switch-route"
+        str(next_safe_action.get("next_safe_action", "")) not in {"choose-task-switch-route", "inspect-current-task-scope"}
         and not isinstance(payload.get("installed_state_compatibility"), dict)
         and not read_only_compact_default
     )
