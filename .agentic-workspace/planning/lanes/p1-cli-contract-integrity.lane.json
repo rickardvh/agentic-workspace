@@ -37,7 +37,27 @@
       "purpose_for_lane": "Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work.",
       "proof": ".agentic-workspace/planning/closeout-evidence/issue-2317-review-status-decision.closeout.json",
       "residual_after_slice": "Closed after structured review-status parsing handled canonical multiline and merge-ready review comments."
+    },
+    {
+      "id": "issue-2311-review-worktree-isolation",
+      "title": "Issue 2311 review worktree isolation",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [],
+      "purpose_for_lane": "Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work.",
+      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2311-review-worktree-isolation.closeout.json",
+      "residual_after_slice": "Closed; compact closeout evidence retained instead of a live execplan."
     }
+  ],
+  "current_slice": "",
+  "active_milestone": {
+    "status": "completed"
+  },
+  "completed_milestones": [
+    "issue-2311-review-worktree-isolation"
+  ],
+  "historical_evidence": [
+    ".agentic-workspace/planning/closeout-evidence/issue-2311-review-worktree-isolation.closeout.json"
   ],
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Require focused startup and generated-package tests plus the full workspace CLI suite and required CI coverage.",
