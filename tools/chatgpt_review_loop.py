@@ -1171,6 +1171,10 @@ def _dispatch_all_unlocked(
             "recovery": "",
             "automatic_recovery_reviews": list(bound.get("automatic_recovery_reviews", [])),
         }
+        _record_job_terminal(
+            state, mode="fresh", worktree=worktree, start_head=review.head,
+            exit_code=0, disposition="awaiting-resume", event="fresh-session-awaiting-resume",
+        )
         _save_state(root, state)
         entries[str(pr)] = {
             "worktree": worktree.as_posix(),
@@ -1200,6 +1204,10 @@ def _dispatch_all_unlocked(
         "recovery": "",
         "automatic_recovery_reviews": list(bound.get("automatic_recovery_reviews", [])),
     }
+    _record_job_terminal(
+        state, mode="fresh", worktree=worktree, start_head=review.head,
+        exit_code=0, disposition="handoff-recorded", event="fresh-handoff-recorded",
+    )
     _save_state(root, state)
     entries[str(pr)] = {
         "worktree": worktree.as_posix(),

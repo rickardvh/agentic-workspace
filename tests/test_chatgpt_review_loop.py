@@ -826,6 +826,7 @@ def test_global_dispatch_retains_one_owned_worktree_through_resume_then_retires_
     )
     assert first["session_id"] == "fresh-session"
     assert loop._load_state(tmp_path, 12)["handoff_head"] == HEAD_B
+    assert loop._load_state(tmp_path, 12)["terminal_result"]["disposition"] == "handoff-recorded"
     assert worktree_root / "pr-12" == Path(loop._load_dispatch(tmp_path)["prs"]["12"]["worktree"])
     assert (worktree_root / "pr-12").is_dir()
 
