@@ -1,0 +1,54 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 2321 proof tiny-profile budgets",
+  "plan_id": "issue-2321-proof-tiny-budget",
+  "created_at": "2026-07-15T22:13:08.007993+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2321-proof-tiny-budget.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2321-proof-tiny-budget.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "compact closeout tombstone",
+    "ordinary_route": "report --section closeout_report --format json"
+  },
+  "claim_level": "slice",
+  "outcome": "Tiny proof packets remain within their documented budgets while retaining the required next validation and docs-only decision information.",
+  "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2321",
+  "evidence_refs": [
+    "uv run --active pytest tests/test_workspace_proof_cli.py -q (117 passed); named tiny-profile budget regressions pass unchanged."
+  ],
+  "residual": {
+    "status": "closed",
+    "owner": "archive"
+  },
+  "closure": {
+    "authority": "planning closeout writer",
+    "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "reopen_trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "revision": 2,
+  "active_milestone": {
+    "status": "completed"
+  },
+  "proof_report": {
+    "validation proof": "uv run --active pytest tests/test_workspace_proof_cli.py -q (117 passed); named tiny-profile budget regressions pass unchanged."
+  },
+  "intent_satisfaction": {
+    "was original intent fully satisfied?": "yes",
+    "unsolved intent passed to": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "execution_summary": {
+    "outcome delivered": "Tiny proof packets remain within their documented budgets while retaining the required next validation and docs-only decision information.",
+    "follow-on routed to": "none"
+  },
+  "execution_run": {
+    "changed surfaces": "No product files changed; Planning closeout records verified current behavior.",
+    "next step": "no active planning work remains"
+  }
+}
