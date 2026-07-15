@@ -1208,42 +1208,63 @@ def _planning_route_decision_payload(
     planning_revision: dict[str, Any] | None = None,
     reconciliation_proposal: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Derive the one consumer-neutral route contract from structured evidence."""
+    """Derive the consumer-neutral route contract from orthogonal facts.
+
+    Older evidence packets carry a legacy ``status`` only.  It remains a
+    compatibility input, while ordinary producers may supply the three
+    decision dimensions directly.
+    """
     status = str(route_evidence.get("status") or "not-applicable")
     next_packet = _as_dict(route_evidence.get("next_action_packet"))
-    continuing = status == "issue-matched-continuation"
-    completed = status == "completed-active-plan-route"
-    bounded = status in {"bounded-reflection-reporting", "current-task-route-acknowledged"}
-    ambiguous = status == "active"
-    scope_inspection = status == "scope-inspection-required"
+    legacy_relation = (
+        "continues-selected-owner"
+        if status == "issue-matched-continuation"
+        else "bounded-independent"
+        if status in {"bounded-reflection-reporting", "current-task-route-acknowledged"}
+        else "independent-pending-scope"
+        if status == "scope-inspection-required"
+        else "ambiguous"
+        if status == "active"
+        else "not-applicable"
+    )
+    legacy_posture = (
+        "completed-residue"
+        if status == "completed-active-plan-route"
+        else "current"
+        if legacy_relation != "not-applicable"
+        else "not-applicable"
+    )
+    task_relation = str(route_evidence.get("task_relation") or legacy_relation)
+    owner_posture = str(route_evidence.get("owner_posture") or legacy_posture)
+    transition_by_posture = {
+        "completed-residue": "closeout-or-archive",
+        "external-conflict": "reconcile",
+        "externally-stale": "reconcile",
+        "projection-drifted": "repair-projection",
+        "proof-incomplete": "complete-proof",
+        "missing": "select-owner",
+    }
+    transition = str(
+        route_evidence.get("required_transition")
+        or transition_by_posture.get(owner_posture)
+        or (
+            "ask-for-route-decision"
+            if task_relation == "ambiguous"
+            else "inspect-current-task-scope"
+            if task_relation == "independent-pending-scope"
+            else "none"
+        )
+    )
+    continuing = task_relation == "continues-selected-owner"
+    bounded = task_relation == "bounded-independent"
+    ambiguous = task_relation == "ambiguous"
     active_plan_protection = _as_dict(route_evidence.get("active_plan_protection"))
     blocked_claims = active_plan_protection.get("blocked_claims") or route_evidence.get("blocked_claims") or []
-    transition = (
-        "closeout-or-archive"
-        if completed
-        else "ask-for-route-decision"
-        if ambiguous
-        else "inspect-current-task-scope"
-        if scope_inspection
-        else "none"
-    )
     selected_owner_ref = str(route_evidence.get("active_execplan") or "")
     decision = {
         "kind": "agentic-planning/route-decision/v1",
-        "task_relation": "continues-selected-owner"
-        if continuing
-        else "bounded-independent"
-        if bounded
-        else "independent-pending-scope"
-        if scope_inspection
-        else "ambiguous"
-        if ambiguous
-        else "not-applicable",
-        "owner_posture": "completed-residue"
-        if completed
-        else "current"
-        if continuing or bounded or ambiguous or scope_inspection
-        else "not-applicable",
+        "task_relation": task_relation,
+        "owner_posture": owner_posture,
         "required_transition": transition,
         "selected_owner": selected_owner_ref,
         "selected_owner_identity": {
@@ -1259,11 +1280,9 @@ def _planning_route_decision_payload(
         "reason_codes": [code for code in (status, str(route_evidence.get("intent_conflict_state") or "")) if code],
         "allowed_claims": ["bounded-task-progress"] if bounded else ["active-plan-progress"] if continuing else [],
         "blocked_claims": blocked_claims,
-        "implementation_allowed": False
-        if ambiguous or completed or scope_inspection
-        else bool(route_evidence.get("implementation_allowed")),
+        "implementation_allowed": False if ambiguous or transition != "none" else bool(route_evidence.get("implementation_allowed")),
         "mutation_authority": "none"
-        if ambiguous or completed or scope_inspection
+        if ambiguous or transition != "none"
         else "current-task"
         if bounded
         else "selected-owner"
