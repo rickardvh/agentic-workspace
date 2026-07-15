@@ -4631,6 +4631,60 @@ def test_decision_point_carry_rejects_stale_startup_route_before_write(tmp_path:
     assert not (tmp_path / ".agentic-workspace/local/decision-point-intent").exists()
 
 
+def test_implement_rejects_stale_startup_fingerprint_before_any_state_write(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from agentic_workspace import current_work_context
+
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write_cli_architecture_principles(tmp_path)
+    _write_decision_point_subsystem_intent(tmp_path)
+    changed_path = "src/agentic_workspace/workspace_runtime_implement.py"
+    _write(tmp_path / changed_path, "VALUE = 1\n")
+    head = {"value": "a" * 40}
+
+    def fake_git(_root: Path, *args: str) -> str:
+        return "main" if args == ("branch", "--show-current") else head["value"] if args == ("rev-parse", "HEAD") else ""
+
+    monkeypatch.setattr(current_work_context, "_git", fake_git)
+    task = f"Update {changed_path}"
+    assert cli.main(["start", "--target", str(tmp_path), "--task", task, "--select", "planning_safety_gate", "--format", "json"]) == 0
+    startup = json.loads(capsys.readouterr().out)
+    fingerprint = startup["values"]["planning_safety_gate"]["route_decision"]["binding"]["identity"]["fingerprint"]
+    head["value"] = "b" * 40
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed_path,
+                "--task",
+                task,
+                "--startup-route-fingerprint",
+                fingerprint,
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    rebind = payload["startup_route_rebind"]
+    assert rebind["status"] == "stale-projection-rejected"
+    assert rebind["route_identity_check"]["actual"]["observed"]["head"] == "b" * 40
+    assert rebind["authoritative_route"]["kind"] == "agentic-planning/route-decision/v1"
+    assert "Rerun start" in rebind["safe_recovery"]
+    assert "Rerun start" in payload["next_allowed_action"]
+    assert not (tmp_path / ".agentic-workspace/local/decision-point-intent").exists()
+
+
 def test_compact_start_route_decision_preserves_contract_and_binding() -> None:
     from agentic_workspace.workspace_runtime_startup import _compact_start_route_decision
 

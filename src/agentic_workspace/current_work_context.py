@@ -362,3 +362,24 @@ def startup_route_identity_check(*, expected: dict[str, Any], root: Path, task: 
         "action": "adopt-route" if not changed else "re-resolve-route",
         "rule": "Do not adopt or mutate from a stale startup route projection.",
     }
+
+
+def startup_route_fingerprint_check(*, expected_fingerprint: str, root: Path, task: str = "") -> dict[str, Any]:
+    """Reject a caller's startup fingerprint at a stateful adoption boundary.
+
+    Command surfaces intentionally transport only the fingerprint.  Comparing
+    that original value to the live identity here prevents an implementer from
+    replacing it with a newly sampled identity immediately before a write.
+    """
+    actual = startup_route_identity(root=root, task=task)
+    expected = str(expected_fingerprint or "")
+    matches = bool(expected) and expected == actual["fingerprint"]
+    return {
+        "kind": "agentic-workspace/startup-route-fingerprint-check/v1",
+        "status": "match" if matches else "stale-projection-rejected",
+        "expected_fingerprint": expected,
+        "actual_fingerprint": actual["fingerprint"],
+        "actual": actual,
+        "action": "adopt-route" if matches else "re-resolve-route",
+        "rule": "Do not adopt or mutate from a stale startup route projection.",
+    }

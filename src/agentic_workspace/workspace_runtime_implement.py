@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from agentic_workspace.config import WorkspaceUsageError
-from agentic_workspace.current_work_context import startup_route_identity
+from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -890,15 +890,26 @@ def _implement_payload(
     subsystem_intents = _list_payload(_as_dict(payload["durable_intent"].get("subsystem_intent")).get("matches"))
     principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
     forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
-    if not forecast_carry and (subsystem_intents or principles) and target_root is not None:
+    stale_startup_route = False
+    if (subsystem_intents or principles or forecast_carry) and startup_route_fingerprint and target_root is not None:
         route_identity = startup_route_identity(root=target_root, task=str(task_text or ""))
-        if startup_route_fingerprint and startup_route_fingerprint != route_identity["fingerprint"]:
+        fingerprint_check = startup_route_fingerprint_check(
+            expected_fingerprint=startup_route_fingerprint, root=target_root, task=str(task_text or "")
+        )
+        if fingerprint_check["status"] != "match":
+            stale_startup_route = True
             payload["startup_route_rebind"] = {
-                "status": "re-resolved-after-stale-projection",
+                "status": "stale-projection-rejected",
                 "expected_fingerprint": startup_route_fingerprint,
                 "actual_fingerprint": route_identity["fingerprint"],
-                "rule": "Implement recomputed the authoritative route in the live identity before committing state.",
+                "route_identity_check": fingerprint_check,
+                "authoritative_route": planning_safety_gate.get("route_decision", {}),
+                "safe_recovery": "Rerun start, adopt its newly projected route packet, then retry implement.",
+                "rule": "Implement does not write carry or decision confirmation state from a stale startup projection.",
             }
+            payload["next_allowed_action"] = "Rerun start, adopt its newly projected route packet, then retry implement."
+    if not stale_startup_route and not forecast_carry and (subsystem_intents or principles) and target_root is not None:
+        route_identity = startup_route_identity(root=target_root, task=str(task_text or ""))
         committed_forecast = _architecture_principles_forecast_payload(
             target_root=target_root,
             planned_paths=normalized_paths,
@@ -910,12 +921,13 @@ def _implement_payload(
             forecast=committed_forecast,
             task_text=task_text,
             expected_route_identity=route_identity,
+            expected_route_fingerprint=startup_route_fingerprint,
         )
         if carry_result.get("status") != "not-created":
             forecast_carry = carry_result
         elif carry_result:
             payload["decision_point_intent_carry"] = carry_result
-    if subsystem_intents or principles or forecast_carry:
+    if not stale_startup_route and (subsystem_intents or principles or forecast_carry):
         forecast_identity = _as_dict(forecast_carry.get("forecast_identity"))
         forecast_paths = _normalize_changed_paths(_list_payload(forecast_identity.get("planned_paths")))
         actual_basis = {
