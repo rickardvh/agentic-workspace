@@ -756,6 +756,14 @@ def _automatic_recovery_available(state: dict[str, Any], *, review_key: str = ""
     )
 
 
+def _select_serial_candidate(
+    recovery_candidates: list[tuple[dict[str, Any], Review]], candidates: list[tuple[dict[str, Any], Review]]
+) -> tuple[dict[str, Any], Review] | None:
+    """Keep a bounded recovery at the head of the one-job serial lane."""
+    queue = recovery_candidates or candidates
+    return queue[0] if queue else None
+
+
 def _recover(state: dict[str, Any], root: Path, *, event: str, recovery: str) -> dict[str, Any]:
     state.update(status="recovery-required", last_event=event, recovery=recovery)
     _save_state(root, state)
@@ -1043,6 +1051,7 @@ def _dispatch_all_unlocked(
     entries = registry["prs"]
     retired = _cleanup_closed_dispatches(root, registry, runner=runner, worktree_root=worktree_root)
     candidates: list[tuple[dict[str, Any], Review]] = []
+    recovery_candidates: list[tuple[dict[str, Any], Review]] = []
     for payload in _open_prs(root, runner):
         pr = int(payload.get("number", 0))
         head = str(payload.get("headRefOid", ""))
@@ -1128,13 +1137,19 @@ def _dispatch_all_unlocked(
             if existing.get("status") == "recovery-required":
                 if not _automatic_recovery_available(existing, review_key=review.key):
                     continue
+                # Preserve the serial lane for a bounded recovery.  Stacked PRs
+                # may have lower-numbered sibling reviews, but they must not
+                # delay the exact session that just ended without a handoff.
+                recovery_candidates.append((payload, review))
+                continue
             elif existing.get("status") != "awaiting-review":
                 continue
         candidates.append((payload, review))
-    if not candidates:
+    selected = _select_serial_candidate(recovery_candidates, candidates)
+    if selected is None:
         return {"status": "no-op", "reason": "no-eligible-blocked-review", "retired": retired}
 
-    payload, review = candidates[0]
+    payload, review = selected
     pr = int(payload["number"])
     entry = entries.get(str(pr))
     fresh_recovery_reviews: list[str] = []

@@ -1191,6 +1191,14 @@ def test_orphaned_worktree_failure_gets_one_automatic_recovery(tmp_path: Path) -
     assert recovered["automatic_recovery_reviews"] == [recovery_key]
 
 
+def test_serial_dispatch_prioritizes_recovery_over_an_earlier_stack_pr() -> None:
+    normal = ({"number": 12}, loop.Review("normal", 12, HEAD_A, "blocked", "fix", "u"))
+    recovery = ({"number": 13}, loop.Review("recovery", 13, HEAD_A, "blocked", "fix", "u"))
+
+    assert loop._select_serial_candidate([recovery], [normal]) == recovery
+    assert loop._select_serial_candidate([], [normal]) == normal
+
+
 def test_reset_open_pr_cycles_clears_attempt_and_repeat_budgets(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
     existing = state(
