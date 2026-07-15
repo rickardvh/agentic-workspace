@@ -62,9 +62,10 @@ def test_interactive_codex_job_uses_a_background_console_on_windows(tmp_path: Pa
 
     monkeypatch.setattr(loop.subprocess, "run", fake_run)
 
-    completed = loop.CommandRunner().run_interactive(["codex", "exec"], cwd=tmp_path)
+    completed = loop.CommandRunner().run_interactive(["codex", "exec", "-"], cwd=tmp_path, input_text="line one\nline two")
 
     assert completed.returncode == 0
+    assert observed["input"] == "line one\nline two"
     if loop.os.name == "nt":
         assert observed["creationflags"] & loop.subprocess.CREATE_NEW_CONSOLE
         assert observed["startupinfo"].wShowWindow == getattr(loop.subprocess, "SW_SHOWMINNOACTIVE", 7)
@@ -119,6 +120,7 @@ class FakeRunner(loop.CommandRunner):
         self.codex_exit = 0
         self.next_handoff_head = ""
         self.next_review_decision = ""
+        self.interactive_inputs: list[str] = []
 
     def run(self, command, *, cwd, env=None):
         command = list(command)
@@ -169,8 +171,16 @@ class FakeRunner(loop.CommandRunner):
             return subprocess.CompletedProcess(command, self.codex_exit, "", "failed" if self.codex_exit else "")
         raise AssertionError(f"unexpected command: {command}")
 
-    def run_interactive(self, command, *, cwd, env=None):
-        return self.run(command, cwd=cwd, env=env)
+    def run_interactive(self, command, *, cwd, env=None, input_text=""):
+        self.interactive_inputs.append(input_text)
+        if "resume" in command:
+            return self.run(command, cwd=cwd, env=env)
+        command = list(command)
+        self.commands.append(command)
+        existing = loop._load_state(self.root, 12)
+        existing.update(session_id="fresh-session", status="awaiting-review", last_event="handoff-noop")
+        loop._save_state(self.root, existing)
+        return subprocess.CompletedProcess(command, self.codex_exit, "", "failed" if self.codex_exit else "")
 
 
 def state(root: Path, **updates) -> dict:
@@ -598,7 +608,8 @@ def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_
     ]
     assert resume[5] == "--dangerously-bypass-hook-trust"
     assert resume[6] == SESSION
-    assert "fix the race" in resume[7]
+    assert resume[7] == "-"
+    assert "fix the race" in runner.interactive_inputs[-1]
     assert loop._load_state(tmp_path, 12)["handled_reviews"] == [f"12:{HEAD_A}:IC_blocked_91"]
     assert loop._load_state(tmp_path, 12)["hook_trust_mode"] == "automation-bypass"
 

@@ -76,9 +76,24 @@ class CommandRunner:
         except json.JSONDecodeError as exc:
             raise LoopError("invalid-command-json", f"{' '.join(command)} returned invalid JSON") from exc
 
-    def run_interactive(self, command: Sequence[str], *, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    def run_interactive(
+        self,
+        command: Sequence[str],
+        *,
+        cwd: Path,
+        env: dict[str, str] | None = None,
+        input_text: str = "",
+    ) -> subprocess.CompletedProcess[str]:
         """Run a Codex job in its own live console instead of capturing its output."""
-        kwargs: dict[str, Any] = {"cwd": cwd, "env": env, "check": False}
+        kwargs: dict[str, Any] = {
+            "cwd": cwd,
+            "env": env,
+            "check": False,
+            "input": input_text,
+            "text": True,
+            "encoding": "utf-8",
+            "errors": "replace",
+        }
         if os.name == "nt":
             kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
             startupinfo = subprocess.STARTUPINFO()
@@ -649,10 +664,10 @@ def poll_one(
         "resume",
         *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []),
         str(state["session_id"]),
-        _review_prompt(review),
+        "-",
     ]
     try:
-        completed = runner.run_interactive(command, cwd=worktree, env=env)
+        completed = runner.run_interactive(command, cwd=worktree, env=env, input_text=_review_prompt(review))
     finally:
         cleanup = _remove_worktree(owner_root, worktree, runner) if isolated_worktree else ""
     latest = _load_state(owner_root, pr)
@@ -861,12 +876,19 @@ def _dispatch_all_unlocked(
     entries[str(pr)] = {"worktree": worktree.as_posix(), "branch": branch, "repository": _repo_slug(root, runner)}
     _save_dispatch(root, registry)
     _emit({"kind": STATE_KIND, "status": "job-started", "pr_number": pr, "mode": "fresh"})
-    command = [*shlex.split(codex_command), "-C", worktree.as_posix(), "exec", "--json", *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []), prompt]
+    command = [
+        *shlex.split(codex_command),
+        "-C",
+        worktree.as_posix(),
+        "exec",
+        *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []),
+        "-",
+    ]
     env = os.environ.copy()
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
     env[OWNER_ROOT_ENV] = root.as_posix()
     env[OWNER_BRANCH_ENV] = branch
-    completed = runner.run_interactive(command, cwd=worktree, env=env)
+    completed = runner.run_interactive(command, cwd=worktree, env=env, input_text=prompt)
     cleanup = _remove_worktree(root, worktree, runner)
     if cleanup:
         return {"status": "recovery-required", "pr_number": pr, "event": "worktree-cleanup-failed", "diagnostic": cleanup[-2000:]}
@@ -875,7 +897,12 @@ def _dispatch_all_unlocked(
         entries.pop(str(pr), None)
         _save_dispatch(root, registry)
         return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-failed"}
-    session_id = _session_id_from_jsonl(completed.stdout)
+    bound = _load_state(root, pr)
+    session_id = str(bound.get("session_id", "")).strip()
+    if not session_id:
+        entries.pop(str(pr), None)
+        _save_dispatch(root, registry)
+        return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-unbound"}
     updated = _pr_view(root, runner, pr=pr)
     new_head = str(updated.get("headRefOid", ""))
     if new_head == review.head:
