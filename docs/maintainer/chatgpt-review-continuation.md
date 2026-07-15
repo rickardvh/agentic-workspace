@@ -41,7 +41,7 @@ It retains one Codex session and one local isolated worktree per PR. A first eli
 
    `CODEX_THREAD_ID` supplies the exact session identity. Outside Codex, pass `--session-id <uuid>` explicitly. The command fails rather than deriving an identity from branch, recency, PID, or timestamps.
 
-The handoff verifies repository, branch, open PR, and pushed full SHA; tolerates a bounded three-read GitHub head-propagation window; adds `<!-- aw-chatgpt-review:enabled -->` as an idempotent top-level comment; and writes local state. It still fails closed when the remote head does not converge. Use `--max-cycles` and `--max-repeated-blockers` to lower or raise the default limits of three blocked cycles and two repetitions of identical findings.
+The handoff verifies repository, branch, open PR, and pushed full SHA; tolerates a bounded three-read GitHub head-propagation window; and records the opt-in only in local dispatcher state. It does not post an enablement comment on the PR. It still fails closed when the remote head does not converge. Use `--max-cycles` and `--max-repeated-blockers` to lower or raise the default limits of three blocked cycles and two repetitions of identical findings.
 
 If another session already owns the PR, inspect it first. `--replace-session` is an explicit human decision to supersede that owner; it is never automatic.
 

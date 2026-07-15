@@ -929,7 +929,7 @@ def test_completed_fresh_session_without_hook_binding_gets_one_safe_replacement(
     assert sum("exec" in command for command in runner.commands) == 2
 
 
-def test_handoff_is_idempotent_adds_opt_in_and_rejects_session_guessing(tmp_path: Path) -> None:
+def test_handoff_is_idempotent_records_local_opt_in_without_posting_pr_comment(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
 
     first = loop.handoff(
@@ -954,10 +954,10 @@ def test_handoff_is_idempotent_adds_opt_in_and_rejects_session_guessing(tmp_path
     )
 
     assert first["status"] == "handoff-recorded"
-    assert first["opt_in_added"] is True
+    assert first["opt_in_added"] is False
     assert second["status"] == "handoff-noop"
     assert second["opt_in_added"] is False
-    assert sum(command[:3] == ["gh", "pr", "comment"] for command in runner.commands) == 1
+    assert not any(command[:3] == ["gh", "pr", "comment"] for command in runner.commands)
     saved = loop._load_state(tmp_path, 12)
     assert (saved["session_id"], saved["handoff_head"]) == (SESSION, HEAD_A)
     assert saved["handoff_at"]

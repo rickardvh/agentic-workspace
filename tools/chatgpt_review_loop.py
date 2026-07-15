@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence, TextIO
 
-OPT_IN_MARKER = "<!-- aw-chatgpt-review:enabled -->"
 REVIEW_POLICY = "pr-review-recheck-v1"
 HEAD_SYNC_ATTEMPTS = 3
 STATE_KIND = "agentic-workspace/chatgpt-review-loop-state/v1"
@@ -528,17 +527,6 @@ def _open_prs(root: Path, runner: CommandRunner) -> list[dict[str, Any]]:
     return sorted(payload, key=lambda item: int(item.get("number", 0)))
 
 
-def _ensure_opt_in(root: Path, runner: CommandRunner, payload: dict[str, Any]) -> bool:
-    bodies = [str(payload.get("body", "")), *(str(item.get("body", "")) for item in _comments_from_pr(payload))]
-    if any(OPT_IN_MARKER in body for body in bodies):
-        return False
-    pr = int(payload["number"])
-    completed = runner.run(["gh", "pr", "comment", str(pr), "--body", OPT_IN_MARKER], cwd=root)
-    if completed.returncode:
-        raise LoopError("opt-in-failed", completed.stderr.strip() or f"could not opt PR #{pr} into external review")
-    return True
-
-
 def handoff(
     *,
     cwd: Path,
@@ -615,7 +603,9 @@ def handoff(
             f"PR #{number} is already bound to a different exact Codex session",
             recovery="inspect status, then rerun handoff with --replace-session only if the previous owner is intentionally superseded",
         )
-    opted_in = _ensure_opt_in(root, runner, payload)
+    # Opt-in is the local, exact-session state written below. Posting a remote
+    # marker comment made routine watcher setup visible and noisy on PRs.
+    opted_in = False
     state = existing or {
         "kind": STATE_KIND,
         "pr_number": number,
@@ -681,7 +671,7 @@ def parse_reviews(comments: list[dict[str, Any]], *, expected_pr: int, expected_
     rejected: list[dict[str, Any]] = []
     for comment in comments:
         body = str(comment.get("body", ""))
-        if "aw-chatgpt-review" not in body or body.strip() == OPT_IN_MARKER:
+        if "aw-chatgpt-review" not in body:
             continue
         markers = list(REVIEW_MARKER_RE.finditer(body))
         comment_id = str(comment.get("databaseId") or comment.get("id") or "").strip()
