@@ -87,8 +87,6 @@ def classify_proof_subject(*, target_root: Path, receipt: dict[str, Any], change
         target_root=target_root,
         changed_paths=changed_paths,
         command=command,
-        claim_classes=stored.get("claim_classes") if isinstance(stored.get("claim_classes"), list) else None,
-        effect_scope=stored.get("effect_scope") if isinstance(stored.get("effect_scope"), list) else None,
     )
     if not bool(stored.get("identity_complete")) or not bool(current.get("identity_complete")):
         return {"status": "unverifiable", "reasons": ["incomplete-subject-identity"], "minimum_rerun_command": command}
