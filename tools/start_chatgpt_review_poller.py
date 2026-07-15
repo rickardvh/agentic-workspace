@@ -53,6 +53,11 @@ def start(root: Path, *, max_cycles: int = 3) -> dict[str, object]:
         # Keep the watcher in an operator-visible console. The watcher itself
         # tees its structured status events to --log-file.
         kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NEW_PROCESS_GROUP
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = getattr(subprocess, "SW_SHOWMINNOACTIVE", 7)
+        kwargs["startupinfo"] = startupinfo
+        kwargs["close_fds"] = True
     else:
         stream = log.open("a", encoding="utf-8")
         kwargs.update(stdout=stream, stderr=subprocess.STDOUT)

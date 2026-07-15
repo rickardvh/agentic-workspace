@@ -53,6 +53,24 @@ def test_command_runner_decodes_output_as_utf8(tmp_path: Path, monkeypatch) -> N
     assert observed["errors"] == "replace"
 
 
+def test_interactive_codex_job_uses_a_background_console_on_windows(tmp_path: Path, monkeypatch) -> None:
+    observed = {}
+
+    def fake_run(command, **kwargs):
+        observed.update(kwargs)
+        return subprocess.CompletedProcess(command, 0)
+
+    monkeypatch.setattr(loop.subprocess, "run", fake_run)
+
+    completed = loop.CommandRunner().run_interactive(["codex", "exec"], cwd=tmp_path)
+
+    assert completed.returncode == 0
+    if loop.os.name == "nt":
+        assert observed["creationflags"] & loop.subprocess.CREATE_NEW_CONSOLE
+        assert observed["startupinfo"].wShowWindow == getattr(loop.subprocess, "SW_SHOWMINNOACTIVE", 7)
+        assert observed["close_fds"] is True
+
+
 class FakeRunner(loop.CommandRunner):
     def __init__(self, root: Path, *, comments: list[dict] | None = None) -> None:
         self.root = root

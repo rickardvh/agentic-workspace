@@ -80,6 +80,11 @@ class CommandRunner:
         kwargs: dict[str, Any] = {"cwd": cwd, "env": env, "check": False}
         if os.name == "nt":
             kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = getattr(subprocess, "SW_SHOWMINNOACTIVE", 7)
+            kwargs["startupinfo"] = startupinfo
+            kwargs["close_fds"] = True
         completed = subprocess.run(_resolved_command(command), **kwargs)
         return subprocess.CompletedProcess(command, completed.returncode, "", "")
 
