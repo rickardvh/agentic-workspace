@@ -26,6 +26,8 @@ agentic-workspace summary --target <repo> --format json
 This is the canonical compact inspection surface for active planning state. The `planning_record` payload carries the minimum facts needed for safe continuation, including next action and proof expectations.
 Treat `planning_record` as canonical active state when it is available; `active_contract` and `resumable_contract` are thinner projections, and raw planning files are fallback surfaces.
 
+When an explicit current task needs a route, select `planning_route_decision` from `summary` or `planning_safety_gate` from `start`. Treat its task relation, owner posture, and required transition as the shared Planning contract; do not rebuild a task-switch classification from prose, status aliases, or a consumer-local heuristic.
+
 When the question is "which proof lane is enough?", also consult:
 
 ```bash

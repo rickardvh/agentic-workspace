@@ -4263,8 +4263,152 @@ def test_route_decision_uses_current_reconciliation_proposal_without_recompiling
 
     assert decision["required_transition"] == "reconcile"
     assert decision["mutation_authority"] == "reconciliation-proposal"
+    assert decision["owner_posture"] == "reconciliation-pending"
     assert decision["reconciliation_proposal"]["proposal_id"] == "a" * 20
     assert decision["next_safe_action"]["command"].endswith("a" * 20)
+
+
+def test_route_decision_preserves_proposal_transition_and_posture() -> None:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    decision = _planning_route_decision_payload(
+        {"task_relation": "bounded-independent", "owner_posture": "current", "implementation_allowed": True},
+        reconciliation_proposal={
+            "status": "current",
+            "freshness": "current",
+            "proposal_id": "b" * 20,
+            "apply_command": "agentic-workspace planning reconcile --apply --proposal " + "b" * 20,
+            "required_transition": "repair-projection",
+            "owner_posture": "projection-drifted",
+        },
+    )
+
+    assert decision["task_relation"] == "bounded-independent"
+    assert decision["owner_posture"] == "projection-drifted"
+    assert decision["required_transition"] == "repair-projection"
+    assert decision["reconciliation_proposal"]["freshness"] == "current"
+
+
+def test_route_decision_requires_fresh_proposal_instead_of_applying_stale_one() -> None:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    decision = _planning_route_decision_payload(
+        {"task_relation": "continues-selected-owner", "owner_posture": "current", "implementation_allowed": True},
+        reconciliation_proposal={"status": "stale", "freshness": "stale", "proposal_id": "c" * 20},
+    )
+
+    assert decision["owner_posture"] == "reconciliation-stale"
+    assert decision["required_transition"] == "reconcile"
+    assert decision["implementation_allowed"] is False
+    assert decision["mutation_authority"] == "none"
+
+
+def test_structured_route_inputs_cover_bounded_work_owner_lifecycle_and_missing_owner(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_planning import _structured_route_inputs
+
+    active = {
+        "active_execplan": ".agentic-workspace/planning/execplans/issue-2046-lane.plan.json",
+        "active_item_id": "issue-2046-lane",
+    }
+    read_only = _structured_route_inputs(
+        target_root=tmp_path,
+        active_summary=active,
+        task_text="Report a bounded result",
+        changed_paths=[],
+        route_evidence={"current_task_class": "bounded-reflection-reporting"},
+        planning_revision={"status": "clean"},
+        proposal={"status": "absent"},
+    )
+    mutation = _structured_route_inputs(
+        target_root=tmp_path,
+        active_summary=active,
+        task_text="Fix a bounded defect",
+        changed_paths=["src/example.py"],
+        route_evidence={"status": "current-task-route-acknowledged", "current_task_class": "current-task"},
+        planning_revision={"status": "clean"},
+        proposal={"status": "absent"},
+    )
+    missing = _structured_route_inputs(
+        target_root=tmp_path,
+        active_summary={},
+        task_text="Implement a bounded task",
+        changed_paths=["src/example.py"],
+        route_evidence={},
+        planning_revision={"status": "clean"},
+        proposal={"status": "absent"},
+    )
+
+    assert (read_only["task_relation"], read_only["owner_posture"]) == ("bounded-independent", "current")
+    assert mutation["route_inputs"]["task_binding"]["mutation_scope_acknowledged"] is True
+    assert (missing["task_relation"], missing["owner_posture"]) == ("not-applicable", "not-applicable")
+
+
+def test_route_decision_transition_matrix_is_compositional() -> None:
+    from agentic_workspace.workspace_runtime_planning import _planning_route_decision_payload
+
+    cases = [
+        ("continuation", {"task_relation": "continues-selected-owner", "owner_posture": "current"}, {}, "none", "current"),
+        (
+            "bounded-read-only",
+            {"task_relation": "bounded-independent", "owner_posture": "current", "route_inputs": {"task_binding": {"mode": "read-only"}}},
+            {},
+            "none",
+            "current",
+        ),
+        (
+            "bounded-mutation",
+            {"task_relation": "bounded-independent", "owner_posture": "current", "route_inputs": {"task_binding": {"mode": "mutation"}}},
+            {},
+            "none",
+            "current",
+        ),
+        (
+            "completed-residue",
+            {"task_relation": "bounded-independent", "owner_posture": "completed-residue"},
+            {},
+            "closeout-or-archive",
+            "completed-residue",
+        ),
+        (
+            "external-conflict",
+            {"task_relation": "continues-selected-owner", "owner_posture": "external-conflict"},
+            {},
+            "reconcile",
+            "external-conflict",
+        ),
+        (
+            "projection-drift",
+            {"task_relation": "continues-selected-owner", "owner_posture": "projection-drifted"},
+            {},
+            "repair-projection",
+            "projection-drifted",
+        ),
+        ("promotion", {"task_relation": "owner-promotion-required", "owner_posture": "missing"}, {}, "promote-or-create-owner", "missing"),
+        ("ambiguity", {"task_relation": "ambiguous", "owner_posture": "current"}, {}, "ask-for-route-decision", "current"),
+    ]
+
+    for _name, evidence, proposal, transition, posture in cases:
+        decision = _planning_route_decision_payload({"implementation_allowed": True, **evidence}, reconciliation_proposal=proposal)
+        assert (decision["required_transition"], decision["owner_posture"]) == (transition, posture)
+
+    read_only = _planning_route_decision_payload(
+        {
+            "implementation_allowed": True,
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "route_inputs": {"task_binding": {"mode": "read-only"}},
+        }
+    )
+    mutation = _planning_route_decision_payload(
+        {
+            "implementation_allowed": True,
+            "task_relation": "bounded-independent",
+            "owner_posture": "current",
+            "route_inputs": {"task_binding": {"mode": "mutation"}},
+        }
+    )
+    assert read_only["mutation_authority"] == "none"
+    assert mutation["mutation_authority"] == "current-task"
 
 
 def test_selector_first_gate_projects_authoritative_route_decision() -> None:

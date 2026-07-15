@@ -1159,6 +1159,7 @@ def _acknowledged_current_task_switch_payload(
         return task_switch
     acknowledged = dict(task_switch)
     acknowledged["status"] = "current-task-route-acknowledged"
+    acknowledged["implementation_allowed"] = True
     acknowledged["intent_conflict_state"] = "current-task-route-acknowledged-active-plan-protected"
     acknowledged["summary"] = (
         "Current task route is acknowledged from the changed-path implementation context; continue current-task proof "
@@ -1243,16 +1244,22 @@ def _planning_route_decision_payload(
         "projection-drifted": "repair-projection",
         "proof-incomplete": "complete-proof",
         "missing": "select-owner",
+        "owner-promotion-required": "promote-or-create-owner",
+        "reconciliation-stale": "reconcile",
     }
     transition = str(
         route_evidence.get("required_transition")
-        or transition_by_posture.get(owner_posture)
         or (
-            "ask-for-route-decision"
-            if task_relation == "ambiguous"
-            else "inspect-current-task-scope"
-            if task_relation == "independent-pending-scope"
-            else "none"
+            "promote-or-create-owner"
+            if task_relation == "owner-promotion-required"
+            else transition_by_posture.get(owner_posture)
+            or (
+                "ask-for-route-decision"
+                if task_relation == "ambiguous"
+                else "inspect-current-task-scope"
+                if task_relation == "independent-pending-scope"
+                else "none"
+            )
         )
     )
     continuing = task_relation == "continues-selected-owner"
@@ -1261,6 +1268,10 @@ def _planning_route_decision_payload(
     active_plan_protection = _as_dict(route_evidence.get("active_plan_protection"))
     blocked_claims = active_plan_protection.get("blocked_claims") or route_evidence.get("blocked_claims") or []
     selected_owner_ref = str(route_evidence.get("active_execplan") or "")
+    route_inputs = _as_dict(route_evidence.get("route_inputs"))
+    task_binding = _as_dict(route_inputs.get("task_binding"))
+    owner_facts = _as_dict(route_inputs.get("owner"))
+    task_mode = str(task_binding.get("mode") or "")
     decision = {
         "kind": "agentic-planning/route-decision/v1",
         "task_relation": task_relation,
@@ -1273,17 +1284,29 @@ def _planning_route_decision_payload(
         },
         "identity_effects": [],
         "input_provenance": {
-            "task_relation": "planning-route-evidence.structured-reference-and-boundary-evidence",
-            "owner_posture": "active-owner-lifecycle-and-route-evidence",
-            "required_transition": "route-decision-policy; detailed reconciliation remains owned by planning reconcile",
+            "task_relation": "current-work binding, explicit structured references, and scoped current-task evidence",
+            "owner_posture": "selected-owner lifecycle, projection, proof, and admitted external-observation facts",
+            "required_transition": "route-decision policy; detailed reconciliation remains owned by planning reconcile",
         },
-        "reason_codes": [code for code in (status, str(route_evidence.get("intent_conflict_state") or "")) if code],
+        "structured_inputs": route_inputs,
+        "reason_codes": [
+            code
+            for code in (
+                status,
+                str(route_evidence.get("intent_conflict_state") or ""),
+                str(task_binding.get("basis") or ""),
+                str(owner_facts.get("lifecycle") or ""),
+            )
+            if code
+        ],
         "allowed_claims": ["bounded-task-progress"] if bounded else ["active-plan-progress"] if continuing else [],
         "blocked_claims": blocked_claims,
         "implementation_allowed": False if ambiguous or transition != "none" else bool(route_evidence.get("implementation_allowed")),
         "mutation_authority": "none"
         if ambiguous or transition != "none"
         else "current-task"
+        if bounded and task_mode != "read-only"
+        else "none"
         if bounded
         else "selected-owner"
         if continuing
@@ -1294,10 +1317,12 @@ def _planning_route_decision_payload(
     }
     proposal = _as_dict(reconciliation_proposal)
     if proposal.get("status") == "current":
+        proposal_posture = str(proposal.get("owner_posture") or "reconciliation-pending")
+        proposal_transition = str(proposal.get("required_transition") or "reconcile")
         decision.update(
             {
-                "owner_posture": "external-reconciliation-pending",
-                "required_transition": "reconcile",
+                "owner_posture": proposal_posture,
+                "required_transition": proposal_transition,
                 "implementation_allowed": False,
                 "mutation_authority": "reconciliation-proposal",
                 "proof_expectation": "apply the current reconciliation proposal and retain its mutation receipt",
@@ -1312,6 +1337,18 @@ def _planning_route_decision_payload(
         )
         decision["reason_codes"] = [*decision["reason_codes"], "current-reconciliation-proposal"]
         decision["reconciliation_proposal"] = proposal
+    elif proposal.get("status") == "stale":
+        decision.update(
+            {
+                "owner_posture": "reconciliation-stale",
+                "required_transition": "reconcile",
+                "implementation_allowed": False,
+                "mutation_authority": "none",
+                "state_update_policy": "fresh-reconciliation-proposal-required",
+            }
+        )
+        decision["reason_codes"] = [*decision["reason_codes"], "stale-reconciliation-proposal"]
+        decision["reconciliation_proposal"] = proposal
     return decision
 
 
@@ -1321,23 +1358,79 @@ def _task_switch_reconciliation_payload(**kwargs: Any) -> dict[str, Any]:
 
 
 def _structured_route_inputs(
-    *, active_summary: dict[str, Any], task_text: str | None, planning_revision: dict[str, Any], proposal: dict[str, Any]
-) -> dict[str, str]:
-    """Derive ordinary resolver inputs from current-work and owner facts."""
-    active_owner = str(active_summary.get("active_execplan") or "")
-    shared_refs = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text).get("shared_refs", [])
-    task_relation = "continues-selected-owner" if shared_refs else "independent-pending-scope" if active_owner else "bounded-independent"
+    *,
+    target_root: Path,
+    active_summary: dict[str, Any],
+    task_text: str | None,
+    changed_paths: list[str],
+    route_evidence: dict[str, Any],
+    planning_revision: dict[str, Any],
+    proposal: dict[str, Any],
+) -> dict[str, Any]:
+    """Derive resolver dimensions from current-work and owner facts, not status aliases."""
+    active_owner, owner_record = _active_execplan_record_payload(target_root=target_root)
+    active_owner = active_owner or str(active_summary.get("active_execplan") or "")
+    mismatch = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text)
+    shared_refs = [str(ref) for ref in mismatch.get("shared_refs", []) if str(ref).strip()]
+    current_task_class = str(route_evidence.get("current_task_class") or "")
+    acknowledged = route_evidence.get("status") == "current-task-route-acknowledged"
+    bounded_read_only = current_task_class.startswith("bounded-") and not acknowledged
+    bounded_mutation = acknowledged and bool(changed_paths)
+    if shared_refs:
+        task_relation, task_basis = "continues-selected-owner", "shared-structured-reference"
+    elif bounded_read_only:
+        task_relation, task_basis = "bounded-independent", "bounded-read-only-current-work-binding"
+    elif bounded_mutation:
+        task_relation, task_basis = "bounded-independent", "bounded-mutation-current-work-binding"
+    elif not active_owner:
+        task_relation, task_basis = "not-applicable", "no-selected-owner"
+    else:
+        task_relation, task_basis = "independent-pending-scope", "selected-owner-without-current-work-binding"
+
     revision_status = str(planning_revision.get("status") or "")
-    owner_posture = (
-        "projection-drifted"
-        if revision_status in {"stale", "drifted"}
-        else "external-conflict"
-        if proposal.get("status") == "current"
-        else "missing"
-        if not active_owner
-        else "current"
-    )
-    return {"task_relation": task_relation, "owner_posture": owner_posture}
+    closure = _as_dict(owner_record.get("closure_check"))
+    proof = _as_dict(owner_record.get("proof_report"))
+    lifecycle = str(owner_record.get("status") or owner_record.get("lifecycle") or "active") if active_owner else "missing"
+    completed = "complete" in str(closure.get("slice status") or "").lower()
+    if revision_status in {"stale", "drifted"}:
+        owner_posture = "projection-drifted"
+    elif not active_owner:
+        owner_posture = "not-applicable"
+    elif completed:
+        owner_posture = "completed-residue"
+    elif lifecycle in {"completed", "closed", "archived"}:
+        owner_posture = "completed-residue"
+    elif lifecycle in {"proof-incomplete", "awaiting-proof"} or (closure and not proof):
+        owner_posture = "proof-incomplete"
+    else:
+        owner_posture = "current"
+    return {
+        "task_relation": task_relation,
+        "owner_posture": owner_posture,
+        "route_inputs": {
+            "task_binding": {
+                "basis": task_basis,
+                "shared_refs": shared_refs,
+                "current_task_class": current_task_class,
+                "changed_path_count": len(changed_paths),
+                "mutation_scope_acknowledged": bounded_mutation,
+                "mode": "read-only" if bounded_read_only else "mutation" if bounded_mutation else "unresolved",
+            },
+            "owner": {
+                "ref": active_owner,
+                "lifecycle": lifecycle,
+                "projection_status": revision_status or "unknown",
+                "proof_present": bool(proof),
+                "closure_status": str(closure.get("slice status") or ""),
+            },
+            "admitted_external_observation": _as_dict(route_evidence.get("admitted_external_observation")),
+            "reconciliation_proposal": {
+                key: proposal.get(key)
+                for key in ("status", "proposal_id", "freshness", "required_transition", "owner_posture")
+                if proposal.get(key) not in (None, "", [], {})
+            },
+        },
+    }
 
 
 def _current_reconciliation_proposal(*, target_root: Path, planning_revision: dict[str, Any]) -> dict[str, Any]:
@@ -1346,19 +1439,28 @@ def _current_reconciliation_proposal(*, target_root: Path, planning_revision: di
     expected_revision = str(_as_dict(planning_revision).get("revision_id") or "")
     if not proposal_root.is_dir() or not expected_revision:
         return {"status": "absent"}
+    stale_proposal_id = ""
     for path in sorted(proposal_root.glob("*.json"), reverse=True)[:8]:
         try:
             proposal = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             continue
         source = _as_dict(_as_dict(proposal).get("source"))
-        if source.get("planning_revision") != expected_revision:
-            continue
         proposal_id = str(_as_dict(proposal).get("proposal_id") or "")
         apply_command = str(_as_dict(proposal).get("apply_command") or "")
+        if source.get("planning_revision") != expected_revision:
+            stale_proposal_id = stale_proposal_id or proposal_id
+            continue
         if proposal_id and apply_command:
-            return {"status": "current", "proposal_id": proposal_id, "apply_command": apply_command}
-    return {"status": "stale-or-absent"}
+            return {
+                "status": "current",
+                "freshness": "current",
+                "proposal_id": proposal_id,
+                "apply_command": apply_command,
+                "required_transition": str(proposal.get("required_transition") or proposal.get("transition") or "reconcile"),
+                "owner_posture": str(proposal.get("owner_posture") or proposal.get("posture") or "reconciliation-pending"),
+            }
+    return {"status": "stale", "freshness": "stale", "proposal_id": stale_proposal_id} if stale_proposal_id else {"status": "absent"}
 
 
 def _bounded_reflection_reporting_payload(*, task_text: str | None) -> dict[str, Any]:
@@ -1732,7 +1834,13 @@ def _planning_safety_gate_payload(
     route_evidence = {
         **route_evidence,
         **_structured_route_inputs(
-            active_summary=active_summary, task_text=task_text, planning_revision=planning_revision, proposal=reconciliation_proposal
+            target_root=target_root,
+            active_summary=active_summary,
+            task_text=task_text,
+            changed_paths=changed_paths,
+            route_evidence=route_evidence,
+            planning_revision=planning_revision,
+            proposal=reconciliation_proposal,
         ),
     }
     route_decision = _planning_route_decision_payload(

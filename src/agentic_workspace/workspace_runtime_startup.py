@@ -911,9 +911,10 @@ def _start_payload(
         payload["route_decision"] = route_decision
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
-    task_switch_visible_by_default = (
-        route_transition in {"closeout-or-archive", "ask-for-route-decision"} or route_relation == "bounded-independent"
-    )
+    task_switch_visible_by_default = route_transition in {"closeout-or-archive", "ask-for-route-decision"} or route_relation in {
+        "bounded-independent",
+        "independent-pending-scope",
+    }
     if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default:
         payload["planning_safety_gate"] = planning_safety_gate
     if isinstance(route_decision, dict) and route_transition in {
@@ -1682,7 +1683,10 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
             if compact_workflow.get(key) not in (None, "", [], {})
         }
     context: dict[str, Any] = {
-        "primary_action": payload["immediate_next_allowed_action"],
+        "primary_action": {
+            **payload["immediate_next_allowed_action"],
+            "read_first": payload["immediate_next_allowed_action"].get("read_first", []),
+        },
         "active_state": _active_state_with_orientation_delta(payload.get("active_state_summary", {}), cli_invoke=cli_invoke),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",

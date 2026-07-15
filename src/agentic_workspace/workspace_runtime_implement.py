@@ -1866,6 +1866,7 @@ def _tiny_implement_payload(payload: dict[str, Any]) -> dict[str, Any]:
                     "delegation_decision_required",
                     "custody_planning",
                     "route_decision",
+                    "task_switch_reconciliation",
                     "detail_selector",
                 )
                 if key in compact_gate
