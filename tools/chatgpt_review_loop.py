@@ -75,6 +75,14 @@ class CommandRunner:
         except json.JSONDecodeError as exc:
             raise LoopError("invalid-command-json", f"{' '.join(command)} returned invalid JSON") from exc
 
+    def run_interactive(self, command: Sequence[str], *, cwd: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+        """Run a Codex job in its own live console instead of capturing its output."""
+        kwargs: dict[str, Any] = {"cwd": cwd, "env": env, "check": False}
+        if os.name == "nt":
+            kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
+        completed = subprocess.run(_resolved_command(command), **kwargs)
+        return subprocess.CompletedProcess(command, completed.returncode, "", "")
+
 
 def _emit(payload: dict[str, Any], *, error: bool = False) -> None:
     rendered = json.dumps(payload, indent=2, sort_keys=True)
@@ -589,7 +597,7 @@ def poll_one(
         _review_prompt(review),
     ]
     try:
-        completed = runner.run(command, cwd=worktree, env=env)
+        completed = runner.run_interactive(command, cwd=worktree, env=env)
     finally:
         cleanup = _remove_worktree(owner_root, worktree, runner) if isolated_worktree else ""
     latest = _load_state(owner_root, pr)
@@ -793,7 +801,7 @@ def _dispatch_all_unlocked(
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
     env[OWNER_ROOT_ENV] = root.as_posix()
     env[OWNER_BRANCH_ENV] = branch
-    completed = runner.run(command, cwd=worktree, env=env)
+    completed = runner.run_interactive(command, cwd=worktree, env=env)
     cleanup = _remove_worktree(root, worktree, runner)
     if cleanup:
         return {"status": "recovery-required", "pr_number": pr, "event": "worktree-cleanup-failed", "diagnostic": cleanup[-2000:]}

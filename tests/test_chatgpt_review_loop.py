@@ -117,6 +117,9 @@ class FakeRunner(loop.CommandRunner):
             return subprocess.CompletedProcess(command, self.codex_exit, "", "failed" if self.codex_exit else "")
         raise AssertionError(f"unexpected command: {command}")
 
+    def run_interactive(self, command, *, cwd, env=None):
+        return self.run(command, cwd=cwd, env=env)
+
 
 def state(root: Path, **updates) -> dict:
     payload = {
