@@ -595,6 +595,7 @@ def _cleanup_closed_dispatches(root: Path, registry: dict[str, Any], *, runner: 
             completed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
             if completed.returncode:
                 raise LoopError("worktree-cleanup-failed", completed.stderr.strip() or f"could not remove worktree for closed PR #{pr}")
+        _state_path(root, pr).unlink(missing_ok=True)
         entries.pop(key)
         removed.append(pr)
     if removed:
@@ -714,6 +715,11 @@ def _dispatch_all_unlocked(
     env[OWNER_BRANCH_ENV] = branch
     completed = runner.run(command, cwd=worktree, env=env)
     if completed.returncode:
+        removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+        if not removed.returncode:
+            _state_path(root, pr).unlink(missing_ok=True)
+            entries.pop(str(pr), None)
+            _save_dispatch(root, registry)
         return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-failed"}
     session_id = _session_id_from_jsonl(completed.stdout)
     updated = _pr_view(root, runner, pr=pr)
