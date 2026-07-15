@@ -47,6 +47,7 @@ def start(root: Path, *, max_cycles: int = 3) -> dict[str, object]:
         str(max_cycles),
         "--log-file",
         log.as_posix(),
+        "--console-output",
     ]
     kwargs: dict[str, object] = {"cwd": root, "stdin": subprocess.DEVNULL}
     if os.name == "nt":

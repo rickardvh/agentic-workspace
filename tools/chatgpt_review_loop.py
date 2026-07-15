@@ -104,6 +104,15 @@ def _configure_log(path: Path | None) -> None:
     _LOG_STREAM = path.open("a", encoding="utf-8")
 
 
+def _configure_console_output(*, windows: bool | None = None) -> None:
+    """Bind watcher output to its newly allocated Windows console."""
+    if not (os.name == "nt" if windows is None else windows):
+        return
+    console = open("CONOUT$", "w", encoding="utf-8", errors="replace", buffering=1)  # noqa: PTH123
+    sys.stdout = console
+    sys.stderr = console
+
+
 def _resolved_command(command: Sequence[str], *, windows: bool | None = None) -> list[str]:
     resolved = list(command)
     is_windows = os.name == "nt" if windows is None else windows
@@ -986,6 +995,7 @@ def _parser() -> argparse.ArgumentParser:
     poll_parser.add_argument("--max-cycles", type=int, default=3)
     poll_parser.add_argument("--max-repeated-blockers", type=int, default=2)
     poll_parser.add_argument("--log-file", type=Path, help="Append watcher events to this file while also printing them.")
+    poll_parser.add_argument("--console-output", action="store_true", help="Bind watcher events to the allocated Windows console.")
     poll_parser.add_argument("--codex-command", default=os.environ.get("AW_CHATGPT_REVIEW_CODEX", "codex"))
     poll_parser.add_argument(
         "--bypass-hook-trust",
@@ -1009,6 +1019,8 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
     runner = runner or CommandRunner()
     try:
         if args.command == "poll":
+            if args.console_output:
+                _configure_console_output()
             _configure_log(args.log_file)
         if args.command == "handoff":
             cwd, session_id = _hook_input() if args.hook else (args.target.resolve(), args.session_id)

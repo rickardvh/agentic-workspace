@@ -45,6 +45,7 @@ def test_start_replaces_stale_pid_and_records_background_process(tmp_path: Path,
     assert result["status"] == "started"
     assert json.loads(pid_path.read_text(encoding="utf-8"))["pid"] == 5678
     assert "--log-file" in captured["command"]
+    assert "--console-output" in captured["command"]
     if os.name == "nt":
         assert captured["kwargs"]["creationflags"] & poller.subprocess.CREATE_NEW_CONSOLE
         assert captured["kwargs"]["startupinfo"].wShowWindow == getattr(poller.subprocess, "SW_SHOWMINNOACTIVE", 7)

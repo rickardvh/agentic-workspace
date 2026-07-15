@@ -71,6 +71,18 @@ def test_interactive_codex_job_uses_a_background_console_on_windows(tmp_path: Pa
         assert observed["close_fds"] is True
 
 
+def test_watcher_console_output_rebinds_stdout_and_stderr(monkeypatch) -> None:
+    stream = io.StringIO()
+    monkeypatch.setattr(loop, "open", lambda *args, **kwargs: stream, raising=False)
+    old_stdout, old_stderr = loop.sys.stdout, loop.sys.stderr
+    try:
+        loop._configure_console_output(windows=True)
+        assert loop.sys.stdout is stream
+        assert loop.sys.stderr is stream
+    finally:
+        loop.sys.stdout, loop.sys.stderr = old_stdout, old_stderr
+
+
 class FakeRunner(loop.CommandRunner):
     def __init__(self, root: Path, *, comments: list[dict] | None = None) -> None:
         self.root = root
