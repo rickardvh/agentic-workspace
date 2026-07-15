@@ -142,6 +142,7 @@ class FakeRunner(loop.CommandRunner):
         self.commands: list[list[str]] = []
         self.codex_exit = 0
         self.next_handoff_head = ""
+        self.next_job_result: dict[str, object] | None = None
         self.next_review_decision = ""
         self.interactive_inputs: list[str] = []
 
@@ -183,6 +184,17 @@ class FakeRunner(loop.CommandRunner):
                 state.update(handoff_head=self.next_handoff_head, status="awaiting-review", last_event="handoff-recorded")
                 loop._save_state(self.root, state)
                 self.pr_head = self.next_handoff_head
+                self.head = self.next_handoff_head
+                if self.next_job_result:
+                    loop.report_job_result(
+                        cwd=self.root,
+                        session_id=SESSION,
+                        proof_status=str(self.next_job_result["proof_status"]),
+                        proof_command=str(self.next_job_result["proof_command"]),
+                        proof_exit_code=int(self.next_job_result["proof_exit_code"]),
+                        push_status=str(self.next_job_result["push_status"]),
+                        runner=self,
+                    )
                 if self.next_review_decision:
                     self.comments = [
                         {
@@ -228,6 +240,10 @@ def state(root: Path, **updates) -> dict:
     payload.update(updates)
     loop._save_state(root, payload)
     return payload
+
+
+def passed_result(runner: FakeRunner) -> None:
+    runner.next_job_result = {"proof_status": "passed", "proof_command": "pytest -q", "proof_exit_code": 0, "push_status": "passed"}
 
 
 def test_marker_parser_accepts_only_exact_pr_and_full_sha() -> None:
@@ -548,7 +564,7 @@ def test_global_dispatch_rearms_legacy_truncated_prompt_without_charging_budget(
     assert seen["blocker_fingerprints"] == {}
 
 
-def test_global_dispatch_reconciles_remote_head_when_stop_hook_misses(tmp_path: Path) -> None:
+def test_global_dispatch_treats_remote_head_without_result_as_recovery_evidence(tmp_path: Path) -> None:
     old_review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[old_review])
     runner.pr_head = HEAD_B
@@ -584,9 +600,9 @@ def test_global_dispatch_reconciles_remote_head_when_stop_hook_misses(tmp_path: 
 
     assert result["status"] == "no-op"
     reconciled = loop._load_state(tmp_path, 12)
-    assert reconciled["handoff_head"] == HEAD_B
-    assert reconciled["status"] == "awaiting-review"
-    assert reconciled["last_event"] == "remote-handoff-reconciled"
+    assert reconciled["handoff_head"] == HEAD_A
+    assert reconciled["status"] == "recovery-required"
+    assert reconciled["last_event"] == "remote-head-observed-without-result"
 
 
 def test_fresh_global_dispatch_fetches_and_detaches_at_reviewed_head(tmp_path: Path, monkeypatch) -> None:
@@ -809,11 +825,29 @@ def test_global_dispatch_retains_one_owned_worktree_through_resume_then_retires_
             runner.head = HEAD_A.replace("a", "c")
             runner.pr_head = runner.head
             runner.pr_heads = [HEAD_B, runner.head]
+            loop.report_job_result(
+                cwd=cwd,
+                session_id="fresh-session",
+                proof_status="passed",
+                proof_command="pytest -q",
+                proof_exit_code=0,
+                push_status="passed",
+                runner=runner,
+            )
             stop_hook(cwd, "fresh-session")
         else:
             runner.head = HEAD_B
             runner.pr_head = HEAD_B
             runner.pr_heads = [HEAD_A, HEAD_B]
+            loop.report_job_result(
+                cwd=cwd,
+                session_id="fresh-session",
+                proof_status="passed",
+                proof_command="pytest -q",
+                proof_exit_code=0,
+                push_status="passed",
+                runner=runner,
+            )
             stop_hook(cwd, "fresh-session")
         return subprocess.CompletedProcess(command, 0, "", "")
 
@@ -826,6 +860,7 @@ def test_global_dispatch_retains_one_owned_worktree_through_resume_then_retires_
     )
     assert first["session_id"] == "fresh-session"
     assert loop._load_state(tmp_path, 12)["handoff_head"] == HEAD_B
+    assert loop._load_state(tmp_path, 12)["terminal_result"]["disposition"] == "handoff-recorded"
     assert worktree_root / "pr-12" == Path(loop._load_dispatch(tmp_path)["prs"]["12"]["worktree"])
     assert (worktree_root / "pr-12").is_dir()
 
@@ -959,6 +994,17 @@ def test_handoff_bounded_retry_absorbs_github_head_propagation(tmp_path: Path, m
     assert sum(command[:3] == ["gh", "pr", "view"] for command in runner.commands) == 2
 
 
+def test_fresh_post_exit_head_convergence_waits_for_delayed_push(tmp_path: Path, monkeypatch) -> None:
+    runner = FakeRunner(tmp_path)
+    runner.pr_heads = [HEAD_A, HEAD_B]
+    monkeypatch.setattr(loop.time, "sleep", lambda _seconds: None)
+
+    payload = loop._converged_pr_view(tmp_path, runner, pr=12, previous_head=HEAD_A)
+
+    assert payload["headRefOid"] == HEAD_B
+    assert sum(command[:3] == ["gh", "pr", "view"] for command in runner.commands) == 2
+
+
 def test_stop_handoff_preserves_explicitly_configured_limits(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
     existing = state(
@@ -993,6 +1039,7 @@ def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_
     review = {"id": "IC_blocked_91", "body": f"- fix the race\n{marker()}", "url": "https://example.test/c/91"}
     runner = FakeRunner(tmp_path, comments=[review])
     runner.next_handoff_head = HEAD_B
+    passed_result(runner)
     initial = state(tmp_path)
 
     result = loop.poll_one(tmp_path, initial, runner=runner, codex_command="codex", bypass_hook_trust=True)
@@ -1017,6 +1064,100 @@ def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_
     assert "fix the race" in runner.interactive_inputs[-1]
     assert loop._load_state(tmp_path, 12)["handled_reviews"] == [f"12:{HEAD_A}:IC_blocked_91"]
     assert loop._load_state(tmp_path, 12)["hook_trust_mode"] == "automation-bypass"
+
+
+def test_resume_persists_a_machine_readable_terminal_result(tmp_path: Path) -> None:
+    review = {"id": "IC_terminal", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    runner.next_handoff_head = HEAD_B
+    passed_result(runner)
+
+    loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
+
+    terminal = loop._load_state(tmp_path, 12)["terminal_result"]
+    assert terminal["kind"] == "agentic-workspace/chatgpt-review-job-result/v1"
+    assert terminal["pr_number"] == 12
+    assert terminal["session_id"] == SESSION
+    assert terminal["starting_head"] == HEAD_A
+    assert terminal["ending_head"] == HEAD_B
+    assert terminal["disposition"] == "handoff-recorded"
+    assert terminal["proof_status"] == "passed"
+
+
+def test_resume_rejects_stale_result_even_when_a_new_head_was_handed_off(tmp_path: Path) -> None:
+    review = {"id": "stale", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    runner.next_handoff_head = HEAD_B
+    saved = state(tmp_path, terminal_result={"proof_status": "passed", "push_status": "passed"})
+
+    result = loop.poll_one(tmp_path, saved, runner=runner, codex_command="codex")
+
+    assert result["event"] == "handoff-proof-unreported"
+    assert loop._load_state(tmp_path, 12)["terminal_result"]["attempt_id"] == loop._load_state(tmp_path, 12)["job_attempt"]["id"]
+    assert loop._load_state(tmp_path, 12)["terminal_result"]["proof_status"] == "unreported"
+
+
+def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
+    review = {"id": "failed-proof", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    runner.next_handoff_head = HEAD_B
+    runner.next_job_result = {"proof_status": "failed", "proof_command": "pytest -q", "proof_exit_code": 1, "push_status": "passed"}
+
+    result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
+
+    assert result["event"] == "handoff-proof-unreported"
+    assert loop._load_state(tmp_path, 12)["terminal_result"]["proof_status"] == "failed"
+
+
+def test_job_result_is_exactly_once_and_requires_a_complete_result(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    saved = state(tmp_path, status="resume-in-progress")
+    loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    loop._save_state(tmp_path, saved)
+
+    loop.report_job_result(
+        cwd=tmp_path,
+        session_id=SESSION,
+        proof_status="passed",
+        proof_command="",
+        proof_exit_code=0,
+        push_status="passed",
+        runner=runner,
+    )
+    recorded = loop._load_state(tmp_path, 12)
+    assert not loop._validated_attempt_result(recorded, worktree=tmp_path, start_head=HEAD_A)
+    with pytest.raises(loop.LoopError, match="already recorded") as error:
+        loop.report_job_result(
+            cwd=tmp_path,
+            session_id=SESSION,
+            proof_status="passed",
+            proof_command="pytest -q",
+            proof_exit_code=0,
+            push_status="passed",
+            runner=runner,
+        )
+    assert error.value.code == "job-result-duplicate"
+
+
+def test_malformed_result_and_mismatched_ending_head_cannot_validate(tmp_path: Path) -> None:
+    saved = state(tmp_path, status="resume-in-progress", handoff_head=HEAD_B)
+    attempt = loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    saved["terminal_result"] = {
+        "kind": "wrong",
+        "attempt_id": attempt["id"],
+        "pr_number": 12,
+        "session_id": SESSION,
+        "worktree": tmp_path.as_posix(),
+        "starting_head": HEAD_A,
+        "ending_head": HEAD_A,
+        "proof_status": "passed",
+        "proof_commands": ["pytest -q"],
+        "proof_exit_code": 0,
+        "push_status": "passed",
+    }
+    attempt.update(session_id=SESSION, result_recorded=True)
+    saved["session_id"] = SESSION
+    assert not loop._validated_attempt_result(saved, worktree=tmp_path, start_head=HEAD_A)
 
 
 def test_new_handoff_clears_stale_resume_failure_diagnostics(tmp_path: Path) -> None:
@@ -1069,6 +1210,14 @@ def test_orphaned_worktree_failure_gets_one_automatic_recovery(tmp_path: Path) -
     recovered = loop._load_state(tmp_path, 12)
     assert recovered["status"] == "awaiting-review"
     assert recovered["automatic_recovery_reviews"] == [recovery_key]
+
+
+def test_serial_dispatch_prioritizes_recovery_over_an_earlier_stack_pr() -> None:
+    normal = ({"number": 12}, loop.Review("normal", 12, HEAD_A, "blocked", "fix", "u"))
+    recovery = ({"number": 13}, loop.Review("recovery", 13, HEAD_A, "blocked", "fix", "u"))
+
+    assert loop._select_serial_candidate([recovery], [normal]) == recovery
+    assert loop._select_serial_candidate([], [normal]) == normal
 
 
 def test_reset_open_pr_cycles_clears_attempt_and_repeat_budgets(tmp_path: Path) -> None:
@@ -1245,6 +1394,7 @@ def test_watch_loop_resumes_head_a_then_reviews_head_b_without_restart(tmp_path:
     }
     runner = FakeRunner(tmp_path, comments=[first_review])
     runner.next_handoff_head = HEAD_B
+    passed_result(runner)
     runner.next_review_decision = "merge-ready"
     state(tmp_path)
     monkeypatch.setattr(loop.time, "sleep", lambda _seconds: None)
