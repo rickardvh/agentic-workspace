@@ -564,7 +564,7 @@ def test_global_dispatch_rearms_legacy_truncated_prompt_without_charging_budget(
     assert seen["blocker_fingerprints"] == {}
 
 
-def test_global_dispatch_reconciles_remote_head_when_stop_hook_misses(tmp_path: Path) -> None:
+def test_global_dispatch_treats_remote_head_without_result_as_recovery_evidence(tmp_path: Path) -> None:
     old_review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[old_review])
     runner.pr_head = HEAD_B
@@ -600,9 +600,9 @@ def test_global_dispatch_reconciles_remote_head_when_stop_hook_misses(tmp_path: 
 
     assert result["status"] == "no-op"
     reconciled = loop._load_state(tmp_path, 12)
-    assert reconciled["handoff_head"] == HEAD_B
-    assert reconciled["status"] == "awaiting-review"
-    assert reconciled["last_event"] == "remote-handoff-reconciled"
+    assert reconciled["handoff_head"] == HEAD_A
+    assert reconciled["status"] == "recovery-required"
+    assert reconciled["last_event"] == "remote-head-observed-without-result"
 
 
 def test_fresh_global_dispatch_fetches_and_detaches_at_reviewed_head(tmp_path: Path, monkeypatch) -> None:
@@ -1137,6 +1137,27 @@ def test_job_result_is_exactly_once_and_requires_a_complete_result(tmp_path: Pat
             runner=runner,
         )
     assert error.value.code == "job-result-duplicate"
+
+
+def test_malformed_result_and_mismatched_ending_head_cannot_validate(tmp_path: Path) -> None:
+    saved = state(tmp_path, status="resume-in-progress", handoff_head=HEAD_B)
+    attempt = loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    saved["terminal_result"] = {
+        "kind": "wrong",
+        "attempt_id": attempt["id"],
+        "pr_number": 12,
+        "session_id": SESSION,
+        "worktree": tmp_path.as_posix(),
+        "starting_head": HEAD_A,
+        "ending_head": HEAD_A,
+        "proof_status": "passed",
+        "proof_commands": ["pytest -q"],
+        "proof_exit_code": 0,
+        "push_status": "passed",
+    }
+    attempt.update(session_id=SESSION, result_recorded=True)
+    saved["session_id"] = SESSION
+    assert not loop._validated_attempt_result(saved, worktree=tmp_path, start_head=HEAD_A)
 
 
 def test_new_handoff_clears_stale_resume_failure_diagnostics(tmp_path: Path) -> None:

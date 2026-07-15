@@ -353,7 +353,7 @@ def _record_job_terminal(
         "session_id": str(state.get("session_id", "")),
         "worktree": worktree.as_posix(),
         "starting_head": start_head,
-        "ending_head": str(state.get("handoff_head", "")),
+        "ending_head": str(terminal.get("ending_head") or state.get("handoff_head", "")),
         "attempt_id": str(attempt.get("id", "")),
         "mode": mode,
         "exit_code": exit_code,
@@ -377,6 +377,7 @@ def _begin_job_attempt(state: dict[str, Any], *, mode: str, worktree: Path, star
         "worktree": worktree.as_posix(),
         "starting_head": start_head,
         "session_id": str(state.get("session_id", "")),
+        "launch_identity": uuid.uuid4().hex,
         "result_recorded": False,
         "started_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -391,11 +392,13 @@ def _validated_attempt_result(state: dict[str, Any], *, worktree: Path, start_he
     if not isinstance(attempt, dict) or not isinstance(result, dict) or not attempt.get("result_recorded"):
         return False
     return bool(
-        result.get("attempt_id") == attempt.get("id")
+        result.get("kind") == "agentic-workspace/chatgpt-review-job-result/v1"
+        and result.get("attempt_id") == attempt.get("id")
         and result.get("pr_number") == int(state["pr_number"])
         and result.get("session_id") == state.get("session_id") == attempt.get("session_id")
         and result.get("worktree") == attempt.get("worktree") == worktree.as_posix()
         and result.get("starting_head") == attempt.get("starting_head") == start_head
+        and result.get("ending_head") == state.get("handoff_head")
         and result.get("proof_status") == "passed"
         and result.get("proof_exit_code") == 0
         and bool(result.get("proof_commands"))
@@ -445,7 +448,8 @@ def report_job_result(*, cwd: Path, session_id: str, proof_status: str, proof_co
         "pr_number": int(state["pr_number"]), "session_id": session_id,
         "attempt_id": attempt["id"], "mode": attempt["mode"],
         "worktree": worktree.as_posix(), "starting_head": attempt["starting_head"],
-        "reported_head": _git_value(worktree, runner, "rev-parse", "HEAD"),
+        "ending_head": _git_value(worktree, runner, "rev-parse", "HEAD"),
+        "launch_identity": attempt["launch_identity"],
         "proof_status": proof_status, "proof_commands": [proof_command] if proof_command else [],
         "proof_exit_code": proof_exit_code, "push_status": push_status,
         "reported_at": datetime.now(timezone.utc).isoformat(),
@@ -1062,17 +1066,12 @@ def _dispatch_all_unlocked(
             existing = _load_state(root, pr)
             prior_head = str(existing.get("handoff_head", ""))
             if prior_head and prior_head != head and existing.get("branch") == payload.get("headRefName"):
-                # The exact PR branch is authoritative when a resumed job
-                # pushed successfully but its Stop hook failed to persist the
-                # handoff locally. Reconcile before looking for a review of the
-                # new head so the serial lane does not stall on stale state.
+                # A remote movement is diagnostic evidence only.  It cannot
+                # advance a handoff without the exact launch's validated result.
                 existing.update(
-                    handoff_head=head,
-                    status="awaiting-review",
-                    last_event="remote-handoff-reconciled",
-                    recovery="",
-                    resume_exit_code=0,
-                    resume_diagnostic="",
+                    status="recovery-required",
+                    last_event="remote-head-observed-without-result",
+                    recovery="remote head changed without a validated exact-attempt result; inspect the recorded job and explicitly recover",
                 )
                 _save_state(root, existing)
         matches, rejected = parse_reviews(_comments_from_pr(payload), expected_pr=pr, expected_head=head)
@@ -1112,6 +1111,13 @@ def _dispatch_all_unlocked(
                     recovery="the watcher will launch one recovery resume for the interrupted job",
                     recovery_review_key=review.key,
                 )
+                attempt = existing.get("job_attempt") if isinstance(existing.get("job_attempt"), dict) else {}
+                _record_job_terminal(
+                    existing, mode="resume", worktree=Path(str(attempt.get("worktree") or entry.get("worktree"))),
+                    start_head=str(attempt.get("starting_head") or existing.get("handoff_head", "")),
+                    exit_code=-1, disposition="interrupted", event="orphaned-resume",
+                    diagnostic="dispatcher lock reclaimed after an interrupted resume",
+                )
                 _save_state(root, existing)
             if existing.get("status") == "fresh-session-in-progress":
                 # A fresh job has no session identity until its Stop hook binds
@@ -1133,6 +1139,13 @@ def _dispatch_all_unlocked(
                         recovery_review_key=review.key,
                         recovery_mode="fresh",
                     )
+                attempt = existing.get("job_attempt") if isinstance(existing.get("job_attempt"), dict) else {}
+                _record_job_terminal(
+                    existing, mode="fresh", worktree=Path(str(attempt.get("worktree") or entry.get("worktree"))),
+                    start_head=str(attempt.get("starting_head") or existing.get("handoff_head", "")),
+                    exit_code=-1, disposition="interrupted", event=str(existing["last_event"]),
+                    diagnostic="dispatcher lock reclaimed after an interrupted fresh launch",
+                )
                 _save_state(root, existing)
             if existing.get("status") == "recovery-required":
                 if not _automatic_recovery_available(existing, review_key=review.key):
