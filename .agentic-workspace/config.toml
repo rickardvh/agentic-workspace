@@ -14,7 +14,11 @@ workflow_artifact_profile = "repo-owned"
 improvement_latitude = "proactive"
 optimization_bias = "agent-efficiency"
 advanced_features = ["review_artifacts", "external_adapters"]
-cli_invoke = "uv run python scripts/run_agentic_workspace.py"
+# Keep a spawned/linked worktree on the caller's already-active environment.
+# Without --active, uv ignores VIRTUAL_ENV when the worktree has a different
+# project path, creates a second .venv, and buries the first AW decision behind
+# installation output.
+cli_invoke = "uv run --active python scripts/run_agentic_workspace.py"
 
 [assurance]
 default_level = "medium"
