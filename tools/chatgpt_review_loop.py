@@ -1081,6 +1081,32 @@ def _dispatch_all_unlocked(
             existing = _load_state(root, pr)
             prior_head = str(existing.get("handoff_head", ""))
             if prior_head and prior_head != head and existing.get("branch") == payload.get("headRefName"):
+                if existing.get("last_event") == "fresh-session-unbound":
+                    # The completed fresh process pushed without recording a
+                    # session/result. Its old review is stale, so do not replay
+                    # it; retire only the owned checkout and let a new-head
+                    # review create a normal fresh session later.
+                    worktree = Path(str(entry.get("worktree", "")))
+                    if worktree.is_dir():
+                        removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+                        if removed.returncode:
+                            existing.update(
+                                status="recovery-required",
+                                last_event="orphan-fresh-worktree-cleanup-failed",
+                                recovery="inspect or explicitly remove the orphaned fresh worktree before retrying",
+                            )
+                            _save_state(root, existing)
+                            continue
+                    retired_attempts = registry.setdefault("retired_attempts", [])
+                    if isinstance(retired_attempts, list):
+                        retired_attempts.append(
+                            {"pr_number": pr, "old_head": prior_head, "new_head": head, "terminal_result": existing.get("terminal_result", {})}
+                        )
+                    _state_path(root, pr).unlink(missing_ok=True)
+                    entries.pop(str(pr), None)
+                    _save_dispatch(root, registry)
+                    entry = None
+                    continue
                 # A remote movement is diagnostic evidence only.  It cannot
                 # advance a handoff without the exact launch's validated result.
                 existing.update(

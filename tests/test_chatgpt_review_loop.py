@@ -946,6 +946,53 @@ def test_completed_fresh_session_without_hook_binding_gets_one_safe_replacement(
     assert sum("exec" in command for command in runner.commands) == 2
 
 
+def test_unbound_fresh_job_with_remote_movement_retires_stale_state_then_accepts_new_head_review(tmp_path: Path) -> None:
+    old_review = {"id": "old", "body": f"Fix old\n{marker(head=HEAD_A)}", "url": "u"}
+    new_review = {"id": "new", "body": f"Fix new\n{marker(head=HEAD_B)}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[old_review])
+    runner.pr_head = HEAD_B
+    worktree_root = tmp_path / "worktrees"
+    worktree = worktree_root / "pr-12"
+    worktree.mkdir(parents=True)
+    state(tmp_path, status="recovery-required", last_event="fresh-session-unbound", session_id="", recovery_mode="fresh")
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix(), "branch": runner.branch}}})
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        command = list(command)
+        if command[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps(
+                    [{"number": 12, "headRefName": runner.branch, "headRefOid": runner.pr_head, "comments": runner.comments, "url": "u"}]
+                ),
+                "",
+            )
+        if command[:3] == ["git", "fetch", "--no-tags"]:
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command == ["git", "rev-parse", "FETCH_HEAD"]:
+            return subprocess.CompletedProcess(command, 0, runner.pr_head, "")
+        if command[:3] == ["git", "worktree", "add"]:
+            Path(command[-2]).mkdir(parents=True)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+    first = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+    )
+    assert first["reason"] == "no-eligible-blocked-review"
+    assert not loop._state_path(tmp_path, 12).exists()
+    assert loop._load_dispatch(tmp_path)["retired_attempts"][0]["old_head"] == HEAD_A
+
+    runner.comments = [new_review]
+    second = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+    )
+    assert second["mode"] == "fresh"
+
+
 def test_handoff_is_idempotent_records_local_opt_in_without_posting_pr_comment(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
 
