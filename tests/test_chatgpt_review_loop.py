@@ -566,6 +566,134 @@ def test_detached_fresh_stop_hook_binds_precreated_owner_state(tmp_path: Path, m
     assert loop._load_state(tmp_path, 12)["session_id"] == SESSION
 
 
+def test_global_dispatch_detached_stop_hook_push_resume_and_cleanup(tmp_path: Path, monkeypatch) -> None:
+    first_review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[first_review])
+    worktree_root = tmp_path / "worktrees"
+    original_run = runner.run
+    seen: list[tuple[str, Path]] = []
+
+    def run(command, *, cwd, env=None):
+        command = list(command)
+        if command[:3] == ["git", "branch", "--show-current"] and cwd != tmp_path:
+            runner.commands.append(command)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps(
+                    [{"number": 12, "headRefName": runner.branch, "headRefOid": runner.pr_head, "comments": runner.comments, "url": "u"}]
+                ),
+                "",
+            )
+        if command[:3] == ["git", "fetch", "--no-tags"]:
+            runner.commands.append(command)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command == ["git", "rev-parse", "FETCH_HEAD"]:
+            runner.commands.append(command)
+            return subprocess.CompletedProcess(command, 0, runner.pr_head, "")
+        if command[:3] == ["git", "worktree", "add"]:
+            runner.commands.append(command)
+            Path(command[-2]).mkdir(parents=True)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        return original_run(command, cwd=cwd, env=env)
+
+    def stop_hook(worktree: Path, session_id: str) -> None:
+        monkeypatch.setattr(
+            sys,
+            "stdin",
+            io.StringIO(json.dumps({"hook_event_name": "Stop", "cwd": str(worktree), "session_id": session_id})),
+        )
+        assert loop.main(["handoff", "--hook"], runner=runner) == 0
+
+    def run_interactive(command, *, cwd, env=None, input_text=""):
+        command = list(command)
+        runner.commands.append(command)
+        seen.append(("resume" if "resume" in command else "fresh", cwd))
+        assert env and env[loop.OWNER_ROOT_ENV] == tmp_path.as_posix()
+        if "resume" in command:
+            runner.head = HEAD_A.replace("a", "c")
+            runner.pr_head = runner.head
+            runner.pr_heads = [HEAD_B, runner.head]
+            stop_hook(cwd, "fresh-session")
+        else:
+            runner.head = HEAD_B
+            runner.pr_head = HEAD_B
+            runner.pr_heads = [HEAD_A, HEAD_B]
+            stop_hook(cwd, "fresh-session")
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    runner.run = run
+    runner.run_interactive = run_interactive
+    monkeypatch.setenv(loop.OWNER_ROOT_ENV, tmp_path.as_posix())
+
+    first = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+    )
+    assert first["session_id"] == "fresh-session"
+    assert loop._load_state(tmp_path, 12)["handoff_head"] == HEAD_B
+
+    runner.comments = [{"id": "resume", "body": f"Fix the follow-up\n{marker(head=HEAD_B)}", "url": "u"}]
+    resumed = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2
+    )
+    assert resumed["mode"] == "resume"
+    assert seen[0] == ("fresh", worktree_root / "pr-12")
+    assert seen[1][0] == "resume"
+    assert seen[1][1] != tmp_path
+    assert "resume-worktrees" in seen[1][1].as_posix()
+    assert loop._load_state(tmp_path, 12)["session_id"] == "fresh-session"
+
+    runner.pr_state = "CLOSED"
+    loop.dispatch_all(tmp_path, runner=runner, codex_command="codex", worktree_root=worktree_root, max_cycles=3, max_repeated_blockers=2)
+    assert not loop._state_path(tmp_path, 12).exists()
+    assert loop._load_dispatch(tmp_path)["prs"] == {}
+
+
+@pytest.mark.parametrize(("exit_code", "event"), [(7, "fresh-session-failed"), (0, "fresh-session-unbound")])
+def test_fresh_session_failure_or_missing_hook_binding_is_terminal_until_human_recovery(tmp_path: Path, exit_code: int, event: str) -> None:
+    review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        command = list(command)
+        if command[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps([{"number": 12, "headRefName": runner.branch, "headRefOid": HEAD_A, "comments": [review], "url": "u"}]),
+                "",
+            )
+        if command[:3] == ["git", "fetch", "--no-tags"]:
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command == ["git", "rev-parse", "FETCH_HEAD"]:
+            return subprocess.CompletedProcess(command, 0, HEAD_A, "")
+        if command[:3] == ["git", "worktree", "add"]:
+            Path(command[-2]).mkdir(parents=True)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        return original_run(command, cwd=cwd, env=env)
+
+    def run_interactive(command, *, cwd, env=None, input_text=""):
+        runner.commands.append(list(command))
+        return subprocess.CompletedProcess(command, exit_code, "", "failed" if exit_code else "")
+
+    runner.run = run
+    runner.run_interactive = run_interactive
+    first = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=3, max_repeated_blockers=2
+    )
+    second = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=3, max_repeated_blockers=2
+    )
+
+    assert first["event"] == event
+    assert loop._load_state(tmp_path, 12)["status"] == "recovery-required"
+    assert second["reason"] == "no-eligible-blocked-review"
+    assert sum("exec" in command for command in runner.commands) == 1
+
+
 def test_handoff_is_idempotent_adds_opt_in_and_rejects_session_guessing(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
 

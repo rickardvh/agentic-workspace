@@ -336,13 +336,11 @@ def handoff(
             "session-missing", "Codex session identity is required", recovery="run from a Stop hook or pass --session-id explicitly"
         )
     root = _repo_root(cwd, runner)
-    owner_root = Path(os.environ.get(OWNER_ROOT_ENV, root.as_posix())).resolve()
-    branch = os.environ.get(OWNER_BRANCH_ENV, "") or _git_value(root, runner, "branch", "--show-current")
+    checkout_branch = _git_value(root, runner, "branch", "--show-current")
+    detached_owner_handoff = existing_only and bool(os.environ.get(OWNER_ROOT_ENV)) and not checkout_branch
+    owner_root = Path(os.environ.get(OWNER_ROOT_ENV, root.as_posix()) if detached_owner_handoff else root).resolve()
+    branch = os.environ.get(OWNER_BRANCH_ENV, "") if detached_owner_handoff else checkout_branch
     head = _git_value(root, runner, "rev-parse", "HEAD")
-    if existing_only and os.environ.get(OWNER_ROOT_ENV) and not _git_value(root, runner, "branch", "--show-current"):
-        candidates = [item for item in _all_states(owner_root) if item.get("branch") == branch and item.get("session_id") == session_id]
-        if not candidates:
-            return {"kind": STATE_KIND, "status": "handoff-not-enabled", "pr_number": 0, "head": head, "session_bound": False, "opt_in_added": False, "state_path": ""}
     if not branch:
         raise LoopError("detached-head", "handoff does not guess a PR from a detached HEAD")
     if existing_only:
@@ -918,7 +916,7 @@ def _dispatch_all_unlocked(
             "handoff_head": review.head, "session_id": "", "max_cycles": max_cycles,
             "max_repeated_blockers": max_repeated_blockers, "handled_reviews": [],
             "blocker_fingerprints": {}, "cycles": 0, "status": "fresh-session-in-progress",
-            "last_event": "fresh-session-bound", "recovery": "",
+            "last_event": "fresh-session-bound", "recovery": "", "prompt_transport": PROMPT_TRANSPORT,
         },
     )
     entries[str(pr)] = {"worktree": worktree.as_posix(), "branch": branch, "repository": _repo_slug(root, runner)}
@@ -941,14 +939,26 @@ def _dispatch_all_unlocked(
     if cleanup:
         return {"status": "recovery-required", "pr_number": pr, "event": "worktree-cleanup-failed", "diagnostic": cleanup[-2000:]}
     if completed.returncode:
-        _state_path(root, pr).unlink(missing_ok=True)
-        entries.pop(str(pr), None)
+        bound = _load_state(root, pr)
+        bound.update(
+            status="recovery-required",
+            last_event="fresh-session-failed",
+            recovery="fresh Codex session failed; inspect the exact job and explicitly recover or clean up before redispatching this review",
+            fresh_exit_code=completed.returncode,
+            fresh_diagnostic=(completed.stderr or completed.stdout).strip()[-2000:],
+        )
+        _save_state(root, bound)
         _save_dispatch(root, registry)
         return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-failed"}
     bound = _load_state(root, pr)
     session_id = str(bound.get("session_id", "")).strip()
     if not session_id:
-        entries.pop(str(pr), None)
+        bound.update(
+            status="recovery-required",
+            last_event="fresh-session-unbound",
+            recovery="fresh Codex session ended without a Stop-hook binding; inspect the job and explicitly recover or clean up before redispatching this review",
+        )
+        _save_state(root, bound)
         _save_dispatch(root, registry)
         return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-unbound"}
     updated = _pr_view(root, runner, pr=pr)
