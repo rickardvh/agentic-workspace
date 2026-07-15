@@ -961,6 +961,17 @@ def test_handoff_bounded_retry_absorbs_github_head_propagation(tmp_path: Path, m
     assert sum(command[:3] == ["gh", "pr", "view"] for command in runner.commands) == 2
 
 
+def test_fresh_post_exit_head_convergence_waits_for_delayed_push(tmp_path: Path, monkeypatch) -> None:
+    runner = FakeRunner(tmp_path)
+    runner.pr_heads = [HEAD_A, HEAD_B]
+    monkeypatch.setattr(loop.time, "sleep", lambda _seconds: None)
+
+    payload = loop._converged_pr_view(tmp_path, runner, pr=12, previous_head=HEAD_A)
+
+    assert payload["headRefOid"] == HEAD_B
+    assert sum(command[:3] == ["gh", "pr", "view"] for command in runner.commands) == 2
+
+
 def test_stop_handoff_preserves_explicitly_configured_limits(tmp_path: Path) -> None:
     runner = FakeRunner(tmp_path)
     existing = state(

@@ -296,6 +296,17 @@ def _pr_view(root: Path, runner: CommandRunner, *, pr: int | None = None, repo: 
     return payload
 
 
+def _converged_pr_view(root: Path, runner: CommandRunner, *, pr: int, previous_head: str) -> dict[str, Any]:
+    """Boundedly wait for a post-job remote head to differ from its reviewed head."""
+    payload = _pr_view(root, runner, pr=pr)
+    for _ in range(HEAD_SYNC_ATTEMPTS - 1):
+        if payload.get("headRefOid") != previous_head:
+            break
+        time.sleep(1)
+        payload = _pr_view(root, runner, pr=pr)
+    return payload
+
+
 def _state_path(root: Path, pr: int) -> Path:
     return root / STATE_RELATIVE / f"pr-{pr}.json"
 
@@ -1181,7 +1192,7 @@ def _dispatch_all_unlocked(
         _save_state(root, bound)
         _save_dispatch(root, registry)
         return {"status": "recovery-required", "pr_number": pr, "event": "fresh-session-unbound"}
-    updated = _pr_view(root, runner, pr=pr)
+    updated = _converged_pr_view(root, runner, pr=pr, previous_head=review.head)
     new_head = str(updated.get("headRefOid", ""))
     if new_head == review.head:
         # A fresh Codex session may finish before it pushes.  Preserve that exact
