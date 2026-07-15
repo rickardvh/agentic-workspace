@@ -894,12 +894,16 @@ def _proof_receipt_reconciliation_payload(
             }
         elif freshness_decisions:
             receipt, _admission, freshness = freshness_decisions[0]
+            subject_freshness = freshness["subject_freshness"]
+            freshness_status = str(subject_freshness.get("status") or "unverifiable")
             state = {
                 "command": command,
-                "evidence_state": "record-stale-untrusted",
-                "diagnostic": "receipt cannot satisfy dependency-scoped freshness",
+                "evidence_state": f"subject-{freshness_status}",
+                "diagnostic": ", ".join(str(reason) for reason in subject_freshness.get("reasons", []) if str(reason))
+                or "proof subject is not reusable",
                 "receipt": _proof_receipt_summary(receipt),
-                "subject_freshness": freshness["subject_freshness"],
+                "subject_freshness": subject_freshness,
+                "minimum_rerun_command": str(subject_freshness.get("minimum_rerun_command") or command),
             }
         elif command_receipts:
             state = {"command": command, "evidence_state": "record-stale-untrusted", "diagnostic": "receipt admission unavailable"}

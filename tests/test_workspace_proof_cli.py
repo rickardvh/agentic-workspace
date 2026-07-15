@@ -3457,6 +3457,56 @@ def test_proof_changed_marks_receipt_stale_for_changed_path_mismatch(tmp_path: P
     assert states["make test-workspace"]["diagnostic"] == "receipt cannot satisfy dependency-scoped freshness"
 
 
+def test_proof_changed_reports_dependency_scoped_staleness_and_minimum_rerun(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    source = tmp_path / "src/agentic_workspace/workspace_runtime_proof.py"
+    _write(source, "before\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--record-receipt",
+                "--receipt-command",
+                "make test-workspace",
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    _write(source, "after\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    states = {item["command"]: item for item in json.loads(capsys.readouterr().out)["answer"]["proof_receipt_reconciliation"]["commands"]}
+    state = states["make test-workspace"]
+    assert state["evidence_state"] == "subject-stale"
+    assert state["subject_freshness"]["reasons"] == ["dependency-input-changed"]
+    assert state["minimum_rerun_command"] == "make test-workspace"
+
+
 def test_proof_changed_selector_routes_installed_docs_to_docs_review(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
 
