@@ -393,6 +393,37 @@ def parse_reviews(comments: list[dict[str, Any]], *, expected_pr: int, expected_
     return matches, rejected
 
 
+AUTO_RECOVERY_EVENTS = frozenset({"resume-failed", "resume-ended-without-new-handoff"})
+
+
+def _queue_automatic_recovery(state: dict[str, Any], root: Path, *, review_key: str = "") -> bool:
+    """Re-arm one recoverable failed resume for the global serial dispatcher.
+
+    A recovery job resumes the same durable Codex session once.  It may retry the
+    review it had claimed, but never repeatedly: that review key is recorded
+    before re-arming, and all other recovery-required states remain human-only.
+    """
+    if state.get("status") != "recovery-required" or state.get("last_event") not in AUTO_RECOVERY_EVENTS:
+        return False
+    key = review_key or str(state.get("recovery_review_key", ""))
+    if not key:
+        return False
+    recovered = state.setdefault("automatic_recovery_reviews", [])
+    if key in recovered:
+        return False
+    handled = state.setdefault("handled_reviews", [])
+    state["handled_reviews"] = [item for item in handled if item != key]
+    recovered.append(key)
+    state.update(
+        status="awaiting-review",
+        last_event="automatic-recovery-queued",
+        recovery="",
+        recovery_review_key=key,
+    )
+    _save_state(root, state)
+    return True
+
+
 def _recover(state: dict[str, Any], root: Path, *, event: str, recovery: str) -> dict[str, Any]:
     state.update(status="recovery-required", last_event=event, recovery=recovery)
     _save_state(root, state)
@@ -557,7 +588,8 @@ def poll_one(
         latest.update(
             status="recovery-required",
             last_event="resume-failed",
-            recovery="inspect the Codex failure; this exact review will not be retried automatically",
+            recovery="the watcher will launch one recovery resume for this exact review; inspect it if that recovery also fails",
+            recovery_review_key=review.key,
             resume_exit_code=completed.returncode,
             resume_diagnostic=diagnostic,
         )
@@ -573,7 +605,8 @@ def poll_one(
         latest.update(
             status="recovery-required",
             last_event="resume-ended-without-new-handoff",
-            recovery="inspect the exact Codex session; push a corrective head and run handoff before continuing",
+            recovery="the watcher will launch one recovery resume for this exact review; inspect it if that recovery also ends without a handoff",
+            recovery_review_key=review.key,
         )
         _save_state(owner_root, latest)
         return {"pr_number": pr, "status": "recovery-required", "event": "resume-ended-without-new-handoff"}
@@ -661,14 +694,20 @@ def _dispatch_all_unlocked(
         if any(item["reason"] != "stale-head" for item in rejected) or len(matches) != 1:
             continue
         review = matches[0]
+        if review.decision != "blocked" or not review.findings:
+            continue
         entry = entries.get(str(pr))
         if isinstance(entry, dict) and _state_path(root, pr).is_file():
             # A completed or exhausted session must release the global serial
-            # slot.  Only an awaiting session owns the next dispatch for its PR.
-            if _load_state(root, pr).get("status") != "awaiting-review":
+            # slot. A recoverable failed resume gets exactly one automatic
+            # recovery job; other recovery states remain explicitly human-owned.
+            existing = _load_state(root, pr)
+            if existing.get("status") == "recovery-required":
+                if not _queue_automatic_recovery(existing, root, review_key=review.key):
+                    continue
+            elif existing.get("status") != "awaiting-review":
                 continue
-        if review.decision == "blocked" and review.findings:
-            candidates.append((payload, review))
+        candidates.append((payload, review))
     if not candidates:
         return {"status": "no-op", "reason": "no-eligible-blocked-review", "retired": retired}
 

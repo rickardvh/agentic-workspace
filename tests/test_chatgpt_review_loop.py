@@ -219,12 +219,12 @@ def test_global_dispatch_refuses_a_second_concurrent_job(tmp_path: Path) -> None
     assert result == {"status": "no-op", "reason": "dispatcher-job-in-progress"}
 
 
-def test_global_dispatch_skips_pr_with_exhausted_session(tmp_path: Path) -> None:
+def test_global_dispatch_skips_pr_with_human_only_recovery(tmp_path: Path) -> None:
     review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
     worktree = tmp_path / "worktrees" / "pr-12"
     worktree.mkdir(parents=True)
-    state(tmp_path, status="recovery-required")
+    state(tmp_path, status="recovery-required", last_event="max-cycles-exceeded")
     loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
     original_run = runner.run
 
@@ -245,6 +245,49 @@ def test_global_dispatch_skips_pr_with_exhausted_session(tmp_path: Path) -> None
         )["reason"]
         == "no-eligible-blocked-review"
     )
+
+
+def test_global_dispatch_launches_one_recovery_resume(tmp_path: Path, monkeypatch) -> None:
+    review = {"id": "blocked", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    worktree = tmp_path / "worktrees" / "pr-12"
+    worktree.mkdir(parents=True)
+    state(
+        tmp_path,
+        status="recovery-required",
+        last_event="resume-failed",
+        recovery_review_key=f"12:{HEAD_A}:blocked",
+        handled_reviews=[f"12:{HEAD_A}:blocked"],
+    )
+    loop._save_dispatch(tmp_path, {"kind": loop.STATE_KIND, "prs": {"12": {"worktree": worktree.as_posix()}}})
+    original_run = runner.run
+
+    def run(command, *, cwd, env=None):
+        if list(command)[:3] == ["gh", "pr", "list"]:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                json.dumps([{"number": 12, "headRefName": runner.branch, "headRefOid": HEAD_A, "comments": [review], "url": "u"}]),
+                "",
+            )
+        return original_run(command, cwd=cwd, env=env)
+
+    runner.run = run
+    seen = {}
+
+    def resume(root, recovered_state, **kwargs):
+        seen.update(recovered_state)
+        return {"pr_number": 12, "status": "resumed"}
+
+    monkeypatch.setattr(loop, "poll_one", resume)
+    result = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=10, max_repeated_blockers=2
+    )
+
+    assert result == {"status": "dispatched", "pr_number": 12, "mode": "resume", "result": {"pr_number": 12, "status": "resumed"}}
+    assert seen["status"] == "awaiting-review"
+    assert seen["handled_reviews"] == []
+    assert seen["automatic_recovery_reviews"] == [f"12:{HEAD_A}:blocked"]
 
 
 def test_fresh_global_dispatch_fetches_and_detaches_at_reviewed_head(tmp_path: Path, monkeypatch) -> None:
@@ -495,20 +538,23 @@ def test_new_handoff_clears_stale_resume_failure_diagnostics(tmp_path: Path) -> 
     assert "resume_diagnostic" not in refreshed
 
 
-def test_resume_failure_is_not_retried_for_same_comment(tmp_path: Path) -> None:
+def test_resume_failure_gets_one_automatic_recovery_for_same_comment(tmp_path: Path) -> None:
     review = {"databaseId": 92, "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
     runner.codex_exit = 9
     initial = state(tmp_path)
 
     first = loop.poll_one(tmp_path, initial, runner=runner, codex_command="codex")
+    recovery_key = f"12:{HEAD_A}:92"
+    assert loop._queue_automatic_recovery(loop._load_state(tmp_path, 12), tmp_path, review_key=recovery_key) is True
     second = loop.poll_one(tmp_path, loop._load_state(tmp_path, 12), runner=runner, codex_command="codex")
 
     assert first["event"] == "resume-failed"
     assert first["diagnostic"] == "failed"
     assert loop._load_state(tmp_path, 12)["resume_diagnostic"] == "failed"
-    assert second == {"pr_number": 12, "status": "no-op", "reason": "state-is-recovery-required"}
-    assert sum("resume" in command for command in runner.commands) == 1
+    assert second["event"] == "resume-failed"
+    assert loop._queue_automatic_recovery(loop._load_state(tmp_path, 12), tmp_path, review_key=recovery_key) is False
+    assert sum("resume" in command for command in runner.commands) == 2
 
 
 def test_merge_ready_records_readiness_without_merging(tmp_path: Path) -> None:
