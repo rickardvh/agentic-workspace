@@ -1,0 +1,54 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 2313 Codex hooks inventory classification",
+  "plan_id": "issue-2313-hooks-inventory",
+  "created_at": "2026-07-15T22:27:57.995360+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2313-hooks-inventory.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2313-hooks-inventory.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "compact closeout tombstone",
+    "ordinary_route": "report --section closeout_report --format json"
+  },
+  "claim_level": "slice",
+  "outcome": "Closed stale #2313 after the canonical inventory guard passed.",
+  "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2313",
+  "evidence_refs": [
+    "uv run --active pytest tests/test_structured_file_inventory.py -q: 30 passed"
+  ],
+  "residual": {
+    "status": "closed",
+    "owner": "archive"
+  },
+  "closure": {
+    "authority": "planning closeout writer",
+    "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "reopen_trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "revision": 2,
+  "active_milestone": {
+    "status": "completed"
+  },
+  "proof_report": {
+    "validation proof": "uv run --active pytest tests/test_structured_file_inventory.py -q: 30 passed"
+  },
+  "intent_satisfaction": {
+    "was original intent fully satisfied?": "yes",
+    "unsolved intent passed to": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
+  },
+  "execution_summary": {
+    "outcome delivered": "Closed stale #2313 after the canonical inventory guard passed.",
+    "follow-on routed to": "none"
+  },
+  "execution_run": {
+    "changed surfaces": ".agentic-workspace/planning/execplans/issue-2317-review-status-decision.plan.json",
+    "next step": "no active planning work remains"
+  }
+}

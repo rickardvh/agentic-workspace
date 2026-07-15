@@ -19,6 +19,16 @@
       "purpose_for_lane": "Group proof-subject, receipt-freshness, and verification P1 slices into dependency-ordered stacked delivery.",
       "proof": ".agentic-workspace/planning/closeout-evidence/issue-2262-proof-subjects.closeout.json",
       "residual_after_slice": "No live/current relation remains for #2262; later proof-freshness work should promote a new bounded slice."
+    },
+    {
+      "id": "issue-2313-hooks-inventory",
+      "title": "Issue 2313 Codex hooks inventory classification",
+      "status": "completed",
+      "execplan_ref": "",
+      "depends_on": [],
+      "purpose_for_lane": "Group proof-subject, receipt-freshness, and verification P1 slices into dependency-ordered stacked delivery.",
+      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2313-hooks-inventory.closeout.json",
+      "residual_after_slice": "Closed; compact closeout evidence retained instead of a live execplan."
     }
   ],
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
