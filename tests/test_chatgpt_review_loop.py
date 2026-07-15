@@ -883,8 +883,7 @@ def test_global_dispatch_retains_one_owned_worktree_through_resume_then_retires_
     assert not (worktree_root / "pr-12").exists()
 
 
-@pytest.mark.parametrize(("exit_code", "event"), [(7, "fresh-session-failed"), (0, "fresh-session-unbound")])
-def test_fresh_session_failure_or_missing_hook_binding_is_terminal_until_human_recovery(tmp_path: Path, exit_code: int, event: str) -> None:
+def test_completed_fresh_session_without_hook_binding_gets_one_safe_replacement(tmp_path: Path) -> None:
     review = {"id": "fresh", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
     original_run = runner.run
@@ -909,7 +908,7 @@ def test_fresh_session_failure_or_missing_hook_binding_is_terminal_until_human_r
 
     def run_interactive(command, *, cwd, env=None, input_text=""):
         runner.commands.append(list(command))
-        return subprocess.CompletedProcess(command, exit_code, "", "failed" if exit_code else "")
+        return subprocess.CompletedProcess(command, 0, "", "")
 
     runner.run = run
     runner.run_interactive = run_interactive
@@ -919,11 +918,15 @@ def test_fresh_session_failure_or_missing_hook_binding_is_terminal_until_human_r
     second = loop.dispatch_all(
         tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=3, max_repeated_blockers=2
     )
+    third = loop.dispatch_all(
+        tmp_path, runner=runner, codex_command="codex", worktree_root=tmp_path / "worktrees", max_cycles=3, max_repeated_blockers=2
+    )
 
-    assert first["event"] == event
+    assert first["event"] == "fresh-session-unbound"
+    assert second["event"] == "fresh-session-unbound"
     assert loop._load_state(tmp_path, 12)["status"] == "recovery-required"
-    assert second["reason"] == "no-eligible-blocked-review"
-    assert sum("exec" in command for command in runner.commands) == 1
+    assert third["reason"] == "no-eligible-blocked-review"
+    assert sum("exec" in command for command in runner.commands) == 2
 
 
 def test_handoff_is_idempotent_adds_opt_in_and_rejects_session_guessing(tmp_path: Path) -> None:

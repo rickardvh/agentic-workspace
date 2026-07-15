@@ -720,6 +720,7 @@ AUTO_RECOVERY_EVENTS = frozenset(
         "resume-ended-without-new-handoff",
         "orphaned-resume",
         "orphaned-fresh-session",
+        "fresh-session-unbound",
         "worktree-create-failed",
         "orphan-worktree-cleanup-failed",
     }
@@ -727,11 +728,12 @@ AUTO_RECOVERY_EVENTS = frozenset(
 
 
 def _queue_automatic_recovery(state: dict[str, Any], root: Path, *, review_key: str = "") -> bool:
-    """Re-arm one recoverable failed resume for the global serial dispatcher.
+    """Re-arm one recoverable failed job for the global serial dispatcher.
 
-    A recovery job resumes the same durable Codex session once.  It may retry the
-    review it had claimed, but never repeatedly: that review key is recorded
-    before re-arming, and all other recovery-required states remain human-only.
+    A bound job resumes the exact durable Codex session; an unbound fresh job
+    receives one replacement session after its owned worktree is retired. Either
+    may retry the claimed review only once: the review key is recorded before
+    re-arming, and all other recovery-required states remain human-only.
     """
     key = review_key or str(state.get("recovery_review_key", ""))
     if not _automatic_recovery_available(state, review_key=key):
@@ -1290,7 +1292,9 @@ def _dispatch_all_unlocked(
         bound.update(
             status="recovery-required",
             last_event="fresh-session-unbound",
-            recovery="fresh Codex session ended without a Stop-hook binding; inspect the job and explicitly recover or clean up before redispatching this review",
+            recovery="the watcher will retire the completed unbound fresh worktree and launch one replacement session for this exact review",
+            recovery_review_key=review.key,
+            recovery_mode="fresh",
         )
         _record_job_terminal(
             bound, mode="fresh", worktree=worktree, start_head=review.head,
