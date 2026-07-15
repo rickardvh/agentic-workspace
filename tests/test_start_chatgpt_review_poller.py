@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -31,8 +32,19 @@ def test_start_replaces_stale_pid_and_records_background_process(tmp_path: Path,
     class Process:
         pid = 5678
 
-    monkeypatch.setattr(poller.subprocess, "Popen", lambda *args, **kwargs: Process())
+    captured = {}
+
+    def popen(*args, **kwargs):
+        captured["command"] = args[0]
+        captured["kwargs"] = kwargs
+        return Process()
+
+    monkeypatch.setattr(poller.subprocess, "Popen", popen)
     result = poller.start(tmp_path)
 
     assert result["status"] == "started"
     assert json.loads(pid_path.read_text(encoding="utf-8"))["pid"] == 5678
+    assert "--log-file" in captured["command"]
+    if os.name == "nt":
+        assert captured["kwargs"]["creationflags"] & poller.subprocess.CREATE_NEW_CONSOLE
+        assert "stdout" not in captured["kwargs"]

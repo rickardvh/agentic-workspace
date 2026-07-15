@@ -45,14 +45,25 @@ def start(root: Path, *, max_cycles: int = 3) -> dict[str, object]:
         "--watch",
         "--max-cycles",
         str(max_cycles),
+        "--log-file",
+        log.as_posix(),
     ]
-    with log.open("a", encoding="utf-8") as stream:
-        kwargs: dict[str, object] = {"cwd": root, "stdin": subprocess.DEVNULL, "stdout": stream, "stderr": subprocess.STDOUT}
-        if os.name == "nt":
-            kwargs["creationflags"] = subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-        else:
+    kwargs: dict[str, object] = {"cwd": root, "stdin": subprocess.DEVNULL}
+    if os.name == "nt":
+        # Keep the watcher in an operator-visible console. The watcher itself
+        # tees its structured status events to --log-file.
+        kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        stream = log.open("a", encoding="utf-8")
+        kwargs.update(stdout=stream, stderr=subprocess.STDOUT)
+        try:
             kwargs["start_new_session"] = True
-        process = subprocess.Popen(command, **kwargs)  # noqa: S603
+            process = subprocess.Popen(command, **kwargs)  # noqa: S603
+        finally:
+            stream.close()
+        pid_path.write_text(json.dumps({"pid": process.pid, "command": command}) + "\n", encoding="utf-8")
+        return {"status": "started", "pid": process.pid, "log": log.relative_to(root).as_posix()}
+    process = subprocess.Popen(command, **kwargs)  # noqa: S603
     pid_path.write_text(json.dumps({"pid": process.pid, "command": command}) + "\n", encoding="utf-8")
     return {"status": "started", "pid": process.pid, "log": log.relative_to(root).as_posix()}
 

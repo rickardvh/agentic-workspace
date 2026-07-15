@@ -13,7 +13,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Sequence, TextIO
 
 OPT_IN_MARKER = "<!-- aw-chatgpt-review:enabled -->"
 REVIEW_POLICY = "pr-review-recheck-v1"
@@ -28,6 +28,7 @@ REVIEW_MARKER_RE = re.compile(
     r"head=(?P<head>[0-9a-f]{40}) policy=pr-review-recheck-v1 "
     r"decision=(?P<decision>blocked|merge-ready) -->"
 )
+_LOG_STREAM: TextIO | None = None
 
 
 class LoopError(RuntimeError):
@@ -76,7 +77,18 @@ class CommandRunner:
 
 
 def _emit(payload: dict[str, Any], *, error: bool = False) -> None:
-    print(json.dumps(payload, indent=2, sort_keys=True), file=sys.stderr if error else sys.stdout, flush=True)
+    rendered = json.dumps(payload, indent=2, sort_keys=True)
+    print(rendered, file=sys.stderr if error else sys.stdout, flush=True)
+    if _LOG_STREAM is not None:
+        print(rendered, file=_LOG_STREAM, flush=True)
+
+
+def _configure_log(path: Path | None) -> None:
+    global _LOG_STREAM
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    _LOG_STREAM = path.open("a", encoding="utf-8")
 
 
 def _resolved_command(command: Sequence[str], *, windows: bool | None = None) -> list[str]:
@@ -719,6 +731,7 @@ def _dispatch_all_unlocked(
         state_path = _state_path(root, pr)
         if state_path.is_file():
             state = _load_state(root, pr)
+            _emit({"kind": STATE_KIND, "status": "job-started", "pr_number": pr, "mode": "resume"})
             result = poll_one(
                 root,
                 state,
@@ -774,6 +787,7 @@ def _dispatch_all_unlocked(
     )
     entries[str(pr)] = {"worktree": worktree.as_posix(), "branch": branch, "repository": _repo_slug(root, runner)}
     _save_dispatch(root, registry)
+    _emit({"kind": STATE_KIND, "status": "job-started", "pr_number": pr, "mode": "fresh"})
     command = [*shlex.split(codex_command), "-C", worktree.as_posix(), "exec", "--json", *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []), prompt]
     env = os.environ.copy()
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
@@ -958,6 +972,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     poll_parser.add_argument("--max-cycles", type=int, default=3)
     poll_parser.add_argument("--max-repeated-blockers", type=int, default=2)
+    poll_parser.add_argument("--log-file", type=Path, help="Append watcher events to this file while also printing them.")
     poll_parser.add_argument("--codex-command", default=os.environ.get("AW_CHATGPT_REVIEW_CODEX", "codex"))
     poll_parser.add_argument(
         "--bypass-hook-trust",
@@ -980,6 +995,8 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
     args = _parser().parse_args(list(argv) if argv is not None else None)
     runner = runner or CommandRunner()
     try:
+        if args.command == "poll":
+            _configure_log(args.log_file)
         if args.command == "handoff":
             cwd, session_id = _hook_input() if args.hook else (args.target.resolve(), args.session_id)
             if args.max_cycles < 1 or args.max_repeated_blockers < 1:
