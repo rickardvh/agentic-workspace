@@ -4604,6 +4604,33 @@ def test_startup_route_identity_rejects_head_change_before_adoption(tmp_path: Pa
     assert check["changed_fields"] == ["head"]
 
 
+def test_decision_point_carry_rejects_stale_startup_route_before_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_workspace import current_work_context
+    from agentic_workspace.workspace_runtime_core import _persist_decision_point_forecast
+
+    _init_git_repo(tmp_path)
+    head = {"value": "a" * 40}
+
+    def fake_git(_root: Path, *args: str) -> str:
+        return "main" if args == ("branch", "--show-current") else head["value"] if args == ("rev-parse", "HEAD") else ""
+
+    monkeypatch.setattr(current_work_context, "_git", fake_git)
+    expected = current_work_context.startup_route_identity(root=tmp_path, task="Continue #2281")
+    head["value"] = "b" * 40
+
+    result = _persist_decision_point_forecast(
+        target_root=tmp_path,
+        task_text="Continue #2281",
+        expected_route_identity=expected,
+        forecast={"forecast_identity": {"system_principle_ids": ["workspace-runtime"], "authoritative_sources": []}},
+    )
+
+    assert result["status"] == "not-created"
+    assert result["reason_code"] == "stale-startup-route-identity"
+    assert result["route_identity_check"]["changed_fields"] == ["head"]
+    assert not (tmp_path / ".agentic-workspace/local/decision-point-intent").exists()
+
+
 def test_compact_start_route_decision_preserves_contract_and_binding() -> None:
     from agentic_workspace.workspace_runtime_startup import _compact_start_route_decision
 

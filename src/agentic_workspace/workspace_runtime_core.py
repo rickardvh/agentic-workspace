@@ -119,7 +119,7 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
-from agentic_workspace.current_work_context import resolve_current_work_context, startup_route_identity
+from agentic_workspace.current_work_context import resolve_current_work_context, startup_route_identity, startup_route_identity_check
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.reporting_support import (
     closeout_claim_boundary_payload,
@@ -19187,12 +19187,28 @@ def _decision_point_binding(*, target_root: Path, task_text: str | None) -> dict
     }
 
 
-def _persist_decision_point_forecast(*, target_root: Path | None, forecast: dict[str, Any], task_text: str | None = None) -> dict[str, Any]:
+def _persist_decision_point_forecast(
+    *,
+    target_root: Path | None,
+    forecast: dict[str, Any],
+    task_text: str | None = None,
+    expected_route_identity: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Persist exactly the pre-edit forecast emitted to the actor."""
 
     identity = _as_dict(forecast.get("forecast_identity"))
     if target_root is None or not identity or not (identity.get("system_principle_ids") or identity.get("subsystem_intent_ids")):
         return {}
+    if expected_route_identity:
+        route_check = startup_route_identity_check(expected=expected_route_identity, root=target_root, task=str(task_text or ""))
+        if route_check["status"] != "match":
+            return {
+                "kind": "agentic-workspace/decision-point-intent-carry/v1",
+                "status": "not-created",
+                "reason_code": "stale-startup-route-identity",
+                "route_identity_check": route_check,
+                "safe_recovery": "Rerun start to re-resolve the authoritative route, then retry the stateful command.",
+            }
     binding = _decision_point_binding(target_root=target_root, task_text=task_text)
     owner_binding = _as_dict(binding.get("owner_binding"))
     if binding["status"] == "ambiguous" or not owner_binding.get("carry_eligible"):

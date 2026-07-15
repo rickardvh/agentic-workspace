@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from agentic_workspace.config import WorkspaceUsageError
+from agentic_workspace.current_work_context import startup_route_identity
 from agentic_workspace.reporting_support import (
     communication_contract_payload,
     compact_communication_contract_payload,
@@ -888,6 +889,7 @@ def _implement_payload(
     principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
     forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
     if not forecast_carry and (subsystem_intents or principles) and target_root is not None:
+        route_identity = startup_route_identity(root=target_root, task=str(task_text or ""))
         committed_forecast = _architecture_principles_forecast_payload(
             target_root=target_root,
             planned_paths=normalized_paths,
@@ -898,6 +900,7 @@ def _implement_payload(
             target_root=target_root,
             forecast=committed_forecast,
             task_text=task_text,
+            expected_route_identity=route_identity,
         )
         if carry_result.get("status") != "not-created":
             forecast_carry = carry_result
