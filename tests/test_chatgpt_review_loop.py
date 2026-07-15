@@ -142,6 +142,7 @@ class FakeRunner(loop.CommandRunner):
         self.commands: list[list[str]] = []
         self.codex_exit = 0
         self.next_handoff_head = ""
+        self.next_job_result: dict[str, object] | None = None
         self.next_review_decision = ""
         self.interactive_inputs: list[str] = []
 
@@ -181,9 +182,19 @@ class FakeRunner(loop.CommandRunner):
             if self.next_handoff_head:
                 state = loop._load_state(self.root, 12)
                 state.update(handoff_head=self.next_handoff_head, status="awaiting-review", last_event="handoff-recorded")
-                state["terminal_result"] = {"proof_status": "passed", "push_status": "passed"}
                 loop._save_state(self.root, state)
                 self.pr_head = self.next_handoff_head
+                self.head = self.next_handoff_head
+                if self.next_job_result:
+                    loop.report_job_result(
+                        cwd=self.root,
+                        session_id=SESSION,
+                        proof_status=str(self.next_job_result["proof_status"]),
+                        proof_command=str(self.next_job_result["proof_command"]),
+                        proof_exit_code=int(self.next_job_result["proof_exit_code"]),
+                        push_status=str(self.next_job_result["push_status"]),
+                        runner=self,
+                    )
                 if self.next_review_decision:
                     self.comments = [
                         {
@@ -229,6 +240,10 @@ def state(root: Path, **updates) -> dict:
     payload.update(updates)
     loop._save_state(root, payload)
     return payload
+
+
+def passed_result(runner: FakeRunner) -> None:
+    runner.next_job_result = {"proof_status": "passed", "proof_command": "pytest -q", "proof_exit_code": 0, "push_status": "passed"}
 
 
 def test_marker_parser_accepts_only_exact_pr_and_full_sha() -> None:
@@ -810,11 +825,29 @@ def test_global_dispatch_retains_one_owned_worktree_through_resume_then_retires_
             runner.head = HEAD_A.replace("a", "c")
             runner.pr_head = runner.head
             runner.pr_heads = [HEAD_B, runner.head]
+            loop.report_job_result(
+                cwd=cwd,
+                session_id="fresh-session",
+                proof_status="passed",
+                proof_command="pytest -q",
+                proof_exit_code=0,
+                push_status="passed",
+                runner=runner,
+            )
             stop_hook(cwd, "fresh-session")
         else:
             runner.head = HEAD_B
             runner.pr_head = HEAD_B
             runner.pr_heads = [HEAD_A, HEAD_B]
+            loop.report_job_result(
+                cwd=cwd,
+                session_id="fresh-session",
+                proof_status="passed",
+                proof_command="pytest -q",
+                proof_exit_code=0,
+                push_status="passed",
+                runner=runner,
+            )
             stop_hook(cwd, "fresh-session")
         return subprocess.CompletedProcess(command, 0, "", "")
 
@@ -1006,6 +1039,7 @@ def test_blocked_review_resumes_exact_session_once_and_requires_new_handoff(tmp_
     review = {"id": "IC_blocked_91", "body": f"- fix the race\n{marker()}", "url": "https://example.test/c/91"}
     runner = FakeRunner(tmp_path, comments=[review])
     runner.next_handoff_head = HEAD_B
+    passed_result(runner)
     initial = state(tmp_path)
 
     result = loop.poll_one(tmp_path, initial, runner=runner, codex_command="codex", bypass_hook_trust=True)
@@ -1036,6 +1070,7 @@ def test_resume_persists_a_machine_readable_terminal_result(tmp_path: Path) -> N
     review = {"id": "IC_terminal", "body": f"Fix it\n{marker()}", "url": "u"}
     runner = FakeRunner(tmp_path, comments=[review])
     runner.next_handoff_head = HEAD_B
+    passed_result(runner)
 
     loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
 
@@ -1047,6 +1082,61 @@ def test_resume_persists_a_machine_readable_terminal_result(tmp_path: Path) -> N
     assert terminal["ending_head"] == HEAD_B
     assert terminal["disposition"] == "handoff-recorded"
     assert terminal["proof_status"] == "passed"
+
+
+def test_resume_rejects_stale_result_even_when_a_new_head_was_handed_off(tmp_path: Path) -> None:
+    review = {"id": "stale", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    runner.next_handoff_head = HEAD_B
+    saved = state(tmp_path, terminal_result={"proof_status": "passed", "push_status": "passed"})
+
+    result = loop.poll_one(tmp_path, saved, runner=runner, codex_command="codex")
+
+    assert result["event"] == "handoff-proof-unreported"
+    assert loop._load_state(tmp_path, 12)["terminal_result"]["attempt_id"] == loop._load_state(tmp_path, 12)["job_attempt"]["id"]
+    assert loop._load_state(tmp_path, 12)["terminal_result"]["proof_status"] == "unreported"
+
+
+def test_resume_rejects_failed_proof_result_after_push(tmp_path: Path) -> None:
+    review = {"id": "failed-proof", "body": f"Fix it\n{marker()}", "url": "u"}
+    runner = FakeRunner(tmp_path, comments=[review])
+    runner.next_handoff_head = HEAD_B
+    runner.next_job_result = {"proof_status": "failed", "proof_command": "pytest -q", "proof_exit_code": 1, "push_status": "passed"}
+
+    result = loop.poll_one(tmp_path, state(tmp_path), runner=runner, codex_command="codex")
+
+    assert result["event"] == "handoff-proof-unreported"
+    assert loop._load_state(tmp_path, 12)["terminal_result"]["proof_status"] == "failed"
+
+
+def test_job_result_is_exactly_once_and_requires_a_complete_result(tmp_path: Path) -> None:
+    runner = FakeRunner(tmp_path)
+    saved = state(tmp_path, status="resume-in-progress")
+    loop._begin_job_attempt(saved, mode="resume", worktree=tmp_path, start_head=HEAD_A)
+    loop._save_state(tmp_path, saved)
+
+    loop.report_job_result(
+        cwd=tmp_path,
+        session_id=SESSION,
+        proof_status="passed",
+        proof_command="",
+        proof_exit_code=0,
+        push_status="passed",
+        runner=runner,
+    )
+    recorded = loop._load_state(tmp_path, 12)
+    assert not loop._validated_attempt_result(recorded, worktree=tmp_path, start_head=HEAD_A)
+    with pytest.raises(loop.LoopError, match="already recorded") as error:
+        loop.report_job_result(
+            cwd=tmp_path,
+            session_id=SESSION,
+            proof_status="passed",
+            proof_command="pytest -q",
+            proof_exit_code=0,
+            push_status="passed",
+            runner=runner,
+        )
+    assert error.value.code == "job-result-duplicate"
 
 
 def test_new_handoff_clears_stale_resume_failure_diagnostics(tmp_path: Path) -> None:
@@ -1275,6 +1365,7 @@ def test_watch_loop_resumes_head_a_then_reviews_head_b_without_restart(tmp_path:
     }
     runner = FakeRunner(tmp_path, comments=[first_review])
     runner.next_handoff_head = HEAD_B
+    passed_result(runner)
     runner.next_review_decision = "merge-ready"
     state(tmp_path)
     monkeypatch.setattr(loop.time, "sleep", lambda _seconds: None)
