@@ -322,7 +322,7 @@ def test_registered_skill_dependency_closure_accepts_package_owned_resource(tmp_
     registry.write_text(
         json.dumps(
             {
-                "resources": {"review-contract": {"path": "resources/review-contract.json"}},
+                "resources": {"review-contract": {"package_path": "resources/review-contract.json"}},
                 "skills": [{"id": "review-pass", "path": "review-pass/SKILL.md", "required_resources": ["review-contract"]}],
             }
         ),

@@ -51117,9 +51117,12 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path, 
     payload = json.loads(registry_file.read_text(encoding="utf-8"))
     entries = payload.get("skills", [])
     resource_paths = {
-        str(resource_id): Path(str(resource.get("path", "")))
+        str(resource_id): (
+            Path(str(resource.get("path", ""))),
+            Path(str(resource.get("package_path", ""))),
+        )
         for resource_id, resource in (payload.get("resources", {}) or {}).items()
-        if isinstance(resource, dict) and str(resource.get("path", "")).strip()
+        if isinstance(resource, dict) and (str(resource.get("path", "")).strip() or str(resource.get("package_path", "")).strip())
     }
     skills: list[RegisteredSkill] = []
     for raw in entries:
@@ -51136,7 +51139,10 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path, 
             if resource_id not in resource_paths
             or not any(
                 candidate.is_file()
-                for candidate in (target_root / resource_paths[resource_id], registry_file.parent / resource_paths[resource_id])
+                for candidate in (
+                    target_root / resource_paths[resource_id][0],
+                    registry_file.parent / resource_paths[resource_id][1],
+                )
             )
         )
         skills.append(
