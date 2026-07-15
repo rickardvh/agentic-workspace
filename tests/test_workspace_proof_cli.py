@@ -3182,6 +3182,7 @@ def test_proof_failed_receipt_marks_excerpt_failure_summary_lower_trust(tmp_path
 
 def test_proof_changed_reconciles_receipt_history_without_duplicate_runs(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
+    _write(tmp_path / "src/agentic_workspace/workspace_runtime_proof.py", "# proof subject fixture\n")
 
     assert (
         cli.main(
