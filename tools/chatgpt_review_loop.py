@@ -218,6 +218,8 @@ def _compact_console_event(payload: dict[str, Any]) -> str:
                 lines.append(f"{result_prefix} recovery required: {result.get('event', 'unknown')}")
             else:
                 lines.append(f"{result_prefix} {result.get('status')}")
+        if not lines:
+            return f"{prefix} poll #{payload.get('poll', '?')} idle"
         return "\n".join(lines)
     if status == "error":
         return f"{prefix} ERROR {payload.get('code', '')}: {payload.get('message', '')}"

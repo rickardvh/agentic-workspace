@@ -90,10 +90,9 @@ def test_watcher_console_output_rebinds_stdout_and_stderr(monkeypatch) -> None:
 
 
 def test_compact_console_suppresses_noop_poll_and_summarizes_jobs() -> None:
-    assert (
-        loop._compact_console_event({"status": "poll-complete", "results": [{"status": "no-op", "reason": "no-eligible-blocked-review"}]})
-        == ""
-    )
+    assert loop._compact_console_event(
+        {"status": "poll-complete", "poll": 7, "results": [{"status": "no-op", "reason": "no-eligible-blocked-review"}]}
+    ).endswith(" poll #7 idle")
     message = loop._compact_console_event(
         {
             "status": "poll-complete",
