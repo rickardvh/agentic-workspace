@@ -1320,28 +1320,22 @@ def _task_switch_reconciliation_payload(**kwargs: Any) -> dict[str, Any]:
     return _planning_route_evidence_payload(**kwargs)
 
 
-def _structured_route_inputs(*, evidence: dict[str, Any], active_summary: dict[str, Any]) -> dict[str, str]:
-    """Derive the ordinary resolver inputs from current-work facts, not consumers."""
-    status = str(evidence.get("status") or "not-applicable")
-    task_relation = (
-        "continues-selected-owner"
-        if status == "issue-matched-continuation"
-        else "bounded-independent"
-        if status in {"bounded-reflection-reporting", "current-task-route-acknowledged"}
-        else "independent-pending-scope"
-        if status == "scope-inspection-required"
-        else "ambiguous"
-        if status == "active"
-        else "not-applicable"
-    )
+def _structured_route_inputs(
+    *, active_summary: dict[str, Any], task_text: str | None, planning_revision: dict[str, Any], proposal: dict[str, Any]
+) -> dict[str, str]:
+    """Derive ordinary resolver inputs from current-work and owner facts."""
+    active_owner = str(active_summary.get("active_execplan") or "")
+    shared_refs = _task_switch_mismatch_evidence(active_summary=active_summary, task_text=task_text).get("shared_refs", [])
+    task_relation = "continues-selected-owner" if shared_refs else "independent-pending-scope" if active_owner else "bounded-independent"
+    revision_status = str(planning_revision.get("status") or "")
     owner_posture = (
-        "completed-residue"
-        if status == "completed-active-plan-route"
+        "projection-drifted"
+        if revision_status in {"stale", "drifted"}
+        else "external-conflict"
+        if proposal.get("status") == "current"
         else "missing"
-        if not active_summary.get("active_execplan") and task_relation != "not-applicable"
+        if not active_owner
         else "current"
-        if task_relation != "not-applicable"
-        else "not-applicable"
     )
     return {"task_relation": task_relation, "owner_posture": owner_posture}
 
@@ -1734,11 +1728,17 @@ def _planning_safety_gate_payload(
         changed_paths=changed_paths,
         path_classification=path_classification,
     )
-    route_evidence = {**route_evidence, **_structured_route_inputs(evidence=route_evidence, active_summary=active_summary)}
+    reconciliation_proposal = _current_reconciliation_proposal(target_root=target_root, planning_revision=planning_revision)
+    route_evidence = {
+        **route_evidence,
+        **_structured_route_inputs(
+            active_summary=active_summary, task_text=task_text, planning_revision=planning_revision, proposal=reconciliation_proposal
+        ),
+    }
     route_decision = _planning_route_decision_payload(
         route_evidence,
         planning_revision=planning_revision,
-        reconciliation_proposal=_current_reconciliation_proposal(target_root=target_root, planning_revision=planning_revision),
+        reconciliation_proposal=reconciliation_proposal,
     )
     closeout_publication_residue = (
         path_classification.get("dirty_shape") == "implementation-with-archived-planning-residue"
