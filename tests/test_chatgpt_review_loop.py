@@ -77,6 +77,11 @@ class FakeRunner(loop.CommandRunner):
             return subprocess.CompletedProcess(command, 0, self.branch, "")
         if command[:3] == ["git", "rev-parse", "HEAD"]:
             return subprocess.CompletedProcess(command, 0, self.head, "")
+        if command[:3] == ["git", "worktree", "remove"]:
+            path = Path(command[-1])
+            if path.exists():
+                path.rmdir()
+            return subprocess.CompletedProcess(command, 0, "", "")
         if command[:3] == ["gh", "repo", "view"]:
             return subprocess.CompletedProcess(command, 0, json.dumps({"nameWithOwner": "owner/repo"}), "")
         if command[:3] == ["gh", "pr", "view"]:

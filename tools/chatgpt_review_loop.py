@@ -424,6 +424,24 @@ def _should_keep_watching(results: list[dict[str, Any]]) -> bool:
     )
 
 
+def _resume_worktree_path(root: Path, state: dict[str, Any]) -> Path:
+    return root / STATE_RELATIVE / "resume-worktrees" / f"pr-{state['pr_number']}-cycle-{state['cycles']}-{str(state['handoff_head'])[:8]}"
+
+
+def _create_resume_worktree(root: Path, state: dict[str, Any], runner: CommandRunner) -> Path:
+    worktree = _resume_worktree_path(root, state)
+    worktree.parent.mkdir(parents=True, exist_ok=True)
+    created = runner.run(["git", "worktree", "add", "--detach", worktree.as_posix(), str(state["handoff_head"])], cwd=root)
+    if created.returncode:
+        raise LoopError("worktree-create-failed", created.stderr.strip() or "could not create resume worktree")
+    return worktree
+
+
+def _remove_worktree(root: Path, worktree: Path, runner: CommandRunner) -> str:
+    removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
+    return removed.stderr.strip() or removed.stdout.strip() if removed.returncode else ""
+
+
 def poll_one(
     root: Path,
     state: dict[str, Any],
@@ -509,21 +527,31 @@ def poll_one(
 
     env = os.environ.copy()
     env["AW_CHATGPT_REVIEW_RESUME_ACTIVE"] = "1"
+    worktree = root
     if isolated_worktree:
+        try:
+            worktree = _create_resume_worktree(owner_root, state, runner)
+        except LoopError as exc:
+            return _recover(state, owner_root, event=exc.code, recovery="inspect Git worktree state before retrying")
         env[OWNER_ROOT_ENV] = owner_root.as_posix()
         env[OWNER_BRANCH_ENV] = str(state["branch"])
     command = [
         *shlex.split(codex_command),
         "-C",
-        root.as_posix(),
+        worktree.as_posix(),
         "exec",
         "resume",
         *(["--dangerously-bypass-hook-trust"] if bypass_hook_trust else []),
         str(state["session_id"]),
         _review_prompt(review),
     ]
-    completed = runner.run(command, cwd=root, env=env)
+    try:
+        completed = runner.run(command, cwd=worktree, env=env)
+    finally:
+        cleanup = _remove_worktree(owner_root, worktree, runner) if isolated_worktree else ""
     latest = _load_state(owner_root, pr)
+    if cleanup:
+        return _recover(latest, owner_root, event="worktree-cleanup-failed", recovery=cleanup[-2000:])
     if completed.returncode:
         diagnostic = (completed.stderr or completed.stdout).strip()[-2000:]
         latest.update(
@@ -650,15 +678,14 @@ def _dispatch_all_unlocked(
     if isinstance(entry, dict):
         worktree = Path(str(entry.get("worktree", "")))
         state_path = _state_path(root, pr)
-        if worktree.is_dir() and state_path.is_file():
+        if state_path.is_file():
             state = _load_state(root, pr)
             result = poll_one(
-                worktree,
+                root,
                 state,
                 runner=runner,
                 codex_command=codex_command,
                 bypass_hook_trust=bypass_hook_trust,
-                state_root=root,
                 isolated_worktree=True,
             )
             return {"status": "dispatched", "pr_number": pr, "mode": "resume", "result": result}
@@ -714,6 +741,9 @@ def _dispatch_all_unlocked(
     env[OWNER_ROOT_ENV] = root.as_posix()
     env[OWNER_BRANCH_ENV] = branch
     completed = runner.run(command, cwd=worktree, env=env)
+    cleanup = _remove_worktree(root, worktree, runner)
+    if cleanup:
+        return {"status": "recovery-required", "pr_number": pr, "event": "worktree-cleanup-failed", "diagnostic": cleanup[-2000:]}
     if completed.returncode:
         removed = runner.run(["git", "worktree", "remove", "--force", worktree.as_posix()], cwd=root)
         if not removed.returncode:
