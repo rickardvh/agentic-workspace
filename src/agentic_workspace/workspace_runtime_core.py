@@ -26199,7 +26199,9 @@ def _next_safe_action_packet(
     if skill in {"planning-reporting", "planning-autopilot", "planning-decompose", "planning-new-plan-tighten"}:
         proof_required = True
     task_switch_route_choice = action == "choose-task-switch-route" and decision == "active-plan-task-switch"
-    implementation_allowed = not forbidden_actions and (task_switch_route_choice or not skill.startswith("planning"))
+    implementation_allowed = not forbidden_actions and (
+        task_switch_route_choice or action == "inspect-current-workflow-context" or not skill.startswith("planning")
+    )
     completion_claim_allowed = not forbidden_actions and action not in {"choose-smallest-workflow-shape"}
     gate_result = decision or action
     read_only_allowance = _read_only_allowance_packet(

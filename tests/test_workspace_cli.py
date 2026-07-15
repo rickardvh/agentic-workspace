@@ -2364,8 +2364,8 @@ def test_start_exposes_workflow_sufficiency_and_continuation_selectors(tmp_path:
     payload = json.loads(capsys.readouterr().out)
 
     assert payload["values"]["workflow_sufficiency"]["kind"] == "agentic-workspace/workflow-sufficiency/v1"
-    assert payload["values"]["workflow_sufficiency"]["sufficiency_result"] == "enough-for-first-contact-routing"
-    assert payload["values"]["workflow_sufficiency"]["nothing_more_needed"] is True
+    assert payload["values"]["workflow_sufficiency"]["sufficiency_result"] == "direct-work-allowed"
+    assert payload["values"]["workflow_sufficiency"]["required_next_action"] == "continue-direct"
     continuation = payload["values"]["continuation_state"]
     assert continuation["kind"] == "agentic-workspace/compact-continuation-state/v1"
     assert continuation["fields"] == [
@@ -2611,6 +2611,7 @@ def test_start_embeds_active_planning_orientation_without_immediate_summary_reru
         assert workflow["sufficiency_result"] in {
             "active-planning-summary-needed",
             "delegation-decision-required",
+            "planning-backed",
         }
     assert "summary --target . --format json" not in payload["decision_packet"]["detail_routes"]["active_plan"]
 
@@ -4160,7 +4161,7 @@ def test_start_keeps_incomplete_active_plan_on_task_switch_route(tmp_path: Path,
 
     assert payload["next_safe_action"]["next_safe_action"] == "inspect-current-task-scope"
     assert route["task_relation"] == "independent-pending-scope"
-    assert route["required_transition"] == "inspect-current-task-scope"
+    assert route["required_transition"] == "closeout-or-archive"
 
 
 def test_implement_acknowledges_current_task_switch_with_return_and_cleanup_routes(tmp_path: Path, capsys) -> None:

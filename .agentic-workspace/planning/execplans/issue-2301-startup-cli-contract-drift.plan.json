@@ -1,0 +1,78 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2301-startup-cli-contract-drift",
+  "title": "Issue 2301 startup CLI contract drift",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "implementation",
+  "revision": 1,
+  "intent": {
+    "outcome": "https://github.com/rickardvh/agentic-workspace/issues/2301",
+    "non_goals": [
+      "Do not alter Planning lane semantics or broaden the startup contract beyond the generic selector and compact-output paths."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2301",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_proof_generated_packages_cli.py",
+      ".github/workflows/ when needed to make the CLI contract suite required"
+    ],
+    "effects": [
+      "Keep generic startup output below its 10 KB compact budget.",
+      "Align selector assertions with the current route-decision contract.",
+      "Preserve required-before-claim as a claim gate rather than an implementation block.",
+      "Use the configured --active CLI invocation in generated-package proof routes."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "pending",
+      "refs": []
+    },
+    "external_posture": {
+      "state": "unobserved",
+      "refs": []
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2301",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2301",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Resolve the required-before-claim startup gate, update intentional selector-contract expectations, and run the focused plus full workspace CLI suites.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "Issue 2301 startup CLI contract drift is implemented, validated, and closed out honestly."
+    ],
+    "requirements": [
+      "uv run --active pytest tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py -q",
+      "make test-workspace",
+      "make lint-workspace",
+      "make typecheck"
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": []
+}

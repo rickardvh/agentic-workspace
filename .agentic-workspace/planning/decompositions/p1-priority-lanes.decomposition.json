@@ -1,0 +1,12 @@
+{
+  "kind": "planning-decomposition/v1",
+  "title": "P1 issue delivery lanes",
+  "status": "shaping",
+  "larger_intended_outcome": "Implement every open GitHub priority:P1 issue through dependency-ordered stacked pull requests grouped by coherent Planning lanes.",
+  "non_goals": [],
+  "candidate_lanes": [],
+  "proof_expectations": [],
+  "promotion_rule": "Promote one lane at a time after its issue dependencies, bounded slice sequence, branch base, and proof route are recorded; each slice ships as the next stacked PR.",
+  "references": [],
+  "notes": ""
+}
