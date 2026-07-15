@@ -59,6 +59,8 @@ Or keep the local controller running for a bounded number of polls:
 uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60 --bypass-hook-trust
 ```
 
+For the serial all-open controller, use `make start-review-poller REVIEW_MAX_CYCLES=10`. It starts at most one job at a time, stores the cycle budget per PR, and is idempotent while its recorded process is alive.
+
 Polling uses `gh` only. A review is eligible only when its comment contains exactly one well-formed marker whose PR number and 40-character lowercase SHA equal the recorded handoff:
 
 ```text
@@ -66,6 +68,8 @@ Polling uses `gh` only. A review is eligible only when its comment contains exac
 ```
 
 For `blocked`, the controller records `(PR, reviewed SHA, comment ID)` as attempted before starting the non-interactive continuation `codex -C <repo> exec resume <exact-session> <verbatim-findings>`. That exact review cannot automatically resume twice, including after a resume failure. The resumed Codex process inherits a transport guard, while its Stop hook only records a newly pushed handoff; neither termination path starts another poller. A successful cycle therefore requires a corrective push with a new head.
+
+The all-open controller fetches and verifies the reviewed SHA before fresh execution. Fresh and later resume jobs run in detached worktrees; owner-local state is pre-bound before the first Stop hook, and every temporary worktree is removed after its job exits. Closing a tracked PR also retires its local state and worktree.
 
 For `merge-ready`, the controller records readiness and stops. It never invokes `gh pr merge` or changes ready/draft state; the human retains merge authority.
 
