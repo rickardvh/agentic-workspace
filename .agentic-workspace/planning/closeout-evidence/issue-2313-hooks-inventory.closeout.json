@@ -15,6 +15,8 @@
   "outcome": "Closed stale #2313 after the canonical inventory guard passed.",
   "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2313",
   "evidence_refs": [
+    "src/agentic_workspace/contracts/structured_file_inventory.json contains three .codex/hooks.json classifications: developer-integration typed-validator-backed, developer-tooling source-checkout-diagnostic, and Codex Stop-hook source-checkout-diagnostic.",
+    "Inventory landing evidence: 4ccee3f58a5f63dae77c9e6e8ac3068cbe2f45ab; PR #2315 / a9d44625d05662cba899e490f08c064f26985c35; PR #2320 / bf8777191f050241e4fb08b21ed338484821e48a.",
     "uv run --active pytest tests/test_structured_file_inventory.py -q: 30 passed"
   ],
   "residual": {
@@ -23,7 +25,7 @@
   },
   "closure": {
     "authority": "planning closeout writer",
-    "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "provenance": "completed-plan cleanup retained compact closeout evidence; canonical source is src/agentic_workspace/contracts/structured_file_inventory.json",
     "reopen_trigger": "None unless new evidence shows the closeout was incomplete."
   },
   "revision": 2,
@@ -48,7 +50,7 @@
     "follow-on routed to": "none"
   },
   "execution_run": {
-    "changed surfaces": ".agentic-workspace/planning/execplans/issue-2317-review-status-decision.plan.json",
+    "changed surfaces": "src/agentic_workspace/contracts/structured_file_inventory.json via 4ccee3f58a5f63dae77c9e6e8ac3068cbe2f45ab, PR #2315 / a9d44625d05662cba899e490f08c064f26985c35, and PR #2320 / bf8777191f050241e4fb08b21ed338484821e48a; verified by tests/test_structured_file_inventory.py.",
     "next step": "no active planning work remains"
   }
 }

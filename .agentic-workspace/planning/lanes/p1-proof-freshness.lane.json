@@ -25,6 +25,7 @@
       "title": "Issue 2321 proof tiny-profile budgets",
       "status": "completed",
       "execplan_ref": "",
+      "depends_on": [],
       "purpose_for_lane": "Group proof-subject, receipt-freshness, and verification P1 slices into dependency-ordered stacked delivery.",
       "proof": ".agentic-workspace/planning/closeout-evidence/issue-2321-proof-tiny-budget.closeout.json",
       "residual_after_slice": "Closed; compact closeout evidence retained instead of a live execplan."
