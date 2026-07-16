@@ -13,21 +13,24 @@
     {
       "id": "issue-2262-proof-subjects",
       "title": "Issue 2262 dependency-scoped proof subjects",
-      "status": "active",
-      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2262-proof-subjects.plan.json",
+      "status": "completed",
+      "execplan_ref": "",
       "depends_on": [],
-      "purpose_for_lane": "Group proof-subject, receipt-freshness, and verification P1 slices into dependency-ordered stacked delivery."
+      "purpose_for_lane": "Group proof-subject, receipt-freshness, and verification P1 slices into dependency-ordered stacked delivery.",
+      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2262-proof-subjects.closeout.json",
+      "residual_after_slice": "Closed; compact closeout evidence retained instead of a live execplan."
     },
     {
       "id": "issue-2321-proof-tiny-budget",
       "title": "Issue 2321 proof tiny-profile budgets",
-      "status": "active",
-      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2321-proof-tiny-budget.plan.json",
+      "status": "completed",
+      "execplan_ref": "",
       "depends_on": [],
-      "purpose_for_lane": "Group proof-subject, receipt-freshness, and verification P1 slices into dependency-ordered stacked delivery."
+      "purpose_for_lane": "Group proof-subject, receipt-freshness, and verification P1 slices into dependency-ordered stacked delivery.",
+      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2321-proof-tiny-budget.closeout.json",
+      "residual_after_slice": "Closed; compact closeout evidence retained instead of a live execplan."
     }
   ],
-  "current_slice": "issue-2321-proof-tiny-budget",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Require focused proof-subject and proof CLI suites, generated/contract checks where touched, and merged PR checks for each slice.",
   "proof_aggregation": {

@@ -1,0 +1,62 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 2317 review status decision classification",
+  "plan_id": "issue-2317-review-status-decision",
+  "created_at": "2026-07-16T14:28:44.7311261Z",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2317-review-status-decision.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2317-review-status-decision.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "compact closeout tombstone",
+    "ordinary_route": "report --section closeout_report --format json"
+  },
+  "claim_level": "slice",
+  "outcome": "Structured ChatGPT review-status comments are classified from canonical decision and multiline unresolved sections before free-form next_action prose is considered.",
+  "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2317",
+  "evidence_refs": [
+    "uv run --active pytest tests/test_pr_comment_delta.py -q: 18 passed",
+    "make test-workspace: passed after staging the intended structured-file deletion/addition",
+    "make lint-workspace: passed",
+    "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json: passed; #2317 no longer active, predecessor #2301 remains active stack residue",
+    "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: passed with selected_module_health=healthy",
+    "uv run --active python scripts/check/check_planning_surfaces.py: passed",
+    "edited P1 lane execplan reference scan: passed"
+  ],
+  "residual": {
+    "status": "closed",
+    "owner": "archive"
+  },
+  "closure": {
+    "authority": "planning closeout writer",
+    "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "reopen_trigger": "New evidence that canonical pr-review-recheck-v1 comments are misclassified."
+  },
+  "revision": 1,
+  "active_milestone": {
+    "status": "completed"
+  },
+  "proof_report": {
+    "focused classifier proof": "uv run --active pytest tests/test_pr_comment_delta.py -q: 18 passed",
+    "final workspace proof": "make test-workspace: passed; make lint-workspace: passed",
+    "planning proof": "summary passed, planning doctor selected_module_health=healthy, planning surface checker passed, edited P1 lane dangling-reference scan passed"
+  },
+  "intent_satisfaction": {
+    "was original intent fully satisfied?": "yes",
+    "unsolved intent passed to": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "reopen trigger": "New evidence that canonical pr-review-recheck-v1 comments are misclassified."
+  },
+  "execution_summary": {
+    "outcome delivered": "Review-status parsing now supports canonical multiline structured fields, requires marker/header agreement for blocked and merge-ready decisions, and keeps blocker classification anchored to structured unresolved content.",
+    "follow-on routed to": "none"
+  },
+  "execution_run": {
+    "changed surfaces": "scripts/github/pr_comment_delta.py; tests/test_pr_comment_delta.py; .agentic-workspace/planning closeout and lane records",
+    "next step": "push the reviewed branch head"
+  }
+}
