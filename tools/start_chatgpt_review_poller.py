@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 STATE_RELATIVE = Path(".agentic-workspace/local/chatgpt-review-loop")
+DEFAULT_CODEX_COMMAND = 'codex -m gpt-5.5 -c model_reasoning_effort="high"'
 
 
 def _is_running(pid: int) -> bool:
@@ -45,6 +46,8 @@ def start(root: Path, *, max_cycles: int = 3) -> dict[str, object]:
         "--watch",
         "--max-cycles",
         str(max_cycles),
+        "--codex-command",
+        os.environ.get("AW_CHATGPT_REVIEW_CODEX", DEFAULT_CODEX_COMMAND),
         "--log-file",
         log.as_posix(),
         "--console-output",
