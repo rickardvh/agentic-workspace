@@ -345,6 +345,137 @@ def test_registered_skill_dependency_closure_accepts_package_owned_resource(tmp_
     assert skills[0].availability == "available"
 
 
+def test_registered_skill_discovery_resolves_package_resource_when_target_registry_exists(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "target"
+    target.mkdir()
+    package_root = tmp_path / "package"
+    package_skills_root = package_root / "skills"
+    package_registry = package_skills_root / "REGISTRY.json"
+    package_registry.parent.mkdir(parents=True)
+    registry_payload = {
+        "resources": {"review-contract": {"package_path": "../resources/review-contract.json"}},
+        "skills": [
+            {
+                "id": "review-pass",
+                "path": "review-pass/SKILL.md",
+                "summary": "run the bounded review pass",
+                "required_resources": ["review-contract"],
+                "activation_hints": {"verbs": ["review"], "phrases": ["bounded review"]},
+            }
+        ],
+    }
+    (target / "REGISTRY.json").write_text(json.dumps(registry_payload), encoding="utf-8")
+    package_registry.write_text(json.dumps(registry_payload), encoding="utf-8")
+    (package_root / "resources").mkdir()
+    (package_root / "resources" / "review-contract.json").write_text("{}", encoding="utf-8")
+    skill_file = package_skills_root / "review-pass" / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text("# Review pass\n", encoding="utf-8")
+    source = workspace_runtime_core.SkillCatalogSource(
+        name="package-fixture",
+        registry_path=Path("REGISTRY.json"),
+        skills_root=Path("skills"),
+        owner="fixture",
+        source_kind="fixture",
+        default_scope="bundled",
+        default_stability="fixture",
+    )
+    monkeypatch.setattr(workspace_runtime_core, "_skill_catalog_sources", lambda: (source,))
+    monkeypatch.setattr(workspace_runtime_core, "_package_skill_registry_file", lambda _source: package_registry)
+
+    skills, warnings, _sources = workspace_runtime_core._discover_registered_skills(target_root=target)
+
+    assert warnings == []
+    assert [skill.skill_id for skill in skills] == ["review-pass"]
+    assert skills[0].availability == "available"
+    assert workspace_runtime_core._recommend_skills(task_text="run a bounded review", skills=skills)[0].skill.skill_id == "review-pass"
+
+
+def test_blocked_skill_match_is_preserved_outside_executable_recommendations(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    registry = tmp_path / "REGISTRY.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "resources": {"review-contract": {"path": ".agentic-workspace/reviews/contract.json"}},
+                "skills": [
+                    {
+                        "id": "review-pass",
+                        "path": "review-pass/SKILL.md",
+                        "summary": "run the bounded review pass",
+                        "required_resources": ["review-contract"],
+                        "activation_hints": {"verbs": ["review"], "phrases": ["bounded review"]},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    skill_file = tmp_path / "skills" / "review-pass" / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text("# Review pass\n", encoding="utf-8")
+    source = workspace_runtime_core.SkillCatalogSource(
+        name="fixture",
+        registry_path=Path("REGISTRY.json"),
+        skills_root=Path("skills"),
+        owner="fixture",
+        source_kind="fixture",
+        default_scope="bundled",
+        default_stability="fixture",
+    )
+    monkeypatch.setattr(workspace_runtime_core, "_skill_catalog_sources", lambda: (source,))
+
+    full_payload = workspace_runtime_core._skills_payload(target_root=tmp_path, task_text="run a bounded review")
+    compact = workspace_runtime_core._skills_recommendation_first_payload(
+        full_payload,
+        target_root=tmp_path,
+        task_text="run a bounded review",
+    )
+
+    assert compact["status"] == "blocked"
+    assert compact["recommendations"] == []
+    assert compact["blocked_recommendations"][0]["id"] == "review-pass"
+    assert compact["blocked_recommendations"][0]["availability"] == "blocked"
+    assert compact["blocked_recommendations"][0]["blocked_reasons"] == ["missing-resource:review-contract"]
+    assert compact["blocked_recommendation_summary"]["repair_command"]
+
+
+def test_skill_dependency_diagnostics_include_resource_provenance_and_repair(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    registry = tmp_path / "REGISTRY.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "resources": {"review-contract": {"path": ".agentic-workspace/reviews/contract.json"}},
+                "skills": [{"id": "review-pass", "path": "review-pass/SKILL.md", "required_resources": ["review-contract"]}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    skill_file = tmp_path / "skills" / "review-pass" / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text("# Review pass\n", encoding="utf-8")
+    source = workspace_runtime_core.SkillCatalogSource(
+        name="fixture",
+        registry_path=Path("REGISTRY.json"),
+        skills_root=Path("skills"),
+        owner="fixture",
+        source_kind="fixture",
+        default_scope="bundled",
+        default_stability="fixture",
+    )
+    monkeypatch.setattr(workspace_runtime_core, "_skill_catalog_sources", lambda: (source,))
+
+    diagnostics = workspace_runtime_core._skill_dependency_diagnostics(target_root=tmp_path)
+
+    assert diagnostics[0]["skill_id"] == "review-pass"
+    assert diagnostics[0]["resource_id"] == "review-contract"
+    assert diagnostics[0]["reason_code"] == "missing-resource:review-contract"
+    assert diagnostics[0]["expected_owner"] == "repo-owned"
+    assert diagnostics[0]["expected_source"].endswith(".agentic-workspace/reviews/contract.json")
+    assert diagnostics[0]["repair_command"]
+
+
 def test_registered_skill_dependency_closure_marks_unknown_resource_identity(tmp_path: Path) -> None:
     registry = tmp_path / "REGISTRY.json"
     registry.write_text(
