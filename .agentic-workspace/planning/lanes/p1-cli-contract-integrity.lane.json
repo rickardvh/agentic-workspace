@@ -50,15 +50,6 @@
     }
   ],
   "current_slice": "",
-  "active_milestone": {
-    "status": "completed"
-  },
-  "completed_milestones": [
-    "issue-2311-review-worktree-isolation"
-  ],
-  "historical_evidence": [
-    ".agentic-workspace/planning/closeout-evidence/issue-2311-review-worktree-isolation.closeout.json"
-  ],
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Require focused startup and generated-package tests plus the full workspace CLI suite and required CI coverage.",
   "proof_aggregation": {
