@@ -1,0 +1,56 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 2301 startup CLI contract drift",
+  "plan_id": "issue-2301-startup-cli-contract-drift",
+  "created_at": "2026-07-16T00:00:00+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2301-startup-cli-contract-drift.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2301-startup-cli-contract-drift.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "PR #2328 external review required completed Planning history instead of live/current relations.",
+    "canonical_evidence": "compact closeout tombstone",
+    "ordinary_route": "report --section closeout_report --format json"
+  },
+  "claim_level": "slice",
+  "outcome": "Startup CLI contract drift for #2301 was implemented and validated on PR #2328; this repair records it as completed history instead of active work.",
+  "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2301",
+  "evidence_refs": [
+    "https://github.com/rickardvh/agentic-workspace/pull/2328",
+    "d1e1393bd2cb705b4bbc4198d8d8000f8274e1c3"
+  ],
+  "residual": {
+    "status": "closed",
+    "owner": "archive"
+  },
+  "closure": {
+    "authority": "planning closeout writer",
+    "provenance": "PR #2328 implementation and review-loop repair",
+    "reopen_trigger": "None unless new evidence shows the #2301 implementation or closeout was incomplete."
+  },
+  "revision": 1,
+  "active_milestone": {
+    "status": "completed"
+  },
+  "proof_report": {
+    "implementation proof": "PR #2328 validation and exact-head CI before Planning repair",
+    "planning repair proof": "Run planning summary, planning doctor, and integrated PR #2329 proof after rebase"
+  },
+  "intent_satisfaction": {
+    "was original intent fully satisfied?": "yes",
+    "unsolved intent passed to": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "reopen trigger": "None unless new evidence shows the #2301 implementation or closeout was incomplete."
+  },
+  "execution_summary": {
+    "outcome delivered": "Startup CLI contract drift is no longer represented as live/current Planning work on the #2328 branch.",
+    "follow-on routed to": "none"
+  },
+  "execution_run": {
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/lanes/p1-cli-contract-integrity.lane.json; .agentic-workspace/planning/closeout-evidence/issue-2301-startup-cli-contract-drift.closeout.json",
+    "next step": "rebase PR #2329 onto the corrected predecessor and run integrated proof"
+  }
+}
