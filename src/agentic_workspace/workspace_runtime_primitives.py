@@ -41273,28 +41273,31 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     changed_paths = _normalize_changed_paths(getattr(args, "changed", []) or [])
     if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)
-    if profile == "router" and section is None and (args.format == "json"):
-        reuse_query = {
-            "profile": profile,
-            "modules": selected_modules,
-            "preset": resolved_preset or "",
-            "task": str(task_text or ""),
-            "changed": changed_paths,
-            "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
-        }
-        full_detail_command = _command_with_cli_invoke(
-            command=f"agentic-workspace report --target {target_root.as_posix()} --verbose --format json",
-            cli_invoke=config.cli_invoke,
-        )
-        reused, reuse_context = lookup_projection_reuse(
-            root=target_root,
-            operation="report",
-            query=reuse_query,
-            full_detail_command=full_detail_command,
-        )
-        if reused is not None and not select:
-            _emit_payload(payload=reused, format_name=args.format)
-            return 0
+    if profile == "router" and section is None:
+        reuse_query: dict[str, Any] | None = None
+        reuse_context: dict[str, Any] | None = None
+        if args.format == "json":
+            reuse_query = {
+                "profile": profile,
+                "modules": selected_modules,
+                "preset": resolved_preset or "",
+                "task": str(task_text or ""),
+                "changed": changed_paths,
+                "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
+            }
+            full_detail_command = _command_with_cli_invoke(
+                command=f"agentic-workspace report --target {target_root.as_posix()} --verbose --format json",
+                cli_invoke=config.cli_invoke,
+            )
+            reused, reuse_context = lookup_projection_reuse(
+                root=target_root,
+                operation="report",
+                query=reuse_query,
+                full_detail_command=full_detail_command,
+            )
+            if reused is not None and not select:
+                _emit_payload(payload=reused, format_name=args.format)
+                return 0
         payload = _run_report_router_command(
             target_root=target_root,
             selected_modules=selected_modules,
@@ -41302,7 +41305,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             descriptors=descriptors,
             config=config,
         )
-        if not select:
+        if not select and reuse_query is not None and reuse_context is not None:
             record_projection_reuse(root=target_root, operation="report", query=reuse_query, context=reuse_context, payload=payload)
         if select:
             payload = _select_payload_fields(payload, select=select, source_command="report")

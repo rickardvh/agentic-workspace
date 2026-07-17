@@ -11,8 +11,25 @@ from pathlib import Path
 from typing import Any
 
 _CACHE_KIND = "agentic-workspace/projection-reuse-record/v1"
-_CACHE_CONTRACT_VERSION = 2
+_CACHE_CONTRACT_VERSION = 3
 _MAX_CACHE_RECORDS = 32
+_GIT_TIMEOUT_SECONDS = 10
+_IGNORED_DEPENDENCY_DIRS = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+}
+_LOCAL_DECISION_DEPENDENCIES = (
+    ".agentic-workspace/local/cache/dogfooding-signal-status.json",
+    ".agentic-workspace/local/cache/external-intent-evidence.json",
+    ".agentic-workspace/local/cache/pr-comment-delta.json",
+    ".agentic-workspace/local/cache/pr-comment-stack.json",
+    ".agentic-workspace/local/cache/proof-reuse.json",
+)
 _OPERATION_DEPENDENCY_ROOTS = {
     "doctor": ("src/agentic_workspace", "generated/workspace", "scripts", "packages"),
     "report": ("src/agentic_workspace", "generated/workspace", "scripts", "packages", "docs"),
@@ -20,25 +37,47 @@ _OPERATION_DEPENDENCY_ROOTS = {
 }
 
 
+def _files_under(path: Path) -> list[Path]:
+    if not path.is_dir():
+        return []
+    files: list[Path] = []
+    for current, directories, filenames in os.walk(path):
+        directories[:] = sorted(name for name in directories if name not in _IGNORED_DEPENDENCY_DIRS)
+        current_path = Path(current)
+        files.extend(current_path / filename for filename in sorted(filenames))
+    return files
+
+
 def _dependency_files(root: Path, operation: str) -> list[Path]:
     candidates = [root / "AGENTS.md", root / "pyproject.toml", root / "uv.lock", root / "Makefile"]
     candidates.extend(root.glob("*/AGENTS.md"))
     aw_root = root / ".agentic-workspace"
     if aw_root.is_dir():
-        candidates.extend(
-            path
-            for path in aw_root.rglob("*")
-            if path.is_file() and not {"projection-cache", "logs", "session-logging"}.intersection(path.relative_to(aw_root).parts)
-        )
+        for child in aw_root.iterdir():
+            if child.name in {"local", "logs", "projection-cache", "session-logging"}:
+                continue
+            if child.is_file():
+                candidates.append(child)
+            else:
+                candidates.extend(_files_under(child))
+        candidates.extend(root / relative for relative in _LOCAL_DECISION_DEPENDENCIES)
     for relative_root in _OPERATION_DEPENDENCY_ROOTS.get(operation, ()):
-        folder = root / relative_root
-        if folder.is_dir():
-            candidates.extend(path for path in folder.rglob("*") if path.is_file())
+        candidates.extend(_files_under(root / relative_root))
     return sorted({path for path in candidates if path.is_file()}, key=lambda path: path.as_posix())
 
 
 def _git(root: Path, *args: str) -> str:
-    result = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False)
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_GIT_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
@@ -56,11 +95,21 @@ def dependency_digest(*, root: Path, operation: str, query: dict[str, Any]) -> t
     dependencies: list[str] = []
     relevant_files = _dependency_files(root, operation)
     relevant_relatives = {path.relative_to(root).as_posix() for path in relevant_files}
-    worktree_state = "\n".join(
+    pathspecs = [
+        "AGENTS.md",
+        "pyproject.toml",
+        "uv.lock",
+        "Makefile",
+        ".agentic-workspace",
+        *_OPERATION_DEPENDENCY_ROOTS.get(operation, ()),
+    ]
+    worktree_lines = [
         line
-        for line in _git(root, "status", "--porcelain=v1", "--untracked-files=all").splitlines()
+        for line in _git(root, "status", "--porcelain=v1", "--untracked-files=all", "--", *pathspecs).splitlines()
         if line[3:].replace("\\", "/") in relevant_relatives
-    )
+    ]
+    worktree_state = "\n".join(worktree_lines)
+    dirty_relatives = {line[3:].replace("\\", "/") for line in worktree_lines}
     digest.update(worktree_state.encode())
     for path in relevant_files:
         try:
@@ -70,11 +119,14 @@ def dependency_digest(*, root: Path, operation: str, query: dict[str, Any]) -> t
             continue
         dependencies.append(relative)
         digest.update(relative.encode())
-        try:
-            digest.update(hashlib.sha256(path.read_bytes()).digest())
-        except OSError:
-            digest.update(str(stat.st_size).encode())
-            digest.update(str(stat.st_mtime_ns).encode())
+        if relative in dirty_relatives:
+            try:
+                digest.update(hashlib.sha256(path.read_bytes()).digest())
+                continue
+            except OSError:
+                pass
+        digest.update(str(stat.st_size).encode())
+        digest.update(str(stat.st_mtime_ns).encode())
     return digest.hexdigest()[:20], dependencies
 
 

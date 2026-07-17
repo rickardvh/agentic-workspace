@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 from tests.workspace_cli_support import _init_git_repo, cli
@@ -43,10 +44,17 @@ def test_doctor_reuses_unchanged_projection_before_full_builder_and_invalidates_
 
     scratch = target / ".agentic-workspace" / "local" / "scratch" / "diagnostic.txt"
     scratch.parent.mkdir(parents=True, exist_ok=True)
-    scratch.write_text("decision-relevant local diagnostic\n", encoding="utf-8")
+    scratch.write_text("runtime-only scratch artifact\n", encoding="utf-8")
     assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
     after_scratch = json.loads(capsys.readouterr().out)
-    assert after_scratch.get("kind") != "agentic-workspace/unchanged-projection/v1"
+    assert after_scratch["kind"] == "agentic-workspace/unchanged-projection/v1"
+
+    external_evidence = target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    external_evidence.parent.mkdir(parents=True, exist_ok=True)
+    external_evidence.write_text('{"kind": "planning-external-intent-evidence/v1", "items": []}\n', encoding="utf-8")
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    after_evidence = json.loads(capsys.readouterr().out)
+    assert after_evidence.get("kind") != "agentic-workspace/unchanged-projection/v1"
 
     config = target / ".agentic-workspace" / "config.toml"
     config.write_text(config.read_text(encoding="utf-8") + "\n# dependency changed\n", encoding="utf-8")
@@ -145,6 +153,48 @@ def test_dependency_digest_ignores_revision_only_changes_for_declared_dependenci
     unchanged, _ = projection_reuse.dependency_digest(root=target, operation="summary", query={})
 
     assert unchanged == first
+
+
+def test_dependency_digest_excludes_crash_recovery_worktrees_and_virtualenvs(tmp_path: Path) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+    first, first_dependencies = projection_reuse.dependency_digest(root=target, operation="report", query={})
+    runtime_file = (
+        target
+        / ".agentic-workspace"
+        / "local"
+        / "chatgpt-review-worktrees"
+        / "pr-9999"
+        / ".venv"
+        / "Lib"
+        / "site-packages"
+        / "dependency.py"
+    )
+    runtime_file.parent.mkdir(parents=True)
+    runtime_file.write_text("VALUE = 1\n", encoding="utf-8")
+
+    unchanged, dependencies = projection_reuse.dependency_digest(root=target, operation="report", query={})
+
+    assert unchanged == first
+    assert dependencies == first_dependencies
+    assert not any("chatgpt-review-worktrees" in path or "/.venv/" in path for path in dependencies)
+
+
+def test_dependency_digest_fails_open_when_git_probe_times_out(tmp_path: Path, monkeypatch) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+
+    def _timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(projection_reuse.subprocess, "run", _timeout)
+
+    digest, dependencies = projection_reuse.dependency_digest(root=target, operation="report", query={})
+
+    assert digest
+    assert ".agentic-workspace/config.toml" in dependencies
 
 
 def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> None:
