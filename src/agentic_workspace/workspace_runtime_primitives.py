@@ -41038,6 +41038,24 @@ def _emit_proof(
             print(f"- {item}")
 
 
+def _print_tiny_summary(summary: dict[str, Any]) -> None:
+    todo = summary.get("todo", {}) if isinstance(summary.get("todo"), dict) else {}
+    health = (
+        summary.get("planning_surface_health", {})
+        if isinstance(summary.get("planning_surface_health"), dict)
+        else {}
+    )
+    decision = summary.get("decision_packet", {}) if isinstance(summary.get("decision_packet"), dict) else {}
+    print(f"Target: {summary.get('target_root', '')}")
+    print("Profile: tiny")
+    print(f"Planning health: {health.get('status', 'unknown')}")
+    print(f"Active work: {todo.get('active_count', 0)}")
+    print(f"Queued work: {todo.get('queued_count', 0)}")
+    if next_action := decision.get("next_action"):
+        print(f"Next action: {next_action}")
+    print("Detail: agentic-workspace summary --verbose --format json")
+
+
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="summary", target_root=target_root)
@@ -41084,7 +41102,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     payload.pop("available_selectors", None)
         _emit_payload(payload=payload, format_name=args.format)
     else:
-        summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
+        summary_profile = _diagnostic_profile(args, default="tiny")
         reuse_query = {
             "profile": summary_profile,
             "format": str(args.format),
@@ -41107,10 +41125,31 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             if reused is not None:
                 _emit_payload(payload=reused, format_name=args.format)
                 return 0
+        summary_started_at = time.perf_counter()
         summary = planning_summary(
             target=target_root.as_posix(), profile=summary_profile, task_text=getattr(args, "task", None), changed_paths=changed_paths
         )
+        summary_elapsed_ms = round((time.perf_counter() - summary_started_at) * 1000, 3)
         if isinstance(summary, dict):
+            if summary_elapsed_ms > 2_000:
+                summary["summary_runtime"] = {
+                    "kind": "agentic-workspace/summary-runtime/v1",
+                    "status": "slow",
+                    "profile": summary_profile,
+                    "elapsed_ms": summary_elapsed_ms,
+                    "slow_section": "planning_summary",
+                    "detail_command": _command_with_cli_invoke(
+                        command=f"agentic-workspace summary --target {target_root.as_posix()} --verbose --format json",
+                        cli_invoke=config.cli_invoke,
+                    ),
+                    "rule": "Ordinary summary uses the tiny profile; broad diagnostics require --verbose or an explicit selector.",
+                }
+            if reuse_context and reuse_context.get("degraded_findings"):
+                summary["projection_reuse"] = {
+                    "status": "degraded",
+                    "findings": reuse_context["degraded_findings"],
+                    "rule": "Projection reuse was disabled; this compact payload was rebuilt from authoritative sources.",
+                }
             if summary_profile == "full":
                 summary["memory_consult"] = _memory_consult_payload(
                     target_root=target_root, changed_paths=changed_paths, compact=False, cli_invoke=config.cli_invoke
@@ -41143,6 +41182,8 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             record_projection_reuse(root=target_root, operation="summary", query=reuse_query, context=reuse_context, payload=summary)
         if args.format == "json":
             print(format_summary_json(summary))
+        elif summary_profile == "tiny":
+            _print_tiny_summary(summary)
         else:
             _print_summary(summary)
     return 0
@@ -41276,7 +41317,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     if profile == "router" and section is None:
         reuse_query: dict[str, Any] | None = None
         reuse_context: dict[str, Any] | None = None
-        if args.format == "json":
+        if args.format == "json" and not select:
             reuse_query = {
                 "profile": profile,
                 "modules": selected_modules,
@@ -41305,6 +41346,12 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
             descriptors=descriptors,
             config=config,
         )
+        if reuse_context and reuse_context.get("degraded_findings"):
+            payload["projection_reuse"] = {
+                "status": "degraded",
+                "findings": reuse_context["degraded_findings"],
+                "rule": "Projection reuse was disabled; this compact payload was rebuilt from authoritative sources.",
+            }
         if not select and reuse_query is not None and reuse_context is not None:
             record_projection_reuse(root=target_root, operation="report", query=reuse_query, context=reuse_context, payload=payload)
         if select:

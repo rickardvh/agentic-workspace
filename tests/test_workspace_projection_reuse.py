@@ -4,11 +4,12 @@ import json
 import subprocess
 from pathlib import Path
 
-from tests.workspace_cli_support import _init_git_repo, cli
+from tests.workspace_cli_support import cli
 
 
 def _target(tmp_path: Path) -> Path:
-    _init_git_repo(tmp_path)
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     return tmp_path
 
@@ -191,10 +192,59 @@ def test_dependency_digest_fails_open_when_git_probe_times_out(tmp_path: Path, m
 
     monkeypatch.setattr(projection_reuse.subprocess, "run", _timeout)
 
-    digest, dependencies = projection_reuse.dependency_digest(root=target, operation="report", query={})
+    result = projection_reuse.dependency_digest(root=target, operation="report", query={})
+    digest, dependencies = result
 
     assert digest
     assert ".agentic-workspace/config.toml" in dependencies
+    assert result.status == "unavailable"
+    assert result.findings[0]["section"] == "projection_dependency_git_probe"
+
+
+def test_report_dependency_budget_exhaustion_returns_degraded_compact_payload(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+    capsys.readouterr()
+    budget_type = projection_reuse.DependencyScanBudget
+    monkeypatch.setattr(
+        projection_reuse,
+        "DependencyScanBudget",
+        lambda: budget_type(max_entries=1, time_budget_seconds=1.0),
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload.get("kind") != "agentic-workspace/unchanged-projection/v1"
+    degradation = payload["projection_reuse"]
+    assert degradation["status"] == "degraded"
+    assert degradation["findings"][0]["section"] == "projection_dependency_discovery"
+    assert degradation["findings"][0]["status"] == "truncated"
+
+
+def test_report_git_timeout_disables_reuse_and_names_failed_probe(tmp_path: Path, capsys, monkeypatch) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+    capsys.readouterr()
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def _timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(projection_reuse.subprocess, "run", _timeout)
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload.get("kind") != "agentic-workspace/unchanged-projection/v1"
+    finding = payload["projection_reuse"]["findings"][0]
+    assert finding["section"] == "projection_dependency_git_probe"
+    assert finding["status"] == "unavailable"
 
 
 def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> None:

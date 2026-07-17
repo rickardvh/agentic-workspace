@@ -8600,6 +8600,33 @@ def test_report_defaults_use_router_without_full_report_or_local_footprint(tmp_p
     assert payload["decision_packet"]["surface"] == "report"
 
 
+def test_report_selector_bypasses_projection_dependency_discovery(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def _unexpected(*args, **kwargs):
+        raise AssertionError("selected report output must not pay the broad projection dependency digest")
+
+    monkeypatch.setattr(cli, "lookup_projection_reuse", _unexpected)
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "decision_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["values"]["decision_packet"]["surface"] == "report"
+
+
 def test_local_footprint_tree_scan_reports_truncation_at_its_entry_budget(tmp_path: Path) -> None:
     from agentic_workspace import workspace_runtime_core
 
