@@ -446,8 +446,12 @@ class AssuranceDomainProofLane:
     proof_profiles: tuple[str, ...]
     authority_refs: tuple[str, ...]
     escalation: tuple[str, ...]
+    escalation_conditions: tuple[str, ...]
     claim_boundary: str | None
     owner: str | None
+    route_role: str | None
+    precedence: str | None
+    allowed_composition: tuple[str, ...]
     notes: str | None
 
 
@@ -1066,8 +1070,12 @@ def _load_assurance_domain_proof_lanes(
         "proof_profiles",
         "authority_refs",
         "escalation",
+        "escalation_conditions",
         "claim_boundary",
         "owner",
+        "route_role",
+        "precedence",
+        "allowed_composition",
         "notes",
     }
     lanes: list[AssuranceDomainProofLane] = []
@@ -1108,8 +1116,12 @@ def _load_assurance_domain_proof_lanes(
                 proof_profiles=require_optional_string_list(payload=raw_lane, key="proof_profiles", config_path=lane_path),
                 authority_refs=require_optional_string_list(payload=raw_lane, key="authority_refs", config_path=lane_path),
                 escalation=require_optional_string_list(payload=raw_lane, key="escalation", config_path=lane_path),
+                escalation_conditions=require_optional_string_list(payload=raw_lane, key="escalation_conditions", config_path=lane_path),
                 claim_boundary=require_optional_string(payload=raw_lane, key="claim_boundary", config_path=lane_path),
                 owner=require_optional_string(payload=raw_lane, key="owner", config_path=lane_path),
+                route_role=require_optional_string(payload=raw_lane, key="route_role", config_path=lane_path),
+                precedence=require_optional_string(payload=raw_lane, key="precedence", config_path=lane_path),
+                allowed_composition=require_optional_string_list(payload=raw_lane, key="allowed_composition", config_path=lane_path),
                 notes=require_optional_string(payload=raw_lane, key="notes", config_path=lane_path),
             )
         )

@@ -2,7 +2,7 @@
   "kind": "planning-closeout-evidence/v1",
   "title": "#2333 executable focused proof routing",
   "plan_id": "issue-2333-serial-focused-proof",
-  "created_at": "2026-07-19T21:54:00+00:00",
+  "created_at": "2026-07-19T23:45:00+00:00",
   "source_plan": ".agentic-workspace/planning/execplans/issue-2333-serial-focused-proof.plan.json",
   "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2333-serial-focused-proof.plan.json",
   "retention": {
@@ -16,19 +16,24 @@
   "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2333",
   "evidence_refs": [
     "https://github.com/rickardvh/agentic-workspace/pull/2335",
-    "rebuilt on master 085b4d05 without #2257 predecessor files or task-summary downgrade",
+    "final pushed PR head containing this closeout was rebuilt on current master without #2257 predecessor files, #2334 friction lifecycle surfaces, or task-summary downgrade",
     "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json: passed",
-    "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: passed",
+    "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: selected_module_health=healthy action_required=false",
     "make maintainer-surfaces: passed",
     "uv run pytest tests/test_workspace_cli.py -q: 217 passed",
-    "uv run pytest tests/test_workspace_proof_cli.py -q: 130 passed",
+    "uv run pytest tests/test_workspace_proof_cli.py tests/test_workspace_makefile_targets.py -q: 137 passed",
     "uv run pytest tests/test_workspace_proof_cli.py -k \"focused_domain_route or missing_focused_route or tiny_profile_returns_next_validation_action\" -q: 3 passed",
     "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q: 31 passed",
-    "uv run pytest tests/test_maintainer_surfaces.py -k \"makefile_keeps_suite_targets_serial_by_default or makefile_preserves_explicit_pytest_parallel\" -q: 2 passed",
+    "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py .agentic-workspace/config.toml Makefile tests/test_workspace_makefile_targets.py --select domain_proof_route_inventory_audit,proof_route_strategy_decision,route_refinement_required --format json: audit current; strategy focused; route_refinement not-required",
+    "uv run pytest tests/test_workspace_makefile_targets.py -q: 3 passed",
     "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success: passed",
     "uv run python scripts/check/check_structured_file_inventory.py --quiet-success: passed",
+    "uv run python scripts/check/check_generated_command_packages.py: passed",
+    "uv run --active python scripts/run_agentic_workspace.py upgrade --target . --repair-managed-local-instructions --format json: updated .agentic-workspace/AGENTS.md",
+    "make schema-reference-docs: passed",
+    "make lint-workspace: passed",
     "make typecheck: passed",
-    "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json: passed",
+    "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json: shape_in_sync",
     "git diff --check: passed"
   ],
   "residual": {
@@ -45,9 +50,10 @@
     "status": "completed"
   },
   "proof_report": {
-    "implementation proof": "Full proof CLI suite, focused route selectors, workspace CLI suite, maintainer surfaces, contract tooling, structured inventory, typecheck, runtime mirror, summary, and scoped planning doctor passed on the rebuilt head.",
+    "implementation proof": "Full proof CLI suite, Makefile route fixtures, focused route selectors, workspace CLI suite, maintainer surfaces, contract tooling, structured inventory, generated command packages, lint, typecheck, runtime mirror, summary, managed-instructions repair, and scoped planning doctor passed on the rebuilt head.",
     "serial default proof": "Makefile fixture coverage proves root and package test targets pass PYTEST_PARALLEL_ARGS through but default to an empty serial value on Windows and non-Windows paths.",
-    "stack hygiene proof": "Effective diff excludes #2257 skill-dependency files and preserves current master Planning state instead of selecting #2333 or stale predecessors."
+    "route authority proof": "The repository route inventory is current; typed escalation conditions, route roles, precedence, and allowed composition are declared in config/schema/parser and consumed by the proof router.",
+    "stack hygiene proof": "Effective diff excludes #2257 skill-dependency files and #2334 proof-friction lifecycle files while preserving current master Planning state instead of selecting #2333 or stale predecessors."
   },
   "intent_satisfaction": {
     "was original intent fully satisfied?": "yes",
@@ -60,11 +66,11 @@
     "reopen trigger": "None unless new evidence shows #2333 proof routing or serial-default acceptance is incomplete."
   },
   "execution_summary": {
-    "outcome delivered": "Focused proof routing now uses typed escalation, route/refinement authority, executable route audits, complete representative regressions, and serial-by-default Makefile suites with explicit parallel opt-in.",
+    "outcome delivered": "Focused proof routing now uses typed escalation conditions, route roles, precedence/allowed-composition authority, executable route audits, complete representative regressions, and serial-by-default Makefile suites with explicit parallel opt-in.",
     "follow-on routed to": "none"
   },
   "execution_run": {
-    "changed surfaces": ".agentic-workspace/config.toml; .agentic-workspace/planning/closeout-evidence/issue-2333-serial-focused-proof.closeout.json; Makefile; docs/maintainer/contributor-playbook.md; docs/maintainer/maintainer-commands.md; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/workspace_runtime_proof.py; tests/test_maintainer_surfaces.py; tests/test_workspace_cli.py; tests/test_workspace_proof_cli.py; tests/test_workspace_proof_generated_packages_cli.py",
+    "changed surfaces": ".agentic-workspace/AGENTS.md; .agentic-workspace/config.toml; .agentic-workspace/planning/closeout-evidence/issue-2333-serial-focused-proof.closeout.json; Makefile; docs/reference/workspace-config.md; src/agentic_workspace/config.py; src/agentic_workspace/contracts/schemas/workspace_config.schema.json; src/agentic_workspace/workspace_runtime_proof.py; tests/test_workspace_makefile_targets.py; tests/test_workspace_proof_cli.py",
     "next step": "push rebuilt PR #2335 and verify exact-head CI/semver"
   }
 }
