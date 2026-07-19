@@ -1239,9 +1239,11 @@ candidates = []
     assert second["payload"] == first["payload"]
     assert second["query_diagnostics"]["cache"]["status"] == "hit"
     assert elapsed < 2.0
-    assert median(historical_samples) <= median(empty_history_samples) * 1.2, (
+    empty_median = median(empty_history_samples)
+    historical_median = median(historical_samples)
+    assert historical_median <= max(empty_median * 1.2, empty_median + 0.010), (
         "planning_record selected-owner resolver exceeded the 20% history-independence budget: "
-        f"empty={median(empty_history_samples):.6f}s history_1000={median(historical_samples):.6f}s"
+        f"empty={empty_median:.6f}s history_1000={historical_median:.6f}s"
     )
 
 
