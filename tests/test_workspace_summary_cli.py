@@ -8,6 +8,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
+from repo_planning_bootstrap import installer as planning_installer
 from repo_planning_bootstrap.installer import install_bootstrap
 from tests.workspace_cli_support import cli
 
@@ -91,6 +92,44 @@ candidates = [
     assert payload["selector_inventory"]["available_count"] == 9
     assert payload["selector_inventory"]["exact_select_command"] == "agentic-workspace summary --select <field.path> --format json"
     assert "candidate_lanes" not in payload["roadmap"]
+
+
+def test_workspace_summary_text_defaults_to_tiny_profile(tmp_path: Path, capsys, monkeypatch) -> None:
+    install_bootstrap(target=tmp_path)
+    observed_profiles: list[str] = []
+    original = planning_installer.planning_summary
+
+    def _record_profile(*args, **kwargs):
+        observed_profiles.append(str(kwargs.get("profile")))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(planning_installer, "planning_summary", _record_profile)
+
+    assert cli.main(["summary", "--target", str(tmp_path)]) == 0
+    capsys.readouterr()
+
+    assert observed_profiles == ["tiny"]
+
+
+def test_planning_tiny_summary_stays_on_fast_builder_with_task_and_changed_paths(
+    tmp_path: Path, monkeypatch
+) -> None:
+    install_bootstrap(target=tmp_path)
+
+    def _unexpected(*args, **kwargs):
+        raise AssertionError("tiny summary must not load broad ownership or historical diagnostics")
+
+    monkeypatch.setattr(planning_installer, "_ownership_review", _unexpected)
+
+    payload = planning_installer.planning_summary(
+        target=tmp_path,
+        profile="tiny",
+        task_text="Continue issue #2340",
+        changed_paths=["src/agentic_workspace/projection_reuse.py"],
+    )
+
+    assert payload["profile"] == "tiny"
+    assert payload["schema"]["schema_version"] == "planning-summary-tiny-schema/v1"
 
 
 def test_workspace_summary_quiet_default_packet_stays_within_four_kib(tmp_path: Path, capsys) -> None:
