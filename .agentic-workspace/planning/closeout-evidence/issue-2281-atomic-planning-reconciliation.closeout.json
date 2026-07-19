@@ -1,0 +1,54 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 2281 atomic Planning reconciliation transaction",
+  "plan_id": "issue-2281-atomic-planning-reconciliation",
+  "created_at": "2026-07-15T21:09:11.073860+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2281-atomic-planning-reconciliation.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2281-atomic-planning-reconciliation.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "canonical_evidence": "compact closeout tombstone",
+    "ordinary_route": "report --section closeout_report --format json"
+  },
+  "claim_level": "slice",
+  "outcome": "One Planning reconciliation preview plus guarded apply now compiles and applies the bounded owner transition set with self-issued proof.",
+  "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2281",
+  "evidence_refs": [
+    "PR #2293 merged with all required checks passing; focused reconciliation transaction tests pass."
+  ],
+  "residual": {
+    "status": "open",
+    "owner": "issue-2279-planning-owner-graph"
+  },
+  "closure": {
+    "authority": "planning closeout writer",
+    "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
+    "reopen_trigger": "Reopen when issue-2279-planning-owner-graph activates a fresh bounded slice."
+  },
+  "revision": 2,
+  "active_milestone": {
+    "status": "completed"
+  },
+  "proof_report": {
+    "validation proof": "PR #2293 merged with all required checks passing; focused reconciliation transaction tests pass."
+  },
+  "intent_satisfaction": {
+    "was original intent fully satisfied?": "no",
+    "unsolved intent passed to": "issue-2279-planning-owner-graph"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "larger-intent status": "open",
+    "closure decision": "archive-but-keep-lane-open",
+    "reopen trigger": "Reopen when issue-2279-planning-owner-graph activates a fresh bounded slice."
+  },
+  "execution_summary": {
+    "outcome delivered": "One Planning reconciliation preview plus guarded apply now compiles and applies the bounded owner transition set with self-issued proof.",
+    "follow-on routed to": "issue-2279-planning-owner-graph"
+  },
+  "execution_run": {
+    "changed surfaces": "packages/planning/src/repo_planning_bootstrap/{installer.py,runtime_projection.py}; packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.reconcile.report.json; generated/planning/*; packages/planning/tests/test_installer.py",
+    "next step": "continue from issue-2279-planning-owner-graph"
+  }
+}

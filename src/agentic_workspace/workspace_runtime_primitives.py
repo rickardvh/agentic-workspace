@@ -8356,6 +8356,7 @@ def _run_lifecycle_command(
     to_payload_target: bool = False,
     footprint_profile: str | None = None,
     mirror_payload: bool = False,
+    include_local_footprint: bool = True,
 ) -> dict[str, Any]:
     if command_name == "upgrade" and local_only_repo_root is None and _has_local_only_workspace_state(target_root=target_root):
         local_only_repo_root = target_root
@@ -8378,6 +8379,7 @@ def _run_lifecycle_command(
             to_payload_target=to_payload_target,
             footprint_profile=resolved_footprint_profile,
             mirror_payload=mirror_payload,
+            include_local_footprint=include_local_footprint,
         )
     registry = _module_registry(descriptors=descriptors, target_root=target_root)
     reports = [
@@ -41040,11 +41042,7 @@ def _emit_proof(
 
 def _print_tiny_summary(summary: dict[str, Any]) -> None:
     todo = summary.get("todo", {}) if isinstance(summary.get("todo"), dict) else {}
-    health = (
-        summary.get("planning_surface_health", {})
-        if isinstance(summary.get("planning_surface_health"), dict)
-        else {}
-    )
+    health = summary.get("planning_surface_health", {}) if isinstance(summary.get("planning_surface_health"), dict) else {}
     decision = summary.get("decision_packet", {}) if isinstance(summary.get("decision_packet"), dict) else {}
     print(f"Target: {summary.get('target_root', '')}")
     print("Profile: tiny")

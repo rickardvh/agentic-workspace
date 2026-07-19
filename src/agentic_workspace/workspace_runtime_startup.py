@@ -1784,8 +1784,7 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         "active_state": _active_state_with_orientation_delta(payload.get("active_state_summary", {}), cli_invoke=cli_invoke),
         "skill_routing": {
             "status": skill_routing.get("status", "unknown") if isinstance(skill_routing, dict) else "unknown",
-            "query": skill_routing.get("query", "") if isinstance(skill_routing, dict) else "",
-            "preferred_routes": list(skill_routing.get("preferred_routes", [])[:2]) if isinstance(skill_routing, dict) else [],
+            "detail_selector": "skill_routing",
         },
         "planning": {
             "workflow_sufficiency": compact_workflow,
@@ -2053,8 +2052,6 @@ def _selector_first_start_payload(payload: dict[str, Any], *, cli_invoke: str, t
         cli_invocation = payload.get("cli_invocation", {})
         primary = str(cli_invocation.get("primary", "")) if isinstance(cli_invocation, dict) else ""
         uv_guidance = _uv_cache_guidance_payload(cli_invoke=primary)
-    if isinstance(uv_guidance, dict) and uv_guidance.get("status") == "available":
-        context["uv_cache_guidance"] = uv_guidance
     prep_only_active = "prep_only_handoff" in payload
     if "task_intent" in payload:
         task_intent = payload["task_intent"]

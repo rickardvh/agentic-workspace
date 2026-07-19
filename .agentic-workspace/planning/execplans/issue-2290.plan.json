@@ -138,7 +138,7 @@
     "unsolved intent passed to": "docs/reviews/aw-chatgpt-review-continuation-dogfood-2026-07-14.md and GitHub #2290"
   },
   "durable_residue": {
-    "status": "planning-and-issue",
+    "status": "planning",
     "learned constraint": "Do not close #2290 or consider automatic merge until several live external-review cycles establish latency, successful exact-session continuation, intervention rate, and blocker quality.",
     "canonical owner now": "GitHub #2290 and the checked-in dogfooding report",
     "promotion trigger": "representative live PR evidence is collected",
