@@ -15,8 +15,8 @@
   "outcome": "Structured ChatGPT review-status comments are classified from canonical decision and multiline unresolved sections before free-form next_action prose is considered.",
   "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2317",
   "evidence_refs": [
-    "python scripts/github/pr_comment_delta.py --repo rickardvh/agentic-workspace --pr 2329 --format json: complete issue_comments/reviews/review_threads inspection at remote head 214572ae32be53c2d55990634eeed85ae4e712ac; remaining comments are CI/label/draft metadata blockers, not source change requests",
-    "uv run pytest tests/test_pr_comment_delta.py -q: 18 passed on rebased branch head b46026effd907b97e241e3b1b40f7d4a137c0d83",
+    "PR #2329 was merged with repaired predecessor PR #2328 head 574d46579f598f03a6db2374ace98342b0f664d7; #2290 remains the unrelated active owner and #2301 remains completed history",
+    "uv run pytest tests/test_pr_comment_delta.py -q: 18 passed after integrating repaired predecessor state",
     "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json: passed; Planning surface warning_count=0 and #2290 remains the protected unrelated active plan",
     "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: passed with selected_module_health=healthy and selected_warning_count=0",
     "uv run python scripts/check/check_planning_surfaces.py: passed",
@@ -40,7 +40,7 @@
     "focused classifier proof": "uv run pytest tests/test_pr_comment_delta.py -q: 18 passed",
     "final workspace proof": "make test-workspace passed after correcting the proof cache path; make lint-workspace passed",
     "planning proof": "summary passed with warning_count=0; planning doctor selected_module_health=healthy selected_warning_count=0; planning surface checker passed",
-    "exact-head accounting": "The checked-in closeout records the exact rebased implementation/proof head before this closeout-only refresh; the PR body records the final pushed closeout commit because a commit cannot embed its own SHA."
+    "exact-head accounting": "The checked-in closeout records the repaired predecessor head and local proof commands; the PR body records the final pushed closeout commit because a commit cannot embed its own SHA."
   },
   "intent_satisfaction": {
     "was original intent fully satisfied?": "yes",
@@ -57,9 +57,9 @@
     "follow-on routed to": "none"
   },
   "execution_run": {
-    "rebased on": "PR #2328 base head 9c9add4be35c2c5c65188ade31fbebd589847f4b",
-    "branch head before closeout refresh": "b46026effd907b97e241e3b1b40f7d4a137c0d83",
-    "reason": "Refresh #2317 closeout after #2328 restored #2290 ownership and passed required startup-contract checks.",
+    "rebased on": "PR #2328 base head 574d46579f598f03a6db2374ace98342b0f664d7",
+    "branch head before closeout refresh": "integrated locally after merging PR #2328 head 574d46579f598f03a6db2374ace98342b0f664d7",
+    "reason": "Refresh #2317 closeout after #2328 removed unsupported P1 Planning residue, restored #2290 ownership, and passed required startup-contract checks.",
     "changed surfaces": "scripts/github/pr_comment_delta.py; tests/test_pr_comment_delta.py; .agentic-workspace/planning closeout and lane records",
     "terminal state": "archive",
     "follow-on": "none"
