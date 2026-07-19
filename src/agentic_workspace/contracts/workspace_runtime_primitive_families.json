@@ -434,6 +434,7 @@
           "_local_work_threads_projection",
           "_ordinary_decision_packet",
           "_selector_first_planning_safety_gate",
+          "_selector_prevalidation_error",
           "_selector_requests",
           "_selector_requests_architecture_principles",
           "_selector_requests_assurance_requirements",

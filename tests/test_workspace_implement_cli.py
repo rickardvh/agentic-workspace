@@ -641,7 +641,7 @@ def test_implement_compact_surfaces_broad_proof_narrowness_before_validation(tmp
     payload = json.loads(capsys.readouterr().out)
     narrowness = payload["proof"]["proof_narrowness"]
     assert narrowness["status"] == "broad_required"
-    assert narrowness["broad_suite_boundary_status"] == "required_acceptance_boundary"
+    assert narrowness["broad_suite_boundary_status"] == "explicit-escalation-required"
     assert narrowness["expansion_trigger_lane"] in {"workspace_cli", "generated_command_packages"}
 
 
@@ -989,7 +989,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert payload["path_boundaries"][0]["authority"] == "payload"
     assert payload["path_boundaries"][0]["requires_attention"] is True
     assert payload["authority_markers"][0]["safe_to_edit"] is False
-    assert payload["next_allowed_action"] == "Resolve boundary warnings before editing."
+    assert payload["next_allowed_action"] == "Resolve proof-route refinement or structured escalation before closeout."
     assert payload["planning_safety_gate"]["status"] == "attention"
     assert payload["planning_safety_gate"]["gate_result"] == "agent-work-shape-decision-required"
     assert payload["planning_safety_gate"]["implementation_allowed"] is True
@@ -2713,7 +2713,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert decision["absence_states"]["full_selector_inventory"] == "hidden_behind_detail_route"
     assert payload["current_decision"]["surface"] == "implementation"
     assert payload["current_decision"]["known_evidence"] == ["implement.decision_packet"]
-    assert payload["current_decision"]["safe_probe"] == "make test-workspace"
+    assert payload["current_decision"]["safe_probe"] == "agentic-workspace defaults --section root_cli_authority --format json"
     assert payload["current_decision"]["response_shape"] == [
         "decision_or_finding",
         "evidence_or_proof_boundary",
@@ -2746,13 +2746,15 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert context["absence_states"]["adaptive_routing"] == "detail_omitted"
     assert context["absence_states"]["work_shape_guidance"] == "detail_omitted"
     assert "context.guidance" in payload["drill_down"]["available_selectors"]
-    assert payload["next"]["action"] == "Inspect only the listed files and run the required validation commands."
-    assert payload["next"]["command"] == "make test-workspace"
+    assert payload["next"]["action"] == "Resolve proof-route refinement or structured escalation before closeout."
+    assert payload["next"]["command"] == "agentic-workspace defaults --section root_cli_authority --format json"
     assert payload["next"]["run"] == payload["next"]["command"]
-    assert "make lint-workspace" in payload["next"]["commands"]
+    assert "uv run python scripts/check/check_generated_command_packages.py" in payload["next"]["commands"]
+    assert "make lint-workspace" not in payload["next"]["commands"]
     assert context["scope"]["inspect_files"] == ["generated/workspace/python/cli.py"]
-    assert "make test-workspace" in payload["proof"]["required_commands"]
+    assert "agentic-workspace defaults --section root_cli_authority --format json" in payload["proof"]["required_commands"]
     assert "uv run python scripts/check/check_generated_command_packages.py" in payload["proof"]["required_commands"]
+    assert "make test-workspace" not in payload["proof"]["required_commands"]
     assert payload["proof"]["generated_cli_freshness"]["status"] == "required"
     assert payload["proof"]["generated_cli_freshness"]["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
     assert payload["proof"]["generated_cli_freshness"]["generated_target_parity"]["target_families"] == ["python", "typescript"]
@@ -2766,7 +2768,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
     assert "do not replace or relax required proof" in obligations["recommended_confidence_checks"]["rule"]
     assert "Completion claims remain blocked" in obligations["completion_claim_rule"]
     tiers = payload["proof"]["proof_command_tiers"]
-    assert tiers["minimal_required_command"] == "make test-workspace"
+    assert tiers["minimal_required_command"] == "agentic-workspace defaults --section root_cli_authority --format json"
     assert tiers["selected_set"]["status"] == "conservative-expanded"
     assert "extra_evidence" in tiers["closeout_rule"]
     tier_ids = {tier["id"] for tier in tiers["tiers"]}
@@ -2817,7 +2819,7 @@ def test_implement_tiny_profile_returns_next_decision_without_diagnostics(tmp_pa
         sort_keys=False,
     )
     _assert_json_payload_under(payload["operating_loop"], 1000, label="implement operating-loop compact projection", sort_keys=False)
-    _assert_json_payload_under(payload, 21000, label="implement generated-surface tiny payload", sort_keys=False)
+    _assert_json_payload_under(payload, 22000, label="implement generated-surface tiny payload", sort_keys=False)
 
 
 def test_implement_tiny_proof_tiers_explain_required_single_tier() -> None:
@@ -8406,5 +8408,5 @@ def test_implement_selector_reports_available_fields_for_missing_selector(tmp_pa
     assert inventory["status"] == "omitted-from-validation-error"
     assert inventory["available_count"] > len(inventory["sample"])
     assert len(inventory["sample"]) <= 8
-    assert inventory["discovery_command"] == "agentic-workspace implement --target . --verbose --format json"
+    assert inventory["inventory_command"] == "agentic-workspace implement --target . --select selector_inventory --format json"
     assert "available_selectors" not in payload

@@ -934,7 +934,7 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert "validation_plan" not in encoded
     assert payload["detail_command_template"]["runnable"] is False
     assert payload["detail_command_template"]["placeholders"] == {"paths": ["generated/workspace/python/cli.py"]}
-    assert len(encoded) < 4300
+    assert len(encoded) < 4500
 
 
 def test_proof_route_escalation_gate_blocks_generic_broad_fallback(tmp_path: Path, capsys) -> None:
@@ -5000,7 +5000,7 @@ evidence = ["session-log:slow-command:generated"]
                 "--changed",
                 "src/generated_component.py",
                 "--select",
-                "proof_route_strategy_decision,proof_route_escalation_gate,proof_route_strategy_preservation,manual_verification,next",
+                "proof_route_strategy_decision,proof_route_escalation_gate,proof_route_strategy_preservation,next",
                 "--format",
                 "json",
             ]

@@ -88,10 +88,101 @@ def test_selector_validation_error_does_not_project_valid_values_or_build_full_i
     assert selected["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert selected["unknown_selectors"] == ["missing.field"]
     assert "values" not in selected
-    assert selected["selector_inventory"]["available_count"] == 2
-    assert selected["selector_inventory"]["sample"] == ["valid", "context"]
-    assert selected["selector_inventory"]["discovery_command"] == "agentic-workspace start --target . --verbose --format json"
-    assert "<field" not in selected["selector_inventory"]["discovery_command"]
+    assert selected["selector_inventory"]["available_count"] == 3
+    assert selected["selector_inventory"]["sample"] == ["valid", "context", "context.known"]
+    assert (
+        selected["selector_inventory"]["inventory_command"]
+        == "agentic-workspace start --target . --select selector_inventory --format json"
+    )
+    assert "--verbose" not in selected["selector_inventory"]["inventory_command"]
+
+
+def test_start_unknown_selector_fails_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_start_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("start payload must not be built for an unknown selector")
+
+    monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["not_a_selector"]
+    assert (
+        payload["selector_inventory"]["inventory_command"] == "agentic-workspace start --target . --select selector_inventory --format json"
+    )
+
+
+def test_start_selector_inventory_route_is_executable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    inventory = payload["values"]["selector_inventory"]
+    assert inventory["kind"] == "agentic-workspace/selector-inventory/v1"
+    assert inventory["source_command"] == "start"
+    assert inventory["available_count"] > 8
+    assert "context_router.rule" in inventory["selectors"]
+
+
+def test_implement_unknown_selector_fails_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_implement_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("implement payload must not be built for an unknown selector")
+
+    monkeypatch.setattr(cli, "_implement_payload", fail_implement_payload)
+
+    assert cli.main(["implement", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["not_a_selector"]
+
+
+def test_implement_selector_inventory_route_is_executable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "check selector inventory",
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "selector_inventory",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    inventory = payload["values"]["selector_inventory"]
+    assert inventory["kind"] == "agentic-workspace/selector-inventory/v1"
+    assert inventory["source_command"] == "implement"
+    assert inventory["available_count"] > 8
+    assert "context.workflow_sufficiency" in inventory["selectors"]
+
+
+def test_report_unknown_selector_fails_before_runtime_context(monkeypatch, capsys) -> None:
+    def fail_runtime_context(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("report runtime context must not be assembled for an unknown selector")
+
+    monkeypatch.setattr(cli, "_selected_runtime_context", fail_runtime_context)
+
+    assert cli.main(["report", "--select", "not_a_selector", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["not_a_selector"]
 
 
 def test_report_selector_conflict_fails_before_runtime_context(monkeypatch, capsys) -> None:
@@ -8252,9 +8343,10 @@ def test_start_missing_selector_returns_bounded_inventory(tmp_path: Path, capsys
     payload = json.loads(capsys.readouterr().out)
 
     _assert_json_payload_under(payload, 2_000, label="start missing selector fallback", sort_keys=False)
-    assert payload["missing"] == ["not_a_selector"]
+    assert payload["status"] == "invalid-selector"
+    assert payload["unknown_selectors"] == ["not_a_selector"]
     inventory = payload["selector_inventory"]
-    assert inventory["status"] == "omitted-from-compact-default"
+    assert inventory["status"] == "omitted-from-validation-error"
     assert inventory["available_count"] > len(inventory["sample"])
     assert len(inventory["sample"]) <= 8
     assert inventory["absence_state"] == "hidden_behind_detail_route"
@@ -8452,7 +8544,7 @@ def test_proof_narrowness_marks_generated_surface_broad_proof_required(tmp_path:
 
     payload = json.loads(capsys.readouterr().out)
     narrowness = payload["values"]["proof_narrowness"]
-    assert narrowness["status"] == "narrow_required"
+    assert narrowness["status"] == "broad_required"
     assert narrowness["broad_suite_boundary"]["status"] == "explicit-escalation-required"
     assert narrowness["broad_suite_boundary"]["requires_explicit_escalation"] is True
     assert narrowness["broad_suite_boundary"]["withheld_generic_broad_lanes"][0]["lane"] == "workspace_cli"

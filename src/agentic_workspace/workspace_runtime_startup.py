@@ -101,6 +101,7 @@ from agentic_workspace.workspace_runtime_core import (
     _run_preflight_command,
     _select_payload_fields,
     _selector_first_planning_safety_gate,
+    _selector_prevalidation_error,
     _selector_requests,
     _session_improvement_pressure_payload,
     _sibling_repo_aw_freshness_payload,
@@ -2524,6 +2525,9 @@ def _active_state_has_planning(active_state: Any) -> bool:
 def _run_start_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="start", target_root=target_root)
+    if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="start"):
+        _emit_payload(payload=prevalidation_error, format_name=args.format)
+        return 0
     if args.format == "json":
         if recovery_payload := _obsolete_default_preset_start_recovery_payload(target_root=target_root):
             _emit_payload(payload=recovery_payload, format_name=args.format)

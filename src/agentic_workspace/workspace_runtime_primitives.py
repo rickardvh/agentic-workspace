@@ -24903,7 +24903,193 @@ def _field_path_exists(payload: Any, path: str) -> bool:
 
 
 def _bounded_selector_descriptor_for_payload(payload: dict[str, Any]) -> list[str]:
-    return [key for key in payload if isinstance(key, str) and key.strip()]
+    selectors: list[str] = []
+
+    def visit(value: Any, prefix: str = "") -> None:
+        if not isinstance(value, dict):
+            return
+        for key, nested in value.items():
+            if not isinstance(key, str) or not key.strip():
+                continue
+            selector = f"{prefix}.{key}" if prefix else key
+            selectors.append(selector)
+            if isinstance(nested, dict):
+                visit(nested, selector)
+
+    visit(payload)
+    return selectors
+
+
+_SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
+    "start": (
+        "action_signals",
+        "next_safe_action",
+        "decision_packet",
+        "communication_contract",
+        "skills",
+        "context",
+        "context.primary_action",
+        "context.route_decision",
+        "workflow_sufficiency",
+        "continuation_state",
+        "current_decision",
+        "message_economy",
+        "evidence_bundle",
+        "local_footprint",
+        "installed_state_compatibility",
+        "routine_work_context",
+        "selector_inventory",
+        "acceptance",
+        "issue_reference_intent",
+        "local_chat_checkpoint",
+        "work_threads",
+        "planning_safety_gate",
+        "planning_route_decision",
+        "task_posture_packet",
+        "memory_decision_packet",
+        "open_issue_intake",
+        "next",
+        "sufficiency",
+        "proof_narrowness",
+        "proof_route_strategy_decision",
+        "proof_route_strategy_preservation",
+    ),
+    "implement": (
+        "next",
+        "proof",
+        "proof.proof_obligations",
+        "proof.runtime_source_edit_review",
+        "proof_route_strategy_preservation",
+        "context",
+        "context.workflow_sufficiency",
+        "context.scope",
+        "context.guidance",
+        "task_contract",
+        "change_impact",
+        "generated_surface_trust",
+        "routine_work_context",
+        "reuse_pressure",
+        "architecture_principles",
+        "assurance_requirements",
+        "verification",
+        "requirement_grounding",
+        "plan_delegation_packet",
+        "test_strategy_check",
+        "active_intent_contract",
+        "intent_satisfaction_matrix",
+        "selector_inventory",
+        "completion_options",
+        "decision_point_intent_confirmation",
+        "planning_safety_gate",
+        "work_threads",
+    ),
+    "summary": (
+        "todo",
+        "target_root",
+        "planning_record",
+        "execplans",
+        "planning_surface_health",
+        "execution_readiness",
+        "continuation_view",
+        "fresh_session_digest",
+        "decision_packet",
+        "decision_point_carry_status",
+        "planning_route_decision",
+        "lanes",
+        "selector_inventory",
+    ),
+    "proof": (
+        "proof_route_strategy_decision",
+        "proof_route_escalation_gate",
+        "proof_route_strategy_preservation",
+        "proof_narrowness",
+        "proof_decision",
+        "proof_next_decision",
+        "proof_obligations",
+        "architecture_principles",
+        "verification",
+        "requirement_grounding",
+        "test_strategy_check",
+        "validation_plan",
+        "generated_cli_freshness",
+        "cli_authority_review",
+        "required_commands",
+        "selected_lanes",
+        "selected_commands",
+        "manual_verification",
+        "next",
+        "sufficiency",
+        "route_refinement_required",
+        "focused_route_coverage_audit",
+        "release_proof_profile",
+        "domain_proof_route_inventory_audit",
+        "completion_options",
+        "selector_inventory",
+    ),
+    "report": (
+        "kind",
+        "status",
+        "answer",
+        "report",
+        "output_contract",
+        "workflow_obligations",
+        "repo_friction",
+        "decision_packet",
+        "selector_inventory",
+    ),
+    "config": (
+        "workspace",
+        "modules",
+        "mixed_agent",
+        "assurance",
+        "config_enforcement",
+        "config_effect_audit",
+        "cli_compatibility",
+        "selector_inventory",
+    ),
+    "doctor": (
+        "command",
+        "target",
+        "health",
+        "reports",
+        "repair_plan",
+        "actionability",
+        "installed_state_summary",
+        "installed_state_compatibility",
+        "payload_closure_summary",
+        "decision_point_carry_status",
+        "selector_inventory",
+    ),
+    "status": (
+        "command",
+        "target",
+        "health",
+        "reports",
+        "repair_plan",
+        "actionability",
+        "installed_state_summary",
+        "payload_closure_summary",
+        "decision_point_carry_status",
+        "selector_inventory",
+    ),
+    "defaults": (
+        "kind",
+        "section",
+        "sections",
+        "workspace",
+        "proof_selection",
+        "improvement_intake",
+        "selector_inventory",
+    ),
+}
+
+
+def _selector_descriptor_for_command(source_command: str) -> list[str]:
+    return list(_SELECTOR_DESCRIPTORS_BY_COMMAND.get(source_command, ()))
+
+
+def _selector_inventory_command(source_command: str) -> str:
+    return f"agentic-workspace {source_command} --target . --select selector_inventory --format json"
 
 
 _KNOWN_OPTIONAL_SELECTORS_BY_COMMAND: dict[str, set[str]] = {
@@ -24930,11 +25116,12 @@ def _selector_suggestions(*, unknown: str, available: list[str], limit: int = 3)
     return suggestions
 
 
-def _selector_validation_error(*, payload: dict[str, Any], selectors: list[str], missing: list[str], source_command: str) -> dict[str, Any]:
-    available = _bounded_selector_descriptor_for_payload(payload)
+def _selector_validation_error_from_available(
+    *, available: list[str], selectors: list[str], missing: list[str], source_command: str
+) -> dict[str, Any]:
     sample = list(dict.fromkeys(selector for selector in available if isinstance(selector, str) and selector.strip()))[:8]
     suggestions = {selector: matches for selector in missing if (matches := _selector_suggestions(unknown=selector, available=available))}
-    inventory_command = f"agentic-workspace {source_command} --target . --verbose --format json"
+    inventory_command = _selector_inventory_command(source_command)
     return {
         "kind": "agentic-workspace/selector-validation-error/v1",
         "status": "invalid-selector",
@@ -24955,11 +25142,46 @@ def _selector_validation_error(*, payload: dict[str, Any], selectors: list[str],
     }
 
 
+def _selector_validation_error(*, payload: dict[str, Any], selectors: list[str], missing: list[str], source_command: str) -> dict[str, Any]:
+    return _selector_validation_error_from_available(
+        available=_bounded_selector_descriptor_for_payload(payload),
+        selectors=selectors,
+        missing=missing,
+        source_command=source_command,
+    )
+
+
+def _selector_prevalidation_error(*, select: str | None, source_command: str) -> dict[str, Any] | None:
+    selectors = _selector_tokens(select)
+    if not selectors:
+        return None
+    available = _selector_descriptor_for_command(source_command)
+    if not available:
+        return None
+    unknown = []
+    for selector in selectors:
+        if selector in available or any(selector.startswith(f"{candidate}.") for candidate in available):
+            continue
+        if _known_optional_selector_absent(source_command=source_command, selector=selector):
+            continue
+        unknown.append(selector)
+    if not unknown:
+        return None
+    return _selector_validation_error_from_available(
+        available=available,
+        selectors=selectors,
+        missing=unknown,
+        source_command=source_command,
+    )
+
+
 def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str) -> dict[str, Any]:
     selectors = _selector_tokens(select)
     unknown: list[str] = []
     missing: list[str] = []
     for selector in selectors:
+        if selector == "selector_inventory":
+            continue
         if _field_path_exists(payload, selector):
             continue
         if _known_optional_selector_absent(source_command=source_command, selector=selector):
@@ -24970,6 +25192,16 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
         return _selector_validation_error(payload=payload, selectors=selectors, missing=unknown, source_command=source_command)
     values: dict[str, Any] = {}
     for selector in selectors:
+        if selector == "selector_inventory":
+            available = _bounded_selector_descriptor_for_payload(payload)
+            values[selector] = {
+                "kind": "agentic-workspace/selector-inventory/v1",
+                "source_command": source_command,
+                "available_count": len(available),
+                "selectors": available,
+                "rule": "Explicit selector inventory is available through --select selector_inventory; validation errors include only a bounded sample.",
+            }
+            continue
         found, value = _field_by_path(payload, selector)
         if found:
             values[selector] = value
@@ -40124,6 +40356,12 @@ def _tiny_defaults_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _emit_defaults(*, format_name: str, section: str | None = None, profile: str = "tiny", select: str | None = None) -> None:
+    if prevalidation_error := _selector_prevalidation_error(select=select, source_command="defaults"):
+        if format_name == "json":
+            print(json.dumps(serialise_value(prevalidation_error), indent=2))
+            return
+        _emit_compact_answer_text(prevalidation_error)
+        return
     payload = _defaults_payload()
     if section is not None:
         payload = _select_defaults_section(payload, section=section)
@@ -41054,6 +41292,9 @@ def _emit_proof(
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="proof", config=config):
         _emit_payload(payload=disabled_payload, format_name=format_name)
         return
+    if prevalidation_error := _selector_prevalidation_error(select=select, source_command="proof"):
+        _emit_payload(payload=prevalidation_error, format_name=format_name)
+        return
     if record_receipt:
         payload = _record_proof_receipt_payload(
             target_root=target_root,
@@ -41157,6 +41398,9 @@ def _print_tiny_summary(summary: dict[str, Any]) -> None:
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="summary", target_root=target_root)
+    if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="summary"):
+        _emit_payload(payload=prevalidation_error, format_name=args.format)
+        return 0
 
     config = _load_workspace_config(target_root=target_root)
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="summary", config=config):
@@ -41393,6 +41637,9 @@ def _selected_runtime_context(
 def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     if getattr(args, "verbose", False) and getattr(args, "section", None):
         raise WorkspaceUsageError("report detail selectors are mutually exclusive; use either --verbose or --section.")
+    if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="report"):
+        _emit_payload(payload=prevalidation_error, format_name=args.format)
+        return 0
     target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="report")
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="report", config=config):
         _emit_payload(payload=disabled_payload, format_name=args.format)
@@ -41880,6 +42127,9 @@ def _run_setup_guidance_adapter(args: argparse.Namespace) -> int:
 
 def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
     command_name = str(args.command)
+    if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command=command_name):
+        _emit_payload(payload=prevalidation_error, format_name=args.format)
+        return 0
     target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name=command_name)
     select = getattr(args, "select", None)
     detail_selector_requested = any(
@@ -47339,6 +47589,9 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "full", select: str | None = None) -> None:
+    if prevalidation_error := _selector_prevalidation_error(select=select, source_command="config"):
+        _emit_payload(payload=prevalidation_error, format_name=format_name)
+        return
     full_payload = _config_payload(config=config)
     if select:
         payload = _select_payload_fields(full_payload, select=select, source_command="config")
