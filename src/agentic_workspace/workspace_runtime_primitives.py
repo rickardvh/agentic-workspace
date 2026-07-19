@@ -25005,6 +25005,8 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "proof_route_strategy_decision",
         "proof_route_escalation_gate",
         "proof_route_strategy_preservation",
+        "proof_route_strategy_claim_gate",
+        "proof_closeout_summary",
         "proof_narrowness",
         "proof_decision",
         "proof_next_decision",
@@ -25105,6 +25107,11 @@ def _known_optional_selector_absent(*, source_command: str, selector: str) -> bo
     return selector in known or any(selector.startswith(f"{item}.") for item in known)
 
 
+def _declared_selector_for_command(*, source_command: str, selector: str) -> bool:
+    available = _selector_descriptor_for_command(source_command)
+    return selector in available or any(selector.startswith(f"{candidate}.") for candidate in available)
+
+
 def _selector_suggestions(*, unknown: str, available: list[str], limit: int = 3) -> list[str]:
     unknown_root = unknown.split(".", 1)[0]
     suggestions: list[str] = []
@@ -25187,7 +25194,9 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
             continue
         if _field_path_exists(payload, selector):
             continue
-        if _known_optional_selector_absent(source_command=source_command, selector=selector):
+        if _known_optional_selector_absent(source_command=source_command, selector=selector) or _declared_selector_for_command(
+            source_command=source_command, selector=selector
+        ):
             missing.append(selector)
         else:
             unknown.append(selector)

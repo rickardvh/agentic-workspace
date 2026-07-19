@@ -917,7 +917,7 @@ def test_implement_command_returns_bounded_context_and_boundary_warnings(tmp_pat
     assert freshness["obligation"] == "required"
     assert freshness["freshness_check_command"] == "uv run python scripts/generate/generate_command_packages.py --check"
     assert freshness["refresh_command"] == "uv run python scripts/generate/generate_command_packages.py"
-    assert freshness["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py"
+    assert freshness["validation_command"] == "uv run python scripts/check/check_generated_command_packages.py --python-conformance"
     assert "uv run python scripts/check/check_generated_command_packages.py" in freshness["required_commands"]
     parity = freshness["generated_target_parity"]
     assert parity["status"] == "required"

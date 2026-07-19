@@ -3038,6 +3038,14 @@ def _route_refinement_required_payload(
     }
 
 
+def _preferred_focused_route_owner(lane_ids: list[str]) -> str:
+    for lane_id in lane_ids:
+        bare = str(lane_id).removeprefix("domain:")
+        if bare not in {"proof_route_authority", "test_evidence_decision"}:
+            return str(lane_id)
+    return str(lane_ids[0]) if lane_ids else ""
+
+
 def _domain_proof_lane_to_selection(
     lane: Any,
     *,
@@ -3127,6 +3135,14 @@ def _primary_domain_lanes(domain_lanes: list[dict[str, Any]]) -> list[dict[str, 
     return [lane for lane in domain_lanes if _domain_lane_route_role(lane) == "behavior"]
 
 
+def _focused_domain_lanes(domain_lanes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [lane for lane in domain_lanes if _domain_lane_route_role(lane) != "broad"]
+
+
+def _broad_escalation_domain_lanes(domain_lanes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return _primary_domain_lanes(domain_lanes)
+
+
 def _select_broad_domain_lane(
     *,
     config: WorkspaceConfig | None,
@@ -3157,8 +3173,8 @@ def _proof_route_strategy_decision_payload(
     generic_broad_without_explicit_escalation: bool = False,
 ) -> dict[str, Any]:
     applicable_friction = [dict(item) for item in (applicable_friction_findings or []) if isinstance(item, dict)]
-    primary_lanes = _primary_domain_lanes(domain_lanes)
-    domain_handled_paths = {str(path) for lane in primary_lanes for path in _list_payload(lane.get("matched_paths")) if str(path).strip()}
+    focused_lanes = _focused_domain_lanes(domain_lanes)
+    domain_handled_paths = {str(path) for lane in focused_lanes for path in _list_payload(lane.get("matched_paths")) if str(path).strip()}
     focused_covers_all = bool(domain_handled_paths) and set(changed_paths).issubset(domain_handled_paths)
     route_refinement_status = str(route_refinement_required.get("status", ""))
     if route_refinement_status == "required":
@@ -3197,7 +3213,7 @@ def _proof_route_strategy_decision_payload(
         "outcome": outcome,
         "reason_code": reason_code,
         "changed_paths": changed_paths,
-        "focused_lane_ids": [str(lane.get("id", "")) for lane in primary_lanes],
+        "focused_lane_ids": [str(lane.get("id", "")) for lane in focused_lanes],
         "focused_covered_paths": sorted(domain_handled_paths),
         "route_refinement_required": route_refinement_required,
         "applicable_friction_findings": applicable_friction,
@@ -3370,6 +3386,38 @@ def _proof_route_strategy_preservation_payload(
         "rule": (
             "Ordinary consumers must preserve this decision identity, selected requirement, next action, and claim effect; "
             "they may not independently substitute broad proof or release a blocked completion claim."
+        ),
+    }
+
+
+def _proof_route_strategy_claim_gate_payload(*, proof_route_strategy_preservation: dict[str, Any]) -> dict[str, Any]:
+    claim_effect = str(proof_route_strategy_preservation.get("claim_effect", ""))
+    blocked = claim_effect == "claim-blocked"
+    consumers = _as_dict(proof_route_strategy_preservation.get("consumers"))
+    handoff = _as_dict(consumers.get("handoff"))
+    closeout = _as_dict(consumers.get("closeout"))
+    return {
+        "kind": "agentic-workspace/proof-route-strategy-claim-gate/v1",
+        "status": "blocked" if blocked else "allowed-after-selected-proof",
+        "decision_id": str(proof_route_strategy_preservation.get("decision_id", "")),
+        "claim_effect": claim_effect,
+        "selected_requirement": str(proof_route_strategy_preservation.get("selected_requirement", "")),
+        "handoff": {
+            **handoff,
+            "consumer": "handoff",
+            "required_identity_field": "proof_route_strategy_preservation.decision_id",
+            "missing_or_mismatch_effect": "claim-blocked",
+        },
+        "closeout": {
+            **closeout,
+            "consumer": "closeout",
+            "required_identity_field": "proof_route_strategy_preservation.decision_id",
+            "missing_or_mismatch_effect": "claim-blocked",
+        },
+        "completion_claim_authorized": not blocked,
+        "rule": (
+            "Handoff and closeout must consume this exact decision id and claim effect. Missing, stale, or mismatched "
+            "strategy identity keeps the completion claim blocked."
         ),
     }
 
@@ -3700,18 +3748,35 @@ def _domain_proof_route_inventory_audit(
                 "manual_evidence_count": len(lane.manual_evidence),
             }
         )
-    duplicate_pattern_owners = [
-        {
-            "pattern": pattern,
-            "lane_ids": owners,
-            "precedence_lane_id": "",
-            "precedence_status": "undeclared",
-            "refinement_owner": "repo proof-route authority",
-            "reason": "identical path pattern is owned by multiple focused routes without declared precedence",
-        }
-        for pattern, owners in pattern_owners.items()
-        if len(owners) > 1
-    ]
+    duplicate_pattern_owners: list[dict[str, Any]] = []
+    for pattern, owners in pattern_owners.items():
+        if len(owners) <= 1:
+            continue
+        records = [record for record in pattern_records if record["pattern"] == pattern and record["lane"] in owners]
+        unapproved_pair = False
+        precedence_lane_id = ""
+        for index, left in enumerate(records):
+            for right in records[index + 1 :]:
+                left_allowed = {item.strip() for item in left["allowed_composition"].split(",") if item.strip()}
+                right_allowed = {item.strip() for item in right["allowed_composition"].split(",") if item.strip()}
+                composition_allowed = right["route_role"] in left_allowed or left["route_role"] in right_allowed
+                precedence_declared = bool(left["precedence"] or right["precedence"])
+                if precedence_declared and not precedence_lane_id:
+                    precedence_lane_id = left["lane"] if left["precedence"] else right["lane"]
+                if not (composition_allowed and precedence_declared):
+                    unapproved_pair = True
+        if not unapproved_pair:
+            continue
+        duplicate_pattern_owners.append(
+            {
+                "pattern": pattern,
+                "lane_ids": owners,
+                "precedence_lane_id": precedence_lane_id,
+                "precedence_status": "declared" if precedence_lane_id else "undeclared",
+                "refinement_owner": "repo proof-route authority",
+                "reason": "identical path pattern is owned by multiple focused routes without declared composition and precedence",
+            }
+        )
     semantic_overlaps: list[dict[str, Any]] = []
     for index, left in enumerate(pattern_records):
         for right in pattern_records[index + 1 :]:
@@ -4699,13 +4764,13 @@ def _proof_selection_for_changed_paths(
         target_root=target_root,
         make_targets=make_targets,
     )
-    primary_domain_lanes = _primary_domain_lanes(domain_lanes)
+    focused_domain_lanes = _focused_domain_lanes(domain_lanes)
     domain_handled_paths = {
-        str(path) for lane in primary_domain_lanes for path in _list_payload(lane.get("matched_paths")) if str(path).strip()
+        str(path) for lane in focused_domain_lanes for path in _list_payload(lane.get("matched_paths")) if str(path).strip()
     }
     preliminary_focused_route_audit = _focused_route_coverage_audit(
         changed_paths=changed_paths,
-        domain_lanes=primary_domain_lanes,
+        domain_lanes=focused_domain_lanes,
         unavailable_commands=[],
     )
     preliminary_route_refinement = _route_refinement_required_payload(
@@ -4974,7 +5039,7 @@ def _proof_selection_for_changed_paths(
     ]
     focused_route_coverage_audit = _focused_route_coverage_audit(
         changed_paths=changed_paths,
-        domain_lanes=_primary_domain_lanes(domain_lanes),
+        domain_lanes=_focused_domain_lanes(domain_lanes),
         unavailable_commands=unavailable_commands,
     )
     route_refinement_required = _route_refinement_required_payload(
@@ -5132,6 +5197,9 @@ def _proof_selection_for_changed_paths(
         proof_route_strategy_decision=proof_route_strategy_decision,
         manual_verification=manual_verification,
         required_commands=required_commands,
+    )
+    proof_route_strategy_claim_gate = _proof_route_strategy_claim_gate_payload(
+        proof_route_strategy_preservation=proof_route_strategy_preservation
     )
     proof_receipt_bridge = _proof_receipt_bridge_payload(
         changed_paths=changed_paths,
@@ -5338,6 +5406,7 @@ def _proof_selection_for_changed_paths(
         unavailable_commands=unavailable_commands,
         host_policy_blocked_commands=host_policy_blocked_commands,
     )
+    proof_closeout_summary["proof_route_strategy_claim_gate"] = proof_route_strategy_claim_gate["closeout"]
     active_planning_record_for_requirement = (
         _active_planning_record_for_report_section(target_root=target_root) if target_root is not None else {}
     )
@@ -5481,6 +5550,7 @@ def _proof_selection_for_changed_paths(
         "route_refinement_required": route_refinement_required,
         "proof_route_strategy_decision": proof_route_strategy_decision,
         "proof_route_strategy_preservation": proof_route_strategy_preservation,
+        "proof_route_strategy_claim_gate": proof_route_strategy_claim_gate,
         "domain_proof_route_inventory_audit": domain_route_inventory_audit,
         "proof_route_precedence": proof_route_precedence,
         "proof_intents": proof_intents,
