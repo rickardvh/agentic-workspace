@@ -37,6 +37,7 @@ PYTEST_CAPTURE_MODE_ENV = "AW_SESSION_LOG_PYTEST_CAPTURE"
 SESSION_LOG_KIND = "agentic-workspace/session-log/v1"
 SESSION_LOG_INDEX_KIND = "agentic-workspace/session-log-index/v1"
 DEFAULT_MAX_INLINE_OUTPUT_BYTES = 64 * 1024
+DEFAULT_SLOW_COMMAND_DURATION_MS = 120000
 LARGE_OUTPUT_SUMMARY_LIMIT = 5
 SESSION_LOG_NON_AUTHORITATIVE_FOR = ("Planning", "Memory", "proof", "closeout")
 SESSION_LOG_LOCAL_BOUNDARY = {
@@ -1533,6 +1534,107 @@ def _entry_brief(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    groups: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        duration_ms = int(entry.get("duration_ms", 0) or 0)
+        if duration_ms < DEFAULT_SLOW_COMMAND_DURATION_MS:
+            continue
+        command = str(entry.get("command", "")).strip()
+        normalized_class = (
+            "validation-command" if "pytest" in command or " make test" in command or command.startswith("make test") else "command"
+        )
+        group_key = f"{normalized_class}\0{command}"
+        group = groups.setdefault(
+            group_key,
+            {
+                "command": command,
+                "normalized_command_class": normalized_class,
+                "durations": [],
+                "evidence_refs": [],
+                "timestamps": [],
+            },
+        )
+        group["durations"].append(duration_ms)
+        entry_id = str(entry.get("id", "")).strip()
+        if entry_id:
+            group["evidence_refs"].append(entry_id)
+        timestamp = str(entry.get("started_at") or entry.get("timestamp") or entry.get("finished_at") or "").strip()
+        if timestamp:
+            group["timestamps"].append(timestamp)
+
+    candidates: list[dict[str, Any]] = []
+    for group in sorted(groups.values(), key=lambda item: max(item["durations"]), reverse=True):
+        durations = [int(item) for item in group["durations"]]
+        occurrence_count = len(durations)
+        duration_ms_max = max(durations)
+        duration_ms_total = sum(durations)
+        recurrence = "recurring" if occurrence_count > 1 else "single-observation"
+        command = str(group["command"])
+        digest = hashlib.sha256(f"{group['normalized_command_class']}\n{command}".encode("utf-8")).hexdigest()[:10]
+        timestamps = sorted(str(item) for item in group["timestamps"] if str(item).strip())
+        severity = (
+            "protective-action" if recurrence == "recurring" or duration_ms_max >= DEFAULT_SLOW_COMMAND_DURATION_MS * 4 else "attention"
+        )
+        signal_recurrence = "repeated" if recurrence == "recurring" else "first_seen"
+        signal_state = "active" if severity == "protective-action" else "active"
+        applicability = "applicable-to-proof-route-maintenance" if normalized_class == "validation-command" else "review-before-use"
+        lifecycle_status = "live-applicable" if severity == "protective-action" else "candidate-local-observation"
+        candidates.append(
+            {
+                "id": f"slow-command:{digest}",
+                "summary": f"{recurrence} slow command ({occurrence_count} run(s), max {duration_ms_max}ms): {command}",
+                "owner": "proof-route-maintenance",
+                "remediation_owner": "proof-router",
+                "lifecycle_status": lifecycle_status,
+                "recurrence": recurrence,
+                "occurrence_count": occurrence_count,
+                "duration_ms": duration_ms_max,
+                "duration_ms_max": duration_ms_max,
+                "duration_ms_total": duration_ms_total,
+                "threshold_ms": DEFAULT_SLOW_COMMAND_DURATION_MS,
+                "normalized_command_class": str(group["normalized_command_class"]),
+                "severity": severity,
+                "route_identity": f"proof-route-friction:{digest}",
+                "treatment": "prefer focused proof; require structured escalation before promoting broad/high-cost proof",
+                "evidence_refs": list(dict.fromkeys(str(item) for item in group["evidence_refs"] if str(item).strip())),
+                "first_seen_at": timestamps[0] if timestamps else "",
+                "last_seen_at": timestamps[-1] if timestamps else "",
+                "evidence_destinations": ["Memory improvement signal", "proof-route refinement"],
+                "promotion_boundary": "Session-log friction is local diagnostic evidence; durable routing changes need Planning, Memory, issue, or PR evidence.",
+                "improvement_signal": {
+                    "candidate_kind": "improvement_signal_candidate",
+                    "kind": "validation_friction",
+                    "state": signal_state,
+                    "lifecycle_state": signal_state,
+                    "lifecycle_source": "session_log.slow_command",
+                    "applicability": applicability,
+                    "applicable_live": lifecycle_status == "live-applicable",
+                    "applicable_to_current_route": normalized_class == "validation-command",
+                    "observed_during": "session-log analyze",
+                    "symptom": f"{command} exceeded the slow-command threshold.",
+                    "cost": f"{occurrence_count} run(s), total {duration_ms_total}ms, max {duration_ms_max}ms.",
+                    "suspected_owner": "proof-router",
+                    "likely_remediation": "validation",
+                    "confidence": "medium" if severity == "protective-action" else "low",
+                    "recurrence": signal_recurrence,
+                    "immediate_action": "route" if severity == "protective-action" else "review",
+                    "retention": "shrink_after_fix",
+                    "source": "session_log.slow_command",
+                    "route_identity": f"proof-route-friction:{digest}",
+                    "allowed_lifecycle_states": ["active", "mitigated", "accepted-risk", "promoted-to-issue", "obsolete"],
+                    "consumption_rule": (
+                        "Only active, applicable validation-friction signals may influence proof-route escalation; "
+                        "candidate-local observations require review or durable routing before they become live escalation inputs."
+                    ),
+                    "retire_when": "focused proof route or test strategy removes the repeated slow-command pressure",
+                    "evidence_refs": list(dict.fromkeys(str(item) for item in group["evidence_refs"] if str(item).strip())),
+                },
+            }
+        )
+    return candidates
+
+
 def _friction_candidates(
     *,
     entries: list[dict[str, Any]],
@@ -1574,6 +1676,7 @@ def _friction_candidates(
                 "owner": "operating-loop",
             }
         )
+    candidates.extend(_slow_command_friction_candidates(entries))
     for entry in entries:
         if _is_session_log_analyzer_entry(entry):
             continue

@@ -924,10 +924,8 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert payload["proof_narrowness"]["status"] == "broad_required"
     assert payload["proof_narrowness"]["broad_suite_boundary_status"] == "required_acceptance_boundary"
     assert payload["proof_narrowness"]["broad_suite_boundary_reason"]
-    assert payload["next"]["action"] == "run-validation-command"
-    assert payload["next"]["command"] == (
-        "uv run --active python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json"
-    )
+    assert payload["next"]["action"] == "route-refinement-required"
+    assert payload["next"]["command"] is None
     assert "make test-workspace" not in payload["required_commands"]
     assert payload["warnings"] == []
     assert "answer" not in payload
@@ -936,6 +934,44 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert payload["detail_command_template"]["runnable"] is False
     assert payload["detail_command_template"]["placeholders"] == {"paths": ["generated/workspace/python/cli.py"]}
     assert len(encoded) < 4300
+
+
+def test_proof_route_escalation_gate_blocks_generic_broad_fallback(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "generated/workspace/python/cli.py",
+                "--select",
+                "proof_route_escalation_gate,proof_narrowness,proof_route_strategy_decision,proof_next_decision,manual_verification",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    boundary = values["proof_narrowness"]["broad_suite_boundary"]
+    gate = values["proof_route_escalation_gate"]
+    assert boundary["status"] == "explicit-escalation-required"
+    assert boundary["requires_explicit_escalation"] is True
+    assert gate["status"] == "blocked-explicit-escalation-required"
+    assert gate["requires_explicit_escalation"] is True
+    assert gate["friction_inputs"]["recurring_validation_friction"] == "lifecycle-managed active validation-friction improvement signals"
+    assert gate["friction_inputs"]["applicable_live_findings"] == []
+    assert gate["friction_inputs"]["candidate_only_sources"] == ["session-log slow-command friction candidates"]
+    assert gate["proof_route_strategy_decision"]["outcome"] == "broad-escalation-required"
+    assert gate["cross_surface_projection"]["route_decision_surface"] == "proof_route_strategy_decision"
+    assert values["proof_route_strategy_decision"]["claim_effect"] == "claim-blocked"
+    assert values["proof_next_decision"]["next"]["action"] == "route-refinement-required"
+    assert values["proof_next_decision"]["next"]["command"] is None
+    assert values["manual_verification"]["status"] == "route-refinement-required"
 
 
 def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:
@@ -4318,7 +4354,12 @@ def test_proof_changed_selector_broadens_contract_plus_cli_changes(tmp_path: Pat
         "verification:requirement_grounding_delegation",
     ]
     assert answer["escalate_when"][0] == "changed paths span multiple validation lanes; run all selected commands or split the work"
-    assert "make test-workspace" in answer["required_commands"]
+    assert "make test-workspace" not in answer["required_commands"]
+    assert "make test-workspace" in answer["optional_commands"]
+    workspace_lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "workspace_cli")
+    assert workspace_lane["focused_route_reduction"]["status"] == "broad-proof-withheld-for-explicit-escalation"
+    assert answer["proof_narrowness"]["broad_suite_boundary"]["status"] == "explicit-escalation-required"
+    assert answer["proof_route_escalation_gate"]["status"] == "blocked-explicit-escalation-required"
 
 
 def test_proof_changed_selector_escalates_for_cross_lane_changes(tmp_path: Path, capsys) -> None:
@@ -4726,7 +4767,29 @@ def test_proof_route_strategy_decision_keeps_same_owner_multi_route_scope_focuse
     _write_repo_local_proof_target(tmp_path)
     _write(
         tmp_path / "Makefile",
-        (tmp_path / "Makefile").read_text(encoding="utf-8") + "\nlint-workspace:\n\tpython -c \"print('workspace lint')\"\n",
+        (tmp_path / "Makefile").read_text(encoding="utf-8")
+        + """
+test-workspace-cli:
+\tpython -c "print('workspace cli')"
+
+test-workspace-proof:
+\tpython -c "print('workspace proof')"
+
+test-workspace-session-review:
+\tpython -c "print('workspace session review')"
+
+test-workspace-contracts:
+\tpython -c "print('workspace contracts')"
+
+test-workspace-generated-release:
+\tpython -c "print('workspace generated release')"
+
+test-workspace-integration:
+\tpython -c "print('workspace integration')"
+
+lint-workspace:
+\tpython -c "print('workspace lint')"
+""",
     )
     _write(
         tmp_path / ".agentic-workspace" / "config.toml",
@@ -4752,7 +4815,15 @@ owner = "workspace-cli-runtime"
 [assurance.domain_proof_lanes.workspace_broad_suite]
 purpose = "Explicit broad workspace validation route."
 applies_to_task_markers = ["full workspace validation"]
-commands = ["make test-workspace", "make lint-workspace"]
+commands = [
+  "make test-workspace-cli",
+  "make test-workspace-proof",
+  "make test-workspace-session-review",
+  "make test-workspace-contracts",
+  "make test-workspace-generated-release",
+  "make test-workspace-integration",
+  "make lint-workspace",
+]
 proof_profiles = ["workspace_behavior"]
 claim_boundary = "explicit-broad-escalation-required"
 owner = "workspace-cli-runtime"
@@ -4857,8 +4928,19 @@ owner = "workspace-cli-runtime"
     assert decision["outcome"] == "broad-escalated"
     assert decision["reason_code"] == "cross-domain-focused-routes"
     assert decision["broad_escalation"]["distinct_owners"] == ["generated-adapters", "workspace-cli-runtime"]
-    assert "make test-workspace" in values["required_commands"]
-    assert "make lint-workspace" in values["required_commands"]
+    assert decision["broad_escalation"]["matched_evidence"]
+    expected_broad_commands = [
+        "make test-workspace-cli",
+        "make test-workspace-proof",
+        "make test-workspace-session-review",
+        "make test-workspace-contracts",
+        "make test-workspace-generated-release",
+        "make test-workspace-integration",
+        "make lint-workspace",
+    ]
+    for command in expected_broad_commands:
+        assert command in values["required_commands"]
+    assert "make test-workspace" not in values["required_commands"]
     assert "domain:workspace_broad_suite" in [lane["id"] for lane in values["selected_lanes"]]
 
 
