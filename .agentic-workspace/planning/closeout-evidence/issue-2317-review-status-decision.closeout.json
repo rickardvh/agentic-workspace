@@ -15,13 +15,13 @@
   "outcome": "Structured ChatGPT review-status comments are classified from canonical decision and multiline unresolved sections before free-form next_action prose is considered.",
   "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2317",
   "evidence_refs": [
-    "uv run --active pytest tests/test_pr_comment_delta.py -q: 18 passed",
-    "make test-workspace: passed after staging the intended structured-file deletion/addition",
-    "make lint-workspace: passed",
-    "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json: passed; #2317 no longer active, predecessor #2301 remains active stack residue",
-    "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: passed with selected_module_health=healthy",
-    "uv run --active python scripts/check/check_planning_surfaces.py: passed",
-    "edited P1 lane execplan reference scan: passed"
+    "python scripts/github/pr_comment_delta.py --repo rickardvh/agentic-workspace --pr 2329 --format json: complete issue_comments/reviews/review_threads inspection at remote head 214572ae32be53c2d55990634eeed85ae4e712ac; remaining comments are CI/label/draft metadata blockers, not source change requests",
+    "uv run pytest tests/test_pr_comment_delta.py -q: 18 passed on rebased branch head b46026effd907b97e241e3b1b40f7d4a137c0d83",
+    "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json: passed; Planning surface warning_count=0 and #2290 remains the protected unrelated active plan",
+    "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: passed with selected_module_health=healthy and selected_warning_count=0",
+    "uv run python scripts/check/check_planning_surfaces.py: passed",
+    "make test-workspace: passed after rerun with absolute UV_CACHE_DIR; an earlier relative-cache proof attempt polluted conformance fixture roots and failed for environment-only .uv-cache files",
+    "make lint-workspace: passed"
   ],
   "residual": {
     "status": "closed",
@@ -32,14 +32,15 @@
     "provenance": "completed-plan cleanup retained compact closeout evidence instead of a full execplan archive",
     "reopen_trigger": "New evidence that canonical pr-review-recheck-v1 comments are misclassified."
   },
-  "revision": 1,
+  "revision": 2,
   "active_milestone": {
     "status": "completed"
   },
   "proof_report": {
-    "focused classifier proof": "uv run --active pytest tests/test_pr_comment_delta.py -q: 18 passed",
-    "final workspace proof": "make test-workspace: passed; make lint-workspace: passed",
-    "planning proof": "summary passed, planning doctor selected_module_health=healthy, planning surface checker passed, edited P1 lane dangling-reference scan passed"
+    "focused classifier proof": "uv run pytest tests/test_pr_comment_delta.py -q: 18 passed",
+    "final workspace proof": "make test-workspace passed after correcting the proof cache path; make lint-workspace passed",
+    "planning proof": "summary passed with warning_count=0; planning doctor selected_module_health=healthy selected_warning_count=0; planning surface checker passed",
+    "exact-head accounting": "The checked-in closeout records the exact rebased implementation/proof head before this closeout-only refresh; the PR body records the final pushed closeout commit because a commit cannot embed its own SHA."
   },
   "intent_satisfaction": {
     "was original intent fully satisfied?": "yes",
@@ -56,7 +57,11 @@
     "follow-on routed to": "none"
   },
   "execution_run": {
+    "rebased on": "PR #2328 base head 9c9add4be35c2c5c65188ade31fbebd589847f4b",
+    "branch head before closeout refresh": "b46026effd907b97e241e3b1b40f7d4a137c0d83",
+    "reason": "Refresh #2317 closeout after #2328 restored #2290 ownership and passed required startup-contract checks.",
     "changed surfaces": "scripts/github/pr_comment_delta.py; tests/test_pr_comment_delta.py; .agentic-workspace/planning closeout and lane records",
-    "next step": "push the reviewed branch head"
+    "terminal state": "archive",
+    "follow-on": "none"
   }
 }

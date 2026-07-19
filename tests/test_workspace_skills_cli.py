@@ -299,7 +299,7 @@ def test_registered_skill_dependency_closure_blocks_unresolved_resource(tmp_path
     assert skills[0].availability == "blocked"
     assert skills[0].blocked_reasons == ("missing-resource:review-contract",)
     assert workspace_runtime_core._recommend_skills(task_text="run a review", skills=skills) == []
-    monkeypatch.setattr(workspace_runtime_core, "_skill_catalog_sources", lambda: (source,))
+    monkeypatch.setattr(cli, "_skill_catalog_sources", lambda: (source,))
     assert workspace_runtime_core._skill_dependency_warnings(target_root=tmp_path) == [
         "skill 'review-pass' is blocked: missing-resource:review-contract"
     ]
@@ -382,8 +382,8 @@ def test_registered_skill_discovery_resolves_package_resource_when_target_regist
         default_scope="bundled",
         default_stability="fixture",
     )
-    monkeypatch.setattr(workspace_runtime_core, "_skill_catalog_sources", lambda: (source,))
-    monkeypatch.setattr(workspace_runtime_core, "_package_skill_registry_file", lambda _source: package_registry)
+    monkeypatch.setattr(cli, "_skill_catalog_sources", lambda: (source,))
+    monkeypatch.setattr(cli, "_package_skill_registry_file", lambda _source: package_registry)
 
     skills, warnings, _sources = workspace_runtime_core._discover_registered_skills(target_root=target)
 
@@ -424,7 +424,7 @@ def test_blocked_skill_match_is_preserved_outside_executable_recommendations(tmp
         default_scope="bundled",
         default_stability="fixture",
     )
-    monkeypatch.setattr(workspace_runtime_core, "_skill_catalog_sources", lambda: (source,))
+    monkeypatch.setattr(cli, "_skill_catalog_sources", lambda: (source,))
 
     full_payload = workspace_runtime_core._skills_payload(target_root=tmp_path, task_text="run a bounded review")
     compact = workspace_runtime_core._skills_recommendation_first_payload(
@@ -439,6 +439,147 @@ def test_blocked_skill_match_is_preserved_outside_executable_recommendations(tmp
     assert compact["blocked_recommendations"][0]["availability"] == "blocked"
     assert compact["blocked_recommendations"][0]["blocked_reasons"] == ["missing-resource:review-contract"]
     assert compact["blocked_recommendation_summary"]["repair_command"]
+
+
+def test_skill_dependency_doctor_uses_same_blocked_resolution_identity(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    registry = target / "REGISTRY.json"
+    registry.write_text(
+        json.dumps(
+            {
+                "resources": {"review-contract": {"path": ".agentic-workspace/reviews/contract.json"}},
+                "skills": [
+                    {
+                        "id": "review-pass",
+                        "path": "review-pass/SKILL.md",
+                        "summary": "run the bounded review pass",
+                        "required_resources": ["review-contract"],
+                        "activation_hints": {"phrases": ["bounded review"]},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    skill_file = target / "skills" / "review-pass" / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text("# Review pass\n", encoding="utf-8")
+    source = workspace_runtime_core.SkillCatalogSource(
+        name="fixture",
+        registry_path=Path("REGISTRY.json"),
+        skills_root=Path("skills"),
+        owner="fixture",
+        source_kind="fixture",
+        default_scope="bundled",
+        default_stability="fixture",
+    )
+    monkeypatch.setattr(cli, "_skill_catalog_sources", lambda: (source,))
+
+    assert cli.main(["skills", "--target", str(target), "--task", "run a bounded review", "--format", "json"]) == 0
+    skills_payload = json.loads(capsys.readouterr().out)
+    blocked = skills_payload["blocked_recommendations"][0]
+    blocked_diagnostic = blocked["dependency_diagnostics"][0]
+
+    assert skills_payload["recommendations"] == []
+    assert blocked["id"] == "review-pass"
+    assert blocked["blocked_reasons"] == ["missing-resource:review-contract"]
+    assert blocked["repair_command"] == "agentic-workspace upgrade --target . --format json"
+    assert blocked_diagnostic["repair_action_id"] == "repair-skill-dependency-review-pass-review-contract"
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    doctor_payload = json.loads(capsys.readouterr().out)
+    diagnostic = doctor_payload["skill_dependency_diagnostics"][0]
+    repair_action = doctor_payload["repair_actions"][0]
+
+    for key in (
+        "skill_id",
+        "resource_id",
+        "reason_code",
+        "expected_owner",
+        "expected_source",
+        "compatibility_state",
+        "repair_action_id",
+    ):
+        assert diagnostic[key] == blocked_diagnostic[key]
+    assert diagnostic["skill_id"] == "review-pass"
+    assert diagnostic["resource_id"] == "review-contract"
+    assert diagnostic["reason_code"] == "missing-resource:review-contract"
+    assert diagnostic["expected_owner"] == "repo-owned"
+    assert diagnostic["compatibility_state"] == "resource-unresolved"
+    assert doctor_payload["health"] == "attention-needed"
+    assert doctor_payload["action_required"] is True
+    assert doctor_payload["repair_plan"]["status"] == "safe-action-available"
+    assert doctor_payload["repair_plan"]["primary_next_action"]["id"] == diagnostic["repair_action_id"]
+    assert repair_action["id"] == diagnostic["repair_action_id"]
+    assert repair_action["reason_code"] == diagnostic["reason_code"]
+    assert repair_action["command"].endswith(f"agentic-workspace upgrade --target {target.as_posix()} --format json")
+
+
+def test_skill_dependency_doctor_is_quiet_for_package_resource_and_undeclared_optional_file(
+    tmp_path: Path, capsys, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target)]) == 0
+    capsys.readouterr()
+    package_root = tmp_path / "package"
+    package_skills_root = package_root / "skills"
+    package_registry = package_skills_root / "REGISTRY.json"
+    package_registry.parent.mkdir(parents=True)
+    package_registry.write_text(
+        json.dumps(
+            {
+                "resources": {
+                    "review-contract": {"package_path": "../resources/review-contract.json"},
+                    "optional-contract": {"path": ".agentic-workspace/reviews/optional.json"},
+                },
+                "skills": [
+                    {
+                        "id": "review-pass",
+                        "path": "review-pass/SKILL.md",
+                        "summary": "run the bounded review pass",
+                        "required_resources": ["review-contract"],
+                        "activation_hints": {"phrases": ["bounded review"]},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (package_root / "resources").mkdir()
+    (package_root / "resources" / "review-contract.json").write_text("{}", encoding="utf-8")
+    skill_file = package_skills_root / "review-pass" / "SKILL.md"
+    skill_file.parent.mkdir(parents=True)
+    skill_file.write_text("# Review pass\n", encoding="utf-8")
+    source = workspace_runtime_core.SkillCatalogSource(
+        name="package-fixture",
+        registry_path=Path("REGISTRY.json"),
+        skills_root=Path("skills"),
+        owner="fixture",
+        source_kind="fixture",
+        default_scope="bundled",
+        default_stability="fixture",
+    )
+    monkeypatch.setattr(cli, "_skill_catalog_sources", lambda: (source,))
+    monkeypatch.setattr(cli, "_package_skill_registry_file", lambda _source: package_registry)
+
+    assert cli.main(["skills", "--target", str(target), "--task", "run a bounded review", "--format", "json"]) == 0
+    skills_payload = json.loads(capsys.readouterr().out)
+    assert skills_payload["recommendations"][0]["id"] == "review-pass"
+    assert skills_payload.get("blocked_recommendations", []) == []
+
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    doctor_payload = json.loads(capsys.readouterr().out)
+    assert doctor_payload.get("skill_dependency_diagnostics", []) == []
+    assert doctor_payload.get("skill_dependency_warnings", []) == []
+    assert not any(action.get("action") == "repair-skill-dependency" for action in doctor_payload["repair_actions"])
 
 
 def test_skill_dependency_diagnostics_include_resource_provenance_and_repair(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -473,7 +614,8 @@ def test_skill_dependency_diagnostics_include_resource_provenance_and_repair(tmp
     assert diagnostics[0]["reason_code"] == "missing-resource:review-contract"
     assert diagnostics[0]["expected_owner"] == "repo-owned"
     assert diagnostics[0]["expected_source"].endswith(".agentic-workspace/reviews/contract.json")
-    assert diagnostics[0]["repair_command"]
+    assert diagnostics[0]["repair_command"] == "agentic-workspace upgrade --target . --format json"
+    assert diagnostics[0]["repair_action_id"] == "repair-skill-dependency-review-pass-review-contract"
 
 
 def test_registered_skill_dependency_closure_marks_unknown_resource_identity(tmp_path: Path) -> None:

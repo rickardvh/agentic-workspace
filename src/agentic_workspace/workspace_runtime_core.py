@@ -7598,7 +7598,9 @@ def _workspace_status_report(
             "detail": "gitignored local scratch space for temporary agent working files",
         }
     )
-    local_footprint = _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke) if include_local_footprint else None
+    local_footprint = (
+        _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke) if include_local_footprint else None
+    )
     if local_footprint is not None and local_footprint.get("status") == "attention":
         actions.append(
             {
@@ -9546,6 +9548,15 @@ def _run_lifecycle_command(
         repair_actions, manual_review_actions = _aggregate_repair_actions_from_reports(
             reports, target_root=target_root, cli_invoke=config.cli_invoke, command_name=command_name
         )
+        if command_name == "doctor" and skill_dependency_diagnostics:
+            repair_actions = [
+                *_skill_dependency_repair_actions(
+                    diagnostics=skill_dependency_diagnostics,
+                    target_root=target_root,
+                    cli_invoke=config.cli_invoke,
+                ),
+                *repair_actions,
+            ]
         if command_name == "doctor":
             cli_review_action = _cli_compatibility_manual_review_action(
                 target_root=target_root, cli_invoke=config.cli_invoke, cli_compatibility=cli_compatibility
@@ -12576,7 +12587,9 @@ def _scratch_entry_stat(path: Path) -> os.stat_result | None:
         return None
 
 
-def _walk_local_tree_no_follow(root: Path, *, max_entries: int, deadline: float) -> tuple[list[Path], list[dict[str, str]], bool]:
+def _walk_local_tree_no_follow(
+    root: Path, *, max_entries: int, deadline: float
+) -> tuple[list[Path], list[dict[str, str]], bool]:
     if root.is_symlink() or root.is_file():
         return [root], [], False
     files: list[Path] = []
@@ -51055,17 +51068,85 @@ def _skill_dependency_diagnostics(*, target_root: Path) -> list[dict[str, str]]:
     for skill in skills:
         if skill.availability != "blocked":
             continue
-        for diagnostic in skill.dependency_diagnostics:
-            diagnostics.append(
-                {
-                    **diagnostic,
-                    "skill_id": skill.skill_id,
-                    "skill_path": skill.path.as_posix(),
-                    "message": f"skill '{skill.skill_id}' is blocked: {diagnostic['reason_code']}",
-                    "repair_command": diagnostic.get("repair_command") or _skill_repair_command(skill),
-                }
-            )
+        diagnostics.extend(_skill_dependency_diagnostic_payloads(skill))
     return diagnostics
+
+
+def _skill_dependency_diagnostic_payloads(skill: RegisteredSkill) -> list[dict[str, str]]:
+    payloads: list[dict[str, str]] = []
+    for diagnostic in skill.dependency_diagnostics:
+        resource_id = str(diagnostic.get("resource_id", ""))
+        repair_command = str(diagnostic.get("repair_command") or _skill_repair_command(skill))
+        payloads.append(
+            {
+                **diagnostic,
+                "skill_id": skill.skill_id,
+                "skill_path": skill.path.as_posix(),
+                "message": f"skill '{skill.skill_id}' is blocked: {diagnostic['reason_code']}",
+                "repair_command": repair_command,
+                "repair_action_id": _skill_dependency_repair_action_id(skill_id=skill.skill_id, resource_id=resource_id),
+            }
+        )
+    return payloads
+
+
+def _skill_dependency_repair_action_id(*, skill_id: str, resource_id: str) -> str:
+    def _safe(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-") or "unknown"
+
+    return f"repair-skill-dependency-{_safe(skill_id)}-{_safe(resource_id)}"
+
+
+def _skill_dependency_repair_actions(
+    *, diagnostics: list[dict[str, str]], target_root: Path, cli_invoke: str
+) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    target = target_root.as_posix()
+    command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --format json",
+        cli_invoke=cli_invoke,
+    )
+    dry_run = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --dry-run --format json",
+        cli_invoke=cli_invoke,
+    )
+    proof_after = [_command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke)]
+    for diagnostic in diagnostics:
+        action_id = str(diagnostic.get("repair_action_id") or "").strip()
+        if not action_id or action_id in seen:
+            continue
+        seen.add(action_id)
+        actions.append(
+            {
+                "id": action_id,
+                "action": "repair-skill-dependency",
+                "invariant": "workspace.skill_dependency_resources_available",
+                "fault_class": "agent_operation_fault",
+                "severity": "warning",
+                "owner": str(diagnostic.get("expected_owner", "workspace")),
+                "safe_to_apply": True,
+                "risk": "low; refreshes workspace/package-managed surfaces through the existing upgrade authority",
+                "command": command,
+                "run": command,
+                "dry_run": dry_run,
+                "proof_after": proof_after,
+                "affected_surfaces": [str(diagnostic.get("expected_source", ""))],
+                "current_fault_summary": str(diagnostic.get("message", "")),
+                "do_not": [
+                    "Do not recommend the blocked skill as executable until its mandatory resource is available.",
+                    "Do not use catalog inspection as the repair action for a missing mandatory dependency.",
+                ],
+                "skill_id": str(diagnostic.get("skill_id", "")),
+                "resource_id": str(diagnostic.get("resource_id", "")),
+                "reason_code": str(diagnostic.get("reason_code", "")),
+                "expected_owner": str(diagnostic.get("expected_owner", "")),
+                "expected_source": str(diagnostic.get("expected_source", "")),
+                "compatibility_state": str(diagnostic.get("compatibility_state", "")),
+                "repair_identity": action_id,
+            }
+        )
+    return actions
 
 
 def _recommend_agent_aids(*, task_text: str, aids: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -51291,15 +51372,22 @@ def _skill_resource_diagnostic(
             "expected_owner": "skill-registry",
             "expected_source": registry_file.as_posix(),
             "compatibility_state": "unknown-resource-identity",
-            "repair_command": "agentic-workspace skills --target . --select skills,sources --format json",
+            "repair_command": "agentic-workspace upgrade --target . --format json",
         }
     repo_path, package_path = resource_paths[resource_id]
     candidates: list[tuple[str, Path]] = []
-    if repo_path.as_posix():
+    if repo_path.as_posix() and repo_path.as_posix() != ".":
         candidates.append(("repo-owned", target_root / repo_path))
-    if package_path.as_posix():
+    if package_path.as_posix() and package_path.as_posix() != ".":
         package_root = package_registry_file.parent if package_registry_file is not None else registry_file.parent
         candidates.append(("package-owned", package_root / package_path))
+        if package_registry_file is not None and package_path.as_posix().startswith("../bootstrap/"):
+            candidates.append(
+                (
+                    "package-owned",
+                    package_registry_file.parent.parent / "_payload" / package_path.as_posix().removeprefix("../bootstrap/"),
+                )
+            )
     for owner, candidate in candidates:
         if candidate.is_file():
             return None
@@ -51312,12 +51400,12 @@ def _skill_resource_diagnostic(
         "expected_owner": expected_owner,
         "expected_source": expected_source,
         "compatibility_state": "resource-unresolved",
-        "repair_command": "agentic-workspace skills --target . --select skills,sources --format json",
+        "repair_command": "agentic-workspace upgrade --target . --format json",
     }
 
 
 def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
-    return {
+    payload: dict[str, Any] = {
         "id": skill.skill_id,
         "path": skill.path.as_posix(),
         "owner": skill.owner,
@@ -51337,6 +51425,9 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
         "availability": skill.availability,
         "blocked_reasons": list(skill.blocked_reasons),
     }
+    if skill.dependency_diagnostics:
+        payload["dependency_diagnostics"] = _skill_dependency_diagnostic_payloads(skill)
+    return payload
 
 
 def _skill_visibility(*, scope: str) -> str:
@@ -51354,7 +51445,7 @@ def _skill_repair_command(skill: RegisteredSkill) -> str:
     for diagnostic in skill.dependency_diagnostics:
         if diagnostic.get("repair_command"):
             return str(diagnostic["repair_command"])
-    return "agentic-workspace skills --target . --select skills,sources --format json"
+    return "agentic-workspace upgrade --target . --format json"
 
 
 def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill], availability: str = "available") -> list[SkillRecommendation]:
