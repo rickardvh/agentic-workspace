@@ -1,0 +1,62 @@
+{
+  "kind": "planning-closeout-evidence/v1",
+  "title": "Issue 2301 startup CLI contract drift",
+  "plan_id": "issue-2301-startup-cli-contract-drift",
+  "created_at": "2026-07-16T17:58:00+00:00",
+  "source_plan": ".agentic-workspace/planning/execplans/issue-2301-startup-cli-contract-drift.plan.json",
+  "intended_archive": ".agentic-workspace/planning/execplans/archive/issue-2301-startup-cli-contract-drift.plan.json",
+  "retention": {
+    "state": "cleanup-distilled-without-full-archive",
+    "reason": "PR #2328 external review required completed Planning history instead of live/current relations and final proof evidence.",
+    "canonical_evidence": "compact closeout tombstone",
+    "ordinary_route": "report --section closeout_report --format json"
+  },
+  "claim_level": "slice",
+  "outcome": "Startup CLI contract drift for #2301 was implemented and validated on PR #2328; this repair records it as completed history instead of active work.",
+  "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2301",
+  "evidence_refs": [
+    "https://github.com/rickardvh/agentic-workspace/pull/2328",
+    "e9fe13852e50f2d76244a289f86a4b3564624927",
+    "PR #2328 exact-head CI at e9fe13852e50f2d76244a289f86a4b3564624927: workspace/package checks and PR Semver Label passed",
+    "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json: passed; no active Planning item/execplan remains",
+    "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: selected Planning health healthy",
+    "uv run --active python scripts/check/check_planning_surfaces.py: passed",
+    "targeted P1/#2279 dangling-current scan: passed"
+  ],
+  "residual": {
+    "status": "closed",
+    "owner": "archive"
+  },
+  "closure": {
+    "authority": "planning closeout writer",
+    "provenance": "PR #2328 implementation and review-loop repair",
+    "reopen_trigger": "None unless new evidence shows the #2301 implementation or closeout was incomplete."
+  },
+  "revision": 2,
+  "active_milestone": {
+    "status": "completed"
+  },
+  "proof_report": {
+    "implementation proof": "uv run --active pytest tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py -q: 217 passed on the PR #2328 implementation head",
+    "planning repair proof": "summary, planning doctor, planning-surface check, and targeted P1/#2279 dangling-current scan passed after closeout repair",
+    "ci proof": "PR #2328 exact-head CI at e9fe13852e50f2d76244a289f86a4b3564624927 passed before this terminal closeout refresh; PR body records the final pushed-head CI result"
+  },
+  "intent_satisfaction": {
+    "was original intent fully satisfied?": "yes",
+    "unsolved intent passed to": "archive"
+  },
+  "closure_check": {
+    "closeout scope": "slice",
+    "larger-intent status": "closed",
+    "closure decision": "archive-and-close",
+    "reopen trigger": "None unless new evidence shows the #2301 implementation or closeout was incomplete."
+  },
+  "execution_summary": {
+    "outcome delivered": "Startup CLI contract drift is no longer represented as live/current Planning work on the #2328 branch.",
+    "follow-on routed to": "none"
+  },
+  "execution_run": {
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/lanes/p1-cli-contract-integrity.lane.json; .agentic-workspace/planning/closeout-evidence/issue-2301-startup-cli-contract-drift.closeout.json",
+    "next step": "compact closeout evidence retained; no active planning work remains"
+  }
+}

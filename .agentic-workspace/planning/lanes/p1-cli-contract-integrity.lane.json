@@ -10,77 +10,18 @@
   "technical_strategy": "Tighten the lane strategy before the first slice starts.",
   "technology_choices": [],
   "slice_sequence": [
-    {
-      "id": "issue-2301-startup-cli-contract-drift",
-      "title": "Issue 2301 startup CLI contract drift",
-      "status": "active",
-      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2301-startup-cli-contract-drift.plan.json",
-      "depends_on": [],
-      "purpose_for_lane": "Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work."
-    },
-    {
-      "id": "issue-2318-review-owner-env",
-      "title": "Issue 2318 review owner-routing test isolation",
-      "status": "completed",
-      "execplan_ref": "",
-      "depends_on": [],
-      "purpose_for_lane": "Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work.",
-      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2318-review-owner-env.closeout.json",
-      "residual_after_slice": "Closed; compact closeout evidence retained instead of a live execplan."
-    },
-    {
-      "id": "issue-2317-review-status-decision",
-      "title": "Issue 2317 review status decision classification",
-      "status": "completed",
-      "execplan_ref": "",
-      "depends_on": [],
-      "purpose_for_lane": "Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work.",
-      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2317-review-status-decision.closeout.json",
-      "residual_after_slice": "Closed after structured review-status parsing handled canonical multiline and merge-ready review comments."
-    },
-    {
-      "id": "issue-2311-review-worktree-isolation",
-      "title": "Issue 2311 review worktree isolation",
-      "status": "completed",
-      "execplan_ref": "",
-      "depends_on": [],
-      "purpose_for_lane": "Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work.",
-      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2311-review-worktree-isolation.closeout.json",
-      "residual_after_slice": "Closed; compact closeout evidence retained instead of a live execplan."
-    },
-    {
-      "id": "issue-2257-skill-dependency-closure",
-      "title": "Issue 2257 routed skill dependency closure",
-      "status": "active",
-      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2257-skill-dependency-closure.plan.json",
-      "depends_on": [],
-      "purpose_for_lane": "Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work."
-    }
+    {"id":"issue-2301-startup-cli-contract-drift","title":"Issue 2301 startup CLI contract drift","status":"completed","execplan_ref":"","depends_on":[],"purpose_for_lane":"Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work.","proof":".agentic-workspace/planning/closeout-evidence/issue-2301-startup-cli-contract-drift.closeout.json","residual_after_slice":"No live/current relation remains for #2301; later CLI contract work should promote a new bounded slice."},
+    {"id":"issue-2318-review-owner-env","title":"Issue 2318 review owner-routing test isolation","status":"completed","execplan_ref":"","depends_on":[],"purpose_for_lane":"Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work.","proof":".agentic-workspace/planning/closeout-evidence/issue-2318-review-owner-env.closeout.json","residual_after_slice":"Closed; compact closeout evidence retained instead of a live execplan."},
+    {"id":"issue-2317-review-status-decision","title":"Issue 2317 review status decision classification","status":"completed","execplan_ref":"","depends_on":[],"purpose_for_lane":"Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work.","proof":".agentic-workspace/planning/closeout-evidence/issue-2317-review-status-decision.closeout.json","residual_after_slice":"Closed after structured review-status parsing handled canonical multiline and merge-ready review comments."},
+    {"id":"issue-2311-review-worktree-isolation","title":"Issue 2311 review worktree isolation","status":"completed","execplan_ref":"","depends_on":[],"purpose_for_lane":"Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work.","proof":".agentic-workspace/planning/closeout-evidence/issue-2311-review-worktree-isolation.closeout.json","residual_after_slice":"Closed; compact closeout evidence retained instead of a live execplan."},
+    {"id":"issue-2257-skill-dependency-closure","title":"Issue 2257 routed skill dependency closure","status":"active","execplan_ref":".agentic-workspace/planning/execplans/issue-2257-skill-dependency-closure.plan.json","depends_on":[],"purpose_for_lane":"Group CLI startup drift, invocation authority, compact-output, and CI contract enforcement P1 work."}
   ],
   "current_slice": "issue-2257-skill-dependency-closure",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Require focused startup and generated-package tests plus the full workspace CLI suite and required CI coverage.",
-  "proof_aggregation": {
-    "status": "not-started",
-    "evidence": [],
-    "known_gaps": []
-  },
-  "residual_lane_work": "not evaluated",
-  "lane_to_epic_contribution": "not evaluated",
-  "parent_close_permission": "not-evaluated",
-  "closeout_state": {
-    "status": "open",
-    "summary": "",
-    "residual_work": "",
-    "next_owner": ""
-  },
-  "references": [
-    {
-      "kind": "decomposition",
-      "target": ".agentic-workspace/planning/decompositions/p1-priority-lanes.decomposition.json",
-      "label": ".agentic-workspace/planning/decompositions/p1-priority-lanes.decomposition.json",
-      "role": "parent"
-    }
-  ],
+  "proof_aggregation": {"status":"not-started","evidence":[],"known_gaps":[]},
+  "residual_lane_work": "not evaluated", "lane_to_epic_contribution": "not evaluated", "parent_close_permission": "not-evaluated",
+  "closeout_state": {"status":"open","summary":"","residual_work":"","next_owner":""},
+  "references": [{"kind":"decomposition","target":".agentic-workspace/planning/decompositions/p1-priority-lanes.decomposition.json","label":".agentic-workspace/planning/decompositions/p1-priority-lanes.decomposition.json","role":"parent"}],
   "notes": ""
 }

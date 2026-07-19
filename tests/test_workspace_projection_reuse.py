@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
-from tests.workspace_cli_support import _init_git_repo, cli
+from tests.workspace_cli_support import cli
 
 
 def _target(tmp_path: Path) -> Path:
-    _init_git_repo(tmp_path)
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
     return tmp_path
 
@@ -43,10 +45,17 @@ def test_doctor_reuses_unchanged_projection_before_full_builder_and_invalidates_
 
     scratch = target / ".agentic-workspace" / "local" / "scratch" / "diagnostic.txt"
     scratch.parent.mkdir(parents=True, exist_ok=True)
-    scratch.write_text("decision-relevant local diagnostic\n", encoding="utf-8")
+    scratch.write_text("runtime-only scratch artifact\n", encoding="utf-8")
     assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
     after_scratch = json.loads(capsys.readouterr().out)
-    assert after_scratch.get("kind") != "agentic-workspace/unchanged-projection/v1"
+    assert after_scratch["kind"] == "agentic-workspace/unchanged-projection/v1"
+
+    external_evidence = target / ".agentic-workspace" / "local" / "cache" / "external-intent-evidence.json"
+    external_evidence.parent.mkdir(parents=True, exist_ok=True)
+    external_evidence.write_text('{"kind": "planning-external-intent-evidence/v1", "items": []}\n', encoding="utf-8")
+    assert cli.main(["doctor", "--target", str(target), "--format", "json"]) == 0
+    after_evidence = json.loads(capsys.readouterr().out)
+    assert after_evidence.get("kind") != "agentic-workspace/unchanged-projection/v1"
 
     config = target / ".agentic-workspace" / "config.toml"
     config.write_text(config.read_text(encoding="utf-8") + "\n# dependency changed\n", encoding="utf-8")
@@ -145,6 +154,95 @@ def test_dependency_digest_ignores_revision_only_changes_for_declared_dependenci
     unchanged, _ = projection_reuse.dependency_digest(root=target, operation="summary", query={})
 
     assert unchanged == first
+
+
+def test_dependency_digest_excludes_crash_recovery_worktrees_and_virtualenvs(tmp_path: Path) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+    first, first_dependencies = projection_reuse.dependency_digest(root=target, operation="report", query={})
+    runtime_file = (
+        target
+        / ".agentic-workspace"
+        / "local"
+        / "chatgpt-review-worktrees"
+        / "pr-9999"
+        / ".venv"
+        / "Lib"
+        / "site-packages"
+        / "dependency.py"
+    )
+    runtime_file.parent.mkdir(parents=True)
+    runtime_file.write_text("VALUE = 1\n", encoding="utf-8")
+
+    unchanged, dependencies = projection_reuse.dependency_digest(root=target, operation="report", query={})
+
+    assert unchanged == first
+    assert dependencies == first_dependencies
+    assert not any("chatgpt-review-worktrees" in path or "/.venv/" in path for path in dependencies)
+
+
+def test_dependency_digest_fails_open_when_git_probe_times_out(tmp_path: Path, monkeypatch) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+
+    def _timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(projection_reuse.subprocess, "run", _timeout)
+
+    result = projection_reuse.dependency_digest(root=target, operation="report", query={})
+    digest, dependencies = result
+
+    assert digest
+    assert ".agentic-workspace/config.toml" in dependencies
+    assert result.status == "unavailable"
+    assert result.findings[0]["section"] == "projection_dependency_git_probe"
+
+
+def test_report_dependency_budget_exhaustion_returns_degraded_compact_payload(tmp_path: Path, capsys, monkeypatch) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+    capsys.readouterr()
+    budget_type = projection_reuse.DependencyScanBudget
+    monkeypatch.setattr(
+        projection_reuse,
+        "DependencyScanBudget",
+        lambda: budget_type(max_entries=1, time_budget_seconds=1.0),
+    )
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload.get("kind") != "agentic-workspace/unchanged-projection/v1"
+    degradation = payload["projection_reuse"]
+    assert degradation["status"] == "degraded"
+    assert degradation["findings"][0]["section"] == "projection_dependency_discovery"
+    assert degradation["findings"][0]["status"] == "truncated"
+
+
+def test_report_git_timeout_disables_reuse_and_names_failed_probe(tmp_path: Path, capsys, monkeypatch) -> None:
+    from agentic_workspace import projection_reuse
+
+    target = _target(tmp_path)
+    capsys.readouterr()
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def _timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(projection_reuse.subprocess, "run", _timeout)
+
+    assert cli.main(["report", "--target", str(target), "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload.get("kind") != "agentic-workspace/unchanged-projection/v1"
+    finding = payload["projection_reuse"]["findings"][0]
+    assert finding["section"] == "projection_dependency_git_probe"
+    assert finding["status"] == "unavailable"
 
 
 def test_volatile_projection_fails_open_and_cache_is_bounded(tmp_path: Path) -> None:
