@@ -58,6 +58,6 @@
   },
   "execution_run": {
     "changed surfaces": "No product source changes; existing tools/chatgpt_review_loop.py implementation verified",
-    "next step": "no active planning work remains"
+    "next step": "no active #2311 planning work remains; unrelated active #2290 continuation state is preserved"
   }
 }

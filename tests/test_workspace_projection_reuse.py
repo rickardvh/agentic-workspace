@@ -201,7 +201,9 @@ def test_dependency_digest_fails_open_when_git_probe_times_out(tmp_path: Path, m
     assert result.findings[0]["section"] == "projection_dependency_git_probe"
 
 
-def test_report_dependency_budget_exhaustion_returns_degraded_compact_payload(tmp_path: Path, capsys, monkeypatch) -> None:
+def test_report_dependency_budget_exhaustion_returns_degraded_compact_payload(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
     from agentic_workspace import projection_reuse
 
     target = _target(tmp_path)
