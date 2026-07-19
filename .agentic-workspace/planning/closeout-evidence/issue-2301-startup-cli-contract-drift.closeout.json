@@ -16,12 +16,17 @@
   "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2301",
   "evidence_refs": [
     "https://github.com/rickardvh/agentic-workspace/pull/2328",
-    "e9fe13852e50f2d76244a289f86a4b3564624927",
-    "PR #2328 exact-head CI at e9fe13852e50f2d76244a289f86a4b3564624927: workspace/package checks and PR Semver Label passed",
-    "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json: passed; no active Planning item/execplan remains",
+    "41a8dc681f7b2f440846a9f16b038282c5fa842d",
+    "PR #2328 implementation/proof head 41a8dc681f7b2f440846a9f16b038282c5fa842d: restored unrelated #2290 live Planning owner, repaired startup-contract test drift, and fixed report local_aw_state runtime wrapper proof failure",
+    "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json: passed; #2290 is the active Planning item/execplan and #2301 remains completed history",
     "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: selected Planning health healthy",
     "uv run --active python scripts/check/check_planning_surfaces.py: passed",
-    "targeted P1/#2279 dangling-current scan: passed"
+    "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json: shape_in_sync",
+    "make test-workspace: passed",
+    "make lint-workspace: passed",
+    "make typecheck: passed",
+    "uv run pytest tests/test_workspace_cli.py -q: 217 passed",
+    "git diff --check: passed"
   ],
   "residual": {
     "status": "closed",
@@ -37,9 +42,9 @@
     "status": "completed"
   },
   "proof_report": {
-    "implementation proof": "uv run --active pytest tests/test_workspace_cli.py tests/test_workspace_proof_generated_packages_cli.py -q: 217 passed on the PR #2328 implementation head",
-    "planning repair proof": "summary, planning doctor, planning-surface check, and targeted P1/#2279 dangling-current scan passed after closeout repair",
-    "ci proof": "PR #2328 exact-head CI at e9fe13852e50f2d76244a289f86a4b3564624927 passed before this terminal closeout refresh; PR body records the final pushed-head CI result"
+    "implementation proof": "make test-workspace passed; uv run pytest tests/test_workspace_cli.py -q passed with 217 tests; make lint-workspace passed; make typecheck passed",
+    "planning repair proof": "summary showed #2290 restored as the active owner and #2301 absent from live/current Planning; planning doctor scoped to planning was healthy; check_planning_surfaces.py passed",
+    "ci proof": "Local exact implementation/proof head 41a8dc681f7b2f440846a9f16b038282c5fa842d passed the required proof set before this closeout evidence refresh; PR body and checks record the final pushed-head CI result."
   },
   "intent_satisfaction": {
     "was original intent fully satisfied?": "yes",

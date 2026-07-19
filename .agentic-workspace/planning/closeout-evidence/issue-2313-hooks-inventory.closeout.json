@@ -51,6 +51,6 @@
   },
   "execution_run": {
     "changed surfaces": "src/agentic_workspace/contracts/structured_file_inventory.json via 4ccee3f58a5f63dae77c9e6e8ac3068cbe2f45ab, PR #2315 / a9d44625d05662cba899e490f08c064f26985c35, and PR #2320 / bf8777191f050241e4fb08b21ed338484821e48a; verified by tests/test_structured_file_inventory.py.",
-    "next step": "no active planning work remains"
+    "next step": "no active #2313 planning work remains; unrelated active #2290 continuation state is preserved"
   }
 }

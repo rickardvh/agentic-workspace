@@ -8865,12 +8865,11 @@ def test_summary_task_scoped_profile_omits_historical_audit_detail(tmp_path: Pat
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["profile"] == "compact-task"
-    assert payload["task_scope"]["task_text_available"] is True
-    assert payload["task_scope"]["changed_paths"] == ["generated/workspace/python/cli.py"]
+    assert payload["profile"] == "tiny"
     assert "detail_commands" in payload
-    assert "historical_audit_pressure" not in payload
-    assert payload["omitted_context"]["historical_audit_pressure"].startswith("not relevant")
+    assert payload["detail_commands"]["task_scoped"] == "agentic-workspace summary --verbose --task <task> --format json"
+    assert "task_scope" not in payload
+    assert "historical_audit_pressure" not in json.dumps(payload)
 
 
 def test_adaptive_assurance_end_to_end_closeout_flow(tmp_path: Path, capsys) -> None:
