@@ -2091,7 +2091,7 @@ def planning_summary(
     changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     target_root = resolve_target_root(target)
-    if profile == "tiny" and not task_text and not changed_paths:
+    if profile == "tiny":
         return _planning_summary_tiny_fast(target_root=target_root)
     todo_path = target_root / "TODO.md"
     legacy_todo_path = target_root / PLANNING_STATE_PATH

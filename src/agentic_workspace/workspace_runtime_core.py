@@ -7527,7 +7527,13 @@ def _filter_minimal_bootstrap_module_report(report: dict[str, Any]) -> dict[str,
 
 
 def _workspace_status_report(
-    *, target_root: Path, selected_modules: list[str], descriptors: dict[str, ModuleDescriptor], command_name: str, config: WorkspaceConfig
+    *,
+    target_root: Path,
+    selected_modules: list[str],
+    descriptors: dict[str, ModuleDescriptor],
+    command_name: str,
+    config: WorkspaceConfig,
+    include_local_footprint: bool = True,
 ) -> dict[str, Any]:
     actions: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
@@ -7588,8 +7594,10 @@ def _workspace_status_report(
             "detail": "gitignored local scratch space for temporary agent working files",
         }
     )
-    local_footprint = _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke)
-    if local_footprint.get("status") == "attention":
+    local_footprint = (
+        _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke) if include_local_footprint else None
+    )
+    if local_footprint is not None and local_footprint.get("status") == "attention":
         actions.append(
             {
                 "kind": "warning",
@@ -9320,6 +9328,7 @@ def _run_lifecycle_command(
     to_payload_target: bool = False,
     footprint_profile: str | None = None,
     mirror_payload: bool = False,
+    include_local_footprint: bool = True,
 ) -> dict[str, Any]:
     if command_name == "upgrade" and local_only_repo_root is None and _has_local_only_workspace_state(target_root=target_root):
         local_only_repo_root = target_root
@@ -9362,6 +9371,7 @@ def _run_lifecycle_command(
                 descriptors=descriptors,
                 command_name=command_name,
                 config=config,
+                include_local_footprint=include_local_footprint,
             )
         )
     elif command_name == "upgrade":
@@ -10751,6 +10761,7 @@ def _run_report_command(
         non_interactive=False,
         config=config,
         compact_status=False,
+        include_local_footprint=False,
     )
     warnings = list(status_payload.get("warnings", []))
     aggregated_findings: list[dict[str, Any]] = []
@@ -12558,34 +12569,55 @@ def _scratch_entry_stat(path: Path) -> os.stat_result | None:
         return None
 
 
-def _walk_local_tree_no_follow(root: Path) -> tuple[list[Path], list[dict[str, str]]]:
+def _walk_local_tree_no_follow(
+    root: Path, *, max_entries: int, deadline: float
+) -> tuple[list[Path], list[dict[str, str]], bool]:
     if root.is_symlink() or root.is_file():
-        return [root], []
+        return [root], [], False
     files: list[Path] = []
     errors: list[dict[str, str]] = []
     stack = [root]
+    entry_count = 0
+    truncated = False
     while stack:
+        if entry_count >= max_entries or time.monotonic() >= deadline:
+            truncated = True
+            break
         current = stack.pop()
         try:
-            entries = list(current.iterdir())
+            entries = current.iterdir()
         except OSError as exc:
             errors.append({"path": current.as_posix(), "reason": str(exc)})
             continue
-        for entry in entries:
-            if entry.is_symlink():
-                files.append(entry)
-                continue
-            try:
-                if entry.is_dir():
-                    stack.append(entry)
-                elif entry.is_file():
+        try:
+            for entry in entries:
+                entry_count += 1
+                if entry_count > max_entries or time.monotonic() >= deadline:
+                    truncated = True
+                    break
+                if entry.is_symlink():
                     files.append(entry)
-            except OSError as exc:
-                errors.append({"path": entry.as_posix(), "reason": str(exc)})
-    return files, errors
+                    continue
+                try:
+                    if entry.is_dir():
+                        stack.append(entry)
+                    elif entry.is_file():
+                        files.append(entry)
+                except OSError as exc:
+                    errors.append({"path": entry.as_posix(), "reason": str(exc)})
+        except OSError as exc:
+            errors.append({"path": current.as_posix(), "reason": str(exc)})
+    return files, errors, truncated
 
 
-def _tree_size_payload(*, path: Path, target_root: Path, sample_limit: int = 5) -> dict[str, Any]:
+def _tree_size_payload(
+    *,
+    path: Path,
+    target_root: Path,
+    sample_limit: int = 5,
+    max_entries: int = 10_000,
+    time_budget_seconds: float = 2.0,
+) -> dict[str, Any]:
     if not path.exists():
         return {
             "path": _repo_relative_path(path, target_root),
@@ -12595,8 +12627,14 @@ def _tree_size_payload(*, path: Path, target_root: Path, sample_limit: int = 5) 
             "file_count": 0,
             "largest_files": [],
             "scan_errors": [],
+            "scan_status": "complete",
+            "truncated": False,
         }
-    files, errors = _walk_local_tree_no_follow(path)
+    files, errors, truncated = _walk_local_tree_no_follow(
+        path,
+        max_entries=max_entries,
+        deadline=time.monotonic() + time_budget_seconds,
+    )
     total = 0
     largest: list[tuple[int, Path]] = []
     for file_path in files:
@@ -12621,6 +12659,12 @@ def _tree_size_payload(*, path: Path, target_root: Path, sample_limit: int = 5) 
         "largest_files": largest_files,
         "scan_errors": errors[:sample_limit],
         "omitted_error_count": max(0, len(errors) - sample_limit),
+        "scan_status": "truncated" if truncated else "complete",
+        "truncated": truncated,
+        "scan_limits": {
+            "max_entries": max_entries,
+            "time_budget_seconds": time_budget_seconds,
+        },
     }
 
 
@@ -12927,6 +12971,12 @@ def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI
     scratch_size = _tree_size_payload(path=scratch_root, target_root=target_root)
     cache_size = _tree_size_payload(path=target_root / ".agentic-workspace" / "local" / "cache", target_root=target_root)
     runs = _local_scratch_runs_payload(target_root=target_root, policy=policy)
+
+    def _budget_status(size: dict[str, Any], limit: int) -> str:
+        if size["bytes"] > limit:
+            return "over-budget"
+        return "scan-incomplete" if size.get("truncated") else "ok"
+
     budget_items = [
         {
             "id": "tracked_aw_payload",
@@ -12943,7 +12993,7 @@ def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI
             "bytes": local_size["bytes"],
             "display_size": local_size["display_size"],
             "limit_bytes": policy["local_aw_warn_bytes"],
-            "status": "over-budget" if local_size["bytes"] > policy["local_aw_warn_bytes"] else "ok",
+            "status": _budget_status(local_size, policy["local_aw_warn_bytes"]),
             "owner": "local-aw-runtime",
         },
         {
@@ -12952,11 +13002,11 @@ def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI
             "bytes": scratch_size["bytes"],
             "display_size": scratch_size["display_size"],
             "limit_bytes": policy["warn_total_bytes"],
-            "status": "over-budget" if scratch_size["bytes"] > policy["warn_total_bytes"] else "ok",
+            "status": _budget_status(scratch_size, policy["warn_total_bytes"]),
             "owner": "aw-local-scratch",
         },
     ]
-    status = "attention" if any(item["status"] == "over-budget" for item in budget_items) or runs["eligible_prune_count"] else "ok"
+    status = "attention" if any(item["status"] != "ok" for item in budget_items) or runs["eligible_prune_count"] else "ok"
     legacy_cleanup_dry_run = _command_with_cli_invoke(
         command="agentic-workspace upgrade --target ./repo --legacy-scratch-cleanup --dry-run --format json",
         cli_invoke=cli_invoke,
@@ -13062,6 +13112,7 @@ def _git_lines(*, target_root: Path, args: list[str]) -> tuple[str, list[str]]:
             capture_output=True,
             text=True,
             encoding="utf-8",
+            timeout=10,
         )
     except (OSError, subprocess.SubprocessError) as exc:
         return ("unavailable", [str(exc)])
@@ -15873,6 +15924,7 @@ def _run_report_router_command(
         non_interactive=False,
         config=config,
         compact_status=True,
+        include_local_footprint=False,
     )
     warnings = list(status_payload.get("warnings", []))
     findings = [{"severity": "warning", "module": "workspace", "message": str(warning)} for warning in warnings]
@@ -44639,7 +44691,7 @@ def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     changed_paths = _normalize_changed_paths(getattr(args, "changed", []) or [])
     if section in {"external_work_reconciliation", "external_work_delta"}:
         _ensure_external_intent_cache_if_available(target_root=target_root)
-    if profile == "router" and section is None and (args.format == "json"):
+    if profile == "router" and section is None:
         payload = _run_report_router_command(
             target_root=target_root,
             selected_modules=selected_modules,
