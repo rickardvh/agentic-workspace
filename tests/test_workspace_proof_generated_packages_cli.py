@@ -60,18 +60,24 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     assert "refresh only when the check reports stale output" in freshness["rule"]
     focused_proof = "uv run pytest tests/test_workspace_proof_generated_packages_cli.py -q"
     assert answer["required_commands"] == [
-        "uv run --active python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
-        "uv run python scripts/generate/generate_command_packages.py --check",
-        "uv run python scripts/check/check_generated_command_packages.py --require-node",
+        "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/run_operation_conformance_tests.py --target all",
         "uv run python scripts/check/check_generated_command_packages.py --conformance --require-node",
         "uv run python scripts/check/check_generated_command_packages.py --docker --require-docker",
         "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker",
+        focused_proof,
+        "uv run --active python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
+        "uv run python scripts/generate/generate_command_packages.py --check",
+        "uv run python scripts/check/check_generated_command_packages.py --require-node",
     ]
     assert [step["lane_id"] for step in answer["validation_plan"]["required"]] == [
+        "generated_command_packages",
+        "generated_command_packages",
+        "generated_command_packages",
+        "generated_command_packages",
+        "generated_command_packages",
+        "generated_command_packages",
         "cli_authority",
-        "verification:generated_adapter_conformance",
-        "verification:generated_adapter_conformance",
-        "verification:generated_adapter_conformance",
         "verification:generated_adapter_conformance",
         "verification:generated_adapter_conformance",
     ]
@@ -85,7 +91,7 @@ def test_proof_changed_selector_routes_generated_command_packages(capsys) -> Non
     ]
     assert {command["execution_mode"] for command in domain_commands} == {"serial-recommended"}
     assert {command["proof_responsibility"] for command in domain_commands} == {"local-closeout"}
-    assert focused_proof not in answer["required_commands"]
+    assert focused_proof in answer["required_commands"]
     assert "tests/test_workspace_proof_cli.py" not in " ".join(answer["required_commands"])
     assert answer["validation_plan"]["required_count"] == len(answer["required_commands"])
     assert answer["validation_plan"]["optional"][0]["required"] is False
@@ -120,6 +126,11 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         "domain:generated_command_packages",
     ]
     assert answer["required_commands"] == [
+        "uv run python scripts/check/check_generated_command_packages.py",
+        "uv run python scripts/check/run_operation_conformance_tests.py --target python",
+        "uv run python scripts/check/check_generated_command_packages.py --python-conformance",
+        "uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker",
+        focused_proof,
         "uv run --active python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
         "uv run pytest tests/test_workspace_cli.py -q",
         "uv run python scripts/run_agentic_workspace.py report --target . --section closeout_trust --format json",
@@ -134,7 +145,7 @@ def test_proof_changed_selector_routes_python_generated_packages_to_python_docke
         "uv run python scripts/check/check_generated_command_packages.py --docker-conformance --require-docker"
         in answer["required_commands"]
     )
-    assert focused_proof not in answer["required_commands"]
+    assert focused_proof in answer["required_commands"]
     assert "tests/test_workspace_proof_cli.py" not in " ".join(answer["required_commands"])
     assert "CI may repeat generated-package proof" in answer["selected_lanes"][0]["ci_relationship"]
     domain_commands = [command for command in answer["selected_commands"] if command["lane"] == "domain:generated_command_packages"]
