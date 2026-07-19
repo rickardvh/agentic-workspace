@@ -27463,6 +27463,16 @@ def _bounded_selector_descriptor_for_payload(payload: dict[str, Any]) -> list[st
     return [key for key in payload if isinstance(key, str) and key.strip()]
 
 
+_KNOWN_OPTIONAL_SELECTORS_BY_COMMAND: dict[str, set[str]] = {
+    "start": {"issue_reference_intent"},
+}
+
+
+def _known_optional_selector_absent(*, source_command: str, selector: str) -> bool:
+    known = _KNOWN_OPTIONAL_SELECTORS_BY_COMMAND.get(source_command, set())
+    return selector in known or any(selector.startswith(f"{item}.") for item in known)
+
+
 def _selector_suggestions(*, unknown: str, available: list[str], limit: int = 3) -> list[str]:
     unknown_root = unknown.split(".", 1)[0]
     suggestions: list[str] = []
@@ -27504,9 +27514,17 @@ def _selector_validation_error(*, payload: dict[str, Any], selectors: list[str],
 
 def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str) -> dict[str, Any]:
     selectors = _selector_tokens(select)
-    missing = [selector for selector in selectors if not _field_path_exists(payload, selector)]
-    if missing:
-        return _selector_validation_error(payload=payload, selectors=selectors, missing=missing, source_command=source_command)
+    unknown: list[str] = []
+    missing: list[str] = []
+    for selector in selectors:
+        if _field_path_exists(payload, selector):
+            continue
+        if _known_optional_selector_absent(source_command=source_command, selector=selector):
+            missing.append(selector)
+        else:
+            unknown.append(selector)
+    if unknown:
+        return _selector_validation_error(payload=payload, selectors=selectors, missing=unknown, source_command=source_command)
     values: dict[str, Any] = {}
     for selector in selectors:
         found, value = _field_by_path(payload, selector)
@@ -27526,6 +27544,8 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
             "rule": "Selected field output stores payloads under values keyed by the selector string; compact report/proof answers store their payload under answer.",
         },
     }
+    if missing:
+        selected["missing"] = missing
     return selected
 
 
