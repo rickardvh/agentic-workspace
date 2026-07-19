@@ -9439,7 +9439,9 @@ def _run_lifecycle_command(
     )
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
-    skill_dependency_diagnostics = _skill_dependency_diagnostics(target_root=target_root) if command_name == "doctor" else []
+    skill_dependency_diagnostics = (
+        _skill_dependency_diagnostics(target_root=target_root, selected_modules=selected_modules) if command_name == "doctor" else []
+    )
     skill_dependency_warnings = [str(item["message"]) for item in skill_dependency_diagnostics]
     warnings.extend(skill_dependency_warnings)
     selected_set = set(selected_modules)
@@ -51057,11 +51059,28 @@ def _skill_dependency_warnings(*, target_root: Path) -> list[str]:
     return [str(item["message"]) for item in _skill_dependency_diagnostics(target_root=target_root)]
 
 
-def _skill_dependency_diagnostics(*, target_root: Path) -> list[dict[str, str]]:
+def _skill_dependency_owner_module(skill: RegisteredSkill) -> str:
+    owner = skill.owner.lower()
+    source_kind = skill.source_kind.lower()
+    path = skill.path.as_posix()
+    if "planning" in owner or "planning" in source_kind or path.startswith(".agentic-workspace/planning/"):
+        return "planning"
+    if "memory" in owner or "memory" in source_kind or path.startswith(".agentic-workspace/memory/"):
+        return "memory"
+    if "verification" in owner or "verification" in source_kind or path.startswith(".agentic-workspace/verification/"):
+        return "verification"
+    return ""
+
+
+def _skill_dependency_diagnostics(*, target_root: Path, selected_modules: list[str] | None = None) -> list[dict[str, str]]:
     skills, _, _ = _discover_registered_skills(target_root=target_root)
+    selected = {module for module in (selected_modules or []) if module}
     diagnostics: list[dict[str, str]] = []
     for skill in skills:
         if skill.availability != "blocked":
+            continue
+        owner_module = _skill_dependency_owner_module(skill)
+        if selected and owner_module and owner_module not in selected:
             continue
         diagnostics.extend(_skill_dependency_diagnostic_payloads(skill))
     return diagnostics
@@ -51069,6 +51088,7 @@ def _skill_dependency_diagnostics(*, target_root: Path) -> list[dict[str, str]]:
 
 def _skill_dependency_diagnostic_payloads(skill: RegisteredSkill) -> list[dict[str, str]]:
     payloads: list[dict[str, str]] = []
+    owner_module = _skill_dependency_owner_module(skill)
     for diagnostic in skill.dependency_diagnostics:
         resource_id = str(diagnostic.get("resource_id", ""))
         repair_command = str(diagnostic.get("repair_command") or _skill_repair_command(skill))
@@ -51077,6 +51097,7 @@ def _skill_dependency_diagnostic_payloads(skill: RegisteredSkill) -> list[dict[s
                 **diagnostic,
                 "skill_id": skill.skill_id,
                 "skill_path": skill.path.as_posix(),
+                "owning_module": str(diagnostic.get("repair_module") or owner_module),
                 "message": f"skill '{skill.skill_id}' is blocked: {diagnostic['reason_code']}",
                 "repair_action_id": _skill_dependency_repair_action_id(skill_id=skill.skill_id, resource_id=resource_id),
             }

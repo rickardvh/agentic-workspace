@@ -8471,7 +8471,9 @@ def _run_lifecycle_command(
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
     skill_dependency_diagnostics = (
-        _workspace_runtime_core._skill_dependency_diagnostics(target_root=target_root) if command_name == "doctor" else []
+        _workspace_runtime_core._skill_dependency_diagnostics(target_root=target_root, selected_modules=selected_modules)
+        if command_name == "doctor"
+        else []
     )
     skill_dependency_warnings = [str(item["message"]) for item in skill_dependency_diagnostics]
     warnings.extend(skill_dependency_warnings)
