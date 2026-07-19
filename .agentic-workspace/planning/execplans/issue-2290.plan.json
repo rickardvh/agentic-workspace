@@ -1,0 +1,170 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2290",
+  "title": "Local ChatGPT review to Codex continuation loop",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 3,
+  "intent": {
+    "outcome": "Implement the complete repo-local, deterministic ChatGPT-review-to-exact-Codex-session continuation loop required by GitHub issue #2290.",
+    "non_goals": [
+      "Do not add or change shipped Agentic Workspace package or generated payload surfaces.",
+      "Do not perform model-based review, reinterpret external review decisions, merge pull requests, or guess a Codex session.",
+      "Do not claim final issue closure without representative live-cycle dogfooding evidence."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "Deliver the repo-maintainer transport loop and its deterministic proof surfaces.",
+    "closure_boundary": "Issue #2290 implementation; live external-review dogfooding remains an explicit completion gate."
+  },
+  "scope": {
+    "owned": [
+      "tools/chatgpt_review_loop.py",
+      ".codex/hooks.json",
+      "tests/test_chatgpt_review_loop.py",
+      "docs/maintainer/chatgpt-review-continuation.md",
+      "docs/maintainer/maintainer-commands.md",
+      "docs/reviews/aw-chatgpt-review-continuation-dogfood-2026-07-14.md",
+      ".gitignore",
+      ".agentic-workspace/planning/execplans/issue-2290.plan.json",
+      ".agentic-workspace/planning/state.toml"
+    ],
+    "effects": [
+      "Writes runtime state only below the already-gitignored .agentic-workspace/local directory.",
+      "Uses authenticated gh for deterministic PR metadata/comments and codex resume with an exact recorded session ID.",
+      "Adds a trusted project-local Stop hook that performs only bounded handoff recording."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected",
+      "owner": "current-work context"
+    },
+    "proof_posture": {
+      "state": "selected",
+      "refs": ["focused pytest", "ruff", "agent-aids and maintainer-surface checks", "AW proof"]
+    },
+    "external_posture": {
+      "state": "observed",
+      "refs": ["https://github.com/rickardvh/agentic-workspace/issues/2290"]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2290",
+      "label": "GitHub issue #2290",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Keep the activated watcher running for PR #2292 head 67c3cce4; verify the next external review resumes this exact Codex session, records a corrective head through the Stop hook, and continues to the subsequent review without manual watcher restart.",
+  "blockers": [
+    "None."
+  ],
+  "proof": {
+    "claims": [
+      "The local controller records exact handoffs, opts in PRs, parses only PR-and-full-SHA-bound markers, resumes blockers once, and fails safely for ambiguous or stale states.",
+      "Merge-ready records readiness without merging; iteration and repeated-blocker limits escalate to a human.",
+      "Runtime state remains local/gitignored and no shipped package or generated payload surface changes."
+    ],
+    "requirements": [
+      "uv run pytest tests/test_chatgpt_review_loop.py -q",
+      "uv run ruff check tools/chatgpt_review_loop.py tests/test_chatgpt_review_loop.py",
+      "uv run python scripts/check/check_agent_aids.py",
+      "uv run python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json",
+      "Inspect git diff to confirm shipped payload and generated surfaces are unchanged."
+    ],
+    "refs": []
+  },
+  "continuation": {
+    "owner": "none",
+    "residual_intent": "none"
+  },
+  "specialist_contracts": [],
+  "execution_bounds": {
+    "allowed paths": "Only the scope.owned paths listed above; runtime fixtures use temporary directories.",
+    "max changed files": "Eight owned files, including Planning state and this plan.",
+    "required validation commands": "Focused pytest, Ruff, maintainer/agent-aid checks, git diff checks, and AW routed proof.",
+    "ask-before-refactor threshold": "Stop before changing Agentic Workspace runtime, package contracts, generated output, or the external review policy skill.",
+    "stop before touching": "Credentials, Codex transcript contents, user-global Codex config, shipped payload mirrors, or merge automation."
+  },
+  "touched_paths": [
+    "tools/chatgpt_review_loop.py",
+    ".codex/hooks.json",
+    "tests/test_chatgpt_review_loop.py",
+    "docs/maintainer/chatgpt-review-continuation.md",
+    "docs/maintainer/maintainer-commands.md",
+    "docs/reviews/aw-chatgpt-review-continuation-dogfood-2026-07-14.md",
+    ".gitignore",
+    ".agentic-workspace/planning/execplans/issue-2290.plan.json",
+    ".agentic-workspace/planning/state.toml"
+  ],
+  "validation_commands": [
+    "uv run pytest tests/test_chatgpt_review_loop.py -q",
+    "uv run ruff check tools/chatgpt_review_loop.py tests/test_chatgpt_review_loop.py",
+    "uv run python scripts/check/check_agent_aids.py",
+    "uv run python scripts/check/check_maintainer_surfaces.py",
+    "git diff --check",
+    "uv run python scripts/run_agentic_workspace.py proof --target . --changed <paths> --format json"
+  ],
+  "completion_criteria": [
+    "All issue #2290 deterministic transport acceptance criteria are implemented and covered by focused tests.",
+    "The ordinary Stop-hook handoff is bounded, idempotent, non-waiting, and exact-session-bound.",
+    "The controller supports inspect, stop, cleanup, and explicit recovery without silent retries or routing guesses.",
+    "Maintainer documentation covers setup, trust, permissions, operation, inspection, stopping, cleanup, and recovery.",
+    "A dogfooding report honestly distinguishes simulated deterministic proof from live external-review evidence.",
+    "No shipped Agentic Workspace or generated package surface changes."
+  ],
+  "execution_run": {
+    "run status": "implementation-complete-live-validation-pending",
+    "executor": "Codex",
+    "what happened": "Added a dormant project Stop hook, explicit handoff command, gitignored local state machine, model-free GitHub poller, exact-session one-shot resume, bounded recovery/limits, focused tests, maintainer docs, and an honest dogfooding report.",
+    "changed surfaces": "tools/chatgpt_review_loop.py; .codex/hooks.json; tests/test_chatgpt_review_loop.py; docs/maintainer/chatgpt-review-continuation.md; docs/maintainer/maintainer-commands.md; docs/reviews/aw-chatgpt-review-continuation-dogfood-2026-07-14.md; this plan; Planning selection state.",
+    "result for continuation": "PR #2292 supplied one real blocked review. The pre-activation exact-session resume failed once, its watcher-continuation blocker is fixed, and the replacement watcher is running with reviewed-hook activation.",
+    "next step": "Let the activated watcher consume the next current-head review and record the exact-session Stop-hook handoff evidence."
+  },
+  "proof_report": {
+    "validation proof": "Focused controller suite: 16 passed, including a two-head unattended watch cycle and hook-trust activation command; Ruff: passed; real Windows Stop-hook smoke: passed; git check-ignore confirmed local runtime state; workspace lint and maintainer surfaces passed; PR #2292 CI passed through head ad37e10d and current-head CI is running; the earlier full workspace suite had 1334 passed, 2 skipped, and 1 unrelated structured-file inventory failure caused by six pre-existing unstaged Planning deletions.",
+    "proof achieved now": "Deterministic two-head proof and one real external blocked review achieved. The first pre-activation exact-session resume failed once; the activated replacement watcher is awaiting a current-head review to prove automatic Stop-hook handoff and subsequent-review continuation.",
+    "evidence for proof state": "tests/test_chatgpt_review_loop.py and docs/reviews/aw-chatgpt-review-continuation-dogfood-2026-07-14.md"
+  },
+  "intent_satisfaction": {
+    "original intent": "Implement issue #2290.",
+    "was original intent fully satisfied?": "no",
+    "evidence of intent satisfaction": "All deterministic transport surfaces and focused acceptance tests are implemented; the issue's mandatory live representative-PR dogfooding gate is not yet satisfied.",
+    "unsolved intent passed to": "docs/reviews/aw-chatgpt-review-continuation-dogfood-2026-07-14.md and GitHub #2290"
+  },
+  "durable_residue": {
+    "status": "planning",
+    "learned constraint": "Do not close #2290 or consider automatic merge until several live external-review cycles establish latency, successful exact-session continuation, intervention rate, and blocker quality.",
+    "canonical owner now": "GitHub #2290 and the checked-in dogfooding report",
+    "promotion trigger": "representative live PR evidence is collected",
+    "retention after promotion": "retain the report"
+  },
+  "improvement_signal_review": {
+    "status": "signals_routed",
+    "signals found": [
+      {
+        "summary": "Issue-scoped external-intent refresh emitted broad unrelated planning-candidate and grouping payload.",
+        "owner": "GitHub #2291",
+        "source": "#2290 startup dogfooding"
+      }
+    ],
+    "signals fixed": [
+      {
+        "summary": "Bare python was unavailable in the real Windows hook environment; changed the checked-in hook and docs to the configured uv run python runtime.",
+        "owner": ".codex/hooks.json",
+        "source": "real Stop-hook smoke"
+      },
+      {
+        "summary": "Real gh comments use GraphQL string IDs; preserved those IDs verbatim instead of coercing them to integers.",
+        "owner": "tools/chatgpt_review_loop.py",
+        "source": "read-only real PR comment payload inspection"
+      }
+    ],
+    "next owner": "GitHub #2291 for output-budget follow-through"
+  }
+}
