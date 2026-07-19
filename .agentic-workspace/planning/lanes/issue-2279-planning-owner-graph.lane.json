@@ -13,53 +13,64 @@
     {
       "id": "issue-2282-compact-owner-records",
       "title": "Issue 2282 compact Planning owner records",
-      "status": "active",
-      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2282-compact-owner-records.plan.json",
+      "status": "completed",
+      "execplan_ref": "",
       "depends_on": [],
-      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority."
+      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority.",
+      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2282-compact-owner-records.closeout.json",
+      "residual_after_slice": "Completed slice retained as closeout evidence; future #2279 work should promote a fresh bounded slice."
     },
     {
       "id": "issue-2278-owner-select",
       "title": "Issue 2278 narrow existing-owner selection",
-      "status": "active",
-      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2278-owner-select.plan.json",
+      "status": "completed",
+      "execplan_ref": "",
       "depends_on": [],
-      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority."
+      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority.",
+      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2278-owner-select.closeout.json",
+      "residual_after_slice": "Completed slice retained as closeout evidence; future #2279 work should promote a fresh bounded slice."
     },
     {
       "id": "issue-2258-current-work-binding",
       "title": "Issue 2258 bind decision-point intent carry to explicit current-work ownership",
-      "status": "active",
-      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2258-current-work-binding.plan.json",
+      "status": "completed",
+      "execplan_ref": "",
       "depends_on": [],
-      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority."
+      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority.",
+      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2258-current-work-binding.closeout.json",
+      "residual_after_slice": "Completed slice retained as closeout evidence; future #2279 work should promote a fresh bounded slice."
     },
     {
       "id": "issue-2276-external-owner-observations",
       "title": "Issue 2276 External Owner Observations",
-      "status": "active",
-      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2276-external-owner-observations.plan.json",
+      "status": "completed",
+      "execplan_ref": "",
       "depends_on": [],
-      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority."
+      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority.",
+      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2276-external-owner-observations.closeout.json",
+      "residual_after_slice": "Completed slice retained as closeout evidence; future #2279 work should promote a fresh bounded slice."
     },
     {
       "id": "issue-2280-query-shaped-planning-reads",
       "title": "Issue 2280 query-shaped Planning reads",
-      "status": "active",
-      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2280-query-shaped-planning-reads.plan.json",
+      "status": "completed",
+      "execplan_ref": "",
       "depends_on": [],
-      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority."
+      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority.",
+      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2280-query-shaped-planning-reads.closeout.json",
+      "residual_after_slice": "Completed slice retained as closeout evidence; future #2279 work should promote a fresh bounded slice."
     },
     {
       "id": "issue-2281-atomic-planning-reconciliation",
       "title": "Issue 2281 atomic Planning reconciliation transaction",
-      "status": "active",
-      "execplan_ref": ".agentic-workspace/planning/execplans/issue-2281-atomic-planning-reconciliation.plan.json",
+      "status": "completed",
+      "execplan_ref": "",
       "depends_on": [],
-      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority."
+      "purpose_for_lane": "Implement and integrate the ordered child slices under GitHub #2279 without weakening intent or proof authority.",
+      "proof": ".agentic-workspace/planning/closeout-evidence/issue-2281-atomic-planning-reconciliation.closeout.json",
+      "residual_after_slice": "Completed slice retained as closeout evidence; future #2279 work should promote a fresh bounded slice."
     }
   ],
-  "current_slice": "issue-2281-atomic-planning-reconciliation",
   "acceptance_boundary": "All lane slices have landed, lane proof aggregation is satisfied, and residual work is routed.",
   "proof_strategy": "Aggregate child proof plus an end-to-end reconciliation replay, scale budgets, migration evidence, generated parity, and closeout trust review.",
   "proof_aggregation": {
