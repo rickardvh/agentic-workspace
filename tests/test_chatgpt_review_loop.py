@@ -63,14 +63,18 @@ def test_interactive_codex_job_uses_a_background_console_on_windows(tmp_path: Pa
 
     monkeypatch.setattr(loop.subprocess, "run", fake_run)
 
-    completed = loop.CommandRunner().run_interactive(["codex", "exec", "-"], cwd=tmp_path, input_text="line one\nline two")
+    completed = loop.CommandRunner().run_interactive(
+        ["codex", "-m", "gpt-5.5", "exec", "-"],
+        cwd=tmp_path,
+        input_text="line one\nline two",
+    )
 
     assert completed.returncode == 0
     assert observed["input"] == "line one\nline two"
     if loop.os.name == "nt":
         assert observed["command"][:3] == [loop.sys.executable, str(loop.Path(loop.__file__).resolve()), "_console-run"]
-        assert loop.Path(observed["command"][-3]).stem.lower() == "codex"
-        assert observed["command"][-2:] == ["exec", "-"]
+        assert loop.Path(observed["command"][3]).stem.lower() == "codex"
+        assert observed["command"][4:] == ["-m", "gpt-5.5", "exec", "-"]
         assert observed["creationflags"] & loop.subprocess.CREATE_NEW_CONSOLE
         assert observed["startupinfo"].wShowWindow == getattr(loop.subprocess, "SW_SHOWMINNOACTIVE", 7)
         assert observed["close_fds"] is True
