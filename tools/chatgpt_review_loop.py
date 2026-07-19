@@ -24,6 +24,8 @@ OWNER_ROOT_ENV = "AW_CHATGPT_REVIEW_OWNER_ROOT"
 OWNER_BRANCH_ENV = "AW_CHATGPT_REVIEW_OWNER_BRANCH"
 DISPATCH_STATE = "dispatch.json"
 PROMPT_TRANSPORT = "stdin-v1"
+DEFAULT_CODEX_COMMAND = 'codex -m gpt-5.5 -c model_reasoning_effort="high"'
+FORBIDDEN_CODEX_MODEL_MARKERS = ("5.6", "gpt-5.6", "terra")
 REVIEW_MARKER_RE = re.compile(
     r"<!-- aw-chatgpt-review pr=(?P<pr>[1-9][0-9]*) "
     r"head=(?P<head>[0-9a-f]{40}) policy=pr-review-recheck-v1 "
@@ -88,6 +90,7 @@ class CommandRunner:
         input_text: str = "",
     ) -> subprocess.CompletedProcess[str]:
         """Run a Codex job in its own live console instead of capturing its output."""
+        _validate_codex_launch_command(command)
         kwargs: dict[str, Any] = {
             "cwd": cwd,
             "env": env,
@@ -141,10 +144,68 @@ def _console_job_output(lines: Sequence[str]) -> list[str]:
     return rendered
 
 
+def _model_values_from_command(command: Sequence[str]) -> list[str]:
+    values: list[str] = []
+    index = 0
+    while index < len(command):
+        token = command[index]
+        if token in {"-m", "--model"}:
+            if index + 1 >= len(command):
+                raise LoopError(
+                    "codex-model-missing",
+                    f"{token} must be followed by an explicit model for review watcher jobs",
+                    recovery="Set AW_CHATGPT_REVIEW_CODEX to the pinned 5.5 command or pass --codex-command explicitly.",
+                )
+            values.append(command[index + 1])
+            index += 2
+            continue
+        if token.startswith("--model="):
+            values.append(token.split("=", 1)[1])
+        elif token.startswith("-m") and token != "-m":
+            values.append(token[2:])
+        elif token in {"-c", "--config"}:
+            if index + 1 >= len(command):
+                raise LoopError(
+                    "codex-config-missing",
+                    f"{token} must be followed by a config assignment",
+                    recovery="Set AW_CHATGPT_REVIEW_CODEX to the pinned 5.5 command or pass --codex-command explicitly.",
+                )
+            config_value = command[index + 1]
+            if config_value.startswith("model="):
+                values.append(config_value.split("=", 1)[1])
+            index += 2
+            continue
+        elif token.startswith("--config="):
+            config_value = token.split("=", 1)[1]
+            if config_value.startswith("model="):
+                values.append(config_value.split("=", 1)[1])
+        index += 1
+    return values
+
+
+def _validate_codex_launch_command(command: Sequence[str]) -> None:
+    command_text = " ".join(command).lower()
+    forbidden = next((marker for marker in FORBIDDEN_CODEX_MODEL_MARKERS if marker in command_text), "")
+    if forbidden:
+        raise LoopError(
+            "forbidden-codex-model",
+            f"refusing to launch review watcher Codex job because the command mentions forbidden model marker {forbidden!r}",
+            recovery="Set AW_CHATGPT_REVIEW_CODEX to the pinned 5.5 command or pass --codex-command explicitly.",
+        )
+    model_values = _model_values_from_command(command)
+    if not model_values:
+        raise LoopError(
+            "codex-model-unpinned",
+            "refusing to launch review watcher Codex job without an explicit model pin",
+            recovery="Use codex -m gpt-5.5 -c model_reasoning_effort=\"high\" for review watcher jobs.",
+        )
+
+
 def _console_run(command: Sequence[str]) -> int:
     """Stream concise Codex conversation through this process's console."""
     if not command:
         return 2
+    _validate_codex_launch_command(command)
     prompt = sys.stdin.read()
     console = open("CONOUT$", "w", encoding="utf-8", errors="replace", buffering=1)  # noqa: PTH123
     try:
@@ -1525,7 +1586,7 @@ def _parser() -> argparse.ArgumentParser:
     poll_parser.add_argument("--max-repeated-blockers", type=int, default=2)
     poll_parser.add_argument("--log-file", type=Path, help="Append watcher events to this file while also printing them.")
     poll_parser.add_argument("--console-output", action="store_true", help="Bind watcher events to the allocated Windows console.")
-    poll_parser.add_argument("--codex-command", default=os.environ.get("AW_CHATGPT_REVIEW_CODEX", "codex"))
+    poll_parser.add_argument("--codex-command", default=os.environ.get("AW_CHATGPT_REVIEW_CODEX", DEFAULT_CODEX_COMMAND))
     poll_parser.add_argument(
         "--bypass-hook-trust",
         action="store_true",
@@ -1655,6 +1716,14 @@ def main(argv: Sequence[str] | None = None, *, runner: CommandRunner | None = No
         polls = args.max_polls if args.watch else 1
         if polls < 1 or args.interval < 1 or args.max_cycles < 1 or args.max_repeated_blockers < 1:
             raise LoopError("invalid-limit", "poll limits and interval must be positive")
+        try:
+            _validate_codex_launch_command(shlex.split(args.codex_command))
+        except ValueError as exc:
+            raise LoopError(
+                "codex-command-invalid",
+                f"--codex-command is not valid shell syntax: {exc}",
+                recovery="Set AW_CHATGPT_REVIEW_CODEX to the pinned 5.5 command or pass --codex-command explicitly.",
+            ) from exc
         last_results: list[dict[str, Any]] = []
         for index in range(polls):
             if args.all_open:
