@@ -8470,7 +8470,9 @@ def _run_lifecycle_command(
     )
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
-    skill_dependency_diagnostics = _workspace_runtime_core._skill_dependency_diagnostics(target_root=target_root) if command_name == "doctor" else []
+    skill_dependency_diagnostics = (
+        _workspace_runtime_core._skill_dependency_diagnostics(target_root=target_root) if command_name == "doctor" else []
+    )
     skill_dependency_warnings = [str(item["message"]) for item in skill_dependency_diagnostics]
     warnings.extend(skill_dependency_warnings)
     selected_set = set(selected_modules)
@@ -8570,14 +8572,13 @@ def _run_lifecycle_command(
             reports, target_root=target_root, cli_invoke=config.cli_invoke, command_name=command_name
         )
         if command_name == "doctor" and skill_dependency_diagnostics:
-            repair_actions = [
-                *_workspace_runtime_core._skill_dependency_repair_actions(
-                    diagnostics=skill_dependency_diagnostics,
-                    target_root=target_root,
-                    cli_invoke=config.cli_invoke,
-                ),
-                *repair_actions,
-            ]
+            dependency_repair_actions, dependency_manual_actions = _workspace_runtime_core._skill_dependency_repair_actions(
+                diagnostics=skill_dependency_diagnostics,
+                target_root=target_root,
+                cli_invoke=config.cli_invoke,
+            )
+            repair_actions = [*dependency_repair_actions, *repair_actions]
+            manual_review_actions = [*dependency_manual_actions, *manual_review_actions]
         if command_name == "doctor":
             cli_review_action = _cli_compatibility_manual_review_action(
                 target_root=target_root, cli_invoke=config.cli_invoke, cli_compatibility=cli_compatibility
@@ -41056,11 +41057,7 @@ def _emit_proof(
 
 def _print_tiny_summary(summary: dict[str, Any]) -> None:
     todo = summary.get("todo", {}) if isinstance(summary.get("todo"), dict) else {}
-    health = (
-        summary.get("planning_surface_health", {})
-        if isinstance(summary.get("planning_surface_health"), dict)
-        else {}
-    )
+    health = summary.get("planning_surface_health", {}) if isinstance(summary.get("planning_surface_health"), dict) else {}
     decision = summary.get("decision_packet", {}) if isinstance(summary.get("decision_packet"), dict) else {}
     print(f"Target: {summary.get('target_root', '')}")
     print("Profile: tiny")

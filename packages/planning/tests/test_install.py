@@ -46,7 +46,7 @@ def test_install_bootstrap_copies_required_files(tmp_path: Path) -> None:
     assert lifecycle_doc_path.exists()
     assert not extraction_doc_path.exists()
     assert not review_readme_path.exists()
-    assert not review_record_template_path.exists()
+    assert review_record_template_path.exists()
     assert not review_template_path.exists()
     assert not intake_doc_path.exists()
     assert not refinement_doc_path.exists()
@@ -214,7 +214,8 @@ def test_planning_contract_file_shortlist_is_explicit() -> None:
     assert Path(".agentic-workspace/docs/minimum-operating-model.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/execplans/README.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES
     assert Path(".agentic-workspace/planning/reviews/README.md") in OPTIONAL_PAYLOAD_FILES
-    assert Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json") in OPTIONAL_PAYLOAD_FILES
+    assert Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json") in REQUIRED_PAYLOAD_FILES
+    assert Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json") not in OPTIONAL_PAYLOAD_FILES
     assert Path(".agentic-workspace/planning/upstream-task-intake.md") in OPTIONAL_PAYLOAD_FILES
     assert Path(".agentic-workspace/planning/pre-ingestion-refinement.md") in OPTIONAL_PAYLOAD_FILES
     assert Path(".agentic-workspace/docs/routing-contract.md") in PLANNING_COMPATIBILITY_CONTRACT_FILES

@@ -21,12 +21,12 @@
   "scope": {
     "owned": [
       ".agentic-workspace/planning/execplans/issue-2257-skill-dependency-closure.plan.json",
-      ".agentic-workspace/planning/lanes/p1-cli-contract-integrity.lane.json",
       ".agentic-workspace/planning/skills/REGISTRY.json",
-      ".agentic-workspace/planning/state.toml",
       "generated/planning/python/_skills/REGISTRY.json",
       "generated/planning/typescript/resources/_skills/REGISTRY.json",
       "packages/planning/skills/REGISTRY.json",
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "packages/planning/tests/test_install.py",
       "packages/planning/tests/test_skills_catalog.py",
       "src/agentic_workspace/workspace_runtime_core.py",
       "src/agentic_workspace/workspace_runtime_primitives.py",
@@ -41,13 +41,13 @@
   },
   "relationships": {
     "selection": {
-      "state": "selected",
-      "owner": ".agentic-workspace/planning/state.toml and p1-cli-contract-integrity lane current_slice"
+      "state": "unselected-live-record",
+      "owner": "This PR carries an explicitly partial #2257 live plan record; current checked-in Planning state remains owned by master and does not select #2257."
     },
     "proof_posture": {
       "state": "local-proof-passed",
       "refs": [
-        "uv run pytest tests/test_workspace_skills_cli.py -q: 34 passed",
+        "uv run pytest tests/test_workspace_skills_cli.py -q: 36 passed",
         "make test-workspace: passed",
         "make typecheck: passed",
         "make lint-workspace: passed"
@@ -69,15 +69,13 @@
       "locator": ""
     }
   ],
-  "next_action": "Run final broad proof, push this bounded resource/routing/doctor slice, and leave remaining module/operation/profile/build-validation #2257 work live.",
-  "blockers": [
-    "Final exact-head CI and mergeability are not yet observed after local blocker fixes."
-  ],
+  "next_action": "Keep remaining module/operation dependency closure, package-profile matrix coverage, and build-time registry validation live for follow-up #2257 slices after this bounded resource/routing/doctor repair-route slice lands.",
+  "blockers": [],
   "proof": {
     "claims": [
       "Registry-declared required skill resources resolve with stable identity, owner/source provenance, compatibility state, and reason code.",
       "Compact task routing keeps matching unavailable skills out of executable recommendations and reports them as non-executable blocked recommendations.",
-      "Doctor consumes the same dependency identity for unresolved ordinary-skill dependencies and exposes non-healthy, action-required repair-plan output with an executable upgrade route.",
+      "Doctor consumes the same dependency identity for unresolved ordinary-skill dependencies and exposes non-healthy, action-required repair-plan output with either a dependency-correct executable managed repair route or a manual action-required route.",
       "The package-backed equivalent remains executable and doctor-quiet; undeclared optional resources remain irrelevant."
     ],
     "requirements": [
@@ -107,7 +105,7 @@
       "uv run pytest tests/test_workspace_cli.py -q: 217 passed",
       "make typecheck: passed",
       "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json: shape_in_sync",
-      "uv run pytest tests/test_workspace_skills_cli.py -q: 34 passed",
+      "uv run pytest tests/test_workspace_skills_cli.py -q: 36 passed",
       "uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q: 2 passed",
       "make package-artifact-duplicates: passed",
       "git diff --check: passed"

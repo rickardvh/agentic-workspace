@@ -98,17 +98,13 @@ def _files_under(
         for current, directories, filenames in os.walk(path):
             exhaustion = _scan_exhausted(started_at=started_at, entries_examined=entries_examined, budget=budget)
             if exhaustion:
-                return DependencyScanResult(
-                    "truncated", files, entries_examined, time.monotonic() - started_at, exhaustion
-                )
+                return DependencyScanResult("truncated", files, entries_examined, time.monotonic() - started_at, exhaustion)
             directories[:] = sorted(name for name in directories if name not in _IGNORED_DEPENDENCY_DIRS)
             current_path = Path(current)
             for filename in sorted(filenames):
                 exhaustion = _scan_exhausted(started_at=started_at, entries_examined=entries_examined, budget=budget)
                 if exhaustion:
-                    return DependencyScanResult(
-                        "truncated", files, entries_examined, time.monotonic() - started_at, exhaustion
-                    )
+                    return DependencyScanResult("truncated", files, entries_examined, time.monotonic() - started_at, exhaustion)
                 entries_examined += 1
                 files.append(current_path / filename)
     except OSError as exc:
@@ -122,9 +118,7 @@ def _files_under(
     return DependencyScanResult("complete", files, entries_examined, time.monotonic() - started_at)
 
 
-def _dependency_files(
-    root: Path, operation: str, *, budget: DependencyScanBudget | None = None
-) -> DependencyScanResult:
+def _dependency_files(root: Path, operation: str, *, budget: DependencyScanBudget | None = None) -> DependencyScanResult:
     budget = budget or DependencyScanBudget()
     started_at = time.monotonic()
     entries_examined = 0
@@ -134,13 +128,9 @@ def _dependency_files(
     try:
         if aw_root.is_dir():
             for child in aw_root.iterdir():
-                exhaustion = _scan_exhausted(
-                    started_at=started_at, entries_examined=entries_examined, budget=budget
-                )
+                exhaustion = _scan_exhausted(started_at=started_at, entries_examined=entries_examined, budget=budget)
                 if exhaustion:
-                    return DependencyScanResult(
-                        "truncated", candidates, entries_examined, time.monotonic() - started_at, exhaustion
-                    )
+                    return DependencyScanResult("truncated", candidates, entries_examined, time.monotonic() - started_at, exhaustion)
                 entries_examined += 1
                 if child.name in {"local", "logs", "projection-cache", "session-logging"}:
                     continue
@@ -245,11 +235,7 @@ def dependency_digest(
         *_OPERATION_DEPENDENCY_ROOTS.get(operation, ()),
     ]
     git_probe = _git(root, "status", "--porcelain=v1", "--untracked-files=all", "--", *pathspecs)
-    worktree_lines = [
-        line
-        for line in git_probe.stdout.splitlines()
-        if line[3:].replace("\\", "/") in relevant_relatives
-    ]
+    worktree_lines = [line for line in git_probe.stdout.splitlines() if line[3:].replace("\\", "/") in relevant_relatives]
     worktree_state = "\n".join(worktree_lines)
     dirty_relatives = {line[3:].replace("\\", "/") for line in worktree_lines}
     digest.update(worktree_state.encode())

@@ -111,9 +111,7 @@ def test_workspace_summary_text_defaults_to_tiny_profile(tmp_path: Path, capsys,
     assert observed_profiles == ["tiny"]
 
 
-def test_planning_tiny_summary_stays_on_fast_builder_with_task_and_changed_paths(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_planning_tiny_summary_stays_on_fast_builder_with_task_and_changed_paths(tmp_path: Path, monkeypatch) -> None:
     install_bootstrap(target=tmp_path)
 
     def _unexpected(*args, **kwargs):
