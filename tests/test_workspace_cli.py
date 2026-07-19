@@ -8580,6 +8580,87 @@ def test_report_ordinary_agent_path_is_phase_question_first(tmp_path: Path, caps
     assert ordinary_path["lane_completion_model"]["detail_section"] == "report_profile"
 
 
+def test_report_defaults_use_router_without_full_report_or_local_footprint(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def _unexpected(*args, **kwargs):
+        raise AssertionError("ordinary report must not run full report or local-footprint diagnostics")
+
+    monkeypatch.setattr(cli, "_run_report_command", _unexpected)
+    monkeypatch.setattr(cli, "_local_footprint_payload", _unexpected)
+
+    assert cli.main(["report", "--target", str(tmp_path)]) == 0
+
+    output = capsys.readouterr().out
+    assert "Command: report" in output
+
+    assert cli.main(["report", "--target", str(tmp_path), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["decision_packet"]["surface"] == "report"
+
+
+def test_report_selector_bypasses_projection_dependency_discovery(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+
+    def _unexpected(*args, **kwargs):
+        raise AssertionError("selected report output must not pay the broad projection dependency digest")
+
+    monkeypatch.setattr(cli, "lookup_projection_reuse", _unexpected)
+
+    assert (
+        cli.main(
+            [
+                "report",
+                "--target",
+                str(tmp_path),
+                "--select",
+                "decision_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["values"]["decision_packet"]["surface"] == "report"
+
+
+def test_local_footprint_tree_scan_reports_truncation_at_its_entry_budget(tmp_path: Path) -> None:
+    from agentic_workspace import workspace_runtime_core
+
+    root = tmp_path / ".agentic-workspace" / "local"
+    for index in range(10):
+        _write(root / f"artifact-{index}.txt", "evidence\n")
+
+    payload = workspace_runtime_core._tree_size_payload(
+        path=root,
+        target_root=tmp_path,
+        max_entries=3,
+        time_budget_seconds=1.0,
+    )
+
+    assert payload["scan_status"] == "truncated"
+    assert payload["truncated"] is True
+    assert payload["file_count"] <= 3
+    assert payload["scan_limits"] == {"max_entries": 3, "time_budget_seconds": 1.0}
+
+
+def test_local_footprint_git_probe_timeout_is_reported_as_unavailable(tmp_path: Path, monkeypatch) -> None:
+    from agentic_workspace import workspace_runtime_core
+
+    def _timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(cmd=args[0], timeout=kwargs["timeout"])
+
+    monkeypatch.setattr(workspace_runtime_core.subprocess, "run", _timeout)
+
+    status, detail = workspace_runtime_core._git_lines(target_root=tmp_path, args=["status", "--short"])
+
+    assert status == "unavailable"
+    assert "timed out" in detail[0]
+
+
 def test_report_exposes_communication_contract_in_router_and_output_contract(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
 

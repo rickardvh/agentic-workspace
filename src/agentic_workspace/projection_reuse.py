@@ -6,13 +6,34 @@ import hashlib
 import json
 import os
 import subprocess
+import time
+from dataclasses import dataclass
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator, Literal
 
 _CACHE_KIND = "agentic-workspace/projection-reuse-record/v1"
-_CACHE_CONTRACT_VERSION = 2
+_CACHE_CONTRACT_VERSION = 3
 _MAX_CACHE_RECORDS = 32
+_GIT_TIMEOUT_SECONDS = 10
+_DEPENDENCY_MAX_ENTRIES = 20_000
+_DEPENDENCY_TIME_BUDGET_SECONDS = 2.0
+_IGNORED_DEPENDENCY_DIRS = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+}
+_LOCAL_DECISION_DEPENDENCIES = (
+    ".agentic-workspace/local/cache/dogfooding-signal-status.json",
+    ".agentic-workspace/local/cache/external-intent-evidence.json",
+    ".agentic-workspace/local/cache/pr-comment-delta.json",
+    ".agentic-workspace/local/cache/pr-comment-stack.json",
+    ".agentic-workspace/local/cache/proof-reuse.json",
+)
 _OPERATION_DEPENDENCY_ROOTS = {
     "doctor": ("src/agentic_workspace", "generated/workspace", "scripts", "packages"),
     "report": ("src/agentic_workspace", "generated/workspace", "scripts", "packages", "docs"),
@@ -20,29 +41,187 @@ _OPERATION_DEPENDENCY_ROOTS = {
 }
 
 
-def _dependency_files(root: Path, operation: str) -> list[Path]:
+@dataclass(frozen=True)
+class DependencyScanBudget:
+    max_entries: int = _DEPENDENCY_MAX_ENTRIES
+    time_budget_seconds: float = _DEPENDENCY_TIME_BUDGET_SECONDS
+
+
+@dataclass
+class DependencyScanResult:
+    status: Literal["complete", "truncated", "unavailable"]
+    files: list[Path]
+    entries_examined: int
+    elapsed_seconds: float
+    reason: str = ""
+
+
+@dataclass(frozen=True)
+class GitProbeResult:
+    status: Literal["complete", "unavailable", "not_applicable"]
+    stdout: str = ""
+    reason: str = ""
+
+
+@dataclass
+class DependencyDigestResult:
+    digest: str
+    dependencies: list[str]
+    status: Literal["complete", "truncated", "unavailable"]
+    findings: list[dict[str, Any]]
+
+    def __iter__(self) -> Iterator[Any]:
+        """Keep the historical two-value unpacking contract for direct callers."""
+        yield self.digest
+        yield self.dependencies
+
+
+def _scan_exhausted(*, started_at: float, entries_examined: int, budget: DependencyScanBudget) -> str:
+    if entries_examined >= budget.max_entries:
+        return f"dependency entry budget exhausted after {entries_examined} entries"
+    if time.monotonic() - started_at >= budget.time_budget_seconds:
+        return f"dependency time budget exhausted after {budget.time_budget_seconds:g}s"
+    return ""
+
+
+def _files_under(
+    path: Path,
+    *,
+    started_at: float,
+    entries_examined: int,
+    budget: DependencyScanBudget,
+) -> DependencyScanResult:
+    if not path.is_dir():
+        return DependencyScanResult("complete", [], entries_examined, time.monotonic() - started_at)
+    files: list[Path] = []
+    try:
+        for current, directories, filenames in os.walk(path):
+            exhaustion = _scan_exhausted(started_at=started_at, entries_examined=entries_examined, budget=budget)
+            if exhaustion:
+                return DependencyScanResult(
+                    "truncated", files, entries_examined, time.monotonic() - started_at, exhaustion
+                )
+            directories[:] = sorted(name for name in directories if name not in _IGNORED_DEPENDENCY_DIRS)
+            current_path = Path(current)
+            for filename in sorted(filenames):
+                exhaustion = _scan_exhausted(started_at=started_at, entries_examined=entries_examined, budget=budget)
+                if exhaustion:
+                    return DependencyScanResult(
+                        "truncated", files, entries_examined, time.monotonic() - started_at, exhaustion
+                    )
+                entries_examined += 1
+                files.append(current_path / filename)
+    except OSError as exc:
+        return DependencyScanResult(
+            "unavailable",
+            files,
+            entries_examined,
+            time.monotonic() - started_at,
+            f"dependency traversal failed for {path}: {exc}",
+        )
+    return DependencyScanResult("complete", files, entries_examined, time.monotonic() - started_at)
+
+
+def _dependency_files(
+    root: Path, operation: str, *, budget: DependencyScanBudget | None = None
+) -> DependencyScanResult:
+    budget = budget or DependencyScanBudget()
+    started_at = time.monotonic()
+    entries_examined = 0
     candidates = [root / "AGENTS.md", root / "pyproject.toml", root / "uv.lock", root / "Makefile"]
     candidates.extend(root.glob("*/AGENTS.md"))
     aw_root = root / ".agentic-workspace"
-    if aw_root.is_dir():
-        candidates.extend(
-            path
-            for path in aw_root.rglob("*")
-            if path.is_file() and not {"projection-cache", "logs", "session-logging"}.intersection(path.relative_to(aw_root).parts)
+    try:
+        if aw_root.is_dir():
+            for child in aw_root.iterdir():
+                exhaustion = _scan_exhausted(
+                    started_at=started_at, entries_examined=entries_examined, budget=budget
+                )
+                if exhaustion:
+                    return DependencyScanResult(
+                        "truncated", candidates, entries_examined, time.monotonic() - started_at, exhaustion
+                    )
+                entries_examined += 1
+                if child.name in {"local", "logs", "projection-cache", "session-logging"}:
+                    continue
+                if child.is_file():
+                    candidates.append(child)
+                else:
+                    result = _files_under(
+                        child,
+                        started_at=started_at,
+                        entries_examined=entries_examined,
+                        budget=budget,
+                    )
+                    candidates.extend(result.files)
+                    entries_examined = result.entries_examined
+                    if result.status != "complete":
+                        return DependencyScanResult(
+                            result.status,
+                            candidates,
+                            entries_examined,
+                            result.elapsed_seconds,
+                            result.reason,
+                        )
+            candidates.extend(root / relative for relative in _LOCAL_DECISION_DEPENDENCIES)
+        for relative_root in _OPERATION_DEPENDENCY_ROOTS.get(operation, ()):
+            result = _files_under(
+                root / relative_root,
+                started_at=started_at,
+                entries_examined=entries_examined,
+                budget=budget,
+            )
+            candidates.extend(result.files)
+            entries_examined = result.entries_examined
+            if result.status != "complete":
+                return DependencyScanResult(
+                    result.status,
+                    candidates,
+                    entries_examined,
+                    result.elapsed_seconds,
+                    result.reason,
+                )
+    except OSError as exc:
+        return DependencyScanResult(
+            "unavailable",
+            candidates,
+            entries_examined,
+            time.monotonic() - started_at,
+            f"dependency discovery failed: {exc}",
         )
-    for relative_root in _OPERATION_DEPENDENCY_ROOTS.get(operation, ()):
-        folder = root / relative_root
-        if folder.is_dir():
-            candidates.extend(path for path in folder.rglob("*") if path.is_file())
-    return sorted({path for path in candidates if path.is_file()}, key=lambda path: path.as_posix())
+    files = sorted({path for path in candidates if path.is_file()}, key=lambda path: path.as_posix())
+    return DependencyScanResult("complete", files, entries_examined, time.monotonic() - started_at)
 
 
-def _git(root: Path, *args: str) -> str:
-    result = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, check=False)
-    return result.stdout.strip() if result.returncode == 0 else ""
+def _git(root: Path, *args: str) -> GitProbeResult:
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_GIT_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired:
+        return GitProbeResult("unavailable", reason=f"git {' '.join(args)} timed out after {_GIT_TIMEOUT_SECONDS}s")
+    except (OSError, subprocess.SubprocessError) as exc:
+        return GitProbeResult("unavailable", reason=f"git {' '.join(args)} failed: {exc}")
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f"exit code {result.returncode}"
+        if "not a git repository" in detail.lower():
+            return GitProbeResult("not_applicable", reason="target is not a Git worktree")
+        return GitProbeResult("unavailable", reason=f"git {' '.join(args)} failed: {detail}")
+    return GitProbeResult("complete", stdout=result.stdout.strip())
 
 
-def dependency_digest(*, root: Path, operation: str, query: dict[str, Any]) -> tuple[str, list[str]]:
+def dependency_digest(
+    *,
+    root: Path,
+    operation: str,
+    query: dict[str, Any],
+    budget: DependencyScanBudget | None = None,
+) -> DependencyDigestResult:
     root = root.resolve()
     digest = hashlib.sha256()
     digest.update(operation.encode())
@@ -54,13 +233,25 @@ def dependency_digest(*, root: Path, operation: str, query: dict[str, Any]) -> t
         package_version = "source-checkout"
     digest.update(package_version.encode())
     dependencies: list[str] = []
-    relevant_files = _dependency_files(root, operation)
+    scan = _dependency_files(root, operation, budget=budget)
+    relevant_files = scan.files
     relevant_relatives = {path.relative_to(root).as_posix() for path in relevant_files}
-    worktree_state = "\n".join(
+    pathspecs = [
+        "AGENTS.md",
+        "pyproject.toml",
+        "uv.lock",
+        "Makefile",
+        ".agentic-workspace",
+        *_OPERATION_DEPENDENCY_ROOTS.get(operation, ()),
+    ]
+    git_probe = _git(root, "status", "--porcelain=v1", "--untracked-files=all", "--", *pathspecs)
+    worktree_lines = [
         line
-        for line in _git(root, "status", "--porcelain=v1", "--untracked-files=all").splitlines()
+        for line in git_probe.stdout.splitlines()
         if line[3:].replace("\\", "/") in relevant_relatives
-    )
+    ]
+    worktree_state = "\n".join(worktree_lines)
+    dirty_relatives = {line[3:].replace("\\", "/") for line in worktree_lines}
     digest.update(worktree_state.encode())
     for path in relevant_files:
         try:
@@ -70,12 +261,43 @@ def dependency_digest(*, root: Path, operation: str, query: dict[str, Any]) -> t
             continue
         dependencies.append(relative)
         digest.update(relative.encode())
-        try:
-            digest.update(hashlib.sha256(path.read_bytes()).digest())
-        except OSError:
-            digest.update(str(stat.st_size).encode())
-            digest.update(str(stat.st_mtime_ns).encode())
-    return digest.hexdigest()[:20], dependencies
+        if relative in dirty_relatives:
+            try:
+                digest.update(hashlib.sha256(path.read_bytes()).digest())
+                continue
+            except OSError:
+                pass
+        digest.update(str(stat.st_size).encode())
+        digest.update(str(stat.st_mtime_ns).encode())
+    findings: list[dict[str, Any]] = []
+    if scan.status != "complete":
+        findings.append(
+            {
+                "kind": "agentic-workspace/projection-degraded-finding/v1",
+                "section": "projection_dependency_discovery",
+                "status": scan.status,
+                "reason": scan.reason,
+                "retry": "Run the command with AW_PROJECTION_FORCE_REFRESH=1 after reducing or repairing the dependency tree.",
+                "limits": {
+                    "max_entries": (budget or DependencyScanBudget()).max_entries,
+                    "time_budget_seconds": (budget or DependencyScanBudget()).time_budget_seconds,
+                },
+            }
+        )
+    if git_probe.status == "unavailable":
+        findings.append(
+            {
+                "kind": "agentic-workspace/projection-degraded-finding/v1",
+                "section": "projection_dependency_git_probe",
+                "status": "unavailable",
+                "reason": git_probe.reason,
+                "retry": "Retry after Git repository access is responsive; projection reuse is disabled meanwhile.",
+            }
+        )
+    status: Literal["complete", "truncated", "unavailable"] = scan.status
+    if git_probe.status != "complete" and status == "complete":
+        status = "unavailable"
+    return DependencyDigestResult(digest.hexdigest()[:20], dependencies, status, findings)
 
 
 def _cache_path(root: Path, operation: str, query: dict[str, Any]) -> Path:
@@ -86,7 +308,8 @@ def _cache_path(root: Path, operation: str, query: dict[str, Any]) -> Path:
 def lookup_projection_reuse(
     *, root: Path, operation: str, query: dict[str, Any], full_detail_command: str, force_refresh: bool = False
 ) -> tuple[dict[str, Any] | None, dict[str, Any]]:
-    digest, dependencies = dependency_digest(root=root, operation=operation, query=query)
+    digest_result = dependency_digest(root=root, operation=operation, query=query)
+    digest, dependencies = digest_result
     path = _cache_path(root, operation, query)
     forced = force_refresh or os.environ.get("AW_PROJECTION_FORCE_REFRESH", "").lower() in {"1", "true", "yes"}
     volatile = (
@@ -101,8 +324,10 @@ def lookup_projection_reuse(
         "forced": forced,
         "volatile": volatile,
         "dependency_contract": operation,
+        "dependency_status": digest_result.status,
+        "degraded_findings": digest_result.findings,
     }
-    if forced or volatile or not path.is_file():
+    if forced or volatile or digest_result.status != "complete" or not path.is_file():
         return None, context
     try:
         record = json.loads(path.read_text(encoding="utf-8"))
@@ -139,7 +364,7 @@ def lookup_projection_reuse(
 
 
 def record_projection_reuse(*, root: Path, operation: str, query: dict[str, Any], context: dict[str, Any], payload: dict[str, Any]) -> None:
-    if context.get("volatile") or not (root / ".agentic-workspace").is_dir():
+    if context.get("volatile") or context.get("dependency_status") != "complete" or not (root / ".agentic-workspace").is_dir():
         return
     path = context["path"]
     actionability = payload.get("actionability", {}) if isinstance(payload.get("actionability"), dict) else {}
