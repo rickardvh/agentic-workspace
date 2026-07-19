@@ -33,6 +33,11 @@ ACTIONABLE_CATEGORIES = (
     "pr_metadata_body_only_change",
     "ci_label_only_issue",
 )
+_STRUCTURED_REVIEW_SECTION_RE = re.compile(
+    r"(?mi)^(decision|what_landed|intent_served|proof|unresolved|closure_honest|next_action)\s*:\s*"
+)
+_STRUCTURED_REVIEW_MARKER_RE = re.compile(r"<!--\s*aw-chatgpt-review\b[^>]*\bdecision=([a-z_-]+)", re.IGNORECASE)
+_STRUCTURED_REVIEW_SUPPORTED_DECISIONS = {"blocked", "merge-ready"}
 
 
 def _parse_timestamp(value: str | None) -> datetime | None:
@@ -216,6 +221,103 @@ def _is_positive_review_summary(body: str) -> bool:
     return ready_signal and not unresolved_signal
 
 
+def _parse_structured_review_sections(body: str) -> tuple[dict[str, str], set[str], list[str]]:
+    section_matches = list(_STRUCTURED_REVIEW_SECTION_RE.finditer(body))
+    marker_matches = list(_STRUCTURED_REVIEW_MARKER_RE.finditer(body))
+    fields: dict[str, str] = {}
+    duplicates: set[str] = set()
+    marker_starts = [match.start() for match in marker_matches]
+
+    for index, match in enumerate(section_matches):
+        name = match.group(1).lower()
+        value_start = match.end()
+        next_stops = [section_matches[index + 1].start()] if index + 1 < len(section_matches) else []
+        next_stops.extend(marker_start for marker_start in marker_starts if marker_start >= value_start)
+        value_end = min(next_stops) if next_stops else len(body)
+        if name in fields:
+            duplicates.add(name)
+            continue
+        fields[name] = body[value_start:value_end].strip()
+
+    marker_decisions = [match.group(1).lower() for match in marker_matches]
+    return fields, duplicates, marker_decisions
+
+
+def _classify_structured_review_status(body: str) -> tuple[str, str, str] | None:
+    fields, duplicates, marker_decisions = _parse_structured_review_sections(body)
+    if not fields and not marker_decisions:
+        return None
+
+    decision = fields.get("decision", "").lower()
+    unresolved = fields.get("unresolved")
+    if (
+        "decision" in duplicates
+        or "unresolved" in duplicates
+        or not decision
+        or unresolved is None
+        or len(marker_decisions) != 1
+    ):
+        return (
+            "ambiguous_needs_human",
+            "structured review-status signal is missing required fields or is inconsistent",
+            "Inspect the structured review status manually before editing or treating next_action prose as a local blocker.",
+        )
+    marker_decision = marker_decisions[0]
+    if (
+        decision not in _STRUCTURED_REVIEW_SUPPORTED_DECISIONS
+        or marker_decision not in _STRUCTURED_REVIEW_SUPPORTED_DECISIONS
+        or marker_decision != decision
+    ):
+        return (
+            "ambiguous_needs_human",
+            "structured review status uses an unsupported or conflicting decision",
+            "Resolve the inconsistent structured review status before acting on next_action prose.",
+        )
+
+    unresolved_lower = unresolved.lower()
+    if decision == "merge-ready":
+        if _requests_source_change(unresolved) or any(token in unresolved_lower for token in ("blocked", "remaining blocker")):
+            return (
+                "ambiguous_needs_human",
+                "structured merge-ready decision conflicts with its unresolved blocker summary",
+                "Resolve the inconsistent structured review status before acting on next_action prose.",
+            )
+        return (
+            "informational_no_local_change",
+            "structured review status explicitly reports readiness with no unresolved local blocker",
+            "No local proof required unless a later review reopens a blocker.",
+        )
+    if not unresolved:
+        return (
+            "ambiguous_needs_human",
+            "structured blocked review status has no unresolved blocker content",
+            "Classify the unresolved blocker manually before acting on next_action prose.",
+        )
+    if _requests_source_change(unresolved):
+        return (
+            "actionable_code_doc_body_change",
+            "structured blocked review status identifies a source or test change",
+            "Inspect the referenced source and test surfaces; run focused proof for the changed behavior.",
+        )
+    if any(token in unresolved_lower for token in ("ci", "check", "workflow", "label", "draft", "mergeable")):
+        return (
+            "ci_label_only_issue",
+            "structured blocked review status identifies CI, labels, draft state, or mergeability",
+            "Inspect PR checks/metadata; run local proof only if CI points to a reproducible failure.",
+        )
+    if any(token in unresolved_lower for token in ("pr body", "pull request body", "description", "title", "close #", "closes #", "closing #")):
+        return (
+            "pr_metadata_body_only_change",
+            "structured blocked review status identifies PR metadata or closure text",
+            "Update PR metadata/body only; no source proof unless the body is generated from checked-in files.",
+        )
+    return (
+        "ambiguous_needs_human",
+        "structured blocked review status does not identify a recognized blocker type",
+        "Classify the unresolved blocker manually before acting on next_action prose.",
+    )
+
+
 def _classify(item: dict[str, Any]) -> tuple[str, str, str]:
     body = _text(item.get("body"))
     lower = body.lower()
@@ -232,6 +334,9 @@ def _classify(item: dict[str, Any]) -> tuple[str, str, str]:
             "inline review comment anchors to a changed file",
             f"Inspect {path}; run focused tests or `agentic-workspace proof --changed {path} --format json`.",
         )
+    structured_status = _classify_structured_review_status(body)
+    if structured_status is not None:
+        return structured_status
     if _is_positive_review_summary(body):
         return (
             "informational_no_local_change",

@@ -9,6 +9,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = REPO_ROOT / "scripts" / "github" / "pr_comment_delta.py"
 README = REPO_ROOT / "scripts" / "github" / "README.md"
+REVIEW_HEAD = "a" * 40
 
 
 def _load_module():
@@ -85,6 +86,38 @@ def _fixture() -> dict:
     }
 
 
+def _structured_review_body(
+    *,
+    decision: str = "blocked",
+    marker_decision: str | None = None,
+    unresolved: str,
+    next_action: str = "Refresh the PR after the structured blocker is resolved.",
+    closure_honest: str = "no",
+) -> str:
+    marker = marker_decision or decision
+    return (
+        f"decision: {decision}\n"
+        "what_landed:\n"
+        "- Rechecked the exact PR head against the current review policy.\n"
+        "\n"
+        "intent_served:\n"
+        "- Preserve the linked issue intent and proof boundary.\n"
+        "\n"
+        "proof:\n"
+        "- Focused review completed against the current head.\n"
+        "\n"
+        "unresolved:\n"
+        f"{unresolved}\n"
+        "\n"
+        f"closure_honest: {closure_honest}\n"
+        "\n"
+        "next_action:\n"
+        f"{next_action}\n"
+        "\n"
+        f"<!-- aw-chatgpt-review pr=2329 head={REVIEW_HEAD} policy=pr-review-recheck-v1 decision={marker} -->"
+    )
+
+
 def test_pr_comment_delta_classifies_new_review_response_scope() -> None:
     module = _load_module()
     packet = module.build_packet(_fixture(), since=module._parse_timestamp("2026-06-23T09:59:00Z"))
@@ -157,6 +190,176 @@ def test_pr_comment_delta_keeps_ready_recheck_summaries_informational() -> None:
     assert category == "informational_no_local_change"
     assert "readiness" in reason
     assert proof_hint.startswith("No local proof required")
+
+
+def test_pr_comment_delta_uses_multiline_structured_blocker_before_next_action_prose() -> None:
+    module = _load_module()
+
+    category, reason, proof_hint = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": _structured_review_body(
+                unresolved=(
+                    "1. The PR remains a draft.\n2. The PR Semver Label workflow is stale.\n3. Required CI checks are still pending."
+                ),
+                next_action=(
+                    "Update `scripts/github/pr_comment_delta.py` if source changes become necessary, "
+                    "then mark the PR ready after checks and labels are correct."
+                ),
+            ),
+        }
+    )
+
+    assert category == "ci_label_only_issue"
+    assert "structured blocked" in reason
+    assert proof_hint.startswith("Inspect PR checks/metadata")
+
+
+def test_pr_comment_delta_keeps_multiline_structured_source_blockers_actionable() -> None:
+    module = _load_module()
+
+    category, _, proof_hint = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": _structured_review_body(
+                unresolved=(
+                    "1. `scripts/github/pr_comment_delta.py` only captures one-line review fields.\n"
+                    "2. Add a focused regression test in tests/test_pr_comment_delta.py for multiline review bodies."
+                ),
+                next_action="Mark the PR ready after the proof passes.",
+            ),
+        }
+    )
+
+    assert category == "actionable_code_doc_body_change"
+    assert "source and test surfaces" in proof_hint
+
+
+def test_pr_comment_delta_keeps_canonical_merge_ready_informational() -> None:
+    module = _load_module()
+
+    category, reason, proof_hint = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": _structured_review_body(
+                decision="merge-ready",
+                unresolved="- none",
+                closure_honest="yes",
+                next_action="No local action; the human retains merge authority.",
+            ),
+        }
+    )
+
+    assert category == "informational_no_local_change"
+    assert "readiness" in reason
+    assert proof_hint.startswith("No local proof required")
+
+
+def test_pr_comment_delta_marks_legacy_ready_structured_status_ambiguous() -> None:
+    module = _load_module()
+
+    category, reason, _ = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": _structured_review_body(
+                decision="ready",
+                marker_decision="merge-ready",
+                unresolved="- none",
+                closure_honest="yes",
+                next_action="No local action.",
+            ),
+        }
+    )
+
+    assert category == "ambiguous_needs_human"
+    assert "unsupported" in reason
+
+
+def test_pr_comment_delta_marks_missing_structured_marker_or_header_ambiguous() -> None:
+    module = _load_module()
+
+    missing_marker, marker_reason, _ = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": _structured_review_body(
+                unresolved="1. PR draft state remains.",
+                next_action="Mark ready after metadata is fixed.",
+            ).split("\n<!-- aw-chatgpt-review", 1)[0],
+        }
+    )
+    missing_unresolved, unresolved_reason, _ = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": (
+                "decision: blocked\n"
+                "next_action:\n"
+                "Mark ready after metadata is fixed.\n"
+                f"<!-- aw-chatgpt-review pr=2329 head={REVIEW_HEAD} policy=pr-review-recheck-v1 decision=blocked -->"
+            ),
+        }
+    )
+
+    assert missing_marker == "ambiguous_needs_human"
+    assert "missing required fields" in marker_reason
+    assert missing_unresolved == "ambiguous_needs_human"
+    assert "missing required fields" in unresolved_reason
+
+
+def test_pr_comment_delta_marks_duplicate_required_structured_fields_ambiguous() -> None:
+    module = _load_module()
+
+    body = _structured_review_body(
+        unresolved="1. PR draft state remains.",
+        next_action="Mark ready after metadata is fixed.",
+    ).replace(
+        "\nclosure_honest:",
+        "\nunresolved:\n2. Duplicate unresolved section should force manual inspection.\n\nclosure_honest:",
+    )
+
+    category, reason, _ = module._classify({"kind": "issue_comment", "body": body})
+
+    assert category == "ambiguous_needs_human"
+    assert "missing required fields" in reason
+
+
+def test_pr_comment_delta_marks_inconsistent_structured_status_ambiguous() -> None:
+    module = _load_module()
+
+    category, reason, _ = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": _structured_review_body(
+                marker_decision="merge-ready",
+                unresolved="1. PR draft state remains.",
+                next_action="Mark ready.",
+            ),
+        }
+    )
+
+    assert category == "ambiguous_needs_human"
+    assert "conflicting" in reason
+
+
+def test_pr_comment_delta_uses_structured_unresolved_for_mixed_blocker_lists() -> None:
+    module = _load_module()
+
+    category, reason, proof_hint = module._classify(
+        {
+            "kind": "issue_comment",
+            "body": _structured_review_body(
+                unresolved=(
+                    "1. The PR remains a draft.\n"
+                    "2. Update scripts/github/pr_comment_delta.py so multiline structured fields parse correctly.\n"
+                    "3. Add a focused regression test before claiming the blocker is resolved."
+                ),
+                next_action="Fix labels only after the source blocker is handled.",
+            ),
+        }
+    )
+
+    assert category == "actionable_code_doc_body_change"
+    assert "structured blocked" in reason
+    assert "source and test surfaces" in proof_hint
 
 
 def test_pr_comment_delta_filters_seen_comment_urls(tmp_path: Path) -> None:
