@@ -36,7 +36,8 @@
       "One pre-selection proof-route strategy identity controls commands, next action, and claim effect.",
       "Applicable live Memory validation-friction findings are consumed before proof commands are selected.",
       "Broad proof requires structured escalation evidence or explicit override instead of lane-count or lane-presence inference.",
-      "Start, implement, proof, handoff, and closeout preserve the same decision id and claim boundary."
+      "Start, implement, proof, handoff, and closeout preserve the same decision id and claim boundary.",
+      "Proof closeout summary consumes the proof_route_strategy_claim_gate so handoff/closeout claims must preserve the exact strategy decision id."
     ],
     "excluded": [
       "Work outside the bounded closeout scope."
@@ -50,7 +51,10 @@
     "proof_posture": {
       "state": "passed",
       "refs": [
-        "local proof commands recorded in validation_commands"
+        "uv run pytest tests/test_workspace_proof_cli.py -q: 133 passed",
+        "uv run pytest tests/test_workspace_session_logging.py tests/test_workspace_makefile_targets.py -q: 60 passed",
+        "uv run pytest tests/test_workspace_cli.py -k \"proof_route_strategy\" -q: 1 passed",
+        "uv run ruff check src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py: passed"
       ]
     },
     "external_posture": {
@@ -95,10 +99,10 @@
   "execution_run": {
     "run status": "completed",
     "executor": "agentic-planning closeout",
-    "what happened": "Finished #2334 strategy routing: one pre-selection proof-route strategy identity now controls proof, broad escalation requires structured evidence, applicable Memory validation friction is consumed before commands, slow-command grouping uses per-group class identity, and start/implement/proof/handoff/closeout preserve claim blocking.",
+    "what happened": "Finished #2334 strategy routing on top of the corrected #2335 route-authority base: one pre-selection proof-route strategy identity now controls proof, broad escalation requires structured evidence, applicable Memory validation friction is consumed before commands, slow-command grouping uses per-group class identity, and start/implement/proof/handoff/closeout preserve claim blocking through a shared claim gate.",
     "scope touched": "Session logging friction candidates, proof route strategy/gate runtime, start/implement proof preservation, contracts/schema reference docs, Planning closeout state, and regressions.",
     "changed surfaces": "src/agentic_workspace/session_logging.py; src/agentic_workspace/workspace_runtime_proof.py; src/agentic_workspace/workspace_runtime_startup.py; src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/contracts/**; tests/test_workspace_cli.py; tests/test_workspace_proof_cli.py; tests/test_workspace_session_logging.py; .agentic-workspace/planning/**",
-    "validations run": "Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests.",
+    "validations run": "Local proof passed: merge-resolved proof router/session suites, start/implement strategy projection test, proof closeout claim-gate regression, plus summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests.",
     "result for continuation": "bounded closeout complete",
     "next step": "archive this execplan"
   },
@@ -137,9 +141,9 @@
     "retention after promotion": "retain"
   },
   "proof_report": {
-    "validation proof": "Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests.",
+    "validation proof": "Local proof passed: merge-resolved proof router/session suites, start/implement strategy projection test, proof closeout claim-gate regression, plus summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests."
+    "evidence for \"proof achieved\" state": "Local proof passed: merge-resolved proof router/session suites, start/implement strategy projection test, proof closeout claim-gate regression, plus summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests."
   },
   "intent_satisfaction": {
     "original intent": "Gate broad proof on recurring friction and structured escalation",

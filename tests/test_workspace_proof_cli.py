@@ -5000,7 +5000,7 @@ evidence = ["session-log:slow-command:generated"]
                 "--changed",
                 "src/generated_component.py",
                 "--select",
-                "proof_route_strategy_decision,proof_route_escalation_gate,proof_route_strategy_preservation,manual_verification,next",
+                "proof_route_strategy_decision,proof_route_escalation_gate,proof_route_strategy_preservation,proof_route_strategy_claim_gate,proof_closeout_summary,manual_verification,next",
                 "--format",
                 "json",
             ]
@@ -5021,6 +5021,10 @@ evidence = ["session-log:slow-command:generated"]
     assert preservation["status"] == "selected"
     assert preservation["consumers"]["proof"]["decision_id"] == preservation["decision_id"]
     assert preservation["consumers"]["handoff"]["claim_effect"] == "focused-proof-required"
+    claim_gate = values["proof_route_strategy_claim_gate"]
+    assert claim_gate["decision_id"] == preservation["decision_id"]
+    assert claim_gate["handoff"]["required_identity_field"] == "proof_route_strategy_preservation.decision_id"
+    assert values["proof_closeout_summary"]["proof_route_strategy_claim_gate"]["decision_id"] == preservation["decision_id"]
     assert values.get("manual_verification") is None
     assert values["next"]["action"] == "run-validation-command"
 
