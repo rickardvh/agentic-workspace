@@ -8470,6 +8470,11 @@ def _run_lifecycle_command(
     )
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
+    skill_dependency_diagnostics = (
+        _workspace_runtime_core._skill_dependency_diagnostics(target_root=target_root) if command_name == "doctor" else []
+    )
+    skill_dependency_warnings = [str(item["message"]) for item in skill_dependency_diagnostics]
+    warnings.extend(skill_dependency_warnings)
     selected_set = set(selected_modules)
     enabled_set = set(config.enabled_modules)
     installed_set = {entry.name for entry in registry if entry.installed}
@@ -8504,6 +8509,8 @@ def _run_lifecycle_command(
         "warnings": warnings,
         "placeholders": placeholders,
         "stale_generated_surfaces": stale_generated_surfaces,
+        "skill_dependency_warnings": skill_dependency_warnings,
+        "skill_dependency_diagnostics": skill_dependency_diagnostics,
         "registry": [
             {
                 "name": entry.name,
@@ -8564,6 +8571,15 @@ def _run_lifecycle_command(
         repair_actions, manual_review_actions = _aggregate_repair_actions_from_reports(
             reports, target_root=target_root, cli_invoke=config.cli_invoke, command_name=command_name
         )
+        if command_name == "doctor" and skill_dependency_diagnostics:
+            repair_actions = [
+                *_workspace_runtime_core._skill_dependency_repair_actions(
+                    diagnostics=skill_dependency_diagnostics,
+                    target_root=target_root,
+                    cli_invoke=config.cli_invoke,
+                ),
+                *repair_actions,
+            ]
         if command_name == "doctor":
             cli_review_action = _cli_compatibility_manual_review_action(
                 target_root=target_root, cli_invoke=config.cli_invoke, cli_compatibility=cli_compatibility
@@ -24325,6 +24341,15 @@ def _compact_start_proof_payload(proof: dict[str, Any]) -> dict[str, Any]:
     runtime_symbol_working_set = proof.get("runtime_symbol_working_set", {})
     if isinstance(runtime_symbol_working_set, dict) and runtime_symbol_working_set.get("status") == "present":
         compact["runtime_symbol_working_set"] = tiny_runtime_symbol_working_set_payload(runtime_symbol_working_set)
+    preservation = proof.get("proof_route_strategy_preservation", {})
+    if isinstance(preservation, dict) and preservation:
+        compact["proof_route_strategy_preservation"] = {
+            key: preservation.get(key)
+            for key in ("kind", "status", "decision_id", "selected_requirement", "claim_effect", "manual_verification_status", "rule")
+            if key in preservation
+        }
+        if isinstance(preservation.get("consumers"), dict):
+            compact["proof_route_strategy_preservation"]["consumer"] = preservation["consumers"].get("start", {})
     changed = proof.get("changed_paths", [])
     if isinstance(changed, list) and changed:
         compact["detail_command"] = "agentic-workspace proof --verbose --changed <paths> --format json"
@@ -24861,16 +24886,75 @@ def _field_by_path(payload: Any, path: str) -> tuple[bool, Any]:
     return (True, copy.deepcopy(current))
 
 
+def _field_path_exists(payload: Any, path: str) -> bool:
+    current = payload
+    for part in path.split("."):
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+            continue
+        if isinstance(current, list):
+            try:
+                current = current[int(part)]
+                continue
+            except (ValueError, IndexError):
+                return False
+        return False
+    return True
+
+
+def _bounded_selector_descriptor_for_payload(payload: dict[str, Any]) -> list[str]:
+    return [key for key in payload if isinstance(key, str) and key.strip()]
+
+
+def _selector_suggestions(*, unknown: str, available: list[str], limit: int = 3) -> list[str]:
+    unknown_root = unknown.split(".", 1)[0]
+    suggestions: list[str] = []
+    for selector in available:
+        if selector == unknown:
+            continue
+        selector_root = selector.split(".", 1)[0]
+        if selector_root == unknown_root or selector.startswith(unknown) or unknown.startswith(selector_root):
+            suggestions.append(selector)
+        if len(suggestions) >= limit:
+            break
+    return suggestions
+
+
+def _selector_validation_error(*, payload: dict[str, Any], selectors: list[str], missing: list[str], source_command: str) -> dict[str, Any]:
+    available = _bounded_selector_descriptor_for_payload(payload)
+    sample = list(dict.fromkeys(selector for selector in available if isinstance(selector, str) and selector.strip()))[:8]
+    suggestions = {selector: matches for selector in missing if (matches := _selector_suggestions(unknown=selector, available=available))}
+    inventory_command = f"agentic-workspace {source_command} --target . --verbose --format json"
+    return {
+        "kind": "agentic-workspace/selector-validation-error/v1",
+        "status": "invalid-selector",
+        "source_command": source_command,
+        "requested_selectors": selectors,
+        "unknown_selectors": missing,
+        "selector_inventory": {
+            "status": "omitted-from-validation-error",
+            "available_count": len(available),
+            "sample": sample,
+            "sample_limit": 8,
+            "discovery_command": inventory_command,
+            "inventory_command": inventory_command,
+            "rule": "Unknown selectors return a bounded validation envelope; full selector inventory is available only through an explicit detail route.",
+        },
+        "suggestions": suggestions,
+        "validation_rule": "Selector requests are atomic: any unknown selector prevents partial projection output.",
+    }
+
+
 def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str) -> dict[str, Any]:
     selectors = _selector_tokens(select)
+    missing = [selector for selector in selectors if not _field_path_exists(payload, selector)]
+    if missing:
+        return _selector_validation_error(payload=payload, selectors=selectors, missing=missing, source_command=source_command)
     values: dict[str, Any] = {}
-    missing: list[str] = []
     for selector in selectors:
         found, value = _field_by_path(payload, selector)
         if found:
             values[selector] = value
-        else:
-            missing.append(selector)
     selected_payload_paths = {
         selector: f"values.{selector}" if selector.isidentifier() else f"values[{json.dumps(selector)}]" for selector in values
     }
@@ -24885,10 +24969,6 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
             "rule": "Selected field output stores payloads under values keyed by the selector string; compact report/proof answers store their payload under answer.",
         },
     }
-    if missing:
-        selected["missing"] = missing
-        selected["selector_rule"] = "Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing."
-        selected["available_selectors"] = _available_selectors_for_payload(payload)
     return selected
 
 
@@ -41065,18 +41145,19 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
     from repo_planning_bootstrap.runtime_projection import _print_summary
 
-    changed_paths = list(getattr(args, "changed", []) or [])
+    changed_paths = _normalize_changed_paths(list(getattr(args, "changed", []) or getattr(args, "changed_paths", []) or []))
+    task_text = getattr(args, "task", None) or getattr(args, "task_text", None)
     if getattr(args, "select", None):
         closeout_inspection = _completion_closeout_inspection_payload(
             target_root=target_root,
             config=config,
-            task_text=getattr(args, "task", None),
+            task_text=task_text,
             explicit_request=_selector_requests(getattr(args, "select", None), "closeout_trust_inspection"),
         )
         payload = _select_summary_payload(
             target_root=target_root,
             select=getattr(args, "select"),
-            task_text=getattr(args, "task", None),
+            task_text=task_text,
             changed_paths=changed_paths,
             planning_summary=planning_summary,
             cli_invoke=config.cli_invoke,
@@ -41100,11 +41181,11 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     payload.pop("available_selectors", None)
         _emit_payload(payload=payload, format_name=args.format)
     else:
-        summary_profile = _diagnostic_profile(args, default="tiny")
+        summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
         reuse_query = {
             "profile": summary_profile,
             "format": str(args.format),
-            "task": str(getattr(args, "task", None) or ""),
+            "task": str(task_text or ""),
             "changed": changed_paths,
             "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
         }
@@ -41124,9 +41205,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 _emit_payload(payload=reused, format_name=args.format)
                 return 0
         summary_started_at = time.perf_counter()
-        summary = planning_summary(
-            target=target_root.as_posix(), profile=summary_profile, task_text=getattr(args, "task", None), changed_paths=changed_paths
-        )
+        summary = planning_summary(target=target_root.as_posix(), profile=summary_profile, task_text=task_text, changed_paths=changed_paths)
         summary_elapsed_ms = round((time.perf_counter() - summary_started_at) * 1000, 3)
         if isinstance(summary, dict):
             if summary_elapsed_ms > 2_000:
@@ -41158,20 +41237,18 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 )
             else:
                 summary["memory_consult"] = _tiny_memory_consult_payload(config=config)
-            closeout_inspection = _completion_closeout_inspection_payload(
-                target_root=target_root, config=config, task_text=getattr(args, "task", None)
-            )
+            closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
             if closeout_inspection["status"] in {"required", "clear"}:
                 summary["closeout_trust_inspection"] = closeout_inspection
             if _task_posture_packet_relevant(
-                task_text=getattr(args, "task", None),
+                task_text=task_text,
                 changed_paths=changed_paths,
                 surface="summary",
             ):
                 _attach_summary_task_posture_packet(
                     summary=summary,
                     target_root=target_root,
-                    task_text=getattr(args, "task", None),
+                    task_text=task_text,
                     changed_paths=changed_paths,
                     cli_invoke=config.cli_invoke,
                 )
@@ -47648,9 +47725,11 @@ def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
 
 
 def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str | None, select: str | None = None) -> None:
-    full_payload = _skills_payload(target_root=target_root, task_text=task_text)
+    full_payload = _workspace_runtime_core._skills_payload(target_root=target_root, task_text=task_text)
     payload = (
-        _skills_recommendation_first_payload(full_payload, target_root=target_root, task_text=task_text) if task_text else full_payload
+        _workspace_runtime_core._skills_recommendation_first_payload(full_payload, target_root=target_root, task_text=task_text)
+        if task_text
+        else full_payload
     )
     if select:
         payload = _select_payload_fields(full_payload, select=select, source_command="skills")

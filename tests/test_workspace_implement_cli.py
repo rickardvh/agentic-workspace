@@ -8399,9 +8399,12 @@ def test_implement_selector_reports_available_fields_for_missing_selector(tmp_pa
     )
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["missing"] == ["does_not_exist"]
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["does_not_exist"]
+    assert "values" not in payload
     inventory = payload["selector_inventory"]
-    assert inventory["status"] == "omitted-from-compact-default"
+    assert inventory["status"] == "omitted-from-validation-error"
     assert inventory["available_count"] > len(inventory["sample"])
     assert len(inventory["sample"]) <= 8
+    assert inventory["discovery_command"] == "agentic-workspace implement --target . --verbose --format json"
     assert "available_selectors" not in payload

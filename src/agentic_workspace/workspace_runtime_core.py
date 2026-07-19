@@ -4523,6 +4523,10 @@ class RegisteredSkill:
     summary: str
     activation_hints: SkillActivationHints
     registration: str
+    required_resources: tuple[str, ...] = ()
+    availability: str = "available"
+    blocked_reasons: tuple[str, ...] = ()
+    dependency_diagnostics: tuple[dict[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -9435,6 +9439,9 @@ def _run_lifecycle_command(
     )
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
+    skill_dependency_diagnostics = _skill_dependency_diagnostics(target_root=target_root) if command_name == "doctor" else []
+    skill_dependency_warnings = [str(item["message"]) for item in skill_dependency_diagnostics]
+    warnings.extend(skill_dependency_warnings)
     selected_set = set(selected_modules)
     enabled_set = set(config.enabled_modules)
     installed_set = {entry.name for entry in registry if entry.installed}
@@ -9471,6 +9478,8 @@ def _run_lifecycle_command(
         "warnings": warnings,
         "placeholders": placeholders,
         "stale_generated_surfaces": stale_generated_surfaces,
+        "skill_dependency_warnings": skill_dependency_warnings,
+        "skill_dependency_diagnostics": skill_dependency_diagnostics,
         "registry": [
             {
                 "name": entry.name,
@@ -9537,6 +9546,15 @@ def _run_lifecycle_command(
         repair_actions, manual_review_actions = _aggregate_repair_actions_from_reports(
             reports, target_root=target_root, cli_invoke=config.cli_invoke, command_name=command_name
         )
+        if command_name == "doctor" and skill_dependency_diagnostics:
+            repair_actions = [
+                *_skill_dependency_repair_actions(
+                    diagnostics=skill_dependency_diagnostics,
+                    target_root=target_root,
+                    cli_invoke=config.cli_invoke,
+                ),
+                *repair_actions,
+            ]
         if command_name == "doctor":
             cli_review_action = _cli_compatibility_manual_review_action(
                 target_root=target_root, cli_invoke=config.cli_invoke, cli_compatibility=cli_compatibility
@@ -26879,6 +26897,15 @@ def _compact_start_proof_payload(proof: dict[str, Any]) -> dict[str, Any]:
             "sections": {str(section): len(items) for section, items in active.items() if isinstance(items, list) and items},
             "detail_selector": "proof.high_risk_overlay",
         }
+    preservation = proof.get("proof_route_strategy_preservation", {})
+    if isinstance(preservation, dict) and preservation:
+        compact["proof_route_strategy_preservation"] = {
+            key: preservation.get(key)
+            for key in ("kind", "status", "decision_id", "selected_requirement", "claim_effect", "manual_verification_status", "rule")
+            if key in preservation
+        }
+        if isinstance(preservation.get("consumers"), dict):
+            compact["proof_route_strategy_preservation"]["consumer"] = preservation["consumers"].get("start", {})
     changed = proof.get("changed_paths", [])
     if isinstance(changed, list) and changed:
         compact["detail_command"] = "agentic-workspace proof --verbose --changed <paths> --format json"
@@ -27416,16 +27443,75 @@ def _field_by_path(payload: Any, path: str) -> tuple[bool, Any]:
     return (True, copy.deepcopy(current))
 
 
+def _field_path_exists(payload: Any, path: str) -> bool:
+    current = payload
+    for part in path.split("."):
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+            continue
+        if isinstance(current, list):
+            try:
+                current = current[int(part)]
+                continue
+            except (ValueError, IndexError):
+                return False
+        return False
+    return True
+
+
+def _bounded_selector_descriptor_for_payload(payload: dict[str, Any]) -> list[str]:
+    return [key for key in payload if isinstance(key, str) and key.strip()]
+
+
+def _selector_suggestions(*, unknown: str, available: list[str], limit: int = 3) -> list[str]:
+    unknown_root = unknown.split(".", 1)[0]
+    suggestions: list[str] = []
+    for selector in available:
+        if selector == unknown:
+            continue
+        selector_root = selector.split(".", 1)[0]
+        if selector_root == unknown_root or selector.startswith(unknown) or unknown.startswith(selector_root):
+            suggestions.append(selector)
+        if len(suggestions) >= limit:
+            break
+    return suggestions
+
+
+def _selector_validation_error(*, payload: dict[str, Any], selectors: list[str], missing: list[str], source_command: str) -> dict[str, Any]:
+    available = _bounded_selector_descriptor_for_payload(payload)
+    suggestions = {selector: matches for selector in missing if (matches := _selector_suggestions(unknown=selector, available=available))}
+    inventory_command = f"agentic-workspace {source_command} --target . --verbose --format json"
+    return {
+        "kind": "agentic-workspace/selector-validation-error/v1",
+        "status": "invalid-selector",
+        "source_command": source_command,
+        "requested_selectors": selectors,
+        "unknown_selectors": missing,
+        "selector_inventory": bounded_selector_inventory(
+            selectors=available,
+            source_command=source_command,
+            select_command=inventory_command,
+            inventory_command=inventory_command,
+        )
+        | {
+            "status": "omitted-from-validation-error",
+            "rule": "Unknown selectors return a bounded validation envelope; full selector inventory is available only through an explicit detail route.",
+        },
+        "suggestions": suggestions,
+        "validation_rule": "Selector requests are atomic: any unknown selector prevents partial projection output.",
+    }
+
+
 def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str) -> dict[str, Any]:
     selectors = _selector_tokens(select)
+    missing = [selector for selector in selectors if not _field_path_exists(payload, selector)]
+    if missing:
+        return _selector_validation_error(payload=payload, selectors=selectors, missing=missing, source_command=source_command)
     values: dict[str, Any] = {}
-    missing: list[str] = []
     for selector in selectors:
         found, value = _field_by_path(payload, selector)
         if found:
             values[selector] = value
-        else:
-            missing.append(selector)
     selected_payload_paths = {
         selector: f"values.{selector}" if selector.isidentifier() else f"values[{json.dumps(selector)}]" for selector in values
     }
@@ -27440,15 +27526,6 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
             "rule": "Selected field output stores payloads under values keyed by the selector string; compact report/proof answers store their payload under answer.",
         },
     }
-    if missing:
-        selected["missing"] = missing
-        selected["selector_rule"] = "Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing."
-        selected["selector_inventory"] = bounded_selector_inventory(
-            selectors=_available_selectors_for_payload(payload),
-            source_command=source_command,
-            select_command=f"agentic-workspace {source_command} --select <field[,field...]> --format json",
-            inventory_command=f"agentic-workspace {source_command} --verbose --format json",
-        )
     return selected
 
 
@@ -44437,7 +44514,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
     from repo_planning_bootstrap.runtime_projection import _print_summary
 
-    changed_paths = list(getattr(args, "changed", []) or [])
+    changed_paths = _normalize_changed_paths(list(getattr(args, "changed", []) or getattr(args, "changed_paths", []) or []))
     if getattr(args, "select", None):
         closeout_inspection = _completion_closeout_inspection_payload(
             target_root=target_root,
@@ -44473,9 +44550,8 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         _emit_payload(payload=payload, format_name=args.format)
     else:
         summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
-        summary = planning_summary(
-            target=target_root.as_posix(), profile=summary_profile, task_text=getattr(args, "task", None), changed_paths=changed_paths
-        )
+        task_text = getattr(args, "task", None) or getattr(args, "task_text", None)
+        summary = planning_summary(target=target_root.as_posix(), profile=summary_profile, task_text=task_text, changed_paths=changed_paths)
         if isinstance(summary, dict):
             if summary_profile == "full":
                 summary["memory_consult"] = _memory_consult_payload(
@@ -44487,20 +44563,18 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 )
             else:
                 summary["memory_consult"] = _tiny_memory_consult_payload(config=config)
-            closeout_inspection = _completion_closeout_inspection_payload(
-                target_root=target_root, config=config, task_text=getattr(args, "task", None)
-            )
+            closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
             if closeout_inspection["status"] in {"required", "clear"}:
                 summary["closeout_trust_inspection"] = closeout_inspection
             if _task_posture_packet_relevant(
-                task_text=getattr(args, "task", None),
+                task_text=task_text,
                 changed_paths=changed_paths,
                 surface="summary",
             ):
                 _attach_summary_task_posture_packet(
                     summary=summary,
                     target_root=target_root,
-                    task_text=getattr(args, "task", None),
+                    task_text=task_text,
                     changed_paths=changed_paths,
                     cli_invoke=config.cli_invoke,
                 )
@@ -46731,6 +46805,8 @@ def _proof_next_decision_payload(
         warnings.append("Host proof policy blocked one or more candidate proof commands.")
     route_refinement_required = isinstance(manual_verification, dict) and manual_verification.get("status") == "route-refinement-required"
     selected = selected_commands[0] if selected_commands else None
+    manual_status = str(manual_verification.get("status", "")) if isinstance(manual_verification, dict) else ""
+    manual_blocks_selected_commands = manual_status == "route-refinement-required"
     if route_refinement_required:
         summary = manual_verification.get("summary") or manual_verification.get("reason") if isinstance(manual_verification, dict) else None
         next_action = {
@@ -46757,13 +46833,18 @@ def _proof_next_decision_payload(
         summary = None
         if isinstance(manual_verification, dict):
             summary = manual_verification.get("summary") or manual_verification.get("reason")
+        action = "select-proof-scope"
+        route_source = "none"
+        if manual_verification:
+            action = "route-refinement-required" if manual_blocks_selected_commands else "manual-verification"
+            route_source = "route-refinement" if manual_blocks_selected_commands else "manual-fallback"
         next_action = {
-            "action": "manual-verification" if manual_verification else "select-proof-scope",
+            "action": action,
             "command": None,
             "run": None,
             "required": bool(manual_verification),
             "why": summary or "No executable proof route was selected.",
-            "route_source": "manual-fallback" if manual_verification else "none",
+            "route_source": route_source,
         }
     return {
         "kind": "proof-next-decision/v1",
@@ -50942,7 +51023,9 @@ def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str |
 
 def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root: Path | None, task_text: str | None) -> dict[str, Any]:
     recommendations = [item for item in _list_payload(payload.get("recommendations")) if isinstance(item, dict)]
+    blocked_recommendations = [item for item in _list_payload(payload.get("blocked_recommendations")) if isinstance(item, dict)]
     top = recommendations[0] if recommendations else {}
+    top_blocked = blocked_recommendations[0] if blocked_recommendations else {}
     top_score = int(top.get("score", 0) or 0) if top else 0
     tied = [item for item in recommendations if int(item.get("score", 0) or 0) == top_score] if top else []
     low_confidence = bool(top and top_score <= 1)
@@ -50953,7 +51036,7 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
         "target": payload.get("target"),
         "task": task_text,
         "profile": "recommendation-first",
-        "status": "recommended" if recommendations else "no-match",
+        "status": "recommended" if recommendations else "blocked" if blocked_recommendations else "no-match",
         "recommendation_summary": {
             "recommended_skill": top.get("id", "") if top else "",
             "next_skill_path": top.get("path", "") if top else "",
@@ -50963,8 +51046,16 @@ def _skills_recommendation_first_payload(payload: dict[str, Any], *, target_root
             "tie_count": len(tied),
             "low_confidence": low_confidence,
         },
+        "blocked_recommendation_summary": {
+            "blocked_skill": top_blocked.get("id", "") if top_blocked else "",
+            "score": int(top_blocked.get("score", 0) or 0) if top_blocked else 0,
+            "reasons": top_blocked.get("reasons", [])[:3] if top_blocked else [],
+            "blocked_reasons": top_blocked.get("blocked_reasons", []) if top_blocked else [],
+            "repair_command": top_blocked.get("repair_command", "") if top_blocked else "",
+        },
         "top_recommendations": payload.get("top_recommendations", recommendations[:3]),
         "recommendations": recommendations,
+        "blocked_recommendations": blocked_recommendations[:3],
         "agent_aids": payload.get("agent_aids", []),
         "agent_aid_recommendations": payload.get("agent_aid_recommendations", []),
         "agent_aid_source": payload.get("agent_aid_source", {}),
@@ -50986,6 +51077,7 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
         return {"skills": [], "recommendations": [], "warnings": [], "sources": []}
     skills, warnings, sources = _discover_registered_skills(target_root=target_root)
     recommendations = _recommend_skills(task_text=task_text, skills=skills) if task_text else []
+    blocked_recommendations = _recommend_skills(task_text=task_text, skills=skills, availability="blocked") if task_text else []
     agent_aids, aid_warnings = _checked_in_agent_aid_entries(target_root=target_root)
     visible_agent_aids = [aid for aid in agent_aids if aid["status"] != "retired"]
     agent_aid_recommendations = _recommend_agent_aids(task_text=task_text, aids=visible_agent_aids) if task_text else []
@@ -50998,11 +51090,22 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
         }
         for recommendation in recommendations
     ]
+    blocked_skill_payloads = [
+        {
+            **_skill_payload(skill=recommendation.skill),
+            "score": recommendation.score,
+            "reasons": list(recommendation.reasons),
+            "follow_up_guidance": list(recommendation.skill.activation_hints.when),
+            "repair_command": _skill_repair_command(recommendation.skill),
+        }
+        for recommendation in blocked_recommendations
+    ]
     return {
         "target": target_root.as_posix(),
         "task": task_text,
         "skills": [_skill_payload(skill=skill) for skill in skills],
         "recommendations": skill_recommendation_payloads,
+        "blocked_recommendations": blocked_skill_payloads,
         "top_recommendations": [
             {
                 key: item.get(key)
@@ -51023,6 +51126,95 @@ def _skills_payload(*, target_root: Path | None, task_text: str | None) -> dict[
         "agent_aid_warnings": aid_warnings,
         "sources": sources,
     }
+
+
+def _skill_dependency_warnings(*, target_root: Path) -> list[str]:
+    return [str(item["message"]) for item in _skill_dependency_diagnostics(target_root=target_root)]
+
+
+def _skill_dependency_diagnostics(*, target_root: Path) -> list[dict[str, str]]:
+    skills, _, _ = _discover_registered_skills(target_root=target_root)
+    diagnostics: list[dict[str, str]] = []
+    for skill in skills:
+        if skill.availability != "blocked":
+            continue
+        diagnostics.extend(_skill_dependency_diagnostic_payloads(skill))
+    return diagnostics
+
+
+def _skill_dependency_diagnostic_payloads(skill: RegisteredSkill) -> list[dict[str, str]]:
+    payloads: list[dict[str, str]] = []
+    for diagnostic in skill.dependency_diagnostics:
+        resource_id = str(diagnostic.get("resource_id", ""))
+        repair_command = str(diagnostic.get("repair_command") or _skill_repair_command(skill))
+        payloads.append(
+            {
+                **diagnostic,
+                "skill_id": skill.skill_id,
+                "skill_path": skill.path.as_posix(),
+                "message": f"skill '{skill.skill_id}' is blocked: {diagnostic['reason_code']}",
+                "repair_command": repair_command,
+                "repair_action_id": _skill_dependency_repair_action_id(skill_id=skill.skill_id, resource_id=resource_id),
+            }
+        )
+    return payloads
+
+
+def _skill_dependency_repair_action_id(*, skill_id: str, resource_id: str) -> str:
+    def _safe(value: str) -> str:
+        return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-") or "unknown"
+
+    return f"repair-skill-dependency-{_safe(skill_id)}-{_safe(resource_id)}"
+
+
+def _skill_dependency_repair_actions(*, diagnostics: list[dict[str, str]], target_root: Path, cli_invoke: str) -> list[dict[str, Any]]:
+    actions: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    target = target_root.as_posix()
+    command = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --format json",
+        cli_invoke=cli_invoke,
+    )
+    dry_run = _command_with_cli_invoke(
+        command=f"agentic-workspace upgrade --target {target} --dry-run --format json",
+        cli_invoke=cli_invoke,
+    )
+    proof_after = [_command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke)]
+    for diagnostic in diagnostics:
+        action_id = str(diagnostic.get("repair_action_id") or "").strip()
+        if not action_id or action_id in seen:
+            continue
+        seen.add(action_id)
+        actions.append(
+            {
+                "id": action_id,
+                "action": "repair-skill-dependency",
+                "invariant": "workspace.skill_dependency_resources_available",
+                "fault_class": "agent_operation_fault",
+                "severity": "warning",
+                "owner": str(diagnostic.get("expected_owner", "workspace")),
+                "safe_to_apply": True,
+                "risk": "low; refreshes workspace/package-managed surfaces through the existing upgrade authority",
+                "command": command,
+                "run": command,
+                "dry_run": dry_run,
+                "proof_after": proof_after,
+                "affected_surfaces": [str(diagnostic.get("expected_source", ""))],
+                "current_fault_summary": str(diagnostic.get("message", "")),
+                "do_not": [
+                    "Do not recommend the blocked skill as executable until its mandatory resource is available.",
+                    "Do not use catalog inspection as the repair action for a missing mandatory dependency.",
+                ],
+                "skill_id": str(diagnostic.get("skill_id", "")),
+                "resource_id": str(diagnostic.get("resource_id", "")),
+                "reason_code": str(diagnostic.get("reason_code", "")),
+                "expected_owner": str(diagnostic.get("expected_owner", "")),
+                "expected_source": str(diagnostic.get("expected_source", "")),
+                "compatibility_state": str(diagnostic.get("compatibility_state", "")),
+                "repair_identity": action_id,
+            }
+        )
+    return actions
 
 
 def _recommend_agent_aids(*, task_text: str, aids: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -51070,21 +51262,31 @@ def _discover_registered_skills(*, target_root: Path) -> tuple[list[RegisteredSk
         warn_for_missing_registry_entries = False
         if registry_file.exists():
             source_state = "registry"
-            loaded_from_registry = _load_registered_skills(source=source, registry_file=registry_file)
+            loaded_from_registry = _load_registered_skills(
+                source=source,
+                registry_file=registry_file,
+                target_root=target_root,
+                package_registry_file=package_registry_file,
+            )
             warn_for_missing_registry_entries = True
         elif package_registry_file is not None:
             source_state = "package-registry"
-            loaded_from_registry = _load_registered_skills(source=source, registry_file=package_registry_file)
+            loaded_from_registry = _load_registered_skills(
+                source=source,
+                registry_file=package_registry_file,
+                target_root=target_root,
+                package_registry_file=package_registry_file,
+            )
         for skill in loaded_from_registry:
             skill_exists = (target_root / skill.path).exists()
-            if (not skill_exists) and source_state == "package-registry" and package_skills_root is not None:
+            if (not skill_exists) and package_skills_root is not None:
                 try:
                     package_relative = skill.path.relative_to(source.skills_root)
                 except ValueError:
                     package_relative = Path(str(skill.path.name))
                 skill_exists = (package_skills_root / package_relative).exists()
             if not skill_exists:
-                if warn_for_missing_registry_entries:
+                if warn_for_missing_registry_entries and package_registry_file is None:
                     warnings.append(f"{source.registry_path.as_posix()} points at missing skill file {skill.path.as_posix()}")
                 continue
             key = (skill.skill_id, skill.path.as_posix())
@@ -51159,9 +51361,19 @@ def _package_skill_registry_file(source: SkillCatalogSource) -> Path | None:
     return registry_file if registry_file.exists() else None
 
 
-def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) -> list[RegisteredSkill]:
+def _load_registered_skills(
+    *, source: SkillCatalogSource, registry_file: Path, target_root: Path, package_registry_file: Path | None = None
+) -> list[RegisteredSkill]:
     payload = json.loads(registry_file.read_text(encoding="utf-8"))
     entries = payload.get("skills", [])
+    resource_paths = {
+        str(resource_id): (
+            Path(str(resource.get("path", ""))),
+            Path(str(resource.get("package_path", ""))),
+        )
+        for resource_id, resource in (payload.get("resources", {}) or {}).items()
+        if isinstance(resource, dict) and (str(resource.get("path", "")).strip() or str(resource.get("package_path", "")).strip())
+    }
     skills: list[RegisteredSkill] = []
     for raw in entries:
         if not isinstance(raw, dict):
@@ -51170,6 +51382,22 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) 
         activation_hints = raw.get("activation_hints", {})
         if not isinstance(activation_hints, dict):
             activation_hints = {}
+        required_resources = tuple(str(value).strip() for value in raw.get("required_resources", []) if str(value).strip())
+        dependency_diagnostics = tuple(
+            diagnostic
+            for resource_id in required_resources
+            if (
+                diagnostic := _skill_resource_diagnostic(
+                    resource_id=resource_id,
+                    resource_paths=resource_paths,
+                    target_root=target_root,
+                    registry_file=registry_file,
+                    package_registry_file=package_registry_file,
+                )
+            )
+            is not None
+        )
+        blocked_reasons = tuple(diagnostic["reason_code"] for diagnostic in dependency_diagnostics)
         skills.append(
             RegisteredSkill(
                 skill_id=str(raw.get("id", "")).strip(),
@@ -51187,13 +51415,65 @@ def _load_registered_skills(*, source: SkillCatalogSource, registry_file: Path) 
                     when=tuple((str(value).strip() for value in activation_hints.get("when", []) if str(value).strip())),
                 ),
                 registration="explicit",
+                required_resources=required_resources,
+                availability="blocked" if blocked_reasons else "available",
+                blocked_reasons=blocked_reasons,
+                dependency_diagnostics=dependency_diagnostics,
             )
         )
     return [skill for skill in skills if skill.skill_id and skill.path.as_posix()]
 
 
-def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
+def _skill_resource_diagnostic(
+    *,
+    resource_id: str,
+    resource_paths: dict[str, tuple[Path, Path]],
+    target_root: Path,
+    registry_file: Path,
+    package_registry_file: Path | None,
+) -> dict[str, str] | None:
+    if resource_id not in resource_paths:
+        return {
+            "resource_id": resource_id,
+            "status": "blocked",
+            "reason_code": f"unknown-resource:{resource_id}",
+            "expected_owner": "skill-registry",
+            "expected_source": registry_file.as_posix(),
+            "compatibility_state": "unknown-resource-identity",
+            "repair_command": "agentic-workspace upgrade --target . --format json",
+        }
+    repo_path, package_path = resource_paths[resource_id]
+    candidates: list[tuple[str, Path]] = []
+    if repo_path.as_posix() and repo_path.as_posix() != ".":
+        candidates.append(("repo-owned", target_root / repo_path))
+    if package_path.as_posix() and package_path.as_posix() != ".":
+        package_root = package_registry_file.parent if package_registry_file is not None else registry_file.parent
+        candidates.append(("package-owned", package_root / package_path))
+        if package_registry_file is not None and package_path.as_posix().startswith("../bootstrap/"):
+            candidates.append(
+                (
+                    "package-owned",
+                    package_registry_file.parent.parent / "_payload" / package_path.as_posix().removeprefix("../bootstrap/"),
+                )
+            )
+    for owner, candidate in candidates:
+        if candidate.is_file():
+            return None
+    expected_owner = candidates[0][0] if candidates else "skill-registry"
+    expected_source = candidates[0][1].as_posix() if candidates else registry_file.as_posix()
     return {
+        "resource_id": resource_id,
+        "status": "blocked",
+        "reason_code": f"missing-resource:{resource_id}",
+        "expected_owner": expected_owner,
+        "expected_source": expected_source,
+        "compatibility_state": "resource-unresolved",
+        "repair_command": "agentic-workspace upgrade --target . --format json",
+    }
+
+
+def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
+    payload: dict[str, Any] = {
         "id": skill.skill_id,
         "path": skill.path.as_posix(),
         "owner": skill.owner,
@@ -51209,7 +51489,13 @@ def _skill_payload(*, skill: RegisteredSkill) -> dict[str, Any]:
             "when": list(skill.activation_hints.when),
         },
         "registration": skill.registration,
+        "required_resources": list(skill.required_resources),
+        "availability": skill.availability,
+        "blocked_reasons": list(skill.blocked_reasons),
     }
+    if skill.dependency_diagnostics:
+        payload["dependency_diagnostics"] = _skill_dependency_diagnostic_payloads(skill)
+    return payload
 
 
 def _skill_visibility(*, scope: str) -> str:
@@ -51223,12 +51509,19 @@ def _skill_visibility(*, scope: str) -> str:
     return "catalogued"
 
 
-def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[SkillRecommendation]:
+def _skill_repair_command(skill: RegisteredSkill) -> str:
+    for diagnostic in skill.dependency_diagnostics:
+        if diagnostic.get("repair_command"):
+            return str(diagnostic["repair_command"])
+    return "agentic-workspace upgrade --target . --format json"
+
+
+def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill], availability: str = "available") -> list[SkillRecommendation]:
     task_text_lower = task_text.lower()
     task_text_normalized = " ".join(_skill_match_tokens(task_text))
     if "setup" in task_text_lower:
         for skill in skills:
-            if skill.skill_id == "workspace-setup-jumpstart":
+            if skill.skill_id == "workspace-setup-jumpstart" and skill.availability == availability:
                 return [
                     SkillRecommendation(
                         skill=skill,
@@ -51238,7 +51531,7 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
                     )
                 ]
         for skill in skills:
-            if skill.skill_id == "planning-reporting":
+            if skill.skill_id == "planning-reporting" and skill.availability == availability:
                 return [
                     SkillRecommendation(
                         skill=skill,
@@ -51251,6 +51544,8 @@ def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill]) -> list[
     task_tokens = set(_skill_match_tokens(task_text))
     recommendations: list[SkillRecommendation] = []
     for skill in skills:
+        if skill.availability != availability:
+            continue
         score = 0
         hint_score = 0
         reasons: list[str] = []

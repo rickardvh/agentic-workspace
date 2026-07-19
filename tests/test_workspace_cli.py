@@ -72,6 +72,28 @@ def test_json_payload_budget_failure_reports_largest_contributors() -> None:
     assert "context.large" in message
 
 
+def test_selector_validation_error_does_not_project_valid_values_or_build_full_inventory(monkeypatch) -> None:
+    class ExplodingCopy:
+        def __deepcopy__(self, memo: dict[int, object]) -> object:
+            raise AssertionError("valid selector value must not be deep-copied when another selector is invalid")
+
+    def fail_inventory(payload: dict[str, Any]) -> list[str]:
+        raise AssertionError("invalid selector path must not build the full selector inventory")
+
+    monkeypatch.setattr(cli, "_available_selectors_for_payload", fail_inventory)
+
+    payload = {"valid": ExplodingCopy(), "context": {"known": "value"}}
+    selected = cli._select_payload_fields(payload, select="valid,missing.field", source_command="start")
+
+    assert selected["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert selected["unknown_selectors"] == ["missing.field"]
+    assert "values" not in selected
+    assert selected["selector_inventory"]["available_count"] == 2
+    assert selected["selector_inventory"]["sample"] == ["valid", "context"]
+    assert selected["selector_inventory"]["discovery_command"] == "agentic-workspace start --target . --verbose --format json"
+    assert "<field" not in selected["selector_inventory"]["discovery_command"]
+
+
 def test_report_selector_conflict_fails_before_runtime_context(monkeypatch, capsys) -> None:
     def fail_if_called(*args: Any, **kwargs: Any) -> None:
         raise AssertionError("report runtime context must not be assembled for invalid selectors")
