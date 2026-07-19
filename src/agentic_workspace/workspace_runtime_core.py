@@ -7594,9 +7594,7 @@ def _workspace_status_report(
             "detail": "gitignored local scratch space for temporary agent working files",
         }
     )
-    local_footprint = (
-        _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke) if include_local_footprint else None
-    )
+    local_footprint = _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke) if include_local_footprint else None
     if local_footprint is not None and local_footprint.get("status") == "attention":
         actions.append(
             {
@@ -12569,9 +12567,7 @@ def _scratch_entry_stat(path: Path) -> os.stat_result | None:
         return None
 
 
-def _walk_local_tree_no_follow(
-    root: Path, *, max_entries: int, deadline: float
-) -> tuple[list[Path], list[dict[str, str]], bool]:
+def _walk_local_tree_no_follow(root: Path, *, max_entries: int, deadline: float) -> tuple[list[Path], list[dict[str, str]], bool]:
     if root.is_symlink() or root.is_file():
         return [root], [], False
     files: list[Path] = []

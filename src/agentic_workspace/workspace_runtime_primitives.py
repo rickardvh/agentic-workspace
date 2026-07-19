@@ -41042,11 +41042,7 @@ def _emit_proof(
 
 def _print_tiny_summary(summary: dict[str, Any]) -> None:
     todo = summary.get("todo", {}) if isinstance(summary.get("todo"), dict) else {}
-    health = (
-        summary.get("planning_surface_health", {})
-        if isinstance(summary.get("planning_surface_health"), dict)
-        else {}
-    )
+    health = summary.get("planning_surface_health", {}) if isinstance(summary.get("planning_surface_health"), dict) else {}
     decision = summary.get("decision_packet", {}) if isinstance(summary.get("decision_packet"), dict) else {}
     print(f"Target: {summary.get('target_root', '')}")
     print("Profile: tiny")

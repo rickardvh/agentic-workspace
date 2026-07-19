@@ -16,8 +16,8 @@
   "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2301",
   "evidence_refs": [
     "https://github.com/rickardvh/agentic-workspace/pull/2328",
-    "41a8dc681f7b2f440846a9f16b038282c5fa842d",
-    "PR #2328 implementation/proof head 41a8dc681f7b2f440846a9f16b038282c5fa842d: restored unrelated #2290 live Planning owner, repaired startup-contract test drift, and fixed report local_aw_state runtime wrapper proof failure",
+    "9c9add4be35c2c5c65188ade31fbebd589847f4b",
+    "PR #2328 reachable implementation/proof head 9c9add4be35c2c5c65188ade31fbebd589847f4b: restored unrelated #2290 live Planning owner, repaired startup-contract test drift, and fixed report local_aw_state runtime wrapper proof failure",
     "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json: passed; #2290 is the active Planning item/execplan and #2301 remains completed history",
     "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: selected Planning health healthy",
     "uv run --active python scripts/check/check_planning_surfaces.py: passed",
@@ -44,7 +44,7 @@
   "proof_report": {
     "implementation proof": "make test-workspace passed; uv run pytest tests/test_workspace_cli.py -q passed with 217 tests; make lint-workspace passed; make typecheck passed",
     "planning repair proof": "summary showed #2290 restored as the active owner and #2301 absent from live/current Planning; planning doctor scoped to planning was healthy; check_planning_surfaces.py passed",
-    "ci proof": "Local exact implementation/proof head 41a8dc681f7b2f440846a9f16b038282c5fa842d passed the required proof set before this closeout evidence refresh; PR body and checks record the final pushed-head CI result."
+    "ci proof": "Reachable implementation/proof head 9c9add4be35c2c5c65188ade31fbebd589847f4b passed the required proof set before this closeout evidence refresh; PR body and checks record the final pushed-head CI result."
   },
   "intent_satisfaction": {
     "was original intent fully satisfied?": "yes",
@@ -61,7 +61,7 @@
     "follow-on routed to": "none"
   },
   "execution_run": {
-    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/lanes/p1-cli-contract-integrity.lane.json; .agentic-workspace/planning/closeout-evidence/issue-2301-startup-cli-contract-drift.closeout.json",
+    "changed surfaces": ".agentic-workspace/planning/state.toml; .agentic-workspace/planning/closeout-evidence/issue-2301-startup-cli-contract-drift.closeout.json",
     "next step": "compact closeout evidence retained; no active planning work remains"
   }
 }
