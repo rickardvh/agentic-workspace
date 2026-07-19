@@ -2851,7 +2851,11 @@ def _host_domain_proof_lanes_for_changed_paths(
                     "proof_profiles": list(lane.proof_profiles),
                     "authority_refs": list(lane.authority_refs),
                     "escalation": list(lane.escalation),
+                    "escalation_conditions": list(lane.escalation_conditions),
                     "claim_boundary": lane.claim_boundary or "domain-proof-required-before-full-completion-claim",
+                    "route_role": _configured_domain_lane_route_role(lane),
+                    "precedence": lane.precedence or "",
+                    "allowed_composition": list(lane.allowed_composition),
                     "notes": lane.notes or "",
                 },
                 "matched_paths": [match["path"] for match in path_matches],
@@ -2863,6 +2867,10 @@ def _host_domain_proof_lanes_for_changed_paths(
                 "authority_refs": list(lane.authority_refs),
                 "claim_boundary": lane.claim_boundary or "domain-proof-required-before-full-completion-claim",
                 "escalate_when": list(lane.escalation),
+                "escalation_conditions": list(lane.escalation_conditions),
+                "route_role": _configured_domain_lane_route_role(lane),
+                "precedence": lane.precedence or "",
+                "allowed_composition": list(lane.allowed_composition),
             }
         )
     return lanes
@@ -2920,15 +2928,15 @@ def _focused_route_coverage_audit(
             if path_text in lanes_by_path and lane_id:
                 lanes_by_path[path_text].append(lane_id)
     missing_paths = [path for path, lane_ids in lanes_by_path.items() if not lane_ids]
-    auxiliary_lane_ids = {"domain:proof_route_authority", "domain:test_evidence_decision"}
+    auxiliary_lane_ids = {str(lane.get("id", "")) for lane in domain_lanes if _domain_lane_route_role(lane) != "behavior"}
     overlapping_paths = [
         {
             "path": path,
             "lane_ids": lane_ids,
-            "precedence_lane_id": "",
+            "precedence_lane_id": _preferred_focused_route_owner(lane_ids),
             "precedence_status": "undeclared",
             "refinement_owner": "repo proof-route authority",
-            "reason": "multiple focused routes matched the same changed path without declared precedence",
+            "reason": "multiple focused behavior routes matched the same changed path without declared precedence",
         }
         for path, lane_ids in lanes_by_path.items()
         if len([lane_id for lane_id in lane_ids if lane_id not in auxiliary_lane_ids]) > 1
@@ -2964,6 +2972,14 @@ def _focused_route_coverage_audit(
             "rule": "Missing or non-executable focused coverage should be fixed or explicitly escalated; it is not silent full-suite authority.",
         },
     }
+
+
+def _preferred_focused_route_owner(lane_ids: list[str]) -> str:
+    for lane_id in lane_ids:
+        bare = str(lane_id).removeprefix("domain:")
+        if bare not in {"proof_route_authority", "test_evidence_decision"}:
+            return str(lane_id)
+    return str(lane_ids[0]) if lane_ids else ""
 
 
 def _route_refinement_required_payload(
@@ -3052,7 +3068,11 @@ def _domain_proof_lane_to_selection(
             "proof_profiles": list(lane.proof_profiles),
             "authority_refs": list(lane.authority_refs),
             "escalation": list(lane.escalation),
+            "escalation_conditions": list(lane.escalation_conditions),
             "claim_boundary": lane.claim_boundary or "domain-proof-required-before-full-completion-claim",
+            "route_role": _configured_domain_lane_route_role(lane),
+            "precedence": lane.precedence or "",
+            "allowed_composition": list(lane.allowed_composition),
             "notes": lane.notes or "",
         },
         "matched_paths": [match["path"] for match in path_matches],
@@ -3064,25 +3084,47 @@ def _domain_proof_lane_to_selection(
         "authority_refs": list(lane.authority_refs),
         "claim_boundary": lane.claim_boundary or "domain-proof-required-before-full-completion-claim",
         "escalate_when": list(lane.escalation),
+        "escalation_conditions": list(lane.escalation_conditions),
+        "route_role": _configured_domain_lane_route_role(lane),
+        "precedence": lane.precedence or "",
+        "allowed_composition": list(lane.allowed_composition),
     }
 
 
+def _domain_lane_config_id(lane: dict[str, Any]) -> str:
+    return str(_as_dict(lane.get("domain_lane")).get("id", "") or lane.get("id", "")).removeprefix("domain:")
+
+
+def _domain_lane_route_role(lane: dict[str, Any]) -> str:
+    declared = str(lane.get("route_role") or _as_dict(lane.get("domain_lane")).get("route_role") or "").strip()
+    if declared:
+        return declared
+    lane_id = _domain_lane_config_id(lane)
+    if lane_id == "workspace_broad_suite":
+        return "broad"
+    if lane_id == "proof_route_authority":
+        return "maintenance"
+    if lane_id == "test_evidence_decision":
+        return "evidence"
+    return "behavior"
+
+
+def _configured_domain_lane_route_role(lane: Any) -> str:
+    declared = str(getattr(lane, "route_role", "") or "").strip()
+    if declared:
+        return declared
+    lane_id = str(getattr(lane, "id", "") or "")
+    if lane_id == "workspace_broad_suite":
+        return "broad"
+    if lane_id == "proof_route_authority":
+        return "maintenance"
+    if lane_id == "test_evidence_decision":
+        return "evidence"
+    return "behavior"
+
+
 def _primary_domain_lanes(domain_lanes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        lane
-        for lane in domain_lanes
-        if str(_as_dict(lane.get("domain_lane")).get("id", "") or lane.get("id", "")).removeprefix("domain:")
-        not in {"workspace_broad_suite"}
-    ]
-
-
-def _broad_escalation_domain_lanes(domain_lanes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [
-        lane
-        for lane in domain_lanes
-        if str(_as_dict(lane.get("domain_lane")).get("id", "") or lane.get("id", "")).removeprefix("domain:")
-        not in {"workspace_broad_suite", "proof_route_authority", "test_evidence_decision"}
-    ]
+    return [lane for lane in domain_lanes if _domain_lane_route_role(lane) == "behavior"]
 
 
 def _select_broad_domain_lane(
@@ -3111,7 +3153,10 @@ def _proof_route_strategy_decision_payload(
     route_refinement_required: dict[str, Any],
     explicit_broad_lane_selected: bool,
     broad_escalation_reason: dict[str, Any] | None,
+    applicable_friction_findings: list[dict[str, Any]] | None = None,
+    generic_broad_without_explicit_escalation: bool = False,
 ) -> dict[str, Any]:
+    applicable_friction = [dict(item) for item in (applicable_friction_findings or []) if isinstance(item, dict)]
     primary_lanes = _primary_domain_lanes(domain_lanes)
     domain_handled_paths = {str(path) for lane in primary_lanes for path in _list_payload(lane.get("matched_paths")) if str(path).strip()}
     focused_covers_all = bool(domain_handled_paths) and set(changed_paths).issubset(domain_handled_paths)
@@ -3119,18 +3164,33 @@ def _proof_route_strategy_decision_payload(
     if route_refinement_status == "required":
         outcome = "route-refinement-required"
         reason_code = "focused-route-coverage-gap"
+    elif generic_broad_without_explicit_escalation:
+        outcome = "broad-escalation-required"
+        reason_code = "missing-structured-broad-escalation"
     elif broad_escalation_reason is not None:
         outcome = "broad-escalated"
         reason_code = str(broad_escalation_reason.get("reason_code", "structured-broad-escalation"))
-    elif explicit_broad_lane_selected:
-        outcome = "broad-escalated"
-        reason_code = "explicit-broad-request"
     elif focused_covers_all:
         outcome = "focused"
         reason_code = "focused-route-sufficient"
     else:
         outcome = "no-focused-authority"
         reason_code = "focused-route-coverage-missing"
+    selected_broad_escalation = broad_escalation_reason
+    if outcome == "broad-escalation-required":
+        selected_broad_escalation = {
+            "kind": "agentic-workspace/structured-broad-escalation/v1",
+            "status": "missing",
+            "reason_code": reason_code,
+            "matched_evidence": [],
+            "changed_paths": changed_paths,
+            "evidence_unavailable_from_focused_routes": [
+                "Generic broad proof was selected by fallback shape, not by a route-specific escalation reason."
+            ],
+            "proportionality": "Broad/high-cost proof needs explicit host/user authority or live route-friction evidence before it can be required.",
+            "resource_posture": "broad/high-cost; withheld from required proof",
+            "authority_source": ".agentic-workspace/config.toml [assurance.domain_proof_lanes.workspace_broad_suite] or explicit user override",
+        }
     return {
         "kind": "agentic-workspace/proof-route-strategy-decision/v1",
         "status": outcome,
@@ -3140,10 +3200,11 @@ def _proof_route_strategy_decision_payload(
         "focused_lane_ids": [str(lane.get("id", "")) for lane in primary_lanes],
         "focused_covered_paths": sorted(domain_handled_paths),
         "route_refinement_required": route_refinement_required,
-        "broad_escalation": broad_escalation_reason,
+        "applicable_friction_findings": applicable_friction,
+        "broad_escalation": selected_broad_escalation,
         "explicit_broad_lane_selected": explicit_broad_lane_selected,
         "claim_effect": "claim-blocked"
-        if outcome == "route-refinement-required"
+        if outcome in {"route-refinement-required", "broad-escalation-required"}
         else "selected-proof-required"
         if outcome == "no-focused-authority"
         else "broad-proof-required"
@@ -3157,25 +3218,220 @@ def _proof_route_strategy_decision_payload(
     }
 
 
-def _structured_broad_escalation_reason(*, domain_lanes: list[dict[str, Any]], changed_paths: list[str]) -> dict[str, Any] | None:
-    primary_lanes = _broad_escalation_domain_lanes(domain_lanes)
+def _memory_note_patterns_match(*, changed_paths: list[str], patterns: Any) -> list[dict[str, str]]:
+    matches: list[dict[str, str]] = []
+    for pattern in [str(item).replace("\\", "/").strip() for item in _list_payload(patterns) if str(item).strip()]:
+        for changed_path in changed_paths:
+            if fnmatch.fnmatch(changed_path, pattern):
+                matches.append({"path": changed_path, "pattern": pattern})
+    return matches
+
+
+def _truthy_manifest_value(value: Any) -> bool:
+    if value is True:
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "live", "applicable", "live-applicable"}
+    return False
+
+
+def _validation_friction_has_repeated_or_severe_evidence(raw_note: dict[str, Any]) -> tuple[bool, str, str]:
+    recurrence = str(raw_note.get("recurrence") or raw_note.get("evidence_recurrence") or "").strip().lower()
+    try:
+        occurrence_count = int(raw_note.get("occurrence_count") or raw_note.get("evidence_count") or 0)
+    except (TypeError, ValueError):
+        occurrence_count = 0
+    host_impact_class = str(raw_note.get("host_impact_class") or raw_note.get("impact_class") or raw_note.get("severity") or "").strip()
+    host_impact_normalized = host_impact_class.lower().replace("_", "-")
+    repeated = recurrence in {"repeated", "recurring"} or occurrence_count > 1
+    severe_host_impact = host_impact_normalized in {"severe-host-impact", "host-impact-severe", "severe"}
+    return (
+        repeated or severe_host_impact,
+        recurrence or ("repeated" if repeated else "first_seen"),
+        ("severe-host-impact" if severe_host_impact else "none"),
+    )
+
+
+def _applicable_validation_friction_findings(*, target_root: Path | None, changed_paths: list[str]) -> list[dict[str, Any]]:
+    if target_root is None:
+        return []
+    manifest_path = target_root / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
+    if not manifest_path.is_file():
+        return []
+    try:
+        manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    notes = manifest.get("notes", {}) if isinstance(manifest, dict) else {}
+    if not isinstance(notes, dict):
+        return []
+    active_states = {"active", "live", "live-applicable"}
+    quiet_states = {"fixed", "mitigated", "superseded", "disputed", "stale", "obsolete", "accepted-risk", "promoted-to-issue"}
+    findings: list[dict[str, Any]] = []
+    for note_path, raw_note in notes.items():
+        if not isinstance(raw_note, dict):
+            continue
+        if str(raw_note.get("memory_role", "")).strip() != "improvement_signal":
+            continue
+        lifecycle_state = str(raw_note.get("lifecycle_state") or raw_note.get("state") or "active").strip() or "active"
+        if lifecycle_state.lower() in quiet_states or lifecycle_state.lower() not in active_states:
+            continue
+        if str(raw_note.get("kind", "")).strip() != "validation_friction":
+            continue
+        if not _truthy_manifest_value(raw_note.get("applicable_live")):
+            continue
+        if not _truthy_manifest_value(raw_note.get("applicable_to_current_route")):
+            continue
+        evidence_admissible, recurrence, host_impact_class = _validation_friction_has_repeated_or_severe_evidence(raw_note)
+        if not evidence_admissible:
+            continue
+        route_patterns = [
+            *_list_payload(raw_note.get("routes_from")),
+            *_list_payload(raw_note.get("applies_to_paths")),
+            *_list_payload(raw_note.get("route_scope")),
+        ]
+        route_matches = _memory_note_patterns_match(changed_paths=changed_paths, patterns=route_patterns)
+        if changed_paths and not route_matches:
+            continue
+        evidence_refs = [str(item) for item in _list_payload(raw_note.get("evidence")) if str(item).strip()]
+        findings.append(
+            {
+                "kind": "agentic-workspace/applicable-validation-friction/v1",
+                "id": hashlib.sha256(f"{note_path}\n{json.dumps(raw_note, sort_keys=True, default=str)}".encode()).hexdigest()[:12],
+                "source": "Memory improvement_signal",
+                "note_path": str(note_path),
+                "lifecycle_state": lifecycle_state,
+                "applicability": "applicable-to-proof-route-maintenance",
+                "applicable_live": True,
+                "applicable_to_current_route": True,
+                "route_matches": route_matches,
+                "route_identity": str(raw_note.get("route_identity", "")),
+                "recurrence": recurrence,
+                "host_impact_class": host_impact_class,
+                "promotion_target": str(raw_note.get("promotion_target", "")),
+                "promotion_trigger": str(raw_note.get("promotion_trigger", "")),
+                "preferred_remediation": str(raw_note.get("preferred_remediation", "")),
+                "improvement_note": str(raw_note.get("improvement_note", "")),
+                "evidence_refs": evidence_refs,
+                "claim_effect": "route-health-pressure-only",
+            }
+        )
+    return findings
+
+
+def _proof_route_strategy_preservation_payload(
+    *,
+    proof_route_strategy_decision: dict[str, Any],
+    manual_verification: dict[str, Any] | None,
+    required_commands: list[str],
+) -> dict[str, Any]:
+    basis = {
+        "outcome": proof_route_strategy_decision.get("outcome", ""),
+        "reason_code": proof_route_strategy_decision.get("reason_code", ""),
+        "changed_paths": proof_route_strategy_decision.get("changed_paths", []),
+        "claim_effect": proof_route_strategy_decision.get("claim_effect", ""),
+        "required_commands": required_commands,
+    }
+    decision_id = hashlib.sha256(json.dumps(basis, sort_keys=True, default=str).encode()).hexdigest()[:16]
+    claim_effect = str(proof_route_strategy_decision.get("claim_effect", ""))
+    selected_requirement = (
+        "route-refinement-or-structured-escalation"
+        if claim_effect == "claim-blocked"
+        else "broad-proof"
+        if str(proof_route_strategy_decision.get("outcome", "")) == "broad-escalated"
+        else "focused-proof"
+    )
+    consumer_state = {
+        "decision_id": decision_id,
+        "selected_requirement": selected_requirement,
+        "claim_effect": claim_effect,
+        "next_action": "route-refinement-required" if claim_effect == "claim-blocked" else "run-selected-proof",
+    }
+    return {
+        "kind": "agentic-workspace/proof-route-strategy-preservation/v1",
+        "status": "claim-blocking" if claim_effect == "claim-blocked" else "selected",
+        "decision_id": decision_id,
+        "selected_requirement": selected_requirement,
+        "claim_effect": claim_effect,
+        "proof_route_strategy_decision": {
+            key: proof_route_strategy_decision.get(key)
+            for key in ("outcome", "reason_code", "changed_paths", "focused_lane_ids", "claim_effect")
+            if key in proof_route_strategy_decision
+        },
+        "manual_verification_status": str((manual_verification or {}).get("status", "")),
+        "required_commands": required_commands,
+        "consumers": {
+            "start": dict(consumer_state),
+            "implement": dict(consumer_state),
+            "proof": dict(consumer_state),
+            "handoff": dict(consumer_state),
+            "closeout": dict(consumer_state),
+        },
+        "rule": (
+            "Ordinary consumers must preserve this decision identity, selected requirement, next action, and claim effect; "
+            "they may not independently substitute broad proof or release a blocked completion claim."
+        ),
+    }
+
+
+def _structured_broad_escalation_reason(
+    *,
+    domain_lanes: list[dict[str, Any]],
+    changed_paths: list[str],
+    active_assurance_requirements: dict[str, Any],
+    local_high_risk_overlay: dict[str, Any],
+) -> dict[str, Any] | None:
+    primary_lanes = _primary_domain_lanes(domain_lanes)
     owners_by_lane: dict[str, dict[str, Any]] = {}
     handled_paths: set[str] = set()
+    active_requirement_ids = {
+        str(item.get("id") or item.get("requirement_id") or "").strip()
+        for item in _list_payload(active_assurance_requirements.get("active"))
+        if isinstance(item, dict) and str(item.get("id") or item.get("requirement_id") or "").strip()
+    }
     for lane in primary_lanes:
         lane_id = str(lane.get("id", ""))
         if not lane_id:
             continue
         matched_paths = [str(path).strip() for path in _list_payload(lane.get("matched_paths")) if str(path).strip()]
         handled_paths.update(matched_paths)
+        lane_requirement_refs = {str(item).strip() for item in _list_payload(lane.get("assurance_requirement_refs")) if str(item).strip()}
+        typed_conditions = _dedupe([str(item).strip() for item in _list_payload(lane.get("escalation_conditions")) if str(item).strip()])
         owners_by_lane[lane_id] = {
             "lane_id": lane_id,
             "owner": str(_as_dict(lane.get("domain_lane")).get("owner", "")),
             "matched_paths": matched_paths,
             "claim_boundary": str(lane.get("claim_boundary", "")),
+            "typed_conditions": typed_conditions,
             "declared_escalation": [str(item).strip() for item in _list_payload(lane.get("escalate_when")) if str(item).strip()],
+            "assurance_requirement_refs": sorted(lane_requirement_refs),
         }
     if len(owners_by_lane) < 2:
-        return None
+        lane = next(iter(owners_by_lane.values()), None)
+        if lane is None:
+            return None
+        conditions = set(_list_payload(lane.get("typed_conditions")))
+        lane_requirement_refs = set(_list_payload(lane.get("assurance_requirement_refs")))
+        matching_active_requirements = sorted(lane_requirement_refs.intersection(active_requirement_ids))
+        if "high-risk-requirement" not in conditions or not matching_active_requirements:
+            return None
+        return {
+            "kind": "agentic-workspace/structured-broad-escalation/v1",
+            "status": "selected",
+            "reason_code": "high-risk-requirement",
+            "matched_evidence": [lane],
+            "changed_paths": changed_paths,
+            "distinct_owners": [str(lane.get("owner", ""))] if lane.get("owner") else [],
+            "distinct_claim_boundaries": [str(lane.get("claim_boundary", ""))] if lane.get("claim_boundary") else [],
+            "matched_typed_conditions": ["high-risk-requirement"],
+            "matched_assurance_requirement_refs": matching_active_requirements,
+            "local_high_risk_overlay_status": str(local_high_risk_overlay.get("status", "absent")),
+            "matched_declared_escalations": _list_payload(lane.get("declared_escalation")),
+            "evidence_unavailable_from_focused_routes": ["A declared high-risk requirement requires broad proof beyond one focused route."],
+            "proportionality": "Broad workspace proof is selected only from typed route conditions and active assurance evidence.",
+            "resource_posture": "broad/high-cost; requires structured escalation reason before command selection",
+            "authority_source": ".agentic-workspace/config.toml [assurance.domain_proof_lanes.workspace_broad_suite]",
+        }
     focused_covers_all = bool(handled_paths) and set(changed_paths).issubset(handled_paths)
     owners = {item["owner"] for item in owners_by_lane.values() if item["owner"]}
     claim_boundaries = {item["claim_boundary"] for item in owners_by_lane.values() if item["claim_boundary"]}
@@ -3187,24 +3443,31 @@ def _structured_broad_escalation_reason(*, domain_lanes: list[dict[str, Any]], c
             if str(condition).strip()
         ]
     )
-    route_declares_broad_or_cross_boundary = any(
-        any(marker in condition.lower() for marker in ("broad", "cross", "high-risk", "high risk", "explicit", "maintainer", "user"))
-        for condition in declared_escalations
-    )
-    concrete_cross_boundary = len(owners) > 1 or len(claim_boundaries) > 1
-    if not focused_covers_all or not concrete_cross_boundary or not route_declares_broad_or_cross_boundary:
+    typed_conditions = {
+        str(condition).strip()
+        for item in owners_by_lane.values()
+        for condition in _list_payload(item.get("typed_conditions"))
+        if str(condition).strip()
+    }
+    matched_conditions: list[str] = []
+    if len(owners) > 1 and "cross-owner" in typed_conditions:
+        matched_conditions.append("cross-owner")
+    if len(claim_boundaries) > 1 and "cross-claim-boundary" in typed_conditions:
+        matched_conditions.append("cross-claim-boundary")
+    if not focused_covers_all or not matched_conditions:
         return None
     return {
         "kind": "agentic-workspace/structured-broad-escalation/v1",
         "status": "selected",
-        "reason_code": "cross-domain-focused-routes",
+        "reason_code": "+".join(matched_conditions),
         "matched_evidence": list(owners_by_lane.values()),
         "changed_paths": changed_paths,
         "distinct_owners": sorted(owners),
         "distinct_claim_boundaries": sorted(claim_boundaries),
+        "matched_typed_conditions": matched_conditions,
         "matched_declared_escalations": declared_escalations,
         "evidence_unavailable_from_focused_routes": [
-            "Declared focused routes matched distinct owners or claim boundaries and also declared an escalation condition for this scope."
+            "Declared focused routes matched typed cross-owner or cross-claim-boundary escalation conditions for this scope."
         ],
         "proportionality": "Broad workspace proof is selected only when concrete route evidence shows focused proof is insufficient.",
         "resource_posture": "broad/high-cost; requires structured escalation reason before command selection",
@@ -3371,6 +3634,7 @@ def _domain_proof_route_inventory_audit(
     route_records: list[dict[str, Any]] = []
     pattern_owners: dict[str, list[str]] = {}
     pattern_records: list[dict[str, str]] = []
+    live_matches_by_pattern: dict[tuple[str, str], set[str]] = {}
     stale_patterns: list[dict[str, str]] = []
     non_executable_commands: list[dict[str, str]] = []
     route_contract_gaps: list[dict[str, str]] = []
@@ -3389,6 +3653,9 @@ def _domain_proof_route_inventory_audit(
                     "pattern": pattern_text,
                     "owner": str(lane.owner or ""),
                     "claim_boundary": str(lane.claim_boundary or ""),
+                    "route_role": _configured_domain_lane_route_role(lane),
+                    "precedence": str(lane.precedence or ""),
+                    "allowed_composition": ",".join(lane.allowed_composition),
                 }
             )
         live_matches: list[str] = []
@@ -3404,6 +3671,7 @@ def _domain_proof_route_inventory_audit(
                     live_matches.extend(pattern_matches)
                 if not pattern_matches:
                     stale_patterns.append({"lane": lane_id, "pattern": glob_pattern, "reason": "no live path matched"})
+                live_matches_by_pattern[(lane_id, glob_pattern)] = set(pattern_matches)
         for command in lane.commands:
             command_text = str(command).strip()
             non_executable_commands.extend(
@@ -3423,6 +3691,9 @@ def _domain_proof_route_inventory_audit(
                 "id": lane_id,
                 "purpose": lane.purpose,
                 "owner": lane.owner,
+                "route_role": _configured_domain_lane_route_role(lane),
+                "precedence": lane.precedence or "",
+                "allowed_composition": list(lane.allowed_composition),
                 "path_pattern_count": len(lane.applies_to_paths),
                 "live_match_count": len(_dedupe(live_matches)),
                 "command_count": len(lane.commands),
@@ -3446,7 +3717,20 @@ def _domain_proof_route_inventory_audit(
         for right in pattern_records[index + 1 :]:
             if left["lane"] == right["lane"]:
                 continue
-            if not _glob_patterns_may_overlap(left["pattern"], right["pattern"]):
+            live_overlap = sorted(
+                live_matches_by_pattern.get((left["lane"], left["pattern"]), set()).intersection(
+                    live_matches_by_pattern.get((right["lane"], right["pattern"]), set())
+                )
+            )
+            if not live_overlap and target_root is not None:
+                continue
+            if target_root is None and not _glob_patterns_may_overlap(left["pattern"], right["pattern"]):
+                continue
+            left_allowed = {item.strip() for item in left["allowed_composition"].split(",") if item.strip()}
+            right_allowed = {item.strip() for item in right["allowed_composition"].split(",") if item.strip()}
+            composition_allowed = right["route_role"] in left_allowed or left["route_role"] in right_allowed
+            precedence_declared = bool(left["precedence"] or right["precedence"])
+            if composition_allowed and precedence_declared:
                 continue
             lane_ids = [left["lane"], right["lane"]]
             semantic_overlaps.append(
@@ -3455,10 +3739,13 @@ def _domain_proof_route_inventory_audit(
                     "lane_ids": lane_ids,
                     "owners": _dedupe([left["owner"], right["owner"]]),
                     "claim_boundaries": _dedupe([left["claim_boundary"], right["claim_boundary"]]),
-                    "precedence_lane_id": "",
-                    "precedence_status": "undeclared",
+                    "route_roles": _dedupe([left["route_role"], right["route_role"]]),
+                    "live_overlap_sample": live_overlap[:5],
+                    "precedence_lane_id": left["lane"] if left["precedence"] else right["lane"] if right["precedence"] else "",
+                    "precedence_status": "declared" if precedence_declared else "undeclared",
+                    "composition_status": "allowed" if composition_allowed else "not-declared",
                     "refinement_owner": "repo proof-route authority",
-                    "reason": "path patterns may match the same files and need declared precedence or disjoint ownership",
+                    "reason": "path patterns match the same live files and need declared precedence/composition or disjoint ownership",
                 }
             )
     contradictory_ownership = [
@@ -3471,6 +3758,7 @@ def _domain_proof_route_inventory_audit(
         }
         for overlap in semantic_overlaps
         if len([owner for owner in _list_payload(overlap.get("owners")) if str(owner).strip()]) > 1
+        and str(overlap.get("composition_status", "")) != "allowed"
     ]
     missing_profile_coverage = [
         {
@@ -3519,6 +3807,7 @@ def _proof_route_escalation_gate(
     proof_route_maintenance: dict[str, Any],
     proof_route_strategy_decision: dict[str, Any],
     selected_commands: list[dict[str, Any]],
+    applicable_friction_findings: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     boundary = _as_dict(proof_narrowness.get("broad_suite_boundary"))
     boundary_status = str(boundary.get("status", ""))
@@ -3531,9 +3820,18 @@ def _proof_route_escalation_gate(
     ]
     route_gap_status = str(_as_dict(focused_route_coverage_audit.get("maintenance_gap")).get("status", ""))
     route_maintenance_status = str(proof_route_maintenance.get("status", ""))
-    if boundary_status == "explicit-escalation-required":
+    route_strategy = {
+        "status": str(proof_route_strategy_decision.get("status", "")),
+        "outcome": str(proof_route_strategy_decision.get("outcome", "")),
+        "reason_code": str(proof_route_strategy_decision.get("reason_code", "")),
+        "claim_effect": str(proof_route_strategy_decision.get("claim_effect", "")),
+    }
+    if route_strategy["outcome"] == "broad-escalation-required":
         status = "blocked-explicit-escalation-required"
         next_action = "Record a concrete broad-proof escalation reason, select a host-declared broad route, or refine focused proof."
+    elif route_strategy["outcome"] == "route-refinement-required":
+        status = "route-maintenance-required"
+        next_action = "Resolve focused-route gaps or record manual route-maintenance evidence before treating broad proof as sufficient."
     elif boundary_status == "required_acceptance_boundary" and (route_gap_status == "present" or route_maintenance_status == "attention"):
         status = "route-maintenance-required"
         next_action = "Resolve focused-route gaps or record manual route-maintenance evidence before treating broad proof as sufficient."
@@ -3543,12 +3841,6 @@ def _proof_route_escalation_gate(
     else:
         status = "not-required"
         next_action = "Use focused proof; broad proof remains optional confidence evidence."
-    route_strategy = {
-        "status": str(proof_route_strategy_decision.get("status", "")),
-        "outcome": str(proof_route_strategy_decision.get("outcome", "")),
-        "reason_code": str(proof_route_strategy_decision.get("reason_code", "")),
-        "claim_effect": str(proof_route_strategy_decision.get("claim_effect", "")),
-    }
     return {
         "kind": "agentic-workspace/proof-route-escalation-gate/v1",
         "status": status,
@@ -3561,7 +3853,7 @@ def _proof_route_escalation_gate(
         "friction_inputs": {
             "recurring_validation_friction": "lifecycle-managed active validation-friction improvement signals",
             "candidate_only_sources": ["session-log slow-command friction candidates"],
-            "applicable_live_findings": [],
+            "applicable_live_findings": [dict(item) for item in (applicable_friction_findings or []) if isinstance(item, dict)],
             "consumption_rule": (
                 "Consume only active improvement_signal records with applicable_live=true and applicable_to_current_route=true; "
                 "candidate-local session diagnostics require review, routing, or dismissal before they influence proof escalation."
@@ -4427,7 +4719,13 @@ def _proof_selection_for_changed_paths(
         or str(lane.get("claim_boundary", "")) == "explicit-broad-escalation-required"
         for lane in selected_lanes
     )
-    broad_escalation_reason = _structured_broad_escalation_reason(domain_lanes=domain_lanes, changed_paths=changed_paths)
+    broad_escalation_reason = _structured_broad_escalation_reason(
+        domain_lanes=domain_lanes,
+        changed_paths=changed_paths,
+        active_assurance_requirements=active_assurance_requirements,
+        local_high_risk_overlay=local_high_risk_overlay,
+    )
+    applicable_friction_findings = _applicable_validation_friction_findings(target_root=target_root, changed_paths=changed_paths)
     if broad_escalation_reason is not None and not explicit_broad_lane_selected:
         broad_lane = _select_broad_domain_lane(
             config=config,
@@ -4438,13 +4736,6 @@ def _proof_selection_for_changed_paths(
             domain_lanes.append(broad_lane)
             selected_lanes.append(broad_lane)
             explicit_broad_lane_selected = True
-    preliminary_proof_route_strategy_decision = _proof_route_strategy_decision_payload(
-        changed_paths=changed_paths,
-        domain_lanes=domain_lanes,
-        route_refinement_required=preliminary_route_refinement,
-        explicit_broad_lane_selected=explicit_broad_lane_selected,
-        broad_escalation_reason=broad_escalation_reason,
-    )
     generic_broad_commands = {
         str(command).strip()
         for lane in selected_lanes
@@ -4458,8 +4749,17 @@ def _proof_selection_for_changed_paths(
     generic_broad_without_explicit_escalation = (
         not explicit_broad_lane_selected and generic_broad_escalation_scope and bool(generic_broad_commands)
     )
+    preliminary_proof_route_strategy_decision = _proof_route_strategy_decision_payload(
+        changed_paths=changed_paths,
+        domain_lanes=domain_lanes,
+        route_refinement_required=preliminary_route_refinement,
+        explicit_broad_lane_selected=explicit_broad_lane_selected,
+        broad_escalation_reason=broad_escalation_reason,
+        applicable_friction_findings=applicable_friction_findings,
+        generic_broad_without_explicit_escalation=generic_broad_without_explicit_escalation,
+    )
     strategy_outcome = str(preliminary_proof_route_strategy_decision["outcome"])
-    if strategy_outcome in {"focused", "route-refinement-required", "broad-escalated"} or generic_broad_without_explicit_escalation:
+    if strategy_outcome in {"focused", "route-refinement-required", "broad-escalated", "broad-escalation-required"}:
         for lane in selected_lanes:
             if str(lane.get("id", "")).startswith("domain:"):
                 continue
@@ -4687,42 +4987,68 @@ def _proof_selection_for_changed_paths(
         route_refinement_required=route_refinement_required,
         explicit_broad_lane_selected=explicit_broad_lane_selected,
         broad_escalation_reason=broad_escalation_reason,
+        applicable_friction_findings=applicable_friction_findings,
+        generic_broad_without_explicit_escalation=generic_broad_without_explicit_escalation,
     )
-    broad_escalation_blocks_claim = generic_broad_without_explicit_escalation and not explicit_broad_lane_selected
-    if broad_escalation_blocks_claim and route_refinement_required["status"] != "required":
-        proof_route_strategy_decision = {
-            **proof_route_strategy_decision,
-            "status": "broad-escalation-required",
-            "outcome": "broad-escalation-required",
-            "reason_code": "generic-broad-proof-withheld",
-            "claim_effect": "claim-blocked",
-            "broad_escalation": {
-                "kind": "agentic-workspace/structured-broad-escalation/v1",
-                "status": "missing",
-                "reason_code": "generic-broad-proof-withheld",
-                "matched_evidence": [],
-                "changed_paths": changed_paths,
-                "evidence_unavailable_from_focused_routes": [
-                    "Generic broad proof was selected by fallback shape, not by a route-specific escalation reason."
-                ],
-                "proportionality": "Broad/high-cost proof needs explicit host/user authority or live route-friction evidence before it can be required.",
-                "resource_posture": "broad/high-cost; withheld from required proof",
-                "authority_source": ".agentic-workspace/config.toml [assurance.domain_proof_lanes.workspace_broad_suite] or explicit user override",
-            },
+    if proof_route_strategy_decision["outcome"] == "route-refinement-required":
+        broad_lane_ids = {
+            str(lane.get("id", ""))
+            for lane in selected_lanes
+            if str(lane.get("route_role") or _as_dict(lane.get("domain_lane")).get("route_role") or "") == "broad"
+            or str(lane.get("id", "")) in broad_acceptance_lanes
+            or str(lane.get("id", "")) == "domain:workspace_broad_suite"
         }
+        broad_commands = {
+            str(command.get("command", ""))
+            for command in selected_commands
+            if isinstance(command, dict) and str(command.get("lane", "")) in broad_lane_ids
+        }
+        for lane in selected_lanes:
+            if str(lane.get("id", "")) in broad_lane_ids:
+                retained_optional = [str(command) for command in _list_payload(lane.get("optional_commands")) if str(command).strip()]
+                lane["optional_commands"] = _dedupe(
+                    [*retained_optional, *[str(command) for command in _list_payload(lane.get("enough_proof"))]]
+                )
+                lane["enough_proof"] = []
+                lane["focused_route_reduction"] = {
+                    "status": "broad-proof-withheld-for-route-refinement",
+                    "source": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+                    "proof_route_strategy_decision": proof_route_strategy_decision["outcome"],
+                    "rule": "Route refinement is the final claim-blocking decision; broad fallback commands are not required proof unless a separate structured escalation is selected.",
+                }
+        if broad_commands:
+            required_commands = [command for command in required_commands if command not in broad_commands]
+            selected_commands = [
+                command
+                for command in selected_commands
+                if not (isinstance(command, dict) and str(command.get("command", "")) in broad_commands)
+            ]
+    broad_escalation_blocks_claim = str(proof_route_strategy_decision.get("outcome", "")) == "broad-escalation-required"
     manual_verification: dict[str, Any] | None = None
-    route_refinement_blocks_claim = route_refinement_required["status"] == "required"
+    route_refinement_blocks_claim = (
+        route_refinement_required["status"] == "required"
+        or str(proof_route_strategy_decision.get("outcome", "")) == "route-refinement-required"
+    )
     if route_refinement_blocks_claim:
+        strategy_reason_code = str(proof_route_strategy_decision.get("reason_code", ""))
+        friction_block = strategy_reason_code == "applicable-validation-friction"
         manual_verification = {
             "kind": "manual-verification/v1",
             "status": "route-refinement-required",
-            "reason": "focused proof-route coverage is missing or non-executable for part of the changed scope",
+            "reason": "applicable lifecycle-managed validation friction blocks repeating the selected proof route"
+            if friction_block
+            else "focused proof-route coverage is missing or non-executable for part of the changed scope",
             "summary": (
-                "Repair focused proof-route coverage or record an explicit structured escalation before treating selected proof "
+                "Retire, mitigate, or route the applicable validation-friction Memory signal before treating selected proof "
+                "commands as sufficient for the completion claim."
+                if friction_block
+                else "Repair focused proof-route coverage or record an explicit structured escalation before treating selected proof "
                 "commands as sufficient for the completion claim."
             ),
             "instructions": [
-                "Inspect route_refinement_required.uncovered_paths and non_executable_route_commands.",
+                "Inspect proof_route_strategy_decision.applicable_friction_findings."
+                if friction_block
+                else "Inspect route_refinement_required.uncovered_paths and non_executable_route_commands.",
                 "Add or repair the focused domain proof lane, or record a structured maintainer/user escalation.",
                 "Run any useful focused commands as supporting evidence, but do not claim completion until the route gap is resolved.",
             ],
@@ -4801,6 +5127,11 @@ def _proof_selection_for_changed_paths(
             "or was manually verified. Latest receipts are reconciled but do not bypass intent or closeout review."
         ),
     }
+    proof_route_strategy_preservation = _proof_route_strategy_preservation_payload(
+        proof_route_strategy_decision=proof_route_strategy_decision,
+        manual_verification=manual_verification,
+        required_commands=required_commands,
+    )
     proof_receipt_bridge = _proof_receipt_bridge_payload(
         changed_paths=changed_paths,
         proof_receipt_reconciliation=proof_receipt_reconciliation,
@@ -4954,6 +5285,7 @@ def _proof_selection_for_changed_paths(
         proof_route_maintenance=proof_route_maintenance,
         proof_route_strategy_decision=proof_route_strategy_decision,
         selected_commands=selected_commands,
+        applicable_friction_findings=applicable_friction_findings,
     )
     proof_obligations = _proof_obligations_payload(
         required_commands=required_commands,
@@ -5147,6 +5479,7 @@ def _proof_selection_for_changed_paths(
         "focused_route_coverage_audit": focused_route_coverage_audit,
         "route_refinement_required": route_refinement_required,
         "proof_route_strategy_decision": proof_route_strategy_decision,
+        "proof_route_strategy_preservation": proof_route_strategy_preservation,
         "domain_proof_route_inventory_audit": domain_route_inventory_audit,
         "proof_route_precedence": proof_route_precedence,
         "proof_intents": proof_intents,

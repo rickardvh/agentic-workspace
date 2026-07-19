@@ -5,7 +5,7 @@
   "owner_level": "slice",
   "lifecycle": "closed",
   "phase": "complete",
-  "revision": 2,
+  "revision": 3,
   "intent": {
     "outcome": "https://github.com/rickardvh/agentic-workspace/issues/2334",
     "non_goals": [
@@ -20,12 +20,23 @@
   },
   "scope": {
     "owned": [
-      "closeout scope recorded in closure_check and generated_closeout."
+      "src/agentic_workspace/session_logging.py",
+      "src/agentic_workspace/workspace_runtime_proof.py",
+      "src/agentic_workspace/workspace_runtime_startup.py",
+      "src/agentic_workspace/workspace_runtime_implement.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "src/agentic_workspace/contracts/**",
+      "tests/test_workspace_cli.py",
+      "tests/test_workspace_proof_cli.py",
+      "tests/test_workspace_session_logging.py",
+      ".agentic-workspace/planning/**"
     ],
     "effects": [
-      "Persistent session evidence classifies slow validation as proof-route friction input.",
-      "Proof output exposes a structured broad-proof escalation gate with explicit override, route-maintenance, and friction-evidence inputs.",
-      "Generic broad fallback no longer counts as sufficient escalation authority on its own."
+      "One pre-selection proof-route strategy identity controls commands, next action, and claim effect.",
+      "Applicable live Memory validation-friction findings are consumed before proof commands are selected.",
+      "Broad proof requires structured escalation evidence or explicit override instead of lane-count or lane-presence inference.",
+      "Start, implement, proof, handoff, and closeout preserve the same decision id and claim boundary."
     ],
     "excluded": [
       "Work outside the bounded closeout scope."
@@ -37,12 +48,16 @@
       "owner": "current-work context"
     },
     "proof_posture": {
-      "state": "pending",
-      "refs": []
+      "state": "passed",
+      "refs": [
+        "local proof commands recorded in validation_commands"
+      ]
     },
     "external_posture": {
-      "state": "unobserved",
-      "refs": []
+      "state": "pending-pr-head-ci-after-push",
+      "refs": [
+        "PR #2336 CI after push"
+      ]
     }
   },
   "references": [
@@ -54,13 +69,13 @@
       "locator": ""
     }
   ],
-  "next_action": "Gate broad or high-cost proof behind structured escalation, route-friction evidence, or explicit override without restoring standalone matrix authority.",
+  "next_action": "No required continuation remains for this archived slice after PR-head CI refresh.",
   "blockers": [
     "None."
   ],
   "proof": {
     "claims": [
-      "#2334 is ready for issue closeout after PR #2336 merge."
+      "#2334 proof-friction escalation is satisfied on this branch head: broad proof is blocked unless the shared strategy decision returns focused sufficiency, justified broad escalation, explicit override, route maintenance, environment gap, or applicable Memory friction handling."
     ],
     "requirements": [
       "See proof_report.validation proof."
@@ -80,16 +95,16 @@
   "execution_run": {
     "run status": "completed",
     "executor": "agentic-planning closeout",
-    "what happened": "Implemented lifecycle-shaped proof-friction records, broad-escalation claim blocking, route-decision projection into proof_next_decision/proof_route_escalation_gate, and regressions for slow-command lifecycle plus broad fallback withholding.",
-    "scope touched": "Session logging friction candidates, proof route strategy/gate runtime, proof compact output, planning/config route surfaces, and related regressions.",
-    "changed surfaces": ".agentic-workspace/config.toml; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/issue-2334-proof-friction-escalation.plan.json; src/agentic_workspace/session_logging.py; src/agentic_workspace/workspace_runtime_proof.py; tests/test_workspace_cli.py; tests/test_workspace_proof_cli.py; tests/test_workspace_session_logging.py",
-    "validations run": "See proof_report.validation proof.",
+    "what happened": "Finished #2334 strategy routing: one pre-selection proof-route strategy identity now controls proof, broad escalation requires structured evidence, applicable Memory validation friction is consumed before commands, slow-command grouping uses per-group class identity, and start/implement/proof/handoff/closeout preserve claim blocking.",
+    "scope touched": "Session logging friction candidates, proof route strategy/gate runtime, start/implement proof preservation, contracts/schema reference docs, Planning closeout state, and regressions.",
+    "changed surfaces": "src/agentic_workspace/session_logging.py; src/agentic_workspace/workspace_runtime_proof.py; src/agentic_workspace/workspace_runtime_startup.py; src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/workspace_runtime_core.py; src/agentic_workspace/workspace_runtime_primitives.py; src/agentic_workspace/contracts/**; tests/test_workspace_cli.py; tests/test_workspace_proof_cli.py; tests/test_workspace_session_logging.py; .agentic-workspace/planning/**",
+    "validations run": "Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests.",
     "result for continuation": "bounded closeout complete",
     "next step": "archive this execplan"
   },
   "finished_run_review": {
     "review status": "complete",
-    "scope respected": "Intent satisfied for the #2334 slice: generic broad proof no longer becomes required acceptance proof without structured escalation, applicable live friction, explicit override, or route refinement; local diagnostic friction is separated from lifecycle-managed authority.",
+    "scope respected": "Scope is now full #2334 closure rather than the earlier partial gating slice; local proof is recorded and PR-head CI remains the external proof after push.",
     "proof status": "passed",
     "intent served": "yes",
     "config compliance": "used planning closeout command-owned writer",
@@ -97,8 +112,8 @@
     "follow-on decision": "none"
   },
   "execution_summary": {
-    "outcome delivered": "#2334 is ready for issue closeout after PR #2336 merge.",
-    "validation confirmed": "See proof_report.validation proof.",
+    "outcome delivered": "Broad proof is claim-blocked unless the shared pre-selection decision returns focused sufficiency, justified broad escalation, explicit override, route maintenance, environment gap, or applicable Memory friction handling.",
+    "validation confirmed": "Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests.",
     "follow-on routed to": "none",
     "post-work posterity capture": "archive closeout distillation",
     "resume from": "archive",
@@ -109,9 +124,9 @@
     "slice status": "completed",
     "larger-intent status": "closed",
     "closure decision": "archive-and-close",
-    "why this decision is honest": "#2334 slice intent is satisfied and no required continuation remains.",
-    "evidence carried forward": "Planning closeout proof report plus local proof evidence on the stacked branch.",
-    "reopen trigger": "New evidence that broad proof can become required without structured escalation or live applicable route-friction authority."
+    "why this decision is honest": "The branch now implements the full #2334 acceptance boundary with one shared proof-route strategy identity, structured broad-escalation authority, applicable lifecycle-managed Memory friction consumption, per-group slow-command applicability, cross-surface preservation, focused regressions, and exact local proof.",
+    "evidence carried forward": "Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests.",
+    "reopen trigger": "None unless new evidence shows the closeout was incomplete."
   },
   "durable_residue": {
     "status": "none",
@@ -122,14 +137,14 @@
     "retention after promotion": "retain"
   },
   "proof_report": {
-    "validation proof": "PR #2336 head d84404c/9738c rebase: local proof passed for tests/test_workspace_proof_cli.py, tests/test_workspace_cli.py, tests/test_workspace_session_logging.py, ruff, typecheck, contract tooling, structured inventory, changed-selector focused proof, session slow-command focused proof, and lint-workspace. make test-workspace broad wrapper timed out and was not used as acceptance evidence.",
+    "validation proof": "Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests.",
     "proof achieved now": "yes; planning closeout recorded explicit proof input.",
-    "evidence for \"proof achieved\" state": "See proof_report.validation proof."
+    "evidence for \"proof achieved\" state": "Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests."
   },
   "intent_satisfaction": {
     "original intent": "Gate broad proof on recurring friction and structured escalation",
     "was original intent fully satisfied?": "yes",
-    "evidence of intent satisfaction": "PR #2336 local proof passed for proof/session/workspace focused and full relevant suites; broad make test-workspace timed out and was not used as acceptance authority.",
+    "evidence of intent satisfaction": "Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests.",
     "unsolved intent passed to": "none"
   },
   "memory_learning_capture": {
@@ -152,12 +167,12 @@
     "owner surface": "archive"
   },
   "canonical_core": {
-    "requested_outcome": "#2334 is ready for issue closeout after PR #2336 merge.",
+    "requested_outcome": "Gate broad proof on recurring friction and structured escalation.",
     "proof_expectations": [
       "See proof_report.validation proof."
     ],
     "touched_scope": [
-      "closeout scope recorded in closure_check and generated_closeout."
+      "Session logging friction candidates, proof route strategy/gate runtime, start/implement proof preservation, contracts/schema reference docs, Planning closeout state, and regressions."
     ],
     "completion_criteria": [
       "#2334 is ready for issue closeout after PR #2336 merge."
@@ -166,13 +181,13 @@
     "continuation_owner": "none"
   },
   "goal": [
-    "#2334 is ready for issue closeout after PR #2336 merge."
+    "Gate broad proof on recurring friction and structured escalation."
   ],
   "delegated_judgment": {
-    "requested outcome": "#2334 is ready for issue closeout after PR #2336 merge."
+    "requested outcome": "Gate broad proof on recurring friction and structured escalation."
   },
   "intent_continuity": {
-    "larger intended outcome": "#2334 is ready for issue closeout after PR #2336 merge."
+    "larger intended outcome": "Gate broad proof on recurring friction and structured escalation."
   },
   "machine_readable_contract": {
     "intent": {
@@ -182,7 +197,7 @@
     "execution": {
       "status": "completed",
       "next_step": "No required continuation remains for this archived slice.",
-      "proof": "See proof_report.validation proof."
+      "proof": "Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests."
     },
     "scope": {
       "touched": [
@@ -191,13 +206,13 @@
     }
   },
   "execution_bounds": {
-    "allowed paths": "closeout scope recorded in closure_check and generated_closeout.",
+    "allowed paths": "Session logging friction candidates, proof route strategy/gate runtime, start/implement proof preservation, contracts/schema reference docs, Planning closeout state, and regressions.",
     "max changed files": "closed slice; no further writes expected without reopening a fresh plan.",
     "required validation commands": "See proof_report.validation proof."
   },
   "intent_interpretation": {
-    "inferred intended outcome": "#2334 is ready for issue closeout after PR #2336 merge.",
-    "chosen concrete what": "#2334 is ready for issue closeout after PR #2336 merge.",
+    "inferred intended outcome": "Gate broad proof on recurring friction and structured escalation.",
+    "chosen concrete what": "Gate broad proof on recurring friction and structured escalation.",
     "review guidance": "Inspect generated_closeout, closure_check, proof_report, and closeout_distillation."
   },
   "context_budget": {
@@ -207,10 +222,27 @@
     "No required continuation remains for this archived slice."
   ],
   "touched_paths": [
-    "closeout scope recorded in closure_check and generated_closeout."
+    "Session logging friction candidates, proof route strategy/gate runtime, start/implement proof preservation, contracts/schema reference docs, Planning closeout state, and regressions."
   ],
   "validation_commands": [
-    "See proof_report.validation proof."
+    "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json",
+    "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "uv run --active python scripts/run_agentic_workspace.py upgrade --target . --repair-managed-local-instructions --format json",
+    "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+    "make maintainer-surfaces",
+    "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success",
+    "uv run python scripts/check/check_structured_file_inventory.py --quiet-success",
+    "uv run ruff check src/agentic_workspace/contracts scripts/check tests/test_structured_file_inventory.py",
+    "make schema-reference-docs",
+    "make typecheck",
+    "uv run pytest tests/test_workspace_session_logging.py -q",
+    "uv run pytest tests/test_workspace_proof_cli.py -q",
+    "uv run pytest tests/test_workspace_cli.py -k \"proof_route_strategy\" -q",
+    "uv run pytest tests/test_workspace_cli.py -q",
+    "uv run pytest tests/test_workspace_proof_cli.py -k \"focused_domain_route or missing_focused_route or tiny_profile_returns_next_validation_action\" -q",
+    "uv run pytest tests/test_workspace_session_logging.py -k slow_commands -q",
+    "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q",
+    "git diff --check"
   ],
   "iterative_follow_through": {
     "what this slice enabled": "#2334 is ready for issue closeout after PR #2336 merge.",
@@ -245,18 +277,21 @@
       "dismissed with reason"
     ],
     "ordinary output cap": 3,
-    "signals found": [],
+    "signals found": [
+      "uv run --active python scripts/run_agentic_workspace.py report --target . --section improvement_intake --format json: candidate_count=0",
+      "uv run --active python scripts/run_agentic_workspace.py report --target . --section session_improvement_intake --format json: no local session dogfooding signal cache was found"
+    ],
     "signals fixed": [],
     "signals routed": [],
     "signals dismissed": [],
-    "status": "not_checked",
-    "next owner": "agent closeout reflection"
+    "status": "no_signal_found",
+    "next owner": "none"
   },
   "closeout_distillation": {
     "buckets": {
       "discard": [
         {
-          "summary": "No Memory, docs, or config promotion was needed for local execution detail.",
+          "summary": "No Memory, docs, config, Planning, or issue promotion was needed after improvement_intake and session_improvement_intake both reported no routeable candidate.",
           "owner": "discard",
           "source": "execution_summary.knowledge promoted (Memory/Docs/Config)"
         }
@@ -342,47 +377,41 @@
   },
   "completion_gate": {
     "kind": "agentic-workspace/completion-gate/v1",
-    "status": "clarification-required",
-    "active_intent_satisfied": false,
+    "status": "allowed",
+    "active_intent_satisfied": true,
     "human_accepted_partial": false,
     "claim_level_requested": "full-intent-complete",
-    "claim_level_allowed": "partial-progress",
-    "required_next_action": "ask-human",
+    "claim_level_allowed": "full-intent-complete",
+    "required_next_action": "close-complete",
     "claim_authorization": {
       "kind": "agentic-workspace/claim-authorization/v1",
-      "allowed_claim_classes": [],
-      "blocked_claim_classes": [
+      "allowed_claim_classes": [
         "partial_progress",
         "slice_complete",
         "lane_complete",
         "parent_complete",
-        "full_intent_complete",
+        "full_intent_complete"
+      ],
+      "blocked_claim_classes": [
         "issue_closure"
       ],
       "closure_actions": [],
       "renderer_rule": "Renderers must choose only templates whose required claim class and closure action are authorized here; unsafe prose examples are diagnostics, not the enforcement model.",
       "diagnostics": {
-        "unsafe_claim_examples": [
-          "done",
-          "implemented",
-          "complete",
-          "finished",
-          "all",
-          "full intent complete"
-        ],
+        "unsafe_claim_examples": [],
         "diagnostic_only": true
       }
     },
     "residual_intent": "",
     "self_review": {
       "question": "Does the delivered work satisfy the active human intent?",
-      "answer": "no",
-      "reason": "Decision-point intent confirmation is missing or unresolved."
+      "answer": "yes",
+      "reason": "Planning closeout evidence supports the requested completion claim."
     },
     "continuation": {
       "owner_surface": "",
-      "created_or_required": true,
-      "reason": "Decision-point intent confirmation is missing or unresolved."
+      "created_or_required": false,
+      "reason": ""
     },
     "authority_boundary": {
       "aw_owns": [
@@ -406,6 +435,6 @@
     "status": "generated",
     "source": "archive-plan --prepare-closeout",
     "authority": "derived adapter; intent_satisfaction, closure_check, proof_report, durable_residue, execution_run, and execution_summary remain authoritative",
-    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Gate broad proof on recurring friction and structured escalation\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: PR #2336 head d84404c/9738c rebase: local proof passed for tests/test_workspace_proof_cli.py, tests/test_workspace_cli.py, tests/test_workspace_session_logging.py, ruff, typecheck, contract tooling, structured inventory, changed-selector focused proof, session slow-command focused proof, and lint-workspace. make test-workspace broad wrapper timed out and was not used as acceptance evidence.\nChanged surfaces: .agentic-workspace/config.toml; .agentic-workspace/planning/state.toml; .agentic-workspace/planning/execplans/issue-2334-proof-friction-escalation.plan.json; src/agentic_workspace/session_logging.py; src/agentic_workspace/workspace_runtime_proof.py; tests/test_workspace_cli.py; tests/test_workspace_proof_cli.py; tests/test_workspace_session_logging.py\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: clarification-required\nCompletion claim allowed: partial-progress"
+    "text": "Generated closeout adapter; structured execplan fields are authoritative.\nIntent: Gate broad proof on recurring friction and structured escalation\nIntent satisfied: yes\nArchive decision: archive-and-close\nProof: Local proof passed: summary, scoped planning doctor, managed local instructions repair plus doctor refresh, maintainer surfaces, contract tooling, structured file inventory, contract ruff, schema reference docs, typecheck, tests/test_workspace_cli.py, tests/test_workspace_proof_cli.py, tests/test_workspace_session_logging.py, proof focused selectors, session slow-command selector, and changed-selector proof tests.\nChanged surfaces: src/agentic_workspace/session_logging.py; src/agentic_workspace/workspace_runtime_proof.py; src/agentic_workspace/workspace_runtime_startup.py; src/agentic_workspace/workspace_runtime_implement.py; src/agentic_workspace/contracts/**; tests/test_workspace_cli.py; tests/test_workspace_proof_cli.py; tests/test_workspace_session_logging.py; .agentic-workspace/planning/**\nDurable residue: none (archive)\nMemory learning: none\nFollow-up: none\nCompletion gate: allowed\nCompletion claim allowed: full-intent-complete"
   }
 }

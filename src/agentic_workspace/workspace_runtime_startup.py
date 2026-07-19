@@ -1294,6 +1294,23 @@ def _start_payload(
                 "open_execplan_only_when": startup_template["open_execplan_only_when"],
             }
         payload["proof"] = _compact_start_proof_payload(proof_payload)
+        strategy_preservation = _as_dict(proof_payload.get("proof_route_strategy_preservation"))
+        if strategy_preservation:
+            payload["proof_route_strategy_preservation"] = strategy_preservation
+        if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
+            payload["immediate_next_allowed_action"] = {
+                "action": str(
+                    _as_dict(strategy_preservation.get("consumers")).get("start", {}).get("next_action") or "route-refinement-required"
+                ),
+                "summary": "Proof route strategy blocks the completion claim; resolve route refinement or structured escalation before closeout.",
+                "command": proof_command,
+                "run": proof_command,
+                "risk": "claim-blocking proof-route decision",
+                "required_inputs": ["target repo", "changed path(s)", "proof_route_strategy_preservation.decision_id"],
+                "next_proof": proof_command,
+                "read_first": [proof_command],
+                "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            }
         repair_profile = _compact_repair_plan_profile(changed_paths=normalized_paths, task_text=task_text, proof_command=proof_command)
         if repair_profile["status"] == "direct-no-plan":
             payload["repair_plan_profile"] = repair_profile
@@ -1305,15 +1322,33 @@ def _start_payload(
             changed_paths=normalized_paths, target_root=target_root, include_durable_intent=False, task_text=task_text
         )
         payload["proof"] = _compact_start_proof_payload(proof_payload)
+        strategy_preservation = _as_dict(proof_payload.get("proof_route_strategy_preservation"))
+        if strategy_preservation:
+            payload["proof_route_strategy_preservation"] = strategy_preservation
+        proof_command = str(
+            _command_with_cli_invoke(
+                command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
+                cli_invoke=config.cli_invoke,
+            )
+        )
+        if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
+            payload["immediate_next_allowed_action"] = {
+                "action": str(
+                    _as_dict(strategy_preservation.get("consumers")).get("start", {}).get("next_action") or "route-refinement-required"
+                ),
+                "summary": "Proof route strategy blocks the completion claim; resolve route refinement or structured escalation before closeout.",
+                "command": proof_command,
+                "run": proof_command,
+                "risk": "claim-blocking proof-route decision",
+                "required_inputs": ["target repo", "changed path(s)", "proof_route_strategy_preservation.decision_id"],
+                "next_proof": proof_command,
+                "read_first": [proof_command],
+                "open_execplan_only_when": startup_template["open_execplan_only_when"],
+            }
         repair_profile = _compact_repair_plan_profile(
             changed_paths=normalized_paths,
             task_text=task_text,
-            proof_command=str(
-                _command_with_cli_invoke(
-                    command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",
-                    cli_invoke=config.cli_invoke,
-                )
-            ),
+            proof_command=proof_command,
         )
         if repair_profile["status"] == "direct-no-plan":
             payload["repair_plan_profile"] = repair_profile

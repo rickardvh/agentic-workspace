@@ -89,8 +89,12 @@ evidence_concepts = ["root-workspace-proof-routing", "focused-serial-proof"]
 proof_profiles = ["workspace_behavior"]
 authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
 escalation = ["the change crosses package, generated-command, lifecycle, or closeout behavior boundaries", "the focused selector does not exercise the changed proof behavior"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient"]
 claim_boundary = "focused-workspace-proof-required-before-runtime-routing-claim"
 owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "60"
+allowed_composition = ["maintenance", "evidence"]
 notes = "This lane is the first focused replacement for generic workspace_behavior proof on proof-router changes."
 
 [assurance.domain_proof_lanes.proof_route_authority]
@@ -103,8 +107,12 @@ evidence_concepts = ["root-workspace-proof-routing", "route-maintenance", "focus
 proof_profiles = ["workspace_behavior", "test_evidence_change"]
 authority_refs = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", "docs/maintainer/testing-strategy.md"]
 escalation = ["route authority changes cannot be covered by focused proof-router tests", "maintainer explicitly requests broad workspace validation"]
+escalation_conditions = ["explicit-request", "focused-route-insufficient"]
 claim_boundary = "proof-route-authority-review-required-before-route-claim"
 owner = "workspace-cli-runtime"
+route_role = "maintenance"
+precedence = "90"
+allowed_composition = ["behavior", "evidence", "broad"]
 
 [assurance.domain_proof_lanes.session_logging_friction]
 purpose = "Focused session-log friction evidence and proof-route maintenance behavior."
@@ -115,8 +123,12 @@ evidence_concepts = ["route-maintenance", "focused-serial-proof"]
 proof_profiles = ["workspace_behavior"]
 authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
 escalation = ["session logging changes alter closeout, Memory capture, or proof-route authority rather than friction evidence only"]
+escalation_conditions = ["focused-route-insufficient"]
 claim_boundary = "session-friction-proof-required-before-route-maintenance-claim"
 owner = "workspace-cli-runtime"
+route_role = "maintenance"
+precedence = "90"
+allowed_composition = ["behavior", "evidence", "broad"]
 
 [assurance.domain_proof_lanes.memory_package_behavior]
 purpose = "Focused Memory package behavior."
@@ -127,8 +139,12 @@ evidence_concepts = ["memory-package-behavior", "package-local-proof"]
 proof_profiles = ["workspace_behavior"]
 authority_refs = [".agentic-workspace/config.toml", "packages/memory/AGENTS.md"]
 escalation = ["the change crosses root workspace orchestration or installed payload boundaries"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary"]
 claim_boundary = "focused-memory-proof-required-before-package-claim"
 owner = "memory"
+route_role = "behavior"
+precedence = "50"
+allowed_composition = ["maintenance", "evidence"]
 
 [assurance.domain_proof_lanes.planning_package_behavior]
 purpose = "Focused Planning package behavior."
@@ -139,8 +155,12 @@ evidence_concepts = ["planning-package-behavior", "package-local-proof"]
 proof_profiles = ["workspace_behavior"]
 authority_refs = [".agentic-workspace/config.toml", "packages/planning/AGENTS.md"]
 escalation = ["the change crosses root workspace orchestration, closeout trust, or installed payload boundaries"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "high-risk-requirement"]
 claim_boundary = "focused-planning-proof-required-before-package-claim"
 owner = "planning"
+route_role = "behavior"
+precedence = "50"
+allowed_composition = ["maintenance", "evidence"]
 
 [assurance.domain_proof_lanes.verification_package_behavior]
 purpose = "Focused Verification package behavior."
@@ -151,8 +171,12 @@ evidence_concepts = ["verification-package-behavior", "package-local-proof"]
 proof_profiles = ["verification_behavior"]
 authority_refs = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml"]
 escalation = ["the change alters root proof selection, assurance policy, or generated package behavior"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary"]
 claim_boundary = "focused-verification-proof-required-before-package-claim"
 owner = "verification"
+route_role = "behavior"
+precedence = "50"
+allowed_composition = ["maintenance", "evidence"]
 
 [assurance.domain_proof_lanes.generated_command_packages]
 purpose = "Focused generated command package and adapter conformance."
@@ -163,8 +187,12 @@ evidence_concepts = ["generated-package-freshness", "generated-adapter-conforman
 proof_profiles = ["workspace_behavior"]
 authority_refs = [".agentic-workspace/verification/manifest.toml#proof_routes.generated_adapter_conformance", "src/agentic_workspace/contracts/command_package_ir.json"]
 escalation = ["Docker packaging, runtime handoff, command-generation internals, or cross-target behavior changed"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "high-risk-requirement"]
 claim_boundary = "focused-generated-adapter-proof-required-before-generated-package-claim"
 owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "55"
+allowed_composition = ["maintenance", "evidence"]
 
 [assurance.domain_proof_lanes.test_evidence_decision]
 purpose = "Focused test-evidence change review."
@@ -177,8 +205,12 @@ assurance_requirement_refs = ["test_evidence_change_decision"]
 proof_profiles = ["test_evidence_change"]
 authority_refs = [".agentic-workspace/verification/manifest.toml#proof_routes.test_evidence_decision", "docs/maintainer/testing-strategy.md"]
 escalation = ["the test evidence change crosses product behavior or generated adapter boundaries"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient"]
 claim_boundary = "test-evidence-disposition-required-before-closeout"
 owner = "verification"
+route_role = "evidence"
+precedence = "80"
+allowed_composition = ["behavior", "maintenance", "broad"]
 
 [assurance.domain_proof_lanes.workspace_broad_suite]
 purpose = "Explicit broad workspace validation route."
@@ -197,8 +229,12 @@ evidence_concepts = ["broad-workspace-validation", "explicit-escalation"]
 proof_profiles = ["workspace_behavior"]
 authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
 escalation = ["cross-cutting behavior lacks sufficient focused coverage", "maintainer or user explicitly requested broad proof", "high-risk claim requires broad root evidence"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary", "focused-route-insufficient", "explicit-request", "high-risk-requirement"]
 claim_boundary = "explicit-broad-escalation-required"
 owner = "workspace-cli-runtime"
+route_role = "broad"
+precedence = "10"
+allowed_composition = ["behavior", "maintenance", "evidence"]
 
 [assurance.requirements.model_harness_evidence]
 level = "high"

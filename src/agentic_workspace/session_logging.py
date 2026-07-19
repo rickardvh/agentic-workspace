@@ -1553,6 +1553,7 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
                 "durations": [],
                 "evidence_refs": [],
                 "timestamps": [],
+                "host_impact_classes": [],
             },
         )
         group["durations"].append(duration_ms)
@@ -1562,6 +1563,9 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
         timestamp = str(entry.get("started_at") or entry.get("timestamp") or entry.get("finished_at") or "").strip()
         if timestamp:
             group["timestamps"].append(timestamp)
+        host_impact_class = str(entry.get("host_impact_class") or entry.get("impact_class") or "").strip()
+        if host_impact_class:
+            group["host_impact_classes"].append(host_impact_class)
 
     candidates: list[dict[str, Any]] = []
     for group in sorted(groups.values(), key=lambda item: max(item["durations"]), reverse=True):
@@ -1573,17 +1577,21 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
         command = str(group["command"])
         digest = hashlib.sha256(f"{group['normalized_command_class']}\n{command}".encode("utf-8")).hexdigest()[:10]
         timestamps = sorted(str(item) for item in group["timestamps"] if str(item).strip())
-        severity = (
-            "protective-action" if recurrence == "recurring" or duration_ms_max >= DEFAULT_SLOW_COMMAND_DURATION_MS * 4 else "attention"
+        host_impact_classes = list(dict.fromkeys(str(item) for item in group["host_impact_classes"] if str(item).strip()))
+        severe_host_impact = any(
+            item.lower().replace("_", "-") in {"severe-host-impact", "host-impact-severe", "severe"} for item in host_impact_classes
         )
+        severity = "protective-action" if recurrence == "recurring" or severe_host_impact else "attention"
         signal_recurrence = "repeated" if recurrence == "recurring" else "first_seen"
         signal_state = "active" if severity == "protective-action" else "active"
-        applicability = "applicable-to-proof-route-maintenance" if normalized_class == "validation-command" else "review-before-use"
+        normalized_command_class = str(group["normalized_command_class"])
+        applicability = "applicable-to-proof-route-maintenance" if normalized_command_class == "validation-command" else "review-before-use"
         lifecycle_status = "live-applicable" if severity == "protective-action" else "candidate-local-observation"
         candidates.append(
             {
                 "id": f"slow-command:{digest}",
                 "summary": f"{recurrence} slow command ({occurrence_count} run(s), max {duration_ms_max}ms): {command}",
+                "command": command,
                 "owner": "proof-route-maintenance",
                 "remediation_owner": "proof-router",
                 "lifecycle_status": lifecycle_status,
@@ -1593,7 +1601,9 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
                 "duration_ms_max": duration_ms_max,
                 "duration_ms_total": duration_ms_total,
                 "threshold_ms": DEFAULT_SLOW_COMMAND_DURATION_MS,
-                "normalized_command_class": str(group["normalized_command_class"]),
+                "normalized_command_class": normalized_command_class,
+                "host_impact_class": "severe-host-impact" if severe_host_impact else "none",
+                "host_impact_classes": host_impact_classes,
                 "severity": severity,
                 "route_identity": f"proof-route-friction:{digest}",
                 "treatment": "prefer focused proof; require structured escalation before promoting broad/high-cost proof",
@@ -1610,7 +1620,7 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
                     "lifecycle_source": "session_log.slow_command",
                     "applicability": applicability,
                     "applicable_live": lifecycle_status == "live-applicable",
-                    "applicable_to_current_route": normalized_class == "validation-command",
+                    "applicable_to_current_route": normalized_command_class == "validation-command",
                     "observed_during": "session-log analyze",
                     "symptom": f"{command} exceeded the slow-command threshold.",
                     "cost": f"{occurrence_count} run(s), total {duration_ms_total}ms, max {duration_ms_max}ms.",
@@ -1618,6 +1628,7 @@ def _slow_command_friction_candidates(entries: list[dict[str, Any]]) -> list[dic
                     "likely_remediation": "validation",
                     "confidence": "medium" if severity == "protective-action" else "low",
                     "recurrence": signal_recurrence,
+                    "host_impact_class": "severe-host-impact" if severe_host_impact else "none",
                     "immediate_action": "route" if severity == "protective-action" else "review",
                     "retention": "shrink_after_fix",
                     "source": "session_log.slow_command",

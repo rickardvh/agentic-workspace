@@ -1646,6 +1646,79 @@ def test_session_log_repeated_slow_commands_surface_recurring_proof_friction() -
     assert len(slow["evidence_refs"]) == 2
 
 
+def test_session_log_single_very_slow_command_remains_candidate_without_host_impact() -> None:
+    slow = session_logging._slow_command_friction_candidates(
+        [
+            {
+                "id": "cmd-1",
+                "command": "make test-workspace",
+                "duration_ms": session_logging.DEFAULT_SLOW_COMMAND_DURATION_MS * 5,
+                "started_at": "2026-07-16T10:00:00+00:00",
+            }
+        ]
+    )[0]
+    assert slow["recurrence"] == "single-observation"
+    assert slow["severity"] == "attention"
+    assert slow["lifecycle_status"] == "candidate-local-observation"
+    assert slow["improvement_signal"]["applicable_live"] is False
+    assert slow["improvement_signal"]["recurrence"] == "first_seen"
+
+
+def test_session_log_single_severe_host_impact_validation_command_is_live_applicable() -> None:
+    slow = session_logging._slow_command_friction_candidates(
+        [
+            {
+                "id": "cmd-1",
+                "command": "make test-workspace",
+                "duration_ms": 125000,
+                "host_impact_class": "severe-host-impact",
+                "started_at": "2026-07-16T10:00:00+00:00",
+            }
+        ]
+    )[0]
+    assert slow["recurrence"] == "single-observation"
+    assert slow["host_impact_class"] == "severe-host-impact"
+    assert slow["severity"] == "protective-action"
+    assert slow["lifecycle_status"] == "live-applicable"
+    assert slow["improvement_signal"]["applicable_live"] is True
+    assert slow["improvement_signal"]["host_impact_class"] == "severe-host-impact"
+
+
+def test_session_log_grouped_slow_command_applicability_uses_each_group_class() -> None:
+    candidates = session_logging._slow_command_friction_candidates(
+        [
+            {
+                "id": "validation-1",
+                "command": "make test-workspace",
+                "duration_ms": 125000,
+                "started_at": "2026-07-16T10:00:00+00:00",
+            },
+            {
+                "id": "validation-2",
+                "command": "make test-workspace",
+                "duration_ms": 130000,
+                "started_at": "2026-07-16T10:10:00+00:00",
+            },
+            {
+                "id": "docs-1",
+                "command": "python scripts/render_docs.py",
+                "duration_ms": 124000,
+                "started_at": "2026-07-16T10:20:00+00:00",
+            },
+        ]
+    )
+
+    by_command = {candidate["command"]: candidate for candidate in candidates}
+    validation = by_command["make test-workspace"]
+    docs = by_command["python scripts/render_docs.py"]
+    assert validation["normalized_command_class"] == "validation-command"
+    assert validation["improvement_signal"]["applicability"] == "applicable-to-proof-route-maintenance"
+    assert validation["improvement_signal"]["applicable_to_current_route"] is True
+    assert docs["normalized_command_class"] == "command"
+    assert docs["improvement_signal"]["applicability"] == "review-before-use"
+    assert docs["improvement_signal"]["applicable_to_current_route"] is False
+
+
 def test_session_log_classifies_structured_runtime_exception() -> None:
     capture = session_logging.CommandCapture(
         stdout=json.dumps(

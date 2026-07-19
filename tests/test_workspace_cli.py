@@ -8327,6 +8327,48 @@ def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, ca
     assert "missing" not in payload
 
 
+def test_proof_route_strategy_identity_is_preserved_by_start_and_implement(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    start_args = [
+        "start",
+        "--target",
+        str(tmp_path),
+        "--changed",
+        "generated/workspace/python/cli.py",
+        "--select",
+        "proof_route_strategy_preservation,next_safe_action",
+        "--format",
+        "json",
+    ]
+    assert cli.main(start_args) == 0
+    start_values = json.loads(capsys.readouterr().out)["values"]
+
+    implement_args = [
+        "implement",
+        "--target",
+        str(tmp_path),
+        "--changed",
+        "generated/workspace/python/cli.py",
+        "--select",
+        "proof_route_strategy_preservation,next",
+        "--format",
+        "json",
+    ]
+    assert cli.main(implement_args) == 0
+    implement_values = json.loads(capsys.readouterr().out)["values"]
+
+    start_preservation = start_values["proof_route_strategy_preservation"]
+    implement_preservation = implement_values["proof_route_strategy_preservation"]
+    assert start_preservation["decision_id"] == implement_preservation["decision_id"]
+    assert start_preservation["claim_effect"] == "claim-blocked"
+    assert implement_preservation["claim_effect"] == "claim-blocked"
+    assert start_values["next_safe_action"]["next_safe_action"] == "route-refinement-required"
+    assert implement_values["next"]["action"] == "Resolve proof-route refinement or structured escalation before closeout."
+
+
 def test_proof_compact_surfaces_narrowness_for_bounded_package_change(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0

@@ -30,6 +30,7 @@ Template registry for compact context fragments used by workspace commands.
 | `implementer_context.handoff_requirements` | object | yes |  | Handoff requirements details used by this contract. |  |  |
 | `implementer_context.handoff_requirements.before_handoff` | array of string | yes |  | Ordered before handoff entries used by this contract. |  |  |
 | `implementer_context.handoff_requirements.stop_when` | array of string | yes |  | Ordered stop when entries used by this contract. |  |  |
+| `implementer_context.handoff_requirements.must_preserve` | array of string | no |  | Decision identities and claim-boundary fields that downstream consumers must preserve. |  |  |
 | `implementer_context.next_allowed_action` | object | yes |  | Next allowed action details used by this contract. |  |  |
 | `implementer_context.next_allowed_action.attention` | string | yes |  | Attention text value used by this contract. |  |  |
 | `implementer_context.next_allowed_action.default` | string | yes |  | Default text value used by this contract. |  |  |

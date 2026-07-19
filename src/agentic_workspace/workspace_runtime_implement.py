@@ -213,6 +213,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["plan_delegation_packet"] = full_payload["plan_delegation_packet"]
         if test_strategy_check_selected:
             payload["test_strategy_check"] = full_payload["test_strategy_check"]
+        if _selector_requests(getattr(args, "select", None), "proof_route_strategy_preservation"):
+            payload["proof_route_strategy_preservation"] = full_payload.get("proof_route_strategy_preservation", {})
         if reuse_pressure_selected:
             payload["reuse_pressure"] = _reuse_pressure_payload(
                 target_root=target_root,
@@ -887,6 +889,17 @@ def _implement_payload(
         if attention_paths
         else implementer_template["next_allowed_action"]["default"],
     }
+    strategy_preservation = _as_dict(_as_dict(proof).get("proof_route_strategy_preservation"))
+    if strategy_preservation:
+        payload["proof_route_strategy_preservation"] = strategy_preservation
+    if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
+        payload["next_allowed_action"] = "Resolve proof-route refinement or structured escalation before closeout."
+        payload["handoff_requirements"]["must_preserve"] = [
+            *list(_list_payload(payload["handoff_requirements"].get("must_preserve"))),
+            "proof_route_strategy_preservation.decision_id",
+            "proof_route_strategy_preservation.claim_effect",
+            "proof_route_strategy_preservation.selected_requirement",
+        ]
     subsystem_intents = _list_payload(_as_dict(payload["durable_intent"].get("subsystem_intent")).get("matches"))
     principles = _list_payload(_as_dict(payload.get("architecture_principles")).get("matched_principles"))
     forecast_carry = _load_decision_point_forecast(target_root=target_root, task_text=task_text)
