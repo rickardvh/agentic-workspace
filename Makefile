@@ -3,11 +3,9 @@
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
 REVIEW_MAX_CYCLES ?= 3
 export UV_CACHE_DIR
-ifeq ($(OS),Windows_NT)
-PYTEST_PARALLEL_ARGS ?= -n 4
-else
-PYTEST_PARALLEL_ARGS ?= -n auto
-endif
+# Serial execution is the safe local default.  Callers that have measured
+# capacity may explicitly opt in, for example: PYTEST_PARALLEL_ARGS='-n 4'.
+PYTEST_PARALLEL_ARGS ?=
 COMPACT_RUN = uv run python scripts/check/run_compact_command.py
 
 .PHONY: help sync-all sync-memory sync-planning sync-verification \
@@ -31,9 +29,8 @@ help:
 	@echo "  sync-memory          Sync consolidated root dev environment for memory package checks."
 	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
 	@echo "  sync-verification    Sync consolidated root dev environment for verification package checks."
-	@echo "  test                 Run workspace and package test suites with pytest-xdist."
-	@echo "                       Defaults to '-n 4' on Windows and '-n auto' elsewhere."
-	@echo "                       Override worker selection with PYTEST_PARALLEL_ARGS='-n <count>' or empty."
+	@echo "  test                 Run workspace and package test suites serially by default."
+	@echo "                       Opt into pytest-xdist only with PYTEST_PARALLEL_ARGS='-n <count>'."
 	@echo "  lint                 Run non-mutating lint checks across workspace and packages."
 	@echo "  markdownlint         Run Markdown lint checks for the memory package surfaces."
 	@echo "  typecheck            Run ty type checks across workspace and packages."

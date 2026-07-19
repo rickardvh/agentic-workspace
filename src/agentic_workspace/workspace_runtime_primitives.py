@@ -43517,7 +43517,9 @@ def _proof_next_decision_payload(
     if host_policy_blocked_commands:
         warnings.append("Host proof policy blocked one or more candidate proof commands.")
     selected = selected_commands[0] if selected_commands else None
-    if selected is not None:
+    manual_status = str(manual_verification.get("status", "")) if isinstance(manual_verification, dict) else ""
+    manual_blocks_selected_commands = manual_status == "route-refinement-required"
+    if selected is not None and not manual_blocks_selected_commands:
         next_action = {
             "action": "run-validation-command",
             "command": selected["command"],
@@ -43533,13 +43535,18 @@ def _proof_next_decision_payload(
         summary = None
         if isinstance(manual_verification, dict):
             summary = manual_verification.get("summary") or manual_verification.get("reason")
+        action = "select-proof-scope"
+        route_source = "none"
+        if manual_verification:
+            action = "route-refinement-required" if manual_blocks_selected_commands else "manual-verification"
+            route_source = "route-refinement" if manual_blocks_selected_commands else "manual-fallback"
         next_action = {
-            "action": "manual-verification" if manual_verification else "select-proof-scope",
+            "action": action,
             "command": None,
             "run": None,
             "required": bool(manual_verification),
             "why": summary or "No executable proof route was selected.",
-            "route_source": "manual-fallback" if manual_verification else "none",
+            "route_source": route_source,
         }
     return {
         "kind": "proof-next-decision/v1",

@@ -133,8 +133,8 @@ Run the narrowest lane that proves the change.
 Use `agentic-workspace defaults --format json` first when you need the structured default answer for which lane is enough, when broader checks are needed, and when the work should escalate beyond the narrow proving path.
 
 - Root workspace CLI changes: `uv run pytest tests -q`, `uv run ruff check src tests`, `uv run ty check src`
-- Memory package changes: `make sync-memory` once, then `cd packages/memory && uv run pytest <path>` for a focused repro or `make test-memory` for the parallel full-suite lane; use `cd packages/memory && uv run ruff check .` for lint and escalate to `make check-memory` for the full package lane
-- Planning package changes: `make sync-planning` once, then `cd packages/planning && uv run pytest <path>` for a focused repro or `make test-planning` for the parallel full-suite lane; use `cd packages/planning && uv run ruff check .` for lint and escalate to `make check-planning` for the full package lane
+- Memory package changes: `make sync-memory` once, then `cd packages/memory && uv run pytest <path>` for a focused repro or `make test-memory` for the serial-by-default full-suite lane; use `cd packages/memory && uv run ruff check .` for lint and escalate to `make check-memory` for the full package lane
+- Planning package changes: `make sync-planning` once, then `cd packages/planning && uv run pytest <path>` for a focused repro or `make test-planning` for the serial-by-default full-suite lane; use `cd packages/planning && uv run ruff check .` for lint and escalate to `make check-planning` for the full package lane
 - Maintainer-surface, generated-doc, or installed-contract payload changes: `make maintainer-surfaces`
 - Planning-surface changes only: `make planning-surfaces`; rerun `make render-agent-docs` when the planning manifest or generated routing docs change
 - Declarative contract manifests or schemas for workspace proof/report/selectors: `uv run python scripts/check/check_contract_tooling_surfaces.py`
@@ -144,7 +144,7 @@ Use `agentic-workspace defaults --format json` first when you need the structure
 
 Escalate to `make check-memory`, `make check-planning`, or `make check-all` only when the change crosses package or root orchestration boundaries.
 
-The default suite-oriented `make test`, `make test-workspace`, `make test-memory`, `make test-planning`, and package `make test` lanes run `pytest` with xdist (`-n 4` on Windows from the root Makefile, `-n auto` elsewhere). Keep direct `uv run pytest <path>` invocations available for tiny focused runs where worker startup would dominate.
+The default suite-oriented `make test`, `make test-workspace`, `make test-memory`, `make test-planning`, and package `make test` lanes run `pytest` serial by default. Opt into xdist only when local capacity is known, for example with `PYTEST_PARALLEL_ARGS='-n 4'`; keep direct `uv run pytest <path>` invocations available for tiny focused runs where worker startup would dominate.
 
 Final repo sync after package work:
 

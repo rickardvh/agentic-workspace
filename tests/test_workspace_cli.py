@@ -8308,7 +8308,7 @@ def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, ca
                 "--changed",
                 "generated/workspace/python/cli.py",
                 "--select",
-                "sufficiency,next",
+                "sufficiency,next,proof_route_strategy_decision",
                 "--format",
                 "json",
             ]
@@ -8321,6 +8321,8 @@ def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, ca
     assert payload["source_command"] == "proof"
     assert payload["values"]["sufficiency"]["sufficiency_result"] == "required-proof-selected"
     assert payload["values"]["next"]["action"] == "run-validation-command"
+    assert payload["values"]["proof_route_strategy_decision"]["outcome"] == "no-focused-authority"
+    assert payload["values"]["proof_route_strategy_decision"]["claim_effect"] == "selected-proof-required"
     assert "missing" not in payload
 
 
