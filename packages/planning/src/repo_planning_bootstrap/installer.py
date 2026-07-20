@@ -4728,6 +4728,14 @@ def _csv_items(value: str | Iterable[str] | None) -> list[str]:
     return [str(item).strip() for item in raw_items if str(item).strip()]
 
 
+def _clear_field_requested(value: str | Iterable[str] | None) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value.strip() in {"__clear__", "<clear>"}
+    return any(str(item).strip() in {"__clear__", "<clear>"} for item in value)
+
+
 def _load_schema_backed_json_record(path: Path, *, kind: str) -> dict[str, Any] | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -4828,6 +4836,87 @@ def _integration_subject_revision(*, target_root: Path, owner_ref: str = "", ext
         components["issue_relation_hash"] = "unspecified"
     material = json.dumps(components, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(material).hexdigest()[:16]
+
+
+def _integration_subject_revision_after_record(
+    *, target_root: Path, owner_ref: str, owner_record: dict[str, Any], external_ref: str
+) -> str:
+    components: dict[str, str] = {"kind": "planning-integration-subject-revision/v1"}
+    ref = owner_ref.strip().replace("\\", "/")
+    if ref:
+        owner_path = (target_root / ref).resolve()
+        try:
+            owner_path.relative_to(target_root.resolve())
+        except ValueError:
+            components["owner_ref"] = "escapes-target"
+            components["owner_hash"] = "invalid"
+        else:
+            owner_bytes = (json.dumps(owner_record, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+            components["owner_ref"] = _planning_surface_relative(target_root, owner_path)
+            components["owner_hash"] = hashlib.sha256(owner_bytes).hexdigest()[:16]
+    else:
+        components["owner_ref"] = ""
+        components["owner_hash"] = "unspecified"
+    if external_ref.strip():
+        relation_path = _issue_relation_path(target_root, external_ref)
+        components["external_ref"] = external_ref.strip()
+        components["issue_relation_hash"] = _short_file_hash(relation_path)
+    else:
+        components["external_ref"] = ""
+        components["issue_relation_hash"] = "unspecified"
+    material = json.dumps(components, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(material).hexdigest()[:16]
+
+
+def _integration_owner_path(target_root: Path, owner_ref: str) -> tuple[Path | None, str]:
+    ref = owner_ref.strip().replace("\\", "/")
+    if not ref:
+        return None, "missing-owner-ref"
+    owner_path = (target_root / ref).resolve()
+    try:
+        owner_path.relative_to(target_root.resolve())
+    except ValueError:
+        return None, "owner-ref-escapes-target"
+    return owner_path, ""
+
+
+def _apply_owner_integration_transition(
+    owner_record: dict[str, Any], *, transition: str, proof_refs: list[str], now: str
+) -> tuple[dict[str, Any], list[str]]:
+    updated = copy.deepcopy(owner_record)
+    changed_fields: list[str] = []
+    if transition == "keep-open":
+        return updated, changed_fields
+    if transition not in {"mark-integrated", "close-owner", "archive-owner"}:
+        return updated, changed_fields
+
+    next_lifecycle = "archived" if transition == "archive-owner" else "closed"
+    if updated.get("lifecycle") != next_lifecycle:
+        updated["lifecycle"] = next_lifecycle
+        changed_fields.append("owner.lifecycle")
+    if updated.get("phase") != "complete":
+        updated["phase"] = "complete"
+        changed_fields.append("owner.phase")
+    if isinstance(updated.get("revision"), int):
+        updated["revision"] = int(updated["revision"]) + 1
+        changed_fields.append("owner.revision")
+
+    milestone = dict(updated.get("active_milestone") or {}) if isinstance(updated.get("active_milestone"), dict) else {}
+    next_status = "archived" if transition == "archive-owner" else "completed"
+    if milestone.get("status") != next_status:
+        milestone["status"] = next_status
+        changed_fields.append("owner.active_milestone.status")
+    milestone.setdefault("ready", "ready")
+    milestone["blocked"] = "none"
+    updated["active_milestone"] = milestone
+
+    proof_report = dict(updated.get("proof_report") or {}) if isinstance(updated.get("proof_report"), dict) else {}
+    proof_text = ", ".join(proof_refs) if proof_refs else "integration proposal applied"
+    proof_report["integration proof"] = proof_text
+    proof_report["integration applied at"] = now
+    updated["proof_report"] = proof_report
+    changed_fields.append("owner.proof_report")
+    return updated, changed_fields
 
 
 def _integration_projection(*, target_root: Path) -> dict[str, Any]:
@@ -12072,6 +12161,8 @@ def shape_issue_relation(
         result.add("manual review", target_root / PLANNING_ISSUE_RELATION_ROOT, "provide --issue or --external-ref")
         result.reason_code = "issue-relation-identity-required"
         return result
+    if not _planning_revision_guard(result, expected_planning_revision=expected_planning_revision, target_root=target_root):
+        return result
     relation_path = _issue_relation_path(target_root, ref)
     before_planning = planning_revision(target_root)
     existing = _load_issue_relation(relation_path) if relation_path.exists() else None
@@ -12127,9 +12218,13 @@ def shape_issue_relation(
         if priority.strip():
             requested_updates["priority"] = priority.strip()
         dependency_items = _csv_items(depends_on)
-        if dependency_items:
+        if _clear_field_requested(depends_on):
+            requested_updates["depends_on"] = []
+        elif dependency_items:
             requested_updates["depends_on"] = dependency_items
-        if rationale.strip():
+        if _clear_field_requested(rationale):
+            requested_updates["rationale"] = ""
+        elif rationale.strip():
             requested_updates["rationale"] = rationale.strip()
         if maturity.strip():
             requested_updates["maturity"] = maturity.strip()
@@ -12139,6 +12234,11 @@ def shape_issue_relation(
                 changed_fields.append(field_name)
         if changed_fields and not expected_relation_revision.strip():
             result.add("manual review", relation_path, "editing an existing issue relation requires --expect-relation-revision")
+            result.add(
+                "next safe action",
+                relation_path,
+                f"refresh relation_revision, then rerun issue-shape with --expect-relation-revision {current_relation_revision}",
+            )
             result.reason_code = "issue-relation-revision-required"
             result.conflict_owner = relation_path.relative_to(target_root).as_posix()
             return result
@@ -12147,6 +12247,11 @@ def shape_issue_relation(
                 "manual review",
                 relation_path,
                 f"issue relation revision changed: expected {expected_relation_revision.strip()}, found {current_relation_revision}",
+            )
+            result.add(
+                "next safe action",
+                relation_path,
+                f"reconcile the current relation, then rerun issue-shape with --expect-relation-revision {current_relation_revision}",
             )
             result.reason_code = "stale-issue-relation-revision"
             result.conflict_owner = relation_path.relative_to(target_root).as_posix()
@@ -12426,10 +12531,56 @@ def apply_integration_proposal(
         result.reason_code = "integration-proposal-not-pending"
         return result
     owner = record.get("owner", {}) if isinstance(record.get("owner"), dict) else {}
+    transition = str(record.get("requested_transition", "")).strip()
+    proof_refs = (
+        [str(item).strip() for item in record.get("proof_refs", []) if str(item).strip()]
+        if isinstance(record.get("proof_refs"), list)
+        else []
+    )
+    current_planning_revision = planning_revision(target_root)
+    for revision_source, required_revision in (
+        ("proposal", str(record.get("expected_planning_revision", "")).strip()),
+        ("apply", expected_planning_revision.strip()),
+    ):
+        if required_revision and required_revision != str(current_planning_revision.get("revision_id", "")):
+            result.add(
+                "manual review",
+                proposal_path,
+                (
+                    f"integration {revision_source} Planning revision changed: expected {required_revision}, "
+                    f"found {current_planning_revision.get('revision_id', '')}"
+                ),
+            )
+            result.reason_code = "stale-integration-planning-revision"
+            result.conflict_owner = PLANNING_STATE_PATH.as_posix()
+            return result
+
+    owner_ref = str(owner.get("ref", "")).strip()
+    owner_path, owner_path_error = _integration_owner_path(target_root, owner_ref)
+    owner_record: dict[str, Any] | None = None
+    updated_owner: dict[str, Any] | None = None
+    owner_changed_fields: list[str] = []
+    if transition != "keep-open":
+        if owner_path_error or owner_path is None:
+            result.add("manual review", proposal_path, "integration apply requires owner.ref for lifecycle transitions")
+            result.reason_code = owner_path_error or "missing-owner-ref"
+            return result
+        owner_record = _load_schema_backed_json_record(owner_path, kind=EXECPLAN_RECORD_KIND)
+        if owner_record is None:
+            result.add("manual review", owner_path, "integration owner record was not found or is not a planning-execplan/v1 record")
+            result.reason_code = "integration-owner-not-found"
+            return result
+        owner_id = str(owner.get("id", "")).strip()
+        record_owner_id = str(owner_record.get("id", "")).strip()
+        if owner_id and record_owner_id and owner_id != record_owner_id:
+            result.add("manual review", owner_path, f"integration owner id mismatch: expected {owner_id}, found {record_owner_id}")
+            result.reason_code = "integration-owner-id-mismatch"
+            result.conflict_owner = owner_path.relative_to(target_root).as_posix()
+            return result
     expected_subject_revision = str(record.get("expected_subject_revision", "")).strip()
     current_subject_revision = _integration_subject_revision(
         target_root=target_root,
-        owner_ref=str(owner.get("ref", "")).strip(),
+        owner_ref=owner_ref,
         external_ref=str(record.get("external_ref", "")).strip(),
     )
     if expected_subject_revision and expected_subject_revision != current_subject_revision:
@@ -12442,6 +12593,28 @@ def apply_integration_proposal(
         result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
         return result
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    if owner_record is not None:
+        updated_owner, owner_changed_fields = _apply_owner_integration_transition(
+            owner_record,
+            transition=transition,
+            proof_refs=proof_refs,
+            now=now,
+        )
+        owner_findings = _json_schema_findings(payload=updated_owner, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+        if owner_findings:
+            result.add("manual review", owner_path or proposal_path, f"integration owner update is invalid: {'; '.join(owner_findings)}")
+            result.reason_code = "integration-owner-validation-failed"
+            return result
+    subject_after_revision = (
+        _integration_subject_revision_after_record(
+            target_root=target_root,
+            owner_ref=owner_ref,
+            owner_record=updated_owner,
+            external_ref=str(record.get("external_ref", "")).strip(),
+        )
+        if updated_owner is not None
+        else current_subject_revision
+    )
     updated_record = copy.deepcopy(record)
     updated_record["status"] = "integrated"
     updated_record["phase"] = "integrated-lifecycle-truth"
@@ -12454,21 +12627,24 @@ def apply_integration_proposal(
         "id": proposal_id,
         "proposal_ref": proposal_path.relative_to(target_root).as_posix(),
         "outcome": "integrated",
-        "requested_transition": str(record.get("requested_transition", "")).strip(),
-        "owner": {"id": str(owner.get("id", "")).strip(), "ref": str(owner.get("ref", "")).strip()},
+        "requested_transition": transition,
+        "owner": {"id": str(owner.get("id", "")).strip(), "ref": owner_ref},
         "external_ref": str(record.get("external_ref", "")).strip(),
-        "proof_refs": [str(item).strip() for item in record.get("proof_refs", []) if str(item).strip()]
-        if isinstance(record.get("proof_refs"), list)
-        else [],
+        "proof_refs": proof_refs,
         "parent_boundary": str(record.get("parent_boundary", "")).strip(),
         "preserved_invariants": [str(item).strip() for item in record.get("preserved_invariants", []) if str(item).strip()]
         if isinstance(record.get("preserved_invariants"), list)
         else [],
-        "changed_fields": ["integration_proposal.status", "integration_proposal.phase", "integration_receipt"],
+        "changed_fields": [
+            "integration_proposal.status",
+            "integration_proposal.phase",
+            *owner_changed_fields,
+            "integration_receipt",
+        ],
         "revisions": {
             "expected_subject": expected_subject_revision,
             "subject_before": current_subject_revision,
-            "subject_after": current_subject_revision,
+            "subject_after": subject_after_revision,
             "proposal_before": str(record.get("proposal_revision", "")).strip(),
             "proposal_after": updated_record["proposal_revision"],
             "expected_planning_revision": expected_planning_revision.strip(),
@@ -12476,7 +12652,7 @@ def apply_integration_proposal(
         "authority_boundary": {
             "integrated_truth": "this receipt",
             "proposal_status": "proposal marked integrated by the same transaction",
-            "owner_body": "preserved",
+            "owner_body": "updated by this transaction" if owner_changed_fields else "preserved",
             "aggregate_indexes": "derived-regenerated-not-mutated",
         },
         "created_at": now,
@@ -12492,12 +12668,20 @@ def apply_integration_proposal(
         return result
     result.operation_receipt = receipt
     if dry_run:
+        if updated_owner is not None and owner_path is not None and owner_changed_fields:
+            result.add("would update", owner_path, f"apply {transition} to integration owner")
         result.add("would update", proposal_path, "mark pending proposal integrated")
         result.add("would create", receipt_path, "schema-valid integration receipt")
-        result.add("would preserve", target_root / PLANNING_STATE_PATH, "owner bodies, current selection, and aggregate indexes")
+        result.add("would preserve", target_root / PLANNING_STATE_PATH, "current selection and aggregate indexes")
         return result
 
     def write_integration() -> None:
+        if updated_owner is not None and owner_path is not None and owner_changed_fields:
+            _write_schema_backed_planning_record(
+                record_path=owner_path,
+                record=updated_owner,
+                schema_path=EXECPLAN_RECORD_SCHEMA_PATH,
+            )
         _write_schema_backed_planning_record(
             record_path=proposal_path,
             record=updated_record,
@@ -12510,14 +12694,17 @@ def apply_integration_proposal(
         )
 
     try:
-        _apply_planning_writes_atomically([proposal_path, receipt_path], write_integration)
+        affected_paths = [path for path in (owner_path if owner_changed_fields else None, proposal_path, receipt_path) if path is not None]
+        _apply_planning_writes_atomically(affected_paths, write_integration)
     except OSError as exc:
         result.add("manual review", proposal_path, f"integration apply rolled back after write failure: {exc}")
         result.reason_code = "integration-apply-rolled-back"
         return result
+    if updated_owner is not None and owner_path is not None and owner_changed_fields:
+        result.add("updated", owner_path, f"applied {transition} to integration owner")
     result.add("updated", proposal_path, "marked pending proposal integrated")
     result.add("created", receipt_path, "schema-valid integration receipt")
-    result.add("preserved", target_root / PLANNING_STATE_PATH, "owner bodies, current selection, and aggregate indexes")
+    result.add("preserved", target_root / PLANNING_STATE_PATH, "current selection and aggregate indexes")
     _add_planning_mutation_proof_actions(result)
     return result
 
