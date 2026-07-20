@@ -8471,7 +8471,9 @@ def _run_lifecycle_command(
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
     skill_dependency_diagnostics = (
-        _workspace_runtime_core._skill_dependency_diagnostics(target_root=target_root) if command_name == "doctor" else []
+        _workspace_runtime_core._skill_dependency_diagnostics(target_root=target_root, selected_modules=selected_modules)
+        if command_name == "doctor"
+        else []
     )
     skill_dependency_warnings = [str(item["message"]) for item in skill_dependency_diagnostics]
     warnings.extend(skill_dependency_warnings)
@@ -8572,14 +8574,13 @@ def _run_lifecycle_command(
             reports, target_root=target_root, cli_invoke=config.cli_invoke, command_name=command_name
         )
         if command_name == "doctor" and skill_dependency_diagnostics:
-            repair_actions = [
-                *_workspace_runtime_core._skill_dependency_repair_actions(
-                    diagnostics=skill_dependency_diagnostics,
-                    target_root=target_root,
-                    cli_invoke=config.cli_invoke,
-                ),
-                *repair_actions,
-            ]
+            dependency_repair_actions, dependency_manual_actions = _workspace_runtime_core._skill_dependency_repair_actions(
+                diagnostics=skill_dependency_diagnostics,
+                target_root=target_root,
+                cli_invoke=config.cli_invoke,
+            )
+            repair_actions = [*dependency_repair_actions, *repair_actions]
+            manual_review_actions = [*dependency_manual_actions, *manual_review_actions]
         if command_name == "doctor":
             cli_review_action = _cli_compatibility_manual_review_action(
                 target_root=target_root, cli_invoke=config.cli_invoke, cli_compatibility=cli_compatibility
@@ -24341,15 +24342,6 @@ def _compact_start_proof_payload(proof: dict[str, Any]) -> dict[str, Any]:
     runtime_symbol_working_set = proof.get("runtime_symbol_working_set", {})
     if isinstance(runtime_symbol_working_set, dict) and runtime_symbol_working_set.get("status") == "present":
         compact["runtime_symbol_working_set"] = tiny_runtime_symbol_working_set_payload(runtime_symbol_working_set)
-    preservation = proof.get("proof_route_strategy_preservation", {})
-    if isinstance(preservation, dict) and preservation:
-        compact["proof_route_strategy_preservation"] = {
-            key: preservation.get(key)
-            for key in ("kind", "status", "decision_id", "selected_requirement", "claim_effect", "manual_verification_status", "rule")
-            if key in preservation
-        }
-        if isinstance(preservation.get("consumers"), dict):
-            compact["proof_route_strategy_preservation"]["consumer"] = preservation["consumers"].get("start", {})
     changed = proof.get("changed_paths", [])
     if isinstance(changed, list) and changed:
         compact["detail_command"] = "agentic-workspace proof --verbose --changed <paths> --format json"
@@ -25245,6 +25237,7 @@ def _selector_validation_error_from_available(
             "sample_limit": 8,
             "discovery_command": inventory_command,
             "inventory_command": inventory_command,
+            "absence_state": "hidden_behind_detail_route",
             "rule": "Unknown selectors return a bounded validation envelope; full selector inventory is available only through an explicit detail route.",
         },
         "suggestions": suggestions,
@@ -25756,9 +25749,6 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.acceptance",
         "context.durable_intent_promotion",
         "context.delegation_decision",
-        "context.delegation_decision.required_next_action",
-        "context.delegation_decision.delegation_next_step.must_report_if_not_run",
-        "context.delegation_decision.effort_guidance.cost_posture",
         "context.repo_posture",
         "context.intent_discovery_dialogue",
         "context.intent_elicitation_protocol",
@@ -41600,19 +41590,18 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
     from repo_planning_bootstrap.runtime_projection import _print_summary
 
-    changed_paths = _normalize_changed_paths(list(getattr(args, "changed", []) or getattr(args, "changed_paths", []) or []))
-    task_text = getattr(args, "task", None) or getattr(args, "task_text", None)
+    changed_paths = list(getattr(args, "changed", []) or [])
     if getattr(args, "select", None):
         closeout_inspection = _completion_closeout_inspection_payload(
             target_root=target_root,
             config=config,
-            task_text=task_text,
+            task_text=getattr(args, "task", None),
             explicit_request=_selector_requests(getattr(args, "select", None), "closeout_trust_inspection"),
         )
         payload = _select_summary_payload(
             target_root=target_root,
             select=getattr(args, "select"),
-            task_text=task_text,
+            task_text=getattr(args, "task", None),
             changed_paths=changed_paths,
             planning_summary=planning_summary,
             cli_invoke=config.cli_invoke,
@@ -41640,7 +41629,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
         reuse_query = {
             "profile": summary_profile,
             "format": str(args.format),
-            "task": str(task_text or ""),
+            "task": str(getattr(args, "task", None) or ""),
             "changed": changed_paths,
             "external_freshness_required": os.environ.get("AW_PROJECTION_EXTERNAL_STATE", "").lower() in {"1", "true", "yes"},
         }
@@ -41660,7 +41649,9 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 _emit_payload(payload=reused, format_name=args.format)
                 return 0
         summary_started_at = time.perf_counter()
-        summary = planning_summary(target=target_root.as_posix(), profile=summary_profile, task_text=task_text, changed_paths=changed_paths)
+        summary = planning_summary(
+            target=target_root.as_posix(), profile=summary_profile, task_text=getattr(args, "task", None), changed_paths=changed_paths
+        )
         summary_elapsed_ms = round((time.perf_counter() - summary_started_at) * 1000, 3)
         if isinstance(summary, dict):
             if summary_elapsed_ms > 2_000:
@@ -41692,18 +41683,20 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 )
             else:
                 summary["memory_consult"] = _tiny_memory_consult_payload(config=config)
-            closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
+            closeout_inspection = _completion_closeout_inspection_payload(
+                target_root=target_root, config=config, task_text=getattr(args, "task", None)
+            )
             if closeout_inspection["status"] in {"required", "clear"}:
                 summary["closeout_trust_inspection"] = closeout_inspection
             if _task_posture_packet_relevant(
-                task_text=task_text,
+                task_text=getattr(args, "task", None),
                 changed_paths=changed_paths,
                 surface="summary",
             ):
                 _attach_summary_task_posture_packet(
                     summary=summary,
                     target_root=target_root,
-                    task_text=task_text,
+                    task_text=getattr(args, "task", None),
                     changed_paths=changed_paths,
                     cli_invoke=config.cli_invoke,
                 )

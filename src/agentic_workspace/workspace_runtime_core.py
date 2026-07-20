@@ -151,7 +151,6 @@ from agentic_workspace.workspace_output import (
     _emit_prompt_text,
     _emit_report_text,
     _emit_setup_text,
-    bounded_selector_inventory,
 )
 from agentic_workspace.workspace_runtime_generated_surface import (
     _generated_cli_freshness_payload,  # noqa: F401 - compatibility re-export for runtime inventory
@@ -9439,7 +9438,9 @@ def _run_lifecycle_command(
     )
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
-    skill_dependency_diagnostics = _skill_dependency_diagnostics(target_root=target_root) if command_name == "doctor" else []
+    skill_dependency_diagnostics = (
+        _skill_dependency_diagnostics(target_root=target_root, selected_modules=selected_modules) if command_name == "doctor" else []
+    )
     skill_dependency_warnings = [str(item["message"]) for item in skill_dependency_diagnostics]
     warnings.extend(skill_dependency_warnings)
     selected_set = set(selected_modules)
@@ -9547,14 +9548,13 @@ def _run_lifecycle_command(
             reports, target_root=target_root, cli_invoke=config.cli_invoke, command_name=command_name
         )
         if command_name == "doctor" and skill_dependency_diagnostics:
-            repair_actions = [
-                *_skill_dependency_repair_actions(
-                    diagnostics=skill_dependency_diagnostics,
-                    target_root=target_root,
-                    cli_invoke=config.cli_invoke,
-                ),
-                *repair_actions,
-            ]
+            dependency_repair_actions, dependency_manual_actions = _skill_dependency_repair_actions(
+                diagnostics=skill_dependency_diagnostics,
+                target_root=target_root,
+                cli_invoke=config.cli_invoke,
+            )
+            repair_actions = [*dependency_repair_actions, *repair_actions]
+            manual_review_actions = [*dependency_manual_actions, *manual_review_actions]
         if command_name == "doctor":
             cli_review_action = _cli_compatibility_manual_review_action(
                 target_root=target_root, cli_invoke=config.cli_invoke, cli_compatibility=cli_compatibility
@@ -26897,15 +26897,6 @@ def _compact_start_proof_payload(proof: dict[str, Any]) -> dict[str, Any]:
             "sections": {str(section): len(items) for section, items in active.items() if isinstance(items, list) and items},
             "detail_selector": "proof.high_risk_overlay",
         }
-    preservation = proof.get("proof_route_strategy_preservation", {})
-    if isinstance(preservation, dict) and preservation:
-        compact["proof_route_strategy_preservation"] = {
-            key: preservation.get(key)
-            for key in ("kind", "status", "decision_id", "selected_requirement", "claim_effect", "manual_verification_status", "rule")
-            if key in preservation
-        }
-        if isinstance(preservation.get("consumers"), dict):
-            compact["proof_route_strategy_preservation"]["consumer"] = preservation["consumers"].get("start", {})
     changed = proof.get("changed_paths", [])
     if isinstance(changed, list) and changed:
         compact["detail_command"] = "agentic-workspace proof --verbose --changed <paths> --format json"
@@ -27778,12 +27769,13 @@ def _selector_suggestions(*, unknown: str, available: list[str], limit: int = 3)
 def _selector_validation_error_from_available(
     *, available: list[str], selectors: list[str], missing: list[str], source_command: str
 ) -> dict[str, Any]:
-    inventory_command = _selector_inventory_command(source_command)
+    sample = list(dict.fromkeys(selector for selector in available if isinstance(selector, str) and selector.strip()))[:8]
     bounded_selectors = selectors[:_MAX_SELECTOR_ERROR_ITEMS]
     bounded_missing = missing[:_MAX_SELECTOR_ERROR_ITEMS]
     suggestions = {
         selector: matches for selector in bounded_missing if (matches := _selector_suggestions(unknown=selector, available=available))
     }
+    inventory_command = _selector_inventory_command(source_command)
     payload = {
         "kind": "agentic-workspace/selector-validation-error/v1",
         "status": "invalid-selector",
@@ -27794,14 +27786,14 @@ def _selector_validation_error_from_available(
         "unknown_selectors": bounded_missing,
         "unknown_selector_count": len(missing),
         "unknown_selector_omitted_count": max(0, len(missing) - len(bounded_missing)),
-        "selector_inventory": bounded_selector_inventory(
-            selectors=available,
-            source_command=source_command,
-            select_command=inventory_command,
-            inventory_command=inventory_command,
-        )
-        | {
+        "selector_inventory": {
             "status": "omitted-from-validation-error",
+            "available_count": len(available),
+            "sample": sample,
+            "sample_limit": 8,
+            "discovery_command": inventory_command,
+            "inventory_command": inventory_command,
+            "absence_state": "hidden_behind_detail_route",
             "rule": "Unknown selectors return a bounded validation envelope; full selector inventory is available only through an explicit detail route.",
         },
         "suggestions": suggestions,
@@ -28315,9 +28307,6 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.acceptance",
         "context.durable_intent_promotion",
         "context.delegation_decision",
-        "context.delegation_decision.required_next_action",
-        "context.delegation_decision.delegation_next_step.must_report_if_not_run",
-        "context.delegation_decision.effort_guidance.cost_posture",
         "context.repo_posture",
         "context.intent_discovery_dialogue",
         "context.intent_elicitation_protocol",
@@ -44969,7 +44958,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     from repo_planning_bootstrap.installer import format_summary_json, planning_summary
     from repo_planning_bootstrap.runtime_projection import _print_summary
 
-    changed_paths = _normalize_changed_paths(list(getattr(args, "changed", []) or getattr(args, "changed_paths", []) or []))
+    changed_paths = list(getattr(args, "changed", []) or [])
     if getattr(args, "select", None):
         closeout_inspection = _completion_closeout_inspection_payload(
             target_root=target_root,
@@ -45004,9 +44993,10 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                     payload.pop("available_selectors", None)
         _emit_payload(payload=payload, format_name=args.format)
     else:
-        summary_profile = _diagnostic_profile(args, default="tiny")
-        task_text = getattr(args, "task", None) or getattr(args, "task_text", None)
-        summary = planning_summary(target=target_root.as_posix(), profile=summary_profile, task_text=task_text, changed_paths=changed_paths)
+        summary_profile = _diagnostic_profile(args, default="tiny") if args.format == "json" else "full"
+        summary = planning_summary(
+            target=target_root.as_posix(), profile=summary_profile, task_text=getattr(args, "task", None), changed_paths=changed_paths
+        )
         if isinstance(summary, dict):
             if summary_profile == "full":
                 summary["memory_consult"] = _memory_consult_payload(
@@ -45018,18 +45008,20 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
                 )
             else:
                 summary["memory_consult"] = _tiny_memory_consult_payload(config=config)
-            closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
+            closeout_inspection = _completion_closeout_inspection_payload(
+                target_root=target_root, config=config, task_text=getattr(args, "task", None)
+            )
             if closeout_inspection["status"] in {"required", "clear"}:
                 summary["closeout_trust_inspection"] = closeout_inspection
             if _task_posture_packet_relevant(
-                task_text=task_text,
+                task_text=getattr(args, "task", None),
                 changed_paths=changed_paths,
                 surface="summary",
             ):
                 _attach_summary_task_posture_packet(
                     summary=summary,
                     target_root=target_root,
-                    task_text=task_text,
+                    task_text=getattr(args, "task", None),
                     changed_paths=changed_paths,
                     cli_invoke=config.cli_invoke,
                 )
@@ -47266,8 +47258,6 @@ def _proof_next_decision_payload(
         warnings.append("Host proof policy blocked one or more candidate proof commands.")
     route_refinement_required = isinstance(manual_verification, dict) and manual_verification.get("status") == "route-refinement-required"
     selected = selected_commands[0] if selected_commands else None
-    manual_status = str(manual_verification.get("status", "")) if isinstance(manual_verification, dict) else ""
-    manual_blocks_selected_commands = manual_status == "route-refinement-required"
     if route_refinement_required:
         summary = manual_verification.get("summary") or manual_verification.get("reason") if isinstance(manual_verification, dict) else None
         next_action = {
@@ -47294,18 +47284,13 @@ def _proof_next_decision_payload(
         summary = None
         if isinstance(manual_verification, dict):
             summary = manual_verification.get("summary") or manual_verification.get("reason")
-        action = "select-proof-scope"
-        route_source = "none"
-        if manual_verification:
-            action = "route-refinement-required" if manual_blocks_selected_commands else "manual-verification"
-            route_source = "route-refinement" if manual_blocks_selected_commands else "manual-fallback"
         next_action = {
-            "action": action,
+            "action": "manual-verification" if manual_verification else "select-proof-scope",
             "command": None,
             "run": None,
             "required": bool(manual_verification),
             "why": summary or "No executable proof route was selected.",
-            "route_source": route_source,
+            "route_source": "manual-fallback" if manual_verification else "none",
         }
     return {
         "kind": "proof-next-decision/v1",
@@ -51596,11 +51581,28 @@ def _skill_dependency_warnings(*, target_root: Path) -> list[str]:
     return [str(item["message"]) for item in _skill_dependency_diagnostics(target_root=target_root)]
 
 
-def _skill_dependency_diagnostics(*, target_root: Path) -> list[dict[str, str]]:
+def _skill_dependency_owner_module(skill: RegisteredSkill) -> str:
+    owner = skill.owner.lower()
+    source_kind = skill.source_kind.lower()
+    path = skill.path.as_posix()
+    if "planning" in owner or "planning" in source_kind or path.startswith(".agentic-workspace/planning/"):
+        return "planning"
+    if "memory" in owner or "memory" in source_kind or path.startswith(".agentic-workspace/memory/"):
+        return "memory"
+    if "verification" in owner or "verification" in source_kind or path.startswith(".agentic-workspace/verification/"):
+        return "verification"
+    return ""
+
+
+def _skill_dependency_diagnostics(*, target_root: Path, selected_modules: list[str] | None = None) -> list[dict[str, str]]:
     skills, _, _ = _discover_registered_skills(target_root=target_root)
+    selected = {module for module in (selected_modules or []) if module}
     diagnostics: list[dict[str, str]] = []
     for skill in skills:
         if skill.availability != "blocked":
+            continue
+        owner_module = _skill_dependency_owner_module(skill)
+        if selected and owner_module and owner_module not in selected:
             continue
         diagnostics.extend(_skill_dependency_diagnostic_payloads(skill))
     return diagnostics
@@ -51608,6 +51610,7 @@ def _skill_dependency_diagnostics(*, target_root: Path) -> list[dict[str, str]]:
 
 def _skill_dependency_diagnostic_payloads(skill: RegisteredSkill) -> list[dict[str, str]]:
     payloads: list[dict[str, str]] = []
+    owner_module = _skill_dependency_owner_module(skill)
     for diagnostic in skill.dependency_diagnostics:
         resource_id = str(diagnostic.get("resource_id", ""))
         repair_command = str(diagnostic.get("repair_command") or _skill_repair_command(skill))
@@ -51616,11 +51619,13 @@ def _skill_dependency_diagnostic_payloads(skill: RegisteredSkill) -> list[dict[s
                 **diagnostic,
                 "skill_id": skill.skill_id,
                 "skill_path": skill.path.as_posix(),
+                "owning_module": str(diagnostic.get("repair_module") or owner_module),
                 "message": f"skill '{skill.skill_id}' is blocked: {diagnostic['reason_code']}",
-                "repair_command": repair_command,
                 "repair_action_id": _skill_dependency_repair_action_id(skill_id=skill.skill_id, resource_id=resource_id),
             }
         )
+        if repair_command:
+            payloads[-1]["repair_command"] = repair_command
     return payloads
 
 
@@ -51631,24 +51636,73 @@ def _skill_dependency_repair_action_id(*, skill_id: str, resource_id: str) -> st
     return f"repair-skill-dependency-{_safe(skill_id)}-{_safe(resource_id)}"
 
 
-def _skill_dependency_repair_actions(*, diagnostics: list[dict[str, str]], target_root: Path, cli_invoke: str) -> list[dict[str, Any]]:
+def _skill_dependency_repair_actions(
+    *, diagnostics: list[dict[str, str]], target_root: Path, cli_invoke: str
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     actions: list[dict[str, Any]] = []
+    manual_actions: list[dict[str, Any]] = []
     seen: set[str] = set()
     target = target_root.as_posix()
-    command = _command_with_cli_invoke(
-        command=f"agentic-workspace upgrade --target {target} --format json",
-        cli_invoke=cli_invoke,
-    )
-    dry_run = _command_with_cli_invoke(
-        command=f"agentic-workspace upgrade --target {target} --dry-run --format json",
-        cli_invoke=cli_invoke,
-    )
     proof_after = [_command_with_cli_invoke(command=f"agentic-workspace doctor --target {target} --format json", cli_invoke=cli_invoke)]
     for diagnostic in diagnostics:
         action_id = str(diagnostic.get("repair_action_id") or "").strip()
         if not action_id or action_id in seen:
             continue
         seen.add(action_id)
+        repair_route = str(diagnostic.get("repair_route", "manual"))
+        safe_to_apply = str(diagnostic.get("repair_safe_to_apply", "")).lower() == "true"
+        module_name = str(diagnostic.get("repair_module", "")).strip()
+        if repair_route == "module-payload-mirror" and module_name and safe_to_apply:
+            command = _command_with_cli_invoke(
+                command=f"agentic-workspace init --target {target} --modules {module_name} --mirror-payload --format json",
+                cli_invoke=cli_invoke,
+            )
+            dry_run = _command_with_cli_invoke(
+                command=f"agentic-workspace init --target {target} --modules {module_name} --mirror-payload --dry-run --format json",
+                cli_invoke=cli_invoke,
+            )
+        elif repair_route == "workspace-upgrade" and safe_to_apply:
+            command = _command_with_cli_invoke(
+                command=f"agentic-workspace upgrade --target {target} --format json",
+                cli_invoke=cli_invoke,
+            )
+            dry_run = _command_with_cli_invoke(
+                command=f"agentic-workspace upgrade --target {target} --dry-run --format json",
+                cli_invoke=cli_invoke,
+            )
+        else:
+            manual_actions.append(
+                {
+                    "id": action_id,
+                    "action": "manually-repair-skill-dependency",
+                    "invariant": "workspace.skill_dependency_resources_available",
+                    "fault_class": "agent_operation_fault",
+                    "severity": "warning",
+                    "owner": str(diagnostic.get("expected_owner", "workspace")),
+                    "action_required": True,
+                    "safe_to_apply": False,
+                    "risk": "manual; no dependency-correct managed repair route is available for this resource identity",
+                    "required_action": str(
+                        diagnostic.get("manual_action")
+                        or "Correct the skill registry/resource declaration or restore the owning resource manually."
+                    ),
+                    "inspection_command": _command_with_cli_invoke(
+                        command=f"agentic-workspace skills --target {target} --select skills,sources --format json",
+                        cli_invoke=cli_invoke,
+                    ),
+                    "proof_after": proof_after,
+                    "affected_surfaces": [str(diagnostic.get("expected_source", ""))],
+                    "current_fault_summary": str(diagnostic.get("message", "")),
+                    "skill_id": str(diagnostic.get("skill_id", "")),
+                    "resource_id": str(diagnostic.get("resource_id", "")),
+                    "reason_code": str(diagnostic.get("reason_code", "")),
+                    "expected_owner": str(diagnostic.get("expected_owner", "")),
+                    "expected_source": str(diagnostic.get("expected_source", "")),
+                    "compatibility_state": str(diagnostic.get("compatibility_state", "")),
+                    "repair_identity": action_id,
+                }
+            )
+            continue
         actions.append(
             {
                 "id": action_id,
@@ -51657,8 +51711,8 @@ def _skill_dependency_repair_actions(*, diagnostics: list[dict[str, str]], targe
                 "fault_class": "agent_operation_fault",
                 "severity": "warning",
                 "owner": str(diagnostic.get("expected_owner", "workspace")),
-                "safe_to_apply": True,
-                "risk": "low; refreshes workspace/package-managed surfaces through the existing upgrade authority",
+                "safe_to_apply": safe_to_apply,
+                "risk": "low; refreshes the declared package-managed target resource through the existing package mirror authority",
                 "command": command,
                 "run": command,
                 "dry_run": dry_run,
@@ -51678,7 +51732,7 @@ def _skill_dependency_repair_actions(*, diagnostics: list[dict[str, str]], targe
                 "repair_identity": action_id,
             }
         )
-    return actions
+    return (actions, manual_actions)
 
 
 def _recommend_agent_aids(*, task_text: str, aids: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -51857,6 +51911,7 @@ def _load_registered_skills(
                     target_root=target_root,
                     registry_file=registry_file,
                     package_registry_file=package_registry_file,
+                    source=source,
                 )
             )
             is not None
@@ -51895,6 +51950,7 @@ def _skill_resource_diagnostic(
     target_root: Path,
     registry_file: Path,
     package_registry_file: Path | None,
+    source: SkillCatalogSource,
 ) -> dict[str, str] | None:
     if resource_id not in resource_paths:
         return {
@@ -51904,7 +51960,9 @@ def _skill_resource_diagnostic(
             "expected_owner": "skill-registry",
             "expected_source": registry_file.as_posix(),
             "compatibility_state": "unknown-resource-identity",
-            "repair_command": "agentic-workspace upgrade --target . --format json",
+            "repair_route": "manual",
+            "repair_safe_to_apply": "false",
+            "manual_action": f"Declare resource '{resource_id}' in {registry_file.as_posix()} before the skill can be executable.",
         }
     repo_path, package_path = resource_paths[resource_id]
     candidates: list[tuple[str, Path]] = []
@@ -51925,6 +51983,7 @@ def _skill_resource_diagnostic(
             return None
     expected_owner = candidates[0][0] if candidates else "skill-registry"
     expected_source = candidates[0][1].as_posix() if candidates else registry_file.as_posix()
+    repair_route = _skill_resource_repair_route(source=source, repo_path=repo_path, package_path=package_path)
     return {
         "resource_id": resource_id,
         "status": "blocked",
@@ -51932,7 +51991,39 @@ def _skill_resource_diagnostic(
         "expected_owner": expected_owner,
         "expected_source": expected_source,
         "compatibility_state": "resource-unresolved",
-        "repair_command": "agentic-workspace upgrade --target . --format json",
+        **repair_route,
+    }
+
+
+def _skill_resource_repair_route(*, source: SkillCatalogSource, repo_path: Path, package_path: Path) -> dict[str, str]:
+    has_repo_target = bool(repo_path.as_posix() and repo_path.as_posix() != ".")
+    has_package_source = bool(package_path.as_posix() and package_path.as_posix() != ".")
+    module_by_source = {
+        "planning-bundled": "planning",
+        "memory-core": "memory",
+        "memory-bootstrap-temporary": "memory",
+    }
+    module_name = module_by_source.get(source.name)
+    if has_repo_target and has_package_source and module_name:
+        return {
+            "repair_route": "module-payload-mirror",
+            "repair_module": module_name,
+            "repair_safe_to_apply": "true",
+            "repair_command": f"agentic-workspace init --target . --modules {module_name} --mirror-payload --format json",
+            "repair_dry_run_command": f"agentic-workspace init --target . --modules {module_name} --mirror-payload --dry-run --format json",
+        }
+    if has_repo_target and has_package_source and source.name == "workspace-core":
+        return {
+            "repair_route": "workspace-upgrade",
+            "repair_safe_to_apply": "true",
+            "repair_command": "agentic-workspace upgrade --target . --format json",
+            "repair_dry_run_command": "agentic-workspace upgrade --target . --dry-run --format json",
+        }
+    target = repo_path.as_posix() if has_repo_target else source.registry_path.as_posix()
+    return {
+        "repair_route": "manual",
+        "repair_safe_to_apply": "false",
+        "manual_action": f"Restore or correct the declared resource '{target}' through its owning repository/package source.",
     }
 
 
@@ -51975,9 +52066,9 @@ def _skill_visibility(*, scope: str) -> str:
 
 def _skill_repair_command(skill: RegisteredSkill) -> str:
     for diagnostic in skill.dependency_diagnostics:
-        if diagnostic.get("repair_command"):
-            return str(diagnostic["repair_command"])
-    return "agentic-workspace upgrade --target . --format json"
+        if "repair_command" in diagnostic:
+            return str(diagnostic.get("repair_command", ""))
+    return ""
 
 
 def _recommend_skills(*, task_text: str, skills: list[RegisteredSkill], availability: str = "available") -> list[SkillRecommendation]:

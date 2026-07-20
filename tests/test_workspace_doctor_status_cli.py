@@ -677,6 +677,57 @@ def test_doctor_module_filter_does_not_warn_about_omitted_installed_modules(tmp_
     assert any("installed module 'verification' is not enabled" in warning for warning in unscoped_payload["warnings"])
 
 
+def test_doctor_scopes_skill_dependency_diagnostics_to_selected_modules(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert cli.main(["init", "--target", str(target), "--modules", "planning,memory", "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+    _write(target / ".agentic-workspace" / "planning" / "skills" / "broken-planning" / "SKILL.md", "# Broken Planning Skill\n")
+    _write(
+        target / ".agentic-workspace" / "planning" / "skills" / "REGISTRY.json",
+        json.dumps(
+            {
+                "schema_version": "skill-registry.v1",
+                "owner": "agentic-planning",
+                "source_kind": "bundled-package-skills",
+                "resources": {
+                    "planning-only-resource": {
+                        "path": ".agentic-workspace/planning/skills/resources/planning-only.md",
+                        "package_path": "resources/planning-only.md",
+                    }
+                },
+                "skills": [
+                    {
+                        "id": "broken-planning",
+                        "path": "broken-planning/SKILL.md",
+                        "summary": "Broken Planning skill",
+                        "required_resources": ["planning-only-resource"],
+                    }
+                ],
+            },
+            indent=2,
+        ),
+    )
+
+    assert cli.main(["doctor", "--target", str(target), "--modules", "memory", "--format", "json"]) == 0
+
+    memory_payload = json.loads(capsys.readouterr().out)
+    assert memory_payload["modules"] == ["memory"]
+    assert memory_payload["health"] == "healthy"
+    assert memory_payload["skill_dependency_diagnostics"] == []
+    assert memory_payload["scoped_health"]["selected_module_health"] == "healthy"
+
+    assert cli.main(["doctor", "--target", str(target), "--modules", "planning", "--format", "json"]) == 0
+
+    planning_payload = json.loads(capsys.readouterr().out)
+    assert planning_payload["modules"] == ["planning"]
+    assert planning_payload["health"] == "attention-needed"
+    assert planning_payload["skill_dependency_diagnostics"][0]["skill_id"] == "broken-planning"
+    assert planning_payload["skill_dependency_diagnostics"][0]["owning_module"] == "planning"
+    assert any("broken-planning" in warning for warning in planning_payload["skill_dependency_warnings"])
+
+
 def test_scoped_lifecycle_health_does_not_block_selected_module_on_global_warnings() -> None:
     from agentic_workspace.workspace_runtime_core import _scoped_lifecycle_health_payload
 

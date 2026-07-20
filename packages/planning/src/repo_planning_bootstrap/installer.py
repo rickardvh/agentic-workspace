@@ -159,6 +159,7 @@ REQUIRED_PAYLOAD_FILES = (
     Path(".agentic-workspace/planning/decompositions/TEMPLATE.decomposition.json"),
     Path(".agentic-workspace/planning/lanes/README.md"),
     Path(".agentic-workspace/planning/lanes/TEMPLATE.lane.json"),
+    Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     EXECPLAN_RECORD_SCHEMA_PATH,
     DECOMPOSITION_RECORD_SCHEMA_PATH,
     LANE_RECORD_SCHEMA_PATH,
@@ -174,7 +175,6 @@ REQUIRED_PAYLOAD_FILES = (
 OPTIONAL_PAYLOAD_FILES = (
     Path(".agentic-workspace/docs/capability-contract.json"),
     Path(".agentic-workspace/planning/reviews/README.md"),
-    Path(".agentic-workspace/planning/reviews/TEMPLATE.review.json"),
     Path(".agentic-workspace/planning/upstream-task-intake.md"),
     Path(".agentic-workspace/planning/pre-ingestion-refinement.md"),
 )
