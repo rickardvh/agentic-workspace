@@ -268,6 +268,54 @@ FINAL_RESPONSE_HOST_BOUNDARIES = [
         "rule": "The sandbox Codex adapter admits the captured final-message artifact and can re-invoke Codex for bounded continuation slices.",
     },
 ]
+ISSUE_2239_CLOSURE_EVIDENCE = {
+    "kind": "agentic-workspace/issue-2239-closure-evidence/v1",
+    "status": "complete",
+    "issue": "#2239",
+    "evidence": [
+        {
+            "id": "structured-terminal-contract",
+            "surface": "_terminal_outcome_contract_payload",
+            "proves": "DELIVERED, BLOCKED, USER_PAUSED, and CONTINUE are structured custody states consumed by final-response rendering.",
+        },
+        {
+            "id": "continue-final-rejection",
+            "surface": "tests/test_workspace_cli.py::test_final_response_admit_rejects_final_runs_continuation_and_persists_resume_slices",
+            "proves": "A model-authored terminal final in CONTINUE state is rejected, resumed, and checkpointed without yielding custody.",
+        },
+        {
+            "id": "ordinary-autopilot-loop",
+            "surface": "tests/test_workspace_cli.py::test_autopilot_rejects_repeated_weak_finals_across_compaction_review_reconciliation_until_delivered",
+            "proves": "The ordinary executor path rejects repeated weak finals across review reconciliation and compaction-marked resume state, then accepts final custody only after all selected threads and proof are delivered.",
+        },
+        {
+            "id": "compaction-resume",
+            "surface": "tests/test_workspace_summary_cli.py::test_final_response_admission_rejects_non_compliant_final_and_resumes_through_compaction",
+            "proves": "Compaction preserves continuation state and resumes with agent custody instead of waiting for the user.",
+        },
+        {
+            "id": "pseudo-blocker-rejection",
+            "surface": "tests/test_workspace_summary_cli.py::test_terminal_outcome_contract_distinguishes_continue_blocked_and_user_paused",
+            "proves": "Task size, elapsed time, context pressure, work remaining, and similar pseudo-blockers cannot authorize BLOCKED.",
+        },
+        {
+            "id": "review-comment-reconciliation",
+            "surface": "src/agentic_workspace/workspace_runtime_core.py::_pr_comment_attention_payload",
+            "proves": "PR/review-comment work exposes actionable, stale, unavailable, and thread-inspection state before readiness claims.",
+        },
+        {
+            "id": "host-terminal-control-states",
+            "surface": "tests/test_workspace_cli.py::test_final_response_executor_boundary_accepts_genuine_blocked_and_user_paused",
+            "proves": "The same host admission boundary accepts qualified BLOCKED and explicit USER_PAUSED states without running continuation.",
+        },
+        {
+            "id": "direct-work-counterexample",
+            "surface": "tests/test_workspace_cli.py::test_closeout_trust_composes_current_task_closeout_for_ordinary_changed_scope",
+            "proves": "Ordinary bounded work can still close through normal direct-work proof without unnecessary Planning or autopilot ceremony.",
+        },
+    ],
+    "rule": "Issue #2239 is closeable only when the ordinary host path rejects CONTINUE finals, resumes safe in-scope work, and authorizes final custody only for DELIVERED, qualified BLOCKED, or USER_PAUSED.",
+}
 HIGH_RISK_COMMANDS = frozenset((str(command) for command in _PREFLIGHT_POLICY["high_risk_commands"]))
 PREFLIGHT_TOKEN_PREFIX = str(_PREFLIGHT_POLICY["token"]["prefix"])
 DEFAULT_PREFLIGHT_MAX_AGE_SECONDS = int(_PREFLIGHT_POLICY["default_max_age_seconds"])
@@ -13818,11 +13866,12 @@ def _final_response_admission_route_payload(
         "checkpoint_path": LOCAL_CHAT_CHECKPOINT_PATH.as_posix(),
         "host_boundary_integrated": host_boundary_integrated,
         "ordinary_host_path_unavoidable": ordinary_host_path_unavoidable,
-        "issue_2239_closure_ready": False,
-        "issue_2239_closure_gap": "Broader unattended end-to-end evidence is deferred pending maintainer direction.",
+        "issue_2239_closure_ready": ISSUE_2239_CLOSURE_EVIDENCE["status"] == "complete",
+        "issue_2239_closure_gap": "",
+        "issue_2239_closure_evidence": copy.deepcopy(ISSUE_2239_CLOSURE_EVIDENCE),
         "integrated_host_boundaries": FINAL_RESPONSE_HOST_BOUNDARIES,
         "integration_gap": (
-            "The canonical ordinary autopilot route uses the final-response executor loop; broader unattended evidence remains separate from the boundary."
+            "The canonical ordinary autopilot route uses the final-response executor loop and is covered by issue_2239_closure_evidence."
         )
         if ordinary_host_path_unavoidable
         else ("Codex SBX has a bounded dogfooding loop, but no vendor-neutral ordinary host/autopilot path is yet unavoidable.")
@@ -18626,8 +18675,9 @@ def _terminal_outcome_contract_payload(
             "enforcement_maturity": "host-integrated" if not final_response_authorized else "not_required",
             "ordinary_host_path_unavoidable": any(bool(item.get("ordinary_path_unavoidable")) for item in FINAL_RESPONSE_HOST_BOUNDARIES),
             "host_boundary_integrated": bool(FINAL_RESPONSE_HOST_BOUNDARIES),
-            "issue_2239_closure_ready": False,
-            "issue_2239_closure_gap": "Broader unattended end-to-end evidence is deferred pending maintainer direction.",
+            "issue_2239_closure_ready": ISSUE_2239_CLOSURE_EVIDENCE["status"] == "complete",
+            "issue_2239_closure_gap": "",
+            "issue_2239_closure_evidence": copy.deepcopy(ISSUE_2239_CLOSURE_EVIDENCE),
             "integrated_host_boundaries": FINAL_RESPONSE_HOST_BOUNDARIES,
             "multi_slice_continuation": {
                 "status": "preserved" if state == "CONTINUE" else "not_required",

@@ -1946,12 +1946,22 @@ def test_closeout_trust_blocks_full_closeout_when_active_execplan_proof_is_missi
     assert "--executor-command" in admission["ordinary_execution_command_template"]
     assert admission["host_boundary_integrated"] is True
     assert admission["ordinary_host_path_unavoidable"] is True
-    assert admission["issue_2239_closure_ready"] is False
-    assert "Broader unattended end-to-end evidence" in admission["issue_2239_closure_gap"]
+    assert admission["issue_2239_closure_ready"] is True
+    assert admission["issue_2239_closure_gap"] == ""
+    closure_evidence = admission["issue_2239_closure_evidence"]
+    assert closure_evidence["status"] == "complete"
+    assert {item["id"] for item in closure_evidence["evidence"]} >= {
+        "continue-final-rejection",
+        "ordinary-autopilot-loop",
+        "compaction-resume",
+        "pseudo-blocker-rejection",
+        "review-comment-reconciliation",
+        "direct-work-counterexample",
+    }
     assert admission["integrated_host_boundaries"][0]["id"] == "agentic-workspace.autopilot"
     assert admission["integrated_host_boundaries"][0]["ordinary_path_unavoidable"] is True
     assert admission["integrated_host_boundaries"][1]["entrypoint"] == "scripts/model_cli_harness/run_sbx_codex_adapter.py"
-    assert "canonical ordinary autopilot route uses the final-response executor loop" in admission["integration_gap"]
+    assert "covered by issue_2239_closure_evidence" in admission["integration_gap"]
     assert rendering["plain_done_allowed"] is False
     assert any("terminal final response" in item for item in rendering["must_not_claim"])
 
@@ -2210,6 +2220,270 @@ else:
     assert attempt_log.read_text(encoding="utf-8").splitlines() == ["1", "2"]
     record = json.loads((tmp_path / ".agentic-workspace/planning/execplans/issue-1981.plan.json").read_text())
     assert record["proof_report"]["validation proof"] == "autopilot executor wrote real repo proof"
+
+
+def test_autopilot_rejects_repeated_weak_finals_across_compaction_review_reconciliation_until_delivered(
+    tmp_path: Path, capsys, monkeypatch
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    fixture_path = tmp_path / ".agentic-workspace" / "local" / "terminal-custody-fixture.json"
+    fixture_path.parent.mkdir(parents=True, exist_ok=True)
+    fixture_path.write_text(
+        json.dumps(
+            {
+                "objective": "finish PR #2236 and #2237 review follow-through",
+                "selected_review_threads": [
+                    {"pr": 2236, "thread": "thread-a", "status": "unresolved"},
+                    {"pr": 2237, "thread": "thread-b", "status": "unresolved"},
+                ],
+                "completed_slices": [],
+                "proof_state": "missing",
+                "progress_events": [],
+                "waiting_for_user": False,
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    def terminal_contract(state: str, *, action: str = "") -> dict[str, Any]:
+        authorized = state in {"DELIVERED", "BLOCKED", "USER_PAUSED"}
+        return {
+            "kind": "agentic-workspace/terminal-outcome-contract/v1",
+            "state": state,
+            "final_response_authorized": authorized,
+            "required_next_action": "" if authorized else action,
+            "safe_continuation_option_ids": [] if authorized else ["address-review-thread", "run-proof"],
+            "blocker_qualification": {"status": "not_required"},
+            "final_response_enforcement": {
+                "status": "authorized" if authorized else "rejected_auto_resume",
+                "terminal_final_rejected": not authorized,
+                "auto_resume_action": "" if authorized else action,
+                "progress_without_yield": not authorized,
+                "compaction_resume_safe": not authorized,
+                "multi_slice_continuation": {
+                    "status": "not_required" if authorized else "preserved",
+                    "resume_fields": [
+                        "objective",
+                        "completed_slices",
+                        "selected_review_threads",
+                        "proof_state",
+                        "required_next_action",
+                    ],
+                },
+            },
+        }
+
+    closeout_observations: list[dict[str, Any]] = []
+
+    def fake_closeout_trust(*, target_root: Path) -> tuple[dict[str, Any], object]:
+        state = json.loads(fixture_path.read_text(encoding="utf-8"))
+        closeout_observations.append(state)
+        unresolved = [thread for thread in state["selected_review_threads"] if thread["status"] != "addressed"]
+        if unresolved:
+            contract = terminal_contract("CONTINUE", action=f"address-pr-{unresolved[0]['pr']}-{unresolved[0]['thread']}")
+        elif state["proof_state"] != "complete":
+            contract = terminal_contract("CONTINUE", action="run-review-stack-proof")
+        else:
+            contract = terminal_contract("DELIVERED")
+        return {"terminal_outcome_contract": contract}, object()
+
+    continuation_events: list[dict[str, Any]] = []
+
+    def fake_continuation(*, target_root: Path, terminal_outcome_contract: dict, request: dict) -> dict:
+        assert target_root == tmp_path.resolve()
+        assert terminal_outcome_contract["state"] == "CONTINUE"
+        assert request["terminal_final_rejected"] is True
+        event = {
+            "action": request["auto_resume_action"],
+            "after_compaction": request["after_compaction"],
+            "custody": "agent",
+        }
+        continuation_events.append(event)
+        return {
+            "kind": "agentic-workspace/final-response-resume-result/v1",
+            "status": "executed",
+            "invoked_action": request["auto_resume_action"],
+            "invoked_operation": "review-stack.follow-through",
+            "command": "review-stack follow-through --fixture",
+            "exit_code": 0,
+            "custody": "agent",
+            "after_state_patch": {
+                "required_next_action": request["auto_resume_action"],
+                "custody_owner": "agent",
+                "continuation_slice": f"slice-{len(continuation_events)}-post-compaction",
+                "selected_review_threads": "preserved",
+                "proof_state": "preserved",
+            },
+        }
+
+    monkeypatch.setattr(cli, "_final_response_closeout_trust_for_admission", fake_closeout_trust)
+    monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fake_continuation)
+    monkeypatch.setenv("FIXTURE_PATH", str(fixture_path))
+
+    executor_script = tmp_path / "weak_review_executor.py"
+    executor_script.write_text(
+        """
+import json
+import os
+from pathlib import Path
+
+slice_no = int(os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_SLICE"])
+assert os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_CUSTODY"] == "agent"
+path = Path(os.environ["FIXTURE_PATH"])
+state = json.loads(path.read_text(encoding="utf-8"))
+if slice_no > 1:
+    assert os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_PREVIOUS_ADMISSION"]
+    assert os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION"]
+    continuation_state = json.loads(os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION_STATE"])
+    assert continuation_state["custody_owner"] == "agent"
+    assert os.environ["AGENTIC_WORKSPACE_FINAL_RESPONSE_ACTIVE_OBJECTIVE"]
+if slice_no == 1:
+    state["selected_review_threads"][0]["status"] = "addressed"
+    state["completed_slices"].append("pr-2236-thread-a")
+    state["progress_events"].append({"slice": slice_no, "message": "PR #2236 thread-a addressed; more review work remains."})
+    print("Progress: first review slice done; work remains. Done.")
+elif slice_no == 2:
+    state["selected_review_threads"][1]["status"] = "addressed"
+    state["completed_slices"].append("pr-2237-thread-b")
+    state["progress_events"].append({"slice": slice_no, "message": "All threads addressed; proof remains."})
+    print("Progress: review comments addressed; proof remains. Done.")
+elif slice_no == 3:
+    state["proof_state"] = "complete"
+    state["completed_slices"].append("review-stack-proof")
+    print("Delivered: PR #2236 and #2237 review threads and proof reconciled.")
+else:
+    raise SystemExit("autopilot should have delivered by slice 3")
+state["waiting_for_user"] = False
+path.write_text(json.dumps(state, indent=2) + "\\n", encoding="utf-8")
+""".strip(),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "autopilot",
+                "--target",
+                str(tmp_path),
+                "--executor-command",
+                subprocess.list2cmdline([sys.executable, str(executor_script)]),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["status"] == "accepted_terminal_final"
+    assert payload["admission"]["attempt"]["claim"] == "Delivered: PR #2236 and #2237 review threads and proof reconciled."
+    loop = payload["ordinary_execution_loop"]
+    assert loop["slice_count"] == 3
+    assert [item["admission_status"] for item in loop["slices"]] == [
+        "rejected_auto_resumed",
+        "rejected_auto_resumed",
+        "accepted_terminal_final",
+    ]
+    assert [item["terminal_state"] for item in loop["slices"]] == ["CONTINUE", "CONTINUE", "DELIVERED"]
+    assert len(continuation_events) == 2
+    assert continuation_events[0]["action"] == "address-pr-2237-thread-b"
+    assert continuation_events[1]["action"] == "run-review-stack-proof"
+    assert continuation_events[0]["after_compaction"] is False
+    assert continuation_events[1]["after_compaction"] is True
+    final_state = json.loads(fixture_path.read_text(encoding="utf-8"))
+    assert final_state["waiting_for_user"] is False
+    assert final_state["proof_state"] == "complete"
+    assert {thread["status"] for thread in final_state["selected_review_threads"]} == {"addressed"}
+    assert [event["slice"] for event in final_state["progress_events"]] == [1, 2]
+    checkpoint = json.loads((tmp_path / ".agentic-workspace" / "local" / "chat-checkpoint.json").read_text())
+    admission_checkpoint = checkpoint["final_response_admission"]
+    assert admission_checkpoint["slice_count"] == 3
+    assert admission_checkpoint["slices"][0]["terminal_state"] == "CONTINUE"
+    assert admission_checkpoint["slices"][1]["after_compaction"] is True
+    assert closeout_observations[0]["selected_review_threads"][1]["status"] == "unresolved"
+    assert closeout_observations[-1]["proof_state"] == "complete"
+
+
+@pytest.mark.parametrize(
+    ("terminal_state", "custody_owner"),
+    [
+        ("BLOCKED", "external-or-human-action"),
+        ("USER_PAUSED", "user"),
+    ],
+)
+def test_final_response_executor_boundary_accepts_genuine_blocked_and_user_paused(
+    tmp_path: Path, capsys, monkeypatch, terminal_state: str, custody_owner: str
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def fake_closeout_trust(*, target_root: Path) -> tuple[dict[str, Any], object]:
+        return {
+            "terminal_outcome_contract": {
+                "kind": "agentic-workspace/terminal-outcome-contract/v1",
+                "state": terminal_state,
+                "final_response_authorized": True,
+                "custody_owner": custody_owner,
+                "required_next_action": "",
+                "safe_continuation_option_ids": [],
+                "blocker_qualification": {
+                    "status": "qualified_external_blocker" if terminal_state == "BLOCKED" else "not_required",
+                    "qualified_blockers": [
+                        {
+                            "id": "missing-credential",
+                            "type": "credential",
+                            "evidence": "The fixture withholds the required credential.",
+                            "recovery": "Ask the user for the credential.",
+                            "no_safe_continuation": True,
+                        }
+                    ]
+                    if terminal_state == "BLOCKED"
+                    else [],
+                },
+                "final_response_enforcement": {
+                    "status": "authorized",
+                    "terminal_final_rejected": False,
+                    "progress_without_yield": False,
+                    "multi_slice_continuation": {"status": "not_required"},
+                },
+            }
+        }, object()
+
+    def fail_continuation(**_: Any) -> dict[str, Any]:
+        raise AssertionError("authorized terminal states must not run continuation")
+
+    monkeypatch.setattr(cli, "_final_response_closeout_trust_for_admission", fake_closeout_trust)
+    monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fail_continuation)
+    executor_script = tmp_path / "terminal_executor.py"
+    executor_script.write_text('print("Terminal state accepted by host boundary.")\n', encoding="utf-8")
+
+    assert (
+        cli.main(
+            [
+                "final-response",
+                "admit",
+                "--target",
+                str(tmp_path),
+                "--executor-command",
+                subprocess.list2cmdline([sys.executable, str(executor_script)]),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "accepted_terminal_final"
+    assert payload["terminal_outcome_contract"]["state"] == terminal_state
+    assert payload["admission"]["terminal_final_rejected"] is False
+    assert payload["ordinary_execution_loop"]["slice_count"] == 1
+    assert payload["ordinary_execution_loop"]["custody"] == "completed-outcome"
 
 
 def test_executor_mode_operation_contracts_are_conservative() -> None:
