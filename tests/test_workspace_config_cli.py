@@ -1297,6 +1297,100 @@ def test_config_command_blocks_required_best_fit_when_current_target_is_unknown(
     assert "cannot be claimed" in policy["binding"]["claim_boundary"]
 
 
+def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'current_target = "codex_current"',
+                "",
+                "[local_memory]",
+                "target_guidance_enabled = true",
+                'user_guidance_root = "~/.agentic-workspace/target-guidance"',
+                'target_guidance_overlay_path = ".agentic-workspace/local/target-guidance-overlay.json"',
+                'correction_events_path = ".agentic-workspace/local/correction-events.json"',
+                "",
+                "[delegation_targets.codex_current]",
+                'target_id = "user-local:codex-current"',
+                'target_revision = "2026-07-runtime"',
+                'aliases = ["codex", "current-codex"]',
+                'revision_policy = "revalidate"',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+                'model_family = "codex"',
+                'provider = "openai"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    local_memory = payload["mixed_agent"]["local_memory"]
+    assert local_memory["target_guidance"]["enabled"] is True
+    assert local_memory["target_guidance"]["repo_overlay_path"] == ".agentic-workspace/local/target-guidance-overlay.json"
+    profile = payload["mixed_agent"]["delegation_targets"]["profiles"][0]
+    assert profile["target_id"] == "user-local:codex-current"
+    assert profile["aliases"] == ["codex", "current-codex"]
+    identity = payload["mixed_agent"]["target_identity"]
+    assert identity["current_target_identity"]["status"] == "known"
+    assert identity["current_target_identity"]["subject"]["stable_target_id"] == "user-local:codex-current"
+    assert identity["storage"]["status"] == "available"
+    assert "repo-local target overlay under .agentic-workspace/local/" in identity["precedence"]
+    correction = payload["mixed_agent"]["correction_feedback"]
+    assert correction["status"] == "ready"
+    assert "explicit-user-correction" in correction["event_schema"]["source_types"]
+    assert "rejected-secret-bearing" in correction["event_schema"]["admission_states"]
+
+
+def test_config_command_target_identity_ambiguous_alias_fails_closed(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'current_target = "codex"',
+                "",
+                "[local_memory]",
+                "target_guidance_enabled = true",
+                'user_guidance_root = "~/.agentic-workspace/target-guidance"',
+                "",
+                "[delegation_targets.codex_a]",
+                'target_id = "user-local:codex-a"',
+                'aliases = ["codex"]',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+                "",
+                "[delegation_targets.codex_b]",
+                'target_id = "user-local:codex-b"',
+                'aliases = ["codex"]',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    identity = payload["mixed_agent"]["target_identity"]
+    assert identity["current_target_identity"]["status"] == "ambiguous"
+    assert identity["current_target_identity"]["fail_closed"] is True
+    assert "exact delegation target profile name" in identity["current_target_identity"]["recovery"]
+    assert payload["mixed_agent"]["correction_feedback"]["status"] == "fail-closed"
+
+
 def test_config_command_layers_assignment_policy_from_shared_local_config(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()

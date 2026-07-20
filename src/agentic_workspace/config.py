@@ -16,6 +16,8 @@ LEGACY_WORKSPACE_LOCAL_CONFIG_PATH = Path("agentic-workspace.local.toml")
 WORKSPACE_DELEGATION_OUTCOMES_PATH = Path(".agentic-workspace/delegation-outcomes.json")
 LEGACY_WORKSPACE_DELEGATION_OUTCOMES_PATH = Path("agentic-workspace.delegation-outcomes.json")
 WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH = Path(".agentic-workspace/local/memory.toml")
+WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH = Path(".agentic-workspace/local/target-guidance-overlay.json")
+WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH = Path(".agentic-workspace/local/correction-events.json")
 WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH = Path(".agentic-workspace/local/integrations")
 WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION = "<vendor-or-runtime>/"
 WORKSPACE_LOCAL_SCRATCH_ROOT_PATH = Path(".agentic-workspace/local/scratch")
@@ -170,6 +172,19 @@ SUPPORTED_DELEGATION_CONTROL_MODES = (
     "manual",
     "suggest",
     "auto",
+)
+SUPPORTED_TARGET_IDENTITY_STATUSES = (
+    "active",
+    "retired",
+    "superseded",
+    "ambiguous",
+    "unavailable",
+)
+SUPPORTED_TARGET_REVISION_POLICIES = (
+    "preserve",
+    "revalidate",
+    "migrate",
+    "retire",
 )
 SUPPORTED_ORCHESTRATION_EXECUTION_ROLES = (
     "ordinary-executor",
@@ -334,6 +349,11 @@ class ModuleUpdatePolicy:
 @dataclass(frozen=True)
 class DelegationTargetProfile:
     name: str
+    target_id: str | None
+    target_revision: str | None
+    aliases: tuple[str, ...]
+    identity_status: str
+    revision_policy: str
     strength: str
     location: str
     execution_methods: tuple[str, ...]
@@ -391,6 +411,10 @@ class MixedAgentLocalOverride:
     clarification_mode: str | None
     local_memory_enabled: bool | None
     local_memory_path: Path
+    target_guidance_enabled: bool | None
+    user_guidance_root: str | None
+    target_guidance_overlay_path: Path
+    correction_events_path: Path
     session_logging: SessionLoggingConfig
     delegation_targets: tuple[DelegationTargetProfile, ...]
     local_overlay: dict[str, Any]
@@ -1493,6 +1517,11 @@ def load_delegation_target_profiles(
         if not isinstance(raw_profile, dict):
             raise WorkspaceUsageError(f"{target_path.as_posix()} must be a table.")
         supported_fields = {
+            "target_id",
+            "target_revision",
+            "aliases",
+            "identity_status",
+            "revision_policy",
             "strength",
             "location",
             "confidence",
@@ -1536,6 +1565,23 @@ def load_delegation_target_profiles(
         profiles.append(
             DelegationTargetProfile(
                 name=target_name,
+                target_id=require_optional_string(payload=raw_profile, key="target_id", config_path=target_path),
+                target_revision=require_optional_string(payload=raw_profile, key="target_revision", config_path=target_path),
+                aliases=require_optional_string_list(payload=raw_profile, key="aliases", config_path=target_path),
+                identity_status=require_optional_enum(
+                    payload=raw_profile,
+                    key="identity_status",
+                    config_path=target_path,
+                    allowed=SUPPORTED_TARGET_IDENTITY_STATUSES,
+                    default="active",
+                ),
+                revision_policy=require_optional_enum(
+                    payload=raw_profile,
+                    key="revision_policy",
+                    config_path=target_path,
+                    allowed=SUPPORTED_TARGET_REVISION_POLICIES,
+                    default="revalidate",
+                ),
                 strength=strength,
                 location=raw_location,
                 execution_methods=execution_methods,
@@ -1704,6 +1750,10 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         clarification_mode=None,
         local_memory_enabled=None,
         local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
+        target_guidance_enabled=None,
+        user_guidance_root=None,
+        target_guidance_overlay_path=WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH,
+        correction_events_path=WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH,
         session_logging=SessionLoggingConfig(enabled=None, redact_local_paths=False, path_mode="absolute", source="unset"),
         delegation_targets=(),
         local_overlay={},
@@ -2498,7 +2548,10 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         raw_local_memory = {}
     if not isinstance(raw_local_memory, dict):
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_memory] section must be a table.")
-    unknown_local_memory = sorted(set(raw_local_memory) - {"enabled", "path"})
+    unknown_local_memory = sorted(
+        set(raw_local_memory)
+        - {"enabled", "path", "target_guidance_enabled", "user_guidance_root", "target_guidance_overlay_path", "correction_events_path"}
+    )
     if unknown_local_memory:
         unknown_text = ", ".join(unknown_local_memory)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [local_memory] contains unsupported field(s): {unknown_text}.")
@@ -2610,6 +2663,28 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             config_path=WORKSPACE_LOCAL_CONFIG_PATH,
             default=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
         ),
+        target_guidance_enabled=require_optional_bool(
+            payload=raw_local_memory,
+            key="target_guidance_enabled",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        user_guidance_root=require_optional_string(
+            payload=raw_local_memory,
+            key="user_guidance_root",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        ),
+        target_guidance_overlay_path=require_optional_relative_path(
+            payload=raw_local_memory,
+            key="target_guidance_overlay_path",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+            default=WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH,
+        ),
+        correction_events_path=require_optional_relative_path(
+            payload=raw_local_memory,
+            key="correction_events_path",
+            config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+            default=WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH,
+        ),
         session_logging=SessionLoggingConfig(
             enabled=session_logging_enabled,
             redact_local_paths=session_logging_path_mode == "redacted",
@@ -2686,6 +2761,25 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
                 ),
                 ("local_memory.enabled", "local_memory", "enabled", raw_local_memory.get("enabled")),
                 ("local_memory.path", "local_memory", "path", raw_local_memory.get("path")),
+                (
+                    "local_memory.target_guidance_enabled",
+                    "local_memory",
+                    "target_guidance_enabled",
+                    raw_local_memory.get("target_guidance_enabled"),
+                ),
+                ("local_memory.user_guidance_root", "local_memory", "user_guidance_root", raw_local_memory.get("user_guidance_root")),
+                (
+                    "local_memory.target_guidance_overlay_path",
+                    "local_memory",
+                    "target_guidance_overlay_path",
+                    raw_local_memory.get("target_guidance_overlay_path"),
+                ),
+                (
+                    "local_memory.correction_events_path",
+                    "local_memory",
+                    "correction_events_path",
+                    raw_local_memory.get("correction_events_path"),
+                ),
                 ("session_logging.enabled", "session_logging", "enabled", raw_session_logging.get("enabled")),
                 (
                     "session_logging.redact_local_paths",
