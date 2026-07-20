@@ -10,6 +10,7 @@ import argparse
 import copy
 import json
 import re
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -84,6 +85,16 @@ def _raw_active_planning_record_for_closeout(*, planning_record: dict[str, Any],
         return {}
     task = planning_record.get("task", {}) if isinstance(planning_record, dict) else {}
     surface = str(task.get("surface", "")).strip() if isinstance(task, dict) else ""
+    if not surface:
+        state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
+        try:
+            state = tomllib.loads(state_path.read_text(encoding="utf-8-sig"))
+        except (OSError, tomllib.TOMLDecodeError):
+            state = {}
+        todo = state.get("todo", {}) if isinstance(state, dict) else {}
+        active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
+        first_item = next((item for item in active_items if isinstance(item, dict)), {})
+        surface = str(first_item.get("surface", "")).strip() if isinstance(first_item, dict) else ""
     if not surface:
         active_summary = _fast_planning_active_summary(target_root=target_root)
         surface = str(active_summary.get("active_execplan", "")).strip()
@@ -1268,6 +1279,7 @@ def _planning_route_decision_payload(
     active_plan_protection = _as_dict(route_evidence.get("active_plan_protection"))
     blocked_claims = active_plan_protection.get("blocked_claims") or route_evidence.get("blocked_claims") or []
     selected_owner_ref = str(route_evidence.get("active_execplan") or "")
+    owner_admission = _as_dict(route_evidence.get("owner_admission"))
     route_inputs = _as_dict(route_evidence.get("route_inputs"))
     task_binding = _as_dict(route_inputs.get("task_binding"))
     owner_facts = _as_dict(route_inputs.get("owner"))
@@ -1315,6 +1327,14 @@ def _planning_route_decision_payload(
         "state_update_policy": "read-only" if transition == "none" else "explicit-transition-required",
         "next_safe_action": next_packet,
     }
+    owner_admission_source = str(_as_dict(owner_admission.get("selected_owner")).get("source") or "")
+    if (
+        owner_admission.get("status") == "rejected"
+        or owner_admission.get("rejected_candidates")
+        or owner_admission_source.endswith("owner-selection.json")
+        or owner_admission_source.endswith(":active.execplans")
+    ):
+        decision["owner_admission"] = owner_admission
     proposal = _as_dict(reconciliation_proposal)
     if proposal.get("status") == "current":
         proposal_posture = str(proposal.get("owner_posture") or "reconciliation-pending")
@@ -1756,6 +1776,7 @@ def _planning_safety_gate_payload(
     *, target_root: Path, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, execution_posture: dict[str, Any]
 ) -> dict[str, Any]:
     active_summary = _fast_planning_active_summary(target_root=target_root)
+    owner_admission = _as_dict(active_summary.get("owner_admission"))
     active_planning_present = bool(active_summary.get("todo_active_count") or active_summary.get("active_execplan"))
     capability = execution_posture.get("capability_posture", {}) if isinstance(execution_posture, dict) else {}
     work_shape, proof_burden = _capability_structural_hints(capability)
@@ -1825,6 +1846,7 @@ def _planning_safety_gate_payload(
         config=config,
         planning_revision=planning_revision,
     )
+    route_evidence["owner_admission"] = owner_admission
     route_evidence = _acknowledged_current_task_switch_payload(
         route_evidence,
         changed_paths=changed_paths,
@@ -2114,6 +2136,7 @@ def _planning_safety_gate_payload(
         "required_next_action": required_next_action,
         "active_planning_present": active_planning_present,
         "planning_revision": planning_revision,
+        "owner_admission": owner_admission,
         "active_plan_reliance": active_plan_reliance,
         "task_switch_reconciliation": route_evidence,
         "route_decision": route_decision,

@@ -22,31 +22,21 @@ def _git(root: Path, *args: str) -> str:
 
 
 def _selected_planning_owner(root: Path) -> tuple[str, str]:
-    selection_path = root / ".agentic-workspace" / "local" / "planning" / "owner-selection.json"
+    state_path = root / ".agentic-workspace" / "planning" / "state.toml"
     try:
-        selection = json.loads(selection_path.read_text(encoding="utf-8-sig"))
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        state = tomllib.loads(state_path.read_text(encoding="utf-8-sig"))
+    except (OSError, tomllib.TOMLDecodeError):
         return "", ""
-    if not isinstance(selection, dict) or str(selection.get("kind") or "") != "agentic-planning/owner-selection/v1":
+
+    from agentic_workspace.workspace_runtime_core import _planning_owner_admission_payload
+
+    admission = _planning_owner_admission_payload(target_root=root, state_data=state if isinstance(state, dict) else {})
+    selected_owner = admission.get("selected_owner", {}) if isinstance(admission, dict) else {}
+    if not isinstance(selected_owner, dict) or selected_owner.get("status") != "accepted":
         return "", ""
-    if str(selection.get("mode") or "local").strip().lower() != "local":
-        return "", ""
-    selected = selection.get("selected_owner", {})
-    owner_id = str(selected.get("id") or "").strip() if isinstance(selected, dict) else ""
-    owner_ref = str(selected.get("ref") or "").strip() if isinstance(selected, dict) else ""
+    owner_id = str(selected_owner.get("record_id") or selected_owner.get("owner") or "").strip()
+    owner_ref = str(selected_owner.get("ref") or "").strip()
     if not owner_id or not owner_ref:
-        return "", ""
-    owner_path = (root / owner_ref).resolve()
-    try:
-        owner_path.relative_to(root.resolve())
-        record = json.loads(owner_path.read_text(encoding="utf-8-sig"))
-    except (ValueError, OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return "", ""
-    if not isinstance(record, dict) or str(record.get("id") or "").strip() != owner_id:
-        return "", ""
-    lifecycle = str(record.get("lifecycle") or "").strip().lower()
-    phase = str(record.get("phase") or "").strip().lower()
-    if lifecycle not in {"live", "planned"} or phase in {"complete", "completed", "closeout", "closed", "archived"}:
         return "", ""
     return owner_id, owner_ref
 
