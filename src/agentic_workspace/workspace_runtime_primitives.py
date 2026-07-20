@@ -35,7 +35,7 @@ from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace import workspace_runtime_core as _workspace_runtime_core
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
-from agentic_workspace.actionability import derive_actionability
+from agentic_workspace.actionability import derive_actionability, operation_invocation
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
@@ -8694,6 +8694,15 @@ def _run_lifecycle_command(
             cli_invoke=config.cli_invoke,
         )
         closure_primary = _as_dict(payload["payload_closure_plan"].get("primary_next_action"))
+        if closure_primary and not isinstance(closure_primary.get("operation_invocation"), dict):
+            rendering = str(closure_primary.get("command") or closure_primary.get("run") or "")
+            closure_primary["operation_invocation"] = operation_invocation(
+                operation_id=command_name,
+                arguments={"target": "./repo", "format": "json"},
+                effect_class="read-only-report",
+                expected_transition=str(closure_primary.get("expected_transition") or closure_primary.get("state_transition") or ""),
+                command_rendering=rendering,
+            )
         actionability = derive_actionability(
             command_name=command_name,
             health=str(payload.get("health") or "unknown"),
@@ -8975,6 +8984,12 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             "run": commands[0],
             "commands": commands,
             "detail_command": detail_command,
+            "operation_invocation": operation_invocation(
+                operation_id="doctor" if command_name == "status" else command_name,
+                arguments={"target": "./repo", "format": "json"},
+                effect_class="read-only-report",
+                command_rendering=commands[0],
+            ),
         }
     actionability = _as_dict(payload.get("actionability")) or derive_actionability(
         command_name=command_name,

@@ -6,7 +6,7 @@
     "format_option": "format"
   },
   "summary": "Derive compact evaluation status from definitions and local observation streams.",
-  "classification": "report",
+  "classification": "read-only-report",
   "inputs": [
     {"name": "target", "source": "cli-option", "required": false},
     {"name": "evaluation_id", "source": "cli-option", "required": false},
@@ -33,6 +33,5 @@
   ],
   "guards": ["Status is derived and must not be edited as authority."],
   "proof": ["evaluation unit tests", "operation contract validates against operation.schema.json"],
-  "migration_status": "runtime-backed-source-command",
-  "ir_plan": {"status": "source-runtime-first"}
+  "migration_status": "validated-contract"
 }

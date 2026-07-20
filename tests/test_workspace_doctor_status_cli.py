@@ -1026,7 +1026,7 @@ def test_status_and_doctor_advisory_outputs_are_coherent_and_do_not_self_loop(tm
 
 
 def test_actionability_allows_same_operation_only_as_explicit_external_condition_watch() -> None:
-    from agentic_workspace.actionability import derive_actionability
+    from agentic_workspace.actionability import derive_actionability, operation_invocation
 
     packet = derive_actionability(
         command_name="doctor",
@@ -1037,6 +1037,12 @@ def test_actionability_allows_same_operation_only_as_explicit_external_condition
         proposed_next_action={
             "action": "watch-remote-state",
             "command": "agentic-workspace doctor --target . --format json",
+            "operation_invocation": operation_invocation(
+                operation_id="doctor",
+                arguments={"target": ".", "format": "json"},
+                effect_class="read-only-report",
+                command_rendering="agentic-workspace doctor --target . --format json",
+            ),
             "external_change_condition": "remote workflow completes",
         },
     )
@@ -1047,7 +1053,7 @@ def test_actionability_allows_same_operation_only_as_explicit_external_condition
 
 
 def test_actionability_allows_same_operation_with_explicit_state_transition() -> None:
-    from agentic_workspace.actionability import derive_actionability
+    from agentic_workspace.actionability import derive_actionability, operation_invocation
 
     packet = derive_actionability(
         command_name="doctor",
@@ -1058,6 +1064,13 @@ def test_actionability_allows_same_operation_with_explicit_state_transition() ->
         proposed_next_action={
             "action": "apply-repair",
             "command": "agentic-workspace doctor --repair --format json",
+            "operation_invocation": operation_invocation(
+                operation_id="doctor",
+                arguments={"repair": True, "format": "json"},
+                effect_class="metadata-refresh",
+                expected_transition="repair applied then health rechecked",
+                command_rendering="agentic-workspace doctor --repair --format json",
+            ),
             "expected_transition": "repair applied then health rechecked",
         },
     )
@@ -1067,6 +1080,31 @@ def test_actionability_allows_same_operation_with_explicit_state_transition() ->
 
 
 def test_actionability_keeps_required_work_visible_when_same_state_action_is_rejected() -> None:
+    from agentic_workspace.actionability import derive_actionability, operation_invocation
+
+    packet = derive_actionability(
+        command_name="doctor",
+        health="broken",
+        warnings=[],
+        repair_actions=[{"id": "repair"}],
+        manual_review_actions=[],
+        proposed_next_action={
+            "action": "retry",
+            "command": "agentic-workspace doctor --format json",
+            "operation_invocation": operation_invocation(
+                operation_id="doctor",
+                arguments={"format": "json"},
+                effect_class="read-only-report",
+                command_rendering="agentic-workspace doctor --format json",
+            ),
+        },
+    )
+    assert packet["status"] == "action-required"
+    assert packet["next_action"]["action"] == "required-action-unavailable"
+    assert packet["next_action"]["missing_precondition"]
+
+
+def test_actionability_treats_rendered_command_as_display_only_without_typed_invocation() -> None:
     from agentic_workspace.actionability import derive_actionability
 
     packet = derive_actionability(
@@ -1077,9 +1115,11 @@ def test_actionability_keeps_required_work_visible_when_same_state_action_is_rej
         manual_review_actions=[],
         proposed_next_action={"action": "retry", "command": "agentic-workspace doctor --format json"},
     )
-    assert packet["status"] == "action-required"
-    assert packet["next_action"]["action"] == "required-action-unavailable"
-    assert packet["next_action"]["missing_precondition"]
+
+    assert packet["progress_check"]["proposed_operation"] == ""
+    assert packet["progress_check"]["command_identity_authority"] == "absent-display-command-only"
+    assert packet["progress_check"]["same_operation"] is False
+    assert packet["next_action"]["action"] == "retry"
 
 
 def test_actionability_deduplicates_one_fact_emitted_by_two_detectors() -> None:

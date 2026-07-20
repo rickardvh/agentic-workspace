@@ -4,13 +4,53 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 from typing import Any
 
 
-def _operation(command: str) -> str:
-    match = re.search(r"(?:agentic-workspace|run_agentic_workspace\.py)\s+([a-z][a-z0-9-]*)", command)
-    return match.group(1) if match else ""
+def operation_invocation(
+    *,
+    operation_id: str,
+    arguments: dict[str, Any] | None = None,
+    effect_class: str = "",
+    expected_transition: str = "",
+    input_revision: str = "",
+    claim_effect: str = "",
+    command_rendering: str = "",
+) -> dict[str, Any]:
+    """Build a typed operation invocation that owns action identity."""
+
+    normalized_arguments = dict(arguments or {})
+    idempotency_input = {
+        "operation_id": operation_id,
+        "arguments": normalized_arguments,
+        "input_revision": input_revision,
+        "expected_transition": expected_transition,
+    }
+    idempotency_key = hashlib.sha256(json.dumps(idempotency_input, sort_keys=True).encode()).hexdigest()[:16]
+    invocation = {
+        "kind": "agentic-workspace/operation-invocation/v1",
+        "operation_id": operation_id,
+        "contract_version": "agentic-workspace/operation/v1",
+        "arguments": normalized_arguments,
+        "effect_class": effect_class,
+        "required_authority": "operation-contract",
+        "expected_input_revision": input_revision,
+        "expected_transition": expected_transition,
+        "idempotency_key": idempotency_key,
+        "claim_effect": claim_effect,
+        "renderings": {"cli": command_rendering} if command_rendering else {},
+        "rule": "Operation identity and progress checks use this typed invocation; rendered commands are display or manual recovery text.",
+    }
+    return {key: value for key, value in invocation.items() if value not in ("", {}, [], None)}
+
+
+def _proposed_invocation(proposed: dict[str, Any]) -> dict[str, Any]:
+    invocation = proposed.get("operation_invocation") or proposed.get("typed_invocation")
+    return dict(invocation) if isinstance(invocation, dict) else {}
+
+
+def _invocation_operation(invocation: dict[str, Any]) -> str:
+    return str(invocation.get("operation_id") or invocation.get("operation") or "").strip()
 
 
 def derive_actionability(
@@ -74,9 +114,13 @@ def derive_actionability(
     action_required = bool(repair_actions or required_reviews)
     proposed = dict(proposed_next_action or {})
     next_command = str(proposed.get("command") or proposed.get("run") or "").strip()
-    same_operation = bool(next_command and _operation(next_command) == command_name)
+    invocation = _proposed_invocation(proposed)
+    proposed_operation = _invocation_operation(invocation)
+    same_operation = bool(proposed_operation and proposed_operation == command_name)
     external_condition = str(proposed.get("external_change_condition") or "").strip()
-    expected_transition = str(proposed.get("expected_transition") or proposed.get("state_transition") or "").strip()
+    expected_transition = str(
+        invocation.get("expected_transition") or proposed.get("expected_transition") or proposed.get("state_transition") or ""
+    ).strip()
     digest_input = {
         "operation": command_name,
         "health": health,
@@ -119,7 +163,9 @@ def derive_actionability(
         "next_action": next_action,
         "progress_check": {
             "input_digest": input_digest,
-            "proposed_operation": _operation(next_command),
+            "proposed_operation": proposed_operation,
+            "operation_invocation": invocation,
+            "command_identity_authority": "typed-operation-invocation" if invocation else "absent-display-command-only",
             "same_operation": same_operation,
             "same_state": same_state,
             "expected_transition": expected_transition,

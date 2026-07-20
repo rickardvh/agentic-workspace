@@ -39,6 +39,5 @@
     "External evidence is referenced, not copied, unless separately promoted."
   ],
   "proof": ["evaluation unit tests", "operation contract validates against operation.schema.json"],
-  "migration_status": "runtime-backed-source-command",
-  "ir_plan": {"status": "source-runtime-first"}
+  "migration_status": "validated-contract"
 }

@@ -6,7 +6,7 @@
     "format_option": "format"
   },
   "summary": "Register or update one compact owner-bound evaluation definition.",
-  "classification": "repo-definition-upsert",
+  "classification": "lifecycle-mutation",
   "inputs": [
     {"name": "target", "source": "cli-option", "required": false},
     {"name": "evaluation_id", "source": "cli-option", "required": true},
@@ -40,9 +40,5 @@
     "Definitions are compact checked-in state; raw observations remain local by default."
   ],
   "proof": ["evaluation unit tests", "operation contract validates against operation.schema.json"],
-  "migration_status": "runtime-backed-source-command",
-  "ir_plan": {
-    "status": "source-runtime-first",
-    "summary": "The source CLI owns the first executable evaluation command while generated command-package migration remains explicit follow-up."
-  }
+  "migration_status": "validated-contract"
 }
