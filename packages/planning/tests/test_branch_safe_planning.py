@@ -10,6 +10,7 @@ from repo_planning_bootstrap.installer import (
     close_lane_record,
     close_planning_item,
     install_bootstrap,
+    planning_reconcile,
     planning_revision,
     planning_summary,
     propose_integration_transition,
@@ -217,6 +218,45 @@ def test_same_issue_relation_conflicts_at_git_merge_boundary(tmp_path: Path) -> 
     assert "2344.issue-relation.json" in (conflict.stdout + conflict.stderr)
 
 
+def test_same_issue_relation_conflict_has_supported_revision_guarded_reconcile_route(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    shape_issue_relation(issue="2344", lane="branch-safe", priority="p0.1", maturity="shaped", target=tmp_path)
+    base_revision = _relation_record(tmp_path, "2344")["relation_revision"]
+    _init_git(tmp_path)
+    _commit_all(tmp_path, "baseline relation")
+
+    _git(tmp_path, "checkout", "-b", "raise-priority")
+    shape_issue_relation(issue="2344", priority="p0.0", expected_relation_revision=base_revision, target=tmp_path)
+    _commit_all(tmp_path, "raise priority")
+
+    _git(tmp_path, "checkout", "main")
+    _git(tmp_path, "checkout", "-b", "lower-priority")
+    shape_issue_relation(issue="2344", priority="p0.9", expected_relation_revision=base_revision, target=tmp_path)
+    _commit_all(tmp_path, "lower priority")
+
+    _git(tmp_path, "checkout", "main")
+    _git(tmp_path, "merge", "--no-ff", "raise-priority", "-m", "merge raise priority")
+    conflict = _git(tmp_path, "merge", "--no-ff", "lower-priority", "-m", "merge lower priority", check=False)
+    assert conflict.returncode != 0
+    _git(tmp_path, "merge", "--abort")
+
+    current_revision = _relation_record(tmp_path, "2344")["relation_revision"]
+    resolved = planning_reconcile(
+        target=tmp_path,
+        issue="2344",
+        priority="p0.9",
+        rationale="Resolved overlapping priority edits after reviewing both branch deltas.",
+        expected_relation_revision=current_revision,
+        apply_issue_relation_reconcile=True,
+    )
+
+    relation = _relation_record(tmp_path, "2344")
+    assert resolved["issue_relation_reconciliation"]["status"] == "applied"
+    assert relation["priority"] == "p0.9"
+    assert relation["lane_id"] == "branch-safe"
+    assert relation["rationale"].startswith("Resolved overlapping")
+
+
 def test_same_issue_relation_requires_current_relation_revision(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     shape_issue_relation(
@@ -260,6 +300,34 @@ def test_same_issue_relation_requires_current_relation_revision(tmp_path: Path) 
     assert [action.kind for action in cleared.actions] == ["updated", "preserved", "proof", "proof"]
     assert _relation_record(tmp_path, "2344")["depends_on"] == []
     assert _relation_record(tmp_path, "2344")["rationale"] == ""
+
+
+def test_ordinary_solo_issue_workflow_uses_one_revision_guarded_relation(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    shape_issue_relation(issue="2344", lane="inbox", priority="p0.4", maturity="observed", target=tmp_path)
+    relation_revision = _relation_record(tmp_path, "2344")["relation_revision"]
+    planning_reconcile(
+        target=tmp_path,
+        issue="2344",
+        lane="branch-safe",
+        priority="p0.1",
+        depends_on="2328,2331",
+        rationale="Grouped and reprioritised through the issue relation owner.",
+        maturity="ready-to-promote",
+        expected_relation_revision=relation_revision,
+        apply_issue_relation_reconcile=True,
+    )
+
+    relation = _relation_record(tmp_path, "2344")
+    summary = planning_summary(target=tmp_path, profile="full")
+    assert relation["lane_id"] == "branch-safe"
+    assert relation["priority"] == "p0.1"
+    assert relation["depends_on"] == ["2328", "2331"]
+    assert relation["maturity"] == "ready-to-promote"
+    assert summary["issue_relations"]["record_count"] == 1
+    assert summary["issue_relations"]["legacy_authority"]["record_count"] == 0
+    assert len(summary["issue_relations"]["by_lane"]["branch-safe"]) == 1
 
 
 def test_external_summary_refresh_does_not_rewrite_issue_relation(tmp_path: Path) -> None:
@@ -366,6 +434,53 @@ def test_integration_apply_supports_close_archive_and_keep_open(tmp_path: Path) 
     assert (root / owner_ref).read_bytes() == before_owner
 
 
+def test_feature_branch_direct_terminal_writers_require_integration_proposal(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-2345")
+    _init_git(tmp_path)
+    _commit_all(tmp_path, "baseline owner")
+    _git(tmp_path, "checkout", "-b", "feature/direct-close")
+
+    blocked_archive = archive_execplan("issue-2345", target=tmp_path)
+    blocked_selection = select_existing_owner("issue-2345", target=tmp_path)
+
+    assert blocked_archive.reason_code == "integration-proposal-required-on-feature-branch"
+    assert "integration-propose" in blocked_archive.actions[1].detail
+    assert blocked_selection.reason_code == "integration-proposal-required-on-feature-branch"
+    assert json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))["lifecycle"] == "live"
+    assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
+
+
+def test_integration_apply_requires_target_branch_and_accepts_merge_queue_branch(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-2345")
+    _init_git(tmp_path)
+    _commit_all(tmp_path, "baseline owner")
+    _git(tmp_path, "checkout", "-b", "feature/propose-close")
+    propose_integration_transition(
+        proposal_id="issue-2345-close-target",
+        owner="issue-2345",
+        owner_ref=owner_ref,
+        requested_transition="close-owner",
+        target=tmp_path,
+    )
+    _commit_all(tmp_path, "propose close")
+
+    feature_apply = apply_integration_proposal(proposal="issue-2345-close-target", target=tmp_path)
+    assert feature_apply.reason_code == "integration-apply-target-required"
+
+    _git(tmp_path, "checkout", "main")
+    _git(tmp_path, "merge", "--no-ff", "feature/propose-close", "-m", "merge proposal")
+    _git(tmp_path, "checkout", "-b", "gh-readonly-queue/main/pr-2348")
+
+    applied = apply_integration_proposal(proposal="issue-2345-close-target", target=tmp_path)
+
+    owner_record = json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))
+    assert applied.reason_code == ""
+    assert owner_record["lifecycle"] == "closed"
+    assert applied.operation_receipt["authority_boundary"]["branch_admission"]["phase"] == "target"
+
+
 def test_pending_integration_proposal_blocks_direct_execplan_archive(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     owner_ref = _write_owner(tmp_path, "issue-2345")
@@ -464,7 +579,7 @@ def test_pending_integration_proposal_blocks_direct_lane_close_and_applies_lane_
     assert any(action.kind == "preserved" and "current selection and aggregate indexes" in action.detail for action in applied.actions)
 
 
-def test_legacy_issue_authority_is_demoted_to_issue_relation_migration(tmp_path: Path) -> None:
+def test_legacy_issue_authority_migrates_without_loss_and_demotes_sources(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     state_path = tmp_path / ".agentic-workspace/planning/state.toml"
     state_path.write_text(
@@ -478,7 +593,7 @@ queued_items = []
 
 [roadmap]
 lanes = [
-  { id = "branch-safe", title = "Branch safe", issues = ["2344"], priority = "p0.1", maturity = "ready", status = "next" },
+  { id = "branch-safe", title = "Branch safe", issues = ["2344"], priority = "p0.1", maturity = "ready", depends_on = ["2328"], reason = "keeps parent intent", status = "next" },
 ]
 candidates = []
 """.lstrip(),
@@ -494,6 +609,22 @@ candidates = []
     assert legacy["records"][0]["relation_status"] == "missing"
     assert legacy["records"][0]["authority_status"] == "freshness-demoted"
     assert any(warning["warning_class"] == "planning_issue_relation_legacy_authority_demoted" for warning in warnings)
+
+    migrated = planning_reconcile(target=tmp_path, apply_issue_relation_migration=True)
+
+    relation = _relation_record(tmp_path, "2344")
+    state_after = state_path.read_text(encoding="utf-8")
+    summary_after = planning_summary(target=tmp_path, profile="full")
+    assert migrated["issue_relation_migration"]["status"] == "applied"
+    assert relation["lane_id"] == "branch-safe"
+    assert relation["priority"] == "p0.1"
+    assert relation["depends_on"] == ["2328"]
+    assert relation["rationale"] == "keeps parent intent"
+    assert relation["maturity"] == "ready-to-promote"
+    assert "issues" not in state_after
+    assert "depends_on" not in state_after
+    assert "strategic_relation_refs" in state_after
+    assert summary_after["issue_relations"]["legacy_authority"]["record_count"] == 0
 
 
 def test_integration_apply_rejects_stale_subject_revision(tmp_path: Path) -> None:
@@ -527,3 +658,42 @@ def test_integration_apply_rejects_stale_planning_revision(tmp_path: Path) -> No
     assert [action.kind for action in stale.actions] == ["manual review"]
     assert stale.reason_code == "stale-integration-planning-revision"
     assert not (tmp_path / ".agentic-workspace/planning/integration-receipts/issue-2345-target-stale.integration-receipt.json").exists()
+
+
+def test_issue_2328_2331_feature_replay_is_owner_scoped_and_repair_free(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_refs = {issue: _write_owner(tmp_path, f"issue-{issue}") for issue in ("2328", "2329", "2330", "2331")}
+    _init_git(tmp_path)
+    _commit_all(tmp_path, "baseline owners")
+
+    for issue, owner_ref in owner_refs.items():
+        _git(tmp_path, "checkout", "main")
+        _git(tmp_path, "checkout", "-b", f"feature/issue-{issue}")
+        propose_integration_transition(
+            proposal_id=f"issue-{issue}-integrated",
+            owner=f"issue-{issue}",
+            owner_ref=owner_ref,
+            issue=issue,
+            requested_transition="mark-integrated",
+            proof=f"https://github.example/pr/{issue}",
+            target=tmp_path,
+        )
+        changed_files = _git(tmp_path, "status", "--short", "--untracked-files=all").stdout.splitlines()
+        assert changed_files == [f"?? .agentic-workspace/planning/integration-proposals/issue-{issue}-integrated.integration-proposal.json"]
+        _commit_all(tmp_path, f"propose issue {issue}")
+
+    for issue in ("2328", "2329", "2330", "2331"):
+        _git(tmp_path, "checkout", "main")
+        _git(tmp_path, "merge", "--no-ff", f"feature/issue-{issue}", "-m", f"merge issue {issue}")
+        applied = apply_integration_proposal(proposal=f"issue-{issue}-integrated", target=tmp_path)
+        _commit_all(tmp_path, f"apply issue {issue}")
+        assert applied.reason_code == ""
+
+    receipts = sorted((tmp_path / ".agentic-workspace/planning/integration-receipts").glob("*.integration-receipt.json"))
+    proposals = sorted((tmp_path / ".agentic-workspace/planning/integration-proposals").glob("*.integration-proposal.json"))
+    assert len(receipts) == 4
+    assert len(proposals) == 4
+    for issue, owner_ref in owner_refs.items():
+        owner = json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))
+        assert owner["lifecycle"] == "live"
+        assert owner["relationships"]["integration"]["status"] == "integrated"

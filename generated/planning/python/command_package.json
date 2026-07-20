@@ -3296,6 +3296,71 @@
             "name": "apply_lane_reconcile"
           },
           {
+            "flags": [
+              "--issue"
+            ],
+            "help": "Issue or external reference whose issue-relation record should be reconciled.",
+            "name": "issue"
+          },
+          {
+            "flags": [
+              "--external-ref"
+            ],
+            "help": "External reference whose issue-relation record should be reconciled.",
+            "name": "external_ref"
+          },
+          {
+            "flags": [
+              "--priority"
+            ],
+            "help": "Resolved issue-relation priority.",
+            "name": "priority"
+          },
+          {
+            "flags": [
+              "--depends-on"
+            ],
+            "help": "Comma-separated resolved issue-relation dependencies.",
+            "name": "depends_on"
+          },
+          {
+            "flags": [
+              "--rationale"
+            ],
+            "help": "Resolved issue-relation rationale.",
+            "name": "rationale"
+          },
+          {
+            "flags": [
+              "--maturity"
+            ],
+            "help": "Resolved issue-relation shaping maturity.",
+            "name": "maturity"
+          },
+          {
+            "flags": [
+              "--expect-relation-revision"
+            ],
+            "help": "Current relation revision required by --apply-issue-relation-reconcile.",
+            "name": "expect_relation_revision"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--apply-issue-relation-reconcile"
+            ],
+            "help": "Apply one revision-guarded semantic issue-relation reconciliation.",
+            "name": "apply_issue_relation_reconcile"
+          },
+          {
+            "action": "store_true",
+            "flags": [
+              "--apply-issue-relation-migration"
+            ],
+            "help": "Migrate legacy issue authority into issue relations and demote duplicate fields.",
+            "name": "apply_issue_relation_migration"
+          },
+          {
             "action": "store_true",
             "flags": [
               "--preview"

@@ -22,7 +22,8 @@
       "id": "integration-apply-dry-run",
       "files": {
         ".git/.keep": "",
-        ".agentic-workspace/planning/integration-proposals/tmp-integration.integration-proposal.json": "{\n  \"kind\": \"planning-integration-proposal/v1\",\n  \"id\": \"tmp-integration\",\n  \"status\": \"pending\",\n  \"phase\": \"integration-pending\",\n  \"requested_transition\": \"mark-integrated\",\n  \"owner\": {\"id\": \"\", \"ref\": \"\"},\n  \"external_ref\": \"\",\n  \"proof_refs\": [\"fixture-proof\"],\n  \"parent_boundary\": \"parent remains open in fixture\",\n  \"preserved_invariants\": [\"dry-run does not mutate fixture state\"],\n  \"expected_subject_revision\": \"48e278244d9a2dff\",\n  \"expected_planning_revision\": \"\",\n  \"created_at\": \"2026-01-01T00:00:00Z\",\n  \"updated_at\": \"2026-01-01T00:00:00Z\",\n  \"proposal_revision\": \"fixture-revision\",\n  \"authority_boundary\": {\"proposal\": \"fixture\", \"integrated_truth\": \"receipt after apply\", \"non_authority\": [\"state\"]}\n}\n"
+        ".agentic-workspace/planning/execplans/tmp-owner.plan.json": "{\n  \"kind\": \"planning-execplan/v1\",\n  \"id\": \"tmp-owner\",\n  \"title\": \"Temporary Owner\",\n  \"owner_level\": \"slice\",\n  \"lifecycle\": \"live\",\n  \"phase\": \"implementation\",\n  \"revision\": 1,\n  \"intent\": {},\n  \"parent\": {},\n  \"scope\": {},\n  \"relationships\": {},\n  \"next_action\": \"finish integration proof\",\n  \"proof\": {},\n  \"continuation\": {}\n}\n",
+        ".agentic-workspace/planning/integration-proposals/tmp-integration.integration-proposal.json": "{\n  \"kind\": \"planning-integration-proposal/v1\",\n  \"id\": \"tmp-integration\",\n  \"status\": \"pending\",\n  \"phase\": \"integration-pending\",\n  \"requested_transition\": \"mark-integrated\",\n  \"owner\": {\"id\": \"tmp-owner\", \"ref\": \".agentic-workspace/planning/execplans/tmp-owner.plan.json\"},\n  \"external_ref\": \"\",\n  \"proof_refs\": [\"fixture-proof\"],\n  \"parent_boundary\": \"parent remains open in fixture\",\n  \"preserved_invariants\": [\"dry-run does not mutate fixture state\"],\n  \"expected_subject_revision\": \"2fa97d1eff665f74\",\n  \"expected_planning_revision\": \"\",\n  \"created_at\": \"2026-01-01T00:00:00Z\",\n  \"updated_at\": \"2026-01-01T00:00:00Z\",\n  \"proposal_revision\": \"fixture-revision\",\n  \"authority_boundary\": {\"proposal\": \"fixture\", \"integrated_truth\": \"receipt after apply\", \"non_authority\": [\"state\"]}\n}\n"
       }
     }
   ],
@@ -38,10 +39,14 @@
     "stderr": {"allow_non_empty": false},
     "filesystem": {
       "allowed_write_paths": [],
-      "required_paths": [".git/.keep", ".agentic-workspace/planning/integration-proposals/tmp-integration.integration-proposal.json"],
+      "required_paths": [
+        ".git/.keep",
+        ".agentic-workspace/planning/execplans/tmp-owner.plan.json",
+        ".agentic-workspace/planning/integration-proposals/tmp-integration.integration-proposal.json"
+      ],
       "forbidden_paths": [".agentic-workspace/planning/integration-receipts/tmp-integration.integration-receipt.json"]
     },
-    "idempotency": {"run_twice": true},
+    "idempotency": {"run_twice": false},
     "safety": {"no_writes_outside_repo_root": true}
   }
 }

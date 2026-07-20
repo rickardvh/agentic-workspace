@@ -14,6 +14,7 @@
   },
   "guards": [
     "Reject stale proposals when the affected owner or issue-relation subject revision changed.",
+    "Reject apply attempts on feature branches; only target, release, and merge-queue branches may establish integrated truth.",
     "Rollback proposal and receipt writes together on validation or write failure.",
     "Aggregate indexes and unrelated owners remain derived or preserved."
   ],
@@ -81,7 +82,7 @@
     "kind": "module-result"
   },
   "proof": [
-    "planning branch-safe tests cover guarded apply, rollback surface, no-op reapply, stale proposals, and generated command exposure"
+    "planning branch-safe tests cover guarded apply, target branch admission, rollback surface, no-op reapply, stale proposals, and generated command exposure"
   ],
   "reads": [
     {
@@ -117,6 +118,11 @@
       "required": false,
       "surface": ".agentic-workspace/planning/integration-receipts/<id>.integration-receipt.json",
       "when": "not a dry run"
+    },
+    {
+      "required": false,
+      "surface": "affected owner record",
+      "when": "the requested transition mutates canonical owner lifecycle or integration truth"
     }
   ]
 }

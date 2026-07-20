@@ -1158,6 +1158,27 @@ function shortFileHash(path) {
   try { return createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16); } catch { return 'unreadable'; }
 }
 
+function shortTreeHash(root, suffix) {
+  if (!existsSync(root)) return 'missing';
+  try {
+    if (!statSync(root).isDirectory()) return 'missing';
+    const names = readdirSync(root).filter((name) => name.endsWith(suffix)).sort();
+    if (names.length === 0) return 'empty';
+    const digest = createHash('sha256');
+    for (const name of names) {
+      const path = join(root, name);
+      if (!statSync(path).isFile()) continue;
+      digest.update(name);
+      digest.update(Buffer.from([0]));
+      digest.update(createHash('sha256').update(readFileSync(path)).digest());
+      digest.update(Buffer.from([0]));
+    }
+    return digest.digest('hex').slice(0, 16);
+  } catch {
+    return 'unreadable';
+  }
+}
+
 function stableJson(value) {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (isObject(value)) return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
@@ -1221,6 +1242,9 @@ function planningRevision(targetRoot, state) {
     active_execplan_hash: selected.path ? shortFileHash(selected.path) : 'missing',
     active_item_id: String(activeItem.id ?? ''),
     active_item_surface: String(activeItem.surface ?? activeItem.path ?? activeItem.execplan ?? selected.ref),
+    issue_relations_hash: shortTreeHash(join(targetRoot, '.agentic-workspace/planning/issue-relations'), '.issue-relation.json'),
+    integration_proposals_hash: shortTreeHash(join(targetRoot, '.agentic-workspace/planning/integration-proposals'), '.integration-proposal.json'),
+    integration_receipts_hash: shortTreeHash(join(targetRoot, '.agentic-workspace/planning/integration-receipts'), '.integration-receipt.json'),
   };
   return { ...components, revision_id: createHash('sha256').update(stableJson(components)).digest('hex').slice(0, 16) };
 }
