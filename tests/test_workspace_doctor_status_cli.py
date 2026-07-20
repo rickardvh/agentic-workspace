@@ -1095,12 +1095,9 @@ def test_doctor_select_reports_available_fields_for_missing_selector(tmp_path: P
     assert cli.main(["doctor", "--target", str(target), "--format", "json", "--select", "missing.field"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "agentic-workspace/selected-output/v1"
-    assert payload["missing"] == ["missing.field"]
-    assert payload["selector_rule"].startswith("Comma-separated dot paths")
-    assert "health" in payload["available_selectors"]
-    assert "warnings_count" in payload["available_selectors"]
-    assert "next_action" in payload["available_selectors"]
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["missing.field"]
+    assert "health" in payload["selector_inventory"]["sample"]
 
 
 def test_status_select_returns_requested_fields(tmp_path: Path, capsys) -> None:
@@ -1144,13 +1141,10 @@ def test_status_select_reports_available_fields_for_missing_selector(tmp_path: P
     assert cli.main(["status", "--target", str(target), "--format", "json", "--select", "missing.field"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
     assert payload["source_command"] == "status"
-    assert payload["missing"] == ["missing.field"]
-    assert payload["selector_rule"].startswith("Comma-separated dot paths")
-    assert "health" in payload["available_selectors"]
-    assert "installed_modules" in payload["available_selectors"]
-    assert "warnings" in payload["available_selectors"]
+    assert payload["unknown_selectors"] == ["missing.field"]
+    assert "health" in payload["selector_inventory"]["sample"]
 
 
 def test_doctor_reports_cli_executable_drift_with_concrete_next_action(tmp_path: Path, capsys) -> None:

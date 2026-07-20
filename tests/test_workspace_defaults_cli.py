@@ -996,9 +996,9 @@ def test_defaults_selector_reports_available_fields_for_missing_selector(capsys)
     assert cli.main(["defaults", "--section", "root_cli_authority", "--select", "answer.nope", "--format", "json"]) == 0
 
     payload = json.loads(capsys.readouterr().out)
-    assert payload["kind"] == "agentic-workspace/selected-output/v1"
-    assert payload["missing"] == ["answer.nope"]
-    assert "answer.command" in payload["available_selectors"]
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["answer.nope"]
+    assert "answer.command" in payload["selector_inventory"]["sample"]
 
 
 def test_defaults_section_selector_returns_optimization_bias_answer(capsys) -> None:
