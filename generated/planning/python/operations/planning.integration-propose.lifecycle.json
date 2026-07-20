@@ -1,0 +1,167 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "integration-propose",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Feature branches write proposals, not integrated lifecycle truth.",
+    "Do not select current work, rewrite aggregate collections, close unrelated owners, or claim terminal parent truth.",
+    "Record a subject revision so target-branch apply can reject stale proposals."
+  ],
+  "id": "planning.integration-propose.lifecycle",
+  "inputs": [
+    {
+      "name": "proposal_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "owner",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "owner_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "issue",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "external_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "requested_transition",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "proof",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "parent_boundary",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "invariant",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_subject_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_target_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Create a pending branch proposal with proof, parent boundary, and invariants.",
+        "id": "apply_integration_proposal",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.integration-propose.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the pending proposal result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated targets own parser and dispatch parity while Planning owns proposal semantics."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "planning branch-safe tests cover pending proposal non-authority, stale detection, idempotence, and generated command exposure"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/execplans/<owner>.plan.json"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/issue-relations/<issue>.issue-relation.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Create a pending branch proposal with proof, parent boundary, and invariants.",
+      "id": "apply_integration_proposal",
+      "uses": "planning.integration-propose.apply"
+    },
+    {
+      "description": "Emit the pending proposal result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Create a pending target-branch Planning integration proposal.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/integration-proposals/<id>.integration-proposal.json",
+      "when": "not a dry run"
+    }
+  ]
+}

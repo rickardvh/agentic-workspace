@@ -412,7 +412,7 @@ queued_items = [
 
 [roadmap]
 lanes = [
-  { id = "maturity-lane", maturity = "shaped", status = "deferred", title = "Maturity lane", issues = ["#496"], outcome = "explicit maturity", reason = "avoid bucket inference", promotion_signal = "select a ready slice" },
+  { id = "maturity-lane", maturity = "shaped", status = "deferred", title = "Maturity lane", outcome = "explicit maturity", reason = "avoid bucket inference", promotion_signal = "select a ready slice" },
 ]
 candidates = []
 """,

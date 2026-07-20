@@ -1152,6 +1152,73 @@ function shortFileHash(path) {
   try { return createHash('sha256').update(readFileSync(path)).digest('hex').slice(0, 16); } catch { return 'unreadable'; }
 }
 
+function shortTreeHash(root, suffix) {
+  if (!existsSync(root)) return 'missing';
+  try {
+    if (!statSync(root).isDirectory()) return 'missing';
+    const names = readdirSync(root).filter((name) => name.endsWith(suffix)).sort();
+    if (names.length === 0) return 'empty';
+    const digest = createHash('sha256');
+    for (const name of names) {
+      const path = join(root, name);
+      if (!statSync(path).isFile()) continue;
+      digest.update(name);
+      digest.update(Buffer.from([0]));
+      digest.update(createHash('sha256').update(readFileSync(path)).digest());
+      digest.update(Buffer.from([0]));
+    }
+    return digest.digest('hex').slice(0, 16);
+  } catch {
+    return 'unreadable';
+  }
+}
+
+function shortTreeHashRecursive(root, suffix) {
+  if (!existsSync(root)) return 'missing';
+  try {
+    if (!statSync(root).isDirectory()) return 'missing';
+    const paths = [];
+    const walk = (dir) => {
+      const names = readdirSync(dir).sort();
+      for (const name of names) {
+        const path = join(dir, name);
+        const stat = statSync(path);
+        if (stat.isDirectory()) {
+          walk(path);
+        } else if (stat.isFile() && name.endsWith(suffix)) {
+          paths.push(relative(root, path).replace(/\\/g, '/'));
+        }
+      }
+    };
+    walk(root);
+    if (paths.length === 0) return 'empty';
+    const digest = createHash('sha256');
+    for (const rel of paths.sort()) {
+      const path = join(root, rel);
+      digest.update(rel);
+      digest.update(Buffer.from([0]));
+      digest.update(createHash('sha256').update(readFileSync(path)).digest());
+      digest.update(Buffer.from([0]));
+    }
+    return digest.digest('hex').slice(0, 16);
+  } catch {
+    return 'unreadable';
+  }
+}
+
+function planningTargetAuthorityRevision(targetRoot) {
+  const components = {
+    kind: 'planning-target-authority-revision/v1',
+    state_path: '.agentic-workspace/planning/state.toml',
+    state_hash: shortFileHash(join(targetRoot, '.agentic-workspace/planning/state.toml')),
+    execplans_hash: shortTreeHashRecursive(join(targetRoot, '.agentic-workspace/planning/execplans'), '.plan.json'),
+    lanes_hash: shortTreeHashRecursive(join(targetRoot, '.agentic-workspace/planning/lanes'), '.lane.json'),
+    decompositions_hash: shortTreeHashRecursive(join(targetRoot, '.agentic-workspace/planning/decompositions'), '.decomposition.json'),
+    issue_relations_hash: shortTreeHash(join(targetRoot, '.agentic-workspace/planning/issue-relations'), '.issue-relation.json'),
+  };
+  return { ...components, revision_id: createHash('sha256').update(stableJson(components)).digest('hex').slice(0, 16) };
+}
+
 function stableJson(value) {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
   if (isObject(value)) return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
@@ -1215,6 +1282,10 @@ function planningRevision(targetRoot, state) {
     active_execplan_hash: selected.path ? shortFileHash(selected.path) : 'missing',
     active_item_id: String(activeItem.id ?? ''),
     active_item_surface: String(activeItem.surface ?? activeItem.path ?? activeItem.execplan ?? selected.ref),
+    issue_relations_hash: shortTreeHash(join(targetRoot, '.agentic-workspace/planning/issue-relations'), '.issue-relation.json'),
+    integration_proposals_hash: shortTreeHash(join(targetRoot, '.agentic-workspace/planning/integration-proposals'), '.integration-proposal.json'),
+    integration_receipts_hash: shortTreeHash(join(targetRoot, '.agentic-workspace/planning/integration-receipts'), '.integration-receipt.json'),
+    target_authority_revision: planningTargetAuthorityRevision(targetRoot).revision_id,
   };
   return { ...components, revision_id: createHash('sha256').update(stableJson(components)).digest('hex').slice(0, 16) };
 }

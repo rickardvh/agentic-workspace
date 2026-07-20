@@ -10,6 +10,7 @@ from typing import Any
 from repo_planning_bootstrap._source import UpgradeSource, resolve_upgrade_source
 from repo_planning_bootstrap.installer import (
     activate_lane_record,
+    apply_integration_proposal,
     archive_execplan,
     archive_lane_record,
     archive_parent_lane_closeout,
@@ -32,8 +33,10 @@ from repo_planning_bootstrap.installer import (
     planning_summary,
     promote_decomposition_lane_to_lane_record,
     promote_todo_item_to_execplan,
+    propose_integration_transition,
     record_delegation_decision,
     select_existing_owner,
+    shape_issue_relation,
 )
 
 
@@ -69,6 +72,16 @@ def load_planning_reconcile_operation(values: dict, _arguments: dict, _context) 
         dry_run=bool(values.get("dry_run")),
         lane=str(values.get("lane") or ""),
         apply_lane_reconcile=bool(values.get("apply_lane_reconcile")),
+        issue=str(values.get("issue") or ""),
+        external_ref=str(values.get("external_ref") or ""),
+        priority=str(values.get("priority") or ""),
+        depends_on=str(values.get("depends_on") or ""),
+        rationale=str(values.get("rationale") or ""),
+        maturity=str(values.get("maturity") or ""),
+        expected_relation_revision=str(values.get("expect_relation_revision") or ""),
+        apply_issue_relation_reconcile=bool(values.get("apply_issue_relation_reconcile")),
+        apply_issue_relation_migration=bool(values.get("apply_issue_relation_migration")),
+        apply_pending_integrations=bool(values.get("apply_pending_integrations")),
         preview=bool(values.get("preview")),
         apply=bool(values.get("apply")),
         proposal=str(values.get("proposal") or ""),
@@ -255,6 +268,62 @@ def apply_planning_owner_select_operation(values: dict, _arguments: dict, _conte
             ("current_work_id", "current_work_id", "str", ""),
             ("expected_planning_revision", "expect_planning_revision", "str", ""),
             ("expected_current_work_revision", "expect_current_work_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
+    )
+
+
+def apply_planning_issue_shape_operation(values: dict, _arguments: dict, _context):
+    return _call_planning_operation(
+        shape_issue_relation,
+        values,
+        keywords=(
+            ("issue", "issue", "str", ""),
+            ("external_ref", "external_ref", "str", ""),
+            ("lane", "lane", "str", ""),
+            ("priority", "priority", "str", ""),
+            ("depends_on", "depends_on", "str", ""),
+            ("rationale", "rationale", "str", ""),
+            ("maturity", "maturity", "str", ""),
+            ("target", "target", "raw", None),
+            ("expected_relation_revision", "expect_relation_revision", "str", ""),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
+    )
+
+
+def apply_planning_integration_propose_operation(values: dict, _arguments: dict, _context):
+    return _call_planning_operation(
+        propose_integration_transition,
+        values,
+        keywords=(
+            ("proposal_id", "proposal_id", "str", ""),
+            ("owner", "owner", "str", ""),
+            ("owner_ref", "owner_ref", "str", ""),
+            ("issue", "issue", "str", ""),
+            ("external_ref", "external_ref", "str", ""),
+            ("requested_transition", "requested_transition", "str", ""),
+            ("proof", "proof", "str", ""),
+            ("parent_boundary", "parent_boundary", "str", ""),
+            ("invariant", "invariant", "str", ""),
+            ("expected_subject_revision", "expect_subject_revision", "str", ""),
+            ("expected_target_revision", "expect_target_revision", "str", ""),
+            ("target", "target", "raw", None),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
+            ("dry_run", "dry_run", "bool", None),
+        ),
+    )
+
+
+def apply_planning_integration_apply_operation(values: dict, _arguments: dict, _context):
+    return _call_planning_operation(
+        apply_integration_proposal,
+        values,
+        keywords=(
+            ("proposal", "proposal", "str", ""),
+            ("target", "target", "raw", None),
+            ("expected_planning_revision", "expect_planning_revision", "str", ""),
             ("dry_run", "dry_run", "bool", None),
         ),
     )

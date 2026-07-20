@@ -400,6 +400,24 @@
       "adapter_kind": "process"
     },
     {
+      "id": "planning.issue-shape.lifecycle.process",
+      "operation_id": "planning.issue-shape.lifecycle",
+      "path": "conformance/planning.issue-shape.lifecycle.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.integration-propose.lifecycle.process",
+      "operation_id": "planning.integration-propose.lifecycle",
+      "path": "conformance/planning.integration-propose.lifecycle.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "planning.integration-apply.lifecycle.process",
+      "operation_id": "planning.integration-apply.lifecycle",
+      "path": "conformance/planning.integration-apply.lifecycle.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "planning.lane-close.lifecycle.dry-run.process",
       "operation_id": "planning.lane-close.lifecycle",
       "path": "conformance/planning.lane-close.lifecycle.dry-run.process.json",

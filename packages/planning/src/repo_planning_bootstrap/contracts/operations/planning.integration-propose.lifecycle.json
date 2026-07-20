@@ -1,0 +1,53 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.integration-propose.lifecycle",
+  "command_surface": {"program": "agentic-planning", "command": "integration-propose", "format_option": "format"},
+  "summary": "Create a pending target-branch Planning integration proposal.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {"name": "proposal_id", "source": "cli-option", "required": false},
+    {"name": "owner", "source": "cli-option", "required": false},
+    {"name": "owner_ref", "source": "cli-option", "required": false},
+    {"name": "issue", "source": "cli-option", "required": false},
+    {"name": "external_ref", "source": "cli-option", "required": false},
+    {"name": "requested_transition", "source": "cli-option", "required": false},
+    {"name": "proof", "source": "cli-option", "required": false},
+    {"name": "parent_boundary", "source": "cli-option", "required": false},
+    {"name": "invariant", "source": "cli-option", "required": false},
+    {"name": "expect_subject_revision", "source": "cli-option", "required": false},
+    {"name": "expect_target_revision", "source": "cli-option", "required": false},
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "expect_planning_revision", "source": "cli-option", "required": false},
+    {"name": "dry_run", "source": "cli-option", "required": false},
+    {"name": "format", "source": "cli-option", "required": false}
+  ],
+  "output": {"kind": "module-result"},
+  "effects": {"read_only": false, "destructive": false, "idempotent": true, "writes_repo_state": true, "requires_preflight_gate": false},
+  "locality": {"requires_repo": false, "network": "forbidden", "outside_repo_writes": "forbidden"},
+  "reads": [
+    {"surface": ".agentic-workspace/planning/execplans/<owner>.plan.json", "required": false},
+    {"surface": ".agentic-workspace/planning/issue-relations/<issue>.issue-relation.json", "required": false}
+  ],
+  "writes": [
+    {"surface": ".agentic-workspace/planning/integration-proposals/<id>.integration-proposal.json", "required": false, "when": "not a dry run"}
+  ],
+  "steps": [
+    {"id": "apply_integration_proposal", "uses": "planning.integration-propose.apply", "description": "Create a pending branch proposal with proof, parent boundary, and invariants."},
+    {"id": "emit_output", "uses": "output.emit", "description": "Emit the pending proposal result."}
+  ],
+  "guards": [
+    "Feature branches write proposals, not integrated lifecycle truth.",
+    "Do not select current work, rewrite aggregate collections, close unrelated owners, or claim terminal parent truth.",
+    "Record a subject revision so target-branch apply can reject stale proposals."
+  ],
+  "proof": ["planning branch-safe tests cover pending proposal non-authority, stale detection, idempotence, and generated command exposure"],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Generated targets own parser and dispatch parity while Planning owns proposal semantics.",
+    "steps": [
+      {"id": "apply_integration_proposal", "uses": "planning.integration-propose.apply", "description": "Create a pending branch proposal with proof, parent boundary, and invariants.", "arguments": {}, "outputs": ["result"], "on_error": "emit_usage_error"},
+      {"id": "emit_output", "uses": "output.emit", "description": "Emit the pending proposal result.", "arguments": {}, "outputs": ["emitted"], "on_error": "emit_usage_error"}
+    ]
+  }
+}

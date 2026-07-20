@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "owner-select", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
-const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.decomposition-create.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.lane-activate.lifecycle", "planning.lane-archive.lifecycle", "planning.lane-close.lifecycle", "planning.lane-create.lifecycle", "planning.lane-promote.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.owner-select.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
+const supportedCommands = new Set(["adopt", "archive-plan", "close-item", "closeout", "create-review", "decomposition-create", "delegation-decision", "doctor", "handoff", "init", "install", "intake-artifact", "integration-apply", "integration-propose", "issue-shape", "lane-activate", "lane-archive", "lane-close", "lane-create", "lane-promote", "list-files", "new-plan", "owner-select", "promote-to-plan", "prompt", "reconcile", "report", "status", "summary", "uninstall", "upgrade", "verify-payload"]);
+const nativeOperationIds = new Set(["planning.adopt.lifecycle", "planning.archive-plan.lifecycle", "planning.close-item.lifecycle", "planning.closeout.lifecycle", "planning.create-review.lifecycle", "planning.decomposition-create.lifecycle", "planning.delegation-decision.lifecycle", "planning.doctor.report", "planning.handoff.report", "planning.init.lifecycle", "planning.install.lifecycle", "planning.intake-artifact.lifecycle", "planning.integration-apply.lifecycle", "planning.integration-propose.lifecycle", "planning.issue-shape.lifecycle", "planning.lane-activate.lifecycle", "planning.lane-archive.lifecycle", "planning.lane-close.lifecycle", "planning.lane-create.lifecycle", "planning.lane-promote.lifecycle", "planning.list-files.report", "planning.new-plan.lifecycle", "planning.owner-select.lifecycle", "planning.promote-to-plan.lifecycle", "planning.prompt.render", "planning.reconcile.report", "planning.report.report", "planning.status.report", "planning.summary.report", "planning.uninstall.lifecycle", "planning.upgrade.lifecycle", "planning.verify-payload.report"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -1290,6 +1290,323 @@ const commandDefinitions = [
   },
   {
     "interface": {
+      "help": "Shape a durable issue-to-lane relation without activating work.",
+      "name": "issue-shape",
+      "options": [
+        {
+          "default": "",
+          "flags": [
+            "--issue"
+          ],
+          "help": "External issue or tracker id.",
+          "name": "issue"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--external-ref"
+          ],
+          "help": "Provider-agnostic external work reference.",
+          "name": "external_ref"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--lane"
+          ],
+          "help": "Strategic Planning lane id; defaults to ungrouped.",
+          "name": "lane"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--priority"
+          ],
+          "help": "Internal priority within the lane.",
+          "name": "priority"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--depends-on"
+          ],
+          "help": "Comma-separated external refs this issue depends on.",
+          "name": "depends_on"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--rationale"
+          ],
+          "help": "Why this issue belongs in the selected lane.",
+          "name": "rationale"
+        },
+        {
+          "choices": [
+            "observed",
+            "shaped",
+            "ready-to-promote",
+            "blocked",
+            "deferred"
+          ],
+          "default": "",
+          "flags": [
+            "--maturity"
+          ],
+          "help": "Strategic shaping maturity.",
+          "name": "maturity"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-relation-revision"
+          ],
+          "help": "Optimistic relation revision required when editing an existing relation.",
+          "name": "expect_relation_revision"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Advisory Planning revision captured in the receipt.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview the relation delta without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "issue-shape",
+    "operation_ref": {
+      "id": "planning.issue-shape.lifecycle",
+      "path": "operations/planning.issue-shape.lifecycle.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Create a pending target-branch Planning integration proposal.",
+      "name": "integration-propose",
+      "options": [
+        {
+          "default": "",
+          "flags": [
+            "--proposal-id"
+          ],
+          "help": "Stable proposal id; defaults from subject and transition.",
+          "name": "proposal_id"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--owner"
+          ],
+          "help": "Affected Planning owner id.",
+          "name": "owner"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--owner-ref"
+          ],
+          "help": "Repo-relative affected owner path.",
+          "name": "owner_ref"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--issue"
+          ],
+          "help": "External issue or tracker id.",
+          "name": "issue"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--external-ref"
+          ],
+          "help": "Provider-agnostic external work reference.",
+          "name": "external_ref"
+        },
+        {
+          "choices": [
+            "mark-integrated",
+            "close-owner",
+            "archive-owner",
+            "keep-open"
+          ],
+          "default": "mark-integrated",
+          "flags": [
+            "--requested-transition"
+          ],
+          "help": "Lifecycle transition requested for target-branch apply.",
+          "name": "requested_transition"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--proof"
+          ],
+          "help": "Comma-separated proof references for the requested transition.",
+          "name": "proof"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--parent-boundary"
+          ],
+          "help": "Boundary that keeps parent/lane truth independent.",
+          "name": "parent_boundary"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--invariant"
+          ],
+          "help": "Comma-separated invariants preserved by the proposal.",
+          "name": "invariant"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-subject-revision"
+          ],
+          "help": "Optimistic affected-subject revision.",
+          "name": "expect_subject_revision"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-target-revision"
+          ],
+          "help": "Alias for --expect-subject-revision.",
+          "name": "expect_target_revision"
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Advisory Planning revision captured in the proposal.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview the proposal without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "integration-propose",
+    "operation_ref": {
+      "id": "planning.integration-propose.lifecycle",
+      "path": "operations/planning.integration-propose.lifecycle.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Apply a pending Planning integration proposal as target-branch truth.",
+      "name": "integration-apply",
+      "options": [
+        {
+          "flags": [
+            "--proposal"
+          ],
+          "help": "Proposal id or repo-relative proposal JSON path.",
+          "name": "proposal",
+          "required": true
+        },
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path.",
+          "name": "target"
+        },
+        {
+          "default": "",
+          "flags": [
+            "--expect-planning-revision"
+          ],
+          "help": "Advisory Planning revision captured in the receipt.",
+          "name": "expect_planning_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--dry-run"
+          ],
+          "help": "Preview the apply transaction without writing files.",
+          "name": "dry_run"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ]
+    },
+    "name": "integration-apply",
+    "operation_ref": {
+      "id": "planning.integration-apply.lifecycle",
+      "path": "operations/planning.integration-apply.lifecycle.json"
+    }
+  },
+  {
+    "interface": {
       "arguments": [
         {
           "help": "Lane id to close.",
@@ -1816,6 +2133,79 @@ const commandDefinitions = [
           ],
           "help": "Apply the reported child-outcome delta without closing the parent lane.",
           "name": "apply_lane_reconcile"
+        },
+        {
+          "flags": [
+            "--issue"
+          ],
+          "help": "Issue or external reference whose issue-relation record should be reconciled.",
+          "name": "issue"
+        },
+        {
+          "flags": [
+            "--external-ref"
+          ],
+          "help": "External reference whose issue-relation record should be reconciled.",
+          "name": "external_ref"
+        },
+        {
+          "flags": [
+            "--priority"
+          ],
+          "help": "Resolved issue-relation priority.",
+          "name": "priority"
+        },
+        {
+          "flags": [
+            "--depends-on"
+          ],
+          "help": "Comma-separated resolved issue-relation dependencies.",
+          "name": "depends_on"
+        },
+        {
+          "flags": [
+            "--rationale"
+          ],
+          "help": "Resolved issue-relation rationale.",
+          "name": "rationale"
+        },
+        {
+          "flags": [
+            "--maturity"
+          ],
+          "help": "Resolved issue-relation shaping maturity.",
+          "name": "maturity"
+        },
+        {
+          "flags": [
+            "--expect-relation-revision"
+          ],
+          "help": "Current relation revision required by --apply-issue-relation-reconcile.",
+          "name": "expect_relation_revision"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--apply-issue-relation-reconcile"
+          ],
+          "help": "Apply one revision-guarded semantic issue-relation reconciliation.",
+          "name": "apply_issue_relation_reconcile"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--apply-issue-relation-migration"
+          ],
+          "help": "Migrate legacy issue authority into issue relations and demote duplicate fields.",
+          "name": "apply_issue_relation_migration"
+        },
+        {
+          "action": "store_true",
+          "flags": [
+            "--apply-pending-integrations"
+          ],
+          "help": "Apply all eligible pending integration proposals in one target-authority transaction.",
+          "name": "apply_pending_integrations"
         },
         {
           "action": "store_true",

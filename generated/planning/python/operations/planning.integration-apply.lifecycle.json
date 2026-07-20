@@ -1,0 +1,129 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "integration-apply",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Reject stale proposals when the affected owner or issue-relation subject revision changed.",
+    "Require a target-authority revision from the proposal or --expect-planning-revision; proposal/receipt bookkeeping is excluded from that token.",
+    "Reject apply attempts on feature branches; only target, release, and merge-queue branches may establish integrated truth.",
+    "Rollback owner, proposal, and receipt writes together on validation or write failure.",
+    "Aggregate indexes and unrelated owners remain derived or preserved."
+  ],
+  "id": "planning.integration-apply.lifecycle",
+  "inputs": [
+    {
+      "name": "proposal",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Validate subject and target-authority revisions, then atomically mark the proposal integrated with owner changes and a receipt.",
+        "id": "apply_integration_receipt",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.integration-apply.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the target-branch integration receipt.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated targets own parser and dispatch parity while Planning owns target integration semantics."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "planning branch-safe tests cover guarded apply, mandatory target CAS, target branch admission, rollback surface, no-op reapply, stale proposals, and generated command exposure"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/planning/integration-proposals/<id>.integration-proposal.json"
+    },
+    {
+      "required": false,
+      "surface": "affected owner and issue-relation surfaces"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Validate subject and target-authority revisions, then atomically mark the proposal integrated with owner changes and a receipt.",
+      "id": "apply_integration_receipt",
+      "uses": "planning.integration-apply.apply"
+    },
+    {
+      "description": "Emit the target-branch integration receipt.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Apply a pending Planning integration proposal as target-branch truth.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/integration-proposals/<id>.integration-proposal.json",
+      "when": "not a dry run"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/integration-receipts/<id>.integration-receipt.json",
+      "when": "not a dry run"
+    },
+    {
+      "required": false,
+      "surface": "affected owner record",
+      "when": "the requested transition mutates canonical owner lifecycle or integration truth"
+    }
+  ]
+}

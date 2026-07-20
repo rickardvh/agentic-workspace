@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:b7be78f84a1afd6ffd344a4cc8fbaa02e4a4f1dd88af8b68c7ab297bbb674641",
+    "fingerprint": "sha256:4dbf56fa644e4b53359f23268c9e1cc3e77b23e6ccd0d1eff47c5b87bab40dd8",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -4412,6 +4412,267 @@
       }
     },
     {
+      "id": "planning.integration-apply.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.integration-apply.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:b7eacf4df5a5d2d62af38998116043d14ff884d6a5d89a99846a8372ebebd2a0"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-planning",
+          "path": "operations/planning.integration-apply.lifecycle.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "path": "resources/operations/planning.integration-apply.lifecycle.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "planning-integration-receipt.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/planning/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/planning/typescript"
+        }
+      },
+      "conformance": [
+        "planning.integration-apply.lifecycle.process"
+      ],
+      "external_consumption": {
+        "status": "internal",
+        "runtime_exceptions": [
+          {
+            "owner": "planning-bootstrap",
+            "scope": "target-branch integration authority",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.integration-apply.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "subject revision CAS",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.integration-apply.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "atomic proposal and receipt mutation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.integration-apply.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.integration-propose.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.integration-propose.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:78bc66fcd8a96f008403f4e2bce0051b3d0966cd07b649d70a5fe11b915c92d2"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-planning",
+          "path": "operations/planning.integration-propose.lifecycle.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "path": "resources/operations/planning.integration-propose.lifecycle.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "planning-integration-proposal.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/planning/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/planning/typescript"
+        }
+      },
+      "conformance": [
+        "planning.integration-propose.lifecycle.process"
+      ],
+      "external_consumption": {
+        "status": "internal",
+        "runtime_exceptions": [
+          {
+            "owner": "planning-bootstrap",
+            "scope": "integration proposal policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.integration-propose.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "subject revision identity",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.integration-propose.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "non-authoritative feature branch transition",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.integration-propose.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "planning.issue-shape.lifecycle",
+      "owner": "planning-bootstrap",
+      "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.issue-shape.lifecycle.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:9f6a952b47a9f04261b3255876734ecbbd9c4e5d81a30c5dad34ce6e01ce8b6b"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-planning",
+          "path": "operations/planning.issue-shape.lifecycle.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "path": "resources/operations/planning.issue-shape.lifecycle.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "planning-issue-relation.schema.json"
+        ]
+      },
+      "effects": {
+        "read_only": false,
+        "destructive": false,
+        "idempotent": true,
+        "writes_repo_state": true,
+        "requires_preflight_gate": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-planning",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/planning/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/planning-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/planning/typescript"
+        }
+      },
+      "conformance": [
+        "planning.issue-shape.lifecycle.process"
+      ],
+      "external_consumption": {
+        "status": "internal",
+        "runtime_exceptions": [
+          {
+            "owner": "planning-bootstrap",
+            "scope": "strategic issue relation policy",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.issue-shape.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "field-scoped revision guard",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.issue-shape.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "non-activation invariant",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.issue-shape.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "planning-bootstrap",
+            "scope": "module result assembly",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "planning.issue-shape.lifecycle.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
       "id": "planning.lane-activate.lifecycle",
       "owner": "planning-bootstrap",
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.lane-activate.lifecycle.json",
@@ -5185,7 +5446,7 @@
       "operation_contract": "packages/planning/src/repo_planning_bootstrap/contracts/operations/planning.reconcile.report.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:0d3c21ca8ea0f93d41c5f83747b1ef1ad3dbf654f360effcb1d17367c9731b12"
+        "fingerprint": "sha256:e882559f18f411da74c01cb1c4914e9b3b8b84ba9790776d2f39f00fbcce2ce7"
       },
       "operation_resources": {
         "python": {

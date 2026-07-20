@@ -35,6 +35,9 @@
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-integration-proposal.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-integration-receipt.schema.json",
+      "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-issue-relation.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-lane.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-owner-selection-receipt.schema.json",
       "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json"
@@ -61,6 +64,9 @@
       ".agentic-workspace/planning/schemas/planning-external-intent-evidence.schema.json",
       ".agentic-workspace/planning/schemas/planning-finished-work-evidence.schema.json",
       ".agentic-workspace/planning/schemas/planning-closeout-evidence.schema.json",
+      ".agentic-workspace/planning/schemas/planning-integration-proposal.schema.json",
+      ".agentic-workspace/planning/schemas/planning-integration-receipt.schema.json",
+      ".agentic-workspace/planning/schemas/planning-issue-relation.schema.json",
       ".agentic-workspace/planning/schemas/planning-lane.schema.json",
       ".agentic-workspace/planning/schemas/planning-owner-selection-receipt.schema.json",
       ".agentic-workspace/planning/schemas/planning-review.schema.json"
@@ -264,6 +270,27 @@
     {
       "source_path": "generated/planning/python/operations/planning.owner-select.lifecycle.json",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.owner-select.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/planning/python/operations/planning.issue-shape.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.issue-shape.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/planning/python/operations/planning.integration-propose.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.integration-propose.lifecycle.json",
+      "classification": "maintainer/development only",
+      "owner": "generated operation projection",
+      "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
+    },
+    {
+      "source_path": "generated/planning/python/operations/planning.integration-apply.lifecycle.json",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/operations/planning.integration-apply.lifecycle.json",
       "classification": "maintainer/development only",
       "owner": "generated operation projection",
       "rationale": "The planning wheel force-includes generated operation resource data as private runtime import data; the canonical source remains the operation contract and generator."
@@ -512,6 +539,27 @@
       "classification": "core daily-operation planning",
       "owner": "planning package payload",
       "rationale": "Schema for first-class lane records so lane ownership, proof aggregation, and parent contribution are validated separately from execplans."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-issue-relation.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-issue-relation.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for durable issue-to-lane shaping relations so lane membership, priority, dependencies, rationale, and maturity are validated separately from execution state."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-integration-receipt.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-integration-receipt.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for target-branch integration receipts so terminal lifecycle truth is applied with exact preserved invariants."
+    },
+    {
+      "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-integration-proposal.schema.json",
+      "installed_path": ".agentic-workspace/planning/schemas/planning-integration-proposal.schema.json",
+      "classification": "core daily-operation planning",
+      "owner": "planning package payload",
+      "rationale": "Schema for pending feature-branch integration proposals so lifecycle transitions remain non-authoritative until target-branch apply."
     },
     {
       "source_path": "packages/planning/bootstrap/.agentic-workspace/planning/schemas/planning-review.schema.json",
@@ -852,6 +900,27 @@
     {
       "source_path": "generated/planning/python/commands/planning_owner_select_lifecycle.py",
       "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_owner_select_lifecycle.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command module projection",
+      "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."
+    },
+    {
+      "source_path": "generated/planning/python/commands/planning_issue_shape_lifecycle.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_issue_shape_lifecycle.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command module projection",
+      "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."
+    },
+    {
+      "source_path": "generated/planning/python/commands/planning_integration_propose_lifecycle.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_integration_propose_lifecycle.py",
+      "classification": "maintainer/development only",
+      "owner": "generated command module projection",
+      "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."
+    },
+    {
+      "source_path": "generated/planning/python/commands/planning_integration_apply_lifecycle.py",
+      "installed_path": "repo_planning_bootstrap/_generated_cli_package_impl/commands/planning_integration_apply_lifecycle.py",
       "classification": "maintainer/development only",
       "owner": "generated command module projection",
       "rationale": "The planning wheel force-includes generated command modules as private runtime import data; behavior changes belong in command/operation contracts and generator output."

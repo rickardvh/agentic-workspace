@@ -1,0 +1,206 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/planning-integration-receipt.schema.json",
+  "title": "Planning integration receipt",
+  "description": "Checked-in target-branch receipt for an applied Planning lifecycle integration proposal.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "id",
+    "proposal_ref",
+    "outcome",
+    "requested_transition",
+    "owner",
+    "external_ref",
+    "proof_refs",
+    "parent_boundary",
+    "preserved_invariants",
+    "changed_fields",
+    "revisions",
+    "authority_boundary",
+    "created_at",
+    "receipt_revision"
+  ],
+  "properties": {
+    "kind": {
+      "const": "planning-integration-receipt/v1",
+      "description": "Schema discriminator for Planning integration receipt records."
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable receipt identifier, matching the applied proposal id."
+    },
+    "proposal_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Repo-relative proposal record path that was applied."
+    },
+    "outcome": {
+      "const": "integrated",
+      "description": "Authoritative target-branch apply outcome."
+    },
+    "requested_transition": {
+      "enum": [
+        "mark-integrated",
+        "close-owner",
+        "archive-owner",
+        "keep-open"
+      ],
+      "description": "Planning lifecycle transition applied from the proposal."
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "ref"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Planning owner id covered by the receipt."
+        },
+        "ref": {
+          "type": "string",
+          "description": "Repo-relative owner record path covered by the receipt."
+        }
+      },
+      "description": "Planning owner subject covered by the receipt."
+    },
+    "external_ref": {
+      "type": "string",
+      "description": "Optional external issue or tracker reference associated with the receipt."
+    },
+    "proof_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "Evidence references carried from the applied proposal."
+    },
+    "parent_boundary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Boundary that kept parent, lane, and aggregate truth independent before apply."
+    },
+    "preserved_invariants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "Invariants preserved during target-branch apply."
+    },
+    "changed_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "Fields changed by the atomic apply transaction."
+    },
+    "revisions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_subject",
+        "subject_before",
+        "subject_after",
+        "proposal_before",
+        "proposal_after",
+        "expected_planning_revision",
+        "target_authority_before",
+        "target_authority_after"
+      ],
+      "properties": {
+        "expected_subject": {
+          "type": "string",
+          "description": "Subject revision required by the pending proposal."
+        },
+        "subject_before": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Subject revision observed immediately before apply."
+        },
+        "subject_after": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Subject revision observed immediately after apply."
+        },
+        "proposal_before": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Proposal revision observed before marking it integrated."
+        },
+        "proposal_after": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Proposal revision after marking it integrated."
+        },
+        "expected_planning_revision": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target-authority revision required by the proposal or apply request."
+        },
+        "target_authority_before": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target-authority revision observed immediately before the apply transaction."
+        },
+        "target_authority_after": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target-authority revision after the owner/proposal/receipt transaction."
+        }
+      },
+      "description": "Revision tokens observed and emitted by target-branch compare-and-apply."
+    },
+    "authority_boundary": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "integrated_truth",
+        "proposal_status",
+        "owner_body",
+        "aggregate_indexes"
+      ],
+      "properties": {
+        "integrated_truth": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Authority statement for integrated lifecycle truth."
+        },
+        "proposal_status": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Authority statement for the proposal status transition."
+        },
+        "owner_body": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Boundary statement excluding owner body rewrites."
+        },
+        "aggregate_indexes": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Boundary statement excluding aggregate index rewrites."
+        }
+      },
+      "description": "Explicit boundary for what the receipt makes authoritative."
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Creation timestamp recorded by the receipt writer."
+    },
+    "receipt_revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Content revision token for the receipt record."
+    }
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}

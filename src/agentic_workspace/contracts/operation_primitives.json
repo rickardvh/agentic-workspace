@@ -970,6 +970,42 @@
       "generic_behavior_audit": "The receipt schema and operation IR expose deterministic boundaries; owner selectability and protected Planning fields remain Planning policy."
     },
     {
+      "id": "planning.issue-shape.apply",
+      "summary": "Shape a durable issue-to-lane relation without activating work.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Strategic issue relation ownership, field-scoped revision guards, and Planning non-activation policy remain package-domain behavior.",
+      "conformance_ref": "planning.issue-shape.lifecycle.process",
+      "migration_path": "Keep strategic shaping policy in Planning while generated targets own parser and dispatch parity.",
+      "generic_behavior_audit": "The record schema exposes deterministic boundaries; activation, tracker status, PR state, proof, and progress remain derived from other authorities."
+    },
+    {
+      "id": "planning.integration-propose.apply",
+      "summary": "Create a pending branch-safe Planning integration proposal.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Planning lifecycle proposal authority and target-branch integration boundaries remain package-domain behavior.",
+      "conformance_ref": "planning.integration-propose.lifecycle.process",
+      "migration_path": "Keep proposal semantics in Planning while generated targets own parser and dispatch parity.",
+      "generic_behavior_audit": "The proposal schema exposes deterministic boundaries; terminal lifecycle truth is not claimed until integration apply emits a receipt."
+    },
+    {
+      "id": "planning.integration-apply.apply",
+      "summary": "Apply a pending Planning integration proposal with a subject revision guard and receipt.",
+      "kind": "planning-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "planning package runtime boundary",
+      "tier_reason": "Target-branch lifecycle truth, subject CAS policy, and atomic Planning receipts remain package-domain behavior.",
+      "conformance_ref": "planning.integration-apply.lifecycle.process",
+      "migration_path": "Keep target integration policy in Planning while generated targets own parser and dispatch parity.",
+      "generic_behavior_audit": "The receipt schema exposes deterministic changed fields and preserved invariants; aggregate indexes remain derived."
+    },
+    {
       "id": "planning.lane-archive.apply",
       "summary": "Archive a closed lane record and remove its live state projection.",
       "kind": "planning-runtime",

@@ -21,7 +21,39 @@ def _git(root: Path, *args: str) -> str:
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
-def _selected_planning_owner(root: Path) -> tuple[str, str]:
+def _local_selected_planning_owner(root: Path) -> tuple[str, str]:
+    path = root / ".agentic-workspace" / "local" / "planning" / "owner-selection.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return "", ""
+    if not isinstance(payload, dict) or payload.get("kind") != "agentic-planning/owner-selection/v1":
+        return "", ""
+    if str(payload.get("mode") or "local").strip().lower() != "local":
+        return "", ""
+    selected = payload.get("selected_owner", {})
+    if not isinstance(selected, dict):
+        return "", ""
+    owner_id = str(selected.get("id") or "").strip()
+    owner_ref = str(selected.get("ref") or "").strip()
+    if not owner_id or not owner_ref:
+        return "", ""
+    try:
+        owner_path = (root / owner_ref).resolve()
+        owner_path.relative_to(root.resolve())
+        record = json.loads(owner_path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError, json.JSONDecodeError, UnicodeDecodeError):
+        return "", ""
+    if not isinstance(record, dict) or str(record.get("id") or "").strip() != owner_id:
+        return "", ""
+    lifecycle = str(record.get("lifecycle") or "").strip().lower()
+    phase = str(record.get("phase") or "").strip().lower()
+    if lifecycle not in {"live", "planned"} or phase in {"complete", "completed", "closeout", "closed", "archived"}:
+        return "", ""
+    return owner_id, owner_ref
+
+
+def _shared_selected_planning_owner(root: Path) -> tuple[str, str]:
     state_path = root / ".agentic-workspace" / "planning" / "state.toml"
     try:
         state = tomllib.loads(state_path.read_text(encoding="utf-8-sig"))
@@ -41,13 +73,20 @@ def _selected_planning_owner(root: Path) -> tuple[str, str]:
     return owner_id, owner_ref
 
 
+def _selected_planning_owner(root: Path) -> tuple[str, str]:
+    local_id, local_ref = _local_selected_planning_owner(root)
+    if local_id and local_ref:
+        return local_id, local_ref
+    return _shared_selected_planning_owner(root)
+
+
 def _active_plan(root: Path, *, task_refs: list[str] | None = None) -> tuple[str, str, list[str], bool]:
     path = root / ".agentic-workspace" / "planning" / "state.toml"
     try:
         state = tomllib.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, tomllib.TOMLDecodeError):
         return "", "", [], False
-    selected_id, selected_ref = _selected_planning_owner(root)
+    selected_id, selected_ref = _local_selected_planning_owner(root)
     items = state.get("todo", {}).get("active_items", []) if isinstance(state.get("todo"), dict) else []
     item = next((entry for entry in items if isinstance(entry, dict) and str(entry.get("id") or "") == selected_id), None)
     if item is None and not selected_id:

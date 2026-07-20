@@ -30209,6 +30209,13 @@ def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path,
     identity_effects = [str(effect) for effect in _list_payload(route_decision.get("identity_effects")) if str(effect).strip()]
     provisional = transition != "none" or bool(identity_effects)
     identity = startup_route_identity(root=target_root, task=str(task_text or ""))
+    selected_identity = _as_dict(route_decision.get("selected_owner_identity"))
+    selected_ref = str(selected_identity.get("ref") or route_decision.get("selected_owner") or "").strip()
+    if selected_ref:
+        observed = _as_dict(identity.get("observed"))
+        observed["selected_owner"] = {"id": str(selected_identity.get("id") or ""), "ref": selected_ref}
+        identity["observed"] = observed
+        identity["fingerprint"] = hashlib.sha256(json.dumps(observed, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]
     rebind_command = _command_with_cli_invoke(
         command="agentic-workspace start --target . --task <same-task> --format json",
         cli_invoke=cli_invoke,
@@ -30998,6 +31005,27 @@ def _planning_owner_short_file_hash(path: Path | None) -> str:
         return "unreadable"
 
 
+def _planning_owner_short_tree_hash(root: Path, pattern: str) -> str:
+    if not root.exists() or not root.is_dir():
+        return "missing"
+    digest = hashlib.sha256()
+    seen = False
+    try:
+        paths = sorted(path for path in root.glob(pattern) if path.is_file())
+    except OSError:
+        return "unreadable"
+    for path in paths:
+        seen = True
+        try:
+            digest.update(path.relative_to(root).as_posix().encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(hashlib.sha256(path.read_bytes()).digest())
+            digest.update(b"\0")
+        except OSError:
+            return "unreadable"
+    return digest.hexdigest()[:16] if seen else "empty"
+
+
 def _planning_owner_selection_basis_revision(*, target_root: Path, state_data: dict[str, Any]) -> str:
     todo = state_data.get("todo", {}) if isinstance(state_data, dict) else {}
     active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
@@ -31064,6 +31092,19 @@ def _planning_owner_selection_basis_revision(*, target_root: Path, state_data: d
         "active_execplan_hash": _planning_owner_short_file_hash(active_path),
         "active_item_id": str(active_item.get("id") or "").strip(),
         "active_item_surface": active_surface,
+        "issue_relations_hash": _planning_owner_short_tree_hash(
+            target_root / ".agentic-workspace" / "planning" / "issue-relations",
+            "*.issue-relation.json",
+        ),
+        "integration_proposals_hash": _planning_owner_short_tree_hash(
+            target_root / ".agentic-workspace" / "planning" / "integration-proposals",
+            "*.integration-proposal.json",
+        ),
+        "integration_receipts_hash": _planning_owner_short_tree_hash(
+            target_root / ".agentic-workspace" / "planning" / "integration-receipts",
+            "*.integration-receipt.json",
+        ),
+        "target_authority_revision": str(_planning_revision_payload(target_root=target_root).get("target_authority_revision") or ""),
     }
     revision_material = json.dumps(components, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(revision_material).hexdigest()[:16]
@@ -31282,6 +31323,13 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     owner_admission = _planning_owner_admission_payload(target_root=target_root, state_data=data)
     selected_owner = owner_admission.get("selected_owner", {}) if isinstance(owner_admission, dict) else {}
     active_execplan = selected_owner.get("ref") if isinstance(selected_owner, dict) else None
+    rejected_candidates = _list_payload(owner_admission.get("rejected_candidates")) if isinstance(owner_admission, dict) else []
+    rejected_reasons = {str(_as_dict(candidate).get("reason") or "") for candidate in rejected_candidates}
+    raw_state_fallback_allowed = owner_admission.get("status") != "rejected" or rejected_reasons == {"owner-identity-mismatch"}
+    if active_execplan is None and raw_state_fallback_allowed and active_items and isinstance(active_items[0], dict):
+        active_execplan = active_items[0].get("surface")
+    if active_execplan is None and raw_state_fallback_allowed and active_execplans and isinstance(active_execplans[0], dict):
+        active_execplan = active_execplans[0].get("path")
     admitted_active_count = 1 if active_execplan else 0
     summary = {
         "todo_active_count": admitted_active_count,

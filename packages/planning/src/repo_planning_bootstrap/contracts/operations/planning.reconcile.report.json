@@ -33,6 +33,21 @@
     },
     {"name": "lane", "source": "cli-option", "required": false},
     {"name": "apply_lane_reconcile", "source": "cli-option", "required": false},
+    {"name": "issue", "source": "cli-option", "required": false},
+    {"name": "external_ref", "source": "cli-option", "required": false},
+    {"name": "priority", "source": "cli-option", "required": false},
+    {"name": "depends_on", "source": "cli-option", "required": false},
+    {"name": "rationale", "source": "cli-option", "required": false},
+    {"name": "maturity", "source": "cli-option", "required": false},
+    {"name": "expect_relation_revision", "source": "cli-option", "required": false},
+    {"name": "apply_issue_relation_reconcile", "source": "cli-option", "required": false},
+    {"name": "apply_issue_relation_migration", "source": "cli-option", "required": false},
+    {
+      "name": "apply_pending_integrations",
+      "source": "cli-option",
+      "required": false,
+      "description": "Apply all eligible pending integration proposals in one target-authority CAS transaction."
+    },
     {
       "name": "preview",
       "source": "cli-option",
@@ -94,6 +109,21 @@
       "surface": ".agentic-workspace/local/planning/reconciliation-{proposals,receipts}/",
       "required": false,
       "when": "a preview records a reusable proposal or apply records its idempotence receipt"
+    },
+    {
+      "surface": ".agentic-workspace/planning/issue-relations/",
+      "required": false,
+      "when": "--apply-issue-relation-reconcile updates one semantic relation or --apply-issue-relation-migration migrates legacy strategic fields"
+    },
+    {
+      "surface": ".agentic-workspace/planning/{state.toml,decompositions,lanes}/",
+      "required": false,
+      "when": "--apply-issue-relation-migration demotes duplicate legacy strategic authority to derived references"
+    },
+    {
+      "surface": ".agentic-workspace/planning/integration-{proposals,receipts}/ and affected owner records",
+      "required": false,
+      "when": "--apply-pending-integrations applies eligible pending proposals as one target transaction"
     }
   ],
   "ir_plan": {
@@ -140,13 +170,18 @@
   "guards": [
     "--apply-safe-prune must only mutate targets already present in cleanup_targets with safe_to_prune=true.",
     "--dry-run must not write repo state.",
-    "--apply requires the exact proposal id and expected Planning revision returned by preview."
+    "--apply requires the exact proposal id and expected Planning revision returned by preview.",
+    "--apply-issue-relation-reconcile requires the current relation revision for semantic edits.",
+    "--apply-issue-relation-migration preserves membership, priority, dependencies, rationale, and maturity before demoting duplicate legacy fields.",
+    "--apply-pending-integrations requires each pending proposal's target-authority revision and applies owner/proposal/receipt writes atomically on an admitted target branch."
   ],
   "proof": [
     "operation contract validates against operation.schema.json",
     "process conformance remains compatible",
     "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior",
-    "proposal/apply tests cover revision guards, idempotence, and transaction rollback"
+    "proposal/apply tests cover revision guards, idempotence, and transaction rollback",
+    "issue-relation tests cover supported conflict repair and legacy authority migration",
+    "pending integration tests cover one-invocation target apply for disjoint merged proposals"
   ],
   "migration_status": "runtime-consumed"
 }
