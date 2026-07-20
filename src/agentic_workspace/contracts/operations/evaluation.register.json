@@ -1,0 +1,48 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "evaluation.register",
+  "command_surface": {
+    "command": "evaluation register",
+    "format_option": "format"
+  },
+  "summary": "Register or update one compact owner-bound evaluation definition.",
+  "classification": "repo-definition-upsert",
+  "inputs": [
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "evaluation_id", "source": "cli-option", "required": true},
+    {"name": "question", "source": "cli-option", "required": true},
+    {"name": "subject", "source": "cli-option", "required": false},
+    {"name": "criteria", "source": "cli-option", "required": true},
+    {"name": "decision_owner", "source": "cli-option", "required": true},
+    {"name": "evidence_sources", "source": "cli-option", "required": true},
+    {"name": "report_sinks", "source": "cli-option", "required": true},
+    {"name": "format", "source": "cli-option", "required": false}
+  ],
+  "output": {"kind": "json", "schema_ref": "schemas/evaluation_definition.schema.json"},
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {"requires_repo": true, "network": "forbidden", "outside_repo_writes": "forbidden"},
+  "reads": [{"surface": ".agentic-workspace/evaluations.json", "required": false}],
+  "writes": [{"surface": ".agentic-workspace/evaluations.json", "required": true, "when": "definition registered or updated"}],
+  "steps": [
+    {"id": "resolve_root", "uses": "workspace.target-root.resolve", "description": "Resolve the target root."},
+    {"id": "register", "uses": "evaluation.definition.register", "description": "Validate and upsert the evaluation definition."},
+    {"id": "emit_output", "uses": "workspace.output.emit", "description": "Emit registration result."}
+  ],
+  "guards": [
+    "Decision owner cannot be a log, transcript, event stream, or metric stream.",
+    "Criteria must be typed without introducing a general expression language.",
+    "Definitions are compact checked-in state; raw observations remain local by default."
+  ],
+  "proof": ["evaluation unit tests", "operation contract validates against operation.schema.json"],
+  "migration_status": "runtime-backed-source-command",
+  "ir_plan": {
+    "status": "source-runtime-first",
+    "summary": "The source CLI owns the first executable evaluation command while generated command-package migration remains explicit follow-up."
+  }
+}

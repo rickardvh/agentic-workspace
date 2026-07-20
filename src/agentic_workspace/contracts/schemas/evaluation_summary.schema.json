@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/evaluation-summary.schema.json",
+  "title": "Agentic Workspace Evaluation Summary",
+  "description": "Compact derived status for registered evaluations and local observations.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "required": ["kind", "path", "summaries"],
+  "properties": {
+    "kind": {"const": "agentic-workspace/evaluation-summary/v1", "description": "Discriminator identifying the derived evaluation summary payload."},
+    "path": {"type": "string", "minLength": 1, "description": "Definition store used to derive the summary."},
+    "summaries": {
+      "type": "array",
+      "description": "Compact derived status entries for selected evaluations.",
+      "items": {
+        "type": "object",
+        "required": [
+          "evaluation_id",
+          "revision",
+          "lifecycle",
+          "coverage",
+          "criterion_status",
+          "contradictions",
+          "latest_material_changes",
+          "conclusion_readiness",
+          "owner",
+          "sinks",
+          "next_collection_action"
+        ],
+        "properties": {
+          "evaluation_id": {"type": "string", "minLength": 1},
+          "revision": {"type": "integer", "minimum": 1},
+          "lifecycle": {"type": "string", "minLength": 1},
+          "coverage": {"type": "object", "additionalProperties": true},
+          "criterion_status": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+          "contradictions": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+          "latest_material_changes": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+          "conclusion_readiness": {"type": "object", "required": ["ready", "reason_code"], "additionalProperties": true},
+          "owner": {"type": "object", "additionalProperties": true},
+          "sinks": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+          "next_collection_action": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

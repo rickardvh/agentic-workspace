@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/evaluation-observation.schema.json",
+  "title": "Agentic Workspace Evaluation Observation",
+  "description": "One local-first append record for an owner-bound evaluation.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "required": [
+    "kind",
+    "recorded_at",
+    "evaluation_id",
+    "definition_revision",
+    "criterion",
+    "result",
+    "context",
+    "evidence_refs",
+    "confidence",
+    "burden",
+    "finding",
+    "recommended_action"
+  ],
+  "properties": {
+    "kind": {"const": "agentic-workspace/evaluation-observation/v1", "description": "Discriminator identifying one evaluation observation record."},
+    "recorded_at": {"type": "string", "minLength": 1, "description": "Timestamp for when the observation was appended."},
+    "evaluation_id": {"type": "string", "minLength": 1, "description": "Registered evaluation id this observation belongs to."},
+    "definition_revision": {"type": "integer", "minimum": 1, "description": "Definition revision observed when the record was appended."},
+    "criterion": {"type": "string", "minLength": 1, "description": "Criterion id from the registered evaluation definition."},
+    "result": {"enum": ["supports", "contradicts", "mixed", "not-applicable", "unknown"], "description": "Observation result for the selected criterion."},
+    "context": {"type": "object", "additionalProperties": true, "description": "Structured context facts for this observation."},
+    "evidence_refs": {"type": "array", "items": {"type": "string", "minLength": 1}, "description": "External evidence references; raw logs are not copied by default."},
+    "confidence": {"enum": ["low", "medium", "high"], "description": "Confidence in the observation."},
+    "burden": {"enum": ["low", "medium", "high"], "description": "Collection or review burden for this observation."},
+    "finding": {"type": "string", "description": "Compact finding text derived from the observation."},
+    "recommended_action": {"type": "string", "description": "Bounded next action recommended by the observer, when any."}
+  },
+  "additionalProperties": false
+}
