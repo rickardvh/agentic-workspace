@@ -2222,6 +2222,202 @@ else:
     assert record["proof_report"]["validation proof"] == "autopilot executor wrote real repo proof"
 
 
+def test_autopilot_rebinds_generic_executor_after_active_owner_changes(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    contracts = [
+        {
+            "kind": "agentic-workspace/terminal-outcome-contract/v1",
+            "state": "CONTINUE",
+            "final_response_authorized": False,
+            "required_next_action": "continue-current-work",
+            "safe_continuation_option_ids": ["run-proof"],
+            "blocker_qualification": {"status": "not_required"},
+            "final_response_enforcement": {
+                "status": "rejected_auto_resume",
+                "terminal_final_rejected": True,
+                "auto_resume_action": "continue-current-work",
+                "progress_without_yield": True,
+                "multi_slice_continuation": {"status": "preserved"},
+            },
+        },
+        {
+            "kind": "agentic-workspace/terminal-outcome-contract/v1",
+            "state": "DELIVERED",
+            "final_response_authorized": True,
+            "required_next_action": "",
+            "safe_continuation_option_ids": [],
+            "blocker_qualification": {"status": "not_required"},
+            "final_response_enforcement": {"status": "authorized", "terminal_final_rejected": False},
+        },
+    ]
+
+    def fake_closeout_trust(*, target_root: Path) -> tuple[dict[str, Any], object]:
+        assert target_root == tmp_path.resolve()
+        return {"terminal_outcome_contract": contracts.pop(0)}, object()
+
+    def fake_continuation(*, target_root: Path, terminal_outcome_contract: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "kind": "agentic-workspace/final-response-resume-result/v1",
+            "status": "executed",
+            "invoked_action": request["auto_resume_action"],
+            "invoked_operation": "planning.admit-child",
+            "command": "agentic-planning lane-activate parent --current-slice owner-b --format json",
+            "exit_code": 0,
+            "custody": "agent",
+            "after_state_patch": {"required_next_action": request["auto_resume_action"], "custody_owner": "agent"},
+        }
+
+    def fake_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+        owner = "owner-a" if slice_number == 1 else "owner-b"
+        return {
+            "kind": "agentic-workspace/autopilot-executor-binding/v1",
+            "status": "bound",
+            "slice": slice_number,
+            "owner_id": owner,
+            "owner_ref": f".agentic-workspace/planning/execplans/{owner}.plan.json",
+            "owner_refs": [f"#{owner[-1]}"],
+            "issue_refs": [f"#{owner[-1]}"],
+            "current_work_id": f"work-{owner}",
+            "input_revision": {"head": "fixture-head", "resolved_at": "2026-07-20T00:00:00+00:00"},
+        }
+
+    monkeypatch.setattr(cli, "_final_response_closeout_trust_for_admission", fake_closeout_trust)
+    monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fake_continuation)
+    monkeypatch.setattr(cli, "_active_executor_binding", fake_binding)
+    binding_log = tmp_path / "binding.log"
+    monkeypatch.setenv("BINDING_LOG", str(binding_log))
+    executor_script = tmp_path / "generic_autopilot_executor.py"
+    executor_script.write_text(
+        """
+import json
+import os
+from pathlib import Path
+
+binding = json.loads(os.environ["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING"])
+guard = json.loads(os.environ["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING_GUARD"])
+Path(os.environ["BINDING_LOG"]).write_text(
+    (Path(os.environ["BINDING_LOG"]).read_text() if Path(os.environ["BINDING_LOG"]).exists() else "")
+    + binding["owner_id"] + ":" + guard["status"] + "\\n"
+)
+print("Done too early." if binding["owner_id"] == "owner-a" else "Actually delivered for owner-b.")
+""".strip(),
+        encoding="utf-8",
+    )
+
+    assert (
+        cli.main(
+            [
+                "autopilot",
+                "--target",
+                str(tmp_path),
+                "--executor-command",
+                subprocess.list2cmdline([sys.executable, str(executor_script)]),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["status"] == "accepted_terminal_final"
+    assert binding_log.read_text(encoding="utf-8").splitlines() == ["owner-a:valid", "owner-b:rebound"]
+    loop = payload["ordinary_execution_loop"]
+    assert loop["latest_executor_binding"]["owner_id"] == "owner-b"
+    assert loop["latest_executor_binding_guard"]["status"] == "rebound"
+    assert [item["executor_binding"]["owner_id"] for item in loop["slices"]] == ["owner-a", "owner-b"]
+
+
+def test_autopilot_rejects_stale_slice_specific_executor_after_owner_changes(tmp_path: Path, capsys, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def fake_closeout_trust(*, target_root: Path) -> tuple[dict[str, Any], object]:
+        return {
+            "terminal_outcome_contract": {
+                "kind": "agentic-workspace/terminal-outcome-contract/v1",
+                "state": "CONTINUE",
+                "final_response_authorized": False,
+                "required_next_action": "continue-current-work",
+                "safe_continuation_option_ids": ["run-proof"],
+                "blocker_qualification": {"status": "not_required"},
+                "final_response_enforcement": {
+                    "status": "rejected_auto_resume",
+                    "terminal_final_rejected": True,
+                    "auto_resume_action": "continue-current-work",
+                    "progress_without_yield": True,
+                    "multi_slice_continuation": {"status": "preserved"},
+                },
+            }
+        }, object()
+
+    def fake_continuation(*, target_root: Path, terminal_outcome_contract: dict[str, Any], request: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "kind": "agentic-workspace/final-response-resume-result/v1",
+            "status": "executed",
+            "invoked_action": request["auto_resume_action"],
+            "invoked_operation": "planning.admit-child",
+            "command": "agentic-planning lane-activate parent --current-slice owner-b --format json",
+            "exit_code": 0,
+            "custody": "agent",
+            "after_state_patch": {"required_next_action": request["auto_resume_action"], "custody_owner": "agent"},
+        }
+
+    def fake_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+        owner = "owner-a" if slice_number == 1 else "owner-b"
+        return {
+            "kind": "agentic-workspace/autopilot-executor-binding/v1",
+            "status": "bound",
+            "slice": slice_number,
+            "owner_id": owner,
+            "owner_ref": f".agentic-workspace/planning/execplans/{owner}.plan.json",
+            "owner_refs": [f"#{owner[-1]}"],
+            "issue_refs": [f"#{owner[-1]}"],
+            "current_work_id": f"work-{owner}",
+            "input_revision": {"head": "fixture-head", "resolved_at": "2026-07-20T00:00:00+00:00"},
+        }
+
+    monkeypatch.setattr(cli, "_final_response_closeout_trust_for_admission", fake_closeout_trust)
+    monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fake_continuation)
+    monkeypatch.setattr(cli, "_active_executor_binding", fake_binding)
+    attempt_log = tmp_path / "attempts.log"
+    monkeypatch.setenv("ATTEMPT_LOG", str(attempt_log))
+    executor_script = tmp_path / "owner_a_executor.py"
+    executor_script.write_text(
+        """
+import os
+from pathlib import Path
+
+Path(os.environ["ATTEMPT_LOG"]).write_text(
+    (Path(os.environ["ATTEMPT_LOG"]).read_text() if Path(os.environ["ATTEMPT_LOG"]).exists() else "") + "ran\\n"
+)
+print("Done too early.")
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(
+            [
+                "autopilot",
+                "--target",
+                str(tmp_path),
+                "--executor-command",
+                subprocess.list2cmdline([sys.executable, str(executor_script), "--owner", "owner-a"]),
+                "--format",
+                "json",
+            ]
+        )
+
+    assert error.value.code == 2
+    assert "stale owner binding" in capsys.readouterr().err
+    assert attempt_log.read_text(encoding="utf-8").splitlines() == ["ran"]
+
+
 def test_autopilot_rejects_repeated_weak_finals_across_compaction_review_reconciliation_until_delivered(
     tmp_path: Path, capsys, monkeypatch
 ) -> None:

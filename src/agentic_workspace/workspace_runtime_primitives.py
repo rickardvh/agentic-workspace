@@ -125,6 +125,7 @@ from agentic_workspace.contract_tooling import (
     workflow_definition_format_manifest,
     workspace_surfaces_manifest,
 )
+from agentic_workspace.current_work_context import resolve_current_work_context
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
@@ -30897,6 +30898,72 @@ def _run_final_response_continuation_operation(
     }
 
 
+def _executor_binding_terms(binding: dict[str, Any]) -> list[str]:
+    terms: list[str] = []
+    for value in [
+        binding.get("owner_id"),
+        binding.get("owner_ref"),
+        *_list_payload(binding.get("owner_refs")),
+        *_list_payload(binding.get("issue_refs")),
+    ]:
+        text = str(value or "").strip()
+        if text:
+            terms.append(text)
+    return _dedupe(terms)
+
+
+def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+    context = resolve_current_work_context(root=target_root, task="", relation_hint="plan-continuation")
+    owner_binding = _as_dict(context.get("owner_binding"))
+    owner_id = str(context.get("selected_plan_id") or context.get("plan_id") or owner_binding.get("owner_id") or "").strip()
+    return {
+        "kind": "agentic-workspace/autopilot-executor-binding/v1",
+        "status": "bound" if owner_id else "unbound",
+        "slice": slice_number,
+        "owner_id": owner_id,
+        "owner_ref": str(_as_dict(context.get("provenance")).get("plan_id") or "").strip(),
+        "owner_refs": _list_payload(context.get("plan_refs")),
+        "issue_refs": _list_payload(context.get("issue_refs")),
+        "current_work_id": str(context.get("id") or ""),
+        "input_revision": {
+            "head": str(_as_dict(context.get("revision")).get("head") or ""),
+            "resolved_at": str(_as_dict(context.get("freshness")).get("resolved_at") or ""),
+        },
+        "source": "resolve_current_work_context",
+        "rule": "Autopilot resolves this binding before every executor slice; changed owners invalidate slice-specific executor task text.",
+    }
+
+
+def _executor_binding_change_guard(
+    *, executor_command: str, previous_binding: dict[str, Any], current_binding: dict[str, Any]
+) -> dict[str, Any]:
+    previous_owner = str(previous_binding.get("owner_id") or "").strip()
+    current_owner = str(current_binding.get("owner_id") or "").strip()
+    if not previous_owner or not current_owner or previous_owner == current_owner:
+        return {"status": "valid", "reason": "owner unchanged or unbound"}
+    previous_terms = _executor_binding_terms(previous_binding)
+    current_terms = _executor_binding_terms(current_binding)
+    command_text_value = str(executor_command or "")
+    names_previous = any(term and term in command_text_value for term in previous_terms)
+    names_current = any(term and term in command_text_value for term in current_terms)
+    if names_previous and not names_current:
+        return {
+            "status": "stale-binding",
+            "reason": "executor command names prior owner after active owner changed",
+            "previous_owner_id": previous_owner,
+            "current_owner_id": current_owner,
+            "previous_terms": previous_terms,
+            "current_terms": current_terms,
+            "repair": "Render a fresh executor command from the newly admitted owner and external intent before running Autopilot again.",
+        }
+    return {
+        "status": "rebound",
+        "reason": "active owner changed; executor command is generic or names the current owner",
+        "previous_owner_id": previous_owner,
+        "current_owner_id": current_owner,
+    }
+
+
 def _final_response_closeout_trust_for_admission(*, target_root: Path) -> tuple[dict[str, Any], WorkspaceConfig]:
     descriptors = _module_operations()
     _validate_descriptor_contract(descriptors)
@@ -30968,13 +31035,51 @@ def _run_final_response_executor_loop(
     slices: list[dict[str, Any]] = []
     previous_admission: dict[str, Any] = {}
     previous_continuation: dict[str, Any] = {}
+    previous_executor_binding: dict[str, Any] = {}
     final_payload: dict[str, Any] = {}
     slice_number = 0
     while True:
         slice_number += 1
+        executor_binding = _active_executor_binding(target_root=target_root, slice_number=slice_number)
+        binding_guard = _executor_binding_change_guard(
+            executor_command=executor_command,
+            previous_binding=previous_executor_binding,
+            current_binding=executor_binding,
+        )
+        if binding_guard.get("status") == "stale-binding":
+            failed_executor = {
+                "kind": "agentic-workspace/final-response-executor-result/v1",
+                "slice": slice_number,
+                "command": executor_command,
+                "exit_code": None,
+                "stdout_present": False,
+                "stderr_excerpt": "",
+                "binding_guard": binding_guard,
+                "binding": executor_binding,
+            }
+            final_payload = {
+                "kind": "agentic-workspace/final-response-admission-result/v1",
+                "status": "executor_binding_stale",
+                "ordinary_execution_loop": {
+                    "status": "executor_binding_stale",
+                    "vendor_neutral": True,
+                    "depends_on_codex_goal_mode": False,
+                    "depends_on_model_cli_harness": False,
+                    "slice_count": slice_number,
+                    "slices": slices,
+                    "failed_executor": failed_executor,
+                    "custody": "agent",
+                    "binding": executor_binding,
+                    "binding_guard": binding_guard,
+                    "rule": "Autopilot must re-resolve executor task binding after admitted owner changes; stale slice-specific commands fail closed before execution.",
+                },
+            }
+            raise WorkspaceUsageError(f"--executor-command has stale owner binding: {binding_guard['repair']}")
         env = os.environ.copy()
         env["AGENTIC_WORKSPACE_FINAL_RESPONSE_SLICE"] = str(slice_number)
         env["AGENTIC_WORKSPACE_FINAL_RESPONSE_CUSTODY"] = "agent"
+        env["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING"] = json.dumps(executor_binding, sort_keys=True)
+        env["AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING_GUARD"] = json.dumps(binding_guard, sort_keys=True)
         if previous_admission:
             env["AGENTIC_WORKSPACE_FINAL_RESPONSE_PREVIOUS_ADMISSION"] = json.dumps(previous_admission, sort_keys=True)
             previous_after_state = _as_dict(_as_dict(previous_admission.get("resume_transition")).get("after_state"))
@@ -31010,6 +31115,8 @@ def _run_final_response_executor_loop(
             "completed_at": completed_at,
             "stdout_present": bool(result.stdout.strip()),
             "stderr_excerpt": (result.stderr or "")[:500],
+            "binding": executor_binding,
+            "binding_guard": binding_guard,
         }
         if result.returncode != 0:
             final_payload = {
@@ -31075,6 +31182,8 @@ def _run_final_response_executor_loop(
             "continuation_exit_code": executor_result.get("exit_code"),
             "after_compaction": bool(getattr(args, "after_compaction", False)) or slice_number > 1,
             "ordinary_execution_slice": slice_number,
+            "executor_binding": executor_binding,
+            "executor_binding_guard": binding_guard,
         }
         checkpoint_write = _write_local_chat_checkpoint(
             target_root=target_root,
@@ -31101,10 +31210,13 @@ def _run_final_response_executor_loop(
             "checkpoint_write": checkpoint_write,
             "checkpoint_before": before_state,
             "checkpoint_after": after_state,
+            "executor_binding": executor_binding,
+            "executor_binding_guard": binding_guard,
         }
         slices.append(slice_payload)
         previous_admission = admission
         previous_continuation = executor_result
+        previous_executor_binding = executor_binding
 
         final_payload = {
             "kind": "agentic-workspace/final-response-admission-result/v1",
@@ -31126,10 +31238,13 @@ def _run_final_response_executor_loop(
                     "AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION",
                     "AGENTIC_WORKSPACE_FINAL_RESPONSE_CONTINUATION_STATE",
                     "AGENTIC_WORKSPACE_FINAL_RESPONSE_ACTIVE_OBJECTIVE",
+                    "AGENTIC_WORKSPACE_AUTOPILOT_EXECUTOR_BINDING",
                 ],
                 "custody": "agent" if admission.get("status") == "rejected_auto_resumed" else "completed-outcome",
                 "slice_count": slice_number,
                 "slices": slices,
+                "latest_executor_binding": executor_binding,
+                "latest_executor_binding_guard": binding_guard,
                 "rule": "The package-owned ordinary loop admits every model-authored executor response and re-enters execution while CONTINUE remains.",
             },
             "rule": "This command is the vendor-neutral ordinary execution boundary for model-authored final responses.",
