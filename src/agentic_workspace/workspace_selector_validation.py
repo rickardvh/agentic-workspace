@@ -7,10 +7,11 @@ import json
 from typing import Any
 
 _MAX_SELECTOR_COUNT = 32
-_MAX_SELECTOR_BYTES = 512
-_MAX_SELECTOR_REQUEST_BYTES = 4096
-_MAX_SELECTOR_ERROR_ENVELOPE_BYTES = 6144
+_MAX_SELECTOR_BYTES = 256
+_MAX_SELECTOR_REQUEST_BYTES = 512
+_MAX_SELECTOR_ERROR_ENVELOPE_BYTES = 6000
 _MAX_SELECTOR_ERROR_ITEMS = 8
+_SELECTOR_SUGGESTION_LIMIT = 1
 
 
 _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
@@ -248,41 +249,16 @@ def _selector_tokens(select: str | None) -> list[str]:
 def _selector_request(*, select: str | None, source_command: str) -> tuple[list[str], dict[str, Any] | None]:
     if not select:
         return ([], None)
-    request_bytes = len(str(select).encode("utf-8", errors="replace"))
-    if request_bytes > _MAX_SELECTOR_REQUEST_BYTES:
-        return (
-            [],
-            _selector_request_validation_error(
-                source_command=source_command,
-                reason="selector-request-too-large",
-                selectors=[],
-                requested_selector_count=0,
-                selector_request_bytes=request_bytes,
-            ),
-        )
     tokens: list[str] = []
     seen: set[str] = set()
     requested_count = 0
+    selector_request_bytes = 0
     for raw in str(select).split(","):
         token = raw.strip()
         if not token:
             continue
         requested_count += 1
         token_bytes = len(token.encode("utf-8", errors="replace"))
-        if token_bytes > _MAX_SELECTOR_BYTES:
-            return (
-                tokens,
-                _selector_request_validation_error(
-                    source_command=source_command,
-                    reason="selector-too-long",
-                    selectors=tokens,
-                    requested_selector_count=requested_count,
-                    selector_request_bytes=request_bytes,
-                    selector_index=requested_count - 1,
-                    selector_bytes=token_bytes,
-                    offending_selector=token,
-                ),
-            )
         if requested_count > _MAX_SELECTOR_COUNT:
             return (
                 tokens,
@@ -291,11 +267,39 @@ def _selector_request(*, select: str | None, source_command: str) -> tuple[list[
                     reason="too-many-selectors",
                     selectors=tokens,
                     requested_selector_count=requested_count,
-                    selector_request_bytes=request_bytes,
+                    selector_request_bytes=selector_request_bytes,
                     selector_index=requested_count - 1,
                     offending_selector=token,
                 ),
             )
+        if token_bytes > _MAX_SELECTOR_BYTES:
+            return (
+                tokens,
+                _selector_request_validation_error(
+                    source_command=source_command,
+                    reason="selector-too-long",
+                    selectors=tokens,
+                    requested_selector_count=requested_count,
+                    selector_request_bytes=selector_request_bytes + token_bytes,
+                    selector_index=requested_count - 1,
+                    selector_bytes=token_bytes,
+                    offending_selector=token,
+                ),
+            )
+        if selector_request_bytes + token_bytes > _MAX_SELECTOR_REQUEST_BYTES:
+            return (
+                tokens,
+                _selector_request_validation_error(
+                    source_command=source_command,
+                    reason="selector-request-too-large",
+                    selectors=tokens,
+                    requested_selector_count=requested_count,
+                    selector_request_bytes=selector_request_bytes + token_bytes,
+                    selector_index=requested_count - 1,
+                    offending_selector=token,
+                ),
+            )
+        selector_request_bytes += token_bytes
         if token in seen:
             continue
         tokens.append(token)
@@ -363,7 +367,7 @@ def _selector_inventory_command(source_command: str) -> str:
 
 def _known_optional_selector_absent(*, source_command: str, selector: str) -> bool:
     known = _KNOWN_OPTIONAL_SELECTORS_BY_COMMAND.get(source_command, set())
-    return selector in known or any(selector.startswith(f"{item}.") for item in known)
+    return selector in known
 
 
 def _replacement_for_deprecated_selector(*, source_command: str, selector: str) -> str | None:
@@ -375,7 +379,7 @@ def _declared_selector_for_command(*, source_command: str, selector: str) -> boo
     return selector in available
 
 
-def _selector_suggestions(*, unknown: str, available: list[str], limit: int = 3) -> list[str]:
+def _selector_suggestions(*, unknown: str, available: list[str], limit: int = _SELECTOR_SUGGESTION_LIMIT) -> list[str]:
     unknown_root = unknown.split(".", 1)[0]
     suggestions: list[str] = []
     for selector in available:
@@ -498,17 +502,17 @@ def _selector_request_validation_error(
 
 
 def _fit_selector_error_envelope(payload: dict[str, Any]) -> dict[str, Any]:
-    if len(json.dumps(payload, sort_keys=True)) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+    if _selector_error_envelope_bytes(payload) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
         return payload
     payload["suggestions"] = {}
-    if len(json.dumps(payload, sort_keys=True)) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+    if _selector_error_envelope_bytes(payload) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
         return payload
     payload["requested_selectors"] = payload.get("requested_selectors", [])[:3]
     payload["unknown_selectors"] = payload.get("unknown_selectors", [])[:3]
     inventory = payload.get("selector_inventory")
     if isinstance(inventory, dict):
         inventory["sample"] = inventory.get("sample", [])[:3]
-    if len(json.dumps(payload, sort_keys=True)) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+    if _selector_error_envelope_bytes(payload) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
         return payload
     payload["requested_selectors"] = []
     payload["unknown_selectors"] = []
@@ -516,6 +520,11 @@ def _fit_selector_error_envelope(payload: dict[str, Any]) -> dict[str, Any]:
         inventory["sample"] = []
     payload["truncated_to_budget"] = True
     return payload
+
+
+def _selector_error_envelope_bytes(payload: dict[str, Any]) -> int:
+    rendered = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return len(rendered.encode("utf-8"))
 
 
 def _selector_validation_error(*, payload: dict[str, Any], selectors: list[str], missing: list[str], source_command: str) -> dict[str, Any]:

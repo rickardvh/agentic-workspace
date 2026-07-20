@@ -508,7 +508,235 @@ function verifyPayload(values, args) {
   return { target_root: targetRoot, dry_run: true, mode: 'full', message: 'Payload verification', detected_version: readFirstVersion(targetRoot, [policy.version_path, policy.legacy_version_path]), bootstrap_version: Number(policy.bootstrap_version ?? 0), actions, route_summary: {}, missing_note_hint: '', review_summary: {}, review_cases: [], sync_summary: {}, route_report_summary: {}, route_report_feedback_cases: [], route_report_fixture_results: [] };
 }
 
+const WORKSPACE_SELECTOR_LIMITS = {
+  max_selectors: 32,
+  max_selector_bytes: 256,
+  max_selector_request_bytes: 512,
+  max_error_envelope_bytes: 6000,
+  max_error_items: 8,
+};
+
+const WORKSPACE_SELECTOR_DESCRIPTORS = {
+  config: [
+    'workspace',
+    'workspace.enabled',
+    'workspace.enabled_modules',
+    'workspace.improvement_latitude',
+    'workspace.optimization_bias',
+    'workspace.optimization_bias_source',
+    'workspace.workflow_obligations',
+    'warnings',
+    'target',
+    'config_path',
+    'modules',
+    'mixed_agent',
+    'mixed_agent.runtime_resolution',
+    'assurance',
+    'config_enforcement',
+    'config_effect_audit',
+    'cli_compatibility',
+    'selector_inventory',
+  ],
+  defaults: [
+    'kind',
+    'answer',
+    'answer.command',
+    'section',
+    'sections',
+    'startup',
+    'startup.canonical_doc',
+    'root_cli_authority',
+    'root_cli_authority.command',
+    'workspace',
+    'proof_selection',
+    'improvement_intake',
+    'optimization_bias',
+    'selector_inventory',
+  ],
+};
+
+const WORKSPACE_DEPRECATED_SELECTOR_REPLACEMENTS = {
+  config: {
+    'workspace.feature_tier': 'workspace.enabled_modules',
+  },
+};
+
+function selectorUtf8Bytes(value) {
+  return Buffer.byteLength(String(value), 'utf8');
+}
+
+function workspaceSelectorInventoryCommand(sourceCommand) {
+  return `agentic-workspace ${sourceCommand} --target . --select selector_inventory --format json`;
+}
+
+function workspaceSelectorBudget() {
+  return {
+    max_selectors: WORKSPACE_SELECTOR_LIMITS.max_selectors,
+    max_selector_bytes: WORKSPACE_SELECTOR_LIMITS.max_selector_bytes,
+    max_selector_request_bytes: WORKSPACE_SELECTOR_LIMITS.max_selector_request_bytes,
+    max_error_envelope_bytes: WORKSPACE_SELECTOR_LIMITS.max_error_envelope_bytes,
+    max_error_items: WORKSPACE_SELECTOR_LIMITS.max_error_items,
+  };
+}
+
+function fitWorkspaceSelectorError(payload) {
+  if (selectorUtf8Bytes(JSON.stringify(payload)) <= WORKSPACE_SELECTOR_LIMITS.max_error_envelope_bytes) return payload;
+  payload.suggestions = {};
+  if (selectorUtf8Bytes(JSON.stringify(payload)) <= WORKSPACE_SELECTOR_LIMITS.max_error_envelope_bytes) return payload;
+  payload.requested_selectors = Array.isArray(payload.requested_selectors) ? payload.requested_selectors.slice(0, 3) : [];
+  payload.unknown_selectors = Array.isArray(payload.unknown_selectors) ? payload.unknown_selectors.slice(0, 3) : [];
+  if (isObject(payload.selector_inventory)) {
+    payload.selector_inventory.sample = Array.isArray(payload.selector_inventory.sample) ? payload.selector_inventory.sample.slice(0, 3) : [];
+  }
+  if (selectorUtf8Bytes(JSON.stringify(payload)) <= WORKSPACE_SELECTOR_LIMITS.max_error_envelope_bytes) return payload;
+  payload.requested_selectors = [];
+  payload.unknown_selectors = [];
+  if (isObject(payload.selector_inventory)) payload.selector_inventory.sample = [];
+  payload.truncated_to_budget = true;
+  return payload;
+}
+
+function workspaceSelectorRequest(select, sourceCommand) {
+  if (!select) return { selectors: [], error: null };
+  const selectors = [];
+  let requestedSelectorCount = 0;
+  let selectorRequestBytes = 0;
+  const seen = new Set();
+  for (const raw of String(select).split(',')) {
+    const token = raw.trim();
+    if (!token) continue;
+    requestedSelectorCount += 1;
+    const tokenBytes = selectorUtf8Bytes(token);
+    if (requestedSelectorCount > WORKSPACE_SELECTOR_LIMITS.max_selectors) {
+      return {
+        selectors,
+        error: workspaceSelectorRequestError(sourceCommand, 'too-many-selectors', selectors, requestedSelectorCount, selectorRequestBytes, requestedSelectorCount - 1, null, token),
+      };
+    }
+    if (tokenBytes > WORKSPACE_SELECTOR_LIMITS.max_selector_bytes) {
+      return {
+        selectors,
+        error: workspaceSelectorRequestError(sourceCommand, 'selector-too-long', selectors, requestedSelectorCount, selectorRequestBytes + tokenBytes, requestedSelectorCount - 1, tokenBytes, token),
+      };
+    }
+    if (selectorRequestBytes + tokenBytes > WORKSPACE_SELECTOR_LIMITS.max_selector_request_bytes) {
+      return {
+        selectors,
+        error: workspaceSelectorRequestError(sourceCommand, 'selector-request-too-large', selectors, requestedSelectorCount, selectorRequestBytes + tokenBytes, requestedSelectorCount - 1, null, token),
+      };
+    }
+    selectorRequestBytes += tokenBytes;
+    if (!seen.has(token)) {
+      selectors.push(token);
+      seen.add(token);
+    }
+  }
+  return { selectors, error: null };
+}
+
+function workspaceSelectorRequestError(sourceCommand, reason, selectors, requestedSelectorCount, selectorRequestBytes, selectorIndex, selectorBytes, offendingSelector) {
+  const inventoryCommand = workspaceSelectorInventoryCommand(sourceCommand);
+  const payload = {
+    kind: 'agentic-workspace/selector-validation-error/v1',
+    status: 'invalid-selector-request',
+    reason,
+    source_command: sourceCommand,
+    requested_selectors: selectors.slice(0, WORKSPACE_SELECTOR_LIMITS.max_error_items),
+    requested_selector_count: requestedSelectorCount,
+    requested_selector_omitted_count: Math.max(0, requestedSelectorCount - WORKSPACE_SELECTOR_LIMITS.max_error_items),
+    selector_request_bytes: selectorRequestBytes,
+    selector_inventory: {
+      status: 'omitted-from-validation-error',
+      inventory_command: inventoryCommand,
+      discovery_command: inventoryCommand,
+      rule: 'Selector request limits are enforced before command payload construction; use the inventory route for valid selectors.',
+    },
+    selector_budget: workspaceSelectorBudget(),
+    validation_rule: 'Selector requests are bounded before descriptor lookup or payload construction.',
+  };
+  if (selectorIndex !== null) {
+    payload.selector_index = selectorIndex;
+    payload.limit_contributor = 'selector_index';
+  }
+  if (selectorBytes !== null) {
+    payload.selector_bytes = selectorBytes;
+    payload.limit_contributor = 'selector_bytes';
+  }
+  if (offendingSelector) payload.offending_selector = String(offendingSelector).slice(0, 120);
+  if (reason === 'selector-too-long') payload.limit_contributor = 'selector_bytes';
+  else if (reason === 'selector-request-too-large') payload.limit_contributor = 'selector_request_bytes';
+  else if (reason === 'too-many-selectors') payload.limit_contributor = 'requested_selector_count';
+  return fitWorkspaceSelectorError(payload);
+}
+
+function workspaceSelectorSuggestions(unknown, available) {
+  const unknownRoot = String(unknown).split('.', 1)[0];
+  const matches = [];
+  for (const selector of available) {
+    const selectorRoot = String(selector).split('.', 1)[0];
+    if (selectorRoot === unknownRoot || String(selector).startsWith(unknown) || String(unknown).startsWith(selectorRoot)) matches.push(selector);
+    if (matches.length >= 1) break;
+  }
+  return matches;
+}
+
+function workspaceSelectorReplacements(sourceCommand, selectors) {
+  const replacements = WORKSPACE_DEPRECATED_SELECTOR_REPLACEMENTS[sourceCommand] ?? {};
+  const entries = [];
+  for (const selector of selectors) {
+    if (replacements[selector]) entries.push([selector, replacements[selector]]);
+    if (entries.length >= WORKSPACE_SELECTOR_LIMITS.max_error_items) break;
+  }
+  return Object.fromEntries(entries);
+}
+
+function workspaceSelectorPrevalidationError(select, sourceCommand) {
+  const request = workspaceSelectorRequest(select, sourceCommand);
+  if (request.error) return request.error;
+  const available = WORKSPACE_SELECTOR_DESCRIPTORS[sourceCommand] ?? [];
+  const unknown = request.selectors.filter((selector) => selector !== 'selector_inventory' && !available.includes(selector));
+  if (!unknown.length) return null;
+  const inventoryCommand = workspaceSelectorInventoryCommand(sourceCommand);
+  const suggestions = Object.fromEntries(
+    unknown.slice(0, WORKSPACE_SELECTOR_LIMITS.max_error_items)
+      .map((selector) => [selector, workspaceSelectorSuggestions(selector, available)])
+      .filter(([, matches]) => matches.length),
+  );
+  const replacementSelectors = workspaceSelectorReplacements(sourceCommand, unknown);
+  const payload = {
+    kind: 'agentic-workspace/selector-validation-error/v1',
+    status: 'invalid-selector',
+    source_command: sourceCommand,
+    requested_selectors: request.selectors.slice(0, WORKSPACE_SELECTOR_LIMITS.max_error_items),
+    requested_selector_count: request.selectors.length,
+    requested_selector_omitted_count: Math.max(0, request.selectors.length - WORKSPACE_SELECTOR_LIMITS.max_error_items),
+    unknown_selectors: unknown.slice(0, WORKSPACE_SELECTOR_LIMITS.max_error_items),
+    unknown_selector_count: unknown.length,
+    unknown_selector_omitted_count: Math.max(0, unknown.length - WORKSPACE_SELECTOR_LIMITS.max_error_items),
+    selector_inventory: {
+      status: 'omitted-from-validation-error',
+      available_count: available.length,
+      sample: available.slice(0, WORKSPACE_SELECTOR_LIMITS.max_error_items),
+      sample_limit: WORKSPACE_SELECTOR_LIMITS.max_error_items,
+      discovery_command: inventoryCommand,
+      inventory_command: inventoryCommand,
+      absence_state: 'hidden_behind_detail_route',
+      rule: 'Unknown selectors return a bounded validation envelope; full selector inventory is available only through an explicit detail route.',
+    },
+    suggestions,
+    selector_budget: workspaceSelectorBudget(),
+    validation_rule: 'Selector requests are exact: nested selectors must be declared before payload construction.',
+  };
+  if (Object.keys(replacementSelectors).length) {
+    payload.deprecated_selectors = Object.keys(replacementSelectors);
+    payload.replacement_selectors = replacementSelectors;
+    payload.replacement_rule = 'Deprecated selectors are rejected atomically with a bounded replacement hint.';
+  }
+  return fitWorkspaceSelectorError(payload);
+}
+
 function workspaceDefaultsSelect(payload, values) {
+  if (values._selector_prevalidation_failed) return payload;
   let result = {
     kind: 'agentic-workspace/default-route-sections/v1',
     profile: 'tiny',
@@ -1349,9 +1577,22 @@ export function executeHostPrimitive(primitive, values, args, operationId) {
   if (primitive === 'memory.payload.current-memory') return payloadCurrentMemory(values, args);
   if (primitive === 'memory.payload.verify') return verifyPayload(values, args);
   if (primitive === 'workspace.output.emit') return emitOutput(values, args);
-  if (primitive === 'workspace.defaults.load') return loadJsonResource('_contracts/payload.json');
+  if (primitive === 'workspace.defaults.load') {
+    const prevalidationError = workspaceSelectorPrevalidationError(values.select, 'defaults');
+    if (prevalidationError) {
+      values.select = null;
+      values._selector_prevalidation_failed = true;
+      return prevalidationError;
+    }
+    return loadJsonResource('_contracts/payload.json');
+  }
   if (primitive === 'workspace.defaults.select') return workspaceDefaultsSelect(values.defaults_payload, values);
   if (primitive === 'workspace.config.load') {
+    const prevalidationError = workspaceSelectorPrevalidationError(values.select, 'config');
+    if (prevalidationError) {
+      values.select = null;
+      return args?.include_payload ? { config: {}, result: prevalidationError } : prevalidationError;
+    }
     const config = workspaceConfig(values);
     return args?.include_payload ? { config, result: config } : config;
   }
