@@ -6,8 +6,19 @@
   "mutation_outcome_contract": {
     "schema_version": "agentic-workspace/mutation-outcome/v1",
     "applicability": "Every registered operation with effects.writes_repo_state=true must emit this result contract unless listed in explicit_exceptions.",
-    "outcomes": ["applied", "noop", "blocked", "failed"],
-    "fields": ["outcome", "mutation_applied", "reason_code", "conflict_owner", "recovery_command"],
+    "outcomes": [
+      "applied",
+      "noop",
+      "blocked",
+      "failed"
+    ],
+    "fields": [
+      "outcome",
+      "mutation_applied",
+      "reason_code",
+      "conflict_owner",
+      "recovery_command"
+    ],
     "runtime_bindings": {
       "python": "agentic_workspace.result_adapter.mutation_outcome_from_actions",
       "typescript": "typescript_primitive_support.mjs#finalizeMutationOutcome",
@@ -73,6 +84,30 @@
       "id": "session-log.manage",
       "path": "operations/session-log.manage.json",
       "command": "session-log",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.register",
+      "path": "operations/evaluation.register.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.observe",
+      "path": "operations/evaluation.observe.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.status",
+      "path": "operations/evaluation.status.json",
+      "command": "evaluation",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "evaluation.transition",
+      "path": "operations/evaluation.transition.json",
+      "command": "evaluation",
       "migration_status": "runtime-consumed"
     },
     {

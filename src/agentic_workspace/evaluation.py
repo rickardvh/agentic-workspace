@@ -417,6 +417,58 @@ def transition_evaluation(*, target_root: Path, evaluation_id: str, lifecycle: s
     }
 
 
+def _emit_evaluation_result(payload: dict[str, Any], output_format: str) -> int:
+    if output_format == "json":
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+    print(f"Kind: {payload.get('kind', '')}")
+    if "outcome" in payload:
+        print(f"Outcome: {payload['outcome']}")
+    if "evaluation_id" in payload:
+        print(f"Evaluation: {payload['evaluation_id']}")
+    if "path" in payload:
+        print(f"Path: {payload['path']}")
+    if payload.get("summaries"):
+        for item in payload["summaries"]:
+            print(
+                f"- {item['evaluation_id']}: {item['lifecycle']}; "
+                f"observations={item['coverage']['observation_count']}; "
+                f"next={item['next_collection_action']}"
+            )
+    return 0
+
+
+def _evaluation_adapter_payload(args: Any, *, target_root: Path) -> dict[str, Any]:
+    values = vars(args)
+    command = str(getattr(args, "evaluation_command", ""))
+    if command == "register":
+        return register_evaluation_from_values(target_root=target_root, values=values)
+    if command == "observe":
+        return append_observation_from_values(target_root=target_root, values=values)
+    if command == "status":
+        return evaluation_summary(target_root=target_root, evaluation_id=getattr(args, "evaluation_id", None))
+    if command == "transition":
+        return transition_evaluation(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            lifecycle=_require_non_empty(getattr(args, "lifecycle", ""), "lifecycle"),
+            reason=str(getattr(args, "reason", "") or ""),
+        )
+    raise WorkspaceUsageError(f"unsupported evaluation command: {command}")
+
+
+def _run_evaluation_adapter(args: Any) -> int:
+    output_format = str(getattr(args, "format", "text") or "text")
+    try:
+        payload = _evaluation_adapter_payload(args, target_root=Path(str(getattr(args, "target", ".") or ".")).resolve())
+    except WorkspaceUsageError as exc:
+        if output_format == "json":
+            print(json.dumps({"kind": "agentic-workspace/evaluation-error/v1", "status": "failed", "reason": str(exc)}, indent=2))
+            return 2
+        raise
+    return _emit_evaluation_result(payload, output_format)
+
+
 def closure_authority(*, implementation_complete: bool, proof_complete: bool, evaluation: dict[str, Any] | None) -> dict[str, Any]:
     valid_evaluation = bool(
         isinstance(evaluation, dict)

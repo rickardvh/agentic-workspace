@@ -1695,6 +1695,308 @@
       "mutates_state": false
     },
     {
+      "name": "evaluation",
+      "help": "Manage local-first workspace evaluations.",
+      "uses_option_groups": [
+        "format"
+      ],
+      "options": [
+        {
+          "name": "target",
+          "flags": [
+            "--target"
+          ],
+          "help": "Repository path."
+        }
+      ],
+      "subcommand_dest": "evaluation_command",
+      "subcommands_required": true,
+      "subcommands": [
+        {
+          "name": "register",
+          "help": "Register or update one evaluation definition.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "question",
+              "flags": [
+                "--question"
+              ],
+              "required": true
+            },
+            {
+              "name": "subject",
+              "flags": [
+                "--subject"
+              ],
+              "default": "{\"type\":\"workspace-task\"}"
+            },
+            {
+              "name": "criteria",
+              "flags": [
+                "--criteria"
+              ],
+              "required": true,
+              "help": "JSON object keyed by criterion id."
+            },
+            {
+              "name": "decision_owner",
+              "flags": [
+                "--decision-owner"
+              ],
+              "required": true,
+              "help": "JSON object with id and class."
+            },
+            {
+              "name": "evidence_sources",
+              "flags": [
+                "--evidence-sources"
+              ],
+              "required": true,
+              "help": "Comma-separated evidence source ids."
+            },
+            {
+              "name": "report_sinks",
+              "flags": [
+                "--report-sinks"
+              ],
+              "required": true,
+              "help": "Comma-separated report sink ids."
+            },
+            {
+              "name": "selectors",
+              "flags": [
+                "--selectors"
+              ],
+              "default": "{}"
+            },
+            {
+              "name": "collection_policy",
+              "flags": [
+                "--collection-policy"
+              ],
+              "default": "{}"
+            },
+            {
+              "name": "conclusion_policy",
+              "flags": [
+                "--conclusion-policy"
+              ],
+              "default": "{}"
+            },
+            {
+              "name": "action_policy",
+              "flags": [
+                "--action-policy"
+              ],
+              "default": "{}"
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "evaluation definition registration writes the local evaluation ledger",
+          "mutates_state": true
+        },
+        {
+          "name": "observe",
+          "help": "Append one local observation.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "criterion",
+              "flags": [
+                "--criterion"
+              ],
+              "required": true
+            },
+            {
+              "name": "result",
+              "flags": [
+                "--result"
+              ],
+              "required": true,
+              "choices": [
+                "supports",
+                "contradicts",
+                "mixed",
+                "not-applicable",
+                "unknown"
+              ]
+            },
+            {
+              "name": "evidence_refs",
+              "flags": [
+                "--evidence-refs"
+              ],
+              "default": ""
+            },
+            {
+              "name": "confidence",
+              "flags": [
+                "--confidence"
+              ],
+              "choices": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "default": "medium"
+            },
+            {
+              "name": "burden",
+              "flags": [
+                "--burden"
+              ],
+              "choices": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "default": "medium"
+            },
+            {
+              "name": "context",
+              "flags": [
+                "--context"
+              ],
+              "default": "{}"
+            },
+            {
+              "name": "finding",
+              "flags": [
+                "--finding"
+              ],
+              "default": ""
+            },
+            {
+              "name": "recommended_action",
+              "flags": [
+                "--recommended-action"
+              ],
+              "default": ""
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "local observation append for evaluation evidence collection",
+          "mutates_state": true
+        },
+        {
+          "name": "status",
+          "help": "Inspect derived evaluation status.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ]
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "read-only derived evaluation status report",
+          "mutates_state": false
+        },
+        {
+          "name": "transition",
+          "help": "Move an evaluation through a validated lifecycle transition.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "lifecycle",
+              "flags": [
+                "--lifecycle"
+              ],
+              "required": true,
+              "choices": [
+                "collecting",
+                "enough-signal",
+                "satisfied",
+                "contradicted",
+                "inconclusive",
+                "paused",
+                "superseded",
+                "archived"
+              ]
+            },
+            {
+              "name": "reason",
+              "flags": [
+                "--reason"
+              ],
+              "default": ""
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "validated lifecycle transition writes the local evaluation ledger",
+          "mutates_state": true
+        }
+      ],
+      "role": "core_lifecycle",
+      "audience": "ordinary_host_repo",
+      "classification_note": "local-first workspace evaluation lifecycle front door",
+      "mutates_state": true
+    },
+    {
       "name": "checkpoint",
       "help": "Create or update ignored local chat continuity checkpoints.",
       "uses_option_groups": [
