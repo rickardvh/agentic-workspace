@@ -1,0 +1,44 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "planning.integration-apply.lifecycle",
+  "command_surface": {"program": "agentic-planning", "command": "integration-apply", "format_option": "format"},
+  "summary": "Apply a pending Planning integration proposal as target-branch truth.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {"name": "proposal", "source": "cli-option", "required": true},
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "expect_planning_revision", "source": "cli-option", "required": false},
+    {"name": "dry_run", "source": "cli-option", "required": false},
+    {"name": "format", "source": "cli-option", "required": false}
+  ],
+  "output": {"kind": "module-result"},
+  "effects": {"read_only": false, "destructive": false, "idempotent": true, "writes_repo_state": true, "requires_preflight_gate": false},
+  "locality": {"requires_repo": false, "network": "forbidden", "outside_repo_writes": "forbidden"},
+  "reads": [
+    {"surface": ".agentic-workspace/planning/integration-proposals/<id>.integration-proposal.json", "required": true},
+    {"surface": "affected owner and issue-relation surfaces", "required": false}
+  ],
+  "writes": [
+    {"surface": ".agentic-workspace/planning/integration-proposals/<id>.integration-proposal.json", "required": false, "when": "not a dry run"},
+    {"surface": ".agentic-workspace/planning/integration-receipts/<id>.integration-receipt.json", "required": false, "when": "not a dry run"}
+  ],
+  "steps": [
+    {"id": "apply_integration_receipt", "uses": "planning.integration-apply.apply", "description": "Validate the subject revision and atomically mark the proposal integrated with a receipt."},
+    {"id": "emit_output", "uses": "output.emit", "description": "Emit the target-branch integration receipt."}
+  ],
+  "guards": [
+    "Reject stale proposals when the affected owner or issue-relation subject revision changed.",
+    "Rollback proposal and receipt writes together on validation or write failure.",
+    "Aggregate indexes and unrelated owners remain derived or preserved."
+  ],
+  "proof": ["planning branch-safe tests cover guarded apply, rollback surface, no-op reapply, stale proposals, and generated command exposure"],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Generated targets own parser and dispatch parity while Planning owns target integration semantics.",
+    "steps": [
+      {"id": "apply_integration_receipt", "uses": "planning.integration-apply.apply", "description": "Validate the subject revision and atomically mark the proposal integrated with a receipt.", "arguments": {}, "outputs": ["result"], "on_error": "emit_usage_error"},
+      {"id": "emit_output", "uses": "output.emit", "description": "Emit the target-branch integration receipt.", "arguments": {}, "outputs": ["emitted"], "on_error": "emit_usage_error"}
+    ]
+  }
+}

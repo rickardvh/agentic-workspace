@@ -1,0 +1,45 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "planning.integration-propose.lifecycle.process",
+  "operation_id": "planning.integration-propose.lifecycle",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_planning_cli}",
+      "integration-propose",
+      "--proposal-id",
+      "tmp-integration",
+      "--issue",
+      "tmp-issue",
+      "--requested-transition",
+      "mark-integrated",
+      "--proof",
+      "fixture-proof",
+      "--target",
+      ".",
+      "--dry-run",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [{"id": "integration-propose-dry-run", "files": {".git/.keep": ""}}],
+  "expectations": {
+    "exit": {"code": 0},
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {"path": ["dry_run"], "equals": true},
+        {"path": ["operation_receipt", "outcome"], "equals": "dry-run"}
+      ]
+    },
+    "stderr": {"allow_non_empty": false},
+    "filesystem": {
+      "allowed_write_paths": [],
+      "required_paths": [".git/.keep"],
+      "forbidden_paths": [".agentic-workspace/planning/integration-proposals/tmp-integration.integration-proposal.json"]
+    },
+    "idempotency": {"run_twice": true},
+    "safety": {"no_writes_outside_repo_root": true}
+  }
+}

@@ -394,6 +394,24 @@
       "migration_status": "runtime-consumed"
     },
     {
+      "id": "planning.issue-shape.lifecycle",
+      "path": "operations/planning.issue-shape.lifecycle.json",
+      "command": "issue-shape",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.integration-propose.lifecycle",
+      "path": "operations/planning.integration-propose.lifecycle.json",
+      "command": "integration-propose",
+      "migration_status": "runtime-consumed"
+    },
+    {
+      "id": "planning.integration-apply.lifecycle",
+      "path": "operations/planning.integration-apply.lifecycle.json",
+      "command": "integration-apply",
+      "migration_status": "runtime-consumed"
+    },
+    {
       "id": "planning.lane-close.lifecycle",
       "path": "operations/planning.lane-close.lifecycle.json",
       "command": "lane-close",

@@ -384,6 +384,108 @@
       },
       "status": "generated"
     },
+    "integration-apply": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "integration-apply",
+        "option_group_manifest": "package:planning:cli",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.integration-apply.lifecycle.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.integration-apply.cli",
+      "operation_id": "planning.integration-apply.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.integration-apply.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "planning-integration-receipt.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
+    "integration-propose": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "integration-propose",
+        "option_group_manifest": "package:planning:cli",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.integration-propose.lifecycle.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.integration-propose.cli",
+      "operation_id": "planning.integration-propose.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.integration-propose.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "planning-integration-proposal.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
+    "issue-shape": {
+      "command": {
+        "command_manifest": "package:planning:cli",
+        "name": "issue-shape",
+        "option_group_manifest": "package:planning:cli",
+        "program": "agentic-planning"
+      },
+      "conformance_refs": [
+        "planning.issue-shape.lifecycle.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
+      },
+      "id": "planning.issue-shape.cli",
+      "operation_id": "planning.issue-shape.lifecycle",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "planning.issue-shape.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [],
+        "output": [
+          "planning-issue-relation.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
     "lane-activate": {
       "command": {
         "command_manifest": "package:planning:cli",

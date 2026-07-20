@@ -1842,30 +1842,462 @@
                 "name": "decomposition-create",
                 "help": "Create a first-class Planning decomposition record.",
                 "options": [
-                  {"name": "id", "flags": ["--id"], "required": true, "help": "Stable decomposition id; used as the .decomposition.json filename."},
-                  {"name": "title", "flags": ["--title"], "required": true, "help": "Human-readable decomposition title."},
-                  {"name": "outcome", "flags": ["--outcome"], "required": true, "help": "Larger intended outcome owned by the decomposition."},
-                  {"name": "promotion_rule", "flags": ["--promotion-rule"], "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.", "help": "Rule for promoting candidate lanes."},
-                  {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-                  {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."},
-                  {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Show planned changes without mutating files."},
-                  {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+                  {
+                    "name": "id",
+                    "flags": [
+                      "--id"
+                    ],
+                    "required": true,
+                    "help": "Stable decomposition id; used as the .decomposition.json filename."
+                  },
+                  {
+                    "name": "title",
+                    "flags": [
+                      "--title"
+                    ],
+                    "required": true,
+                    "help": "Human-readable decomposition title."
+                  },
+                  {
+                    "name": "outcome",
+                    "flags": [
+                      "--outcome"
+                    ],
+                    "required": true,
+                    "help": "Larger intended outcome owned by the decomposition."
+                  },
+                  {
+                    "name": "promotion_rule",
+                    "flags": [
+                      "--promotion-rule"
+                    ],
+                    "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.",
+                    "help": "Rule for promoting candidate lanes."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id from a read surface; stop if Planning changed before mutation."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Show planned changes without mutating files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
                 ]
               },
               {
                 "name": "owner-select",
                 "help": "Select an existing Planning owner without creating or overwriting it.",
                 "options": [
-                  {"name": "owner", "flags": ["--owner"], "default": "", "help": "Stable existing owner id."},
-                  {"name": "owner_ref", "flags": ["--owner-ref"], "default": "", "help": "Explicit repo-relative existing owner reference."},
-                  {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-                  {"name": "mode", "flags": ["--mode"], "choices": ["local", "shared"], "default": "local", "help": "Selection scope; local is advisory and current-work scoped."},
-                  {"name": "reason", "flags": ["--reason"], "default": "", "help": "Required reason for explicit shared checked-in selection."},
-                  {"name": "current_work_id", "flags": ["--current-work-id"], "default": "", "help": "Stable current-work context id; defaults to the local context."},
-                  {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id."},
-                  {"name": "expect_current_work_revision", "flags": ["--expect-current-work-revision"], "default": "", "help": "Optimistic current-work selection revision."},
-                  {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Return the exact proposed delta without writing files."},
-                  {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+                  {
+                    "name": "owner",
+                    "flags": [
+                      "--owner"
+                    ],
+                    "default": "",
+                    "help": "Stable existing owner id."
+                  },
+                  {
+                    "name": "owner_ref",
+                    "flags": [
+                      "--owner-ref"
+                    ],
+                    "default": "",
+                    "help": "Explicit repo-relative existing owner reference."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "mode",
+                    "flags": [
+                      "--mode"
+                    ],
+                    "choices": [
+                      "local",
+                      "shared"
+                    ],
+                    "default": "local",
+                    "help": "Selection scope; local is advisory and current-work scoped."
+                  },
+                  {
+                    "name": "reason",
+                    "flags": [
+                      "--reason"
+                    ],
+                    "default": "",
+                    "help": "Required reason for explicit shared checked-in selection."
+                  },
+                  {
+                    "name": "current_work_id",
+                    "flags": [
+                      "--current-work-id"
+                    ],
+                    "default": "",
+                    "help": "Stable current-work context id; defaults to the local context."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic Planning revision id."
+                  },
+                  {
+                    "name": "expect_current_work_revision",
+                    "flags": [
+                      "--expect-current-work-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic current-work selection revision."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Return the exact proposed delta without writing files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "issue-shape",
+                "help": "Shape a durable issue-to-lane relation without activating work.",
+                "options": [
+                  {
+                    "name": "issue",
+                    "flags": [
+                      "--issue"
+                    ],
+                    "default": "",
+                    "help": "External issue or tracker id."
+                  },
+                  {
+                    "name": "external_ref",
+                    "flags": [
+                      "--external-ref"
+                    ],
+                    "default": "",
+                    "help": "Provider-agnostic external work reference."
+                  },
+                  {
+                    "name": "lane",
+                    "flags": [
+                      "--lane"
+                    ],
+                    "default": "",
+                    "help": "Strategic Planning lane id; defaults to ungrouped."
+                  },
+                  {
+                    "name": "priority",
+                    "flags": [
+                      "--priority"
+                    ],
+                    "default": "",
+                    "help": "Internal priority within the lane."
+                  },
+                  {
+                    "name": "depends_on",
+                    "flags": [
+                      "--depends-on"
+                    ],
+                    "default": "",
+                    "help": "Comma-separated external refs this issue depends on."
+                  },
+                  {
+                    "name": "rationale",
+                    "flags": [
+                      "--rationale"
+                    ],
+                    "default": "",
+                    "help": "Why this issue belongs in the selected lane."
+                  },
+                  {
+                    "name": "maturity",
+                    "flags": [
+                      "--maturity"
+                    ],
+                    "choices": [
+                      "observed",
+                      "shaped",
+                      "ready-to-promote",
+                      "blocked",
+                      "deferred"
+                    ],
+                    "default": "",
+                    "help": "Strategic shaping maturity."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path."
+                  },
+                  {
+                    "name": "expect_relation_revision",
+                    "flags": [
+                      "--expect-relation-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic relation revision required when editing an existing relation."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Advisory Planning revision captured in the receipt."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Preview the relation delta without writing files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "integration-propose",
+                "help": "Create a pending target-branch Planning integration proposal.",
+                "options": [
+                  {
+                    "name": "proposal_id",
+                    "flags": [
+                      "--proposal-id"
+                    ],
+                    "default": "",
+                    "help": "Stable proposal id; defaults from subject and transition."
+                  },
+                  {
+                    "name": "owner",
+                    "flags": [
+                      "--owner"
+                    ],
+                    "default": "",
+                    "help": "Affected Planning owner id."
+                  },
+                  {
+                    "name": "owner_ref",
+                    "flags": [
+                      "--owner-ref"
+                    ],
+                    "default": "",
+                    "help": "Repo-relative affected owner path."
+                  },
+                  {
+                    "name": "issue",
+                    "flags": [
+                      "--issue"
+                    ],
+                    "default": "",
+                    "help": "External issue or tracker id."
+                  },
+                  {
+                    "name": "external_ref",
+                    "flags": [
+                      "--external-ref"
+                    ],
+                    "default": "",
+                    "help": "Provider-agnostic external work reference."
+                  },
+                  {
+                    "name": "requested_transition",
+                    "flags": [
+                      "--requested-transition"
+                    ],
+                    "choices": [
+                      "mark-integrated",
+                      "close-owner",
+                      "archive-owner",
+                      "keep-open"
+                    ],
+                    "default": "mark-integrated",
+                    "help": "Lifecycle transition requested for target-branch apply."
+                  },
+                  {
+                    "name": "proof",
+                    "flags": [
+                      "--proof"
+                    ],
+                    "default": "",
+                    "help": "Comma-separated proof references for the requested transition."
+                  },
+                  {
+                    "name": "parent_boundary",
+                    "flags": [
+                      "--parent-boundary"
+                    ],
+                    "default": "",
+                    "help": "Boundary that keeps parent/lane truth independent."
+                  },
+                  {
+                    "name": "invariant",
+                    "flags": [
+                      "--invariant"
+                    ],
+                    "default": "",
+                    "help": "Comma-separated invariants preserved by the proposal."
+                  },
+                  {
+                    "name": "expect_subject_revision",
+                    "flags": [
+                      "--expect-subject-revision"
+                    ],
+                    "default": "",
+                    "help": "Optimistic affected-subject revision."
+                  },
+                  {
+                    "name": "expect_target_revision",
+                    "flags": [
+                      "--expect-target-revision"
+                    ],
+                    "default": "",
+                    "help": "Alias for --expect-subject-revision."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Advisory Planning revision captured in the proposal."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Preview the proposal without writing files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "integration-apply",
+                "help": "Apply a pending Planning integration proposal as target-branch truth.",
+                "options": [
+                  {
+                    "name": "proposal",
+                    "flags": [
+                      "--proposal"
+                    ],
+                    "required": true,
+                    "help": "Proposal id or repo-relative proposal JSON path."
+                  },
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path."
+                  },
+                  {
+                    "name": "expect_planning_revision",
+                    "flags": [
+                      "--expect-planning-revision"
+                    ],
+                    "default": "",
+                    "help": "Advisory Planning revision captured in the receipt."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Preview the apply transaction without writing files."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
                 ]
               },
               {
@@ -4217,19 +4649,28 @@
                 "options": [
                   {
                     "name": "target",
-                    "flags": ["--target"],
+                    "flags": [
+                      "--target"
+                    ],
                     "help": "Optional repository path."
                   },
                   {
                     "name": "key",
-                    "flags": ["--key"],
+                    "flags": [
+                      "--key"
+                    ],
                     "default": "",
                     "help": "Optional exact carry key to inspect."
                   },
                   {
                     "name": "format",
-                    "flags": ["--format"],
-                    "choices": ["text", "json"],
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
                     "default": "text",
                     "help": "Output format."
                   }
@@ -4245,19 +4686,28 @@
                 "options": [
                   {
                     "name": "target",
-                    "flags": ["--target"],
+                    "flags": [
+                      "--target"
+                    ],
                     "help": "Optional repository path."
                   },
                   {
                     "name": "key",
-                    "flags": ["--key"],
+                    "flags": [
+                      "--key"
+                    ],
                     "required": true,
                     "help": "Exact active carry key to select."
                   },
                   {
                     "name": "format",
-                    "flags": ["--format"],
-                    "choices": ["text", "json"],
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
                     "default": "text",
                     "help": "Output format."
                   }
@@ -4273,37 +4723,52 @@
                 "options": [
                   {
                     "name": "target",
-                    "flags": ["--target"],
+                    "flags": [
+                      "--target"
+                    ],
                     "help": "Optional repository path."
                   },
                   {
                     "name": "key",
-                    "flags": ["--key"],
+                    "flags": [
+                      "--key"
+                    ],
                     "required": true,
                     "help": "Exact selected carry key to mark stale."
                   },
                   {
                     "name": "expect_context_id",
-                    "flags": ["--expect-context-id"],
+                    "flags": [
+                      "--expect-context-id"
+                    ],
                     "required": true,
                     "help": "Optimistic current-work context id returned by carry-select."
                   },
                   {
                     "name": "reason",
-                    "flags": ["--reason"],
+                    "flags": [
+                      "--reason"
+                    ],
                     "required": true,
                     "help": "Concrete evidence that the selected carry is stale."
                   },
                   {
                     "name": "dry_run",
-                    "flags": ["--dry-run"],
+                    "flags": [
+                      "--dry-run"
+                    ],
                     "action": "store_true",
                     "help": "Report the exact mutation without changing the carry."
                   },
                   {
                     "name": "format",
-                    "flags": ["--format"],
-                    "choices": ["text", "json"],
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
                     "default": "text",
                     "help": "Output format."
                   }
@@ -4623,10 +5088,39 @@
                   "path": "operations/session-log.manage.json"
                 },
                 "options": [
-                  {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-                  {"name": "path", "flags": ["--path"], "help": "Optional repo-relative session log path; defaults to the current session pointer."},
-                  {"name": "id", "flags": ["--id"], "help": "Optional session id or aw-session-<id> directory name to repair."},
-                  {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "path",
+                    "flags": [
+                      "--path"
+                    ],
+                    "help": "Optional repo-relative session log path; defaults to the current session pointer."
+                  },
+                  {
+                    "name": "id",
+                    "flags": [
+                      "--id"
+                    ],
+                    "help": "Optional session id or aw-session-<id> directory name to repair."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
                 ]
               },
               {
@@ -4637,11 +5131,47 @@
                   "path": "operations/session-log.manage.json"
                 },
                 "options": [
-                  {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-                  {"name": "path", "flags": ["--path"], "help": "Optional repo-relative session log path; defaults to the current session pointer."},
-                  {"name": "id", "flags": ["--id"], "help": "Optional session id or aw-session-<id> directory name to export."},
-                  {"name": "no_artifacts", "flags": ["--no-artifacts"], "action": "store_true", "help": "Exclude raw-output artifacts from the exported bundle."},
-                  {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Optional repository path."
+                  },
+                  {
+                    "name": "path",
+                    "flags": [
+                      "--path"
+                    ],
+                    "help": "Optional repo-relative session log path; defaults to the current session pointer."
+                  },
+                  {
+                    "name": "id",
+                    "flags": [
+                      "--id"
+                    ],
+                    "help": "Optional session id or aw-session-<id> directory name to export."
+                  },
+                  {
+                    "name": "no_artifacts",
+                    "flags": [
+                      "--no-artifacts"
+                    ],
+                    "action": "store_true",
+                    "help": "Exclude raw-output artifacts from the exported bundle."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  }
                 ]
               }
             ]
@@ -7570,6 +8100,9 @@
             "planning.lane-promote.lifecycle",
             "planning.new-plan.lifecycle",
             "planning.owner-select.lifecycle",
+            "planning.integration-apply.lifecycle",
+            "planning.integration-propose.lifecycle",
+            "planning.issue-shape.lifecycle",
             "planning.promote-to-plan.lifecycle",
             "planning.prompt.render",
             "planning.reconcile.report",
@@ -7675,6 +8208,71 @@
             {
               "name": "issue",
               "arg": "issue",
+              "default": ""
+            },
+            {
+              "name": "external_ref",
+              "arg": "external_ref",
+              "default": ""
+            },
+            {
+              "name": "priority",
+              "arg": "priority",
+              "default": ""
+            },
+            {
+              "name": "depends_on",
+              "arg": "depends_on",
+              "default": ""
+            },
+            {
+              "name": "rationale",
+              "arg": "rationale",
+              "default": ""
+            },
+            {
+              "name": "maturity",
+              "arg": "maturity",
+              "default": ""
+            },
+            {
+              "name": "expect_relation_revision",
+              "arg": "expect_relation_revision",
+              "default": ""
+            },
+            {
+              "name": "proposal_id",
+              "arg": "proposal_id",
+              "default": ""
+            },
+            {
+              "name": "requested_transition",
+              "arg": "requested_transition",
+              "default": "mark-integrated"
+            },
+            {
+              "name": "parent_boundary",
+              "arg": "parent_boundary",
+              "default": ""
+            },
+            {
+              "name": "invariant",
+              "arg": "invariant",
+              "default": ""
+            },
+            {
+              "name": "expect_subject_revision",
+              "arg": "expect_subject_revision",
+              "default": ""
+            },
+            {
+              "name": "expect_target_revision",
+              "arg": "expect_target_revision",
+              "default": ""
+            },
+            {
+              "name": "proposal",
+              "arg": "proposal",
               "default": ""
             },
             {
@@ -8103,6 +8701,24 @@
               "import_module": "repo_planning_bootstrap.runtime_projection"
             },
             {
+              "primitive": "planning.issue-shape.apply",
+              "handler": "runtime_handler",
+              "function": "apply_planning_issue_shape_operation",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
+            },
+            {
+              "primitive": "planning.integration-propose.apply",
+              "handler": "runtime_handler",
+              "function": "apply_planning_integration_propose_operation",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
+            },
+            {
+              "primitive": "planning.integration-apply.apply",
+              "handler": "runtime_handler",
+              "function": "apply_planning_integration_apply_operation",
+              "import_module": "repo_planning_bootstrap.runtime_projection"
+            },
+            {
               "primitive": "planning.lane-archive.apply",
               "handler": "runtime_handler",
               "function": "apply_planning_lane_archive_operation",
@@ -8527,12 +9143,16 @@
               },
               {
                 "name": "decision_point_carry_key",
-                "flags": ["--decision-point-carry-key"],
+                "flags": [
+                  "--decision-point-carry-key"
+                ],
                 "help": "Select one exact decision-point carry work-binding key for closeout."
               },
               {
                 "name": "prune_decision_point_carry_key",
-                "flags": ["--prune-decision-point-carry-key"],
+                "flags": [
+                  "--prune-decision-point-carry-key"
+                ],
                 "help": "Mark one exact abandoned decision-point carry stale while preserving other active carries."
               },
               {
@@ -9749,31 +10369,127 @@
         {
           "adapter_id": "planning.decomposition-create.cli",
           "status": "generated",
-          "command": {"manifest_ref": "package:planning:cli", "name": "decomposition-create"},
-          "operation_ref": {"id": "planning.decomposition-create.lifecycle", "path": "operations/planning.decomposition-create.lifecycle.json"},
-          "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["planning.decomposition-create.apply", "output.emit"]},
-          "schemas": {"input": [], "output": []},
-          "effect_hints": {"read_only": false, "destructive": false, "idempotent": false, "writes_repo_state": true, "requires_preflight_gate": false},
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "decomposition-create"
+          },
+          "operation_ref": {
+            "id": "planning.decomposition-create.lifecycle",
+            "path": "operations/planning.decomposition-create.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.decomposition-create.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": []
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": false,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
           "interface": {
             "name": "decomposition-create",
             "help": "Create a first-class Planning decomposition record.",
             "options": [
-              {"name": "id", "flags": ["--id"], "required": true, "help": "Stable decomposition id."},
-              {"name": "title", "flags": ["--title"], "required": true, "help": "Human-readable decomposition title."},
-              {"name": "outcome", "flags": ["--outcome"], "required": true, "help": "Larger intended outcome."},
-              {"name": "promotion_rule", "flags": ["--promotion-rule"], "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.", "help": "Candidate-lane promotion rule."},
-              {"name": "target", "flags": ["--target"], "help": "Target repository path."},
-              {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id."},
-              {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Preview changes without writing files."},
-              {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+              {
+                "name": "id",
+                "flags": [
+                  "--id"
+                ],
+                "required": true,
+                "help": "Stable decomposition id."
+              },
+              {
+                "name": "title",
+                "flags": [
+                  "--title"
+                ],
+                "required": true,
+                "help": "Human-readable decomposition title."
+              },
+              {
+                "name": "outcome",
+                "flags": [
+                  "--outcome"
+                ],
+                "required": true,
+                "help": "Larger intended outcome."
+              },
+              {
+                "name": "promotion_rule",
+                "flags": [
+                  "--promotion-rule"
+                ],
+                "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.",
+                "help": "Candidate-lane promotion rule."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview changes without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
             ]
           },
           "projection_boundary": {
-            "universal": ["command identity", "operation reference", "runtime primitive reference", "effect hints", "conformance refs"],
-            "target_specific": ["parser library", "package entrypoint wiring", "help text layout", "test container image"],
-            "runtime_owned": ["planning decomposition mutation policy", "module result assembly"]
+            "universal": [
+              "command identity",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "planning decomposition mutation policy",
+              "module result assembly"
+            ]
           },
-          "conformance_refs": ["planning.decomposition-create.lifecycle.dry-run.process"]
+          "conformance_refs": [
+            "planning.decomposition-create.lifecycle.dry-run.process"
+          ]
         },
         {
           "adapter_id": "planning.lane-create.cli",
@@ -10133,33 +10849,617 @@
         {
           "adapter_id": "planning.owner-select.cli",
           "status": "generated",
-          "command": {"manifest_ref": "package:planning:cli", "name": "owner-select"},
-          "operation_ref": {"id": "planning.owner-select.lifecycle", "path": "operations/planning.owner-select.lifecycle.json"},
-          "runtime_binding": {"kind": "operation-primitive-sequence", "primitive_refs": ["planning.owner-select.apply", "output.emit"]},
-          "schemas": {"input": [], "output": ["planning-owner-selection-receipt.schema.json"]},
-          "effect_hints": {"read_only": false, "destructive": false, "idempotent": true, "writes_repo_state": true, "requires_preflight_gate": false},
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "owner-select"
+          },
+          "operation_ref": {
+            "id": "planning.owner-select.lifecycle",
+            "path": "operations/planning.owner-select.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.owner-select.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "planning-owner-selection-receipt.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
           "interface": {
             "name": "owner-select",
             "help": "Select an existing Planning owner without creating or overwriting it.",
             "options": [
-              {"name": "owner", "flags": ["--owner"], "default": "", "help": "Stable existing owner id."},
-              {"name": "owner_ref", "flags": ["--owner-ref"], "default": "", "help": "Explicit repo-relative existing owner reference."},
-              {"name": "target", "flags": ["--target"], "help": "Target repository path."},
-              {"name": "mode", "flags": ["--mode"], "choices": ["local", "shared"], "default": "local", "help": "Selection scope; local is advisory and current-work scoped."},
-              {"name": "reason", "flags": ["--reason"], "default": "", "help": "Required reason for explicit shared checked-in selection."},
-              {"name": "current_work_id", "flags": ["--current-work-id"], "default": "", "help": "Stable current-work context id."},
-              {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id."},
-              {"name": "expect_current_work_revision", "flags": ["--expect-current-work-revision"], "default": "", "help": "Optimistic current-work selection revision."},
-              {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Return the exact proposed delta without writing files."},
-              {"name": "format", "flags": ["--format"], "choices": ["text", "json"], "default": "text", "help": "Output format."}
+              {
+                "name": "owner",
+                "flags": [
+                  "--owner"
+                ],
+                "default": "",
+                "help": "Stable existing owner id."
+              },
+              {
+                "name": "owner_ref",
+                "flags": [
+                  "--owner-ref"
+                ],
+                "default": "",
+                "help": "Explicit repo-relative existing owner reference."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path."
+              },
+              {
+                "name": "mode",
+                "flags": [
+                  "--mode"
+                ],
+                "choices": [
+                  "local",
+                  "shared"
+                ],
+                "default": "local",
+                "help": "Selection scope; local is advisory and current-work scoped."
+              },
+              {
+                "name": "reason",
+                "flags": [
+                  "--reason"
+                ],
+                "default": "",
+                "help": "Required reason for explicit shared checked-in selection."
+              },
+              {
+                "name": "current_work_id",
+                "flags": [
+                  "--current-work-id"
+                ],
+                "default": "",
+                "help": "Stable current-work context id."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Optimistic Planning revision id."
+              },
+              {
+                "name": "expect_current_work_revision",
+                "flags": [
+                  "--expect-current-work-revision"
+                ],
+                "default": "",
+                "help": "Optimistic current-work selection revision."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Return the exact proposed delta without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
             ]
           },
           "projection_boundary": {
-            "universal": ["command identity", "option schema", "operation reference", "runtime primitive reference", "effect hints", "conformance refs"],
-            "target_specific": ["parser library", "package entrypoint wiring", "help text layout", "test container image"],
-            "runtime_owned": ["owner resolution and lifecycle policy", "current-work binding", "atomic Planning mutation", "receipt validation"]
+            "universal": [
+              "command identity",
+              "option schema",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "owner resolution and lifecycle policy",
+              "current-work binding",
+              "atomic Planning mutation",
+              "receipt validation"
+            ]
           },
-          "conformance_refs": ["planning.owner-select.lifecycle.process"]
+          "conformance_refs": [
+            "planning.owner-select.lifecycle.process"
+          ]
+        },
+        {
+          "adapter_id": "planning.issue-shape.cli",
+          "status": "generated",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "issue-shape"
+          },
+          "operation_ref": {
+            "id": "planning.issue-shape.lifecycle",
+            "path": "operations/planning.issue-shape.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.issue-shape.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "planning-issue-relation.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "interface": {
+            "name": "issue-shape",
+            "help": "Shape a durable issue-to-lane relation without activating work.",
+            "options": [
+              {
+                "name": "issue",
+                "flags": [
+                  "--issue"
+                ],
+                "default": "",
+                "help": "External issue or tracker id."
+              },
+              {
+                "name": "external_ref",
+                "flags": [
+                  "--external-ref"
+                ],
+                "default": "",
+                "help": "Provider-agnostic external work reference."
+              },
+              {
+                "name": "lane",
+                "flags": [
+                  "--lane"
+                ],
+                "default": "",
+                "help": "Strategic Planning lane id; defaults to ungrouped."
+              },
+              {
+                "name": "priority",
+                "flags": [
+                  "--priority"
+                ],
+                "default": "",
+                "help": "Internal priority within the lane."
+              },
+              {
+                "name": "depends_on",
+                "flags": [
+                  "--depends-on"
+                ],
+                "default": "",
+                "help": "Comma-separated external refs this issue depends on."
+              },
+              {
+                "name": "rationale",
+                "flags": [
+                  "--rationale"
+                ],
+                "default": "",
+                "help": "Why this issue belongs in the selected lane."
+              },
+              {
+                "name": "maturity",
+                "flags": [
+                  "--maturity"
+                ],
+                "choices": [
+                  "observed",
+                  "shaped",
+                  "ready-to-promote",
+                  "blocked",
+                  "deferred"
+                ],
+                "default": "",
+                "help": "Strategic shaping maturity."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path."
+              },
+              {
+                "name": "expect_relation_revision",
+                "flags": [
+                  "--expect-relation-revision"
+                ],
+                "default": "",
+                "help": "Optimistic relation revision required when editing an existing relation."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Advisory Planning revision captured in the receipt."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview the relation delta without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option schema",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "strategic issue relation policy",
+              "field-scoped revision guard",
+              "non-activation invariant",
+              "module result assembly"
+            ]
+          },
+          "conformance_refs": [
+            "planning.issue-shape.lifecycle.process"
+          ]
+        },
+        {
+          "adapter_id": "planning.integration-propose.cli",
+          "status": "generated",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "integration-propose"
+          },
+          "operation_ref": {
+            "id": "planning.integration-propose.lifecycle",
+            "path": "operations/planning.integration-propose.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.integration-propose.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "planning-integration-proposal.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "interface": {
+            "name": "integration-propose",
+            "help": "Create a pending target-branch Planning integration proposal.",
+            "options": [
+              {
+                "name": "proposal_id",
+                "flags": [
+                  "--proposal-id"
+                ],
+                "default": "",
+                "help": "Stable proposal id; defaults from subject and transition."
+              },
+              {
+                "name": "owner",
+                "flags": [
+                  "--owner"
+                ],
+                "default": "",
+                "help": "Affected Planning owner id."
+              },
+              {
+                "name": "owner_ref",
+                "flags": [
+                  "--owner-ref"
+                ],
+                "default": "",
+                "help": "Repo-relative affected owner path."
+              },
+              {
+                "name": "issue",
+                "flags": [
+                  "--issue"
+                ],
+                "default": "",
+                "help": "External issue or tracker id."
+              },
+              {
+                "name": "external_ref",
+                "flags": [
+                  "--external-ref"
+                ],
+                "default": "",
+                "help": "Provider-agnostic external work reference."
+              },
+              {
+                "name": "requested_transition",
+                "flags": [
+                  "--requested-transition"
+                ],
+                "choices": [
+                  "mark-integrated",
+                  "close-owner",
+                  "archive-owner",
+                  "keep-open"
+                ],
+                "default": "mark-integrated",
+                "help": "Lifecycle transition requested for target-branch apply."
+              },
+              {
+                "name": "proof",
+                "flags": [
+                  "--proof"
+                ],
+                "default": "",
+                "help": "Comma-separated proof references for the requested transition."
+              },
+              {
+                "name": "parent_boundary",
+                "flags": [
+                  "--parent-boundary"
+                ],
+                "default": "",
+                "help": "Boundary that keeps parent/lane truth independent."
+              },
+              {
+                "name": "invariant",
+                "flags": [
+                  "--invariant"
+                ],
+                "default": "",
+                "help": "Comma-separated invariants preserved by the proposal."
+              },
+              {
+                "name": "expect_subject_revision",
+                "flags": [
+                  "--expect-subject-revision"
+                ],
+                "default": "",
+                "help": "Optimistic affected-subject revision."
+              },
+              {
+                "name": "expect_target_revision",
+                "flags": [
+                  "--expect-target-revision"
+                ],
+                "default": "",
+                "help": "Alias for --expect-subject-revision."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Advisory Planning revision captured in the proposal."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview the proposal without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option schema",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "integration proposal policy",
+              "subject revision identity",
+              "non-authoritative feature branch transition"
+            ]
+          },
+          "conformance_refs": [
+            "planning.integration-propose.lifecycle.process"
+          ]
+        },
+        {
+          "adapter_id": "planning.integration-apply.cli",
+          "status": "generated",
+          "command": {
+            "manifest_ref": "package:planning:cli",
+            "name": "integration-apply"
+          },
+          "operation_ref": {
+            "id": "planning.integration-apply.lifecycle",
+            "path": "operations/planning.integration-apply.lifecycle.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "planning.integration-apply.apply",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "planning-integration-receipt.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "interface": {
+            "name": "integration-apply",
+            "help": "Apply a pending Planning integration proposal as target-branch truth.",
+            "options": [
+              {
+                "name": "proposal",
+                "flags": [
+                  "--proposal"
+                ],
+                "required": true,
+                "help": "Proposal id or repo-relative proposal JSON path."
+              },
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Target repository path."
+              },
+              {
+                "name": "expect_planning_revision",
+                "flags": [
+                  "--expect-planning-revision"
+                ],
+                "default": "",
+                "help": "Advisory Planning revision captured in the receipt."
+              },
+              {
+                "name": "dry_run",
+                "flags": [
+                  "--dry-run"
+                ],
+                "action": "store_true",
+                "help": "Preview the apply transaction without writing files."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ]
+          },
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option schema",
+              "operation reference",
+              "runtime primitive reference",
+              "effect hints",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "package entrypoint wiring",
+              "help text layout",
+              "test container image"
+            ],
+            "runtime_owned": [
+              "target-branch integration authority",
+              "subject revision CAS",
+              "atomic proposal and receipt mutation"
+            ]
+          },
+          "conformance_refs": [
+            "planning.integration-apply.lifecycle.process"
+          ]
         },
         {
           "adapter_id": "planning.lane-close.cli",
@@ -10956,35 +12256,47 @@
               },
               {
                 "name": "lane",
-                "flags": ["--lane"],
+                "flags": [
+                  "--lane"
+                ],
                 "help": "Lane id whose machine-readable child outcomes should be reconciled."
               },
               {
                 "name": "apply_lane_reconcile",
-                "flags": ["--apply-lane-reconcile"],
+                "flags": [
+                  "--apply-lane-reconcile"
+                ],
                 "action": "store_true",
                 "help": "Apply the reported child-outcome delta without closing the parent lane."
               },
               {
                 "name": "preview",
-                "flags": ["--preview"],
+                "flags": [
+                  "--preview"
+                ],
                 "action": "store_true",
                 "help": "Compile a reusable reconciliation proposal without mutating Planning state."
               },
               {
                 "name": "apply",
-                "flags": ["--apply"],
+                "flags": [
+                  "--apply"
+                ],
                 "action": "store_true",
                 "help": "Apply the exact reconciliation proposal guarded by --proposal and --expect-planning-revision."
               },
               {
                 "name": "proposal",
-                "flags": ["--proposal"],
+                "flags": [
+                  "--proposal"
+                ],
                 "help": "Proposal id returned by --preview."
               },
               {
                 "name": "expected_planning_revision",
-                "flags": ["--expect-planning-revision"],
+                "flags": [
+                  "--expect-planning-revision"
+                ],
                 "help": "Planning revision returned by --preview and required by --apply."
               }
             ]

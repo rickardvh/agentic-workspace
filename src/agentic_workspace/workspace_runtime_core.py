@@ -30998,6 +30998,27 @@ def _planning_owner_short_file_hash(path: Path | None) -> str:
         return "unreadable"
 
 
+def _planning_owner_short_tree_hash(root: Path, pattern: str) -> str:
+    if not root.exists() or not root.is_dir():
+        return "missing"
+    digest = hashlib.sha256()
+    seen = False
+    try:
+        paths = sorted(path for path in root.glob(pattern) if path.is_file())
+    except OSError:
+        return "unreadable"
+    for path in paths:
+        seen = True
+        try:
+            digest.update(path.relative_to(root).as_posix().encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(hashlib.sha256(path.read_bytes()).digest())
+            digest.update(b"\0")
+        except OSError:
+            return "unreadable"
+    return digest.hexdigest()[:16] if seen else "empty"
+
+
 def _planning_owner_selection_basis_revision(*, target_root: Path, state_data: dict[str, Any]) -> str:
     todo = state_data.get("todo", {}) if isinstance(state_data, dict) else {}
     active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
@@ -31064,6 +31085,18 @@ def _planning_owner_selection_basis_revision(*, target_root: Path, state_data: d
         "active_execplan_hash": _planning_owner_short_file_hash(active_path),
         "active_item_id": str(active_item.get("id") or "").strip(),
         "active_item_surface": active_surface,
+        "issue_relations_hash": _planning_owner_short_tree_hash(
+            target_root / ".agentic-workspace" / "planning" / "issue-relations",
+            "*.issue-relation.json",
+        ),
+        "integration_proposals_hash": _planning_owner_short_tree_hash(
+            target_root / ".agentic-workspace" / "planning" / "integration-proposals",
+            "*.integration-proposal.json",
+        ),
+        "integration_receipts_hash": _planning_owner_short_tree_hash(
+            target_root / ".agentic-workspace" / "planning" / "integration-receipts",
+            "*.integration-receipt.json",
+        ),
     }
     revision_material = json.dumps(components, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(revision_material).hexdigest()[:16]

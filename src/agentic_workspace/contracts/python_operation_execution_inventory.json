@@ -1338,10 +1338,15 @@
       "generated_transport": "generated/planning/python/cli.py",
       "operation_contract": "operations/planning.owner-select.lifecycle.json",
       "primitive_executor": "command_generation/primitive_executor.py",
-      "hand_owned_runtime_code": ["planning.owner-select.apply", "module-result text/json compatibility formatting"],
+      "hand_owned_runtime_code": [
+        "planning.owner-select.apply",
+        "module-result text/json compatibility formatting"
+      ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "planning.owner-select.lifecycle.process",
-      "domain_runtime_primitive_refs": ["planning.owner-select.apply"],
+      "domain_runtime_primitive_refs": [
+        "planning.owner-select.apply"
+      ],
       "runtime_boundary_class": "mutation-orchestration",
       "runtime_boundary_reason": "Generated operation IR owns dataflow while Planning owns owner selectability, current-work binding, protected-field preservation, rollback, and receipt policy.",
       "what_would_make_portable_later": "Keep semantic selection policy in Planning; extract only generic atomic JSON/TOML and schema-validation mechanics when portable primitives preserve the same transaction boundary.",
@@ -1892,6 +1897,72 @@
       "runtime_boundary_reason": "Lifecycle planning/apply behavior owns managed-surface safety, dry-run, and mutation orchestration.",
       "what_would_make_portable_later": "Represent this operation as schema-backed IR steps using codegen-owned primitives for the deterministic portions and keep only irreducible package judgment behind an explicit domain primitive.",
       "generic_behavior_audit": "Classified as mutation-orchestration; current proof requires this entry to name hand-owned runtime code and explain why it is not generic deterministic file/data/template/schema/output behavior."
+    },
+    {
+      "operation_id": "planning.issue-shape.lifecycle",
+      "program": "agentic-planning",
+      "command": "issue-shape",
+      "generated_transport": "generated/planning/python/cli.py",
+      "operation_contract": "operations/planning.issue-shape.lifecycle.json",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.issue-shape.apply",
+        "output.emit"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.issue-shape.lifecycle.process",
+      "domain_runtime_primitive_refs": [
+        "planning.issue-shape.apply",
+        "output.emit"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Strategic issue relation shaping owns field-scoped relation revision policy and the non-activation invariant.",
+      "what_would_make_portable_later": "Represent the deterministic file/schema portions as portable primitives once Planning lifecycle authority and branch-safety policy can remain as smaller explicit domain steps.",
+      "generic_behavior_audit": "Generated parser, command metadata, operation resource loading, and dataflow execution are codegen-owned; Planning runtime owns policy-heavy mutation semantics and exact authority boundaries. This is not accepted as portable codegen coverage."
+    },
+    {
+      "operation_id": "planning.integration-propose.lifecycle",
+      "program": "agentic-planning",
+      "command": "integration-propose",
+      "generated_transport": "generated/planning/python/cli.py",
+      "operation_contract": "operations/planning.integration-propose.lifecycle.json",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.integration-propose.apply",
+        "output.emit"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.integration-propose.lifecycle.process",
+      "domain_runtime_primitive_refs": [
+        "planning.integration-propose.apply",
+        "output.emit"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Planning proposal creation owns branch-safe lifecycle proposal semantics and affected-subject revision identity.",
+      "what_would_make_portable_later": "Represent the deterministic file/schema portions as portable primitives once Planning lifecycle authority and branch-safety policy can remain as smaller explicit domain steps.",
+      "generic_behavior_audit": "Generated parser, command metadata, operation resource loading, and dataflow execution are codegen-owned; Planning runtime owns policy-heavy mutation semantics and exact authority boundaries. This is not accepted as portable codegen coverage."
+    },
+    {
+      "operation_id": "planning.integration-apply.lifecycle",
+      "program": "agentic-planning",
+      "command": "integration-apply",
+      "generated_transport": "generated/planning/python/cli.py",
+      "operation_contract": "operations/planning.integration-apply.lifecycle.json",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "hand_owned_runtime_code": [
+        "planning.integration-apply.apply",
+        "output.emit"
+      ],
+      "status": "domain-runtime-primitive-via-ir",
+      "conformance_ref": "planning.integration-apply.lifecycle.process",
+      "domain_runtime_primitive_refs": [
+        "planning.integration-apply.apply",
+        "output.emit"
+      ],
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Planning integration apply owns target-branch lifecycle truth, subject CAS policy, and atomic proposal/receipt mutation.",
+      "what_would_make_portable_later": "Represent the deterministic file/schema portions as portable primitives once Planning lifecycle authority and branch-safety policy can remain as smaller explicit domain steps.",
+      "generic_behavior_audit": "Generated parser, command metadata, operation resource loading, and dataflow execution are codegen-owned; Planning runtime owns policy-heavy mutation semantics and exact authority boundaries. This is not accepted as portable codegen coverage."
     }
   ],
   "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried as portable-codegen-primitive-executed, generated-runtime-handler, domain-runtime-primitive-via-ir, or accepted-hand-owned-runtime-primitive; domain-runtime-primitive-via-ir and accepted-hand-owned-runtime-primitive entries are transitional unless their audit proves they do not hide generic deterministic runtime debt."

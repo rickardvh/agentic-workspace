@@ -93,7 +93,10 @@
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_report_combined_adapter|agentic_workspace.workspace_runtime_primitives|_run_report_combined_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_setup_guidance_adapter|agentic_workspace.workspace_runtime_primitives|_run_setup_guidance_adapter",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_startup_runtime.py|_run_start_context_adapter|agentic_workspace.workspace_runtime_startup|_run_start_context_adapter",
-      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_summary_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_summary_report_adapter"
+      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_run_summary_report_adapter|agentic_workspace.workspace_runtime_primitives|_run_summary_report_adapter",
+      "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|apply_planning_issue_shape_operation|repo_planning_bootstrap.runtime_projection|apply_planning_issue_shape_operation",
+      "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|apply_planning_integration_propose_operation|repo_planning_bootstrap.runtime_projection|apply_planning_integration_propose_operation",
+      "runtime-facade-call|generated/planning/python/primitives/planning_runtime.py|apply_planning_integration_apply_operation|repo_planning_bootstrap.runtime_projection|apply_planning_integration_apply_operation"
     ],
     "entries": [
       {
@@ -1598,8 +1601,12 @@
         "source_module": "repo_planning_bootstrap.runtime_projection",
         "source_symbol": "apply_planning_owner_select_operation",
         "owner_package": "planning package runtime boundary",
-        "operation_ids": ["planning.owner-select.lifecycle"],
-        "primitive_refs": ["planning.owner-select.apply"],
+        "operation_ids": [
+          "planning.owner-select.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.owner-select.apply"
+        ],
         "runtime_boundary_class": "mutation-orchestration",
         "why_not_generic_deterministic": "The symbol binds Planning-owned owner lifecycle, lane relationship, current-work selection, protected-field, rollback, and receipt policy.",
         "conformance_ref": "planning.owner-select.lifecycle.process",
@@ -1610,7 +1617,94 @@
         "minimization_owner": "Planning owner selection primitive owner",
         "minimization_tracking_issue": "#2278",
         "stale_when": "Stale if owner selection semantics move to a normalized portable owner graph without this runtime facade.",
-        "direct_edit_reasons_allowed": ["existing-primitive-bugfix", "new-primitive-implementation"]
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "apply_planning_issue_shape_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "apply_planning_issue_shape_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.issue-shape.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.issue-shape.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "Strategic issue relation shaping owns field-scoped relation revision policy, schema validation, and the non-activation invariant.",
+        "conformance_ref": "planning.issue-shape.lifecycle.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Generated operation IR owns parser, value mapping, and dispatch; the package primitive owns Planning branch-safety policy, validation, conflict handling, and exact authority boundaries.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "Planning branch-safe lifecycle primitive owner",
+        "minimization_tracking_issue": "#2344",
+        "stale_when": "Stale if branch-safe Planning relation/proposal semantics move to portable schema-backed primitives without this runtime facade.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "apply_planning_integration_propose_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "apply_planning_integration_propose_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.integration-propose.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.integration-propose.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "Integration proposal creation owns branch-safe proposal authority, affected-subject revision identity, and non-authoritative feature-branch lifecycle semantics.",
+        "conformance_ref": "planning.integration-propose.lifecycle.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Generated operation IR owns parser, value mapping, and dispatch; the package primitive owns Planning branch-safety policy, validation, conflict handling, and exact authority boundaries.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "Planning branch-safe lifecycle primitive owner",
+        "minimization_tracking_issue": "#2345",
+        "stale_when": "Stale if branch-safe Planning relation/proposal semantics move to portable schema-backed primitives without this runtime facade.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/planning/python/primitives/planning_runtime.py",
+        "facade_symbol": "apply_planning_integration_apply_operation",
+        "source_module": "repo_planning_bootstrap.runtime_projection",
+        "source_symbol": "apply_planning_integration_apply_operation",
+        "owner_package": "planning package runtime boundary",
+        "operation_ids": [
+          "planning.integration-apply.lifecycle"
+        ],
+        "primitive_refs": [
+          "planning.integration-apply.apply"
+        ],
+        "runtime_boundary_class": "mutation-orchestration",
+        "why_not_generic_deterministic": "Integration apply owns target-branch lifecycle truth, affected-subject CAS validation, and atomic proposal/receipt mutation.",
+        "conformance_ref": "planning.integration-apply.lifecycle.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Generated operation IR owns parser, value mapping, and dispatch; the package primitive owns Planning branch-safety policy, validation, conflict handling, and exact authority boundaries.",
+        "minimization_category": "mutation-safety-orchestration",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "Planning branch-safe lifecycle primitive owner",
+        "minimization_tracking_issue": "#2345",
+        "stale_when": "Stale if branch-safe Planning relation/proposal semantics move to portable schema-backed primitives without this runtime facade.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
       },
       {
         "binding_kind": "runtime-facade-call",
@@ -2041,10 +2135,10 @@
           "new-primitive-implementation"
         ]
       },
-    {
-      "binding_kind": "runtime-facade-call",
-      "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-      "facade_symbol": "_run_final_response_admit_adapter",
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_final_response_admit_adapter",
         "source_module": "agentic_workspace.workspace_runtime_primitives",
         "source_symbol": "_run_final_response_admit_adapter",
         "owner_package": "workspace package runtime boundary",
@@ -2064,41 +2158,41 @@
         "minimization_owner": "package runtime primitive owner for semantic package judgment",
         "minimization_tracking_issue": "#1364",
         "stale_when": "Stale when host final-response custody and continuation dispatch can be represented as stable declarative dataflow with equivalent terminal outcome safeguards.",
-      "direct_edit_reasons_allowed": [
-        "existing-primitive-bugfix",
-        "new-primitive-implementation"
-      ]
-    },
-    {
-      "binding_kind": "runtime-facade-call",
-      "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
-      "facade_symbol": "_run_autopilot_adapter",
-      "source_module": "agentic_workspace.workspace_runtime_primitives",
-      "source_symbol": "_run_autopilot_adapter",
-      "owner_package": "workspace package runtime boundary",
-      "operation_ids": [
-        "autopilot.run"
-      ],
-      "primitive_refs": [
-        "runtime_module_handler:autopilot.run"
-      ],
-      "runtime_boundary_class": "package-specific-judgment",
-      "why_not_generic_deterministic": "The symbol owns the ordinary host executor loop, terminal outcome custody, continuation command execution, and ignored-local admission checkpointing rather than generic deterministic target-executor logic.",
-      "conformance_ref": "autopilot.run.process",
-      "status": "accepted-permanent-package-domain-boundary",
-      "generic_behavior_audit": "Classified as package-specific-judgment; generated parser and facade wiring own command projection while the package runtime boundary owns ordinary autopilot execution, final-response admission, continuation execution, and local-only checkpoint semantics.",
-      "minimization_category": "package-specific-judgment",
-      "minimization_route": "keep-as-hand-owned-primitive",
-      "minimization_owner": "package runtime primitive owner for semantic package judgment",
-      "minimization_tracking_issue": "#1364",
-      "stale_when": "Stale when ordinary host executor custody and continuation dispatch can be represented as stable declarative dataflow with equivalent terminal outcome safeguards.",
-      "direct_edit_reasons_allowed": [
-        "existing-primitive-bugfix",
-        "new-primitive-implementation"
-      ]
-    },
-    {
-      "binding_kind": "runtime-facade-call",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_run_autopilot_adapter",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_run_autopilot_adapter",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "autopilot.run"
+        ],
+        "primitive_refs": [
+          "runtime_module_handler:autopilot.run"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns the ordinary host executor loop, terminal outcome custody, continuation command execution, and ignored-local admission checkpointing rather than generic deterministic target-executor logic.",
+        "conformance_ref": "autopilot.run.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated parser and facade wiring own command projection while the package runtime boundary owns ordinary autopilot execution, final-response admission, continuation execution, and local-only checkpoint semantics.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when ordinary host executor custody and continuation dispatch can be represented as stable declarative dataflow with equivalent terminal outcome safeguards.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
+      },
+      {
+        "binding_kind": "runtime-facade-call",
         "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
         "facade_symbol": "_run_external_intent_refresh_github_adapter",
         "source_module": "agentic_workspace.workspace_runtime_primitives",

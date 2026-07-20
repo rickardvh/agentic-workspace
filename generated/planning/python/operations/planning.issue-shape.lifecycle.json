@@ -1,0 +1,152 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "issue-shape",
+    "format_option": "format",
+    "program": "agentic-planning"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Never activate, queue, close, or select execution work from shaping.",
+    "Do not rewrite state.toml, lane records, execplans, proof, progress, PR state, or external tracker state.",
+    "Editing an existing relation requires the current relation revision."
+  ],
+  "id": "planning.issue-shape.lifecycle",
+  "inputs": [
+    {
+      "name": "issue",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "external_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "lane",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "priority",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "depends_on",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "rationale",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "maturity",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_relation_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expect_planning_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "arguments": {},
+        "description": "Create or field-scope update one strategic issue relation.",
+        "id": "apply_issue_relation",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "result"
+        ],
+        "uses": "planning.issue-shape.apply"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the exact semantic delta and preserved invariants.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated targets own parser and dispatch parity while Planning owns strategic issue relation semantics."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": false
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "module-result"
+  },
+  "proof": [
+    "planning branch-safe tests cover non-activation, disjoint merge composition, same-relation conflict, and generated command exposure"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/issue-relations/<issue>.issue-relation.json"
+    },
+    {
+      "required": true,
+      "surface": ".agentic-workspace/planning/schemas/planning-issue-relation.schema.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Create or field-scope update one strategic issue relation.",
+      "id": "apply_issue_relation",
+      "uses": "planning.issue-shape.apply"
+    },
+    {
+      "description": "Emit the exact semantic delta and preserved invariants.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Shape a durable issue-to-lane relation without activating work.",
+  "writes": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/issue-relations/<issue>.issue-relation.json",
+      "when": "not a dry run"
+    }
+  ]
+}

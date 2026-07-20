@@ -23,6 +23,9 @@ from . import planning_handoff_report as _command_planning_handoff_report
 from . import planning_init_lifecycle as _command_planning_init_lifecycle
 from . import planning_install_lifecycle as _command_planning_install_lifecycle
 from . import planning_intake_artifact_lifecycle as _command_planning_intake_artifact_lifecycle
+from . import planning_integration_apply_lifecycle as _command_planning_integration_apply_lifecycle
+from . import planning_integration_propose_lifecycle as _command_planning_integration_propose_lifecycle
+from . import planning_issue_shape_lifecycle as _command_planning_issue_shape_lifecycle
 from . import planning_lane_activate_lifecycle as _command_planning_lane_activate_lifecycle
 from . import planning_lane_archive_lifecycle as _command_planning_lane_archive_lifecycle
 from . import planning_lane_close_lifecycle as _command_planning_lane_close_lifecycle
@@ -55,6 +58,9 @@ GENERATED_COMMAND_HANDLERS = {
     'planning.init.lifecycle': _command_planning_init_lifecycle.run,
     'planning.install.lifecycle': _command_planning_install_lifecycle.run,
     'planning.intake-artifact.lifecycle': _command_planning_intake_artifact_lifecycle.run,
+    'planning.integration-apply.lifecycle': _command_planning_integration_apply_lifecycle.run,
+    'planning.integration-propose.lifecycle': _command_planning_integration_propose_lifecycle.run,
+    'planning.issue-shape.lifecycle': _command_planning_issue_shape_lifecycle.run,
     'planning.lane-activate.lifecycle': _command_planning_lane_activate_lifecycle.run,
     'planning.lane-archive.lifecycle': _command_planning_lane_archive_lifecycle.run,
     'planning.lane-close.lifecycle': _command_planning_lane_close_lifecycle.run,

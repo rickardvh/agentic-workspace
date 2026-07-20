@@ -53,6 +53,19 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'current_work_id': getattr(args, 'current_work_id', ''),
                 'expect_current_work_revision': getattr(args, 'expect_current_work_revision', ''),
                 'issue': getattr(args, 'issue', ''),
+                'external_ref': getattr(args, 'external_ref', ''),
+                'priority': getattr(args, 'priority', ''),
+                'depends_on': getattr(args, 'depends_on', ''),
+                'rationale': getattr(args, 'rationale', ''),
+                'maturity': getattr(args, 'maturity', ''),
+                'expect_relation_revision': getattr(args, 'expect_relation_revision', ''),
+                'proposal_id': getattr(args, 'proposal_id', ''),
+                'requested_transition': getattr(args, 'requested_transition', 'mark-integrated'),
+                'parent_boundary': getattr(args, 'parent_boundary', ''),
+                'invariant': getattr(args, 'invariant', ''),
+                'expect_subject_revision': getattr(args, 'expect_subject_revision', ''),
+                'expect_target_revision': getattr(args, 'expect_target_revision', ''),
+                'proposal': getattr(args, 'proposal', ''),
                 'slug': getattr(args, 'slug', ''),
                 'title': getattr(args, 'title', ''),
                 'scope': getattr(args, 'scope', None),
@@ -155,6 +168,19 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'current_work_id': values.get('current_work_id', ''),
                 'expect_current_work_revision': values.get('expect_current_work_revision', ''),
                 'issue': values.get('issue', ''),
+                'external_ref': values.get('external_ref', ''),
+                'priority': values.get('priority', ''),
+                'depends_on': values.get('depends_on', ''),
+                'rationale': values.get('rationale', ''),
+                'maturity': values.get('maturity', ''),
+                'expect_relation_revision': values.get('expect_relation_revision', ''),
+                'proposal_id': values.get('proposal_id', ''),
+                'requested_transition': values.get('requested_transition', 'mark-integrated'),
+                'parent_boundary': values.get('parent_boundary', ''),
+                'invariant': values.get('invariant', ''),
+                'expect_subject_revision': values.get('expect_subject_revision', ''),
+                'expect_target_revision': values.get('expect_target_revision', ''),
+                'proposal': values.get('proposal', ''),
                 'slug': values.get('slug', ''),
                 'title': values.get('title', ''),
                 'scope': values.get('scope', None),
@@ -243,6 +269,9 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
         'planning.init.lifecycle',
         'planning.install.lifecycle',
         'planning.intake-artifact.lifecycle',
+        'planning.integration-apply.lifecycle',
+        'planning.integration-propose.lifecycle',
+        'planning.issue-shape.lifecycle',
         'planning.lane-activate.lifecycle',
         'planning.lane-archive.lifecycle',
         'planning.lane-close.lifecycle',
@@ -287,6 +316,9 @@ def run_operation_values(operation: dict[str, Any], *, initial_values: Mapping[s
                 'planning.lane-activate.apply': _handle_planning_lane_activate_apply,
                 'planning.lane-close.apply': _handle_planning_lane_close_apply,
                 'planning.owner-select.apply': _handle_planning_owner_select_apply,
+                'planning.issue-shape.apply': _handle_planning_issue_shape_apply,
+                'planning.integration-propose.apply': _handle_planning_integration_propose_apply,
+                'planning.integration-apply.apply': _handle_planning_integration_apply_apply,
                 'planning.lane-archive.apply': _handle_planning_lane_archive_apply,
                 'planning.archive-plan.apply': _handle_planning_archive_plan_apply,
                 'planning.closeout.apply': _handle_planning_closeout_apply,
@@ -396,6 +428,24 @@ def _handle_planning_owner_select_apply(values: dict[str, Any], arguments: dict[
     from .planning_runtime import apply_planning_owner_select_operation
 
     return apply_planning_owner_select_operation(values, arguments, context)
+
+
+def _handle_planning_issue_shape_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_issue_shape_operation
+
+    return apply_planning_issue_shape_operation(values, arguments, context)
+
+
+def _handle_planning_integration_propose_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_integration_propose_operation
+
+    return apply_planning_integration_propose_operation(values, arguments, context)
+
+
+def _handle_planning_integration_apply_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
+    from .planning_runtime import apply_planning_integration_apply_operation
+
+    return apply_planning_integration_apply_operation(values, arguments, context)
 
 
 def _handle_planning_lane_archive_apply(values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> Any:
