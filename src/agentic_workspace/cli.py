@@ -3,7 +3,6 @@ from __future__ import annotations
 import importlib
 import json
 import sys
-from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
 from agentic_workspace.config import WorkspaceUsageError
@@ -14,6 +13,21 @@ from agentic_workspace.evaluation import (
     transition_evaluation,
 )
 from agentic_workspace.session_logging import run_with_session_logging
+
+_EVALUATION_COMMANDS = {"register", "observe", "status", "transition"}
+_OBSERVATION_RESULTS = {"supports", "contradicts", "mixed", "not-applicable", "unknown"}
+_CONFIDENCE_VALUES = {"low", "medium", "high"}
+_BURDEN_VALUES = {"low", "medium", "high"}
+_EVALUATION_LIFECYCLES = {
+    "collecting",
+    "enough-signal",
+    "satisfied",
+    "contradicted",
+    "inconclusive",
+    "paused",
+    "superseded",
+    "archived",
+}
 
 
 def _load_main():
@@ -27,51 +41,78 @@ def _load_main():
         return importlib.import_module("generated.workspace.python.cli").main
 
 
-def _evaluation_parser() -> ArgumentParser:
-    parser = ArgumentParser(prog="agentic-workspace evaluation", description="Manage local-first workspace evaluations.")
-    parser.add_argument("--target", default=".", help="Repository path.")
-    parser.add_argument("--format", choices=("text", "json"), default="text", help="Output format.")
-    subparsers = parser.add_subparsers(dest="evaluation_command", required=True)
-
-    register = subparsers.add_parser("register", help="Register or update one evaluation definition.")
-    register.add_argument("--evaluation-id", required=True)
-    register.add_argument("--question", required=True)
-    register.add_argument("--subject", default='{"type":"workspace-task"}')
-    register.add_argument("--criteria", required=True, help="JSON object keyed by criterion id.")
-    register.add_argument("--decision-owner", required=True, help="JSON object with id and class.")
-    register.add_argument("--evidence-sources", required=True, help="Comma-separated evidence source ids.")
-    register.add_argument("--report-sinks", required=True, help="Comma-separated report sink ids.")
-    register.add_argument("--selectors", default="{}")
-    register.add_argument("--collection-policy", default="{}")
-    register.add_argument("--conclusion-policy", default="{}")
-    register.add_argument("--action-policy", default="{}")
-
-    observe = subparsers.add_parser("observe", help="Append one local observation.")
-    observe.add_argument("--evaluation-id", required=True)
-    observe.add_argument("--criterion", required=True)
-    observe.add_argument("--result", required=True, choices=("supports", "contradicts", "mixed", "not-applicable", "unknown"))
-    observe.add_argument("--evidence-refs", default="")
-    observe.add_argument("--confidence", default="medium", choices=("low", "medium", "high"))
-    observe.add_argument("--burden", default="medium", choices=("low", "medium", "high"))
-    observe.add_argument("--context", default="{}")
-    observe.add_argument("--finding", default="")
-    observe.add_argument("--recommended-action", default="")
-
-    status = subparsers.add_parser("status", help="Inspect derived evaluation status.")
-    status.add_argument("--evaluation-id")
-
-    transition = subparsers.add_parser("transition", help="Move an evaluation through a validated lifecycle transition.")
-    transition.add_argument("--evaluation-id", required=True)
-    transition.add_argument(
-        "--lifecycle",
-        required=True,
-        choices=("collecting", "enough-signal", "satisfied", "contradicted", "inconclusive", "paused", "superseded", "archived"),
-    )
-    transition.add_argument("--reason", default="")
-    return parser
+def _evaluation_error(message: str, *, output_format: str = "text") -> int:
+    if output_format == "json":
+        print(json.dumps({"kind": "agentic-workspace/evaluation-error/v1", "status": "failed", "reason": message}, indent=2))
+    else:
+        print(f"agentic-workspace evaluation: {message}", file=sys.stderr)
+    return 2
 
 
-def _emit_evaluation_result(payload: dict, output_format: str) -> int:
+def _consume_option_value(tokens: list[str], index: int, flag: str) -> tuple[str | None, int, str | None]:
+    token = tokens[index]
+    if token.startswith(f"{flag}="):
+        return token.split("=", 1)[1], index + 1, None
+    if index + 1 >= len(tokens):
+        return None, index + 1, f"{flag} requires a value"
+    return tokens[index + 1], index + 2, None
+
+
+def _parse_evaluation_options(
+    tokens: list[str],
+    *,
+    value_options: dict[str, str],
+    defaults: dict[str, object],
+    choices: dict[str, set[str]] | None = None,
+) -> tuple[dict[str, object], str | None]:
+    values = dict(defaults)
+    choices = choices or {}
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        matching_equals = next((flag for flag in value_options if token.startswith(f"{flag}=")), None)
+        if token in value_options or matching_equals:
+            flag = matching_equals or token
+            value, index, error = _consume_option_value(tokens, index, flag)
+            if error is not None:
+                return values, error
+            name = value_options[flag]
+            if name in choices and value not in choices[name]:
+                return values, f"{flag} must be one of: {', '.join(sorted(choices[name]))}"
+            values[name] = value
+            continue
+        return values, f"unexpected argument: {token}"
+    return values, None
+
+
+def _split_evaluation_command(tokens: list[str]) -> tuple[dict[str, object], str, list[str], str | None]:
+    values: dict[str, object] = {"target": ".", "format": "text"}
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token in _EVALUATION_COMMANDS:
+            return values, token, tokens[index + 1 :], None
+        if token in {"--target", "--format"} or token.startswith("--target=") or token.startswith("--format="):
+            flag = "--target" if token == "--target" or token.startswith("--target=") else "--format"
+            value, index, error = _consume_option_value(tokens, index, flag)
+            if error is not None:
+                return values, "", [], error
+            if flag == "--format" and value not in {"text", "json"}:
+                return values, "", [], "--format must be one of: json, text"
+            values["target" if flag == "--target" else "format"] = value
+            continue
+        return values, "", [], f"expected one of: {', '.join(sorted(_EVALUATION_COMMANDS))}"
+    return values, "", [], f"expected one of: {', '.join(sorted(_EVALUATION_COMMANDS))}"
+
+
+def _require_evaluation_options(values: dict[str, object], required: list[str]) -> str | None:
+    for name in required:
+        if not str(values.get(name) or "").strip():
+            return f"--{name.replace('_', '-')} is required"
+    return None
+
+
+def _emit_evaluation_result(payload: dict[str, object], output_format: str) -> int:
     if output_format == "json":
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0
@@ -82,46 +123,121 @@ def _emit_evaluation_result(payload: dict, output_format: str) -> int:
         print(f"Evaluation: {payload['evaluation_id']}")
     if "path" in payload:
         print(f"Path: {payload['path']}")
-    if payload.get("summaries"):
-        for item in payload["summaries"]:
+    summaries = payload.get("summaries")
+    if isinstance(summaries, list):
+        for item in summaries:
+            if not isinstance(item, dict):
+                continue
+            coverage = item.get("coverage", {})
+            observation_count = coverage.get("observation_count", 0) if isinstance(coverage, dict) else 0
             print(
-                f"- {item['evaluation_id']}: {item['lifecycle']}; "
-                f"observations={item['coverage']['observation_count']}; "
-                f"next={item['next_collection_action']}"
+                f"- {item.get('evaluation_id', '')}: {item.get('lifecycle', '')}; "
+                f"observations={observation_count}; next={item.get('next_collection_action', '')}"
             )
     return 0
 
 
-def _run_evaluation_cli(argv: list[str]) -> int:
-    parser = _evaluation_parser()
-    args = parser.parse_args(argv)
-    target_root = Path(args.target).resolve()
-    try:
-        payload = _evaluation_payload(args, target_root=target_root)
-    except WorkspaceUsageError as exc:
-        if args.format == "json":
-            print(json.dumps({"kind": "agentic-workspace/evaluation-error/v1", "status": "failed", "reason": str(exc)}, indent=2))
-            return 2
-        parser.error(str(exc))
-    return _emit_evaluation_result(payload, args.format)
-
-
-def _evaluation_payload(args: Namespace, *, target_root: Path) -> dict:
-    values = vars(args)
-    if args.evaluation_command == "register":
-        return register_evaluation_from_values(target_root=target_root, values=values)
-    if args.evaluation_command == "observe":
-        return append_observation_from_values(target_root=target_root, values=values)
-    if args.evaluation_command == "status":
-        return evaluation_summary(target_root=target_root, evaluation_id=args.evaluation_id)
-    if args.evaluation_command == "transition":
-        return transition_evaluation(
-            target_root=target_root,
-            evaluation_id=args.evaluation_id,
-            lifecycle=args.lifecycle,
-            reason=args.reason,
+def _evaluation_command_values(parent: dict[str, object], command: str, rest: list[str]) -> tuple[dict[str, object], str | None]:
+    common = {"target": parent["target"], "format": parent["format"]}
+    if command == "register":
+        values, error = _parse_evaluation_options(
+            rest,
+            value_options={
+                "--evaluation-id": "evaluation_id",
+                "--question": "question",
+                "--subject": "subject",
+                "--criteria": "criteria",
+                "--decision-owner": "decision_owner",
+                "--evidence-sources": "evidence_sources",
+                "--report-sinks": "report_sinks",
+                "--selectors": "selectors",
+                "--collection-policy": "collection_policy",
+                "--conclusion-policy": "conclusion_policy",
+                "--action-policy": "action_policy",
+            },
+            defaults={
+                **common,
+                "subject": '{"type":"workspace-task"}',
+                "selectors": "{}",
+                "collection_policy": "{}",
+                "conclusion_policy": "{}",
+                "action_policy": "{}",
+            },
         )
-    raise WorkspaceUsageError(f"unsupported evaluation command: {args.evaluation_command}")
+        return values, error or _require_evaluation_options(
+            values, ["evaluation_id", "question", "criteria", "decision_owner", "evidence_sources", "report_sinks"]
+        )
+    if command == "observe":
+        values, error = _parse_evaluation_options(
+            rest,
+            value_options={
+                "--evaluation-id": "evaluation_id",
+                "--criterion": "criterion",
+                "--result": "result",
+                "--evidence-refs": "evidence_refs",
+                "--confidence": "confidence",
+                "--burden": "burden",
+                "--context": "context",
+                "--finding": "finding",
+                "--recommended-action": "recommended_action",
+            },
+            defaults={
+                **common,
+                "evidence_refs": "",
+                "confidence": "medium",
+                "burden": "medium",
+                "context": "{}",
+                "finding": "",
+                "recommended_action": "",
+            },
+            choices={"result": _OBSERVATION_RESULTS, "confidence": _CONFIDENCE_VALUES, "burden": _BURDEN_VALUES},
+        )
+        return values, error or _require_evaluation_options(values, ["evaluation_id", "criterion", "result"])
+    if command == "status":
+        return _parse_evaluation_options(
+            rest,
+            value_options={"--evaluation-id": "evaluation_id"},
+            defaults={**common, "evaluation_id": None},
+        )
+    return _parse_evaluation_options(
+        rest,
+        value_options={"--evaluation-id": "evaluation_id", "--lifecycle": "lifecycle", "--reason": "reason"},
+        defaults={**common, "reason": ""},
+        choices={"lifecycle": _EVALUATION_LIFECYCLES},
+    )
+
+
+def _evaluation_payload(command: str, values: dict[str, object]) -> dict[str, object]:
+    target_root = Path(str(values.get("target") or ".")).resolve()
+    if command == "register":
+        return register_evaluation_from_values(target_root=target_root, values=values)
+    if command == "observe":
+        return append_observation_from_values(target_root=target_root, values=values)
+    if command == "status":
+        evaluation_id = values.get("evaluation_id")
+        return evaluation_summary(target_root=target_root, evaluation_id=str(evaluation_id) if evaluation_id else None)
+    return transition_evaluation(
+        target_root=target_root,
+        evaluation_id=str(values.get("evaluation_id") or ""),
+        lifecycle=str(values.get("lifecycle") or ""),
+        reason=str(values.get("reason") or ""),
+    )
+
+
+def _run_evaluation_cli(argv: list[str]) -> int:
+    parent, command, rest, split_error = _split_evaluation_command(argv)
+    output_format = str(parent.get("format") or "text")
+    if split_error is not None:
+        return _evaluation_error(split_error, output_format=output_format)
+    values, parse_error = _evaluation_command_values(parent, command, rest)
+    output_format = str(values.get("format") or output_format)
+    if parse_error is not None:
+        return _evaluation_error(parse_error, output_format=output_format)
+    try:
+        payload = _evaluation_payload(command, values)
+    except WorkspaceUsageError as exc:
+        return _evaluation_error(str(exc), output_format=output_format)
+    return _emit_evaluation_result(payload, output_format)
 
 
 def _run_cli(argv: list[str] | None = None) -> int:
