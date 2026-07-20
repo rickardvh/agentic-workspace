@@ -72,6 +72,538 @@ def test_json_payload_budget_failure_reports_largest_contributors() -> None:
     assert "context.large" in message
 
 
+def test_selector_validation_error_does_not_project_valid_values_or_build_full_inventory(monkeypatch) -> None:
+    class ExplodingCopy:
+        def __deepcopy__(self, memo: dict[int, object]) -> object:
+            raise AssertionError("valid selector value must not be deep-copied when another selector is invalid")
+
+    def fail_inventory(payload: dict[str, Any]) -> list[str]:
+        raise AssertionError("invalid selector path must not build the full selector inventory")
+
+    monkeypatch.setattr(cli, "_available_selectors_for_payload", fail_inventory)
+
+    payload = {"valid": ExplodingCopy(), "context": {"known": "value"}}
+    selected = cli._select_payload_fields(payload, select="valid,missing.field", source_command="start")
+
+    assert selected["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert selected["unknown_selectors"] == ["missing.field"]
+    assert "values" not in selected
+    assert selected["selector_inventory"]["available_count"] == 3
+    assert selected["selector_inventory"]["sample"] == ["valid", "context", "context.known"]
+    assert (
+        selected["selector_inventory"]["inventory_command"]
+        == "agentic-workspace start --target . --select selector_inventory --format json"
+    )
+    assert "--verbose" not in selected["selector_inventory"]["inventory_command"]
+
+
+def test_start_unknown_selector_fails_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_start_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("start payload must not be built for an unknown selector")
+
+    monkeypatch.setattr(cli, "_selector_first_start_payload", fail_start_payload)
+    monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["not_a_selector"]
+    assert (
+        payload["selector_inventory"]["inventory_command"] == "agentic-workspace start --target . --select selector_inventory --format json"
+    )
+
+
+def test_start_nested_unknown_selector_fails_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_start_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("start payload must not be built for an unknown nested selector")
+
+    monkeypatch.setattr(cli, "_selector_first_start_payload", fail_start_payload)
+    monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "context.not_a_real_field", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["context.not_a_real_field"]
+    assert payload["validation_rule"] == "Selector requests are exact: nested selectors must be declared before payload construction."
+
+
+def test_start_selector_request_limits_fail_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_start_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("start payload must not be built for an oversized selector request")
+
+    monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
+    selectors = ",".join(f"missing_{index}" for index in range(40))
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", selectors, "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["status"] == "invalid-selector-request"
+    assert payload["reason"] == "too-many-selectors"
+    assert payload["selector_budget"]["max_selectors"] == 32
+    assert len(json.dumps(payload)) <= 6000
+
+
+@pytest.mark.parametrize(
+    ("selector", "reason", "limit_contributor"),
+    [
+        ("x" * 257, "selector-too-long", "selector_bytes"),
+        (",".join(f"missing_{index}" for index in range(40)), "too-many-selectors", "requested_selector_count"),
+        (",".join(f"missing_{index}_" + ("x" * 40) for index in range(12)), "selector-request-too-large", "selector_request_bytes"),
+    ],
+)
+def test_start_selector_budget_limits_have_bounded_attribution_before_payload_construction(
+    tmp_path: Path, monkeypatch, capsys, selector: str, reason: str, limit_contributor: str
+) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_start_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("start payload must not be built for invalid selector-budget requests")
+
+    monkeypatch.setattr(cli, "_selector_first_start_payload", fail_start_payload)
+    monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", selector, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["status"] == "invalid-selector-request"
+    assert payload["reason"] == reason
+    assert payload["limit_contributor"] == limit_contributor
+    assert payload["selector_budget"]["max_error_envelope_bytes"] == 6000
+    assert len(json.dumps(payload)) <= 6000
+
+
+def test_start_selector_inventory_route_is_executable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    inventory = payload["values"]["selector_inventory"]
+    assert inventory["kind"] == "agentic-workspace/selector-inventory/v1"
+    assert inventory["source_command"] == "start"
+    assert inventory["available_count"] > 8
+    assert "context_router.rule" in inventory["selectors"]
+
+
+def test_implement_unknown_selector_fails_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_implement_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("implement payload must not be built for an unknown selector")
+
+    monkeypatch.setattr(cli, "_implement_payload", fail_implement_payload)
+
+    assert cli.main(["implement", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["not_a_selector"]
+
+
+def test_implement_nested_unknown_selector_fails_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_implement_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("implement payload must not be built for an unknown nested selector")
+
+    monkeypatch.setattr(cli, "_implement_payload", fail_implement_payload)
+
+    assert cli.main(["implement", "--target", str(tmp_path), "--select", "context.not_a_real_field", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["context.not_a_real_field"]
+
+
+def test_selector_contract_has_single_shared_host_authority() -> None:
+    from agentic_workspace import workspace_selector_validation
+
+    assert workspace_runtime_core._selector_tokens is workspace_selector_validation._selector_tokens
+    assert workspace_runtime_core._selector_prevalidation_error is workspace_selector_validation._selector_prevalidation_error
+    assert workspace_runtime_core._select_payload_fields is workspace_selector_validation._select_payload_fields
+    assert workspace_runtime_primitives._selector_tokens is workspace_selector_validation._selector_tokens
+    assert workspace_runtime_primitives._selector_prevalidation_error is workspace_selector_validation._selector_prevalidation_error
+    assert workspace_runtime_primitives._select_payload_fields is workspace_selector_validation._select_payload_fields
+
+    repo_root = Path(__file__).resolve().parents[1]
+    for relative_path in (
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+    ):
+        text = (repo_root / relative_path).read_text(encoding="utf-8")
+        assert "_SELECTOR_DESCRIPTORS_BY_COMMAND" not in text
+        assert "_MAX_SELECTOR_COUNT" not in text
+        assert "def _selector_request(" not in text
+
+    primitive_executor_text = (repo_root / "generated/workspace/python/primitives/primitive_executor.py").read_text(encoding="utf-8")
+
+    def generated_constant(name: str) -> int:
+        match = re.search(rf"^{name}\s*=\s*([0-9_]+)$", primitive_executor_text, flags=re.MULTILINE)
+        assert match is not None
+        return int(match.group(1).replace("_", ""))
+
+    assert workspace_selector_validation._MAX_SELECTOR_COUNT == generated_constant("_MAX_PROJECTION_SELECTORS")
+    assert workspace_selector_validation._MAX_SELECTOR_BYTES == generated_constant("_MAX_PROJECTION_SELECTOR_BYTES")
+    assert workspace_selector_validation._MAX_SELECTOR_REQUEST_BYTES == generated_constant("_MAX_PROJECTION_SELECTOR_REQUEST_BYTES")
+    assert workspace_selector_validation._MAX_SELECTOR_ERROR_ENVELOPE_BYTES == generated_constant("_MAX_SELECTOR_ERROR_ENVELOPE_BYTES")
+    assert workspace_selector_validation._SELECTOR_SUGGESTION_LIMIT == generated_constant("_SELECTOR_SUGGESTION_LIMIT")
+
+
+def test_deprecated_selector_reports_bounded_replacement_hint_before_projection(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["config", "--target", str(tmp_path), "--select", "workspace.feature_tier", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["workspace.feature_tier"]
+    assert payload["deprecated_selectors"] == ["workspace.feature_tier"]
+    assert payload["replacement_selectors"] == {"workspace.feature_tier": "workspace.enabled_modules"}
+    assert len(json.dumps(payload)) <= 6000
+
+
+def test_explicit_selector_inventory_and_prevalidation_share_declared_nested_selectors(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+    start_inventory = json.loads(capsys.readouterr().out)["values"]["selector_inventory"]
+    assert "context_router.rule" in start_inventory["selectors"]
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "context_router.rule", "--format", "json"]) == 0
+    start_projection = json.loads(capsys.readouterr().out)
+    assert start_projection["kind"] == "agentic-workspace/selected-output/v1"
+    assert "context_router.rule" in start_projection["values"]
+
+    assert cli.main(["defaults", "--section", "root_cli_authority", "--select", "selector_inventory", "--format", "json"]) == 0
+    defaults_inventory = json.loads(capsys.readouterr().out)["values"]["selector_inventory"]
+    assert "answer.command" in defaults_inventory["selectors"]
+
+    assert cli.main(["defaults", "--section", "root_cli_authority", "--select", "answer.command", "--format", "json"]) == 0
+    defaults_projection = json.loads(capsys.readouterr().out)
+    assert defaults_projection["kind"] == "agentic-workspace/selected-output/v1"
+    assert defaults_projection["values"] == {"answer.command": "agentic-workspace defaults --section root_cli_authority --format json"}
+
+
+def test_generated_workspace_operations_prevalidate_before_payload_producers(tmp_path: Path, monkeypatch) -> None:
+    from generated.workspace.python.commands import config_report, defaults_report
+
+    _init_git_repo(tmp_path)
+
+    def fail_payload_producer(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("generated operation must not run payload producer for an invalid selector")
+
+    monkeypatch.setattr(workspace_runtime_primitives, "_config_payload", fail_payload_producer)
+    monkeypatch.setattr(workspace_runtime_primitives, "_defaults_payload", fail_payload_producer)
+
+    config_payload = config_report.invoke({"target": str(tmp_path), "select": "workspace.not_a_real_field", "format": "json"})
+    assert isinstance(config_payload, dict)
+    assert config_payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert config_payload["source_command"] == "config"
+
+    defaults_payload = defaults_report.invoke({"select": "workspace.not_a_real_field", "format": "json"})
+    assert isinstance(defaults_payload, dict)
+    assert defaults_payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert defaults_payload["source_command"] == "defaults"
+
+
+def _selector_contract_payload_bytes(payload: dict[str, Any]) -> int:
+    rendered = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return len(rendered.encode("utf-8"))
+
+
+def _generated_typescript_config_selector_payload(tmp_path: Path, selector: str) -> dict[str, Any]:
+    cli_path = Path(__file__).resolve().parents[1] / "generated/workspace/typescript/src/cli.mjs"
+    script = (
+        "process.argv = [process.execPath, "
+        f"{json.dumps(str(cli_path))}, 'config', '--target', '.', '--select', {json.dumps(selector)}, '--format', 'json'];"
+        f" await import({json.dumps(cli_path.as_uri())});"
+    )
+    completed = subprocess.run(
+        [
+            "node",
+            "--input-type=module",
+            "-e",
+            script,
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        check=True,
+    )
+    return json.loads(completed.stdout.decode("utf-8"))
+
+
+def _generated_python_config_selector_payload(tmp_path: Path, selector: str) -> dict[str, Any]:
+    repo_root = Path(__file__).resolve().parents[1]
+    repo_root_text = str(repo_root)
+    if repo_root_text not in sys.path:
+        sys.path.insert(0, repo_root_text)
+    from generated.workspace.python.commands import config_report
+
+    payload = config_report.invoke({"target": str(tmp_path), "select": selector, "format": "json"})
+    assert isinstance(payload, dict)
+    return payload
+
+
+@pytest.mark.parametrize(
+    ("case_name", "selector", "expected"),
+    [
+        (
+            "max_selector_count_unknowns",
+            ",".join(f"u{index}" for index in range(32)),
+            {"status": "invalid-selector", "requested_selector_count": 32, "unknown_selector_count": 32},
+        ),
+        (
+            "selector_count_over_limit",
+            ",".join(f"u{index}" for index in range(33)),
+            {"status": "invalid-selector-request", "reason": "too-many-selectors", "limit_contributor": "requested_selector_count"},
+        ),
+        (
+            "max_unicode_selector_bytes",
+            chr(0xE9) * 128,
+            {"status": "invalid-selector", "requested_selector_count": 1, "unknown_selector_count": 1},
+        ),
+        (
+            "unicode_selector_bytes_over_limit",
+            (chr(0xE9) * 128) + "a",
+            {"status": "invalid-selector-request", "reason": "selector-too-long", "limit_contributor": "selector_bytes"},
+        ),
+        (
+            "max_selector_request_bytes",
+            f"{'a' * 256},{'b' * 256}",
+            {"status": "invalid-selector", "requested_selector_count": 2, "unknown_selector_count": 2},
+        ),
+        (
+            "selector_request_bytes_over_limit",
+            f"{'a' * 255},{'b' * 255},ccc",
+            {"status": "invalid-selector-request", "reason": "selector-request-too-large", "limit_contributor": "selector_request_bytes"},
+        ),
+        (
+            "mixed_unknown_suggestions",
+            "workspace.not_a_real_field,assurance.not_a_real_field",
+            {"status": "invalid-selector", "requested_selector_count": 2, "unknown_selector_count": 2},
+        ),
+        (
+            "deprecated_replacement",
+            "workspace.feature_tier",
+            {"status": "invalid-selector", "deprecated_selectors": ["workspace.feature_tier"]},
+        ),
+    ],
+)
+def test_generated_selector_validation_matches_host_contract_for_canonical_boundary_cases(
+    tmp_path: Path, capsys, case_name: str, selector: str, expected: dict[str, Any]
+) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["config", "--target", str(tmp_path), "--select", selector, "--format", "json"]) == 0
+    host_payload = json.loads(capsys.readouterr().out)
+    generated_python_payload = _generated_python_config_selector_payload(tmp_path, selector)
+    generated_typescript_payload = _generated_typescript_config_selector_payload(tmp_path, selector)
+
+    assert generated_python_payload == host_payload
+    assert generated_typescript_payload == host_payload
+    for key, value in expected.items():
+        assert host_payload[key] == value
+
+    assert host_payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert host_payload["source_command"] == "config"
+    assert host_payload["selector_budget"] == {
+        "max_selectors": 32,
+        "max_selector_bytes": 256,
+        "max_selector_request_bytes": 512,
+        "max_error_envelope_bytes": 6000,
+        "max_error_items": 8,
+    }
+    assert _selector_contract_payload_bytes(host_payload) <= 6000
+    assert len(json.dumps(host_payload, indent=2).splitlines()) <= 70
+
+    if host_payload["status"] == "invalid-selector":
+        assert host_payload["requested_selector_omitted_count"] == max(0, host_payload["requested_selector_count"] - 8)
+        assert host_payload["unknown_selector_omitted_count"] == max(0, host_payload["unknown_selector_count"] - 8)
+        assert host_payload["selector_inventory"]["sample_limit"] == 8
+        assert len(host_payload["selector_inventory"]["sample"]) == 8
+    if case_name == "mixed_unknown_suggestions":
+        assert host_payload["suggestions"] == {
+            "workspace.not_a_real_field": ["workspace"],
+            "assurance.not_a_real_field": ["assurance"],
+        }
+    if case_name == "deprecated_replacement":
+        assert host_payload["replacement_selectors"] == {"workspace.feature_tier": "workspace.enabled_modules"}
+        assert host_payload["replacement_rule"] == "Deprecated selectors are rejected atomically with a bounded replacement hint."
+
+
+@pytest.mark.parametrize(
+    ("argv", "source_command"),
+    [
+        (["defaults", "--select", "workspace.not_a_real_field", "--format", "json"], "defaults"),
+    ],
+)
+def test_generated_typescript_workspace_operations_use_host_selector_prevalidation(
+    tmp_path: Path, argv: list[str], source_command: str
+) -> None:
+    _init_git_repo(tmp_path)
+
+    completed = subprocess.run(
+        ["node", str(Path(__file__).resolve().parents[1] / "generated/workspace/typescript/src/cli.mjs"), *argv],
+        cwd=tmp_path,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    payload = json.loads(completed.stdout)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["source_command"] == source_command
+    assert payload["selector_budget"]["max_selector_bytes"] == 256
+    assert payload["selector_budget"]["max_selector_request_bytes"] == 512
+    assert payload["selector_budget"]["max_error_envelope_bytes"] == 6000
+
+
+def test_start_optional_selector_root_is_exact_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "issue_reference_intent", "--format", "json"]) == 0
+    exact_root_payload = json.loads(capsys.readouterr().out)
+    assert exact_root_payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert exact_root_payload["missing"] == ["issue_reference_intent"]
+
+    def fail_start_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("start payload must not be built for an undeclared optional selector descendant")
+
+    monkeypatch.setattr(cli, "_selector_first_start_payload", fail_start_payload)
+    monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "issue_reference_intent.not_a_real_field", "--format", "json"]) == 0
+    nested_payload = json.loads(capsys.readouterr().out)
+    assert nested_payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert nested_payload["unknown_selectors"] == ["issue_reference_intent.not_a_real_field"]
+
+
+@pytest.mark.parametrize(
+    ("argv", "source_command", "unknown_selector", "tripwire_attrs"),
+    [
+        (["start", "--target", "{target}"], "start", "context.not_a_real_field", ("_selector_first_start_payload", "_start_payload")),
+        (["implement", "--target", "{target}"], "implement", "context.not_a_real_field", ("_implement_payload",)),
+        (["summary", "--target", "{target}"], "summary", "planning_record.not_a_real_field", ("_load_workspace_config",)),
+        (["config", "--target", "{target}"], "config", "workspace.not_a_real_field", ("_config_payload",)),
+        (
+            ["proof", "--target", "{target}", "--changed", "src/sample.py"],
+            "proof",
+            "proof_obligations.not_a_real_field",
+            ("_proof_payload",),
+        ),
+        (["doctor", "--target", "{target}"], "doctor", "payload_closure_summary.not_a_real_field", ("_selected_runtime_context",)),
+        (["status", "--target", "{target}"], "status", "payload_closure_summary.not_a_real_field", ("_selected_runtime_context",)),
+        (["defaults"], "defaults", "workspace.not_a_real_field", ("_defaults_payload",)),
+        (["report", "--target", "{target}"], "report", "answer.not_a_real_field", ("_selected_runtime_context",)),
+    ],
+)
+def test_command_families_reject_nested_unknown_selectors_before_projection(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+    argv: list[str],
+    source_command: str,
+    unknown_selector: str,
+    tripwire_attrs: tuple[str, ...],
+) -> None:
+    _init_git_repo(tmp_path)
+    command_argv = [str(tmp_path) if token == "{target}" else token for token in argv]
+
+    def fail_payload_construction(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError(f"{source_command} payload/runtime builder must not run for an invalid nested selector")
+
+    for attr in tripwire_attrs:
+        monkeypatch.setattr(cli, attr, fail_payload_construction)
+
+    assert cli.main([*command_argv, "--select", unknown_selector, "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["source_command"] == source_command
+    assert payload["unknown_selectors"] == [unknown_selector]
+    assert len(json.dumps(payload)) <= 6000
+    assert payload["selector_budget"]["max_error_envelope_bytes"] == 6000
+    assert payload["selector_inventory"]["inventory_command"].endswith("--select selector_inventory --format json")
+
+
+def test_selector_error_size_measurements_stay_under_budget(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    cases = {
+        "ordinary_typo": ["start", "--target", str(tmp_path), "--select", "not_a_selector", "--format", "json"],
+        "nested_typo": ["start", "--target", str(tmp_path), "--select", "context.not_a_real_field", "--format", "json"],
+        "oversized_request": [
+            "start",
+            "--target",
+            str(tmp_path),
+            "--select",
+            ",".join(f"missing_{index}" for index in range(40)),
+            "--format",
+            "json",
+        ],
+        "explicit_inventory": ["start", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"],
+    }
+    measurements: dict[str, dict[str, int]] = {}
+
+    for name, argv in cases.items():
+        assert cli.main(argv) == 0
+        text = capsys.readouterr().out
+        measurements[name] = {"bytes": len(text.encode("utf-8")), "lines": len(text.splitlines())}
+
+    assert measurements["ordinary_typo"]["bytes"] < 2000
+    assert measurements["nested_typo"]["bytes"] < 2200
+    assert measurements["oversized_request"]["bytes"] < 1600
+    assert measurements["explicit_inventory"]["bytes"] > measurements["nested_typo"]["bytes"]
+    assert measurements["explicit_inventory"]["bytes"] < 25000
+
+
+def test_implement_selector_inventory_route_is_executable(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "check selector inventory",
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "selector_inventory",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    inventory = payload["values"]["selector_inventory"]
+    assert inventory["kind"] == "agentic-workspace/selector-inventory/v1"
+    assert inventory["source_command"] == "implement"
+    assert inventory["available_count"] > 8
+    assert "context.workflow_sufficiency" in inventory["selectors"]
+
+
+def test_report_unknown_selector_fails_before_runtime_context(monkeypatch, capsys) -> None:
+    def fail_runtime_context(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("report runtime context must not be assembled for an unknown selector")
+
+    monkeypatch.setattr(cli, "_selected_runtime_context", fail_runtime_context)
+
+    assert cli.main(["report", "--select", "not_a_selector", "--format", "json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selector-validation-error/v1"
+    assert payload["unknown_selectors"] == ["not_a_selector"]
+
+
 def test_report_selector_conflict_fails_before_runtime_context(monkeypatch, capsys) -> None:
     def fail_if_called(*args: Any, **kwargs: Any) -> None:
         raise AssertionError("report runtime context must not be assembled for invalid selectors")
@@ -8230,9 +8762,10 @@ def test_start_missing_selector_returns_bounded_inventory(tmp_path: Path, capsys
     payload = json.loads(capsys.readouterr().out)
 
     _assert_json_payload_under(payload, 2_000, label="start missing selector fallback", sort_keys=False)
-    assert payload["missing"] == ["not_a_selector"]
+    assert payload["status"] == "invalid-selector"
+    assert payload["unknown_selectors"] == ["not_a_selector"]
     inventory = payload["selector_inventory"]
-    assert inventory["status"] == "omitted-from-compact-default"
+    assert inventory["status"] == "omitted-from-validation-error"
     assert inventory["available_count"] > len(inventory["sample"])
     assert len(inventory["sample"]) <= 8
     assert inventory["absence_state"] == "hidden_behind_detail_route"
@@ -8430,7 +8963,7 @@ def test_proof_narrowness_marks_generated_surface_broad_proof_required(tmp_path:
 
     payload = json.loads(capsys.readouterr().out)
     narrowness = payload["values"]["proof_narrowness"]
-    assert narrowness["status"] == "narrow_required"
+    assert narrowness["status"] == "broad_required"
     assert narrowness["broad_suite_boundary"]["status"] == "explicit-escalation-required"
     assert narrowness["broad_suite_boundary"]["requires_explicit_escalation"] is True
     assert narrowness["broad_suite_boundary"]["withheld_generic_broad_lanes"][0]["lane"] == "workspace_cli"

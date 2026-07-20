@@ -746,6 +746,16 @@
                 "uniqueItems": true,
                 "default": []
               },
+              "escalation_conditions": {
+                "description": "Typed escalation condition ids evaluated mechanically, such as cross-owner, cross-claim-boundary, high-risk-requirement, focused-route-insufficient, explicit-request, or structured-override.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
+              },
               "claim_boundary": {
                 "description": "Human-readable boundary for claims supported by this lane.",
                 "type": "string",
@@ -755,6 +765,26 @@
                 "description": "Repo-local owner label for the lane.",
                 "type": "string",
                 "minLength": 1
+              },
+              "route_role": {
+                "description": "Mechanical lane role for composition and overlap auditing, for example behavior, maintenance, evidence, or broad.",
+                "type": "string",
+                "minLength": 1
+              },
+              "precedence": {
+                "description": "Repo-declared precedence label or rank used when overlapping proof lanes are intentionally composed.",
+                "type": "string",
+                "minLength": 1
+              },
+              "allowed_composition": {
+                "description": "Route roles this lane is allowed to overlap or compose with without creating a contradictory ownership finding.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true,
+                "default": []
               },
               "notes": {
                 "description": "Optional repo-local note about this lane.",

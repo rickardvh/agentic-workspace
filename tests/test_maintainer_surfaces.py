@@ -507,7 +507,22 @@ def test_root_makefile_keeps_suite_targets_serial_by_default_for_all_platforms()
 def test_root_makefile_preserves_explicit_pytest_parallel_opt_in_for_all_test_targets() -> None:
     makefile = (WORKSPACE_ROOT / "Makefile").read_text(encoding="utf-8")
 
-    assert '@$(COMPACT_RUN) --label "workspace tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) tests' in makefile
+    assert '@$(COMPACT_RUN) --label "workspace CLI tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CLI)' in makefile
+    assert '@$(COMPACT_RUN) --label "workspace proof tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_PROOF)' in makefile
+    assert (
+        '@$(COMPACT_RUN) --label "workspace session and review tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) '
+        "$(WORKSPACE_TEST_SESSION_REVIEW)"
+    ) in makefile
+    assert (
+        '@$(COMPACT_RUN) --label "workspace contract tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CONTRACTS)'
+    ) in makefile
+    assert (
+        '@$(COMPACT_RUN) --label "workspace generated and release tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) '
+        "$(WORKSPACE_TEST_GENERATED_RELEASE)"
+    ) in makefile
+    assert (
+        '@$(COMPACT_RUN) --label "workspace integration tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_INTEGRATION)'
+    ) in makefile
     assert '@$(COMPACT_RUN) --label "memory tests" --cwd packages/memory -- uv run pytest $(PYTEST_PARALLEL_ARGS)' in makefile
     assert '@$(COMPACT_RUN) --label "planning tests" --cwd packages/planning -- uv run pytest $(PYTEST_PARALLEL_ARGS)' in makefile
     assert '@$(COMPACT_RUN) --label "verification tests" --cwd packages/verification -- uv run pytest $(PYTEST_PARALLEL_ARGS)' in makefile

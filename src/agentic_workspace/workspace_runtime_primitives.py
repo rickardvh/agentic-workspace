@@ -192,6 +192,12 @@ from agentic_workspace.workspace_runtime_startup import (
     _start_payload,  # noqa: F401 - compatibility re-export for startup owner boundary
     _tiny_start_payload,
 )
+from agentic_workspace.workspace_selector_validation import (
+    _field_by_path,
+    _select_payload_fields,
+    _selector_prevalidation_error,
+    _selector_tokens,
+)
 
 _GENERATED_CLI_MODULES = {
     "agentic-workspace": ("agentic_workspace._generated_cli_package_impl.cli", "generated.workspace.python.cli"),
@@ -24848,67 +24854,6 @@ def _start_profile_for_select(*, requested_profile: str | None, select: str | No
     return "tiny" if selectors and selectors <= _START_TINY_ONLY_SELECTORS else "compact"
 
 
-def _selector_tokens(select: str | None) -> list[str]:
-    if not select:
-        return []
-    tokens: list[str] = []
-    seen: set[str] = set()
-    for raw in select.split(","):
-        token = raw.strip()
-        if not token or token in seen:
-            continue
-        tokens.append(token)
-        seen.add(token)
-    return tokens
-
-
-def _field_by_path(payload: Any, path: str) -> tuple[bool, Any]:
-    current = payload
-    for part in path.split("."):
-        if isinstance(current, dict) and part in current:
-            current = current[part]
-            continue
-        if isinstance(current, list):
-            try:
-                current = current[int(part)]
-                continue
-            except (ValueError, IndexError):
-                return (False, None)
-        return (False, None)
-    return (True, copy.deepcopy(current))
-
-
-def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str) -> dict[str, Any]:
-    selectors = _selector_tokens(select)
-    values: dict[str, Any] = {}
-    missing: list[str] = []
-    for selector in selectors:
-        found, value = _field_by_path(payload, selector)
-        if found:
-            values[selector] = value
-        else:
-            missing.append(selector)
-    selected_payload_paths = {
-        selector: f"values.{selector}" if selector.isidentifier() else f"values[{json.dumps(selector)}]" for selector in values
-    }
-    selected: dict[str, Any] = {
-        "kind": "agentic-workspace/selected-output/v1",
-        "source_command": source_command,
-        "values": values,
-        "payload_locations": {
-            "kind": "agentic-workspace/output-wrapper-locations/v1",
-            "primary_payload_field": "values",
-            "selected_payload_paths": selected_payload_paths,
-            "rule": "Selected field output stores payloads under values keyed by the selector string; compact report/proof answers store their payload under answer.",
-        },
-    }
-    if missing:
-        selected["missing"] = missing
-        selected["selector_rule"] = "Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing."
-        selected["available_selectors"] = _available_selectors_for_payload(payload)
-    return selected
-
-
 def _selector_requests(select: str | None, key: str) -> bool:
     return any(token == key or token.startswith(f"{key}.") for token in _selector_tokens(select))
 
@@ -40041,6 +39986,12 @@ def _tiny_defaults_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _emit_defaults(*, format_name: str, section: str | None = None, profile: str = "tiny", select: str | None = None) -> None:
+    if prevalidation_error := _selector_prevalidation_error(select=select, source_command="defaults"):
+        if format_name == "json":
+            print(json.dumps(serialise_value(prevalidation_error), indent=2))
+            return
+        _emit_compact_answer_text(prevalidation_error)
+        return
     payload = _defaults_payload()
     if section is not None:
         payload = _select_defaults_section(payload, section=section)
@@ -40971,6 +40922,9 @@ def _emit_proof(
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="proof", config=config):
         _emit_payload(payload=disabled_payload, format_name=format_name)
         return
+    if prevalidation_error := _selector_prevalidation_error(select=select, source_command="proof"):
+        _emit_payload(payload=prevalidation_error, format_name=format_name)
+        return
     if record_receipt:
         payload = _record_proof_receipt_payload(
             target_root=target_root,
@@ -41074,6 +41028,9 @@ def _print_tiny_summary(summary: dict[str, Any]) -> None:
 def _run_summary_report_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="summary", target_root=target_root)
+    if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="summary"):
+        _emit_payload(payload=prevalidation_error, format_name=args.format)
+        return 0
 
     config = _load_workspace_config(target_root=target_root)
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="summary", config=config):
@@ -41313,6 +41270,9 @@ def _selected_runtime_context(
 def _run_report_combined_adapter(args: argparse.Namespace) -> int:
     if getattr(args, "verbose", False) and getattr(args, "section", None):
         raise WorkspaceUsageError("report detail selectors are mutually exclusive; use either --verbose or --section.")
+    if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="report"):
+        _emit_payload(payload=prevalidation_error, format_name=args.format)
+        return 0
     target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name="report")
     if disabled_payload := _workspace_disabled_payload(target_root=target_root, command_name="report", config=config):
         _emit_payload(payload=disabled_payload, format_name=args.format)
@@ -41800,6 +41760,9 @@ def _run_setup_guidance_adapter(args: argparse.Namespace) -> int:
 
 def _run_lifecycle_report_adapter(args: argparse.Namespace) -> int:
     command_name = str(args.command)
+    if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command=command_name):
+        _emit_payload(payload=prevalidation_error, format_name=args.format)
+        return 0
     target_root, descriptors, config, selected_modules, resolved_preset = _selected_runtime_context(args=args, command_name=command_name)
     select = getattr(args, "select", None)
     detail_selector_requested = any(
@@ -42360,6 +42323,9 @@ def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[st
     _validate_descriptor_contract(descriptors)
     config = config_lib.load_workspace_config(target_root=values["target_root"], valid_presets=set(descriptors))
     if _arguments.get("include_payload"):
+        if prevalidation_error := _selector_prevalidation_error(select=values.get("select"), source_command="config"):
+            values["select"] = None
+            return {"config": config, "result": prevalidation_error}
         payload = _config_payload(config=config)
         if not values.get("select"):
             profile = _workspace_operation_profile(values)
@@ -42371,12 +42337,18 @@ def _load_workspace_operation_config(values: dict[str, Any], _arguments: dict[st
     return config
 
 
-def _load_workspace_operation_defaults(_values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+def _load_workspace_operation_defaults(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
+    if prevalidation_error := _selector_prevalidation_error(select=values.get("select"), source_command="defaults"):
+        values["select"] = None
+        values["_selector_prevalidation_failed"] = True
+        return prevalidation_error
     return _defaults_payload()
 
 
 def _select_workspace_operation_defaults(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
     payload = values["defaults_payload"]
+    if values.get("_selector_prevalidation_failed"):
+        return serialise_value(payload)
     section = values.get("section")
     if section is not None:
         payload = _select_defaults_section(payload, section=str(section))
@@ -47259,6 +47231,9 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _emit_config(*, format_name: str, config: WorkspaceConfig, profile: str = "full", select: str | None = None) -> None:
+    if prevalidation_error := _selector_prevalidation_error(select=select, source_command="config"):
+        _emit_payload(payload=prevalidation_error, format_name=format_name)
+        return
     full_payload = _config_payload(config=config)
     if select:
         payload = _select_payload_fields(full_payload, select=select, source_command="config")

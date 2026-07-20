@@ -74,6 +74,8 @@
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_append_workspace_operation_delegation_outcome|agentic_workspace.workspace_runtime_primitives|_append_workspace_operation_delegation_outcome",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_emit_workspace_operation_output|agentic_workspace.workspace_runtime_primitives|_emit_workspace_operation_output",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_load_workspace_operation_config|agentic_workspace.workspace_runtime_primitives|_load_workspace_operation_config",
+      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_load_workspace_operation_defaults|agentic_workspace.workspace_runtime_primitives|_load_workspace_operation_defaults",
+      "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_select_workspace_operation_defaults|agentic_workspace.workspace_runtime_primitives|_select_workspace_operation_defaults",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_load_workspace_operation_system_intent_config|agentic_workspace.workspace_runtime_primitives|_load_workspace_operation_system_intent_config",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_read_or_create_workspace_operation_system_intent_mirror|agentic_workspace.workspace_runtime_primitives|_read_or_create_workspace_operation_system_intent_mirror",
       "runtime-facade-call|generated/workspace/python/primitives/workspace_runtime.py|_refresh_workspace_operation_system_intent_metadata|agentic_workspace.workspace_runtime_primitives|_refresh_workspace_operation_system_intent_metadata",
@@ -1806,6 +1808,62 @@
         "minimization_owner": "package runtime primitive owner for semantic package judgment",
         "minimization_tracking_issue": "#1364",
         "stale_when": "Stale when the semantic judgment becomes stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_load_workspace_operation_defaults",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_load_workspace_operation_defaults",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "defaults.report"
+        ],
+        "primitive_refs": [
+          "workspace.defaults.load"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns workspace defaults resource loading plus shared selector prevalidation before defaults payload construction; that compatibility and package-policy judgment is behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "defaults.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while workspace.defaults.load remains an explicit package-boundary call for defaults resource compatibility and fail-fast selector validation before payload construction. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when defaults resource loading and pre-projection selector validation become stable declarative dataflow or a portable primitive contract shared across packages.",
+        "direct_edit_reasons_allowed": [
+          "existing-primitive-bugfix",
+          "new-primitive-implementation"
+        ]
+      },
+      {
+        "binding_kind": "runtime-facade-call",
+        "facade_path": "generated/workspace/python/primitives/workspace_runtime.py",
+        "facade_symbol": "_select_workspace_operation_defaults",
+        "source_module": "agentic_workspace.workspace_runtime_primitives",
+        "source_symbol": "_select_workspace_operation_defaults",
+        "owner_package": "workspace package runtime boundary",
+        "operation_ids": [
+          "defaults.report"
+        ],
+        "primitive_refs": [
+          "workspace.defaults.select"
+        ],
+        "runtime_boundary_class": "package-specific-judgment",
+        "why_not_generic_deterministic": "The symbol owns defaults section/tiny compatibility, root CLI authority behavior, and shared selector projection after prevalidation; that package policy is behind an explicit operation primitive boundary rather than generic deterministic target-executor logic.",
+        "conformance_ref": "defaults.report.process",
+        "status": "accepted-permanent-package-domain-boundary",
+        "generic_behavior_audit": "Classified as package-specific-judgment; generated operation IR and codegen-owned run_operation_steps own the dataflow, while workspace.defaults.select remains an explicit package-boundary call for defaults tiny/section compatibility and shared selector projection. This entry is not accepted as portable codegen coverage, and full-completion proof rejects it if the boundary class is generic-deterministic-runtime-debt.",
+        "minimization_category": "package-specific-judgment",
+        "minimization_route": "keep-as-hand-owned-primitive",
+        "minimization_owner": "package runtime primitive owner for semantic package judgment",
+        "minimization_tracking_issue": "#1364",
+        "stale_when": "Stale when defaults section/tiny compatibility and selector projection become stable declarative dataflow or a portable primitive contract shared across packages.",
         "direct_edit_reasons_allowed": [
           "existing-primitive-bugfix",
           "new-primitive-implementation"

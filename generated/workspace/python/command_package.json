@@ -6335,7 +6335,7 @@
   "generation_metadata": {
     "generator": {
       "package": "command-generation",
-      "version": "1.3.1"
+      "version": "2.0.0"
     },
     "schema_version": "command-generation/generated-artifact-metadata/v1",
     "source_ir": {
@@ -6360,36 +6360,6 @@
           {
             "function": "_resolve_workspace_operation_target_root",
             "implementation": "target_root_resolve"
-          },
-          {
-            "function": "_load_workspace_operation_defaults",
-            "generated_root": "_contracts",
-            "implementation": "json_resource_load",
-            "relative_path": "payload.json",
-            "required_marker": "payload.json"
-          },
-          {
-            "common_sections": [
-              "startup",
-              "proof_surfaces",
-              "memory_routing",
-              "capability_routing",
-              "closeout_trust",
-              "compact_contract_profile",
-              "workflow_sufficiency",
-              "authority_hierarchy",
-              "compliance_economics"
-            ],
-            "compact_profile_ref": ".agentic-workspace/docs/compact-contract-profile.md",
-            "full_detail_command": "agentic-workspace defaults --verbose --format json",
-            "function": "_select_workspace_operation_defaults",
-            "implementation": "sectioned_payload_select",
-            "payload_value": "defaults_payload",
-            "section_command_ref": "agentic-workspace defaults --format json",
-            "section_detail_command": "agentic-workspace defaults --section <section> --format json",
-            "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
-            "selected_output_kind": "agentic-workspace/selected-output/v1",
-            "source_command": "defaults"
           },
           {
             "delegation_outcomes_kind": "agentic-workspace/delegation-outcomes/v1",

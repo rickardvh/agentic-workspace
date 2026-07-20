@@ -86,6 +86,7 @@ from agentic_workspace.workspace_runtime_core import (
     _routine_work_context_payload,
     _select_payload_fields,
     _selector_first_planning_safety_gate,
+    _selector_prevalidation_error,
     _selector_requests,
     _selector_requests_architecture_principles,
     _selector_requests_assurance_requirements,
@@ -147,6 +148,9 @@ from agentic_workspace.workspace_runtime_proof import (
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     target_root = _resolve_target_root(args.target) if args.target else _resolve_target_root(None)
     _validate_target_root(command_name="implement", target_root=target_root)
+    if prevalidation_error := _selector_prevalidation_error(select=getattr(args, "select", None), source_command="implement"):
+        _emit_payload(payload=prevalidation_error, format_name=args.format)
+        return 0
     task_text = getattr(args, "task", None)
     if task_text and getattr(args, "task_file", None):
         raise WorkspaceUsageError("Use either --task or --task-file, not both.")

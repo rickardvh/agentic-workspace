@@ -4779,6 +4779,7 @@ def _proof_selection_for_changed_paths(
         focused_route_authority_available=bool(config is not None and config.assurance.domain_proof_lanes),
     )
     broad_acceptance_lanes = {str(lane_id) for lane_id in _list_payload(_PROOF_SELECTION_RULES.get("broad_acceptance_lanes"))}
+    generic_broad_lane_ids = broad_acceptance_lanes - {"generated_command_packages"}
     explicit_broad_lane_selected = any(
         str(lane.get("id", "")) == "domain:workspace_broad_suite"
         or str(lane.get("claim_boundary", "")) == "explicit-broad-escalation-required"
@@ -4804,7 +4805,7 @@ def _proof_selection_for_changed_paths(
     generic_broad_commands = {
         str(command).strip()
         for lane in selected_lanes
-        if not str(lane.get("id", "")).startswith("domain:") and str(lane.get("id", "")) in broad_acceptance_lanes
+        if not str(lane.get("id", "")).startswith("domain:") and str(lane.get("id", "")) in generic_broad_lane_ids
         for command in _list_payload(lane.get("enough_proof"))
         if str(command).strip()
     }
@@ -4831,8 +4832,8 @@ def _proof_selection_for_changed_paths(
             broad_commands = [str(command) for command in _list_payload(lane.get("enough_proof")) if str(command).strip()]
             if not broad_commands:
                 continue
-            lane_is_broad_profile = bool(lane.get("proof_profile")) or str(lane.get("id", "")) in broad_acceptance_lanes
-            lane_is_generic_broad_escalation = str(lane.get("id", "")) in broad_acceptance_lanes
+            lane_is_broad_profile = bool(lane.get("proof_profile")) or str(lane.get("id", "")) in generic_broad_lane_ids
+            lane_is_generic_broad_escalation = str(lane.get("id", "")) in generic_broad_lane_ids
             if strategy_outcome in {"focused", "route-refinement-required"}:
                 should_withhold_broad = lane_is_broad_profile
             else:
@@ -5060,7 +5061,7 @@ def _proof_selection_for_changed_paths(
             str(lane.get("id", ""))
             for lane in selected_lanes
             if str(lane.get("route_role") or _as_dict(lane.get("domain_lane")).get("route_role") or "") == "broad"
-            or str(lane.get("id", "")) in broad_acceptance_lanes
+            or str(lane.get("id", "")) in generic_broad_lane_ids
             or str(lane.get("id", "")) == "domain:workspace_broad_suite"
         }
         broad_commands = {

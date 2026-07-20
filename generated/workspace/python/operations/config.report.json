@@ -57,6 +57,8 @@
           {
             "arguments": {
               "selected_output_kind": "agentic-workspace/selected-output/v1",
+              "selector_detail_command": "agentic-workspace config --target . --select selector_inventory --format json",
+              "selector_inventory_command": "agentic-workspace config --target . --select selector_inventory --format json",
               "source": "result",
               "source_command": "config"
             },

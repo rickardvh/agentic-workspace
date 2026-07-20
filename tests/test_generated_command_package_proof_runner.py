@@ -2194,7 +2194,7 @@ def test_static_generated_package_proof_rejects_full_completion_with_runtime_deb
         assert any(expected_fragment in error for error in errors), label
 
 
-def test_generated_workspace_defaults_loader_uses_generated_resource() -> None:
+def test_generated_workspace_defaults_loader_uses_shared_runtime_boundary() -> None:
     checker = _load_checker()
     runtime_path = checker.REPO_ROOT / "generated" / "workspace" / "python" / "primitives" / "workspace_runtime.py"
     text = runtime_path.read_text(encoding="utf-8")
@@ -2202,8 +2202,8 @@ def test_generated_workspace_defaults_loader_uses_generated_resource() -> None:
     end = text.index("\ndef _load_workspace_operation_system_intent_config", start)
     loader = text[start:end]
 
-    assert "read_json_object(resource_root, 'payload.json')" in loader
-    assert "agentic_workspace.workspace_runtime_primitives import _load_workspace_operation_defaults" not in loader
+    assert "agentic_workspace.workspace_runtime_primitives import _load_workspace_operation_defaults" in loader
+    assert "read_json_object(resource_root, 'payload.json')" not in loader
     assert (checker.REPO_ROOT / "generated" / "workspace" / "python" / "_contracts" / "payload.json").is_file()
 
 

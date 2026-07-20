@@ -29,7 +29,7 @@ def _serialise_value(value: Any) -> Any:
     return value
 
 
-def _field_by_path(payload: Any, path: str) -> tuple[bool, Any]:
+def _field_by_path(payload: Any, path: str, *, copy_value: bool = True) -> tuple[bool, Any]:
     current = payload
     for part in path.split('.'):
         if isinstance(current, dict) and part in current:
@@ -42,42 +42,242 @@ def _field_by_path(payload: Any, path: str) -> tuple[bool, Any]:
             except (ValueError, IndexError):
                 return (False, None)
         return (False, None)
-    return (True, copy.deepcopy(current))
+    return (True, copy.deepcopy(current) if copy_value else None)
 
 
-def _selector_tokens(select: str | None) -> list[str]:
-    return [token.strip() for token in str(select or '').split(',') if token.strip()]
+_MAX_PROJECTION_SELECTORS = 32
+_MAX_PROJECTION_SELECTOR_BYTES = 256
+_MAX_PROJECTION_SELECTOR_REQUEST_BYTES = 512
+_MAX_SELECTOR_ERROR_TEXT_BYTES = 128
+_MAX_SELECTOR_INVENTORY_SAMPLE_PATH_BYTES = 96
+_MAX_SELECTOR_INVENTORY_SAMPLE_BYTES = 384
+_MAX_SELECTOR_ERROR_ENVELOPE_BYTES = 6000
+_SELECTOR_INVENTORY_SAMPLE_LIMIT = 8
+_SELECTOR_SUGGESTION_LIMIT = 1
 
 
-def _available_selectors_for_payload(payload: Any, prefix: str = '') -> list[str]:
+def _utf8_size(value: str) -> int:
+    return len(value.encode('utf-8'))
+
+
+def _utf8_sort_key(value: str) -> bytes:
+    return value.encode('utf-8')
+
+
+def _bounded_selector_error_text(value: str) -> str:
+    return value if _utf8_size(value) <= _MAX_SELECTOR_ERROR_TEXT_BYTES else ''
+
+
+def _selector_error_json_size(payload: dict[str, Any]) -> int:
+    return _utf8_size(json.dumps(payload, ensure_ascii=False, separators=(',', ':')))
+
+
+def _fit_selector_error_envelope(payload: dict[str, Any]) -> dict[str, Any]:
+    if _selector_error_json_size(payload) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+        return payload
+    suggestions = payload.get('suggestions')
+    if isinstance(suggestions, dict):
+        suggestions.clear()
+    if _selector_error_json_size(payload) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+        return payload
+    inventory = payload.get('selector_inventory')
+    if isinstance(inventory, dict):
+        inventory['sample'] = []
+        inventory['discovery_command'] = ''
+        inventory['inventory_command'] = ''
+    if _selector_error_json_size(payload) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+        return payload
+    payload['requested_selectors'] = []
+    payload['unknown_selectors'] = []
+    return payload
+
+
+def _selector_tokens(select: str | None) -> dict[str, Any]:
     selectors: list[str] = []
-    if isinstance(payload, dict):
-        for key in sorted(str(item) for item in payload):
-            path = f'{prefix}.{key}' if prefix else key
-            selectors.append(path)
-            selectors.extend(_available_selectors_for_payload(payload.get(key), path))
-    elif isinstance(payload, list):
-        for index, item in enumerate(payload[:10]):
-            path = f'{prefix}.{index}' if prefix else str(index)
-            selectors.append(path)
-            selectors.extend(_available_selectors_for_payload(item, path))
-    return selectors
+    requested_selector_count = 0
+    selector_request_bytes = 0
+    token_chars: list[str] = []
+    token_bytes = 0
+    pending_whitespace = 0
+    seen_non_whitespace = False
+
+    def limit_error(*, reason: str, selector_request_bytes_value: int, selector_index: int | None = None, selector_bytes: int | None = None) -> dict[str, Any]:
+        error: dict[str, Any] = {'reason': reason, 'requested_selector_count': requested_selector_count, 'selector_request_bytes': selector_request_bytes_value, 'max_selectors': _MAX_PROJECTION_SELECTORS, 'max_selector_bytes': _MAX_PROJECTION_SELECTOR_BYTES, 'max_selector_request_bytes': _MAX_PROJECTION_SELECTOR_REQUEST_BYTES}
+        if selector_index is not None:
+            error['selector_index'] = selector_index
+        if selector_bytes is not None:
+            error['selector_bytes'] = selector_bytes
+        return error
+
+    def append_selector() -> dict[str, Any] | None:
+        nonlocal requested_selector_count, selector_request_bytes, token_chars, token_bytes, pending_whitespace
+        token = ''.join(token_chars)
+        token_chars = []
+        appended_token_bytes = token_bytes
+        token_bytes = 0
+        pending_whitespace = 0
+        if not token:
+            return None
+        requested_selector_count += 1
+        if requested_selector_count > _MAX_PROJECTION_SELECTORS:
+            return limit_error(reason='too-many-selectors', selector_request_bytes_value=selector_request_bytes, selector_index=requested_selector_count - 1)
+        if selector_request_bytes + appended_token_bytes > _MAX_PROJECTION_SELECTOR_REQUEST_BYTES:
+            return limit_error(reason='selector-request-too-large', selector_request_bytes_value=selector_request_bytes + appended_token_bytes, selector_index=requested_selector_count - 1)
+        selector_request_bytes += appended_token_bytes
+        selectors.append(token)
+        return None
+
+    for char in str(select or ''):
+        if char == ',':
+            error = append_selector()
+            if error is not None:
+                return {'selectors': selectors, 'error': error}
+            seen_non_whitespace = False
+            continue
+        if char.isspace() and not seen_non_whitespace:
+            continue
+        if char.isspace():
+            pending_whitespace += 1
+            continue
+        if pending_whitespace:
+            token_chars.extend(' ' * pending_whitespace)
+            token_bytes += pending_whitespace
+            pending_whitespace = 0
+        seen_non_whitespace = True
+        token_chars.append(char)
+        token_bytes += _utf8_size(char)
+        if token_bytes > _MAX_PROJECTION_SELECTOR_BYTES:
+            requested_selector_count += 1
+            error = limit_error(reason='selector-too-long', selector_request_bytes_value=selector_request_bytes + token_bytes, selector_index=requested_selector_count - 1, selector_bytes=token_bytes)
+            return {'selectors': selectors, 'error': error}
+    error = append_selector()
+    return {'selectors': selectors, 'error': error}
 
 
-def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str, selected_output_kind: str) -> dict[str, Any]:
+def _selector_inventory_summary(payload: Any, sample_limit: int = 8) -> tuple[int, list[str]]:
+    count = 0
+    sample_candidates: list[str] = []
+    def record_sample(path: str) -> None:
+        if sample_limit <= 0:
+            return
+        path_bytes = _utf8_size(path)
+        if path_bytes > _MAX_SELECTOR_INVENTORY_SAMPLE_PATH_BYTES:
+            return
+        sample_candidates.append(path)
+        sample_candidates.sort(key=_utf8_sort_key)
+        if len(sample_candidates) > sample_limit:
+            sample_candidates.pop()
+
+    def budgeted_sample() -> list[str]:
+        sample: list[str] = []
+        sample_bytes = 0
+        for path in sample_candidates:
+            path_bytes = _utf8_size(path)
+            if sample_bytes + path_bytes > _MAX_SELECTOR_INVENTORY_SAMPLE_BYTES:
+                break
+            sample.append(path)
+            sample_bytes += path_bytes
+        return sample
+
+    def visit(current: Any, prefix: str) -> None:
+        nonlocal count
+        if isinstance(current, dict):
+            entries = current.items()
+        elif isinstance(current, list):
+            entries = enumerate(current)
+        else:
+            return
+        for key, value in entries:
+            path = f'{prefix}.{key}' if prefix else str(key)
+            count += 1
+            record_sample(path)
+            visit(value, path)
+    visit(payload, '')
+    return count, budgeted_sample()
+
+
+def _selector_validation_kind(selected_output_kind: str) -> str:
+    if '/selected-output/' in selected_output_kind:
+        kind = selected_output_kind.replace('/selected-output/', '/selector-validation-error/', 1)
+    elif selected_output_kind.endswith('/selected-output'):
+        kind = f"{selected_output_kind.removesuffix('/selected-output')}/selector-validation-error"
+    else:
+        kind = 'command-generation/selector-validation-error/v1'
+    if _utf8_size(kind) <= _MAX_SELECTOR_ERROR_TEXT_BYTES:
+        return kind
+    return 'command-generation/selector-validation-error/v1'
+
+
+def _selector_suggestions(unknown: str, available: list[str], *, limit: int = 3) -> list[str]:
+    terms = [part for part in unknown.replace('_', '.').split('.') if part]
+    matches: list[str] = []
+    for selector in available:
+        selector_terms = selector.split('.')
+        if unknown in selector or any(term in selector_terms or term in selector for term in terms):
+            matches.append(selector)
+        if len(matches) >= limit:
+            return matches
+    return available[:limit]
+
+
+def _selector_validation_error(*, payload: Any, selectors: list[str], missing: list[str], source_command: str, selected_output_kind: str, discovery_command: str, detail_command: str) -> dict[str, Any]:
+    sample_limit = _SELECTOR_INVENTORY_SAMPLE_LIMIT
+    available_count, available = _selector_inventory_summary(payload, sample_limit=sample_limit)
+    error = {
+        'kind': _selector_validation_kind(selected_output_kind),
+        'status': 'invalid-selector',
+        'source_command': _bounded_selector_error_text(source_command),
+        'requested_selectors': selectors,
+        'unknown_selectors': missing,
+        'selector_inventory': {
+            'status': 'omitted-from-validation-error',
+            'available_count': available_count,
+            'sample': available,
+            'sample_limit': sample_limit,
+            'discovery_command': _bounded_selector_error_text(discovery_command),
+            'inventory_command': _bounded_selector_error_text(detail_command),
+            'rule': 'Full selector inventories are omitted from validation errors; use the inventory command for complete details.',
+        },
+        'suggestions': {selector: _selector_suggestions(selector, available, limit=_SELECTOR_SUGGESTION_LIMIT) for selector in missing},
+        'validation_rule': 'Selector requests are atomic: any unknown selector prevents partial projection output.',
+    }
+
+
+    return _fit_selector_error_envelope(error)
+
+
+def _selector_request_validation_error(*, selectors: list[str], request_error: dict[str, Any], source_command: str, selected_output_kind: str) -> dict[str, Any]:
+    error = {
+        'kind': _selector_validation_kind(selected_output_kind),
+        'status': 'invalid-selector-request',
+        'source_command': _bounded_selector_error_text(source_command),
+        'requested_selectors': selectors,
+        'selector_request': {'status': 'rejected', **request_error},
+        'validation_rule': 'Selector requests are bounded and atomic: too many selectors or overlong selectors are rejected before projection.',
+    }
+
+
+    return _fit_selector_error_envelope(error)
+
+
+def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str, selected_output_kind: str, discovery_command: str, detail_command: str) -> dict[str, Any]:
     values: dict[str, Any] = {}
     missing: list[str] = []
-    for selector in _selector_tokens(select):
+    selector_request = _selector_tokens(select)
+    selectors = selector_request['selectors']
+    request_error = selector_request['error']
+    if request_error is not None:
+        return _selector_request_validation_error(selectors=selectors, request_error=request_error, source_command=source_command, selected_output_kind=selected_output_kind)
+    missing = [selector for selector in selectors if not _field_by_path(payload, selector, copy_value=False)[0]]
+    if missing:
+        return _selector_validation_error(payload=payload, selectors=selectors, missing=missing, source_command=source_command, selected_output_kind=selected_output_kind, discovery_command=discovery_command, detail_command=detail_command)
+    for selector in selectors:
         found, value = _field_by_path(payload, selector)
         if found:
             values[selector] = value
         else:
             missing.append(selector)
     selected: dict[str, Any] = {'kind': selected_output_kind, 'source_command': source_command, 'values': values}
-    if missing:
-        selected['missing'] = missing
-        selected['selector_rule'] = 'Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing.'
-        selected['available_selectors'] = _available_selectors_for_payload(payload)
     return selected
 
 
@@ -223,11 +423,10 @@ def _load_workspace_operation_config(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _load_workspace_operation_defaults(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
-    from .resources import find_resource_root, read_json_object
+def _load_workspace_operation_defaults(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_primitives import _load_workspace_operation_defaults as source_function
 
-    resource_root = find_resource_root(__file__, [('_contracts', 'payload.json')])
-    return read_json_object(resource_root, 'payload.json')
+    return source_function(*args, **kwargs)
 
 
 def _load_workspace_operation_system_intent_config(*args: Any, **kwargs: Any) -> Any:
@@ -336,17 +535,10 @@ def _run_summary_report_adapter(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _select_workspace_operation_defaults(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
-    payload = values['defaults_payload']
-    section = values.get('section')
-    if section is not None:
-        payload = _select_section(payload, section=str(section), source_command='defaults', command_ref='agentic-workspace defaults --format json', compact_profile_ref='.agentic-workspace/docs/compact-contract-profile.md')
-    elif ('full' if values.get('verbose') else str(values.get('profile') or 'tiny')) == 'tiny':
-        payload = _tiny_sectioned_payload(payload, common_sections=['startup', 'proof_surfaces', 'memory_routing', 'capability_routing', 'closeout_trust', 'compact_contract_profile', 'workflow_sufficiency', 'authority_hierarchy', 'compliance_economics'], sectioned_payload_kind='agentic-workspace/defaults-router/v1', section_detail_command='agentic-workspace defaults --section <section> --format json', full_detail_command='agentic-workspace defaults --verbose --format json')
-    select = values.get('select')
-    if select is not None:
-        payload = _select_payload_fields(payload, select=str(select), source_command='defaults', selected_output_kind='agentic-workspace/selected-output/v1')
-    return _serialise_value(payload)
+def _select_workspace_operation_defaults(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_primitives import _select_workspace_operation_defaults as source_function
+
+    return source_function(*args, **kwargs)
 
 
 __all__ = [

@@ -418,7 +418,9 @@ def _assemble_package_resource_manifest(
     files = _resolve_dotted_value(manifest, files_path)
     bundled_skill_files = _resolve_dotted_value(manifest, bundled_skills_path)
     return {
-        "files": _manifest_path_list(files or [], source=f"{manifest_from}.{files_path}"),
+        "files": _manifest_path_list(
+            files or [], source=f"{manifest_from}.{files_path}"
+        ),
         "default_files": _string_list(
             fields.get("default_files", []),
             source="payload.assemble fields.default_files",
@@ -590,7 +592,9 @@ def _emit_output(
     if output_format == "json":
         return json.dumps(result, indent=2, sort_keys=True) + "\n"
     if isinstance(result, dict):
-        declared_view = _emit_declared_text_view(result, arguments.get("text_views", []))
+        declared_view = _emit_declared_text_view(
+            result, arguments.get("text_views", [])
+        )
         if declared_view is not None:
             return declared_view
     if str(arguments.get("text_style", "")) == "current-memory" and isinstance(
@@ -634,7 +638,9 @@ def _emit_declared_text_view(result: dict[str, Any], views: Any) -> str | None:
     declared_views: list[Mapping[str, Any]] = []
     for view in views:
         if not isinstance(view, Mapping):
-            raise PrimitiveExecutionError("output.emit text_views entries must be objects")
+            raise PrimitiveExecutionError(
+                "output.emit text_views entries must be objects"
+            )
         _validate_declared_text_view(view)
         declared_views.append(view)
     default_view: Mapping[str, Any] | None = None
@@ -648,13 +654,17 @@ def _emit_declared_text_view(result: dict[str, Any], views: Any) -> str | None:
     return None
 
 
-def _declared_text_view_matches(result: dict[str, Any], view: Mapping[str, Any]) -> bool:
+def _declared_text_view_matches(
+    result: dict[str, Any], view: Mapping[str, Any]
+) -> bool:
     match = view.get("match", {})
     if not isinstance(match, Mapping) or not match:
         return False
     for path, expected in match.items():
         if not _is_declared_text_scalar(expected):
-            raise PrimitiveExecutionError("output.emit text view match values must be JSON scalars")
+            raise PrimitiveExecutionError(
+                "output.emit text view match values must be JSON scalars"
+            )
         found, actual = _field_by_path(result, str(path))
         if not found or not _declared_text_scalar_equal(actual, expected):
             return False
@@ -672,7 +682,9 @@ def _validate_declared_text_view(view: Mapping[str, Any]) -> None:
     if isinstance(match, Mapping):
         for expected in match.values():
             if not _is_declared_text_scalar(expected):
-                raise PrimitiveExecutionError("output.emit text view match values must be JSON scalars")
+                raise PrimitiveExecutionError(
+                    "output.emit text view match values must be JSON scalars"
+                )
     if "lines" in view:
         _validate_declared_text_lines(view["lines"])
 
@@ -688,7 +700,9 @@ def _validate_declared_text_line(line: Any) -> None:
     if isinstance(line, str):
         return
     if not isinstance(line, Mapping):
-        raise PrimitiveExecutionError("output.emit text view lines must be strings or objects")
+        raise PrimitiveExecutionError(
+            "output.emit text view lines must be strings or objects"
+        )
     discriminators = {"when", "for_each", "json", "template", "literal"}
     present = [key for key in discriminators if key in line]
     if len(present) != 1:
@@ -698,23 +712,39 @@ def _validate_declared_text_line(line: Any) -> None:
     key = present[0]
     if key == "literal":
         if set(line) != {"literal"}:
-            raise PrimitiveExecutionError("output.emit literal line must only declare literal")
-        _validate_declared_text_string(line["literal"], "output.emit literal line value must be a string")
+            raise PrimitiveExecutionError(
+                "output.emit literal line must only declare literal"
+            )
+        _validate_declared_text_string(
+            line["literal"], "output.emit literal line value must be a string"
+        )
         return
     if key == "template":
         if set(line) != {"template"}:
-            raise PrimitiveExecutionError("output.emit template line must only declare template")
-        _validate_declared_text_string(line["template"], "output.emit template line value must be a string")
+            raise PrimitiveExecutionError(
+                "output.emit template line must only declare template"
+            )
+        _validate_declared_text_string(
+            line["template"], "output.emit template line value must be a string"
+        )
         return
     if key == "json":
         if set(line) != {"json"}:
-            raise PrimitiveExecutionError("output.emit json line must only declare json")
-        _validate_declared_text_string(line["json"], "output.emit json line path must be a string")
+            raise PrimitiveExecutionError(
+                "output.emit json line must only declare json"
+            )
+        _validate_declared_text_string(
+            line["json"], "output.emit json line path must be a string"
+        )
         return
     if key == "when":
         if set(line) != {"when", "lines"}:
-            raise PrimitiveExecutionError("output.emit when line must declare when and lines")
-        _validate_declared_text_string(line["when"], "output.emit when line path must be a string")
+            raise PrimitiveExecutionError(
+                "output.emit when line must declare when and lines"
+            )
+        _validate_declared_text_string(
+            line["when"], "output.emit when line path must be a string"
+        )
         _validate_declared_text_lines(line["lines"])
         return
     spec = line["for_each"]
@@ -722,17 +752,25 @@ def _validate_declared_text_line(line: Any) -> None:
         raise PrimitiveExecutionError("output.emit for_each line must be an object")
     if "path" not in spec:
         raise PrimitiveExecutionError("output.emit for_each line must declare path")
-    _validate_declared_text_string(spec["path"], "output.emit for_each path must be a string")
+    _validate_declared_text_string(
+        spec["path"], "output.emit for_each path must be a string"
+    )
     nested_forms = [name for name in ("lines", "template") if name in spec]
     if len(nested_forms) != 1:
-        raise PrimitiveExecutionError("output.emit for_each line must declare exactly one of lines or template")
+        raise PrimitiveExecutionError(
+            "output.emit for_each line must declare exactly one of lines or template"
+        )
     expected_keys = {"path", nested_forms[0]}
     if set(spec) != expected_keys:
-        raise PrimitiveExecutionError("output.emit for_each line has unsupported fields")
+        raise PrimitiveExecutionError(
+            "output.emit for_each line has unsupported fields"
+        )
     if "lines" in spec:
         _validate_declared_text_lines(spec["lines"])
     else:
-        _validate_declared_text_string(spec["template"], "output.emit for_each template must be a string")
+        _validate_declared_text_string(
+            spec["template"], "output.emit for_each template must be a string"
+        )
 
 
 def _validate_declared_text_string(value: Any, message: str) -> None:
@@ -741,11 +779,15 @@ def _validate_declared_text_string(value: Any, message: str) -> None:
 
 
 def _render_declared_text_view(result: dict[str, Any], view: Mapping[str, Any]) -> str:
-    rendered = _render_declared_text_lines(view.get("lines", []), current=result, root=result)
+    rendered = _render_declared_text_lines(
+        view.get("lines", []), current=result, root=result
+    )
     return "\n".join(rendered).rstrip() + "\n"
 
 
-def _render_declared_text_lines(lines: Any, *, current: Any, root: dict[str, Any]) -> list[str]:
+def _render_declared_text_lines(
+    lines: Any, *, current: Any, root: dict[str, Any]
+) -> list[str]:
     if not isinstance(lines, Sequence) or isinstance(lines, (str, bytes, bytearray)):
         raise PrimitiveExecutionError("output.emit text view lines must be a list")
     rendered: list[str] = []
@@ -754,32 +796,46 @@ def _render_declared_text_lines(lines: Any, *, current: Any, root: dict[str, Any
     return rendered
 
 
-def _render_declared_text_line(line: Any, *, current: Any, root: dict[str, Any]) -> list[str]:
+def _render_declared_text_line(
+    line: Any, *, current: Any, root: dict[str, Any]
+) -> list[str]:
     if isinstance(line, str):
         return [_render_declared_text_template(line, current=current, root=root)]
     if not isinstance(line, Mapping):
-        raise PrimitiveExecutionError("output.emit text view lines must be strings or objects")
+        raise PrimitiveExecutionError(
+            "output.emit text view lines must be strings or objects"
+        )
     if "when" in line:
         found, value = _declared_text_value(line["when"], current=current, root=root)
         if not found or not _declared_text_truthy(value):
             return []
-        return _render_declared_text_lines(line.get("lines", []), current=current, root=root)
+        return _render_declared_text_lines(
+            line.get("lines", []), current=current, root=root
+        )
     if "for_each" in line:
         spec = line["for_each"]
         if not isinstance(spec, Mapping):
             raise PrimitiveExecutionError("output.emit for_each line must be an object")
-        found, value = _declared_text_value(spec.get("path", ""), current=current, root=root)
+        found, value = _declared_text_value(
+            spec.get("path", ""), current=current, root=root
+        )
         if not found or value in (None, ""):
             return []
-        if not isinstance(value, Sequence) or isinstance(value, (str, bytes, bytearray)):
-            raise PrimitiveExecutionError("output.emit for_each path must resolve to a list")
+        if not isinstance(value, Sequence) or isinstance(
+            value, (str, bytes, bytearray)
+        ):
+            raise PrimitiveExecutionError(
+                "output.emit for_each path must resolve to a list"
+            )
         nested_lines = spec.get("lines")
         if nested_lines is None:
             nested_lines = [str(spec.get("template", "{}"))]
         return [
             nested
             for item in value
-            for nested in _render_declared_text_lines(nested_lines, current=item, root=root)
+            for nested in _render_declared_text_lines(
+                nested_lines, current=item, root=root
+            )
         ]
     if "json" in line:
         found, value = _declared_text_value(line["json"], current=current, root=root)
@@ -791,37 +847,60 @@ def _render_declared_text_line(line: Any, *, current: Any, root: dict[str, Any])
             ensure_ascii=False,
         ).splitlines()
     if "template" in line:
-        return [_render_declared_text_template(str(line["template"]), current=current, root=root)]
+        return [
+            _render_declared_text_template(
+                str(line["template"]), current=current, root=root
+            )
+        ]
     if "literal" in line:
         return [str(line["literal"])]
-    raise PrimitiveExecutionError("output.emit text view line object must declare when, for_each, json, template, or literal")
+    raise PrimitiveExecutionError(
+        "output.emit text view line object must declare when, for_each, json, template, or literal"
+    )
 
 
-def _render_declared_text_template(template: str, *, current: Any, root: dict[str, Any]) -> str:
+def _render_declared_text_template(
+    template: str, *, current: Any, root: dict[str, Any]
+) -> str:
     def replace(match: re.Match[str]) -> str:
         token = match.group(1)
-        found, value = _declared_text_placeholder_value(token, current=current, root=root)
+        found, value = _declared_text_placeholder_value(
+            token, current=current, root=root
+        )
         return _declared_text_format(value if found else "")
 
     return _DECLARED_TEXT_TEMPLATE_PATTERN.sub(replace, template)
 
 
-def _declared_text_placeholder_value(token: str, *, current: Any, root: dict[str, Any]) -> tuple[bool, Any]:
+def _declared_text_placeholder_value(
+    token: str, *, current: Any, root: dict[str, Any]
+) -> tuple[bool, Any]:
     parts = token.split("|")
     found, value = _declared_text_value(parts[0], current=current, root=root)
     for raw_filter in parts[1:]:
         name, _, argument = raw_filter.partition(":")
         if name == "len":
-            value = len(value) if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)) else 0
+            value = (
+                len(value)
+                if isinstance(value, Sequence)
+                and not isinstance(value, (str, bytes, bytearray))
+                else 0
+            )
             found = True
         elif name == "join":
             separator = argument
             if not found or value is None:
                 value = ""
-            elif isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            elif isinstance(value, Sequence) and not isinstance(
+                value, (str, bytes, bytearray)
+            ):
                 if not all(_is_declared_text_scalar(item) for item in value):
-                    raise PrimitiveExecutionError("output.emit join filter requires a list of JSON scalars")
-                value = separator.join(_declared_text_format_scalar(item) for item in value)
+                    raise PrimitiveExecutionError(
+                        "output.emit join filter requires a list of JSON scalars"
+                    )
+                value = separator.join(
+                    _declared_text_format_scalar(item) for item in value
+                )
             else:
                 raise PrimitiveExecutionError("output.emit join filter requires a list")
             found = True
@@ -830,11 +909,15 @@ def _declared_text_placeholder_value(token: str, *, current: Any, root: dict[str
                 value = argument
                 found = True
         else:
-            raise PrimitiveExecutionError(f"unsupported output.emit text view filter: {name!r}")
+            raise PrimitiveExecutionError(
+                f"unsupported output.emit text view filter: {name!r}"
+            )
     return found, value
 
 
-def _declared_text_value(path: Any, *, current: Any, root: dict[str, Any]) -> tuple[bool, Any]:
+def _declared_text_value(
+    path: Any, *, current: Any, root: dict[str, Any]
+) -> tuple[bool, Any]:
     path_text = str(path or "")
     if path_text in {"", "."}:
         return True, current
@@ -853,7 +936,9 @@ def _declared_text_truthy(value: Any) -> bool:
 
 def _declared_text_format(value: Any) -> str:
     if not _is_declared_text_scalar(value):
-        raise PrimitiveExecutionError("output.emit text view placeholders require JSON scalars; use json lines for arrays or objects")
+        raise PrimitiveExecutionError(
+            "output.emit text view placeholders require JSON scalars; use json lines for arrays or objects"
+        )
     return _declared_text_format_scalar(value)
 
 
@@ -920,10 +1005,14 @@ def _declared_text_canonical_json_value(value: Any) -> Any:
     return value
 
 
-def _view_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+def _view_payload(
+    *, values: dict[str, Any], arguments: dict[str, Any]
+) -> dict[str, Any]:
     source_name = str(arguments.get("source") or "result")
     if source_name not in values:
-        raise PrimitiveExecutionError(f"payload.view source value is missing: {source_name!r}")
+        raise PrimitiveExecutionError(
+            f"payload.view source value is missing: {source_name!r}"
+        )
     fields = _string_list(arguments.get("fields", []), source="payload.view fields")
     limits = arguments.get("limits", {})
     if not isinstance(limits, Mapping):
@@ -931,7 +1020,9 @@ def _view_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[
     payload = values[source_name]
     viewed: dict[str, Any] = {
         "kind": str(arguments.get("view_kind") or "command-generation/payload-view/v1"),
-        "source_command": str(arguments.get("source_command") or values.get("operation_id") or ""),
+        "source_command": str(
+            arguments.get("source_command") or values.get("operation_id") or ""
+        ),
         "values": {},
     }
     missing: list[str] = []
@@ -956,7 +1047,9 @@ def _limited_view_value(value: Any, *, limit: Any) -> Any:
     return value
 
 
-def _transaction_plan(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+def _transaction_plan(
+    *, values: dict[str, Any], arguments: dict[str, Any]
+) -> dict[str, Any]:
     resources_from = str(arguments.get("resources_from", "resources"))
     raw_resources = values.get(resources_from, arguments.get("resources", []))
     if not isinstance(raw_resources, list):
@@ -991,7 +1084,9 @@ def _transaction_plan(*, values: dict[str, Any], arguments: dict[str, Any]) -> d
         )
     target_root_value = str(arguments.get("target_root_value", "target_root"))
     plan: dict[str, Any] = {
-        "kind": str(arguments.get("plan_kind", "command-generation/transaction-plan/v1")),
+        "kind": str(
+            arguments.get("plan_kind", "command-generation/transaction-plan/v1")
+        ),
         "dry_run": True,
         "target_root": str(values.get(target_root_value, "")),
         "schema_ref": str(arguments.get("schema_ref", "")),
@@ -1029,44 +1124,362 @@ def _validate_resource_path(path: str) -> str:
     return resource_path
 
 
-def _project_payload(*, values: dict[str, Any], arguments: dict[str, Any]) -> dict[str, Any]:
+_MAX_PROJECTION_SELECTORS = 32
+_MAX_PROJECTION_SELECTOR_BYTES = 256
+_MAX_PROJECTION_SELECTOR_REQUEST_BYTES = 512
+_MAX_SELECTOR_ERROR_TEXT_BYTES = 128
+_MAX_SELECTOR_INVENTORY_SAMPLE_PATH_BYTES = 96
+_MAX_SELECTOR_INVENTORY_SAMPLE_BYTES = 384
+_MAX_SELECTOR_ERROR_ENVELOPE_BYTES = 6_000
+_SELECTOR_INVENTORY_SAMPLE_LIMIT = 8
+_SELECTOR_SUGGESTION_LIMIT = 1
+
+
+def _project_payload(
+    *, values: dict[str, Any], arguments: dict[str, Any]
+) -> dict[str, Any]:
     source_name = str(arguments.get("source") or "result")
-    source_command = str(arguments.get("source_command") or values.get("operation_id") or "")
-    selected_output_kind = str(arguments.get("selected_output_kind") or "command-generation/selected-output/v1")
+    source_command = str(
+        arguments.get("source_command") or values.get("operation_id") or ""
+    )
+    selected_output_kind = str(
+        arguments.get("selected_output_kind") or "command-generation/selected-output/v1"
+    )
     if source_name not in values:
-        raise PrimitiveExecutionError(f"payload.project source value is missing: {source_name!r}")
+        raise PrimitiveExecutionError(
+            f"payload.project source value is missing: {source_name!r}"
+        )
     payload = values[source_name]
-    selectors = _projection_selectors(values=values, arguments=arguments)
+    selector_request = _projection_selectors(values=values, arguments=arguments)
+    selectors = selector_request["selectors"]
+    request_error = selector_request["error"]
+    if request_error is not None:
+        return _selector_request_validation_error(
+            selectors=selectors,
+            request_error=request_error,
+            source_command=source_command,
+            selected_output_kind=selected_output_kind,
+        )
     if not selectors:
         return _plain_output_result(payload)
+    missing = [
+        selector for selector in selectors if not _path_exists(payload, selector)
+    ]
+    if missing:
+        return _selector_validation_error(
+            payload=payload,
+            selectors=selectors,
+            missing=missing,
+            source_command=source_command,
+            selected_output_kind=selected_output_kind,
+            discovery_command=str(arguments.get("selector_inventory_command") or ""),
+            detail_command=str(arguments.get("selector_detail_command") or ""),
+        )
     selected: dict[str, Any] = {
         "kind": selected_output_kind,
         "source_command": source_command,
         "values": {},
     }
-    missing: list[str] = []
     projected_values = cast(dict[str, Any], selected["values"])
     for selector in selectors:
-        found, value = _field_by_path(payload, selector)
-        if found:
-            projected_values[selector] = _plain_output_result(value)
-        else:
-            missing.append(selector)
-    if missing:
-        selected["missing"] = missing
-        selected["selector_rule"] = "Comma-separated dot paths select exact JSON fields; unknown fields are reported in missing."
-        selected["available_selectors"] = _available_selectors_for_payload(payload)
+        _, value = _field_by_path(payload, selector)
+        projected_values[selector] = _plain_output_result(value)
     return selected
 
 
-def _projection_selectors(*, values: dict[str, Any], arguments: dict[str, Any]) -> list[str]:
+def _projection_selectors(
+    *, values: dict[str, Any], arguments: dict[str, Any]
+) -> dict[str, Any]:
     raw_selectors = arguments.get("selectors")
     if raw_selectors is None:
         select_value_name = str(arguments.get("select_value") or "select")
         raw_selectors = values.get(select_value_name)
-    if isinstance(raw_selectors, Sequence) and not isinstance(raw_selectors, (str, bytes, bytearray)):
-        return [str(item).strip() for item in raw_selectors if str(item).strip()]
-    return [token.strip() for token in str(raw_selectors or "").split(",") if token.strip()]
+    if isinstance(raw_selectors, Sequence) and not isinstance(
+        raw_selectors, (str, bytes, bytearray)
+    ):
+        return _projection_selectors_from_sequence(raw_selectors)
+    return _projection_selectors_from_string(str(raw_selectors or ""))
+
+
+def _projection_selector_result(
+    selectors: list[str], error: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    return {"selectors": selectors, "error": error}
+
+
+def _projection_selector_limit_error(
+    *,
+    reason: str,
+    requested_selector_count: int,
+    selector_request_bytes: int,
+    selector_index: int | None = None,
+    selector_bytes: int | None = None,
+) -> dict[str, Any]:
+    error: dict[str, Any] = {
+        "reason": reason,
+        "requested_selector_count": requested_selector_count,
+        "selector_request_bytes": selector_request_bytes,
+        "max_selectors": _MAX_PROJECTION_SELECTORS,
+        "max_selector_bytes": _MAX_PROJECTION_SELECTOR_BYTES,
+        "max_selector_request_bytes": _MAX_PROJECTION_SELECTOR_REQUEST_BYTES,
+    }
+    if selector_index is not None:
+        error["selector_index"] = selector_index
+    if selector_bytes is not None:
+        error["selector_bytes"] = selector_bytes
+    return error
+
+
+def _projection_selectors_from_sequence(raw_selectors: Sequence[Any]) -> dict[str, Any]:
+    selectors: list[str] = []
+    requested_selector_count = 0
+    selector_request_bytes = 0
+    for item in raw_selectors:
+        token = str(item).strip()
+        if not token:
+            continue
+        token_bytes = _utf8_size(token)
+        requested_selector_count += 1
+        if requested_selector_count > _MAX_PROJECTION_SELECTORS:
+            return _projection_selector_result(
+                selectors,
+                _projection_selector_limit_error(
+                    reason="too-many-selectors",
+                    requested_selector_count=requested_selector_count,
+                    selector_request_bytes=selector_request_bytes,
+                    selector_index=requested_selector_count - 1,
+                ),
+            )
+        if token_bytes > _MAX_PROJECTION_SELECTOR_BYTES:
+            return _projection_selector_result(
+                selectors,
+                _projection_selector_limit_error(
+                    reason="selector-too-long",
+                    requested_selector_count=requested_selector_count,
+                    selector_request_bytes=selector_request_bytes + token_bytes,
+                    selector_index=requested_selector_count - 1,
+                    selector_bytes=token_bytes,
+                ),
+            )
+        if (
+            selector_request_bytes + token_bytes
+            > _MAX_PROJECTION_SELECTOR_REQUEST_BYTES
+        ):
+            return _projection_selector_result(
+                selectors,
+                _projection_selector_limit_error(
+                    reason="selector-request-too-large",
+                    requested_selector_count=requested_selector_count,
+                    selector_request_bytes=selector_request_bytes + token_bytes,
+                    selector_index=requested_selector_count - 1,
+                ),
+            )
+        selector_request_bytes += token_bytes
+        selectors.append(token)
+    return _projection_selector_result(selectors)
+
+
+def _projection_selectors_from_string(raw_selectors: str) -> dict[str, Any]:
+    selectors: list[str] = []
+    requested_selector_count = 0
+    selector_request_bytes = 0
+    token_chars: list[str] = []
+    token_bytes = 0
+    pending_whitespace = 0
+    seen_non_whitespace = False
+
+    def append_selector() -> dict[str, Any] | None:
+        nonlocal requested_selector_count, selector_request_bytes, token_chars
+        nonlocal token_bytes, pending_whitespace
+        token = "".join(token_chars)
+        token_chars = []
+        appended_token_bytes = token_bytes
+        token_bytes = 0
+        pending_whitespace = 0
+        if not token:
+            return None
+        requested_selector_count += 1
+        if requested_selector_count > _MAX_PROJECTION_SELECTORS:
+            return _projection_selector_limit_error(
+                reason="too-many-selectors",
+                requested_selector_count=requested_selector_count,
+                selector_request_bytes=selector_request_bytes,
+                selector_index=requested_selector_count - 1,
+            )
+        if (
+            selector_request_bytes + appended_token_bytes
+            > _MAX_PROJECTION_SELECTOR_REQUEST_BYTES
+        ):
+            return _projection_selector_limit_error(
+                reason="selector-request-too-large",
+                requested_selector_count=requested_selector_count,
+                selector_request_bytes=selector_request_bytes + appended_token_bytes,
+                selector_index=requested_selector_count - 1,
+            )
+        selector_request_bytes += appended_token_bytes
+        selectors.append(token)
+        return None
+
+    for char in raw_selectors:
+        if char == ",":
+            error = append_selector()
+            if error is not None:
+                return _projection_selector_result(selectors, error)
+            seen_non_whitespace = False
+            continue
+        if char.isspace() and not seen_non_whitespace:
+            continue
+        if char.isspace():
+            pending_whitespace += 1
+            continue
+        if pending_whitespace:
+            token_chars.extend(" " * pending_whitespace)
+            token_bytes += pending_whitespace
+            pending_whitespace = 0
+        seen_non_whitespace = True
+        token_chars.append(char)
+        token_bytes += _utf8_size(char)
+        if token_bytes > _MAX_PROJECTION_SELECTOR_BYTES:
+            requested_selector_count += 1
+            return _projection_selector_result(
+                selectors,
+                _projection_selector_limit_error(
+                    reason="selector-too-long",
+                    requested_selector_count=requested_selector_count,
+                    selector_request_bytes=selector_request_bytes + token_bytes,
+                    selector_index=requested_selector_count - 1,
+                    selector_bytes=token_bytes,
+                ),
+            )
+    error = append_selector()
+    return _projection_selector_result(selectors, error)
+
+
+def _selector_validation_kind(selected_output_kind: str) -> str:
+    if "/selected-output/" in selected_output_kind:
+        kind = selected_output_kind.replace(
+            "/selected-output/", "/selector-validation-error/", 1
+        )
+    elif selected_output_kind.endswith("/selected-output"):
+        kind = f"{selected_output_kind.removesuffix('/selected-output')}/selector-validation-error"
+    else:
+        kind = "command-generation/selector-validation-error/v1"
+    if _utf8_size(kind) <= _MAX_SELECTOR_ERROR_TEXT_BYTES:
+        return kind
+    return "command-generation/selector-validation-error/v1"
+
+
+def _utf8_size(value: str) -> int:
+    return len(value.encode("utf-8"))
+
+
+def _utf8_sort_key(value: str) -> bytes:
+    return value.encode("utf-8")
+
+
+def _bounded_selector_error_text(value: str) -> str:
+    return value if _utf8_size(value) <= _MAX_SELECTOR_ERROR_TEXT_BYTES else ""
+
+
+def _selector_error_json_size(payload: dict[str, Any]) -> int:
+    return _utf8_size(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+
+
+def _fit_selector_error_envelope(payload: dict[str, Any]) -> dict[str, Any]:
+    if _selector_error_json_size(payload) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+        return payload
+    suggestions = payload.get("suggestions")
+    if isinstance(suggestions, dict):
+        suggestions.clear()
+    if _selector_error_json_size(payload) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+        return payload
+    inventory = payload.get("selector_inventory")
+    if isinstance(inventory, dict):
+        inventory["sample"] = []
+        inventory["discovery_command"] = ""
+        inventory["inventory_command"] = ""
+    if _selector_error_json_size(payload) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+        return payload
+    payload["requested_selectors"] = []
+    payload["unknown_selectors"] = []
+    return payload
+
+
+def _selector_suggestions(
+    unknown: str, sample: list[str], *, limit: int = 3
+) -> list[str]:
+    terms = [part for part in unknown.replace("_", ".").split(".") if part]
+    matches: list[str] = []
+    for selector in sample:
+        selector_terms = selector.split(".")
+        if unknown in selector or any(
+            term in selector_terms or term in selector for term in terms
+        ):
+            matches.append(selector)
+        if len(matches) >= limit:
+            return matches
+    return sample[:limit]
+
+
+def _selector_validation_error(
+    *,
+    payload: Any,
+    selectors: list[str],
+    missing: list[str],
+    source_command: str,
+    selected_output_kind: str,
+    discovery_command: str,
+    detail_command: str,
+) -> dict[str, Any]:
+    sample_limit = _SELECTOR_INVENTORY_SAMPLE_LIMIT
+    available_count, sample = _selector_inventory_summary(
+        payload, sample_limit=sample_limit
+    )
+    error = {
+        "kind": _selector_validation_kind(selected_output_kind),
+        "status": "invalid-selector",
+        "source_command": _bounded_selector_error_text(source_command),
+        "requested_selectors": selectors[:32],
+        "unknown_selectors": missing[:32],
+        "selector_inventory": {
+            "status": "omitted-from-validation-error",
+            "available_count": available_count,
+            "sample": sample,
+            "sample_limit": sample_limit,
+            "discovery_command": _bounded_selector_error_text(discovery_command),
+            "inventory_command": _bounded_selector_error_text(detail_command),
+            "rule": "Full selector inventories are omitted from validation errors; use the inventory command for complete details.",
+        },
+        "suggestions": {
+            selector: _selector_suggestions(
+                selector, sample, limit=_SELECTOR_SUGGESTION_LIMIT
+            )
+            for selector in missing
+        },
+        "validation_rule": "Selector requests are atomic: any unknown selector prevents partial projection output.",
+    }
+    return _fit_selector_error_envelope(error)
+
+
+def _selector_request_validation_error(
+    *,
+    selectors: list[str],
+    request_error: dict[str, Any],
+    source_command: str,
+    selected_output_kind: str,
+) -> dict[str, Any]:
+    error = {
+        "kind": _selector_validation_kind(selected_output_kind),
+        "status": "invalid-selector-request",
+        "source_command": _bounded_selector_error_text(source_command),
+        "requested_selectors": selectors,
+        "selector_request": {
+            "status": "rejected",
+            **request_error,
+        },
+        "validation_rule": "Selector requests are bounded and atomic: too many selectors or overlong selectors are rejected before projection.",
+    }
+    return _fit_selector_error_envelope(error)
 
 
 def _plain_output_result(result: Any) -> Any:
@@ -1317,7 +1730,9 @@ def _field_by_path(payload: Any, dotted_path: str) -> tuple[bool, Any]:
         if isinstance(current, Mapping) and part in current:
             current = current[part]
             continue
-        if isinstance(current, Sequence) and not isinstance(current, (str, bytes, bytearray)):
+        if isinstance(current, Sequence) and not isinstance(
+            current, (str, bytes, bytearray)
+        ):
             try:
                 current = current[int(part)]
                 continue
@@ -1327,19 +1742,56 @@ def _field_by_path(payload: Any, dotted_path: str) -> tuple[bool, Any]:
     return True, current
 
 
-def _available_selectors_for_payload(payload: Any, prefix: str = "") -> list[str]:
-    selectors: list[str] = []
-    if isinstance(payload, Mapping):
-        for key in sorted(str(item) for item in payload):
-            path = f"{prefix}.{key}" if prefix else key
-            selectors.append(path)
-            selectors.extend(_available_selectors_for_payload(payload.get(key), path))
-    elif isinstance(payload, Sequence) and not isinstance(payload, (str, bytes, bytearray)):
-        for index, item in enumerate(payload[:10]):
-            path = f"{prefix}.{index}" if prefix else str(index)
-            selectors.append(path)
-            selectors.extend(_available_selectors_for_payload(item, path))
-    return selectors
+def _path_exists(payload: Any, dotted_path: str) -> bool:
+    return _field_by_path(payload, dotted_path)[0]
+
+
+def _selector_inventory_summary(
+    payload: Any, *, sample_limit: int
+) -> tuple[int, list[str]]:
+    count = 0
+    sample_candidates: list[str] = []
+
+    def record_sample(path: str) -> None:
+        if sample_limit <= 0:
+            return
+        path_bytes = _utf8_size(path)
+        if path_bytes > _MAX_SELECTOR_INVENTORY_SAMPLE_PATH_BYTES:
+            return
+        sample_candidates.append(path)
+        sample_candidates.sort(key=_utf8_sort_key)
+        if len(sample_candidates) > sample_limit:
+            sample_candidates.pop()
+
+    def budgeted_sample() -> list[str]:
+        sample: list[str] = []
+        sample_bytes = 0
+        for path in sample_candidates:
+            path_bytes = _utf8_size(path)
+            if sample_bytes + path_bytes > _MAX_SELECTOR_INVENTORY_SAMPLE_BYTES:
+                break
+            sample.append(path)
+            sample_bytes += path_bytes
+        return sample
+
+    def visit(current: Any, prefix: str) -> None:
+        nonlocal count
+        if isinstance(current, Mapping):
+            entries = current.items()
+        elif isinstance(current, Sequence) and not isinstance(
+            current, (str, bytes, bytearray)
+        ):
+            entries = enumerate(current)
+        else:
+            return
+        for key, value in entries:
+            path = f"{prefix}.{key}" if prefix else str(key)
+            count += 1
+            record_sample(path)
+            visit(value, path)
+
+    visit(payload, "")
+    return count, budgeted_sample()
 
 
 def _resolve_inside(root: Path, relative: str) -> Path:

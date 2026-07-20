@@ -305,8 +305,27 @@ def _generated_cli_freshness_payload(
         return None
     freshness_check = "uv run python scripts/generate/generate_command_packages.py --check"
     refresh_command = "uv run python scripts/generate/generate_command_packages.py"
+    has_typescript_change = any("/typescript/" in path.replace("\\", "/") for path in changed_paths)
+    has_python_change = any("/python/" in path.replace("\\", "/") for path in changed_paths)
+    preferred_validation_markers = (
+        ("--require-node", "--conformance --require-node")
+        if has_typescript_change and not has_python_change
+        else ("--python-conformance", "--python-docker-conformance", "")
+        if has_python_change and not has_typescript_change
+        else ("--require-node", "--python-conformance", "")
+    )
+
+    def matches_preferred_marker(command: str, marker: str) -> bool:
+        if "check_generated_command_packages.py" not in command:
+            return False
+        if not marker:
+            return True
+        if marker == "--require-node":
+            return command.endswith("--require-node") and "--conformance" not in command
+        return marker in command
+
     validation_command = next(
-        (command for command in related_commands if "check_generated_command_packages.py" in command),
+        (command for marker in preferred_validation_markers for command in related_commands if matches_preferred_marker(command, marker)),
         "uv run python scripts/check/check_generated_command_packages.py",
     )
     obligation = "required" if related_commands else "advisory"
