@@ -7733,6 +7733,117 @@ def test_implement_command_surfaces_reasoning_heavy_execution_posture(tmp_path: 
     assert "semantic task classification" in posture["delegation_decision"]["route_evidence"]["rule"]
 
 
+def test_implement_required_best_fit_blocks_unknown_current_target(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'assignment_policy = "required-best-fit"',
+                'mode = "manual"',
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--task",
+                "Implement bounded text helper behavior",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    posture = payload["execution_posture"]
+    decision = payload["delegation_decision"]
+    assert posture["assignment_policy"]["status"] == "blocked-unknown-current-target"
+    assert posture["assignment_decision"]["decision"] == "blocked"
+    assert posture["assignment_gate"]["implementation_allowed"] is False
+    assert posture["assignment_gate"]["required_next_action"] == "resolve-current-target-profile"
+    assert posture["implementation_allowed"] is False
+    assert decision["recommended_route"] == "blocked-assignment-policy"
+    assert decision["required_next_action"] == "resolve-current-target-profile"
+    assert decision["config_effect"]["assignment_gate"] == "blocked"
+    assert "current_target" in decision["route_obligation"]["must"]
+    assert posture["delegated_run_lifecycle"]["status"] == "blocked"
+
+
+def test_implement_required_best_fit_requires_assigned_handoff(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[runtime]",
+                "strong_planner_available = true",
+                "",
+                "[delegation]",
+                'assignment_policy = "required-best-fit"',
+                'current_target = "planner"',
+                'mode = "manual"',
+                'manual_transport_policy = "allowed"',
+                "",
+                "[delegation_targets.planner]",
+                'strength = "strong"',
+                'location = "local"',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
+                'execution_methods = ["manual"]',
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+                "--task",
+                "update delegation config schema",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    posture = payload["execution_posture"]
+    decision = payload["delegation_decision"]
+    assert posture["assignment_policy"]["current_target_status"] == "known-profile"
+    assert posture["assignment_decision"]["decision"] == "assign-or-escalate"
+    assert posture["assignment_gate"]["status"] == "handoff-required"
+    assert posture["assignment_gate"]["implementation_allowed"] is False
+    assert posture["assignment_gate"]["required_next_action"] == "prepare-assigned-handoff"
+    assert decision["recommended_route"] == "assignment-handoff-required"
+    assert decision["required_next_action"] == "prepare-assigned-handoff"
+    assert decision["delegation_next_step"]["assignment_gate"]["selected_target"] == "planner"
+    assert decision["handoff_command"] == "agentic-workspace planning handoff --target . --format json"
+    lifecycle = posture["delegated_run_lifecycle"]
+    assert lifecycle["status"] == "waiting-for-handoff"
+    assert lifecycle["assignment"]["target"] == "planner"
+    assert lifecycle["manual_transport"]["export_allowed"] is True
+    assert lifecycle["manual_transport"]["import_requires_review"] is True
+
+
 def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
