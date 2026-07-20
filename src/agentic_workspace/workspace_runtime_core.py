@@ -30209,6 +30209,13 @@ def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path,
     identity_effects = [str(effect) for effect in _list_payload(route_decision.get("identity_effects")) if str(effect).strip()]
     provisional = transition != "none" or bool(identity_effects)
     identity = startup_route_identity(root=target_root, task=str(task_text or ""))
+    selected_identity = _as_dict(route_decision.get("selected_owner_identity"))
+    selected_ref = str(selected_identity.get("ref") or route_decision.get("selected_owner") or "").strip()
+    if selected_ref:
+        observed = _as_dict(identity.get("observed"))
+        observed["selected_owner"] = {"id": str(selected_identity.get("id") or ""), "ref": selected_ref}
+        identity["observed"] = observed
+        identity["fingerprint"] = hashlib.sha256(json.dumps(observed, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]
     rebind_command = _command_with_cli_invoke(
         command="agentic-workspace start --target . --task <same-task> --format json",
         cli_invoke=cli_invoke,
@@ -31097,6 +31104,7 @@ def _planning_owner_selection_basis_revision(*, target_root: Path, state_data: d
             target_root / ".agentic-workspace" / "planning" / "integration-receipts",
             "*.integration-receipt.json",
         ),
+        "target_authority_revision": str(_planning_revision_payload(target_root=target_root).get("target_authority_revision") or ""),
     }
     revision_material = json.dumps(components, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(revision_material).hexdigest()[:16]
@@ -31315,6 +31323,13 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     owner_admission = _planning_owner_admission_payload(target_root=target_root, state_data=data)
     selected_owner = owner_admission.get("selected_owner", {}) if isinstance(owner_admission, dict) else {}
     active_execplan = selected_owner.get("ref") if isinstance(selected_owner, dict) else None
+    rejected_candidates = _list_payload(owner_admission.get("rejected_candidates")) if isinstance(owner_admission, dict) else []
+    rejected_reasons = {str(_as_dict(candidate).get("reason") or "") for candidate in rejected_candidates}
+    raw_state_fallback_allowed = owner_admission.get("status") != "rejected" or rejected_reasons == {"owner-identity-mismatch"}
+    if active_execplan is None and raw_state_fallback_allowed and active_items and isinstance(active_items[0], dict):
+        active_execplan = active_items[0].get("surface")
+    if active_execplan is None and raw_state_fallback_allowed and active_execplans and isinstance(active_execplans[0], dict):
+        active_execplan = active_execplans[0].get("path")
     admitted_active_count = 1 if active_execplan else 0
     summary = {
         "todo_active_count": admitted_active_count,

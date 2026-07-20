@@ -463,6 +463,55 @@ def _short_tree_hash(root: Path, pattern: str) -> str:
     return digest.hexdigest()[:16] if seen else "empty"
 
 
+def _short_tree_hash_recursive(root: Path, pattern: str, *, overrides: Mapping[Path, bytes] | None = None) -> str:
+    if not root.exists() or not root.is_dir():
+        return "missing"
+    digest = hashlib.sha256()
+    seen = False
+    override_map: dict[str, bytes] = {}
+    for path, content in (overrides or {}).items():
+        try:
+            relative = path.resolve().relative_to(root.resolve()).as_posix()
+        except ValueError:
+            continue
+        if path.match(pattern) or Path(relative).match(pattern):
+            override_map[relative] = content
+    relative_paths: set[str] = set(override_map)
+
+    def collect(path: Path) -> bool:
+        try:
+            children = sorted(path.iterdir(), key=lambda item: item.name)
+        except OSError:
+            return False
+        for child in children:
+            if child.is_dir():
+                if not collect(child):
+                    return False
+            elif child.is_file():
+                relative = child.relative_to(root).as_posix()
+                if child.match(pattern) or Path(relative).match(pattern):
+                    relative_paths.add(relative)
+        return True
+
+    if not collect(root):
+        return "unreadable"
+    ordered_relative_paths = sorted(relative_paths)
+    for relative in ordered_relative_paths:
+        seen = True
+        try:
+            path = root / relative
+            content = override_map.get(relative)
+            if content is None:
+                content = path.read_bytes()
+            digest.update(relative.encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(hashlib.sha256(content).digest())
+            digest.update(b"\0")
+        except OSError:
+            return "unreadable"
+    return digest.hexdigest()[:16] if seen else "empty"
+
+
 def _workspace_cli_invoke(target_root: Path) -> str:
     for relative in (Path(".agentic-workspace/config.local.toml"), Path(".agentic-workspace/config.toml")):
         path = target_root / relative
@@ -475,6 +524,41 @@ def _workspace_cli_invoke(target_root: Path) -> str:
         if isinstance(workspace, dict) and str(workspace.get("cli_invoke", "")).strip():
             return str(workspace["cli_invoke"]).strip()
     return "agentic-workspace"
+
+
+def _planning_target_authority_revision(target_root: Path, *, file_overrides: Mapping[Path, bytes] | None = None) -> dict[str, Any]:
+    """Revision for target-side Planning truth, excluding proposal/receipt bookkeeping."""
+    components = {
+        "kind": "planning-target-authority-revision/v1",
+        "state_path": PLANNING_STATE_PATH.as_posix(),
+        "state_hash": hashlib.sha256(file_overrides[target_root / PLANNING_STATE_PATH]).hexdigest()[:16]
+        if file_overrides and target_root / PLANNING_STATE_PATH in file_overrides
+        else _short_file_hash(target_root / PLANNING_STATE_PATH),
+        "execplans_hash": _short_tree_hash_recursive(
+            target_root / PLANNING_MANAGED_ROOT / "execplans", "*.plan.json", overrides=file_overrides
+        ),
+        "lanes_hash": _short_tree_hash_recursive(target_root / PLANNING_MANAGED_ROOT / "lanes", "*.lane.json", overrides=file_overrides),
+        "decompositions_hash": _short_tree_hash_recursive(
+            target_root / PLANNING_MANAGED_ROOT / "decompositions", "*.decomposition.json", overrides=file_overrides
+        ),
+        "issue_relations_hash": _short_tree_hash(target_root / PLANNING_ISSUE_RELATION_ROOT, "*.issue-relation.json"),
+    }
+    material = json.dumps(components, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return {**components, "revision_id": hashlib.sha256(material).hexdigest()[:16]}
+
+
+def _planning_target_authority_revision_after_record(
+    *, target_root: Path, owner_ref: str, owner_record: dict[str, Any] | None
+) -> dict[str, Any]:
+    if owner_record is None or not owner_ref.strip():
+        return _planning_target_authority_revision(target_root)
+    owner_path = (target_root / owner_ref.strip().replace("\\", "/")).resolve()
+    try:
+        owner_path.relative_to(target_root.resolve())
+    except ValueError:
+        return _planning_target_authority_revision(target_root)
+    content = (json.dumps(owner_record, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    return _planning_target_authority_revision(target_root, file_overrides={owner_path: content})
 
 
 def planning_revision(target: str | Path | None = None) -> dict[str, Any]:
@@ -508,6 +592,7 @@ def planning_revision(target: str | Path | None = None) -> dict[str, Any]:
         "issue_relations_hash": _short_tree_hash(target_root / PLANNING_ISSUE_RELATION_ROOT, "*.issue-relation.json"),
         "integration_proposals_hash": _short_tree_hash(target_root / PLANNING_INTEGRATION_PROPOSAL_ROOT, "*.integration-proposal.json"),
         "integration_receipts_hash": _short_tree_hash(target_root / PLANNING_INTEGRATION_RECEIPT_ROOT, "*.integration-receipt.json"),
+        "target_authority_revision": _planning_target_authority_revision(target_root)["revision_id"],
     }
     revision_material = json.dumps(components, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return {
@@ -2913,6 +2998,7 @@ def planning_reconcile(
     expected_relation_revision: str = "",
     apply_issue_relation_reconcile: bool = False,
     apply_issue_relation_migration: bool = False,
+    apply_pending_integrations: bool = False,
     preview: bool = False,
     apply: bool = False,
     proposal: str = "",
@@ -2943,6 +3029,14 @@ def planning_reconcile(
             dry_run=dry_run,
         )
         payload["issue_relations_after_migration"] = _issue_relation_projection(target_root=target_root)
+        return payload
+    if apply_pending_integrations:
+        payload["pending_integration_apply"] = _apply_pending_integration_proposals(
+            target_root=target_root,
+            expected_planning_revision=expected_planning_revision,
+            dry_run=dry_run,
+        )
+        payload["integration_after_apply"] = _integration_projection(target_root=target_root)
         return payload
     if preview or apply or proposal:
         return _planning_reconciliation_transaction(
@@ -3546,6 +3640,91 @@ def _reconcile_external_work_state(*, state: dict[str, Any], external_evidence: 
     }
 
 
+def _planning_mutation_admission_inventory() -> dict[str, Any]:
+    entries = [
+        {
+            "operation": "planning.issue-shape.lifecycle",
+            "writer": "shape_issue_relation",
+            "surface_class": "strategic-relation",
+            "feature_branch_admission": "allowed",
+            "authority": "durable declaration; relation revision and Planning revision guarded",
+        },
+        {
+            "operation": "planning.integration-propose.lifecycle",
+            "writer": "propose_integration_transition",
+            "surface_class": "integration-proposal",
+            "feature_branch_admission": "allowed",
+            "authority": "durable declaration; no owner, selection, lifecycle, or aggregate rewrite",
+        },
+        {
+            "operation": "planning.integration-apply.lifecycle",
+            "writer": "apply_integration_proposal",
+            "surface_class": "target-integration-transaction",
+            "feature_branch_admission": "blocked",
+            "authority": "mandatory target-authority CAS; proposal, owner, and receipt transaction",
+        },
+        {
+            "operation": "planning.reconcile.report --apply-pending-integrations",
+            "writer": "_apply_pending_integration_proposals",
+            "surface_class": "target-integration-transaction",
+            "feature_branch_admission": "blocked",
+            "authority": "one ordinary target transaction for all eligible pending proposals",
+        },
+        {
+            "operation": "planning.owner-select.lifecycle --mode local",
+            "writer": "select_existing_owner",
+            "surface_class": "local-work-context",
+            "feature_branch_admission": "allowed",
+            "authority": "#2346 local selection; outside checked-in integration truth",
+        },
+        {
+            "operation": "planning.owner-select.lifecycle --mode shared",
+            "writer": "select_existing_owner",
+            "surface_class": "shared-selection",
+            "feature_branch_admission": "blocked",
+            "authority": "checked-in state selection is aggregate Planning truth",
+        },
+        {
+            "operation": "planning.close-item.lifecycle",
+            "writer": "close_planning_item",
+            "surface_class": "state-closeout",
+            "feature_branch_admission": "blocked",
+            "authority": "merge-dependent terminal cleanup must use proposal/apply",
+        },
+        {
+            "operation": "planning.lane-close.lifecycle",
+            "writer": "close_lane_record",
+            "surface_class": "lane-closeout",
+            "feature_branch_admission": "blocked",
+            "authority": "merge-dependent terminal lane truth must use proposal/apply",
+        },
+        {
+            "operation": "planning.lane-archive.lifecycle",
+            "writer": "archive_lane_record",
+            "surface_class": "lane-closeout",
+            "feature_branch_admission": "blocked",
+            "authority": "merge-dependent terminal lane truth must use proposal/apply",
+        },
+        {
+            "operation": "planning.archive-plan.lifecycle",
+            "writer": "archive_execplan",
+            "surface_class": "execplan-closeout",
+            "feature_branch_admission": "blocked",
+            "authority": "merge-dependent terminal owner truth must use proposal/apply",
+        },
+    ]
+    return {
+        "kind": "planning-mutation-admission-inventory/v1",
+        "entry_count": len(entries),
+        "entries": entries,
+        "rule": (
+            "Feature branches may write durable declarations and local work-context selection. "
+            "Checked-in terminal lifecycle, shared selection, closeout, and target integration truth are admitted only "
+            "through owner-scoped proposal records and target-authority CAS apply."
+        ),
+    }
+
+
 def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
     external_evidence = _load_external_intent_evidence(target_root)
     completed_execplans = _reconcile_completed_execplans(target_root)
@@ -3747,6 +3926,7 @@ def _planning_reconcile_payload(target_root: Path) -> dict[str, Any]:
             "proof_boundary": "Evidence refs are observations only; #2262-compatible proof admission remains required.",
             "mutation_authority": "none",
         },
+        "mutation_admission_inventory": _planning_mutation_admission_inventory(),
         "historical_audit_references": historical_audit_references,
         "stale_forward_state": {
             "completed_live_execplans": [
@@ -13099,6 +13279,9 @@ def propose_integration_transition(
         owner_ref=owner_path_text,
         external_ref=external,
     )
+    target_authority_revision = expected_planning_revision.strip() or str(
+        _planning_target_authority_revision(target_root).get("revision_id", "")
+    )
     admission = _git_branch_admission(target_root)
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     proposal = {
@@ -13113,7 +13296,7 @@ def propose_integration_transition(
         "parent_boundary": parent_boundary.strip() or "parent and lane remain open unless an independent boundary is satisfied",
         "preserved_invariants": preserved_invariants,
         "expected_subject_revision": subject_revision,
-        "expected_planning_revision": expected_planning_revision.strip(),
+        "expected_planning_revision": target_authority_revision,
         "created_at": now,
         "updated_at": now,
         "authority_boundary": {
@@ -13145,6 +13328,7 @@ def propose_integration_transition(
             "parent_boundary",
             "preserved_invariants",
             "expected_subject_revision",
+            "expected_planning_revision",
         )
         if all(existing.get(field) == proposal.get(field) for field in semantic_fields):
             result.mutation_expected = False
@@ -13172,6 +13356,7 @@ def propose_integration_transition(
         "changed_fields": ["integration_proposal"],
         "preserved_invariants": preserved_invariants,
         "expected_subject_revision": subject_revision,
+        "expected_planning_revision": target_authority_revision,
     }
     if dry_run:
         result.add("would create", proposal_path, "schema-valid pending integration proposal")
@@ -13196,6 +13381,326 @@ def propose_integration_transition(
     )
     _add_planning_mutation_proof_actions(result)
     return result
+
+
+def _integration_apply_recovery_command(target_root: Path) -> str:
+    return f"{_workspace_cli_invoke(target_root)} planning reconcile --apply-pending-integrations --target . --format json"
+
+
+def _apply_pending_integration_proposals(
+    *, target_root: Path, expected_planning_revision: str = "", dry_run: bool = False
+) -> dict[str, Any]:
+    result = InstallResult(target_root=target_root, message="Apply pending Planning integration proposals", dry_run=dry_run)
+    admission = _git_branch_admission(target_root)
+    proposal_dir = target_root / PLANNING_INTEGRATION_PROPOSAL_ROOT
+    pending_paths: list[Path] = []
+    if proposal_dir.exists():
+        for path in sorted(proposal_dir.glob("*.integration-proposal.json")):
+            record = _load_integration_proposal(path)
+            if isinstance(record, dict) and str(record.get("status", "")).strip() == "pending":
+                pending_paths.append(path)
+    if not pending_paths:
+        result.mutation_expected = False
+        result.add("no-op", proposal_dir, "no pending integration proposals were found")
+        payload = result.to_dict()
+        payload["kind"] = "planning-pending-integration-apply/v1"
+        payload["status"] = "no-op"
+        payload["applied_count"] = 0
+        return payload
+    if admission.get("phase") == "feature":
+        result.add(
+            "manual review",
+            proposal_dir,
+            (
+                f"pending integration apply is blocked on feature branch '{admission.get('branch') or '<detached>'}'; "
+                "run it on an admitted target, release, or merge-queue branch"
+            ),
+        )
+        result.reason_code = "integration-apply-target-required"
+        payload = result.to_dict()
+        payload["kind"] = "planning-pending-integration-apply/v1"
+        payload["status"] = "blocked"
+        return payload
+    current_target_revision = _planning_target_authority_revision(target_root)
+    current_target_id = str(current_target_revision.get("revision_id", ""))
+    if expected_planning_revision.strip() and expected_planning_revision.strip() != current_target_id:
+        result.add(
+            "manual review",
+            target_root / PLANNING_STATE_PATH,
+            (f"target authority revision changed: expected {expected_planning_revision.strip()}, found {current_target_id}"),
+        )
+        result.reason_code = "stale-integration-planning-revision"
+        payload = result.to_dict()
+        payload["kind"] = "planning-pending-integration-apply/v1"
+        payload["status"] = "blocked"
+        return payload
+
+    now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    owner_refs_seen: set[str] = set()
+    writes: list[tuple[Path, dict[str, Any], Path]] = []
+    owner_overrides: dict[Path, bytes] = {}
+    receipts: list[dict[str, Any]] = []
+    proposals_applied: list[str] = []
+    for proposal_path in pending_paths:
+        record = _load_integration_proposal(proposal_path)
+        if record is None:
+            result.add("manual review", proposal_path, "pending integration proposal is invalid")
+            result.reason_code = "integration-proposal-invalid"
+            break
+        findings = _json_schema_findings(payload=record, schema_path=INTEGRATION_PROPOSAL_SCHEMA_PATH)
+        if findings:
+            result.add("manual review", proposal_path, f"integration proposal is invalid: {'; '.join(findings)}")
+            result.reason_code = "integration-proposal-invalid"
+            break
+        required_target = str(record.get("expected_planning_revision", "")).strip()
+        if not required_target:
+            result.add(
+                "manual review",
+                proposal_path,
+                "pending proposal is missing target authority revision; refresh or recreate the proposal before batch apply",
+            )
+            result.reason_code = "integration-target-revision-required"
+            break
+        if expected_planning_revision.strip() and required_target != expected_planning_revision.strip():
+            result.add(
+                "manual review",
+                proposal_path,
+                (
+                    f"proposal target authority revision {required_target} does not match requested apply revision "
+                    f"{expected_planning_revision.strip()}"
+                ),
+            )
+            result.reason_code = "integration-planning-revision-conflict"
+            break
+        if required_target != current_target_id:
+            result.add(
+                "manual review",
+                proposal_path,
+                f"proposal target authority revision changed: expected {required_target}, found {current_target_id}",
+            )
+            result.add("next safe action", proposal_path, "refresh stale proposals or reconcile overlapping target truth")
+            result.reason_code = "stale-integration-planning-revision"
+            break
+        proposal_id = str(record.get("id", "")).strip()
+        owner = record.get("owner", {}) if isinstance(record.get("owner"), dict) else {}
+        owner_ref = str(owner.get("ref", "")).strip()
+        transition = str(record.get("requested_transition", "")).strip()
+        proof_refs = (
+            [str(item).strip() for item in record.get("proof_refs", []) if str(item).strip()]
+            if isinstance(record.get("proof_refs"), list)
+            else []
+        )
+        owner_path, owner_path_error = _integration_owner_path(target_root, owner_ref)
+        owner_record: dict[str, Any] | None = None
+        updated_owner: dict[str, Any] | None = None
+        owner_schema_path = EXECPLAN_RECORD_SCHEMA_PATH
+        owner_kind = ""
+        owner_changed_fields: list[str] = []
+        if transition != "keep-open":
+            if owner_path_error or owner_path is None:
+                result.add("manual review", proposal_path, "integration apply requires owner.ref for lifecycle transitions")
+                result.reason_code = owner_path_error or "missing-owner-ref"
+                break
+            normalized_owner_ref = _planning_surface_relative(target_root, owner_path)
+            if normalized_owner_ref in owner_refs_seen:
+                result.add(
+                    "manual review",
+                    proposal_path,
+                    "multiple pending proposals target the same owner; reconcile the owner-scoped semantic delta first",
+                )
+                result.add(
+                    "next safe action",
+                    proposal_path,
+                    "agentic-planning reconcile --proposal <proposal-id> --target . --format json",
+                )
+                result.reason_code = "overlapping-integration-proposals-require-reconcile"
+                break
+            owner_refs_seen.add(normalized_owner_ref)
+            owner_record = _load_schema_backed_json_record(owner_path, kind=EXECPLAN_RECORD_KIND)
+            owner_kind = EXECPLAN_RECORD_KIND if owner_record is not None else ""
+            if owner_record is None:
+                owner_record = _load_schema_backed_json_record(owner_path, kind=LANE_RECORD_KIND)
+                owner_schema_path = LANE_RECORD_SCHEMA_PATH
+                owner_kind = LANE_RECORD_KIND if owner_record is not None else ""
+            if owner_record is None:
+                result.add(
+                    "manual review",
+                    owner_path,
+                    "integration owner record was not found or is not a planning-execplan/v1 or planning-lane/v1 record",
+                )
+                result.reason_code = "integration-owner-not-found"
+                break
+            expected_owner_id = str(owner.get("id", "")).strip()
+            actual_owner_id = str(owner_record.get("id", "")).strip()
+            if expected_owner_id and actual_owner_id and expected_owner_id != actual_owner_id:
+                result.add(
+                    "manual review", owner_path, f"integration owner id mismatch: expected {expected_owner_id}, found {actual_owner_id}"
+                )
+                result.reason_code = "integration-owner-id-mismatch"
+                break
+        expected_subject_revision = str(record.get("expected_subject_revision", "")).strip()
+        current_subject_revision = _integration_subject_revision(
+            target_root=target_root,
+            owner_ref=owner_ref,
+            external_ref=str(record.get("external_ref", "")).strip(),
+        )
+        if expected_subject_revision and expected_subject_revision != current_subject_revision:
+            result.add(
+                "manual review",
+                proposal_path,
+                f"integration subject revision changed: expected {expected_subject_revision}, found {current_subject_revision}",
+            )
+            result.reason_code = "stale-integration-subject-revision"
+            break
+        if owner_record is not None:
+            if owner_kind == LANE_RECORD_KIND:
+                updated_owner, owner_changed_fields = _apply_lane_integration_transition(
+                    owner_record,
+                    transition=transition,
+                    proof_refs=proof_refs,
+                    now=now,
+                )
+            else:
+                updated_owner, owner_changed_fields = _apply_owner_integration_transition(
+                    owner_record,
+                    transition=transition,
+                    proof_refs=proof_refs,
+                    now=now,
+                )
+            owner_findings = _json_schema_findings(payload=updated_owner, schema_path=owner_schema_path)
+            if owner_findings:
+                result.add(
+                    "manual review", owner_path or proposal_path, f"integration owner update is invalid: {'; '.join(owner_findings)}"
+                )
+                result.reason_code = "integration-owner-validation-failed"
+                break
+            if owner_path is not None and owner_changed_fields:
+                writes.append((owner_path, updated_owner, owner_schema_path))
+                owner_overrides[owner_path] = (json.dumps(updated_owner, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+        subject_after_revision = (
+            _integration_subject_revision_after_record(
+                target_root=target_root,
+                owner_ref=owner_ref,
+                owner_record=updated_owner,
+                external_ref=str(record.get("external_ref", "")).strip(),
+            )
+            if updated_owner is not None
+            else current_subject_revision
+        )
+        receipt_path = _integration_receipt_path(target_root, proposal_id)
+        updated_record = copy.deepcopy(record)
+        updated_record["status"] = "integrated"
+        updated_record["phase"] = "integrated-lifecycle-truth"
+        updated_record["updated_at"] = now
+        updated_record["integrated_at"] = now
+        updated_record["integration_receipt_ref"] = receipt_path.relative_to(target_root).as_posix()
+        updated_record["proposal_revision"] = _record_revision(updated_record)
+        receipt = {
+            "kind": INTEGRATION_RECEIPT_KIND,
+            "id": proposal_id,
+            "proposal_ref": proposal_path.relative_to(target_root).as_posix(),
+            "outcome": "integrated",
+            "requested_transition": transition,
+            "owner": {"id": str(owner.get("id", "")).strip(), "ref": owner_ref},
+            "external_ref": str(record.get("external_ref", "")).strip(),
+            "proof_refs": proof_refs,
+            "parent_boundary": str(record.get("parent_boundary", "")).strip(),
+            "preserved_invariants": [str(item).strip() for item in record.get("preserved_invariants", []) if str(item).strip()]
+            if isinstance(record.get("preserved_invariants"), list)
+            else [],
+            "changed_fields": ["integration_proposal.status", "integration_proposal.phase", *owner_changed_fields, "integration_receipt"],
+            "revisions": {
+                "expected_subject": expected_subject_revision,
+                "subject_before": current_subject_revision,
+                "subject_after": subject_after_revision,
+                "proposal_before": str(record.get("proposal_revision", "")).strip(),
+                "proposal_after": updated_record["proposal_revision"],
+                "expected_planning_revision": required_target,
+                "target_authority_before": current_target_id,
+                "target_authority_after": "pending-final-target-authority-revision",
+            },
+            "authority_boundary": {
+                "integrated_truth": "this receipt",
+                "proposal_status": "proposal marked integrated by the same batch transaction",
+                "owner_body": "updated by this transaction" if owner_changed_fields else "preserved",
+                "aggregate_indexes": "derived-regenerated-not-mutated",
+                "branch_admission": admission,
+                "entrypoint": "planning reconcile --apply-pending-integrations",
+            },
+            "created_at": now,
+        }
+        writes.append((proposal_path, updated_record, INTEGRATION_PROPOSAL_SCHEMA_PATH))
+        writes.append((receipt_path, receipt, INTEGRATION_RECEIPT_SCHEMA_PATH))
+        receipts.append(receipt)
+        proposals_applied.append(proposal_id)
+
+    if result.reason_code:
+        payload = result.to_dict()
+        payload["kind"] = "planning-pending-integration-apply/v1"
+        payload["status"] = "blocked"
+        payload["target_authority_revision"] = current_target_id
+        payload["applied_count"] = 0
+        payload["recovery_command"] = _integration_apply_recovery_command(target_root)
+        return payload
+
+    final_target_id = str(_planning_target_authority_revision(target_root, file_overrides=owner_overrides).get("revision_id", ""))
+    finalized_writes: list[tuple[Path, dict[str, Any], Path]] = []
+    for path, record, schema_path in writes:
+        if schema_path == INTEGRATION_RECEIPT_SCHEMA_PATH:
+            record = copy.deepcopy(record)
+            record["revisions"]["target_authority_after"] = final_target_id
+            record["receipt_revision"] = _record_revision(record)
+        findings = _json_schema_findings(payload=record, schema_path=schema_path)
+        if findings:
+            result.add("manual review", path, f"batch integration record is invalid: {'; '.join(findings)}")
+            result.reason_code = "integration-apply-validation-failed"
+            payload = result.to_dict()
+            payload["kind"] = "planning-pending-integration-apply/v1"
+            payload["status"] = "blocked"
+            return payload
+        finalized_writes.append((path, record, schema_path))
+    result.operation_receipt = {
+        "kind": "planning-pending-integration-apply-receipt/v1",
+        "outcome": "dry-run" if dry_run else "integrated",
+        "applied_proposals": proposals_applied,
+        "applied_count": len(proposals_applied),
+        "target_authority_before": current_target_id,
+        "target_authority_after": final_target_id,
+    }
+    if dry_run:
+        result.add("would update", proposal_dir, f"apply {len(proposals_applied)} pending integration proposal(s)")
+        payload = result.to_dict()
+        payload["kind"] = "planning-pending-integration-apply/v1"
+        payload["status"] = "dry-run"
+        payload["applied_count"] = len(proposals_applied)
+        payload["target_authority_before"] = current_target_id
+        payload["target_authority_after"] = final_target_id
+        return payload
+
+    def write_pending_integrations() -> None:
+        for path, record, schema_path in finalized_writes:
+            _write_schema_backed_planning_record(record_path=path, record=record, schema_path=schema_path)
+
+    try:
+        _apply_planning_writes_atomically([path for path, _record, _schema_path in finalized_writes], write_pending_integrations)
+    except OSError as exc:
+        result.add("manual review", proposal_dir, f"pending integration apply rolled back after write failure: {exc}")
+        result.reason_code = "integration-apply-rolled-back"
+        payload = result.to_dict()
+        payload["kind"] = "planning-pending-integration-apply/v1"
+        payload["status"] = "blocked"
+        return payload
+    result.add("updated", proposal_dir, f"applied {len(proposals_applied)} pending integration proposal(s)")
+    result.add("preserved", target_root / PLANNING_STATE_PATH, "current selection and aggregate indexes")
+    _add_planning_mutation_proof_actions(result)
+    payload = result.to_dict()
+    payload["kind"] = "planning-pending-integration-apply/v1"
+    payload["status"] = "applied"
+    payload["applied_count"] = len(proposals_applied)
+    payload["target_authority_before"] = current_target_id
+    payload["target_authority_after"] = final_target_id
+    payload["receipts"] = [str(item.get("id", "")) for item in receipts]
+    return payload
 
 
 def apply_integration_proposal(
@@ -13273,23 +13778,53 @@ def apply_integration_proposal(
         if isinstance(record.get("proof_refs"), list)
         else []
     )
-    current_planning_revision = planning_revision(target_root)
-    for revision_source, required_revision in (
-        ("proposal", str(record.get("expected_planning_revision", "")).strip()),
-        ("apply", expected_planning_revision.strip()),
-    ):
-        if required_revision and required_revision != str(current_planning_revision.get("revision_id", "")):
-            result.add(
-                "manual review",
-                proposal_path,
-                (
-                    f"integration {revision_source} Planning revision changed: expected {required_revision}, "
-                    f"found {current_planning_revision.get('revision_id', '')}"
-                ),
-            )
-            result.reason_code = "stale-integration-planning-revision"
-            result.conflict_owner = PLANNING_STATE_PATH.as_posix()
-            return result
+    proposal_target_revision = str(record.get("expected_planning_revision", "")).strip()
+    apply_target_revision = expected_planning_revision.strip()
+    if proposal_target_revision and apply_target_revision and proposal_target_revision != apply_target_revision:
+        result.add(
+            "manual review",
+            proposal_path,
+            (
+                f"integration apply token {apply_target_revision} does not match proposal target authority "
+                f"revision {proposal_target_revision}"
+            ),
+        )
+        result.reason_code = "integration-planning-revision-conflict"
+        result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+        return result
+    required_target_revision = apply_target_revision or proposal_target_revision
+    current_target_revision = _planning_target_authority_revision(target_root)
+    if not required_target_revision:
+        result.add(
+            "manual review",
+            proposal_path,
+            "integration apply requires the proposal's target authority revision or --expect-planning-revision",
+        )
+        result.add(
+            "next safe action",
+            proposal_path,
+            "refresh target reconciliation context and retry integration-apply with the current target authority revision",
+        )
+        result.reason_code = "integration-target-revision-required"
+        result.conflict_owner = PLANNING_STATE_PATH.as_posix()
+        return result
+    if required_target_revision != str(current_target_revision.get("revision_id", "")):
+        result.add(
+            "manual review",
+            proposal_path,
+            (
+                f"integration target authority revision changed: expected {required_target_revision}, "
+                f"found {current_target_revision.get('revision_id', '')}"
+            ),
+        )
+        result.add(
+            "next safe action",
+            proposal_path,
+            "rerun planning reconcile --apply-pending-integrations or refresh the proposal against the current target truth",
+        )
+        result.reason_code = "stale-integration-planning-revision"
+        result.conflict_owner = PLANNING_STATE_PATH.as_posix()
+        return result
 
     owner_ref = str(owner.get("ref", "")).strip()
     owner_path, owner_path_error = _integration_owner_path(target_root, owner_ref)
@@ -13402,7 +13937,15 @@ def apply_integration_proposal(
             "subject_after": subject_after_revision,
             "proposal_before": str(record.get("proposal_revision", "")).strip(),
             "proposal_after": updated_record["proposal_revision"],
-            "expected_planning_revision": expected_planning_revision.strip(),
+            "expected_planning_revision": required_target_revision,
+            "target_authority_before": str(current_target_revision.get("revision_id", "")),
+            "target_authority_after": str(
+                _planning_target_authority_revision_after_record(
+                    target_root=target_root,
+                    owner_ref=owner_ref,
+                    owner_record=updated_owner,
+                ).get("revision_id", "")
+            ),
         },
         "authority_boundary": {
             "integrated_truth": "this receipt",
@@ -13669,24 +14212,25 @@ def select_existing_owner(
         result.reason_code = "owner-not-selectable"
         result.recovery_command = f"{_workspace_cli_invoke(target_root)} summary --target . --select planning_surface_health --format json"
         return result
-    if not _guard_feature_branch_integration_mutation(
-        result,
-        target_root=target_root,
-        subject_path=owner_path,
-        owner_id=str(owner_record.get("id", "")).strip(),
-        owner_ref=owner_relative,
-        operation="owner selection",
-        requested_transition="mark-integrated",
-    ):
-        return result
-    if not _guard_pending_integration_owner_mutation(
-        result,
-        target_root=target_root,
-        owner_path=owner_path,
-        owner_id=str(owner_record.get("id", "")).strip(),
-        operation="owner selection",
-    ):
-        return result
+    if mode == "shared":
+        if not _guard_feature_branch_integration_mutation(
+            result,
+            target_root=target_root,
+            subject_path=owner_path,
+            owner_id=str(owner_record.get("id", "")).strip(),
+            owner_ref=owner_relative,
+            operation="shared owner selection",
+            requested_transition="mark-integrated",
+        ):
+            return result
+        if not _guard_pending_integration_owner_mutation(
+            result,
+            target_root=target_root,
+            owner_path=owner_path,
+            owner_id=str(owner_record.get("id", "")).strip(),
+            operation="shared owner selection",
+        ):
+            return result
     work_id = current_work_id.strip() or "default"
     state = _read_state_from_toml(target_root) or {}
     protected_sections = ["owner body", "roadmap", "decompositions", "lane records", "unrelated local work contexts"]

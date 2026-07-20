@@ -4,6 +4,9 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
+import repo_planning_bootstrap.installer as installer
 from repo_planning_bootstrap.installer import (
     apply_integration_proposal,
     archive_execplan,
@@ -442,13 +445,15 @@ def test_feature_branch_direct_terminal_writers_require_integration_proposal(tmp
     _git(tmp_path, "checkout", "-b", "feature/direct-close")
 
     blocked_archive = archive_execplan("issue-2345", target=tmp_path)
-    blocked_selection = select_existing_owner("issue-2345", target=tmp_path)
+    local_selection = select_existing_owner("issue-2345", target=tmp_path)
+    blocked_shared_selection = select_existing_owner("issue-2345", target=tmp_path, mode="shared", reason="checked-in selection")
 
     assert blocked_archive.reason_code == "integration-proposal-required-on-feature-branch"
     assert "integration-propose" in blocked_archive.actions[1].detail
-    assert blocked_selection.reason_code == "integration-proposal-required-on-feature-branch"
+    assert local_selection.reason_code == ""
+    assert blocked_shared_selection.reason_code == "integration-proposal-required-on-feature-branch"
     assert json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))["lifecycle"] == "live"
-    assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
+    assert (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
 
 
 def test_integration_apply_requires_target_branch_and_accepts_merge_queue_branch(tmp_path: Path) -> None:
@@ -511,12 +516,14 @@ def test_pending_integration_proposal_blocks_owner_selection(tmp_path: Path) -> 
         target=tmp_path,
     )
 
-    blocked = select_existing_owner("issue-2345", target=tmp_path)
+    local_selection = select_existing_owner("issue-2345", target=tmp_path)
+    blocked = select_existing_owner("issue-2345", target=tmp_path, mode="shared", reason="checked-in selection")
 
     assert [action.kind for action in blocked.actions] == ["manual review", "next safe action"]
     assert blocked.reason_code == "pending-integration-proposal-required"
     assert "integration-apply --proposal issue-2345-select" in blocked.actions[1].detail
-    assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
+    assert local_selection.reason_code == ""
+    assert (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
 
 
 def test_pending_integration_proposal_blocks_state_item_close(tmp_path: Path) -> None:
@@ -634,10 +641,14 @@ def test_integration_apply_rejects_stale_subject_revision(tmp_path: Path) -> Non
     propose_integration_transition(proposal_id="issue-2345-stale", owner="issue-2345", owner_ref=owner_ref, issue="2345", target=tmp_path)
     relation_revision = _relation_record(tmp_path, "2345")["relation_revision"]
     shape_issue_relation(issue="2345", priority="p0.3", expected_relation_revision=relation_revision, target=tmp_path)
+    proposal_path = tmp_path / ".agentic-workspace/planning/integration-proposals/issue-2345-stale.integration-proposal.json"
+    proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+    proposal["expected_planning_revision"] = planning_revision(tmp_path)["target_authority_revision"]
+    proposal_path.write_text(json.dumps(proposal, indent=2) + "\n", encoding="utf-8")
 
     stale = apply_integration_proposal(proposal="issue-2345-stale", target=tmp_path)
 
-    assert [action.kind for action in stale.actions] == ["manual review"]
+    assert stale.actions[0].kind == "manual review"
     assert stale.reason_code == "stale-integration-subject-revision"
     assert not (tmp_path / ".agentic-workspace/planning/integration-receipts/issue-2345-stale.integration-receipt.json").exists()
     summary = planning_summary(target=tmp_path, profile="full")
@@ -648,16 +659,44 @@ def test_integration_apply_rejects_stale_planning_revision(tmp_path: Path) -> No
     install_bootstrap(target=tmp_path)
     owner_ref = _write_owner(tmp_path, "issue-2345")
     propose_integration_transition(proposal_id="issue-2345-target-stale", owner="issue-2345", owner_ref=owner_ref, target=tmp_path)
+    _write_owner(tmp_path, "unrelated-target-change")
 
     stale = apply_integration_proposal(
         proposal="issue-2345-target-stale",
+        target=tmp_path,
+    )
+
+    assert stale.actions[0].kind == "manual review"
+    assert stale.reason_code == "stale-integration-planning-revision"
+    assert not (tmp_path / ".agentic-workspace/planning/integration-receipts/issue-2345-target-stale.integration-receipt.json").exists()
+
+
+def test_integration_apply_rejects_conflicting_apply_token(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-2345")
+    propose_integration_transition(proposal_id="issue-2345-token", owner="issue-2345", owner_ref=owner_ref, target=tmp_path)
+
+    stale = apply_integration_proposal(
+        proposal="issue-2345-token",
         expected_planning_revision="stale-target",
         target=tmp_path,
     )
 
     assert [action.kind for action in stale.actions] == ["manual review"]
-    assert stale.reason_code == "stale-integration-planning-revision"
-    assert not (tmp_path / ".agentic-workspace/planning/integration-receipts/issue-2345-target-stale.integration-receipt.json").exists()
+    assert stale.reason_code == "integration-planning-revision-conflict"
+
+
+def test_reconcile_reports_structural_mutation_admission_inventory(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+
+    inventory = planning_reconcile(target=tmp_path)["mutation_admission_inventory"]
+    by_operation = {entry["operation"]: entry for entry in inventory["entries"]}
+
+    assert by_operation["planning.owner-select.lifecycle --mode local"]["feature_branch_admission"] == "allowed"
+    assert by_operation["planning.owner-select.lifecycle --mode shared"]["feature_branch_admission"] == "blocked"
+    assert by_operation["planning.integration-apply.lifecycle"]["feature_branch_admission"] == "blocked"
+    assert by_operation["planning.reconcile.report --apply-pending-integrations"]["feature_branch_admission"] == "blocked"
+    assert by_operation["planning.issue-shape.lifecycle"]["feature_branch_admission"] == "allowed"
 
 
 def test_issue_2328_2331_feature_replay_is_owner_scoped_and_repair_free(tmp_path: Path) -> None:
@@ -685,9 +724,10 @@ def test_issue_2328_2331_feature_replay_is_owner_scoped_and_repair_free(tmp_path
     for issue in ("2328", "2329", "2330", "2331"):
         _git(tmp_path, "checkout", "main")
         _git(tmp_path, "merge", "--no-ff", f"feature/issue-{issue}", "-m", f"merge issue {issue}")
-        applied = apply_integration_proposal(proposal=f"issue-{issue}-integrated", target=tmp_path)
-        _commit_all(tmp_path, f"apply issue {issue}")
-        assert applied.reason_code == ""
+    applied = planning_reconcile(target=tmp_path, apply_pending_integrations=True)
+    _commit_all(tmp_path, "apply pending issue integrations")
+    assert applied["pending_integration_apply"]["status"] == "applied"
+    assert applied["pending_integration_apply"]["applied_count"] == 4
 
     receipts = sorted((tmp_path / ".agentic-workspace/planning/integration-receipts").glob("*.integration-receipt.json"))
     proposals = sorted((tmp_path / ".agentic-workspace/planning/integration-proposals").glob("*.integration-proposal.json"))
@@ -697,3 +737,77 @@ def test_issue_2328_2331_feature_replay_is_owner_scoped_and_repair_free(tmp_path
         owner = json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))
         assert owner["lifecycle"] == "live"
         assert owner["relationships"]["integration"]["status"] == "integrated"
+
+
+def test_stacked_child_proposal_applies_with_parent_in_one_target_reconcile(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    parent_owner = _write_owner(tmp_path, "issue-parent")
+    child_owner = _write_owner(tmp_path, "issue-child")
+    _init_git(tmp_path)
+    _commit_all(tmp_path, "baseline owners")
+
+    _git(tmp_path, "checkout", "-b", "feature/parent")
+    propose_integration_transition(
+        proposal_id="issue-parent-integrated",
+        owner="issue-parent",
+        owner_ref=parent_owner,
+        requested_transition="mark-integrated",
+        target=tmp_path,
+    )
+    _commit_all(tmp_path, "propose parent")
+
+    _git(tmp_path, "checkout", "-b", "feature/child")
+    propose_integration_transition(
+        proposal_id="issue-child-integrated",
+        owner="issue-child",
+        owner_ref=child_owner,
+        requested_transition="mark-integrated",
+        target=tmp_path,
+    )
+    _commit_all(tmp_path, "propose child")
+
+    _git(tmp_path, "checkout", "main")
+    _git(tmp_path, "merge", "--no-ff", "feature/parent", "-m", "merge parent")
+    _git(tmp_path, "merge", "--no-ff", "feature/child", "-m", "merge child")
+
+    applied = planning_reconcile(target=tmp_path, apply_pending_integrations=True)
+
+    assert applied["pending_integration_apply"]["status"] == "applied"
+    assert applied["pending_integration_apply"]["applied_count"] == 2
+    for owner_ref in (parent_owner, child_owner):
+        owner = json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))
+        assert owner["relationships"]["integration"]["status"] == "integrated"
+
+
+def test_pending_integration_batch_rolls_back_owner_proposal_and_receipt_on_write_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-rollback")
+    propose_integration_transition(
+        proposal_id="issue-rollback-integrated",
+        owner="issue-rollback",
+        owner_ref=owner_ref,
+        requested_transition="mark-integrated",
+        target=tmp_path,
+    )
+    owner_before = (tmp_path / owner_ref).read_bytes()
+    proposal_path = tmp_path / ".agentic-workspace/planning/integration-proposals/issue-rollback-integrated.integration-proposal.json"
+    proposal_before = proposal_path.read_bytes()
+    receipt_path = tmp_path / ".agentic-workspace/planning/integration-receipts/issue-rollback-integrated.integration-receipt.json"
+    original_write = installer._write_schema_backed_planning_record
+
+    def fail_receipt_write(*, record_path: Path, record: dict, schema_path: Path) -> None:
+        if record_path == receipt_path:
+            raise OSError("injected receipt write failure")
+        original_write(record_path=record_path, record=record, schema_path=schema_path)
+
+    monkeypatch.setattr(installer, "_write_schema_backed_planning_record", fail_receipt_write)
+
+    applied = planning_reconcile(target=tmp_path, apply_pending_integrations=True)
+
+    assert applied["pending_integration_apply"]["status"] == "blocked"
+    assert applied["pending_integration_apply"]["reason_code"] == "integration-apply-rolled-back"
+    assert (tmp_path / owner_ref).read_bytes() == owner_before
+    assert proposal_path.read_bytes() == proposal_before
+    assert not receipt_path.exists()

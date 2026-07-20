@@ -81,6 +81,7 @@ def load_planning_reconcile_operation(values: dict, _arguments: dict, _context) 
         expected_relation_revision=str(values.get("expect_relation_revision") or ""),
         apply_issue_relation_reconcile=bool(values.get("apply_issue_relation_reconcile")),
         apply_issue_relation_migration=bool(values.get("apply_issue_relation_migration")),
+        apply_pending_integrations=bool(values.get("apply_pending_integrations")),
         preview=bool(values.get("preview")),
         apply=bool(values.get("apply")),
         proposal=str(values.get("proposal") or ""),

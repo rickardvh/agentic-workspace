@@ -14,8 +14,9 @@
   },
   "guards": [
     "Reject stale proposals when the affected owner or issue-relation subject revision changed.",
+    "Require a target-authority revision from the proposal or --expect-planning-revision; proposal/receipt bookkeeping is excluded from that token.",
     "Reject apply attempts on feature branches; only target, release, and merge-queue branches may establish integrated truth.",
-    "Rollback proposal and receipt writes together on validation or write failure.",
+    "Rollback owner, proposal, and receipt writes together on validation or write failure.",
     "Aggregate indexes and unrelated owners remain derived or preserved."
   ],
   "id": "planning.integration-apply.lifecycle",
@@ -51,7 +52,7 @@
     "steps": [
       {
         "arguments": {},
-        "description": "Validate the subject revision and atomically mark the proposal integrated with a receipt.",
+        "description": "Validate subject and target-authority revisions, then atomically mark the proposal integrated with owner changes and a receipt.",
         "id": "apply_integration_receipt",
         "on_error": "emit_usage_error",
         "outputs": [
@@ -82,7 +83,7 @@
     "kind": "module-result"
   },
   "proof": [
-    "planning branch-safe tests cover guarded apply, target branch admission, rollback surface, no-op reapply, stale proposals, and generated command exposure"
+    "planning branch-safe tests cover guarded apply, mandatory target CAS, target branch admission, rollback surface, no-op reapply, stale proposals, and generated command exposure"
   ],
   "reads": [
     {
@@ -97,7 +98,7 @@
   "schema_version": "agentic-workspace/operation/v1",
   "steps": [
     {
-      "description": "Validate the subject revision and atomically mark the proposal integrated with a receipt.",
+      "description": "Validate subject and target-authority revisions, then atomically mark the proposal integrated with owner changes and a receipt.",
       "id": "apply_integration_receipt",
       "uses": "planning.integration-apply.apply"
     },

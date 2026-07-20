@@ -111,7 +111,9 @@
         "subject_after",
         "proposal_before",
         "proposal_after",
-        "expected_planning_revision"
+        "expected_planning_revision",
+        "target_authority_before",
+        "target_authority_after"
       ],
       "properties": {
         "expected_subject": {
@@ -140,7 +142,18 @@
         },
         "expected_planning_revision": {
           "type": "string",
-          "description": "Advisory Planning revision captured in the apply request."
+          "minLength": 1,
+          "description": "Target-authority revision required by the proposal or apply request."
+        },
+        "target_authority_before": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target-authority revision observed immediately before the apply transaction."
+        },
+        "target_authority_after": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Target-authority revision after the owner/proposal/receipt transaction."
         }
       },
       "description": "Revision tokens observed and emitted by target-branch compare-and-apply."

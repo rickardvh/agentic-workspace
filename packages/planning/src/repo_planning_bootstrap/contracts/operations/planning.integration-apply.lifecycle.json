@@ -24,22 +24,23 @@
     {"surface": "affected owner record", "required": false, "when": "the requested transition mutates canonical owner lifecycle or integration truth"}
   ],
   "steps": [
-    {"id": "apply_integration_receipt", "uses": "planning.integration-apply.apply", "description": "Validate the subject revision and atomically mark the proposal integrated with a receipt."},
+    {"id": "apply_integration_receipt", "uses": "planning.integration-apply.apply", "description": "Validate subject and target-authority revisions, then atomically mark the proposal integrated with owner changes and a receipt."},
     {"id": "emit_output", "uses": "output.emit", "description": "Emit the target-branch integration receipt."}
   ],
   "guards": [
     "Reject stale proposals when the affected owner or issue-relation subject revision changed.",
+    "Require a target-authority revision from the proposal or --expect-planning-revision; proposal/receipt bookkeeping is excluded from that token.",
     "Reject apply attempts on feature branches; only target, release, and merge-queue branches may establish integrated truth.",
-    "Rollback proposal and receipt writes together on validation or write failure.",
+    "Rollback owner, proposal, and receipt writes together on validation or write failure.",
     "Aggregate indexes and unrelated owners remain derived or preserved."
   ],
-  "proof": ["planning branch-safe tests cover guarded apply, target branch admission, rollback surface, no-op reapply, stale proposals, and generated command exposure"],
+  "proof": ["planning branch-safe tests cover guarded apply, mandatory target CAS, target branch admission, rollback surface, no-op reapply, stale proposals, and generated command exposure"],
   "migration_status": "runtime-consumed",
   "ir_plan": {
     "status": "representative",
     "summary": "Generated targets own parser and dispatch parity while Planning owns target integration semantics.",
     "steps": [
-      {"id": "apply_integration_receipt", "uses": "planning.integration-apply.apply", "description": "Validate the subject revision and atomically mark the proposal integrated with a receipt.", "arguments": {}, "outputs": ["result"], "on_error": "emit_usage_error"},
+      {"id": "apply_integration_receipt", "uses": "planning.integration-apply.apply", "description": "Validate subject and target-authority revisions, then atomically mark the proposal integrated with owner changes and a receipt.", "arguments": {}, "outputs": ["result"], "on_error": "emit_usage_error"},
       {"id": "emit_output", "uses": "output.emit", "description": "Emit the target-branch integration receipt.", "arguments": {}, "outputs": ["emitted"], "on_error": "emit_usage_error"}
     ]
   }

@@ -12335,6 +12335,14 @@
                 "help": "Migrate legacy issue authority into issue relations and demote duplicate fields."
               },
               {
+                "name": "apply_pending_integrations",
+                "flags": [
+                  "--apply-pending-integrations"
+                ],
+                "action": "store_true",
+                "help": "Apply all eligible pending integration proposals in one target-authority transaction."
+              },
+              {
                 "name": "preview",
                 "flags": [
                   "--preview"

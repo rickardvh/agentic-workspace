@@ -24,7 +24,7 @@ Checked-in feature-branch proposal for a later target-branch Planning lifecycle 
 | `parent_boundary` | string | yes |  | Boundary that keeps parent, lane, and aggregate truth independent on feature branches. |  |  |
 | `preserved_invariants` | array of string | yes |  | Invariants the proposal asserts are preserved until target-branch apply. |  |  |
 | `expected_subject_revision` | string | yes |  | Subject revision expected by target-branch compare-and-apply. |  |  |
-| `expected_planning_revision` | string | yes |  | Advisory Planning revision captured when the proposal was written. |  |  |
+| `expected_planning_revision` | string | yes |  | Mandatory target-authority revision captured when the proposal was written; excludes proposal and receipt bookkeeping. |  |  |
 | `created_at` | string | yes |  | Creation timestamp recorded by the proposal writer. |  |  |
 | `updated_at` | string | yes |  | Last proposal update timestamp recorded by propose or apply. |  |  |
 | `integrated_at` | string | no |  | Timestamp set when the target branch applies the proposal. |  |  |

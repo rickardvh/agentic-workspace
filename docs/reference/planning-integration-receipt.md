@@ -30,7 +30,9 @@ Checked-in target-branch receipt for an applied Planning lifecycle integration p
 | `revisions.subject_after` | string | yes |  | Subject revision observed immediately after apply. |  |  |
 | `revisions.proposal_before` | string | yes |  | Proposal revision observed before marking it integrated. |  |  |
 | `revisions.proposal_after` | string | yes |  | Proposal revision after marking it integrated. |  |  |
-| `revisions.expected_planning_revision` | string | yes |  | Advisory Planning revision captured in the apply request. |  |  |
+| `revisions.expected_planning_revision` | string | yes |  | Target-authority revision required by the proposal or apply request. |  |  |
+| `revisions.target_authority_before` | string | yes |  | Target-authority revision observed immediately before the apply transaction. |  |  |
+| `revisions.target_authority_after` | string | yes |  | Target-authority revision after the owner/proposal/receipt transaction. |  |  |
 | `authority_boundary` | object | yes |  | Explicit boundary for what the receipt makes authoritative. |  |  |
 | `authority_boundary.integrated_truth` | string | yes |  | Authority statement for integrated lifecycle truth. |  |  |
 | `authority_boundary.proposal_status` | string | yes |  | Authority statement for the proposal status transition. |  |  |

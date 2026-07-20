@@ -3363,6 +3363,14 @@
           {
             "action": "store_true",
             "flags": [
+              "--apply-pending-integrations"
+            ],
+            "help": "Apply all eligible pending integration proposals in one target-authority transaction.",
+            "name": "apply_pending_integrations"
+          },
+          {
+            "action": "store_true",
+            "flags": [
               "--preview"
             ],
             "help": "Compile a reusable reconciliation proposal without mutating Planning state.",

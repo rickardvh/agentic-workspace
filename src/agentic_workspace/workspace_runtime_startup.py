@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
 import tomllib
 from pathlib import Path
@@ -155,6 +156,13 @@ def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path,
     identity_effects = [str(effect) for effect in _list_payload(route_decision.get("identity_effects")) if str(effect).strip()]
     provisional = transition != "none" or bool(identity_effects)
     identity = startup_route_identity(root=target_root, task=str(task_text or ""))
+    selected_identity = _as_dict(route_decision.get("selected_owner_identity"))
+    selected_ref = str(selected_identity.get("ref") or route_decision.get("selected_owner") or "").strip()
+    if selected_ref:
+        observed = _as_dict(identity.get("observed"))
+        observed["selected_owner"] = {"id": str(selected_identity.get("id") or ""), "ref": selected_ref}
+        identity["observed"] = observed
+        identity["fingerprint"] = hashlib.sha256(json.dumps(observed, sort_keys=True, separators=(",", ":")).encode()).hexdigest()[:24]
     rebind_command = _command_with_cli_invoke(
         command="agentic-workspace start --target . --task <same-task> --format json",
         cli_invoke=cli_invoke,

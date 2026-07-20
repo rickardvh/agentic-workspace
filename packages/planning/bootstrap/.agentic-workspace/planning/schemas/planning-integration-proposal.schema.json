@@ -110,7 +110,8 @@
     },
     "expected_planning_revision": {
       "type": "string",
-      "description": "Advisory Planning revision captured when the proposal was written."
+      "minLength": 1,
+      "description": "Mandatory target-authority revision captured when the proposal was written; excludes proposal and receipt bookkeeping."
     },
     "created_at": {
       "type": "string",
