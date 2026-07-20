@@ -8,10 +8,12 @@ from repo_planning_bootstrap.installer import (
     apply_integration_proposal,
     archive_execplan,
     close_lane_record,
+    close_planning_item,
     install_bootstrap,
     planning_revision,
     planning_summary,
     propose_integration_transition,
+    select_existing_owner,
     shape_issue_relation,
 )
 
@@ -381,6 +383,57 @@ def test_pending_integration_proposal_blocks_direct_execplan_archive(tmp_path: P
     assert blocked.reason_code == "pending-integration-proposal-required"
     assert "integration-apply --proposal issue-2345-close" in blocked.actions[1].detail
     assert json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))["lifecycle"] == "live"
+
+
+def test_pending_integration_proposal_blocks_owner_selection(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    owner_ref = _write_owner(tmp_path, "issue-2345")
+    propose_integration_transition(
+        proposal_id="issue-2345-select",
+        owner="issue-2345",
+        owner_ref=owner_ref,
+        requested_transition="mark-integrated",
+        target=tmp_path,
+    )
+
+    blocked = select_existing_owner("issue-2345", target=tmp_path)
+
+    assert [action.kind for action in blocked.actions] == ["manual review", "next safe action"]
+    assert blocked.reason_code == "pending-integration-proposal-required"
+    assert "integration-apply --proposal issue-2345-select" in blocked.actions[1].detail
+    assert not (tmp_path / ".agentic-workspace/local/planning/owner-selection.json").exists()
+
+
+def test_pending_integration_proposal_blocks_state_item_close(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    state_path = tmp_path / ".agentic-workspace/planning/state.toml"
+    state_path.write_text(
+        """
+kind = "agentic-planning-state"
+schema_version = "planning-state/v1"
+
+[todo]
+active_items = [
+  { id = "issue-2345", title = "Issue 2345", status = "completed", refs = ["2345"] },
+]
+queued_items = []
+""".lstrip(),
+        encoding="utf-8",
+    )
+    before = state_path.read_text(encoding="utf-8")
+    propose_integration_transition(
+        proposal_id="issue-2345-state",
+        issue="2345",
+        requested_transition="keep-open",
+        target=tmp_path,
+    )
+
+    blocked = close_planning_item("issue-2345", issue="2345", target=tmp_path)
+
+    assert [action.kind for action in blocked.actions] == ["manual review", "next safe action"]
+    assert blocked.reason_code == "pending-integration-proposal-required"
+    assert "integration-apply --proposal issue-2345-state" in blocked.actions[1].detail
+    assert state_path.read_text(encoding="utf-8") == before
 
 
 def test_pending_integration_proposal_blocks_direct_lane_close_and_applies_lane_owner(tmp_path: Path) -> None:

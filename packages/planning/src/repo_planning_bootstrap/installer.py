@@ -13274,6 +13274,14 @@ def select_existing_owner(
         result.reason_code = "owner-not-selectable"
         result.recovery_command = f"{_workspace_cli_invoke(target_root)} summary --target . --select planning_surface_health --format json"
         return result
+    if not _guard_pending_integration_owner_mutation(
+        result,
+        target_root=target_root,
+        owner_path=owner_path,
+        owner_id=str(owner_record.get("id", "")).strip(),
+        operation="owner selection",
+    ):
+        return result
     work_id = current_work_id.strip() or "default"
     state = _read_state_from_toml(target_root) or {}
     protected_sections = ["owner body", "roadmap", "decompositions", "lane records", "unrelated local work contexts"]
@@ -17474,6 +17482,33 @@ def close_planning_item(
         )
         archive_result.message = f"Close planning item {item_id} through execplan archive flow"
         return archive_result
+
+    pending = _pending_integration_proposals_for_owner(
+        target_root=target_root,
+        owner_refs=[str(candidate.get("surface", "")).strip()],
+        owner_ids=[str(candidate.get("id", "")).strip()],
+        external_refs=[issue.strip(), *[str(ref) for ref in candidate.get("external_refs", []) if str(ref).strip()]],
+    )
+    if pending:
+        proposal = pending[0]
+        proposal_id = proposal.get("id", "")
+        proposal_path = target_root / proposal.get("path", PLANNING_INTEGRATION_PROPOSAL_ROOT.as_posix())
+        result.add(
+            "manual review",
+            target_root / PLANNING_STATE_PATH,
+            (f"close-item is blocked because pending integration proposal '{proposal_id}' owns the next state cleanup for this subject"),
+        )
+        result.add(
+            "next safe action",
+            proposal_path,
+            f"agentic-planning integration-apply --proposal {proposal_id} --target . --format json",
+        )
+        result.reason_code = "pending-integration-proposal-required"
+        result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+        result.recovery_command = (
+            f"{_workspace_cli_invoke(target_root)} planning integration-apply --proposal {proposal_id} --target . --format json"
+        )
+        return result
 
     status = str(candidate.get("status", "")).strip().lower()
     normalized_status = _normalize_status(status)
@@ -21795,6 +21830,9 @@ def _close_item_state_candidates(state: dict[str, Any], *, item_id: str, target_
             match = _close_item_id_match(raw_id, item_id)
             if match is None:
                 continue
+            external_refs = _external_refs_from_value(raw_record.get("issues")) | _external_refs_from_value(raw_record.get("refs"))
+            external_refs.update(_external_refs_from_value(raw_record.get("issue")))
+            external_refs.update(_external_refs_from_value(raw_record.get("external_ref")))
             candidates.append(
                 {
                     "kind": kind,
@@ -21804,6 +21842,7 @@ def _close_item_state_candidates(state: dict[str, Any], *, item_id: str, target_
                     "id": raw_id,
                     "status": str(raw_record.get("status", "")).strip(),
                     "surface": _active_execplan_reference(raw_record),
+                    "external_refs": sorted(external_refs),
                     "match": match,
                     "target_root": target_root,
                 }
