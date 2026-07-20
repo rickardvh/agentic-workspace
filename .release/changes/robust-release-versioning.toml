@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Replace direct post-merge release publishing with changeset-driven release PRs and exact tag publishing."
