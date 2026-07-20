@@ -24857,17 +24857,73 @@ def _start_profile_for_select(*, requested_profile: str | None, select: str | No
 
 
 def _selector_tokens(select: str | None) -> list[str]:
+    tokens, _ = _selector_request(select=select, source_command="")
+    return tokens
+
+
+_MAX_SELECTOR_COUNT = 32
+_MAX_SELECTOR_BYTES = 512
+_MAX_SELECTOR_REQUEST_BYTES = 4096
+_MAX_SELECTOR_ERROR_ENVELOPE_BYTES = 6144
+_MAX_SELECTOR_ERROR_ITEMS = 8
+
+
+def _selector_request(*, select: str | None, source_command: str) -> tuple[list[str], dict[str, Any] | None]:
     if not select:
-        return []
+        return ([], None)
+    request_bytes = len(str(select).encode("utf-8", errors="replace"))
+    if request_bytes > _MAX_SELECTOR_REQUEST_BYTES:
+        return (
+            [],
+            _selector_request_validation_error(
+                source_command=source_command,
+                reason="selector-request-too-large",
+                selectors=[],
+                requested_selector_count=0,
+                selector_request_bytes=request_bytes,
+            ),
+        )
     tokens: list[str] = []
     seen: set[str] = set()
-    for raw in select.split(","):
+    requested_count = 0
+    for raw in str(select).split(","):
         token = raw.strip()
-        if not token or token in seen:
+        if not token:
+            continue
+        requested_count += 1
+        token_bytes = len(token.encode("utf-8", errors="replace"))
+        if token_bytes > _MAX_SELECTOR_BYTES:
+            return (
+                tokens,
+                _selector_request_validation_error(
+                    source_command=source_command,
+                    reason="selector-too-long",
+                    selectors=tokens,
+                    requested_selector_count=requested_count,
+                    selector_request_bytes=request_bytes,
+                    selector_index=requested_count - 1,
+                    selector_bytes=token_bytes,
+                    offending_selector=token,
+                ),
+            )
+        if requested_count > _MAX_SELECTOR_COUNT:
+            return (
+                tokens,
+                _selector_request_validation_error(
+                    source_command=source_command,
+                    reason="too-many-selectors",
+                    selectors=tokens,
+                    requested_selector_count=requested_count,
+                    selector_request_bytes=request_bytes,
+                    selector_index=requested_count - 1,
+                    offending_selector=token,
+                ),
+            )
+        if token in seen:
             continue
         tokens.append(token)
         seen.add(token)
-    return tokens
+    return (tokens, None)
 
 
 def _field_by_path(payload: Any, path: str) -> tuple[bool, Any]:
@@ -24964,6 +25020,10 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "proof.runtime_source_edit_review",
         "proof_route_strategy_preservation",
         "context",
+        "context.delegation_decision",
+        "context.delegation_decision.required_next_action",
+        "context.delegation_decision.delegation_next_step.must_report_if_not_run",
+        "context.delegation_decision.effort_guidance.cost_posture",
         "context.workflow_sufficiency",
         "context.scope",
         "context.guidance",
@@ -24988,6 +25048,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
     ),
     "summary": (
         "todo",
+        "todo.active_count",
         "target_root",
         "planning_revision",
         "planning_record",
@@ -25053,8 +25114,10 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
     ),
     "config": (
         "workspace",
+        "workspace.enabled_modules",
         "modules",
         "mixed_agent",
+        "mixed_agent.runtime_resolution",
         "assurance",
         "config_enforcement",
         "config_effect_audit",
@@ -25138,7 +25201,7 @@ def _known_optional_selector_absent(*, source_command: str, selector: str) -> bo
 
 def _declared_selector_for_command(*, source_command: str, selector: str) -> bool:
     available = _selector_descriptor_for_command(source_command)
-    return selector in available or any(selector.startswith(f"{candidate}.") for candidate in available)
+    return selector in available
 
 
 def _selector_suggestions(*, unknown: str, available: list[str], limit: int = 3) -> list[str]:
@@ -25159,14 +25222,22 @@ def _selector_validation_error_from_available(
     *, available: list[str], selectors: list[str], missing: list[str], source_command: str
 ) -> dict[str, Any]:
     sample = list(dict.fromkeys(selector for selector in available if isinstance(selector, str) and selector.strip()))[:8]
-    suggestions = {selector: matches for selector in missing if (matches := _selector_suggestions(unknown=selector, available=available))}
+    bounded_selectors = selectors[:_MAX_SELECTOR_ERROR_ITEMS]
+    bounded_missing = missing[:_MAX_SELECTOR_ERROR_ITEMS]
+    suggestions = {
+        selector: matches for selector in bounded_missing if (matches := _selector_suggestions(unknown=selector, available=available))
+    }
     inventory_command = _selector_inventory_command(source_command)
-    return {
+    payload = {
         "kind": "agentic-workspace/selector-validation-error/v1",
         "status": "invalid-selector",
         "source_command": source_command,
-        "requested_selectors": selectors,
-        "unknown_selectors": missing,
+        "requested_selectors": bounded_selectors,
+        "requested_selector_count": len(selectors),
+        "requested_selector_omitted_count": max(0, len(selectors) - len(bounded_selectors)),
+        "unknown_selectors": bounded_missing,
+        "unknown_selector_count": len(missing),
+        "unknown_selector_omitted_count": max(0, len(missing) - len(bounded_missing)),
         "selector_inventory": {
             "status": "omitted-from-validation-error",
             "available_count": len(available),
@@ -25177,8 +25248,80 @@ def _selector_validation_error_from_available(
             "rule": "Unknown selectors return a bounded validation envelope; full selector inventory is available only through an explicit detail route.",
         },
         "suggestions": suggestions,
-        "validation_rule": "Selector requests are atomic: any unknown selector prevents partial projection output.",
+        "selector_budget": _selector_budget_payload(),
+        "validation_rule": "Selector requests are exact: nested selectors must be declared before payload construction.",
     }
+    return _fit_selector_error_envelope(payload)
+
+
+def _selector_budget_payload() -> dict[str, int]:
+    return {
+        "max_selectors": _MAX_SELECTOR_COUNT,
+        "max_selector_bytes": _MAX_SELECTOR_BYTES,
+        "max_selector_request_bytes": _MAX_SELECTOR_REQUEST_BYTES,
+        "max_error_envelope_bytes": _MAX_SELECTOR_ERROR_ENVELOPE_BYTES,
+        "max_error_items": _MAX_SELECTOR_ERROR_ITEMS,
+    }
+
+
+def _selector_request_validation_error(
+    *,
+    source_command: str,
+    reason: str,
+    selectors: list[str],
+    requested_selector_count: int,
+    selector_request_bytes: int,
+    selector_index: int | None = None,
+    selector_bytes: int | None = None,
+    offending_selector: str = "",
+) -> dict[str, Any]:
+    inventory_command = _selector_inventory_command(source_command)
+    payload: dict[str, Any] = {
+        "kind": "agentic-workspace/selector-validation-error/v1",
+        "status": "invalid-selector-request",
+        "source_command": source_command,
+        "reason": reason,
+        "requested_selectors": selectors[:_MAX_SELECTOR_ERROR_ITEMS],
+        "requested_selector_count": requested_selector_count,
+        "requested_selector_omitted_count": max(0, requested_selector_count - _MAX_SELECTOR_ERROR_ITEMS),
+        "selector_request_bytes": selector_request_bytes,
+        "selector_inventory": {
+            "status": "omitted-from-validation-error",
+            "inventory_command": inventory_command,
+            "discovery_command": inventory_command,
+            "rule": "Selector request limits are enforced before command payload construction; use the inventory route for valid selectors.",
+        },
+        "selector_budget": _selector_budget_payload(),
+        "validation_rule": "Selector requests are bounded before descriptor lookup or payload construction.",
+    }
+    if selector_index is not None:
+        payload["selector_index"] = selector_index
+    if selector_bytes is not None:
+        payload["selector_bytes"] = selector_bytes
+    if offending_selector:
+        payload["offending_selector"] = offending_selector[:120]
+    return _fit_selector_error_envelope(payload)
+
+
+def _fit_selector_error_envelope(payload: dict[str, Any]) -> dict[str, Any]:
+    if len(json.dumps(payload, sort_keys=True)) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+        return payload
+    payload["suggestions"] = {}
+    if len(json.dumps(payload, sort_keys=True)) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+        return payload
+    payload["requested_selectors"] = payload.get("requested_selectors", [])[:3]
+    payload["unknown_selectors"] = payload.get("unknown_selectors", [])[:3]
+    inventory = payload.get("selector_inventory")
+    if isinstance(inventory, dict):
+        inventory["sample"] = inventory.get("sample", [])[:3]
+    if len(json.dumps(payload, sort_keys=True)) <= _MAX_SELECTOR_ERROR_ENVELOPE_BYTES:
+        return payload
+    payload["requested_selectors"] = []
+    payload["unknown_selectors"] = []
+    if isinstance(inventory, dict):
+        inventory["sample"] = []
+    payload["truncated_to_budget"] = True
+    return payload
 
 
 def _selector_validation_error(*, payload: dict[str, Any], selectors: list[str], missing: list[str], source_command: str) -> dict[str, Any]:
@@ -25191,7 +25334,9 @@ def _selector_validation_error(*, payload: dict[str, Any], selectors: list[str],
 
 
 def _selector_prevalidation_error(*, select: str | None, source_command: str) -> dict[str, Any] | None:
-    selectors = _selector_tokens(select)
+    selectors, request_error = _selector_request(select=select, source_command=source_command)
+    if request_error is not None:
+        return request_error
     if not selectors:
         return None
     available = _selector_descriptor_for_command(source_command)
@@ -25199,7 +25344,7 @@ def _selector_prevalidation_error(*, select: str | None, source_command: str) ->
         return None
     unknown = []
     for selector in selectors:
-        if selector in available or any(selector.startswith(f"{candidate}.") for candidate in available):
+        if selector in available:
             continue
         if _known_optional_selector_absent(source_command=source_command, selector=selector):
             continue
@@ -25215,7 +25360,9 @@ def _selector_prevalidation_error(*, select: str | None, source_command: str) ->
 
 
 def _select_payload_fields(payload: dict[str, Any], *, select: str | None, source_command: str) -> dict[str, Any]:
-    selectors = _selector_tokens(select)
+    selectors, request_error = _selector_request(select=select, source_command=source_command)
+    if request_error is not None:
+        return request_error
     unknown: list[str] = []
     missing: list[str] = []
     for selector in selectors:
@@ -25609,6 +25756,9 @@ def _available_selectors_for_payload(payload: dict[str, Any]) -> list[str]:
         "context.acceptance",
         "context.durable_intent_promotion",
         "context.delegation_decision",
+        "context.delegation_decision.required_next_action",
+        "context.delegation_decision.delegation_next_step.must_report_if_not_run",
+        "context.delegation_decision.effort_guidance.cost_posture",
         "context.repo_posture",
         "context.intent_discovery_dialogue",
         "context.intent_elicitation_protocol",
