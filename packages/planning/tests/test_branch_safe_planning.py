@@ -198,9 +198,11 @@ def test_integration_proposal_is_pending_until_guarded_apply(tmp_path: Path) -> 
     assert [action.kind for action in applied.actions] == ["updated", "updated", "created", "preserved", "proof", "proof"]
     assert _state_bytes(tmp_path) == before_state
     owner_record = json.loads((tmp_path / owner_ref).read_text(encoding="utf-8"))
-    assert owner_record["lifecycle"] == "closed"
-    assert owner_record["phase"] == "complete"
+    assert owner_record["lifecycle"] == "live"
+    assert owner_record["phase"] == "implementation"
     assert owner_record["revision"] == 2
+    assert owner_record["relationships"]["integration"]["status"] == "integrated"
+    assert owner_record["relationships"]["integration"]["transition"] == "mark-integrated"
     proposal = _proposal_record(tmp_path, "issue-2345-merged")
     assert proposal["status"] == "integrated"
     assert proposal["phase"] == "integrated-lifecycle-truth"

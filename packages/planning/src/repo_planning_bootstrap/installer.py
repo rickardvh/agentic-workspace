@@ -4890,6 +4890,31 @@ def _apply_owner_integration_transition(
     if transition not in {"mark-integrated", "close-owner", "archive-owner"}:
         return updated, changed_fields
 
+    if transition == "mark-integrated":
+        relationships = dict(updated.get("relationships") or {}) if isinstance(updated.get("relationships"), dict) else {}
+        integration = dict(relationships.get("integration") or {}) if isinstance(relationships.get("integration"), dict) else {}
+        integration.update(
+            {
+                "status": "integrated",
+                "transition": "mark-integrated",
+                "applied_at": now,
+                "proof_refs": proof_refs,
+            }
+        )
+        relationships["integration"] = integration
+        updated["relationships"] = relationships
+        changed_fields.append("owner.relationships.integration")
+        if isinstance(updated.get("revision"), int):
+            updated["revision"] = int(updated["revision"]) + 1
+            changed_fields.append("owner.revision")
+        proof_report = dict(updated.get("proof_report") or {}) if isinstance(updated.get("proof_report"), dict) else {}
+        proof_text = ", ".join(proof_refs) if proof_refs else "integration proposal applied"
+        proof_report["integration proof"] = proof_text
+        proof_report["integration applied at"] = now
+        updated["proof_report"] = proof_report
+        changed_fields.append("owner.proof_report")
+        return updated, changed_fields
+
     next_lifecycle = "archived" if transition == "archive-owner" else "closed"
     if updated.get("lifecycle") != next_lifecycle:
         updated["lifecycle"] = next_lifecycle
