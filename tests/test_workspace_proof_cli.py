@@ -3292,6 +3292,47 @@ def test_reconciliation_selects_newest_admitted_history_when_latest_file_is_reje
     assert reconciliation["receipt_history"]["record_count"] == 2
 
 
+def test_reconciliation_accepts_instantiated_paths_template_receipt(tmp_path: Path) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
+    receipt_dir.mkdir(parents=True)
+    changed_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+    for path in changed_paths:
+        _write(tmp_path / path, f"fixture for {path}\n")
+    template_command = (
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> "
+        "--select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json"
+    )
+    concrete_command = (
+        "uv run python scripts/run_agentic_workspace.py implement "
+        "--changed src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py "
+        "--select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json"
+    )
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": concrete_command,
+        "result": "passed",
+        "recorded_at": "2026-07-11T08:00:00+00:00",
+        "changed_paths": changed_paths,
+    }
+    receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=changed_paths, command=concrete_command)
+    (receipt_dir / "last.json").write_text(json.dumps(receipt), encoding="utf-8")
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=changed_paths,
+        required_commands=[template_command],
+        selected_commands=[],
+    )
+
+    assert reconciliation["status"] == "accepted"
+    assert reconciliation["commands"][0]["evidence_state"] == "accepted"
+    assert reconciliation["commands"][0]["receipt_match"] == "instantiated-template"
+    assert reconciliation["commands"][0]["receipt"]["command"] == concrete_command
+
+
 @pytest.mark.parametrize(
     ("latest_text", "reason"),
     [("{broken", "latest-receipt-unreadable"), (json.dumps(["not", "an", "object"]), "latest-receipt-not-object")],

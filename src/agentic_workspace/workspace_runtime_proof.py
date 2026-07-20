@@ -649,6 +649,37 @@ def _proof_receipt_aggregate_matches(*, receipt: dict[str, Any], required_comman
     return False, "receipt is not for this selected proof set"
 
 
+def _command_tokens_match(left: str, right: str) -> bool:
+    try:
+        return shlex.split(left, posix=False) == shlex.split(right, posix=False)
+    except ValueError:
+        return left == right
+
+
+def _instantiated_template_commands(command: str, *, changed_paths: list[str]) -> list[str]:
+    if "<paths>" not in command:
+        return []
+    normalized_paths = [str(path).strip() for path in changed_paths if str(path).strip()]
+    if not normalized_paths:
+        return []
+    shell_quoted_paths = " ".join(_shell_quote(path) for path in normalized_paths)
+    plain_paths = " ".join(normalized_paths)
+    return _dedupe([command.replace("<paths>", shell_quoted_paths), command.replace("<paths>", plain_paths)])
+
+
+def _proof_receipt_command_matches(*, required_command: str, receipt_command: str, changed_paths: list[str]) -> tuple[bool, str]:
+    required = str(required_command).strip()
+    recorded = str(receipt_command).strip()
+    if not required or not recorded:
+        return False, "missing command identity"
+    if required == recorded:
+        return True, "exact selected command accepted"
+    for instantiated in _instantiated_template_commands(required, changed_paths=changed_paths):
+        if instantiated == recorded or _command_tokens_match(instantiated, recorded):
+            return True, "instantiated template command accepted"
+    return False, "receipt command does not match selected command or its current template expansion"
+
+
 def _receipt_subject_freshness(*, target_root: Path, receipt: dict[str, Any], changed_paths: list[str], command: str) -> dict[str, Any]:
     """Classify every receipt form through its recorded proof subject.
 
@@ -839,7 +870,21 @@ def _proof_receipt_reconciliation_payload(
     ]
     for command in blocking_commands:
         state: dict[str, Any]
-        command_receipts = [receipt for receipt in receipt_records if str(receipt.get("command") or "").strip() == command]
+        command_receipt_matches = [
+            (
+                receipt,
+                _proof_receipt_command_matches(
+                    required_command=command,
+                    receipt_command=str(receipt.get("command") or ""),
+                    changed_paths=changed_paths,
+                ),
+            )
+            for receipt in receipt_records
+        ]
+        command_receipts = [receipt for receipt, match in command_receipt_matches if match[0]]
+        template_matched_receipts = [
+            receipt for receipt, match in command_receipt_matches if match[0] and match[1].startswith("instantiated")
+        ]
         admissions = [(receipt, proof_receipt_admission(receipt)) for receipt in command_receipts]
         subject_decisions = [
             (receipt, _receipt_subject_freshness(target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=command))
@@ -878,6 +923,8 @@ def _proof_receipt_reconciliation_payload(
             }
             if not isinstance(accepted_receipt.get("proof_subject"), dict):
                 state["receipt_match"] = "legacy-migration"
+            elif accepted_receipt in template_matched_receipts:
+                state["receipt_match"] = "instantiated-template"
         elif aggregate_receipt is not None:
             subject_freshness = _receipt_subject_freshness(
                 target_root=target_root, receipt=aggregate_receipt, changed_paths=changed_paths, command=command
