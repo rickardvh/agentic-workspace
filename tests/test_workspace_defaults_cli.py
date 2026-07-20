@@ -349,6 +349,14 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
         "safety.safe_to_auto_run_commands",
         "safety.requires_human_verification_on_pr",
         "delegation.mode",
+        "delegation.execution_role",
+        "delegation.assignment_policy",
+        "delegation.selection_objective",
+        "delegation.current_target",
+        "delegation.underfit_behavior",
+        "delegation.down_routing_behavior",
+        "delegation.human_override_policy",
+        "delegation.manual_transport_policy",
         "clarification.mode",
         "local_memory.enabled",
         "local_memory.path",
@@ -395,6 +403,36 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert payload["mixed_agent"]["local_override"]["supported_target_cost_classes"] == ["cheap", "standard", "premium", "unknown"]
     assert payload["mixed_agent"]["local_override"]["supported_target_latency_classes"] == ["fast", "standard", "slow", "unknown"]
     assert payload["mixed_agent"]["local_override"]["supported_delegation_modes"] == ["off", "manual", "suggest", "auto"]
+    assert payload["mixed_agent"]["local_override"]["supported_assignment_policies"] == [
+        "local-preferred",
+        "best-fit-advisory",
+        "required-best-fit",
+    ]
+    assert payload["mixed_agent"]["local_override"]["supported_orchestration_execution_roles"] == [
+        "ordinary-executor",
+        "orchestrator",
+        "bounded-worker",
+    ]
+    assert payload["mixed_agent"]["local_override"]["supported_underfit_behaviors"] == [
+        "stay-when-safe",
+        "prepare-manual-escalation",
+        "require-delegation",
+    ]
+    assert payload["mixed_agent"]["local_override"]["supported_down_routing_behaviors"] == [
+        "never",
+        "bounded-mechanical-work",
+        "when-cheaper-safe-target-exists",
+    ]
+    assert payload["mixed_agent"]["local_override"]["supported_human_override_policies"] == [
+        "explicit-only",
+        "allowed-with-recorded-reason",
+        "disallowed",
+    ]
+    assert payload["mixed_agent"]["local_override"]["supported_manual_transport_policies"] == [
+        "disabled",
+        "allowed",
+        "required-when-no-automatic-method",
+    ]
     assert payload["mixed_agent"]["local_override"]["supported_clarification_modes"] == ["ask-first", "suggest", "auto-continue"]
     delegation_control = payload["mixed_agent"]["delegation_control"]
     assert delegation_control["field"] == "delegation.mode"

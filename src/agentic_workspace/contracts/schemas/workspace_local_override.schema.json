@@ -95,6 +95,76 @@
           ],
           "default": "suggest",
           "description": "Local control mode for delegation: disable target recommendations, prepare manual handoff prompts, suggest targets without execution, or allow automatic delegation only when safety settings permit it."
+        },
+        "execution_role": {
+          "type": "string",
+          "enum": [
+            "ordinary-executor",
+            "orchestrator",
+            "bounded-worker"
+          ],
+          "default": "ordinary-executor",
+          "description": "Role of the current runtime in assignment decisions. This is separate from how a selected delegation handoff is executed."
+        },
+        "assignment_policy": {
+          "type": "string",
+          "enum": [
+            "local-preferred",
+            "best-fit-advisory",
+            "required-best-fit"
+          ],
+          "default": "local-preferred",
+          "description": "Whether work stays local by default, receives advisory best-fit routing, or must bind to the best available configured target before implementation claims."
+        },
+        "selection_objective": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable objective for assignment selection, such as minimizing expected total successful-completion cost while preserving quality and proof."
+        },
+        "current_target": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Name of the delegation target profile representing the current runtime. Required to claim mandatory best-fit enforcement."
+        },
+        "underfit_behavior": {
+          "type": "string",
+          "enum": [
+            "stay-when-safe",
+            "prepare-manual-escalation",
+            "require-delegation"
+          ],
+          "default": "stay-when-safe",
+          "description": "What the current runtime should do when it appears underfit for the selected task class."
+        },
+        "down_routing_behavior": {
+          "type": "string",
+          "enum": [
+            "never",
+            "bounded-mechanical-work",
+            "when-cheaper-safe-target-exists"
+          ],
+          "default": "never",
+          "description": "Whether a capable orchestrator should route bounded mechanical work to a cheaper safe target."
+        },
+        "human_override_policy": {
+          "type": "string",
+          "enum": [
+            "explicit-only",
+            "allowed-with-recorded-reason",
+            "disallowed"
+          ],
+          "default": "explicit-only",
+          "description": "When a human override may replace the selected assignment and what provenance is required."
+        },
+        "manual_transport_policy": {
+          "type": "string",
+          "enum": [
+            "disabled",
+            "allowed",
+            "required-when-no-automatic-method"
+          ],
+          "default": "allowed",
+          "description": "Whether a human may carry a prepared assignment packet when no automatic execution method is available."
         }
       },
       "additionalProperties": false,

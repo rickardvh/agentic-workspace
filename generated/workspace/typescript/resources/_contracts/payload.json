@@ -2563,6 +2563,36 @@
         "suggest",
         "auto"
       ],
+      "supported_assignment_policies": [
+        "local-preferred",
+        "best-fit-advisory",
+        "required-best-fit"
+      ],
+      "supported_orchestration_execution_roles": [
+        "ordinary-executor",
+        "orchestrator",
+        "bounded-worker"
+      ],
+      "supported_underfit_behaviors": [
+        "stay-when-safe",
+        "prepare-manual-escalation",
+        "require-delegation"
+      ],
+      "supported_down_routing_behaviors": [
+        "never",
+        "bounded-mechanical-work",
+        "when-cheaper-safe-target-exists"
+      ],
+      "supported_human_override_policies": [
+        "explicit-only",
+        "allowed-with-recorded-reason",
+        "disallowed"
+      ],
+      "supported_manual_transport_policies": [
+        "disabled",
+        "allowed",
+        "required-when-no-automatic-method"
+      ],
       "supported_fields": [
         "workspace.cli_invoke",
         "workspace.shared_config_path",
@@ -2574,6 +2604,14 @@
         "safety.safe_to_auto_run_commands",
         "safety.requires_human_verification_on_pr",
         "delegation.mode",
+        "delegation.execution_role",
+        "delegation.assignment_policy",
+        "delegation.selection_objective",
+        "delegation.current_target",
+        "delegation.underfit_behavior",
+        "delegation.down_routing_behavior",
+        "delegation.human_override_policy",
+        "delegation.manual_transport_policy",
         "clarification.mode",
         "local_memory.enabled",
         "local_memory.path",

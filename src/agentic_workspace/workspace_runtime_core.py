@@ -48,6 +48,7 @@ from agentic_workspace.config import (
     MEMORY_WORKFLOW_MARKER_START,
     SUPPORTED_ADVANCED_FEATURES,
     SUPPORTED_AGENT_INSTRUCTIONS_FILES,
+    SUPPORTED_ASSIGNMENT_POLICIES,
     SUPPORTED_ASSURANCE_LEVELS,
     SUPPORTED_ASSURANCE_REQUIREMENT_BLOCKING_CLAIMS,
     SUPPORTED_BOOTSTRAP_FOOTPRINT_PROFILES,
@@ -62,10 +63,15 @@ from agentic_workspace.config import (
     SUPPORTED_DELEGATION_TARGET_LATENCY_CLASSES,
     SUPPORTED_DELEGATION_TARGET_REASONING_PROFILES,
     SUPPORTED_DELEGATION_TARGET_STRENGTHS,
+    SUPPORTED_DOWN_ROUTING_BEHAVIORS,
     SUPPORTED_HANDOFF_SUFFICIENCY,
+    SUPPORTED_HUMAN_OVERRIDE_POLICIES,
     SUPPORTED_IMPROVEMENT_LATITUDES,
+    SUPPORTED_MANUAL_TRANSPORT_POLICIES,
     SUPPORTED_OPTIMIZATION_BIASES,
+    SUPPORTED_ORCHESTRATION_EXECUTION_ROLES,
     SUPPORTED_REVIEW_BURDENS,
+    SUPPORTED_UNDERFIT_BEHAVIORS,
     SUPPORTED_WORKFLOW_ARTIFACT_PROFILES,
     SUPPORTED_WORKFLOW_OBLIGATION_FORCES,
     SUPPORTED_WORKFLOW_OBLIGATION_STAGES,
@@ -38485,6 +38491,95 @@ def _delegation_control_payload(local_override: MixedAgentLocalOverride) -> dict
     }
 
 
+def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_payloads: list[dict[str, Any]]) -> dict[str, Any]:
+    configured_role = local_override.execution_role or "ordinary-executor"
+    configured_policy = local_override.assignment_policy or "local-preferred"
+    configured_target = local_override.current_target
+    known_targets = {str(profile.get("name") or "") for profile in profile_payloads if isinstance(profile, dict)}
+    current_target_known = configured_target in known_targets if configured_target else False
+    binding_requested = configured_policy == "required-best-fit"
+    enforceable = not binding_requested or bool(current_target_known)
+    status = "configured" if local_override.assignment_policy is not None or local_override.execution_role is not None else "default-quiet"
+    if binding_requested and not current_target_known:
+        status = "blocked-unknown-current-target"
+    return {
+        "kind": "agentic-workspace/orchestration-assignment-policy/v1",
+        "status": status,
+        "execution_role": _sourced_value(
+            configured_role,
+            source=local_override.field_sources.get("delegation.execution_role", "default")
+            if local_override.execution_role is not None
+            else "default",
+        ),
+        "assignment_policy": _sourced_value(
+            configured_policy,
+            source=local_override.field_sources.get("delegation.assignment_policy", "default")
+            if local_override.assignment_policy is not None
+            else "default",
+        ),
+        "selection_objective": _sourced_value(
+            local_override.selection_objective
+            or "safe minimum expected total successful-completion cost with quality and proof before price",
+            source=local_override.field_sources.get("delegation.selection_objective", "default")
+            if local_override.selection_objective is not None
+            else "default",
+        ),
+        "current_target": _sourced_value(
+            configured_target,
+            source=local_override.field_sources.get("delegation.current_target", "unset") if configured_target is not None else "unset",
+        ),
+        "current_target_status": "known-profile" if current_target_known else "unknown" if configured_target else "not-configured",
+        "underfit_behavior": _sourced_value(
+            local_override.underfit_behavior or "stay-when-safe",
+            source=local_override.field_sources.get("delegation.underfit_behavior", "default")
+            if local_override.underfit_behavior is not None
+            else "default",
+        ),
+        "down_routing_behavior": _sourced_value(
+            local_override.down_routing_behavior or "never",
+            source=local_override.field_sources.get("delegation.down_routing_behavior", "default")
+            if local_override.down_routing_behavior is not None
+            else "default",
+        ),
+        "human_override_policy": _sourced_value(
+            local_override.human_override_policy or "explicit-only",
+            source=local_override.field_sources.get("delegation.human_override_policy", "default")
+            if local_override.human_override_policy is not None
+            else "default",
+        ),
+        "manual_transport_policy": _sourced_value(
+            local_override.manual_transport_policy or "allowed",
+            source=local_override.field_sources.get("delegation.manual_transport_policy", "default")
+            if local_override.manual_transport_policy is not None
+            else "default",
+        ),
+        "binding": {
+            "required_best_fit_requested": binding_requested,
+            "enforceable": enforceable,
+            "claim_boundary": "mandatory best-fit cannot be claimed until current_target resolves to a configured profile"
+            if binding_requested and not current_target_known
+            else "assignment policy resolved",
+        },
+        "supported": {
+            "execution_roles": list(SUPPORTED_ORCHESTRATION_EXECUTION_ROLES),
+            "assignment_policies": list(SUPPORTED_ASSIGNMENT_POLICIES),
+            "underfit_behaviors": list(SUPPORTED_UNDERFIT_BEHAVIORS),
+            "down_routing_behaviors": list(SUPPORTED_DOWN_ROUTING_BEHAVIORS),
+            "human_override_policies": list(SUPPORTED_HUMAN_OVERRIDE_POLICIES),
+            "manual_transport_policies": list(SUPPORTED_MANUAL_TRANSPORT_POLICIES),
+        },
+        "authority_order": [
+            "explicit current-session human instruction",
+            "repo-owned prohibitions and proof requirements",
+            "repo-local local override",
+            "shared local config",
+            "target metadata and learned evidence",
+            "model self-assessment",
+        ],
+        "separation_rule": "assignment_policy chooses who should own work; delegation_control.mode only governs how far tooling may execute a selected handoff.",
+    }
+
+
 def _clarification_control_payload(local_override: MixedAgentLocalOverride) -> dict[str, Any]:
     configured_mode = local_override.clarification_mode or "suggest"
     mode_actions = {
@@ -50515,6 +50610,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "rule": "local-only machine/runtime posture; may override local-advisory invocation and routing fields, not repo-owned product semantics",
         },
         "delegation_control": _delegation_control_payload(local_override),
+        "assignment_policy": _assignment_policy_payload(local_override, profile_payloads),
         "delegation_targets": {
             "supported": True,
             "status": "configured" if local_override.delegation_targets else "available-not-set",
@@ -50798,6 +50894,7 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
     local_override = mixed_agent["local_override"]
     effective_posture = mixed_agent["effective_posture"]
     runtime_resolution = mixed_agent["runtime_resolution"]
+    assignment_policy = mixed_agent["assignment_policy"]
     assurance = payload["assurance"]
     local_overlay = mixed_agent.get("local_overlay", {}) if isinstance(mixed_agent, dict) else {}
     local_high_risk_overlay = mixed_agent.get("high_risk_overlay", {}) if isinstance(mixed_agent, dict) else {}
@@ -50854,6 +50951,8 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             },
             "local_runtime": {
                 "delegation_mode": effective_posture["delegation_mode"],
+                "assignment_policy": assignment_policy["assignment_policy"],
+                "execution_role": assignment_policy["execution_role"],
                 "safe_to_auto_run_commands": effective_posture["safe_to_auto_run_commands"],
                 "requires_human_verification_on_pr": effective_posture["requires_human_verification_on_pr"],
             },
@@ -50877,6 +50976,15 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "strong_planner_available": effective_posture["strong_planner_available"],
             "cheap_bounded_executor_available": effective_posture["cheap_bounded_executor_available"],
             "delegation_mode": effective_posture["delegation_mode"],
+            "assignment_policy": {
+                "status": assignment_policy["status"],
+                "execution_role": assignment_policy["execution_role"],
+                "assignment_policy": assignment_policy["assignment_policy"],
+                "current_target": assignment_policy["current_target"],
+                "current_target_status": assignment_policy["current_target_status"],
+                "binding": assignment_policy["binding"],
+                "separation_rule": assignment_policy["separation_rule"],
+            },
             "clarification_mode": effective_posture["clarification_mode"],
             "safe_to_auto_run_commands": effective_posture["safe_to_auto_run_commands"],
             "prefer_internal_delegation_when_available": effective_posture["prefer_internal_delegation_when_available"],
@@ -50940,6 +51048,7 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
         },
         "local_runtime": {
             "delegation_mode": local_runtime["delegation_mode"],
+            "assignment_policy": local_runtime["assignment_policy"],
             "clarification_mode": local_runtime["clarification_mode"],
             "safe_to_auto_run_commands": local_runtime["safe_to_auto_run_commands"],
             "requires_human_verification_on_pr": local_runtime["requires_human_verification_on_pr"],
@@ -50955,7 +51064,9 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "workspace.agent_instructions_file",
             "workspace.workflow_obligation_ids",
             "local_runtime",
+            "local_runtime.assignment_policy",
             "mixed_agent.runtime_resolution",
+            "mixed_agent.assignment_policy",
             "cli_compatibility",
         ],
     }

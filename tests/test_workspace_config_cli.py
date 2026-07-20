@@ -1225,6 +1225,127 @@ def test_config_command_reports_local_delegation_control_mode(tmp_path: Path, ca
     }
 
 
+def test_config_command_reports_assignment_policy_separate_from_delegation_mode(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'mode = "suggest"',
+                'execution_role = "orchestrator"',
+                'assignment_policy = "required-best-fit"',
+                'selection_objective = "minimize successful completion cost after quality and proof"',
+                'current_target = "codex_current"',
+                'underfit_behavior = "require-delegation"',
+                'down_routing_behavior = "bounded-mechanical-work"',
+                'human_override_policy = "allowed-with-recorded-reason"',
+                'manual_transport_policy = "required-when-no-automatic-method"',
+                "",
+                "[delegation_targets.codex_current]",
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    policy = payload["local_runtime"]["assignment_policy"]
+    assert policy["status"] == "configured"
+    assert policy["execution_role"] == {"value": "orchestrator", "source": "local-override"}
+    assert policy["assignment_policy"] == {"value": "required-best-fit", "source": "local-override"}
+    assert policy["current_target"] == {"value": "codex_current", "source": "local-override"}
+    assert policy["current_target_status"] == "known-profile"
+    assert policy["binding"] == {
+        "required_best_fit_requested": True,
+        "enforceable": True,
+        "claim_boundary": "assignment policy resolved",
+    }
+
+
+def test_config_command_blocks_required_best_fit_when_current_target_is_unknown(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'execution_role = "orchestrator"',
+                'assignment_policy = "required-best-fit"',
+                'current_target = "missing_profile"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    policy = payload["local_runtime"]["assignment_policy"]
+    assert policy["status"] == "blocked-unknown-current-target"
+    assert policy["current_target_status"] == "unknown"
+    assert policy["binding"]["enforceable"] is False
+    assert "cannot be claimed" in policy["binding"]["claim_boundary"]
+
+
+def test_config_command_layers_assignment_policy_from_shared_local_config(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    shared = tmp_path / "aw.config.shared.toml"
+    shared.write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'execution_role = "orchestrator"',
+                'assignment_policy = "best-fit-advisory"',
+                'current_target = "shared_current"',
+                'underfit_behavior = "prepare-manual-escalation"',
+                "",
+                "[delegation_targets.shared_current]",
+                'strength = "strong"',
+                'execution_methods = ["manual"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[workspace]",
+                f'shared_config_path = "{shared.as_posix()}"',
+                "",
+                "[delegation]",
+                'assignment_policy = "required-best-fit"',
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    policy = payload["mixed_agent"]["assignment_policy"]
+    assert policy["execution_role"] == {"value": "orchestrator", "source": "shared-local-config"}
+    assert policy["assignment_policy"] == {"value": "required-best-fit", "source": "local-override"}
+    assert policy["current_target"] == {"value": "shared_current", "source": "shared-local-config"}
+    assert policy["underfit_behavior"] == {"value": "prepare-manual-escalation", "source": "shared-local-config"}
+    assert policy["binding"]["enforceable"] is True
+
+
 def test_config_command_rejects_invalid_local_delegation_control_mode(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
@@ -1237,6 +1358,20 @@ def test_config_command_rejects_invalid_local_delegation_control_mode(tmp_path: 
     with pytest.raises(SystemExit):
         cli.main(["config", "--verbose", "--target", str(target), "--format", "json"])
     assert "delegation.mode must be one of" in capsys.readouterr().err
+
+
+def test_config_command_rejects_invalid_assignment_policy_value(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        'schema_version = 1\n\n[delegation]\nassignment_policy = "self-confidence"\n',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit):
+        cli.main(["config", "--verbose", "--target", str(target), "--format", "json"])
+    assert "assignment_policy must be one of" in capsys.readouterr().err
 
 
 def test_config_command_reports_runtime_resolution_for_no_posture(tmp_path: Path, capsys) -> None:
