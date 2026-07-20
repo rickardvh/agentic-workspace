@@ -1,0 +1,129 @@
+{
+  "kind": "planning-execplan/v1",
+  "id": "issue-2257-skill-dependency-closure",
+  "title": "Issue 2257 routed skill dependency closure",
+  "owner_level": "slice",
+  "lifecycle": "live",
+  "phase": "validation",
+  "revision": 2,
+  "intent": {
+    "outcome": "https://github.com/rickardvh/agentic-workspace/issues/2257",
+    "non_goals": [
+      "Do not claim full #2257 closure in this PR.",
+      "Leave module/operation dependency closure, profile-matrix coverage, and build-time registry validation for follow-up slices."
+    ]
+  },
+  "parent": {
+    "owner_id": "none",
+    "contribution": "https://github.com/rickardvh/agentic-workspace/issues/2257",
+    "closure_boundary": "this slice only"
+  },
+  "scope": {
+    "owned": [
+      ".agentic-workspace/planning/execplans/issue-2257-skill-dependency-closure.plan.json",
+      ".agentic-workspace/AGENTS.md",
+      ".agentic-workspace/planning/skills/REGISTRY.json",
+      "generated/planning/python/_skills/REGISTRY.json",
+      "generated/planning/typescript/resources/_skills/REGISTRY.json",
+      "packages/planning/skills/REGISTRY.json",
+      "packages/planning/src/repo_planning_bootstrap/installer.py",
+      "packages/planning/tests/test_install.py",
+      "packages/planning/tests/test_skills_catalog.py",
+      "src/agentic_workspace/workspace_runtime_core.py",
+      "src/agentic_workspace/workspace_runtime_primitives.py",
+      "tests/test_workspace_doctor_status_cli.py",
+      "tests/test_workspace_skills_cli.py"
+    ],
+    "effects": [
+      "Add registry-declared resource dependency identities and resolve them before ordinary skill recommendation.",
+      "Expose unavailable skills with stable blocked reasons instead of advertising them as executable.",
+      "Route unresolved mandatory ordinary-skill dependencies into doctor health, actionability, and repair-plan output.",
+      "Keep package-backed declared resources executable and doctor-quiet while undeclared optional resources remain irrelevant.",
+      "Refresh managed local AW instructions so scoped doctor has no required repair action after the blocker fix."
+    ]
+  },
+  "relationships": {
+    "selection": {
+      "state": "unselected-live-record",
+      "owner": "This PR carries an explicitly partial #2257 live plan record; current checked-in Planning state remains owned by master and does not select #2257."
+    },
+    "proof_posture": {
+      "state": "local-proof-passed-with-scoped-doctor-regression-and-managed-instructions-repair",
+      "refs": [
+        "uv run pytest tests/test_workspace_doctor_status_cli.py -k \"skill_dependency or module_filter or scoped_lifecycle_health\" -q: 5 passed",
+        "uv run pytest tests/test_workspace_skills_cli.py -q: 36 passed",
+        "uv run pytest tests/test_workspace_cli.py -q: 217 passed",
+        "make test-workspace: passed",
+        "make lint-workspace: passed",
+        "make typecheck: passed",
+        "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json: shape_in_sync",
+        "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: selected_module_health=healthy action_required=false skill_dependency_diagnostics=[]"
+      ]
+    },
+    "external_posture": {
+      "state": "blocked-review-addressed-locally-pending-pr-head-ci",
+      "refs": [
+        "https://github.com/rickardvh/agentic-workspace/pull/2332#issuecomment-5017576608"
+      ]
+    }
+  },
+  "references": [
+    {
+      "kind": "source",
+      "target": "https://github.com/rickardvh/agentic-workspace/issues/2257",
+      "label": "https://github.com/rickardvh/agentic-workspace/issues/2257",
+      "role": "intake",
+      "locator": ""
+    }
+  ],
+  "next_action": "Keep remaining module/operation dependency closure, package-profile matrix coverage, and build-time registry validation live for follow-up #2257 slices after this bounded resource/routing/doctor repair-route slice lands.",
+  "blockers": [],
+  "proof": {
+    "claims": [
+      "Registry-declared required skill resources resolve with stable identity, owner/source provenance, compatibility state, and reason code.",
+      "Compact task routing keeps matching unavailable skills out of executable recommendations and reports them as non-executable blocked recommendations.",
+      "Doctor consumes the same dependency identity for unresolved ordinary-skill dependencies and exposes non-healthy, action-required repair-plan output with either a dependency-correct executable managed repair route or a manual action-required route.",
+      "Scoped doctor filters skill dependency diagnostics through the selected module set so unrelated module-owned skill resource failures do not make an unrelated scoped doctor action-required.",
+      "The package-backed equivalent remains executable and doctor-quiet; undeclared optional resources remain irrelevant."
+    ],
+    "requirements": [
+      "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json",
+      "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json",
+      "uv run python scripts/check/check_generated_command_packages.py",
+      "uv run python scripts/check/run_operation_conformance_tests.py --target all",
+      "uv run --active python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json",
+      "make test-planning",
+      "make lint-planning",
+      "make test-workspace",
+      "make lint-workspace",
+      "uv run pytest tests/test_workspace_cli.py -q",
+      "make typecheck",
+      "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json",
+      "uv run pytest tests/test_workspace_doctor_status_cli.py -k \"skill_dependency or module_filter or scoped_lifecycle_health\" -q"
+    ],
+    "refs": [
+      "uv run --active python scripts/run_agentic_workspace.py summary --target . --format json: passed; warning_count=0",
+      "uv run --active python scripts/run_agentic_workspace.py doctor --target . --modules planning --format json: passed; selected_module_health=healthy action_required=false skill_dependency_diagnostics=[]",
+      "uv run python scripts/check/check_generated_command_packages.py: passed",
+      "uv run python scripts/check/run_operation_conformance_tests.py --target all: pass=19 fail=0 unavailable=0 skipped=0",
+      "uv run --active python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json: passed",
+      "make test-planning: passed",
+      "make lint-planning: passed",
+      "make test-workspace: passed",
+      "make lint-workspace: passed",
+      "uv run pytest tests/test_workspace_cli.py -q: 217 passed",
+      "make typecheck: passed",
+      "uv run python scripts/run_agentic_workspace.py report --target . --section runtime_mirror_consistency --format json: shape_in_sync",
+      "uv run pytest tests/test_workspace_skills_cli.py -q: 36 passed",
+      "uv run pytest tests/test_workspace_doctor_status_cli.py -k \"skill_dependency or module_filter or scoped_lifecycle_health\" -q: 5 passed",
+      "uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q: 2 passed",
+      "make package-artifact-duplicates: passed",
+      "git diff --check: passed"
+    ]
+  },
+  "continuation": {
+    "owner": "issue-2257-skill-dependency-closure",
+    "residual_intent": "Add module/operation dependency closure, package-profile matrix coverage, and build-time registry validation before closing #2257."
+  },
+  "specialist_contracts": []
+}

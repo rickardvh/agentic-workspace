@@ -8470,6 +8470,13 @@ def _run_lifecycle_command(
     )
     cli_compatibility_warnings = _cli_compatibility_warning_messages(cli_compatibility)
     warnings.extend(cli_compatibility_warnings)
+    skill_dependency_diagnostics = (
+        _workspace_runtime_core._skill_dependency_diagnostics(target_root=target_root, selected_modules=selected_modules)
+        if command_name == "doctor"
+        else []
+    )
+    skill_dependency_warnings = [str(item["message"]) for item in skill_dependency_diagnostics]
+    warnings.extend(skill_dependency_warnings)
     selected_set = set(selected_modules)
     enabled_set = set(config.enabled_modules)
     installed_set = {entry.name for entry in registry if entry.installed}
@@ -8504,6 +8511,8 @@ def _run_lifecycle_command(
         "warnings": warnings,
         "placeholders": placeholders,
         "stale_generated_surfaces": stale_generated_surfaces,
+        "skill_dependency_warnings": skill_dependency_warnings,
+        "skill_dependency_diagnostics": skill_dependency_diagnostics,
         "registry": [
             {
                 "name": entry.name,
@@ -8564,6 +8573,14 @@ def _run_lifecycle_command(
         repair_actions, manual_review_actions = _aggregate_repair_actions_from_reports(
             reports, target_root=target_root, cli_invoke=config.cli_invoke, command_name=command_name
         )
+        if command_name == "doctor" and skill_dependency_diagnostics:
+            dependency_repair_actions, dependency_manual_actions = _workspace_runtime_core._skill_dependency_repair_actions(
+                diagnostics=skill_dependency_diagnostics,
+                target_root=target_root,
+                cli_invoke=config.cli_invoke,
+            )
+            repair_actions = [*dependency_repair_actions, *repair_actions]
+            manual_review_actions = [*dependency_manual_actions, *manual_review_actions]
         if command_name == "doctor":
             cli_review_action = _cli_compatibility_manual_review_action(
                 target_root=target_root, cli_invoke=config.cli_invoke, cli_compatibility=cli_compatibility
@@ -47641,9 +47658,11 @@ def _skill_catalog_sources() -> tuple[SkillCatalogSource, ...]:
 
 
 def _emit_skills(*, format_name: str, target_root: Path | None, task_text: str | None, select: str | None = None) -> None:
-    full_payload = _skills_payload(target_root=target_root, task_text=task_text)
+    full_payload = _workspace_runtime_core._skills_payload(target_root=target_root, task_text=task_text)
     payload = (
-        _skills_recommendation_first_payload(full_payload, target_root=target_root, task_text=task_text) if task_text else full_payload
+        _workspace_runtime_core._skills_recommendation_first_payload(full_payload, target_root=target_root, task_text=task_text)
+        if task_text
+        else full_payload
     )
     if select:
         payload = _select_payload_fields(full_payload, select=select, source_command="skills")
