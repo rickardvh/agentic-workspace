@@ -171,6 +171,36 @@ SUPPORTED_DELEGATION_CONTROL_MODES = (
     "suggest",
     "auto",
 )
+SUPPORTED_ORCHESTRATION_EXECUTION_ROLES = (
+    "ordinary-executor",
+    "orchestrator",
+    "bounded-worker",
+)
+SUPPORTED_ASSIGNMENT_POLICIES = (
+    "local-preferred",
+    "best-fit-advisory",
+    "required-best-fit",
+)
+SUPPORTED_UNDERFIT_BEHAVIORS = (
+    "stay-when-safe",
+    "prepare-manual-escalation",
+    "require-delegation",
+)
+SUPPORTED_DOWN_ROUTING_BEHAVIORS = (
+    "never",
+    "bounded-mechanical-work",
+    "when-cheaper-safe-target-exists",
+)
+SUPPORTED_HUMAN_OVERRIDE_POLICIES = (
+    "explicit-only",
+    "allowed-with-recorded-reason",
+    "disallowed",
+)
+SUPPORTED_MANUAL_TRANSPORT_POLICIES = (
+    "disabled",
+    "allowed",
+    "required-when-no-automatic-method",
+)
 SUPPORTED_CLARIFICATION_CONTROL_MODES = (
     "ask-first",
     "suggest",
@@ -350,6 +380,14 @@ class MixedAgentLocalOverride:
     safe_to_auto_run_commands: bool | None
     requires_human_verification_on_pr: bool | None
     delegation_mode: str | None
+    execution_role: str | None
+    assignment_policy: str | None
+    selection_objective: str | None
+    current_target: str | None
+    underfit_behavior: str | None
+    down_routing_behavior: str | None
+    human_override_policy: str | None
+    manual_transport_policy: str | None
     clarification_mode: str | None
     local_memory_enabled: bool | None
     local_memory_path: Path
@@ -665,6 +703,22 @@ def require_optional_enum(
 ) -> str:
     if key not in payload:
         return default
+    value = payload[key]
+    if not isinstance(value, str) or value not in allowed:
+        allowed_text = ", ".join(allowed)
+        raise WorkspaceUsageError(f"{config_path.as_posix()} {key} must be one of: {allowed_text}.")
+    return value
+
+
+def require_optional_enum_or_none(
+    *,
+    payload: dict[str, Any],
+    key: str,
+    config_path: Path,
+    allowed: tuple[str, ...],
+) -> str | None:
+    if key not in payload:
+        return None
     value = payload[key]
     if not isinstance(value, str) or value not in allowed:
         allowed_text = ", ".join(allowed)
@@ -1639,6 +1693,14 @@ def empty_mixed_agent_local_override(*, path: Path | None, exists: bool) -> Mixe
         safe_to_auto_run_commands=None,
         requires_human_verification_on_pr=None,
         delegation_mode=None,
+        execution_role=None,
+        assignment_policy=None,
+        selection_objective=None,
+        current_target=None,
+        underfit_behavior=None,
+        down_routing_behavior=None,
+        human_override_policy=None,
+        manual_transport_policy=None,
         clarification_mode=None,
         local_memory_enabled=None,
         local_memory_path=WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
@@ -2335,7 +2397,20 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
         raw_delegation = {}
     if not isinstance(raw_delegation, dict):
         raise WorkspaceUsageError(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [delegation] section must be a table.")
-    unknown_delegation = sorted(set(raw_delegation) - {"mode"})
+    unknown_delegation = sorted(
+        set(raw_delegation)
+        - {
+            "mode",
+            "execution_role",
+            "assignment_policy",
+            "selection_objective",
+            "current_target",
+            "underfit_behavior",
+            "down_routing_behavior",
+            "human_override_policy",
+            "manual_transport_policy",
+        }
+    )
     if unknown_delegation:
         unknown_text = ", ".join(unknown_delegation)
         warnings.append(f"{WORKSPACE_LOCAL_CONFIG_PATH.as_posix()} [delegation] contains unsupported field(s): {unknown_text}.")
@@ -2350,6 +2425,52 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             table="delegation",
             key="mode",
         )
+    execution_role = require_optional_enum_or_none(
+        payload=raw_delegation,
+        key="execution_role",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        allowed=SUPPORTED_ORCHESTRATION_EXECUTION_ROLES,
+    )
+    assignment_policy = require_optional_enum_or_none(
+        payload=raw_delegation,
+        key="assignment_policy",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        allowed=SUPPORTED_ASSIGNMENT_POLICIES,
+    )
+    selection_objective = require_optional_string(
+        payload=raw_delegation,
+        key="selection_objective",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+    current_target = require_optional_string(
+        payload=raw_delegation,
+        key="current_target",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+    )
+    underfit_behavior = require_optional_enum_or_none(
+        payload=raw_delegation,
+        key="underfit_behavior",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        allowed=SUPPORTED_UNDERFIT_BEHAVIORS,
+    )
+    down_routing_behavior = require_optional_enum_or_none(
+        payload=raw_delegation,
+        key="down_routing_behavior",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        allowed=SUPPORTED_DOWN_ROUTING_BEHAVIORS,
+    )
+    human_override_policy = require_optional_enum_or_none(
+        payload=raw_delegation,
+        key="human_override_policy",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        allowed=SUPPORTED_HUMAN_OVERRIDE_POLICIES,
+    )
+    manual_transport_policy = require_optional_enum_or_none(
+        payload=raw_delegation,
+        key="manual_transport_policy",
+        config_path=WORKSPACE_LOCAL_CONFIG_PATH,
+        allowed=SUPPORTED_MANUAL_TRANSPORT_POLICIES,
+    )
 
     raw_clarification = payload.get("clarification", {})
     if raw_clarification is None:
@@ -2469,6 +2590,14 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
             config_path=WORKSPACE_LOCAL_CONFIG_PATH,
         ),
         delegation_mode=delegation_mode,
+        execution_role=execution_role,
+        assignment_policy=assignment_policy,
+        selection_objective=selection_objective,
+        current_target=current_target,
+        underfit_behavior=underfit_behavior,
+        down_routing_behavior=down_routing_behavior,
+        human_override_policy=human_override_policy,
+        manual_transport_policy=manual_transport_policy,
         clarification_mode=clarification_mode,
         local_memory_enabled=require_optional_bool(
             payload=raw_local_memory,
@@ -2541,6 +2670,19 @@ def load_mixed_agent_local_override(*, target_root: Path) -> tuple[MixedAgentLoc
                     "safety",
                     "requires_human_verification_on_pr",
                     raw_safety.get("requires_human_verification_on_pr"),
+                ),
+                ("delegation.execution_role", "delegation", "execution_role", raw_delegation.get("execution_role")),
+                ("delegation.assignment_policy", "delegation", "assignment_policy", raw_delegation.get("assignment_policy")),
+                ("delegation.selection_objective", "delegation", "selection_objective", raw_delegation.get("selection_objective")),
+                ("delegation.current_target", "delegation", "current_target", raw_delegation.get("current_target")),
+                ("delegation.underfit_behavior", "delegation", "underfit_behavior", raw_delegation.get("underfit_behavior")),
+                ("delegation.down_routing_behavior", "delegation", "down_routing_behavior", raw_delegation.get("down_routing_behavior")),
+                ("delegation.human_override_policy", "delegation", "human_override_policy", raw_delegation.get("human_override_policy")),
+                (
+                    "delegation.manual_transport_policy",
+                    "delegation",
+                    "manual_transport_policy",
+                    raw_delegation.get("manual_transport_policy"),
                 ),
                 ("local_memory.enabled", "local_memory", "enabled", raw_local_memory.get("enabled")),
                 ("local_memory.path", "local_memory", "path", raw_local_memory.get("path")),
