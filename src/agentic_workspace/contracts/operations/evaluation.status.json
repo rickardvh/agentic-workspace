@@ -6,7 +6,7 @@
     "format_option": "format"
   },
   "summary": "Derive compact evaluation status from definitions and local observation streams.",
-  "classification": "report",
+  "classification": "read-only-report",
   "inputs": [
     {"name": "target", "source": "cli-option", "required": false},
     {"name": "evaluation_id", "source": "cli-option", "required": false},
@@ -33,6 +33,19 @@
   ],
   "guards": ["Status is derived and must not be edited as authority."],
   "proof": ["evaluation unit tests", "operation contract validates against operation.schema.json"],
-  "migration_status": "runtime-backed-source-command",
-  "ir_plan": {"status": "source-runtime-first"}
+  "migration_status": "draft-contract-only",
+  "ir_plan": {
+    "status": "not-modeled",
+    "summary": "The source CLI owns evaluation status derivation until generated command-package migration models it.",
+    "steps": [
+      {
+        "id": "source_runtime_boundary",
+        "uses": "workspace.target-root.resolve",
+        "description": "Only target-root resolution is represented here; evaluation status derivation remains source-runtime-owned."
+      }
+    ],
+    "portability_notes": [
+      "Evaluation status behavior is intentionally not claimed as generated operation IR coverage."
+    ]
+  }
 }

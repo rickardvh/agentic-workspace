@@ -39,6 +39,19 @@
     "External evidence is referenced, not copied, unless separately promoted."
   ],
   "proof": ["evaluation unit tests", "operation contract validates against operation.schema.json"],
-  "migration_status": "runtime-backed-source-command",
-  "ir_plan": {"status": "source-runtime-first"}
+  "migration_status": "draft-contract-only",
+  "ir_plan": {
+    "status": "not-modeled",
+    "summary": "The source CLI owns evaluation observation append behavior until generated command-package migration models it.",
+    "steps": [
+      {
+        "id": "source_runtime_boundary",
+        "uses": "workspace.target-root.resolve",
+        "description": "Only target-root resolution is represented here; evaluation append semantics remain source-runtime-owned."
+      }
+    ],
+    "portability_notes": [
+      "Evaluation append behavior is intentionally not claimed as generated operation IR coverage."
+    ]
+  }
 }

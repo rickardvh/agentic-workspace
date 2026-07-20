@@ -6,7 +6,7 @@
     "format_option": "format"
   },
   "summary": "Register or update one compact owner-bound evaluation definition.",
-  "classification": "repo-definition-upsert",
+  "classification": "lifecycle-mutation",
   "inputs": [
     {"name": "target", "source": "cli-option", "required": false},
     {"name": "evaluation_id", "source": "cli-option", "required": true},
@@ -40,9 +40,19 @@
     "Definitions are compact checked-in state; raw observations remain local by default."
   ],
   "proof": ["evaluation unit tests", "operation contract validates against operation.schema.json"],
-  "migration_status": "runtime-backed-source-command",
+  "migration_status": "draft-contract-only",
   "ir_plan": {
-    "status": "source-runtime-first",
-    "summary": "The source CLI owns the first executable evaluation command while generated command-package migration remains explicit follow-up."
+    "status": "not-modeled",
+    "summary": "The source CLI owns evaluation definition registration until generated command-package migration models it.",
+    "steps": [
+      {
+        "id": "source_runtime_boundary",
+        "uses": "workspace.target-root.resolve",
+        "description": "Only target-root resolution is represented here; evaluation definition upsert semantics remain source-runtime-owned."
+      }
+    ],
+    "portability_notes": [
+      "Evaluation registration behavior is intentionally not claimed as generated operation IR coverage."
+    ]
   }
 }

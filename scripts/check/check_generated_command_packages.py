@@ -268,6 +268,12 @@ PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
     "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
     "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
 )
+PYTHON_SHIPPED_SOURCE_EXECUTABLE_RETIREMENT_EXCEPTIONS = {
+    "src/agentic_workspace/cli.py": {
+        "command parsing": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
+        "subparser ownership": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
+    },
+}
 RUNTIME_SOURCE_EDIT_ACCEPTED_REASONS = (
     "existing-primitive-bugfix",
     "new-primitive-implementation",
@@ -3770,6 +3776,9 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             continue
         text = path.read_text(encoding="utf-8")
         matched_categories = _python_executable_behavior_categories(text)
+        exceptions = PYTHON_SHIPPED_SOURCE_EXECUTABLE_RETIREMENT_EXCEPTIONS.get(relative_path, {})
+        if exceptions:
+            matched_categories = [category for category in matched_categories if category not in exceptions]
         if matched_categories:
             errors.append(
                 "tracked shipped Python source must stay retired from generated CLI executable ownership; "
