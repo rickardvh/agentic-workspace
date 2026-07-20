@@ -150,6 +150,7 @@ from agentic_workspace.reporting_support import (
 from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
+from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
 from agentic_workspace.workspace_output import (
     _display_path,
     _emit_init_text,
@@ -50569,6 +50570,13 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "closeout_gate": _delegation_target_closeout_gate(profile=profile, advisory=advisory, outcome_evidence=outcome_evidence),
             }
         )
+    assignment_policy = _assignment_policy_payload(local_override, profile_payloads)
+    target_evidence = target_evidence_posture(
+        target_root=config.target_root,
+        profiles=local_override.delegation_targets,
+        records=outcome_records,
+    )
+    runtime_resolution = _runtime_resolution_payload(config=config)
     return {
         "status": "reporting-only",
         "rule": defaults["rule"],
@@ -50610,7 +50618,8 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "rule": "local-only machine/runtime posture; may override local-advisory invocation and routing fields, not repo-owned product semantics",
         },
         "delegation_control": _delegation_control_payload(local_override),
-        "assignment_policy": _assignment_policy_payload(local_override, profile_payloads),
+        "assignment_policy": assignment_policy,
+        "target_evidence": target_evidence,
         "delegation_targets": {
             "supported": True,
             "status": "configured" if local_override.delegation_targets else "available-not-set",
@@ -50732,7 +50741,12 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "delegated_run_guardrail": _delegated_run_guardrail_payload(
             defaults=defaults, profile_payloads=profile_payloads, local_override=local_override
         ),
-        "runtime_resolution": _runtime_resolution_payload(config=config),
+        "runtime_resolution": runtime_resolution,
+        "assignment_decision": assignment_decision_from_policy(
+            assignment_policy=assignment_policy,
+            runtime_resolution=runtime_resolution,
+            target_evidence=target_evidence,
+        ),
         "strong_handoff_packet": _strong_handoff_packet_template(),
         "success_measures": defaults["success_measures"],
     }
@@ -50895,6 +50909,8 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
     effective_posture = mixed_agent["effective_posture"]
     runtime_resolution = mixed_agent["runtime_resolution"]
     assignment_policy = mixed_agent["assignment_policy"]
+    target_evidence = mixed_agent["target_evidence"]
+    assignment_decision = mixed_agent["assignment_decision"]
     assurance = payload["assurance"]
     local_overlay = mixed_agent.get("local_overlay", {}) if isinstance(mixed_agent, dict) else {}
     local_high_risk_overlay = mixed_agent.get("high_risk_overlay", {}) if isinstance(mixed_agent, dict) else {}
@@ -50985,6 +51001,13 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "binding": assignment_policy["binding"],
                 "separation_rule": assignment_policy["separation_rule"],
             },
+            "target_evidence": {
+                "status": target_evidence["status"],
+                "record_count": target_evidence["record_count"],
+                "storage": target_evidence["storage"],
+                "suitability": target_evidence["suitability"],
+            },
+            "assignment_decision": assignment_decision,
             "clarification_mode": effective_posture["clarification_mode"],
             "safe_to_auto_run_commands": effective_posture["safe_to_auto_run_commands"],
             "prefer_internal_delegation_when_available": effective_posture["prefer_internal_delegation_when_available"],
@@ -51067,6 +51090,8 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "local_runtime.assignment_policy",
             "mixed_agent.runtime_resolution",
             "mixed_agent.assignment_policy",
+            "mixed_agent.target_evidence",
+            "mixed_agent.assignment_decision",
             "cli_compatibility",
         ],
     }

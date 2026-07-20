@@ -1785,6 +1785,38 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
     assert mini["outcome_evidence"]["record_count"] == 3
     assert mini["outcome_evidence"]["confidence"]["action"] == "raise"
     assert mini["outcome_evidence"]["task_fit"]["suggest_add"] == ["narrow-tests"]
+    evidence = payload["mixed_agent"]["target_evidence"]
+    assert evidence["status"] == "present"
+    assert evidence["storage"] == {
+        "path": ".agentic-workspace/delegation-outcomes.json",
+        "location": "local-only",
+        "checked_in": False,
+        "exists": True,
+        "safe_to_remove": True,
+        "raw_transcripts_stored": False,
+    }
+    assert evidence["record_count"] == 3
+    assert evidence["normalized_records"][0]["target"] == "gpt_5_4_mini"
+    assert evidence["normalized_records"][0]["admission_state"] == "accepted-normalized"
+    assert evidence["normalized_records"][0]["routing_relevance"] == "task-class-bound"
+    assert evidence["suitability"] == [
+        {
+            "target": "gpt_5_4_mini",
+            "profile_status": "configured",
+            "record_count": 3,
+            "average_signal": 1.42,
+            "route_effect": "preferred-for-matching-task-class",
+            "uncertainty": "low",
+            "supported_task_classes": ["bounded-docs", "narrow-tests"],
+            "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
+            "raw_history_retention": "bounded-local-ledger",
+        }
+    ]
+    decision = payload["mixed_agent"]["assignment_decision"]
+    assert decision["kind"] == "agentic-workspace/assignment-decision/v1"
+    assert decision["assignment_policy"] == "local-preferred"
+    assert decision["decision"] == "keep-local"
+    assert decision["record_count"] == 3
 
 
 def test_repo_config_cli_invoke_sets_repo_owned_invocation_policy(tmp_path: Path, capsys) -> None:
