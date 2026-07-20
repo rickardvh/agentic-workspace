@@ -5927,6 +5927,83 @@ def _planning_lane_surface_warnings(*, target_root: Path, lane_projection: dict[
                     "suggested_fix": f"Run agentic-planning lane-archive {lane_id} --target . --format json.",
                 }
             )
+            continue
+        warnings.extend(_lane_live_reference_warnings(target_root=target_root, records=records))
+    return warnings
+
+
+def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> list[dict[str, Any]]:
+    warnings: list[dict[str, Any]] = []
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        lane_status = str(record.get("status", "")).strip()
+        current_slice = str(record.get("current_slice", "")).strip()
+        path = str(record.get("path", "")).strip()
+        lane_id = str(record.get("id", "")).strip() or Path(path).stem.removesuffix(".lane")
+        if lane_status not in {"active", "ready"} and not current_slice:
+            continue
+        lane_record = _load_lane_record(target_root / path) if path else None
+        slices = (
+            lane_record.get("slice_sequence", [])
+            if isinstance(lane_record, dict) and isinstance(lane_record.get("slice_sequence"), list)
+            else []
+        )
+        active_slices = [item for item in slices if isinstance(item, dict) and str(item.get("status", "")).strip() == "active"]
+        selected = next(
+            (item for item in slices if isinstance(item, dict) and str(item.get("id", "")).strip() == current_slice),
+            None,
+        )
+        reason_code = ""
+        execplan_ref = ""
+        if lane_status == "active" and not current_slice:
+            reason_code = "active-lane-current-slice-missing"
+        elif current_slice and selected is None:
+            reason_code = "current-slice-missing"
+        elif isinstance(selected, dict):
+            selected_status = str(selected.get("status", "")).strip()
+            execplan_ref = str(selected.get("execplan_ref") or selected.get("execplan") or "").strip()
+            if selected_status in {"completed", "closed", "archived"}:
+                reason_code = "current-slice-not-live"
+            elif not execplan_ref:
+                inferred = (Path(".agentic-workspace") / "planning" / "execplans" / f"{_slugify(current_slice)}.plan.json").as_posix()
+                if (target_root / inferred).exists():
+                    execplan_ref = inferred
+                else:
+                    reason_code = "current-slice-execplan-missing"
+            elif not (target_root / execplan_ref).exists():
+                reason_code = "current-slice-execplan-missing"
+        if not reason_code and len(active_slices) > 1:
+            reason_code = "multiple-active-slices"
+        if not reason_code:
+            continue
+        recovery_slice = current_slice or (str(active_slices[0].get("id", "")).strip() if active_slices else f"{lane_id}-slice")
+        recovery_title = f"{str(record.get('title') or _title_from_slug(lane_id)).strip()} Slice"
+        warnings.append(
+            {
+                "warning_class": "lane_current_slice_non_executable",
+                "path": path or (PLANNING_MANAGED_ROOT / "lanes").as_posix(),
+                "message": (
+                    f"Lane '{lane_id}' has non-executable current/live slice relation ({reason_code}) for slice '{recovery_slice}'."
+                ),
+                "suggested_fix": (
+                    f"Run agentic-planning lane-activate {lane_id} --current-slice {recovery_slice} --target . --format json "
+                    "after creating or restoring the referenced execplan."
+                ),
+                "repair_affordance": {
+                    "kind": "planning-live-reference-integrity/v1",
+                    "relation": "lane.current_slice",
+                    "lane_id": lane_id,
+                    "current_slice": current_slice,
+                    "execplan_ref": execplan_ref,
+                    "reason_code": reason_code,
+                    "repair_route": (
+                        f"{_workspace_cli_invoke(target_root)} planning new-plan --id {recovery_slice} "
+                        f"--title {json.dumps(recovery_title)} --activate --lane {lane_id} --target . --format json"
+                    ),
+                },
+            }
+        )
     return warnings
 
 
@@ -14408,6 +14485,8 @@ def activate_lane_record(
                 slice_record["status"] = "active"
                 slice_record["execplan_ref"] = execplan_ref
                 selected_slice_found = True
+            elif isinstance(slice_record, dict) and str(slice_record.get("status", "")).strip() == "active":
+                slice_record["status"] = "completed"
         if not selected_slice_found:
             slices = list(record.get("slice_sequence", []))
             slices.append(

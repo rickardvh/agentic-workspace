@@ -275,6 +275,83 @@ def test_lane_activate_projects_current_slice_execplan_ref_and_keeps_summary_cle
     assert doctor.warnings == []
 
 
+def test_lane_health_rejects_current_slice_missing_execplan(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["status"] = "active"
+    lane["current_slice"] = "slice-one"
+    lane["slice_sequence"] = [
+        {
+            "id": "slice-one",
+            "title": "Slice One",
+            "status": "active",
+            "execplan_ref": ".agentic-workspace/planning/execplans/missing-slice.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "Expose missing live owner relations.",
+        },
+        {
+            "id": "completed-slice",
+            "title": "Completed Slice",
+            "status": "completed",
+            "execplan_ref": ".agentic-workspace/planning/execplans/completed-slice.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "Completed non-current tombstone may omit execplan.",
+        },
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+
+    summary = planning_summary(target=tmp_path, profile="compact")
+    health = summary["planning_surface_health"]
+
+    assert health["status"] == "not-clean"
+    warning = next(item for item in health["warnings"] if item["warning_class"] == "lane_current_slice_non_executable")
+    assert warning["repair_affordance"]["relation"] == "lane.current_slice"
+    assert warning["repair_affordance"]["reason_code"] == "current-slice-execplan-missing"
+    assert warning["repair_affordance"]["current_slice"] == "slice-one"
+
+
+def test_lane_activate_demotes_prior_active_slice_when_successor_becomes_current(tmp_path: Path) -> None:
+    install_bootstrap(target=tmp_path)
+    create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
+    lane_path = tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json"
+    lane = json.loads(lane_path.read_text(encoding="utf-8"))
+    lane["status"] = "active"
+    lane["current_slice"] = "slice-one"
+    lane["slice_sequence"] = [
+        {
+            "id": "slice-one",
+            "title": "Slice One",
+            "status": "active",
+            "execplan_ref": ".agentic-workspace/planning/execplans/slice-one.plan.json",
+            "depends_on": [],
+            "purpose_for_lane": "Prior slice.",
+        },
+        {
+            "id": "slice-two",
+            "title": "Slice Two",
+            "status": "ready",
+            "execplan_ref": ".agentic-workspace/planning/execplans/slice-two.plan.json",
+            "depends_on": ["slice-one"],
+            "purpose_for_lane": "Successor slice.",
+        },
+    ]
+    lane_path.write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
+    _write_execplan_fixture(tmp_path / ".agentic-workspace/planning/execplans/slice-one.plan.json", item_id="slice-one", status="completed")
+    _write_execplan_fixture(tmp_path / ".agentic-workspace/planning/execplans/slice-two.plan.json", item_id="slice-two", status="planned")
+
+    result = activate_lane_record("activation-lane", target=tmp_path, current_slice="slice-two")
+
+    assert [action.kind for action in result.actions] == ["updated", "updated", "proof", "proof"]
+    updated = json.loads(lane_path.read_text(encoding="utf-8"))
+    assert updated["current_slice"] == "slice-two"
+    statuses = {item["id"]: item["status"] for item in updated["slice_sequence"]}
+    assert statuses == {"slice-one": "completed", "slice-two": "active"}
+    warnings = planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"]
+    assert not [item for item in warnings if item["warning_class"] == "lane_current_slice_non_executable"]
+
+
 def test_lane_activate_infers_current_slice_execplan_when_slice_sequence_is_minimal(tmp_path: Path) -> None:
     install_bootstrap(target=tmp_path)
     create_lane_record(lane_id="activation-lane", title="Activation Lane", target=tmp_path)
