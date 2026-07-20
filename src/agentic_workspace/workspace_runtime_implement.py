@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
+from agentic_workspace.authority_envelope import authority_envelope_payload
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.current_work_context import startup_route_fingerprint_check, startup_route_identity
 from agentic_workspace.reporting_support import (
@@ -812,6 +813,11 @@ def _implement_payload(
         "files_to_avoid": list(implementer_template["files_to_avoid"]),
         "package_boundary": _package_boundary_payload(target_root=target_root),
         "path_boundaries": path_boundaries,
+        "authority_envelope": authority_envelope_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            task_text=task_text,
+        ),
         "authority_markers": [
             _authority_marker_for_path(path, agent_instructions_file=config.agent_instructions_file)
             for path in normalized_paths or [config.agent_instructions_file]

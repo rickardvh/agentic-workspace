@@ -46,6 +46,55 @@ def test_implement_context_adapter_routes_through_implement_owner_facade() -> No
     assert workspace_runtime_primitives._run_implement_context_adapter is workspace_runtime_implement._run_implement_context_adapter
 
 
+def test_implement_verbose_reports_authority_envelope_and_mutation_baseline(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "print('baseline')\n")
+    subprocess.run(["git", "add", "src/app.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "print('changed')\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/app.py",
+                "--task",
+                "Update the app helper",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    envelope = payload["authority_envelope"]
+    assert envelope["kind"] == "agentic-workspace/authority-envelope/v1"
+    assert envelope["status"] == "resolved"
+    assert any(
+        item["class"] == "untrusted-content" and item["effect"].startswith("cannot authorise")
+        for item in envelope["instruction_provenance"]
+    )
+    destructive = next(item for item in envelope["side_effect_decisions"] if item["class"] == "destructive-filesystem-or-git")
+    assert destructive == {
+        "class": "destructive-filesystem-or-git",
+        "decision": "deny",
+        "reason_code": "unowned-state-protected",
+    }
+    baseline = envelope["mutation_baseline"]
+    assert baseline["status"] == "dirty-scope-advisory-baseline"
+    assert baseline["scope"]["allowed_paths"] == ["src/app.py"]
+    assert baseline["observed_state"]["entries"][0]["path"] == "src/app.py"
+    assert baseline["ownership"]["claim"] == "advisory-observed-baseline"
+    assert "unexpected-path-overlap" in baseline["stale_revalidation"]["stop_reasons"]
+
+
 def test_implement_tiny_surfaces_local_high_risk_overlay(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_planning_state(tmp_path)
