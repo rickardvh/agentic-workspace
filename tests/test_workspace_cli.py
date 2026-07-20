@@ -8320,10 +8320,53 @@ def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, ca
     assert payload["kind"] == "agentic-workspace/selected-output/v1"
     assert payload["source_command"] == "proof"
     assert payload["values"]["sufficiency"]["sufficiency_result"] == "required-proof-selected"
-    assert payload["values"]["next"]["action"] == "run-validation-command"
-    assert payload["values"]["proof_route_strategy_decision"]["outcome"] == "no-focused-authority"
-    assert payload["values"]["proof_route_strategy_decision"]["claim_effect"] == "selected-proof-required"
+    assert payload["values"]["next"]["action"] == "route-refinement-required"
+    assert payload["values"]["next"]["command"] is None
+    assert payload["values"]["proof_route_strategy_decision"]["outcome"] == "broad-escalation-required"
+    assert payload["values"]["proof_route_strategy_decision"]["claim_effect"] == "claim-blocked"
     assert "missing" not in payload
+
+
+def test_proof_route_strategy_identity_is_preserved_by_start_and_implement(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--format", "json"]) == 0
+    capsys.readouterr()
+
+    start_args = [
+        "start",
+        "--target",
+        str(tmp_path),
+        "--changed",
+        "generated/workspace/python/cli.py",
+        "--select",
+        "proof_route_strategy_preservation,next_safe_action",
+        "--format",
+        "json",
+    ]
+    assert cli.main(start_args) == 0
+    start_values = json.loads(capsys.readouterr().out)["values"]
+
+    implement_args = [
+        "implement",
+        "--target",
+        str(tmp_path),
+        "--changed",
+        "generated/workspace/python/cli.py",
+        "--select",
+        "proof_route_strategy_preservation,next",
+        "--format",
+        "json",
+    ]
+    assert cli.main(implement_args) == 0
+    implement_values = json.loads(capsys.readouterr().out)["values"]
+
+    start_preservation = start_values["proof_route_strategy_preservation"]
+    implement_preservation = implement_values["proof_route_strategy_preservation"]
+    assert start_preservation["decision_id"] == implement_preservation["decision_id"]
+    assert start_preservation["claim_effect"] == "claim-blocked"
+    assert implement_preservation["claim_effect"] == "claim-blocked"
+    assert start_values["next_safe_action"]["next_safe_action"] == "route-refinement-required"
+    assert implement_values["next"]["action"] == "Resolve proof-route refinement or structured escalation before closeout."
 
 
 def test_proof_compact_surfaces_narrowness_for_bounded_package_change(tmp_path: Path, capsys) -> None:
@@ -8387,9 +8430,10 @@ def test_proof_narrowness_marks_generated_surface_broad_proof_required(tmp_path:
 
     payload = json.loads(capsys.readouterr().out)
     narrowness = payload["values"]["proof_narrowness"]
-    assert narrowness["status"] == "broad_required"
-    assert narrowness["broad_suite_boundary"]["status"] == "required_acceptance_boundary"
-    assert any(trigger["trigger"] == "selected lane requires broad proof" for trigger in narrowness["expansion_triggers"])
+    assert narrowness["status"] == "narrow_required"
+    assert narrowness["broad_suite_boundary"]["status"] == "explicit-escalation-required"
+    assert narrowness["broad_suite_boundary"]["requires_explicit_escalation"] is True
+    assert narrowness["broad_suite_boundary"]["withheld_generic_broad_lanes"][0]["lane"] == "workspace_cli"
     assert all(item["acceptance_boundary"] is False for item in narrowness["optional_confidence_checks"])
     assert "optional checks as confidence" in narrowness["final_report_rule"]
 

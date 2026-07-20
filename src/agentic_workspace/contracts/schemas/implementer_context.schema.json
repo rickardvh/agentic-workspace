@@ -183,6 +183,11 @@
       "$ref": "#/$defs/proof_selection",
       "description": "Selected proof lane and validation commands for the changed paths."
     },
+    "proof_route_strategy_preservation": {
+      "type": "object",
+      "description": "Stable proof-route strategy identity and consumer-preservation packet shared by start, implement, proof, handoff, and closeout surfaces.",
+      "additionalProperties": true
+    },
     "required_validation_commands": {
       "type": "array",
       "items": {
@@ -729,6 +734,14 @@
           },
           "minItems": 1,
           "description": "Ordered stop when entries used by this contract."
+        },
+        "must_preserve": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One field path or identity that must survive handoff and closeout."
+          },
+          "description": "Decision identities and claim-boundary fields that downstream consumers must preserve."
         }
       },
       "additionalProperties": false,

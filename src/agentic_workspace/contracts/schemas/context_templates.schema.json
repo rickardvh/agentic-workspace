@@ -185,6 +185,14 @@
               },
               "minItems": 1,
               "description": "Ordered stop when entries used by this contract."
+            },
+            "must_preserve": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "One field path or identity that must survive handoff and closeout."
+              },
+              "description": "Decision identities and claim-boundary fields that downstream consumers must preserve."
             }
           },
           "additionalProperties": false,

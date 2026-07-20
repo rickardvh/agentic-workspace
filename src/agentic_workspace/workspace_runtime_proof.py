@@ -332,6 +332,19 @@ def _tiny_proof_payload(payload: dict[str, Any], *, cli_invoke: str = DEFAULT_CL
             next_decision.setdefault("target", payload.get("target"))
             next_decision.setdefault("selector", payload.get("selector", {}))
             next_decision.setdefault("sufficiency", _tiny_workflow_sufficiency(answer.get("sufficiency", {})))
+            next_action = _as_dict(next_decision.get("next"))
+            route_strategy = _as_dict(answer.get("proof_route_strategy_decision"))
+            if (
+                str(next_action.get("action", "")) == "route-refinement-required"
+                and str(route_strategy.get("outcome", "")) == "broad-escalation-required"
+            ):
+                include_intent_proof = False
+                manual = _as_dict(next_decision.get("manual_verification"))
+                next_decision["manual_verification"] = {
+                    "status": str(manual.get("status", "")),
+                    "summary": _short_tiny_text(str(manual.get("summary", "")), limit=180),
+                    "detail_selector": "manual_verification",
+                }
             if answer.get("proof_route_decision"):
                 route_decision = dict(answer["proof_route_decision"])
                 route_decision.pop("next_action", None)
@@ -2689,14 +2702,25 @@ def _proof_narrowness_payload(
         lane_id = str(lane.get("id", ""))
         proof_kind = str(lane.get("proof_kind", ""))
         if proof_kind == "full-test" or lane_id in broad_acceptance_lanes:
-            expansion_triggers.append(
-                {
-                    "trigger": "selected lane requires broad proof",
-                    "lane": lane_id,
-                    "why": _lane_activation_summary(lane),
-                    "effect": "broad proof is part of required_commands, not optional confidence",
-                }
-            )
+            focused_route_reduction = _as_dict(lane.get("focused_route_reduction"))
+            if _list_payload(lane.get("enough_proof")):
+                expansion_triggers.append(
+                    {
+                        "trigger": "selected lane requires broad proof",
+                        "lane": lane_id,
+                        "why": _lane_activation_summary(lane),
+                        "effect": "broad proof is part of required_commands, not optional confidence",
+                    }
+                )
+            elif str(focused_route_reduction.get("status", "")) == "broad-proof-withheld-for-explicit-escalation":
+                expansion_triggers.append(
+                    {
+                        "trigger": "generic broad proof withheld",
+                        "lane": lane_id,
+                        "why": _lane_activation_summary(lane),
+                        "effect": "broad proof remains optional confidence until a structured escalation is selected",
+                    }
+                )
     for condition in broaden_when:
         expansion_triggers.append({"trigger": "broaden_when", "why": str(condition), "effect": "broaden proof before closeout"})
     for condition in escalate_when:
@@ -2719,6 +2743,25 @@ def _proof_narrowness_payload(
         if str(item.get("trigger", "")).strip() in {"selected lane requires broad proof", "broaden_when"}
     )
     broad_reason = "; ".join(_dedupe([item for item in broad_reason_candidates if item]))
+    generic_broad_lane = any(item.get("lane") in broad_acceptance_lanes for item in required)
+    withheld_broad_escalations = [
+        {
+            "lane": str(lane.get("id", "")),
+            "status": str(_as_dict(lane.get("focused_route_reduction")).get("status", "")),
+            "withheld_commands": _list_payload(_as_dict(lane.get("focused_route_reduction")).get("withheld_commands")),
+        }
+        for lane in selected_lanes
+        if str(_as_dict(lane.get("focused_route_reduction")).get("status", "")) == "broad-proof-withheld-for-explicit-escalation"
+    ]
+    explicit_broad_lane = any(
+        str(lane.get("id", "")) == "domain:workspace_broad_suite"
+        or str(lane.get("claim_boundary", "")) == "explicit-broad-escalation-required"
+        for lane in selected_lanes
+    )
+    explicit_escalation_required = (broad_required and generic_broad_lane and not explicit_broad_lane) or bool(withheld_broad_escalations)
+    escalation_reason = broad_reason
+    if explicit_escalation_required:
+        escalation_reason = "missing: generic broad lane selection is not an escalation reason"
     if manual_verification is not None and not required_commands:
         status = "manual_required"
     elif broad_required:
@@ -2736,11 +2779,25 @@ def _proof_narrowness_payload(
         "optional_confidence_checks": optional,
         "expansion_triggers": expansion_triggers,
         "broad_suite_boundary": {
-            "status": "required_acceptance_boundary" if broad_required else "not_required_acceptance_boundary",
-            "escalation_reason": broad_reason if broad_required else "",
+            "status": (
+                "explicit-escalation-required"
+                if explicit_escalation_required
+                else "required_acceptance_boundary"
+                if broad_required
+                else "not_required_acceptance_boundary"
+            ),
+            "requires_explicit_escalation": explicit_escalation_required,
+            "escalation_reason": escalation_reason if broad_required else "",
+            "eligible_evidence": [
+                "host-declared broad domain proof route",
+                "concrete high-risk or cross-boundary reason",
+                "explicit maintainer or user override",
+                "recurring friction evidence that focused proof is insufficient",
+            ],
+            "withheld_generic_broad_lanes": withheld_broad_escalations,
             "rule": (
-                "Broad suite results are part of the acceptance boundary only when selected as required proof before validation runs; "
-                "otherwise they are confidence evidence the final report may mention without treating them as required."
+                "A generic broad lane is not by itself a sufficient escalation reason. Broad suite results are part of the acceptance "
+                "boundary only when selected as required proof before validation runs with an explicit reason; otherwise they are confidence evidence."
             ),
         },
         "final_report_rule": (
@@ -2915,6 +2972,14 @@ def _focused_route_coverage_audit(
             "rule": "Missing or non-executable focused coverage should be fixed or explicitly escalated; it is not silent full-suite authority.",
         },
     }
+
+
+def _preferred_focused_route_owner(lane_ids: list[str]) -> str:
+    for lane_id in lane_ids:
+        bare = str(lane_id).removeprefix("domain:")
+        if bare not in {"proof_route_authority", "test_evidence_decision"}:
+            return str(lane_id)
+    return str(lane_ids[0]) if lane_ids else ""
 
 
 def _route_refinement_required_payload(
@@ -3104,7 +3169,10 @@ def _proof_route_strategy_decision_payload(
     route_refinement_required: dict[str, Any],
     explicit_broad_lane_selected: bool,
     broad_escalation_reason: dict[str, Any] | None,
+    applicable_friction_findings: list[dict[str, Any]] | None = None,
+    generic_broad_without_explicit_escalation: bool = False,
 ) -> dict[str, Any]:
+    applicable_friction = [dict(item) for item in (applicable_friction_findings or []) if isinstance(item, dict)]
     focused_lanes = _focused_domain_lanes(domain_lanes)
     domain_handled_paths = {str(path) for lane in focused_lanes for path in _list_payload(lane.get("matched_paths")) if str(path).strip()}
     focused_covers_all = bool(domain_handled_paths) and set(changed_paths).issubset(domain_handled_paths)
@@ -3112,18 +3180,33 @@ def _proof_route_strategy_decision_payload(
     if route_refinement_status == "required":
         outcome = "route-refinement-required"
         reason_code = "focused-route-coverage-gap"
+    elif generic_broad_without_explicit_escalation:
+        outcome = "broad-escalation-required"
+        reason_code = "missing-structured-broad-escalation"
     elif broad_escalation_reason is not None:
         outcome = "broad-escalated"
         reason_code = str(broad_escalation_reason.get("reason_code", "structured-broad-escalation"))
-    elif explicit_broad_lane_selected:
-        outcome = "broad-escalated"
-        reason_code = "explicit-broad-request"
     elif focused_covers_all:
         outcome = "focused"
         reason_code = "focused-route-sufficient"
     else:
         outcome = "no-focused-authority"
         reason_code = "focused-route-coverage-missing"
+    selected_broad_escalation = broad_escalation_reason
+    if outcome == "broad-escalation-required":
+        selected_broad_escalation = {
+            "kind": "agentic-workspace/structured-broad-escalation/v1",
+            "status": "missing",
+            "reason_code": reason_code,
+            "matched_evidence": [],
+            "changed_paths": changed_paths,
+            "evidence_unavailable_from_focused_routes": [
+                "Generic broad proof was selected by fallback shape, not by a route-specific escalation reason."
+            ],
+            "proportionality": "Broad/high-cost proof needs explicit host/user authority or live route-friction evidence before it can be required.",
+            "resource_posture": "broad/high-cost; withheld from required proof",
+            "authority_source": ".agentic-workspace/config.toml [assurance.domain_proof_lanes.workspace_broad_suite] or explicit user override",
+        }
     return {
         "kind": "agentic-workspace/proof-route-strategy-decision/v1",
         "status": outcome,
@@ -3133,10 +3216,11 @@ def _proof_route_strategy_decision_payload(
         "focused_lane_ids": [str(lane.get("id", "")) for lane in focused_lanes],
         "focused_covered_paths": sorted(domain_handled_paths),
         "route_refinement_required": route_refinement_required,
-        "broad_escalation": broad_escalation_reason,
+        "applicable_friction_findings": applicable_friction,
+        "broad_escalation": selected_broad_escalation,
         "explicit_broad_lane_selected": explicit_broad_lane_selected,
         "claim_effect": "claim-blocked"
-        if outcome == "route-refinement-required"
+        if outcome in {"route-refinement-required", "broad-escalation-required"}
         else "selected-proof-required"
         if outcome == "no-focused-authority"
         else "broad-proof-required"
@@ -3146,6 +3230,194 @@ def _proof_route_strategy_decision_payload(
         "rule": (
             "Compute focused, broad-escalated, or route-refinement outcomes before required commands are finalized; "
             "generic broad commands are not fallback authority."
+        ),
+    }
+
+
+def _memory_note_patterns_match(*, changed_paths: list[str], patterns: Any) -> list[dict[str, str]]:
+    matches: list[dict[str, str]] = []
+    for pattern in [str(item).replace("\\", "/").strip() for item in _list_payload(patterns) if str(item).strip()]:
+        for changed_path in changed_paths:
+            if fnmatch.fnmatch(changed_path, pattern):
+                matches.append({"path": changed_path, "pattern": pattern})
+    return matches
+
+
+def _truthy_manifest_value(value: Any) -> bool:
+    if value is True:
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "live", "applicable", "live-applicable"}
+    return False
+
+
+def _validation_friction_has_repeated_or_severe_evidence(raw_note: dict[str, Any]) -> tuple[bool, str, str]:
+    recurrence = str(raw_note.get("recurrence") or raw_note.get("evidence_recurrence") or "").strip().lower()
+    try:
+        occurrence_count = int(raw_note.get("occurrence_count") or raw_note.get("evidence_count") or 0)
+    except (TypeError, ValueError):
+        occurrence_count = 0
+    host_impact_class = str(raw_note.get("host_impact_class") or raw_note.get("impact_class") or raw_note.get("severity") or "").strip()
+    host_impact_normalized = host_impact_class.lower().replace("_", "-")
+    repeated = recurrence in {"repeated", "recurring"} or occurrence_count > 1
+    severe_host_impact = host_impact_normalized in {"severe-host-impact", "host-impact-severe", "severe"}
+    return (
+        repeated or severe_host_impact,
+        recurrence or ("repeated" if repeated else "first_seen"),
+        ("severe-host-impact" if severe_host_impact else "none"),
+    )
+
+
+def _applicable_validation_friction_findings(*, target_root: Path | None, changed_paths: list[str]) -> list[dict[str, Any]]:
+    if target_root is None:
+        return []
+    manifest_path = target_root / ".agentic-workspace" / "memory" / "repo" / "manifest.toml"
+    if not manifest_path.is_file():
+        return []
+    try:
+        manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        return []
+    notes = manifest.get("notes", {}) if isinstance(manifest, dict) else {}
+    if not isinstance(notes, dict):
+        return []
+    active_states = {"active", "live", "live-applicable"}
+    quiet_states = {"fixed", "mitigated", "superseded", "disputed", "stale", "obsolete", "accepted-risk", "promoted-to-issue"}
+    findings: list[dict[str, Any]] = []
+    for note_path, raw_note in notes.items():
+        if not isinstance(raw_note, dict):
+            continue
+        if str(raw_note.get("memory_role", "")).strip() != "improvement_signal":
+            continue
+        lifecycle_state = str(raw_note.get("lifecycle_state") or raw_note.get("state") or "active").strip() or "active"
+        if lifecycle_state.lower() in quiet_states or lifecycle_state.lower() not in active_states:
+            continue
+        if str(raw_note.get("kind", "")).strip() != "validation_friction":
+            continue
+        if not _truthy_manifest_value(raw_note.get("applicable_live")):
+            continue
+        if not _truthy_manifest_value(raw_note.get("applicable_to_current_route")):
+            continue
+        evidence_admissible, recurrence, host_impact_class = _validation_friction_has_repeated_or_severe_evidence(raw_note)
+        if not evidence_admissible:
+            continue
+        route_patterns = [
+            *_list_payload(raw_note.get("routes_from")),
+            *_list_payload(raw_note.get("applies_to_paths")),
+            *_list_payload(raw_note.get("route_scope")),
+        ]
+        route_matches = _memory_note_patterns_match(changed_paths=changed_paths, patterns=route_patterns)
+        if changed_paths and not route_matches:
+            continue
+        evidence_refs = [str(item) for item in _list_payload(raw_note.get("evidence")) if str(item).strip()]
+        findings.append(
+            {
+                "kind": "agentic-workspace/applicable-validation-friction/v1",
+                "id": hashlib.sha256(f"{note_path}\n{json.dumps(raw_note, sort_keys=True, default=str)}".encode()).hexdigest()[:12],
+                "source": "Memory improvement_signal",
+                "note_path": str(note_path),
+                "lifecycle_state": lifecycle_state,
+                "applicability": "applicable-to-proof-route-maintenance",
+                "applicable_live": True,
+                "applicable_to_current_route": True,
+                "route_matches": route_matches,
+                "route_identity": str(raw_note.get("route_identity", "")),
+                "recurrence": recurrence,
+                "host_impact_class": host_impact_class,
+                "promotion_target": str(raw_note.get("promotion_target", "")),
+                "promotion_trigger": str(raw_note.get("promotion_trigger", "")),
+                "preferred_remediation": str(raw_note.get("preferred_remediation", "")),
+                "improvement_note": str(raw_note.get("improvement_note", "")),
+                "evidence_refs": evidence_refs,
+                "claim_effect": "route-health-pressure-only",
+            }
+        )
+    return findings
+
+
+def _proof_route_strategy_preservation_payload(
+    *,
+    proof_route_strategy_decision: dict[str, Any],
+    manual_verification: dict[str, Any] | None,
+    required_commands: list[str],
+) -> dict[str, Any]:
+    basis = {
+        "outcome": proof_route_strategy_decision.get("outcome", ""),
+        "reason_code": proof_route_strategy_decision.get("reason_code", ""),
+        "changed_paths": proof_route_strategy_decision.get("changed_paths", []),
+        "claim_effect": proof_route_strategy_decision.get("claim_effect", ""),
+        "required_commands": required_commands,
+    }
+    decision_id = hashlib.sha256(json.dumps(basis, sort_keys=True, default=str).encode()).hexdigest()[:16]
+    claim_effect = str(proof_route_strategy_decision.get("claim_effect", ""))
+    selected_requirement = (
+        "route-refinement-or-structured-escalation"
+        if claim_effect == "claim-blocked"
+        else "broad-proof"
+        if str(proof_route_strategy_decision.get("outcome", "")) == "broad-escalated"
+        else "focused-proof"
+    )
+    consumer_state = {
+        "decision_id": decision_id,
+        "selected_requirement": selected_requirement,
+        "claim_effect": claim_effect,
+        "next_action": "route-refinement-required" if claim_effect == "claim-blocked" else "run-selected-proof",
+    }
+    return {
+        "kind": "agentic-workspace/proof-route-strategy-preservation/v1",
+        "status": "claim-blocking" if claim_effect == "claim-blocked" else "selected",
+        "decision_id": decision_id,
+        "selected_requirement": selected_requirement,
+        "claim_effect": claim_effect,
+        "proof_route_strategy_decision": {
+            key: proof_route_strategy_decision.get(key)
+            for key in ("outcome", "reason_code", "changed_paths", "focused_lane_ids", "claim_effect")
+            if key in proof_route_strategy_decision
+        },
+        "manual_verification_status": str((manual_verification or {}).get("status", "")),
+        "required_commands": required_commands,
+        "consumers": {
+            "start": dict(consumer_state),
+            "implement": dict(consumer_state),
+            "proof": dict(consumer_state),
+            "handoff": dict(consumer_state),
+            "closeout": dict(consumer_state),
+        },
+        "rule": (
+            "Ordinary consumers must preserve this decision identity, selected requirement, next action, and claim effect; "
+            "they may not independently substitute broad proof or release a blocked completion claim."
+        ),
+    }
+
+
+def _proof_route_strategy_claim_gate_payload(*, proof_route_strategy_preservation: dict[str, Any]) -> dict[str, Any]:
+    claim_effect = str(proof_route_strategy_preservation.get("claim_effect", ""))
+    blocked = claim_effect == "claim-blocked"
+    consumers = _as_dict(proof_route_strategy_preservation.get("consumers"))
+    handoff = _as_dict(consumers.get("handoff"))
+    closeout = _as_dict(consumers.get("closeout"))
+    return {
+        "kind": "agentic-workspace/proof-route-strategy-claim-gate/v1",
+        "status": "blocked" if blocked else "allowed-after-selected-proof",
+        "decision_id": str(proof_route_strategy_preservation.get("decision_id", "")),
+        "claim_effect": claim_effect,
+        "selected_requirement": str(proof_route_strategy_preservation.get("selected_requirement", "")),
+        "handoff": {
+            **handoff,
+            "consumer": "handoff",
+            "required_identity_field": "proof_route_strategy_preservation.decision_id",
+            "missing_or_mismatch_effect": "claim-blocked",
+        },
+        "closeout": {
+            **closeout,
+            "consumer": "closeout",
+            "required_identity_field": "proof_route_strategy_preservation.decision_id",
+            "missing_or_mismatch_effect": "claim-blocked",
+        },
+        "completion_claim_authorized": not blocked,
+        "rule": (
+            "Handoff and closeout must consume this exact decision id and claim effect. Missing, stale, or mismatched "
+            "strategy identity keeps the completion claim blocked."
         ),
     }
 
@@ -3590,6 +3862,87 @@ def _domain_proof_route_inventory_audit(
             "status": "advisory-only",
             "rule": "Code coverage may inform route maintenance, but route inventory and command executability remain explicit repo authority checks.",
         },
+    }
+
+
+def _proof_route_escalation_gate(
+    *,
+    proof_narrowness: dict[str, Any],
+    focused_route_coverage_audit: dict[str, Any],
+    proof_route_maintenance: dict[str, Any],
+    proof_route_strategy_decision: dict[str, Any],
+    selected_commands: list[dict[str, Any]],
+    applicable_friction_findings: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    boundary = _as_dict(proof_narrowness.get("broad_suite_boundary"))
+    boundary_status = str(boundary.get("status", ""))
+    broad_commands = [
+        str(command.get("command", ""))
+        for command in selected_commands
+        if str(command.get("command", "")).startswith("make test")
+        or str(command.get("command", "")).startswith("make lint")
+        or str(command.get("proof_kind", "")) == "full-test"
+    ]
+    route_gap_status = str(_as_dict(focused_route_coverage_audit.get("maintenance_gap")).get("status", ""))
+    route_maintenance_status = str(proof_route_maintenance.get("status", ""))
+    route_strategy = {
+        "status": str(proof_route_strategy_decision.get("status", "")),
+        "outcome": str(proof_route_strategy_decision.get("outcome", "")),
+        "reason_code": str(proof_route_strategy_decision.get("reason_code", "")),
+        "claim_effect": str(proof_route_strategy_decision.get("claim_effect", "")),
+    }
+    if route_strategy["outcome"] == "broad-escalation-required":
+        status = "blocked-explicit-escalation-required"
+        next_action = "Record a concrete broad-proof escalation reason, select a host-declared broad route, or refine focused proof."
+    elif route_strategy["outcome"] == "route-refinement-required":
+        status = "route-maintenance-required"
+        next_action = "Resolve focused-route gaps or record manual route-maintenance evidence before treating broad proof as sufficient."
+    elif boundary_status == "required_acceptance_boundary" and (route_gap_status == "present" or route_maintenance_status == "attention"):
+        status = "route-maintenance-required"
+        next_action = "Resolve focused-route gaps or record manual route-maintenance evidence before treating broad proof as sufficient."
+    elif boundary_status == "required_acceptance_boundary":
+        status = "allowed-with-structured-escalation"
+        next_action = "Run or record the selected broad proof only as the named acceptance boundary."
+    else:
+        status = "not-required"
+        next_action = "Use focused proof; broad proof remains optional confidence evidence."
+    return {
+        "kind": "agentic-workspace/proof-route-escalation-gate/v1",
+        "status": status,
+        "proof_route_strategy_decision": route_strategy,
+        "broad_suite_boundary_status": boundary_status,
+        "broad_commands": _dedupe([command for command in broad_commands if command]),
+        "requires_explicit_escalation": bool(boundary.get("requires_explicit_escalation")),
+        "escalation_reason": str(boundary.get("escalation_reason", "")),
+        "eligible_evidence": _list_payload(boundary.get("eligible_evidence")),
+        "friction_inputs": {
+            "recurring_validation_friction": "lifecycle-managed active validation-friction improvement signals",
+            "candidate_only_sources": ["session-log slow-command friction candidates"],
+            "applicable_live_findings": [dict(item) for item in (applicable_friction_findings or []) if isinstance(item, dict)],
+            "consumption_rule": (
+                "Consume only active improvement_signal records with applicable_live=true and applicable_to_current_route=true; "
+                "candidate-local session diagnostics require review, routing, or dismissal before they influence proof escalation."
+            ),
+            "route_maintenance_status": route_maintenance_status,
+            "focused_route_coverage_status": str(focused_route_coverage_audit.get("status", "")),
+            "focused_route_maintenance_gap": route_gap_status,
+        },
+        "cross_surface_projection": {
+            "route_decision_surface": "proof_route_strategy_decision",
+            "boundary_surface": "proof_narrowness.broad_suite_boundary",
+            "friction_lifecycle_surface": "session_improvement_intake or Memory improvement_signal",
+            "rule": "The escalation gate projects route decision, broad-boundary status, and live friction lifecycle state into one closeout decision.",
+        },
+        "explicit_override": {
+            "status": "available",
+            "route": ".agentic-workspace/config.toml [assurance.domain_proof_lanes.workspace_broad_suite]",
+            "rule": "Explicit override must be selected before the broad run is treated as required acceptance proof.",
+        },
+        "next_action": next_action,
+        "rule": (
+            "Broad or high-cost proof is not promoted by generic fallback alone. Promotion requires structured escalation, "
+            "route-friction evidence, or an explicit host/user override."
+        ),
     }
 
 
@@ -4437,6 +4790,7 @@ def _proof_selection_for_changed_paths(
         active_assurance_requirements=active_assurance_requirements,
         local_high_risk_overlay=local_high_risk_overlay,
     )
+    applicable_friction_findings = _applicable_validation_friction_findings(target_root=target_root, changed_paths=changed_paths)
     if broad_escalation_reason is not None and not explicit_broad_lane_selected:
         broad_lane = _select_broad_domain_lane(
             config=config,
@@ -4447,38 +4801,65 @@ def _proof_selection_for_changed_paths(
             domain_lanes.append(broad_lane)
             selected_lanes.append(broad_lane)
             explicit_broad_lane_selected = True
+    generic_broad_commands = {
+        str(command).strip()
+        for lane in selected_lanes
+        if not str(lane.get("id", "")).startswith("domain:") and str(lane.get("id", "")) in broad_acceptance_lanes
+        for command in _list_payload(lane.get("enough_proof"))
+        if str(command).strip()
+    }
+    generic_broad_escalation_scope = any(
+        str(lane.get("id", "")) in {"cli_authority", "generated_command_packages"} for lane in selected_lanes
+    )
+    generic_broad_without_explicit_escalation = (
+        not explicit_broad_lane_selected and generic_broad_escalation_scope and bool(generic_broad_commands)
+    )
     preliminary_proof_route_strategy_decision = _proof_route_strategy_decision_payload(
         changed_paths=changed_paths,
         domain_lanes=domain_lanes,
         route_refinement_required=preliminary_route_refinement,
         explicit_broad_lane_selected=explicit_broad_lane_selected,
         broad_escalation_reason=broad_escalation_reason,
+        applicable_friction_findings=applicable_friction_findings,
+        generic_broad_without_explicit_escalation=generic_broad_without_explicit_escalation,
     )
-    if preliminary_proof_route_strategy_decision["outcome"] in {"focused", "route-refinement-required"}:
+    strategy_outcome = str(preliminary_proof_route_strategy_decision["outcome"])
+    if strategy_outcome in {"focused", "route-refinement-required", "broad-escalated", "broad-escalation-required"}:
         for lane in selected_lanes:
             if str(lane.get("id", "")).startswith("domain:"):
                 continue
-            if not lane.get("proof_profile") and str(lane.get("id", "")) not in broad_acceptance_lanes:
-                continue
             broad_commands = [str(command) for command in _list_payload(lane.get("enough_proof")) if str(command).strip()]
             if not broad_commands:
+                continue
+            lane_is_broad_profile = bool(lane.get("proof_profile")) or str(lane.get("id", "")) in broad_acceptance_lanes
+            lane_is_generic_broad_escalation = str(lane.get("id", "")) in broad_acceptance_lanes
+            if strategy_outcome in {"focused", "route-refinement-required"}:
+                should_withhold_broad = lane_is_broad_profile
+            else:
+                should_withhold_broad = lane_is_generic_broad_escalation or (
+                    bool(lane.get("proof_profile"))
+                    and bool(generic_broad_commands.intersection(str(command).strip() for command in broad_commands))
+                )
+            if not should_withhold_broad:
                 continue
             optional = [str(command) for command in _list_payload(lane.get("optional_commands")) if str(command).strip()]
             lane["optional_commands"] = _dedupe([*optional, *broad_commands])
             lane["enough_proof"] = []
             reduction_status = (
                 "required-proof-satisfied-by-domain-proof-lane"
-                if preliminary_proof_route_strategy_decision["outcome"] == "focused"
+                if strategy_outcome == "focused"
                 else "broad-proof-withheld-for-route-refinement"
-                if preliminary_proof_route_strategy_decision["outcome"] == "route-refinement-required"
-                else "broad-proof-withheld-for-missing-focused-authority"
+                if strategy_outcome == "route-refinement-required"
+                else "broad-proof-withheld-for-explicit-escalation"
             )
             lane["focused_route_reduction"] = {
                 "status": reduction_status,
                 "matched_paths": sorted(domain_handled_paths),
                 "uncovered_paths": preliminary_route_refinement["uncovered_paths"],
                 "source": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
-                "proof_route_strategy_decision": preliminary_proof_route_strategy_decision["outcome"],
+                "proof_route_strategy_decision": strategy_outcome,
+                "withheld_commands": broad_commands,
+                "explicit_broad_lane_selected": explicit_broad_lane_selected,
                 "rule": (
                     "A host-declared focused proof lane replaces generic broad profile proof for the same changed paths. "
                     "When changed paths lack focused route authority, generic broad proof is withheld until route refinement or explicit escalation."
@@ -4671,20 +5052,68 @@ def _proof_selection_for_changed_paths(
         route_refinement_required=route_refinement_required,
         explicit_broad_lane_selected=explicit_broad_lane_selected,
         broad_escalation_reason=broad_escalation_reason,
+        applicable_friction_findings=applicable_friction_findings,
+        generic_broad_without_explicit_escalation=generic_broad_without_explicit_escalation,
     )
+    if proof_route_strategy_decision["outcome"] == "route-refinement-required":
+        broad_lane_ids = {
+            str(lane.get("id", ""))
+            for lane in selected_lanes
+            if str(lane.get("route_role") or _as_dict(lane.get("domain_lane")).get("route_role") or "") == "broad"
+            or str(lane.get("id", "")) in broad_acceptance_lanes
+            or str(lane.get("id", "")) == "domain:workspace_broad_suite"
+        }
+        broad_commands = {
+            str(command.get("command", ""))
+            for command in selected_commands
+            if isinstance(command, dict) and str(command.get("lane", "")) in broad_lane_ids
+        }
+        for lane in selected_lanes:
+            if str(lane.get("id", "")) in broad_lane_ids:
+                retained_optional = [str(command) for command in _list_payload(lane.get("optional_commands")) if str(command).strip()]
+                lane["optional_commands"] = _dedupe(
+                    [*retained_optional, *[str(command) for command in _list_payload(lane.get("enough_proof"))]]
+                )
+                lane["enough_proof"] = []
+                lane["focused_route_reduction"] = {
+                    "status": "broad-proof-withheld-for-route-refinement",
+                    "source": ".agentic-workspace/config.toml [assurance.domain_proof_lanes]",
+                    "proof_route_strategy_decision": proof_route_strategy_decision["outcome"],
+                    "rule": "Route refinement is the final claim-blocking decision; broad fallback commands are not required proof unless a separate structured escalation is selected.",
+                }
+        if broad_commands:
+            required_commands = [command for command in required_commands if command not in broad_commands]
+            selected_commands = [
+                command
+                for command in selected_commands
+                if not (isinstance(command, dict) and str(command.get("command", "")) in broad_commands)
+            ]
+    broad_escalation_blocks_claim = str(proof_route_strategy_decision.get("outcome", "")) == "broad-escalation-required"
     manual_verification: dict[str, Any] | None = None
-    route_refinement_blocks_claim = route_refinement_required["status"] == "required"
+    route_refinement_blocks_claim = (
+        route_refinement_required["status"] == "required"
+        or str(proof_route_strategy_decision.get("outcome", "")) == "route-refinement-required"
+    )
     if route_refinement_blocks_claim:
+        strategy_reason_code = str(proof_route_strategy_decision.get("reason_code", ""))
+        friction_block = strategy_reason_code == "applicable-validation-friction"
         manual_verification = {
             "kind": "manual-verification/v1",
             "status": "route-refinement-required",
-            "reason": "focused proof-route coverage is missing or non-executable for part of the changed scope",
+            "reason": "applicable lifecycle-managed validation friction blocks repeating the selected proof route"
+            if friction_block
+            else "focused proof-route coverage is missing or non-executable for part of the changed scope",
             "summary": (
-                "Repair focused proof-route coverage or record an explicit structured escalation before treating selected proof "
+                "Retire, mitigate, or route the applicable validation-friction Memory signal before treating selected proof "
+                "commands as sufficient for the completion claim."
+                if friction_block
+                else "Repair focused proof-route coverage or record an explicit structured escalation before treating selected proof "
                 "commands as sufficient for the completion claim."
             ),
             "instructions": [
-                "Inspect route_refinement_required.uncovered_paths and non_executable_route_commands.",
+                "Inspect proof_route_strategy_decision.applicable_friction_findings."
+                if friction_block
+                else "Inspect route_refinement_required.uncovered_paths and non_executable_route_commands.",
                 "Add or repair the focused domain proof lane, or record a structured maintainer/user escalation.",
                 "Run any useful focused commands as supporting evidence, but do not claim completion until the route gap is resolved.",
             ],
@@ -4692,6 +5121,25 @@ def _proof_selection_for_changed_paths(
             "candidate_commands": target_capabilities.get("candidate_commands", []),
             "unavailable_commands": unavailable_commands,
             "route_refinement_required": route_refinement_required,
+        }
+    elif broad_escalation_blocks_claim:
+        manual_verification = {
+            "kind": "manual-verification/v1",
+            "status": "route-refinement-required",
+            "reason": "generic broad proof was withheld because no structured broad escalation was selected",
+            "summary": (
+                "Run focused proof if useful, but do not treat the remaining selected commands as sufficient until broad escalation "
+                "has a structured reason, live applicable friction evidence, explicit override, or a refined focused route."
+            ),
+            "instructions": [
+                "Inspect proof_route_strategy_decision.broad_escalation and proof_route_escalation_gate.",
+                "Select a host-declared broad route only from concrete cross-owner/high-risk evidence, live applicable friction, or explicit authority.",
+                "Otherwise refine the focused proof route and keep broad commands out of the required acceptance boundary.",
+            ],
+            "templates": _manual_verification_templates_for_intents(proof_intents=proof_intents),
+            "candidate_commands": target_capabilities.get("candidate_commands", []),
+            "unavailable_commands": unavailable_commands,
+            "proof_route_strategy_decision": proof_route_strategy_decision,
         }
     elif not required_commands or unavailable_proof_commands:
         manual_verification = {
@@ -4744,6 +5192,14 @@ def _proof_selection_for_changed_paths(
             "or was manually verified. Latest receipts are reconciled but do not bypass intent or closeout review."
         ),
     }
+    proof_route_strategy_preservation = _proof_route_strategy_preservation_payload(
+        proof_route_strategy_decision=proof_route_strategy_decision,
+        manual_verification=manual_verification,
+        required_commands=required_commands,
+    )
+    proof_route_strategy_claim_gate = _proof_route_strategy_claim_gate_payload(
+        proof_route_strategy_preservation=proof_route_strategy_preservation
+    )
     proof_receipt_bridge = _proof_receipt_bridge_payload(
         changed_paths=changed_paths,
         proof_receipt_reconciliation=proof_receipt_reconciliation,
@@ -4891,6 +5347,14 @@ def _proof_selection_for_changed_paths(
         escalate_when=escalate_when,
         manual_verification=manual_verification,
     )
+    proof_route_escalation_gate = _proof_route_escalation_gate(
+        proof_narrowness=proof_narrowness,
+        focused_route_coverage_audit=focused_route_coverage_audit,
+        proof_route_maintenance=proof_route_maintenance,
+        proof_route_strategy_decision=proof_route_strategy_decision,
+        selected_commands=selected_commands,
+        applicable_friction_findings=applicable_friction_findings,
+    )
     proof_obligations = _proof_obligations_payload(
         required_commands=required_commands,
         optional_commands=optional_commands,
@@ -4941,6 +5405,7 @@ def _proof_selection_for_changed_paths(
         unavailable_commands=unavailable_commands,
         host_policy_blocked_commands=host_policy_blocked_commands,
     )
+    proof_closeout_summary["proof_route_strategy_claim_gate"] = proof_route_strategy_claim_gate["closeout"]
     active_planning_record_for_requirement = (
         _active_planning_record_for_report_section(target_root=target_root) if target_root is not None else {}
     )
@@ -5083,6 +5548,8 @@ def _proof_selection_for_changed_paths(
         "focused_route_coverage_audit": focused_route_coverage_audit,
         "route_refinement_required": route_refinement_required,
         "proof_route_strategy_decision": proof_route_strategy_decision,
+        "proof_route_strategy_preservation": proof_route_strategy_preservation,
+        "proof_route_strategy_claim_gate": proof_route_strategy_claim_gate,
         "domain_proof_route_inventory_audit": domain_route_inventory_audit,
         "proof_route_precedence": proof_route_precedence,
         "proof_intents": proof_intents,
@@ -5114,6 +5581,7 @@ def _proof_selection_for_changed_paths(
         "proof_next_decision": proof_next_decision,
         "proof_command_tiers": _proof_command_tiers(selected_commands=selected_commands, required_commands=required_commands),
         "proof_narrowness": proof_narrowness,
+        "proof_route_escalation_gate": proof_route_escalation_gate,
         "proof_obligations": proof_obligations,
         "transient_validation_retry": _transient_validation_retry_guidance(required_commands=required_commands),
         "tiny_surface_compatibility_review": _tiny_surface_compatibility_review(changed_paths),

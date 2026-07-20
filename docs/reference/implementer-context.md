@@ -129,6 +129,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `proof.broaden_when` | array of string | yes |  | Signals that narrow proof is no longer enough. |  |  |
 | `proof.escalate_when` | array of string | yes |  | Signals that the implementer should not guess. |  |  |
 | `proof.acceptance_guidance` | object | no |  | Guidance that proof should demonstrate acceptance satisfaction, not only command success. |  |  |
+| `proof_route_strategy_preservation` | object | no |  | Stable proof-route strategy identity and consumer-preservation packet shared by start, implement, proof, handoff, and closeout surfaces. |  |  |
 | `required_validation_commands` | array of string | yes |  | Commands that must pass before claiming implementation complete. |  |  |
 | `acceptance_reconciliation` | object | yes |  | Closeout guard against passing self-authored tests while missing requested behavior. |  |  |
 | `acceptance_reconciliation.kind` | const `"agentic-workspace/acceptance-reconciliation/v1"` | yes |  | Discriminator for the acceptance reconciliation guidance. |  |  |
@@ -257,4 +258,5 @@ Cheap implementer context for a bounded changed-path scope.
 | `handoff_requirements` | object | yes |  | Information that must be preserved before pausing or handing off work. |  |  |
 | `handoff_requirements.before_handoff` | array of string | yes |  | Ordered before handoff entries used by this contract. |  |  |
 | `handoff_requirements.stop_when` | array of string | yes |  | Ordered stop when entries used by this contract. |  |  |
+| `handoff_requirements.must_preserve` | array of string | no |  | Decision identities and claim-boundary fields that downstream consumers must preserve. |  |  |
 | `next_allowed_action` | string | yes |  | Smallest safe implementation action after reading this context. |  |  |

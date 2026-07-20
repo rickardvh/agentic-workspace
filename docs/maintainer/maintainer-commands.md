@@ -19,7 +19,7 @@ Use this page when you need the canonical command to run, not the broader routin
 | `python scripts/check/check_maintainer_surfaces.py` | Run the aggregate maintainer-surface checker directly |
 | `uv run python tools/chatgpt_review_loop.py handoff` | Opt the current pushed PR head into the repo-local external ChatGPT review continuation loop |
 | `uv run python tools/chatgpt_review_loop.py poll --watch --interval 60 --max-polls 60` | Run the bounded, model-free local review poller; see [ChatGPT review to Codex continuation](chatgpt-review-continuation.md) |
-| `make start-review-poller` | Idempotently start the detached global all-open PR-review poller for this checkout; run it after creating a PR |
+| `make start-review-poller` | Idempotently start the detached global all-open PR-review poller for this checkout when a maintainer explicitly wants local review polling |
 | `make format` | Apply Ruff formatting across workspace and packages |
 | `make lint` | Run lint checks across workspace and packages |
 | `make typecheck` | Run type checks across workspace and packages |
@@ -46,6 +46,6 @@ Use this page when you need the canonical command to run, not the broader routin
 - Full tests should run in CI and in explicit local validation runs such as `make check-all`.
 - Run generated command package conformance and Docker conformance as explicit serial proof lanes. For Python-only generated output, prefer `uv run python scripts/check/check_generated_command_packages.py --python-conformance` followed by `uv run python scripts/check/check_generated_command_packages.py --python-docker-conformance --require-docker`; use the cross-target conformance and Docker flags only when proof selection names those broader targets.
 - Use `python scripts/check/check_maintainer_surfaces.py` when you want the aggregate maintainer wrapper directly; it includes the planning maintainer checks and the boundary checker when that checker exists in the repo.
-- After creating a PR, run `make start-review-poller`. Repeating it is safe: it reuses the recorded live poller PID instead of starting another process. Its local PID record and log are gitignored under `.agentic-workspace/local/chatgpt-review-loop/`.
+- Start `make start-review-poller` manually only when local all-open PR review polling is needed. Repeating it is safe: it reuses the recorded live poller PID instead of starting another process. Its local PID record and log are gitignored under `.agentic-workspace/local/chatgpt-review-loop/`.
 - Prefer `make maintainer-surfaces` when a change touches generated maintainer docs, startup routing, either package's installed contract surfaces, or the source/payload/root-install boundary.
 - Use `.agentic-workspace/docs/generated-surface-trust.md` for the canonical source and freshness rules behind generated maintainer surfaces.

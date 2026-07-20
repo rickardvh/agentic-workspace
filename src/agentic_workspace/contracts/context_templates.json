@@ -58,7 +58,8 @@
         "changed paths are missing or too broad",
         "a payload/source boundary warning cannot be resolved inside the assigned scope",
         "required validation cannot prove the touched contract"
-      ]
+      ],
+      "must_preserve": []
     },
     "next_allowed_action": {
       "attention": "Resolve boundary warnings before editing.",

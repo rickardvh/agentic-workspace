@@ -99,7 +99,7 @@ notes = "This lane is the first focused replacement for generic workspace_behavi
 
 [assurance.domain_proof_lanes.proof_route_authority]
 purpose = "Focused maintenance route for repo-owned proof-routing authority."
-applies_to_paths = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", ".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/closeout-evidence/issue-2333-serial-focused-proof.closeout.json", "Makefile", "docs/reference/workspace-config.md", "src/agentic_workspace/contract_tooling.py", "src/agentic_workspace/contracts/python_contract_consumption.json", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_makefile_targets.py", "tests/test_workspace_proof_cli.py"]
+applies_to_paths = [".agentic-workspace/config.toml", ".agentic-workspace/verification/manifest.toml", ".agentic-workspace/planning/state.toml", ".agentic-workspace/planning/closeout-evidence/issue-2333-serial-focused-proof.closeout.json", ".agentic-workspace/planning/execplans/archive/issue-2334-proof-friction-escalation.plan.json", "Makefile", "docs/reference/workspace-config.md", "src/agentic_workspace/contract_tooling.py", "src/agentic_workspace/contracts/python_contract_consumption.json", "src/agentic_workspace/contracts/schemas/workspace_config.schema.json", "src/agentic_workspace/workspace_runtime_implement.py", "src/agentic_workspace/workspace_runtime_proof.py", "src/agentic_workspace/workspace_runtime_startup.py", "tests/test_workspace_makefile_targets.py", "tests/test_workspace_proof_cli.py"]
 commands = ["uv run pytest tests/test_workspace_proof_cli.py -k \"focused_domain_route or missing_focused_route or tiny_profile_returns_next_validation_action\" -q", "uv run python scripts/check/check_contract_tooling_surfaces.py --quiet-success", "uv run python scripts/check/check_structured_file_inventory.py --quiet-success"]
 manual_evidence = ["proof_route_authority_review"]
 review_aids = ["Confirm focused routes remain declared in existing config and Verification authority rather than in a standalone parallel matrix."]
@@ -109,6 +109,22 @@ authority_refs = [".agentic-workspace/config.toml", ".agentic-workspace/verifica
 escalation = ["route authority changes cannot be covered by focused proof-router tests", "maintainer explicitly requests broad workspace validation"]
 escalation_conditions = ["explicit-request", "focused-route-insufficient"]
 claim_boundary = "proof-route-authority-review-required-before-route-claim"
+owner = "workspace-cli-runtime"
+route_role = "maintenance"
+precedence = "90"
+allowed_composition = ["behavior", "evidence", "broad"]
+
+[assurance.domain_proof_lanes.session_logging_friction]
+purpose = "Focused session-log friction evidence and proof-route maintenance behavior."
+applies_to_paths = ["src/agentic_workspace/session_logging.py", "tests/test_workspace_session_logging.py"]
+commands = ["uv run pytest tests/test_workspace_session_logging.py -k slow_commands -q"]
+review_aids = ["Confirm session-log friction candidates remain non-authoritative evidence that can feed proof-route refinement."]
+evidence_concepts = ["route-maintenance", "focused-serial-proof"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
+escalation = ["session logging changes alter closeout, Memory capture, or proof-route authority rather than friction evidence only"]
+escalation_conditions = ["focused-route-insufficient"]
+claim_boundary = "session-friction-proof-required-before-route-maintenance-claim"
 owner = "workspace-cli-runtime"
 route_role = "maintenance"
 precedence = "90"
