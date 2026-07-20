@@ -235,6 +235,16 @@ PYTHON_SHIPPED_MODULE_SOURCE_ROOTS = (
     "packages/memory/src/repo_memory_bootstrap/",
     "packages/verification/src/repo_verification_bootstrap/",
 )
+PYTHON_SOURCE_RUNTIME_FIRST_CLI_OPERATION_CONTRACTS = (
+    "operations/evaluation.register.json",
+    "operations/evaluation.observe.json",
+    "operations/evaluation.status.json",
+    "operations/evaluation.transition.json",
+)
+PYTHON_SOURCE_RUNTIME_FIRST_CLI_EXECUTABLE_CATEGORIES = {
+    "command parsing",
+    "subparser ownership",
+}
 PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS = (
     "workspace_runtime_cli.py",
     "planning_runtime_cli.py",
@@ -3757,6 +3767,24 @@ def _python_executable_behavior_categories(text: str) -> list[str]:
     return sorted(categories)
 
 
+def _operation_declares_source_runtime_first(relative_path: str) -> bool:
+    operation = _load_json(relative_path)
+    ir_plan = operation.get("ir_plan", {})
+    return (
+        operation.get("migration_status") == "runtime-backed-source-command"
+        and isinstance(ir_plan, dict)
+        and ir_plan.get("status") == "source-runtime-first"
+    )
+
+
+def _allowed_source_runtime_first_cli_exception(relative_path: str, matched_categories: list[str]) -> bool:
+    if relative_path != "src/agentic_workspace/cli.py":
+        return False
+    if not set(matched_categories) <= PYTHON_SOURCE_RUNTIME_FIRST_CLI_EXECUTABLE_CATEGORIES:
+        return False
+    return all(_operation_declares_source_runtime_first(path) for path in PYTHON_SOURCE_RUNTIME_FIRST_CLI_OPERATION_CONTRACTS)
+
+
 def _validate_python_shipped_source_executable_retirement() -> list[str]:
     errors: list[str] = []
     tracked_sources = _tracked_python_source_files()
@@ -3771,6 +3799,8 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
         text = path.read_text(encoding="utf-8")
         matched_categories = _python_executable_behavior_categories(text)
         if matched_categories:
+            if _allowed_source_runtime_first_cli_exception(relative_path, matched_categories):
+                continue
             errors.append(
                 "tracked shipped Python source must stay retired from generated CLI executable ownership; "
                 f"{relative_path} contains retired executable markers: {matched_categories!r}"
