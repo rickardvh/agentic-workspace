@@ -423,11 +423,10 @@ def _load_workspace_operation_config(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _load_workspace_operation_defaults(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
-    from .resources import find_resource_root, read_json_object
+def _load_workspace_operation_defaults(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_primitives import _load_workspace_operation_defaults as source_function
 
-    resource_root = find_resource_root(__file__, [('_contracts', 'payload.json')])
-    return read_json_object(resource_root, 'payload.json')
+    return source_function(*args, **kwargs)
 
 
 def _load_workspace_operation_system_intent_config(*args: Any, **kwargs: Any) -> Any:
@@ -536,17 +535,10 @@ def _run_summary_report_adapter(*args: Any, **kwargs: Any) -> Any:
     return source_function(*args, **kwargs)
 
 
-def _select_workspace_operation_defaults(values: dict[str, Any], _arguments: dict[str, Any], _context: Any) -> dict[str, Any]:
-    payload = values['defaults_payload']
-    section = values.get('section')
-    if section is not None:
-        payload = _select_section(payload, section=str(section), source_command='defaults', command_ref='agentic-workspace defaults --format json', compact_profile_ref='.agentic-workspace/docs/compact-contract-profile.md')
-    elif ('full' if values.get('verbose') else str(values.get('profile') or 'tiny')) == 'tiny':
-        payload = _tiny_sectioned_payload(payload, common_sections=['startup', 'proof_surfaces', 'memory_routing', 'capability_routing', 'closeout_trust', 'compact_contract_profile', 'workflow_sufficiency', 'authority_hierarchy', 'compliance_economics'], sectioned_payload_kind='agentic-workspace/defaults-router/v1', section_detail_command='agentic-workspace defaults --section <section> --format json', full_detail_command='agentic-workspace defaults --verbose --format json')
-    select = values.get('select')
-    if select is not None:
-        payload = _select_payload_fields(payload, select=str(select), source_command='defaults', selected_output_kind='agentic-workspace/selected-output/v1', discovery_command='', detail_command='')
-    return _serialise_value(payload)
+def _select_workspace_operation_defaults(*args: Any, **kwargs: Any) -> Any:
+    from agentic_workspace.workspace_runtime_primitives import _select_workspace_operation_defaults as source_function
+
+    return source_function(*args, **kwargs)
 
 
 __all__ = [

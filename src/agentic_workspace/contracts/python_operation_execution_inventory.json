@@ -218,7 +218,7 @@
       "operation_contract": "operations/defaults.report.json",
       "primitive_executor": "command_generation/primitive_executor.py",
       "hand_owned_runtime_code": [
-        "none for defaults payload truth; generated workspace runtime loads generated _contracts/payload.json, selected-output/compact-answer text is generated-owned, and tiny-router text consumes declared view metadata from workspace_output_views.json"
+        "workspace.defaults.load and workspace.defaults.select route through the accepted workspace runtime boundary for shared selector prevalidation, defaults resource loading, section/tiny compatibility, and selected-output projection; tiny-router text consumes declared view metadata from workspace_output_views.json"
       ],
       "status": "domain-runtime-primitive-via-ir",
       "conformance_ref": "defaults.report.process",
@@ -227,9 +227,9 @@
         "workspace.defaults.select"
       ],
       "runtime_boundary_class": "package-specific-judgment",
-      "runtime_boundary_reason": "Operation dataflow, defaults payload loading, defaults section selection, selected-output text, and compact-answer text are generated; tiny-router text consumes declared view metadata from src/agentic_workspace/contracts/workspace_output_views.json. Product truth is stored in src/agentic_workspace/contracts/workspace_defaults/payload.json and copied into generated/workspace/python/_contracts.",
+      "runtime_boundary_reason": "Operation dataflow and output emission stay generated, while defaults payload loading, defaults section selection, selector prevalidation, selected-output projection, and compact-answer compatibility are package-runtime policy behind explicit workspace.defaults.load and workspace.defaults.select primitive refs. Tiny-router text consumes declared view metadata from src/agentic_workspace/contracts/workspace_output_views.json. Product truth is stored in src/agentic_workspace/contracts/workspace_defaults/payload.json and copied into generated/workspace/python/_contracts.",
       "what_would_make_portable_later": "Replace each package-domain primitive in this operation with schema-backed codegen-owned primitives once the behavior is deterministic file/data/template/schema/output work rather than package policy, live inspection, lifecycle safety, or external-adapter judgment.",
-      "generic_behavior_audit": "Generated operation IR and codegen-owned run_operation_steps own defaults.report dataflow. workspace.defaults.load no longer imports agentic_workspace.workspace_runtime_primitives; generated/workspace/python/primitives/workspace_runtime.py reads generated _contracts/payload.json. workspace.defaults.select, selected-output text, and compact-answer text remain generated output behavior. Tiny-router text now has declared view metadata in workspace_output_views.json, so the defaults payload source is no longer hidden generic deterministic source runtime debt."
+      "generic_behavior_audit": "Generated operation IR and codegen-owned run_operation_steps own defaults.report dataflow and output.emit owns JSON/tiny-router text emission. workspace.defaults.load and workspace.defaults.select intentionally import agentic_workspace.workspace_runtime_primitives through accepted exact source-symbol runtime facade entries so shared selector prevalidation rejects invalid selectors before defaults payload construction. This boundary is not accepted as portable codegen coverage; it is stale when selector prevalidation, defaults resource loading, section/tiny compatibility, and selected-output projection can be expressed as stable declarative dataflow."
     },
     {
       "operation_id": "delegation-outcome.append",

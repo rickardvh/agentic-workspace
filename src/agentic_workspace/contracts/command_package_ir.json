@@ -1357,36 +1357,6 @@
                 "implementation": "target_root_resolve"
               },
               {
-                "function": "_load_workspace_operation_defaults",
-                "implementation": "json_resource_load",
-                "generated_root": "_contracts",
-                "required_marker": "payload.json",
-                "relative_path": "payload.json"
-              },
-              {
-                "function": "_select_workspace_operation_defaults",
-                "implementation": "sectioned_payload_select",
-                "payload_value": "defaults_payload",
-                "source_command": "defaults",
-                "common_sections": [
-                  "startup",
-                  "proof_surfaces",
-                  "memory_routing",
-                  "capability_routing",
-                  "closeout_trust",
-                  "compact_contract_profile",
-                  "workflow_sufficiency",
-                  "authority_hierarchy",
-                  "compliance_economics"
-                ],
-                "selected_output_kind": "agentic-workspace/selected-output/v1",
-                "sectioned_payload_kind": "agentic-workspace/defaults-router/v1",
-                "compact_profile_ref": ".agentic-workspace/docs/compact-contract-profile.md",
-                "section_command_ref": "agentic-workspace defaults --format json",
-                "section_detail_command": "agentic-workspace defaults --section <section> --format json",
-                "full_detail_command": "agentic-workspace defaults --verbose --format json"
-              },
-              {
                 "function": "_emit_workspace_operation_output",
                 "implementation": "json_output_with_source_fallback",
                 "selected_output_kind": "agentic-workspace/selected-output/v1",
