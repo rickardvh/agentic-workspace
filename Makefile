@@ -3,16 +3,83 @@
 UV_CACHE_DIR ?= $(CURDIR)/.uv-cache-root
 REVIEW_MAX_CYCLES ?= 3
 export UV_CACHE_DIR
-ifeq ($(OS),Windows_NT)
-PYTEST_PARALLEL_ARGS ?= -n 4
-else
-PYTEST_PARALLEL_ARGS ?= -n auto
-endif
+# Serial execution is the safe local default.  Callers that have measured
+# capacity may explicitly opt in, for example: PYTEST_PARALLEL_ARGS='-n 4'.
+PYTEST_PARALLEL_ARGS ?=
 COMPACT_RUN = uv run python scripts/check/run_compact_command.py
+
+WORKSPACE_TEST_CLI = \
+	tests/test_workspace_cli.py \
+	tests/test_workspace_cli_blackbox.py \
+	tests/test_workspace_config_cli.py \
+	tests/test_workspace_defaults_cli.py \
+	tests/test_workspace_doctor_status_cli.py \
+	tests/test_workspace_implement_cli.py \
+	tests/test_workspace_intent_cli.py \
+	tests/test_workspace_modules_cli.py \
+	tests/test_workspace_ownership_cli.py \
+	tests/test_workspace_planning_help_cli.py \
+	tests/test_workspace_projection_reuse.py \
+	tests/test_workspace_runtime_projection.py \
+	tests/test_workspace_skills_cli.py \
+	tests/test_workspace_summary_cli.py
+
+WORKSPACE_TEST_PROOF = \
+	tests/test_generated_command_package_proof_runner.py \
+	tests/test_proof_subject.py \
+	tests/test_workspace_proof_cli.py \
+	tests/test_workspace_proof_generated_packages_cli.py
+
+WORKSPACE_TEST_SESSION_REVIEW = \
+	tests/test_chatgpt_review_loop.py \
+	tests/test_codex_session_identity_agent_aid.py \
+	tests/test_github_check_inspection.py \
+	tests/test_pr_comment_delta.py \
+	tests/test_start_chatgpt_review_poller.py \
+	tests/test_workspace_session_logging.py
+
+WORKSPACE_TEST_CONTRACTS = \
+	tests/test_agent_aids.py \
+	tests/test_command_surface_bundle_check.py \
+	tests/test_contract_tooling_surfaces.py \
+	tests/test_github_issue_body_agent_aid.py \
+	tests/test_no_absolute_paths.py \
+	tests/test_package_artifact_duplicates.py \
+	tests/test_prompt_semantic_markers.py \
+	tests/test_schema_reference_docs.py \
+	tests/test_structured_file_inventory.py \
+	tests/test_workspace_makefile_targets.py
+
+WORKSPACE_TEST_GENERATED_RELEASE = \
+	tests/test_command_generation_integration.py \
+	tests/test_command_generation_release_promotion.py \
+	tests/test_generated_tool_conformance.py \
+	tests/test_release_recovery_status.py \
+	tests/test_release_workflows.py \
+	tests/test_workspace_packaging.py
+
+WORKSPACE_TEST_INTEGRATION = \
+	tests/test_agentic_workspace_launcher.py \
+	tests/test_compact_command_runner.py \
+	tests/test_completion_cost_json_corpus.py \
+	tests/test_completion_cost_lane_evidence.py \
+	tests/test_completion_cost_live_behavior_proof.py \
+	tests/test_completion_cost_schema_analysis.py \
+	tests/test_external_agent_evaluation_lane.py \
+	tests/test_external_consumer_profile.py \
+	tests/test_external_integration_boundary.py \
+	tests/test_external_operation_clients.py \
+	tests/test_git_hooks.py \
+	tests/test_lazy_discovery_measurements.py \
+	tests/test_lifecycle_smoke.py \
+	tests/test_long_horizon_episode.py \
+	tests/test_maintainer_surfaces.py \
+	tests/test_repository_scanning.py \
+	tests/test_source_payload_operational_install.py
 
 .PHONY: help sync-all sync-memory sync-planning sync-verification \
 	setup install-hooks \
-	test test-workspace test-memory test-planning test-verification \
+	test test-workspace test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration test-memory test-planning test-verification \
 	lint lint-workspace lint-memory lint-planning lint-verification markdownlint markdownlint-memory \
 	typecheck typecheck-workspace typecheck-memory typecheck-planning typecheck-verification \
 	format format-workspace format-memory format-planning format-verification \
@@ -31,9 +98,15 @@ help:
 	@echo "  sync-memory          Sync consolidated root dev environment for memory package checks."
 	@echo "  sync-planning        Sync consolidated root dev environment for planning package checks."
 	@echo "  sync-verification    Sync consolidated root dev environment for verification package checks."
-	@echo "  test                 Run workspace and package test suites with pytest-xdist."
-	@echo "                       Defaults to '-n 4' on Windows and '-n auto' elsewhere."
-	@echo "                       Override worker selection with PYTEST_PARALLEL_ARGS='-n <count>' or empty."
+	@echo "  test                 Run workspace and package test suites serially by default."
+	@echo "                       Opt into pytest-xdist only with PYTEST_PARALLEL_ARGS='-n <count>'."
+	@echo "  test-workspace       Run all focused workspace test targets serially."
+	@echo "  test-workspace-cli   Run workspace CLI, config, summary, and projection tests."
+	@echo "  test-workspace-proof Run proof-router and generated proof-package tests."
+	@echo "  test-workspace-session-review  Run session logging and review-loop tests."
+	@echo "  test-workspace-contracts  Run contract, schema, inventory, and guardrail tests."
+	@echo "  test-workspace-generated-release  Run generated-command and release workflow tests."
+	@echo "  test-workspace-integration  Run external, lifecycle, launcher, and cost tests."
 	@echo "  lint                 Run non-mutating lint checks across workspace and packages."
 	@echo "  markdownlint         Run Markdown lint checks for the memory package surfaces."
 	@echo "  typecheck            Run ty type checks across workspace and packages."
@@ -81,8 +154,27 @@ sync-planning:
 sync-verification:
 	@$(COMPACT_RUN) --label "sync-verification" -- uv sync --all-packages --group dev
 
-test-workspace:
-	@$(COMPACT_RUN) --label "workspace tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) tests
+.NOTPARALLEL: test-workspace
+
+test-workspace: test-workspace-cli test-workspace-proof test-workspace-session-review test-workspace-contracts test-workspace-generated-release test-workspace-integration
+
+test-workspace-cli:
+	@$(COMPACT_RUN) --label "workspace CLI tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CLI)
+
+test-workspace-proof:
+	@$(COMPACT_RUN) --label "workspace proof tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_PROOF)
+
+test-workspace-session-review:
+	@$(COMPACT_RUN) --label "workspace session and review tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_SESSION_REVIEW)
+
+test-workspace-contracts:
+	@$(COMPACT_RUN) --label "workspace contract tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_CONTRACTS)
+
+test-workspace-generated-release:
+	@$(COMPACT_RUN) --label "workspace generated and release tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_GENERATED_RELEASE)
+
+test-workspace-integration:
+	@$(COMPACT_RUN) --label "workspace integration tests" -- uv run pytest $(PYTEST_PARALLEL_ARGS) $(WORKSPACE_TEST_INTEGRATION)
 
 test-memory:
 	@$(COMPACT_RUN) --label "memory tests" --cwd packages/memory -- uv run pytest $(PYTEST_PARALLEL_ARGS)

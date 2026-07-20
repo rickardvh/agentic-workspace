@@ -119,8 +119,12 @@ Repo-owned Agentic Workspace configuration stored in .agentic-workspace/config.t
 | `assurance.domain_proof_lanes.<name>.proof_profiles` | array of string | no | `[]` | Proof profile ids related to this lane. |  |  |
 | `assurance.domain_proof_lanes.<name>.authority_refs` | array of string | no | `[]` | Repo-owned authority refs for interpreting the lane. |  |  |
 | `assurance.domain_proof_lanes.<name>.escalation` | array of string | no | `[]` | Conditions that should escalate proof or review. |  |  |
+| `assurance.domain_proof_lanes.<name>.escalation_conditions` | array of string | no | `[]` | Typed escalation condition ids evaluated mechanically, such as cross-owner, cross-claim-boundary, high-risk-requirement, focused-route-insufficient, explicit-request, or structured-override. |  |  |
 | `assurance.domain_proof_lanes.<name>.claim_boundary` | string | no |  | Human-readable boundary for claims supported by this lane. |  |  |
 | `assurance.domain_proof_lanes.<name>.owner` | string | no |  | Repo-local owner label for the lane. |  |  |
+| `assurance.domain_proof_lanes.<name>.route_role` | string | no |  | Mechanical lane role for composition and overlap auditing, for example behavior, maintenance, evidence, or broad. |  |  |
+| `assurance.domain_proof_lanes.<name>.precedence` | string | no |  | Repo-declared precedence label or rank used when overlapping proof lanes are intentionally composed. |  |  |
+| `assurance.domain_proof_lanes.<name>.allowed_composition` | array of string | no | `[]` | Route roles this lane is allowed to overlap or compose with without creating a contradictory ownership finding. |  |  |
 | `assurance.domain_proof_lanes.<name>.notes` | string | no |  | Optional repo-local note about this lane. |  |  |
 | `assurance.closeout_postures` | object | no | `{}` | Host-declared high-assurance closeout postures that project evidence, waiver, uncertainty, and claim boundaries. |  |  |
 | `assurance.closeout_postures.<name>` | object | no |  | One host-defined closeout posture. It declares claim boundaries; it does not certify domain correctness. |  | x-agentic-workspace-unknown-properties: "warn" |

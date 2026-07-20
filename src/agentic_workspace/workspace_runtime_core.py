@@ -46748,8 +46748,19 @@ def _proof_next_decision_payload(
         warnings.append("Some selected proof commands are unavailable in this target repo.")
     if host_policy_blocked_commands:
         warnings.append("Host proof policy blocked one or more candidate proof commands.")
+    route_refinement_required = isinstance(manual_verification, dict) and manual_verification.get("status") == "route-refinement-required"
     selected = selected_commands[0] if selected_commands else None
-    if selected is not None:
+    if route_refinement_required:
+        summary = manual_verification.get("summary") or manual_verification.get("reason") if isinstance(manual_verification, dict) else None
+        next_action = {
+            "action": "route-refinement-required",
+            "command": None,
+            "run": None,
+            "required": True,
+            "why": summary or "Focused proof route refinement is required before completion can be claimed.",
+            "route_source": "manual-fallback",
+        }
+    elif selected is not None:
         next_action = {
             "action": "run-validation-command",
             "command": selected["command"],

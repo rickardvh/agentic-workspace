@@ -387,6 +387,252 @@ def test_proof_changed_selector_returns_path_based_validation_lane(tmp_path: Pat
     assert any(item.startswith("Relevant durable intent may add proof") for item in answer["escalate_when"])
 
 
+def _append_focused_proof_runtime_lane(target: Path) -> None:
+    config = target / ".agentic-workspace" / "config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.proof_runtime]
+purpose = "Focused proof runtime behavior."
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+commands = ["uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q"]
+review_aids = ["Confirm changed proof routing behavior is exercised."]
+evidence_concepts = ["focused-proof-runtime"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
+escalation = ["focused proof does not exercise the changed behavior"]
+claim_boundary = "focused-proof-runtime-required"
+owner = "workspace-cli-runtime"
+""",
+        encoding="utf-8",
+    )
+
+
+def _append_session_logging_lane(target: Path) -> None:
+    config = target / ".agentic-workspace" / "config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.session_logging]
+purpose = "Focused session logging behavior."
+applies_to_paths = ["src/agentic_workspace/session_logging.py", "tests/test_workspace_session_logging.py"]
+commands = ["uv run pytest tests/test_workspace_session_logging.py -q"]
+review_aids = ["Confirm local diagnostic boundaries and persistence behavior."]
+evidence_concepts = ["focused-session-logging"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml"]
+escalation = ["session-log persistence or local diagnostic boundaries changed"]
+claim_boundary = "focused-session-logging-required"
+owner = "workspace-cli-runtime"
+""",
+        encoding="utf-8",
+    )
+
+
+def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_changed_selector():\n    assert True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "domain:proof_runtime")
+
+    assert lane["execution_mode"] == "serial-recommended"
+    assert lane["domain_lane"]["source"] == ".agentic-workspace/config.toml [assurance.domain_proof_lanes]"
+    assert lane["domain_lane"]["purpose"] == "Focused proof runtime behavior."
+    assert "make test-workspace" not in answer["required_commands"]
+    assert "focused proof does not exercise the changed behavior" in lane["escalate_when"]
+    assert answer["focused_route_coverage_audit"]["status"] == "covered"
+
+
+def test_proof_changed_selector_domain_route_covers_multi_path_scope(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_changed_selector():\n    assert True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "tests/test_workspace_proof_cli.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lanes = [lane for lane in answer["selected_lanes"] if lane["id"] == "domain:proof_runtime"]
+
+    assert len(lanes) == 1
+    assert lanes[0]["matched_paths"] == [
+        "src/agentic_workspace/workspace_runtime_proof.py",
+        "tests/test_workspace_proof_cli.py",
+    ]
+    assert answer["required_commands"].count("uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q") == 1
+    assert "make test-workspace" not in answer["required_commands"]
+    assert answer["focused_route_coverage_audit"]["missing_focused_route_paths"] == []
+
+
+def test_proof_changed_selector_uses_domain_route_without_broad_coverage_fallback(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_session_logging_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "session_logging.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_session_logging.py", "def test_session_logging():\n    assert True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/session_logging.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "domain:session_logging")
+
+    assert lane["domain_lane"]["purpose"] == "Focused session logging behavior."
+    assert answer["required_commands"] == ["uv run pytest tests/test_workspace_session_logging.py -q"]
+    assert answer["proof_narrowness"]["status"] == "narrow_required"
+    assert "does not authorize broad-suite fallback" in answer["focused_route_coverage_audit"]["coverage_evidence"]["rule"]
+
+
+def test_proof_changed_selector_reports_missing_focused_route_as_maintenance_gap(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "unknown_runtime.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/unknown_runtime.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+    audit = answer["focused_route_coverage_audit"]
+
+    assert audit["status"] == "attention"
+    assert audit["missing_focused_route_paths"] == ["src/agentic_workspace/unknown_runtime.py"]
+    assert audit["maintenance_gap"]["status"] == "present"
+    assert answer["route_refinement_required"]["status"] == "required"
+    assert answer["route_refinement_required"]["uncovered_paths"] == ["src/agentic_workspace/unknown_runtime.py"]
+    assert "make test-workspace" not in answer["required_commands"]
+    assert "make lint-workspace" not in answer["required_commands"]
+    assert answer["manual_verification"]["status"] == "route-refinement-required"
+    assert answer["proof_next_decision"]["next"]["action"] == "route-refinement-required"
+
+
+def test_proof_changed_selector_blocks_claim_for_partial_focused_route_gap(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "src" / "agentic_workspace" / "unknown_runtime.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_changed_selector():\n    assert True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "src/agentic_workspace/unknown_runtime.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["answer"]
+
+    assert answer["route_refinement_required"]["status"] == "required"
+    assert answer["route_refinement_required"]["uncovered_paths"] == ["src/agentic_workspace/unknown_runtime.py"]
+    assert "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q" in answer["required_commands"]
+    assert "make test-workspace" not in answer["required_commands"]
+    assert "make lint-workspace" not in answer["required_commands"]
+    assert answer["manual_verification"]["status"] == "route-refinement-required"
+    assert answer["proof_next_decision"]["next"]["action"] == "route-refinement-required"
+    assert answer["proof_next_decision"]["next"]["command"] is None
+    assert answer["proof_route_decision"]["manual_fallback"]["status"] == "route-refinement-required"
+
+
+def test_proof_changed_reports_domain_route_inventory_audit(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "def test_changed_selector():\n    assert True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--verbose",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    inventory = json.loads(capsys.readouterr().out)["answer"]["domain_proof_route_inventory_audit"]
+    assert inventory["kind"] == "agentic-workspace/domain-proof-route-inventory-audit/v1"
+    assert inventory["route_count"] == 1
+    assert inventory["routes"][0]["id"] == "proof_runtime"
+    assert inventory["routes"][0]["live_match_count"] == 2
+    assert inventory["coverage_evidence"]["status"] == "advisory-only"
+
+
 def test_proof_routine_context_surfaces_workflow_obligation_match(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(
@@ -677,16 +923,19 @@ def test_proof_tiny_profile_returns_next_validation_action(capsys) -> None:
     assert payload["selector"] == {"changed": ["generated/workspace/python/cli.py"]}
     assert payload["proof_narrowness"]["status"] == "broad_required"
     assert payload["proof_narrowness"]["broad_suite_boundary_status"] == "required_acceptance_boundary"
+    assert payload["proof_narrowness"]["broad_suite_boundary_reason"]
     assert payload["next"]["action"] == "run-validation-command"
-    assert payload["next"]["command"] == "make test-workspace"
-    assert "make lint-workspace" in payload["required_commands"]
+    assert payload["next"]["command"] == (
+        "uv run --active python scripts/run_agentic_workspace.py defaults --section root_cli_authority --format json"
+    )
+    assert "make test-workspace" not in payload["required_commands"]
     assert payload["warnings"] == []
     assert "answer" not in payload
     assert "selected_lanes" not in encoded
     assert "validation_plan" not in encoded
     assert payload["detail_command_template"]["runnable"] is False
     assert payload["detail_command_template"]["placeholders"] == {"paths": ["generated/workspace/python/cli.py"]}
-    assert len(encoded) < 4100
+    assert len(encoded) < 4300
 
 
 def test_proof_changed_uses_available_target_makefile_targets(tmp_path: Path, capsys) -> None:
@@ -3826,6 +4075,7 @@ def test_proof_changed_selector_includes_planning_source_typecheck_ci_parity(tmp
 
 def test_proof_changed_selector_includes_workspace_runtime_typecheck_ci_parity(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
 
     assert (
         cli.main(
@@ -3845,7 +4095,7 @@ def test_proof_changed_selector_includes_workspace_runtime_typecheck_ci_parity(t
 
     answer = json.loads(capsys.readouterr().out)["answer"]
     lane_ids = [lane["id"] for lane in answer["selected_lanes"]]
-    assert "workspace_cli" in lane_ids
+    assert "domain:proof_runtime" in lane_ids
     assert "workspace_runtime_typecheck_ci_parity" in lane_ids
     assert "make typecheck" in answer["required_commands"]
     typecheck_lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "workspace_runtime_typecheck_ci_parity")
@@ -4419,6 +4669,657 @@ commands = ["python -c \\"print('audit proof')\\""]
     assert all(not lane["id"].startswith("domain:") for lane in packet["selected_lanes"])
 
 
+def test_overlapping_domain_routes_require_refinement_before_claim(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.access_control]
+purpose = "Access-control changes need access proof."
+applies_to_paths = ["services/auth/**"]
+commands = ["python -c \\"print('access proof')\\""]
+claim_boundary = "access-control-proof"
+owner = "security"
+
+[assurance.domain_proof_lanes.audit_events]
+purpose = "Access-control changes need audit-event proof."
+applies_to_paths = ["services/auth/**"]
+commands = ["python -c \\"print('audit proof')\\""]
+claim_boundary = "audit-event-proof"
+owner = "audit"
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "route_refinement_required,proof_route_strategy_decision,manual_verification,focused_route_coverage_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["focused_route_coverage_audit"]["overlapping_focused_route_paths"][0]["precedence_status"] == "undeclared"
+    assert values["route_refinement_required"]["status"] == "required"
+    assert values["proof_route_strategy_decision"]["outcome"] == "route-refinement-required"
+    assert values["proof_route_strategy_decision"]["claim_effect"] == "claim-blocked"
+    assert values["manual_verification"]["status"] == "route-refinement-required"
+
+
+def test_proof_route_strategy_decision_keeps_same_owner_multi_route_scope_focused(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(
+        tmp_path / "Makefile",
+        (tmp_path / "Makefile").read_text(encoding="utf-8") + "\nlint-workspace:\n\tpython -c \"print('workspace lint')\"\n",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.runtime_contract]
+purpose = "Runtime contract behavior."
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py"]
+commands = ["python -c \\"print('runtime proof')\\""]
+proof_profiles = ["workspace_behavior"]
+escalation = ["cross-owner generated/runtime changes require broad workspace validation"]
+owner = "workspace-cli-runtime"
+
+[assurance.domain_proof_lanes.generated_command_packages]
+purpose = "Generated command package behavior."
+applies_to_paths = ["generated/workspace/python/**"]
+commands = ["python -c \\"print('generated proof')\\""]
+proof_profiles = ["workspace_behavior"]
+escalation = ["cross-owner generated/runtime changes require broad workspace validation"]
+owner = "workspace-cli-runtime"
+
+[assurance.domain_proof_lanes.workspace_broad_suite]
+purpose = "Explicit broad workspace validation route."
+applies_to_task_markers = ["full workspace validation"]
+commands = ["make test-workspace", "make lint-workspace"]
+proof_profiles = ["workspace_behavior"]
+claim_boundary = "explicit-broad-escalation-required"
+owner = "workspace-cli-runtime"
+""",
+        encoding="utf-8",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "generated" / "workspace" / "python" / "cli.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "generated/workspace/python/cli.py",
+                "--select",
+                "proof_route_strategy_decision,required_commands,selected_lanes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    decision = values["proof_route_strategy_decision"]
+    assert decision["outcome"] == "focused"
+    assert decision["reason_code"] == "focused-route-sufficient"
+    assert decision["broad_escalation"] is None
+    assert "python -c \"print('runtime proof')\"" in values["required_commands"]
+    assert "python -c \"print('generated proof')\"" in values["required_commands"]
+    assert "make test-workspace" not in values["required_commands"]
+    assert "make lint-workspace" not in values["required_commands"]
+    assert "domain:workspace_broad_suite" not in [lane["id"] for lane in values["selected_lanes"]]
+
+
+def test_proof_route_strategy_decision_selects_structured_broad_escalation_for_distinct_owners(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(
+        tmp_path / "Makefile",
+        (tmp_path / "Makefile").read_text(encoding="utf-8") + "\nlint-workspace:\n\tpython -c \"print('workspace lint')\"\n",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.runtime_contract]
+purpose = "Runtime contract behavior."
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py"]
+commands = ["python -c \\"print('runtime proof')\\""]
+proof_profiles = ["workspace_behavior"]
+escalation = ["cross-owner generated/runtime changes require broad workspace validation"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary"]
+claim_boundary = "runtime-contract-proof"
+owner = "workspace-cli-runtime"
+
+[assurance.domain_proof_lanes.generated_command_packages]
+purpose = "Generated command package behavior."
+applies_to_paths = ["generated/workspace/python/**"]
+commands = ["python -c \\"print('generated proof')\\""]
+proof_profiles = ["workspace_behavior"]
+escalation = ["cross-owner generated/runtime changes require broad workspace validation"]
+escalation_conditions = ["cross-owner", "cross-claim-boundary"]
+claim_boundary = "generated-adapter-proof"
+owner = "generated-adapters"
+
+[assurance.domain_proof_lanes.workspace_broad_suite]
+purpose = "Explicit broad workspace validation route."
+applies_to_task_markers = ["full workspace validation"]
+commands = ["make test-workspace", "make lint-workspace"]
+proof_profiles = ["workspace_behavior"]
+claim_boundary = "explicit-broad-escalation-required"
+owner = "workspace-cli-runtime"
+""",
+        encoding="utf-8",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "generated" / "workspace" / "python" / "cli.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "generated/workspace/python/cli.py",
+                "--select",
+                "proof_route_strategy_decision,required_commands,selected_lanes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    decision = values["proof_route_strategy_decision"]
+    assert decision["outcome"] == "broad-escalated"
+    assert decision["reason_code"] == "cross-owner+cross-claim-boundary"
+    assert decision["broad_escalation"]["matched_typed_conditions"] == ["cross-owner", "cross-claim-boundary"]
+    assert decision["broad_escalation"]["distinct_owners"] == ["generated-adapters", "workspace-cli-runtime"]
+    assert "make test-workspace" in values["required_commands"]
+    assert "make lint-workspace" in values["required_commands"]
+    assert "domain:workspace_broad_suite" in [lane["id"] for lane in values["selected_lanes"]]
+
+
+def test_proof_route_strategy_decision_does_not_broaden_from_untyped_escalation_prose(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.runtime_contract]
+purpose = "Runtime contract behavior."
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py"]
+commands = ["python -c \\"print('runtime proof')\\""]
+proof_profiles = ["workspace_behavior"]
+escalation = ["cross-owner generated/runtime changes require broad workspace validation"]
+claim_boundary = "runtime-contract-proof"
+owner = "workspace-cli-runtime"
+
+[assurance.domain_proof_lanes.generated_command_packages]
+purpose = "Generated command package behavior."
+applies_to_paths = ["generated/workspace/python/**"]
+commands = ["python -c \\"print('generated proof')\\""]
+proof_profiles = ["workspace_behavior"]
+escalation = ["cross-owner generated/runtime changes require broad workspace validation"]
+claim_boundary = "generated-adapter-proof"
+owner = "generated-adapters"
+
+[assurance.domain_proof_lanes.workspace_broad_suite]
+purpose = "Explicit broad workspace validation route."
+applies_to_task_markers = ["full workspace validation"]
+commands = ["make test-workspace"]
+proof_profiles = ["workspace_behavior"]
+claim_boundary = "explicit-broad-escalation-required"
+owner = "workspace-cli-runtime"
+route_role = "broad"
+""",
+        encoding="utf-8",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+    _write(tmp_path / "generated" / "workspace" / "python" / "cli.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "generated/workspace/python/cli.py",
+                "--select",
+                "proof_route_strategy_decision,required_commands,selected_lanes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    decision = values["proof_route_strategy_decision"]
+    assert decision["outcome"] == "focused"
+    assert decision["broad_escalation"] is None
+    assert "make test-workspace" not in values["required_commands"]
+    assert "domain:workspace_broad_suite" not in [lane["id"] for lane in values["selected_lanes"]]
+
+
+def test_proof_route_strategy_decision_selects_high_risk_requirement_escalation(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        + """
+
+[assurance.requirements.security_delta]
+level = "high"
+applies_to_paths = ["services/auth/**"]
+authority_refs = ["docs/security.md"]
+required_evidence = ["security review"]
+force = "required-before-closeout"
+
+[assurance.domain_proof_lanes.auth_runtime]
+purpose = "Auth runtime behavior."
+applies_to_paths = ["services/auth/**"]
+commands = ["python -c \\"print('auth proof')\\""]
+proof_profiles = ["workspace_behavior"]
+assurance_requirement_refs = ["security_delta"]
+escalation_conditions = ["high-risk-requirement"]
+claim_boundary = "auth-runtime-proof"
+owner = "auth"
+route_role = "behavior"
+
+[assurance.domain_proof_lanes.workspace_broad_suite]
+purpose = "Explicit broad workspace validation route."
+applies_to_task_markers = ["full workspace validation"]
+commands = ["make test-workspace"]
+proof_profiles = ["workspace_behavior"]
+escalation_conditions = ["high-risk-requirement"]
+claim_boundary = "explicit-broad-escalation-required"
+owner = "workspace-cli-runtime"
+route_role = "broad"
+""",
+        encoding="utf-8",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "proof_route_strategy_decision,required_commands,selected_lanes",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    decision = values["proof_route_strategy_decision"]
+    assert decision["outcome"] == "broad-escalated"
+    assert decision["reason_code"] == "high-risk-requirement"
+    assert decision["broad_escalation"]["matched_typed_conditions"] == ["high-risk-requirement"]
+    assert decision["broad_escalation"]["matched_assurance_requirement_refs"] == ["security_delta"]
+    assert "make test-workspace" in values["required_commands"]
+    assert "domain:workspace_broad_suite" in [lane["id"] for lane in values["selected_lanes"]]
+
+
+def test_domain_proof_route_inventory_reports_profile_and_command_gaps(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.proof_profiles.workspace_behavior]
+required_commands = []
+
+[assurance.proof_profiles.uncovered_profile]
+required_commands = []
+
+[assurance.domain_proof_lanes.runtime_contract]
+purpose = "Runtime contract behavior."
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py"]
+commands = ["uv run pytest tests/missing_runtime_contract.py -q"]
+proof_profiles = ["workspace_behavior"]
+""",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--select",
+                "domain_proof_route_inventory_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    audit = json.loads(capsys.readouterr().out)["values"]["domain_proof_route_inventory_audit"]
+    assert audit["status"] == "attention"
+    assert audit["missing_profile_coverage"] == [
+        {
+            "proof_profile": "uncovered_profile",
+            "reason": "configured proof profile has no domain proof lane coverage",
+            "refinement_owner": "repo proof-route authority",
+        }
+    ]
+    assert any(item.get("missing_path") == "tests/missing_runtime_contract.py" for item in audit["non_executable_commands"])
+
+
+def test_domain_proof_route_inventory_reports_wildcard_overlap_and_selector_defects(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.service_root]
+purpose = "Service root route."
+applies_to_paths = ["services/**"]
+commands = ["cd missing && uv run pytest tests/test_service.py::test_contract -q"]
+claim_boundary = "service-root-proof"
+owner = "platform"
+
+[assurance.domain_proof_lanes.service_auth]
+purpose = "Auth service route."
+applies_to_paths = ["services/auth/**", "services/payments/**/*.py"]
+commands = ["uv run pytest tests/missing_auth.py::test_policy -q"]
+claim_boundary = "auth-service-proof"
+owner = "security"
+""",
+    )
+    _write(tmp_path / "services" / "auth" / "policy.py", "ALLOW = True\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "services/auth/policy.py",
+                "--select",
+                "domain_proof_route_inventory_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    audit = json.loads(capsys.readouterr().out)["values"]["domain_proof_route_inventory_audit"]
+    assert audit["status"] == "attention"
+    assert {
+        "lane": "service_auth",
+        "pattern": "services/payments/**/*.py",
+        "reason": "no live path matched",
+    } in audit["stale_patterns"]
+    assert audit["semantic_overlaps"][0]["precedence_status"] == "undeclared"
+    assert sorted(audit["contradictory_ownership"][0]["owners"]) == ["platform", "security"]
+    assert any(item.get("reason") == "configured command cwd does not exist" for item in audit["non_executable_commands"])
+    assert any(item.get("reason") == "pytest selector path does not exist" for item in audit["non_executable_commands"])
+
+
+def test_domain_proof_route_inventory_ignores_disjoint_shared_prefix_globs(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.package_tests]
+purpose = "Package tests."
+applies_to_paths = ["packages/**/tests/**"]
+commands = ["python -c \\"print('tests')\\""]
+claim_boundary = "package-test-proof"
+owner = "verification"
+route_role = "evidence"
+precedence = "80"
+allowed_composition = ["behavior"]
+
+[assurance.domain_proof_lanes.memory_source]
+purpose = "Memory source."
+applies_to_paths = ["packages/memory/src/**"]
+commands = ["python -c \\"print('memory')\\""]
+claim_boundary = "memory-source-proof"
+owner = "memory"
+route_role = "behavior"
+precedence = "50"
+allowed_composition = ["evidence"]
+""",
+    )
+    _write(tmp_path / "packages" / "memory" / "src" / "repo_memory_bootstrap" / "core.py", "VALUE = 1\n")
+    _write(tmp_path / "packages" / "memory" / "tests" / "test_core.py", "def test_core(): pass\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "packages/memory/src/repo_memory_bootstrap/core.py",
+                "--select",
+                "domain_proof_route_inventory_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    audit = json.loads(capsys.readouterr().out)["values"]["domain_proof_route_inventory_audit"]
+    assert audit["semantic_overlaps"] == []
+    assert audit["contradictory_ownership"] == []
+
+
+def test_domain_proof_route_inventory_accepts_intentional_composition_with_precedence(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.runtime_behavior]
+purpose = "Runtime behavior."
+applies_to_paths = ["src/agentic_workspace/**"]
+commands = ["python -c \\"print('runtime')\\""]
+claim_boundary = "runtime-proof"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+precedence = "50"
+allowed_composition = ["maintenance"]
+
+[assurance.domain_proof_lanes.route_maintenance]
+purpose = "Route maintenance."
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py"]
+commands = ["python -c \\"print('route audit')\\""]
+claim_boundary = "route-maintenance-proof"
+owner = "workspace-cli-runtime"
+route_role = "maintenance"
+precedence = "90"
+allowed_composition = ["behavior"]
+""",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--select",
+                "domain_proof_route_inventory_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    audit = json.loads(capsys.readouterr().out)["values"]["domain_proof_route_inventory_audit"]
+    assert audit["status"] == "current"
+    assert audit["semantic_overlaps"] == []
+    assert audit["contradictory_ownership"] == []
+
+
+def test_domain_proof_route_inventory_reports_required_route_contract_fields(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.incomplete]
+purpose = "Incomplete but loader-valid route."
+applies_to_paths = ["src/**"]
+commands = ["python -c \\"print('proof')\\""]
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/example.py",
+                "--select",
+                "domain_proof_route_inventory_audit",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    gaps = json.loads(capsys.readouterr().out)["values"]["domain_proof_route_inventory_audit"]["route_contract_gaps"]
+    gap_fields = {gap["field"] for gap in gaps}
+    assert {"owner", "claim_boundary"} <= gap_fields
+
+
+def test_proof_route_strategy_decision_honors_explicit_broad_request(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _write(
+        tmp_path / "Makefile",
+        (tmp_path / "Makefile").read_text(encoding="utf-8") + "\nlint-workspace:\n\tpython -c \"print('workspace lint')\"\n",
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        (tmp_path / ".agentic-workspace" / "config.toml").read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.runtime_contract]
+purpose = "Runtime contract behavior."
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py"]
+commands = ["python -c \\"print('runtime proof')\\""]
+proof_profiles = ["workspace_behavior"]
+claim_boundary = "runtime-contract-proof"
+owner = "workspace-cli-runtime"
+
+[assurance.domain_proof_lanes.workspace_broad_suite]
+purpose = "Explicit broad workspace validation route."
+applies_to_task_markers = ["full workspace validation"]
+commands = ["make test-workspace", "make lint-workspace"]
+proof_profiles = ["workspace_behavior"]
+claim_boundary = "explicit-broad-escalation-required"
+owner = "workspace-cli-runtime"
+""",
+        encoding="utf-8",
+    )
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_proof.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "maintainer explicitly requests full workspace validation",
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_proof.py",
+                "--select",
+                "proof_route_strategy_decision,required_commands",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["proof_route_strategy_decision"]["outcome"] == "broad-escalated"
+    assert values["proof_route_strategy_decision"]["reason_code"] == "explicit-broad-request"
+    assert "make test-workspace" in values["required_commands"]
+    assert "make lint-workspace" in values["required_commands"]
+
+
 def test_domain_proof_lane_coexists_with_package_default_lane(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write_empty_proof_planning_state(tmp_path)
@@ -4458,7 +5359,6 @@ proof_profiles = ["runtime_contract"]
 
     packet = json.loads(capsys.readouterr().out)["values"]["proof_decision"]
     lane_ids = [lane["id"] for lane in packet["selected_lanes"]]
-    assert "workspace_cli" in lane_ids
     assert "domain:runtime_contract" in lane_ids
 
 
