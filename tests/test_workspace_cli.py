@@ -4023,18 +4023,15 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
         == 0
     )
     payload = json.loads(capsys.readouterr().out)
-    gate = payload["context"]["planning"]["planning_safety_gate"]
-    switch = gate["task_switch_reconciliation"]
-    completed = switch["completed_active_plan"]
+    route = payload["context"]["route_decision"]
+    admission = route["owner_admission"]
 
-    assert payload["next_safe_action"]["next_safe_action"] == "archive-or-retire-completed-plan"
-    assert gate["gate_result"] == "archive-or-retire-completed-plan"
-    assert switch["status"] == "completed-active-plan-route"
-    assert completed["active_execplan"] == ".agentic-workspace/planning/execplans/issue-1981.plan.json"
-    assert "closure_check.slice status" in completed["evidence_fields"]
-    assert "proof_report" in completed["evidence_fields"]
-    assert "planning archive-plan --plan issue-1981" in completed["archive_command"]
-    assert completed["parent_lane_boundary"] == "parent-or-lane-closure-still-requires-explicit-closeout-authorization"
+    assert payload["next_safe_action"]["next_safe_action"] != "archive-or-retire-completed-plan"
+    assert admission["status"] == "rejected"
+    assert admission["rejected_candidates"][0]["ref"] == ".agentic-workspace/planning/execplans/issue-1981.plan.json"
+    assert admission["rejected_candidates"][0]["reason"] == "owner-lifecycle-not-live"
+    assert admission["repair_route"]["status"] == "available"
+    assert route.get("selected_owner_identity", {}).get("ref", "") == ""
 
     assert (
         cli.main(
@@ -4256,7 +4253,7 @@ def test_start_treats_shared_issue_ref_as_active_plan_continuation(tmp_path: Pat
     assert "issue-2045" in plural_lane_switch["mismatch_evidence"]["shared_refs"]
 
 
-def test_start_route_honors_local_selected_planning_owner(tmp_path: Path, capsys) -> None:
+def test_start_route_rejects_stale_local_selected_planning_owner(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     shared_ref = ".agentic-workspace/planning/execplans/issue-2290.plan.json"
     selected_ref = ".agentic-workspace/planning/execplans/issue-2281.plan.json"
@@ -4313,11 +4310,384 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
         == 0
     )
 
+    gate = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]
+    route = gate["route_decision"]
+    assert route["selected_owner"] == shared_ref
+    assert route["task_relation"] == "independent-pending-scope"
+    assert route["owner_admission"]["rejected_candidates"][0]["ref"] == selected_ref
+    assert route["owner_admission"]["rejected_candidates"][0]["reason"] == "local-selection-missing-planning-revision"
+    assert gate["owner_admission"] == route["owner_admission"]
+    assert route["binding"]["identity"]["observed"]["selected_owner"]["ref"] == shared_ref
+    assert route["binding"]["adoption_guard"]["on_mismatch"] == "reject-stale-projection-and-re-resolve"
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #2281 reconciliation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    default_payload = json.loads(capsys.readouterr().out)
+    default_admission = default_payload["context"]["route_decision"]["owner_admission"]
+    assert default_admission["rejected_candidates"][0]["reason"] == route["owner_admission"]["rejected_candidates"][0]["reason"]
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #2281 reconciliation",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    verbose_payload = json.loads(capsys.readouterr().out)
+    verbose_admission = verbose_payload["active_state_summary"]["owner_admission"]
+    assert verbose_admission["rejected_candidates"][0]["reason"] == route["owner_admission"]["rejected_candidates"][0]["reason"]
+
+
+def test_start_route_honors_explicit_residual_selected_owner(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap.installer import planning_revision
+
+    _init_git_repo(tmp_path)
+    shared_ref = ".agentic-workspace/planning/execplans/issue-2290.plan.json"
+    selected_ref = ".agentic-workspace/planning/execplans/issue-2281.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """schema_version = 1
+
+[todo]
+active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-workspace/planning/execplans/issue-2290.plan.json", refs = ["#2290"] }]
+""",
+    )
+    _write(
+        tmp_path / shared_ref,
+        json.dumps({"kind": "planning-execplan/v1", "id": "issue-2290", "lifecycle": "live", "phase": "implementation"}),
+    )
+    _write(
+        tmp_path / selected_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2281",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "relationships": {"selection": {"state": "explicit-residual", "admission": "explicit"}},
+                "references": [{"kind": "issue", "target": "#2281"}],
+            }
+        ),
+    )
+    revision_id = planning_revision(tmp_path)["revision_id"]
+    _write(
+        tmp_path / ".agentic-workspace/local/work-threads/index.json",
+        json.dumps({"kind": "agentic-workspace/local-work-thread-index/v1", "selected_thread_id": "isolated-stack"}),
+    )
+    _write(
+        tmp_path / ".agentic-workspace/local/planning/owner-selection.json",
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "isolated-stack",
+                "selected_owner": {"id": "issue-2281", "ref": selected_ref},
+                "planning_revision": revision_id,
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #2281 reconciliation",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
     route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
     assert route["selected_owner"] == selected_ref
     assert route["task_relation"] == "continues-selected-owner"
-    assert route["binding"]["identity"]["observed"]["selected_owner"]["ref"] == selected_ref
-    assert route["binding"]["adoption_guard"]["on_mismatch"] == "reject-stale-projection-and-re-resolve"
+    assert route["owner_admission"]["selected_owner"]["reason"] == "explicit-residual-owner"
+
+
+def test_start_route_rejects_stale_local_selection_revision(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap.installer import planning_revision
+
+    _init_git_repo(tmp_path)
+    selected_ref = ".agentic-workspace/planning/execplans/issue-2290.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """schema_version = 1
+
+[todo]
+active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-workspace/planning/execplans/issue-2290.plan.json", refs = ["#2290"] }]
+""",
+    )
+    _write(
+        tmp_path / selected_ref,
+        json.dumps({"kind": "planning-execplan/v1", "id": "issue-2290", "lifecycle": "live", "phase": "implementation"}),
+    )
+    assert planning_revision(tmp_path)["revision_id"] != "stale-revision"
+    _write(
+        tmp_path / ".agentic-workspace/local/planning/owner-selection.json",
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "default",
+                "selected_owner": {"id": "issue-2290", "ref": selected_ref},
+                "planning_revision": "stale-revision",
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #2290",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    admission = route["owner_admission"]
+    assert route["selected_owner"] == selected_ref
+    assert admission["rejected_candidates"][0]["reason"] == "local-selection-planning-revision-mismatch"
+    assert admission["selected_owner"]["source"] == ".agentic-workspace/planning/state.toml:todo.active_items"
+
+
+def test_start_route_rejects_local_selection_from_another_current_work(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap.installer import planning_revision
+
+    _init_git_repo(tmp_path)
+    selected_ref = ".agentic-workspace/planning/execplans/issue-2281.plan.json"
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "schema_version = 1\n\n[todo]\nactive_items = []\n")
+    _write(
+        tmp_path / selected_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2281",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "relationships": {"selection": {"state": "explicit-residual", "admission": "explicit"}},
+            }
+        ),
+    )
+    revision_id = planning_revision(tmp_path)["revision_id"]
+    _write(
+        tmp_path / ".agentic-workspace/local/work-threads/index.json",
+        json.dumps({"kind": "agentic-workspace/local-work-thread-index/v1", "selected_thread_id": "current-thread"}),
+    )
+    _write(
+        tmp_path / ".agentic-workspace/local/planning/owner-selection.json",
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "other-thread",
+                "selected_owner": {"id": "issue-2281", "ref": selected_ref},
+                "planning_revision": revision_id,
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #2281",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    assert route["selected_owner"] == ""
+    rejected = route["owner_admission"]["rejected_candidates"][0]
+    assert rejected["reason"] == "local-selection-current-work-mismatch"
+    assert rejected["expected_current_work_id"] == "current-thread"
+    assert rejected["selection_current_work_id"] == "other-thread"
+
+
+def test_start_route_rejects_local_selection_from_another_target(tmp_path: Path, capsys) -> None:
+    from repo_planning_bootstrap.installer import planning_revision
+
+    _init_git_repo(tmp_path)
+    selected_ref = ".agentic-workspace/planning/execplans/issue-2281.plan.json"
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "schema_version = 1\n\n[todo]\nactive_items = []\n")
+    _write(
+        tmp_path / selected_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2281",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "relationships": {"selection": {"state": "explicit-residual", "admission": "explicit"}},
+            }
+        ),
+    )
+    _write(
+        tmp_path / ".agentic-workspace/local/planning/owner-selection.json",
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "default",
+                "target_root": str(tmp_path / "other-worktree"),
+                "selected_owner": {"id": "issue-2281", "ref": selected_ref},
+                "planning_revision": planning_revision(tmp_path)["revision_id"],
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #2281",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    assert route["selected_owner"] == ""
+    assert route["owner_admission"]["rejected_candidates"][0]["reason"] == "local-selection-target-mismatch"
+
+
+def test_start_route_accepts_active_execplans_owner_through_shared_admission(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    selected_ref = ".agentic-workspace/planning/execplans/issue-2290.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """schema_version = 1
+
+[todo]
+active_items = []
+
+[active]
+execplans = [{ id = "issue-2290", path = ".agentic-workspace/planning/execplans/issue-2290.plan.json" }]
+""",
+    )
+    _write(
+        tmp_path / selected_ref,
+        json.dumps({"kind": "planning-execplan/v1", "id": "issue-2290", "lifecycle": "live", "phase": "implementation"}),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #2290",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    assert route["selected_owner"] == selected_ref
+    assert route["owner_admission"]["selected_owner"]["source"] == ".agentic-workspace/planning/state.toml:active.execplans"
+
+
+def test_start_route_replays_stale_2290_local_selection_without_claim_constraints(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    selected_ref = ".agentic-workspace/planning/execplans/issue-2290.plan.json"
+    _write(tmp_path / ".agentic-workspace/planning/state.toml", "schema_version = 1\n\n[todo]\nactive_items = []\n")
+    _write(
+        tmp_path / selected_ref,
+        json.dumps({"kind": "planning-execplan/v1", "id": "issue-2290", "lifecycle": "live", "phase": "implementation"}),
+    )
+    _write(
+        tmp_path / ".agentic-workspace/local/planning/owner-selection.json",
+        json.dumps(
+            {
+                "kind": "agentic-planning/owner-selection/v1",
+                "mode": "local",
+                "current_work_id": "stale-2290-thread",
+                "selected_owner": {"id": "issue-2290", "ref": selected_ref},
+                "planning_revision": "stale-revision",
+            }
+        ),
+    )
+
+    before_files = sorted(path.relative_to(tmp_path).as_posix() for path in (tmp_path / ".agentic-workspace").rglob("*") if path.is_file())
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Implement unrelated issue #3000",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    after_files = sorted(path.relative_to(tmp_path).as_posix() for path in (tmp_path / ".agentic-workspace").rglob("*") if path.is_file())
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    assert before_files == after_files
+    assert route["selected_owner"] == ""
+    assert route["task_relation"] == "not-applicable"
+    assert route["owner_admission"]["status"] == "rejected"
+    assert route["owner_admission"]["rejected_candidates"][0]["reason"] == "local-selection-planning-revision-mismatch"
+    assert "claim-active-plan-progress" not in route.get("blocked_claims", [])
 
 
 def test_route_decision_keeps_relation_posture_and_transition_separate() -> None:

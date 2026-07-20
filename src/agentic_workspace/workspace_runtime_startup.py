@@ -61,6 +61,7 @@ from agentic_workspace.workspace_runtime_core import (
     _emit_payload,
     _execution_posture_payload,
     _fast_installed_modules,
+    _fast_planning_active_summary,
     _feature_tier_payload,
     _guidance_with_cli_invoke,
     _installed_state_compatibility_payload,
@@ -192,6 +193,7 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
             "required_transition",
             "selected_owner",
             "selected_owner_identity",
+            "owner_admission",
             "allowed_claims",
             "blocked_claims",
             "implementation_allowed",
@@ -204,6 +206,9 @@ def _compact_start_route_decision(value: Any) -> dict[str, Any]:
         )
         if route.get(key) not in (None, "", [], {})
     }
+    selected_identity = _as_dict(compact.get("selected_owner_identity"))
+    if selected_identity and not selected_identity.get("ref"):
+        compact.pop("selected_owner_identity", None)
     binding = _as_dict(compact.get("binding"))
     identity = _as_dict(binding.get("identity"))
     guard = _as_dict(binding.get("adoption_guard"))
@@ -696,6 +701,9 @@ def _start_payload(
     active_contract = active_state.get("active_contract", {})
     active_execplans = active_state.get("execplans", {}).get("active_execplans", [])
     active_execplan = active_execplans[0].get("path") if active_execplans else None
+    admitted_active_summary = _fast_planning_active_summary(target_root=target_root)
+    if isinstance(admitted_active_summary, dict):
+        active_execplan = admitted_active_summary.get("active_execplan")
     next_action = ""
     if isinstance(planning_record, dict):
         next_action = str(planning_record.get("next_action", "") or "")
@@ -795,9 +803,16 @@ def _start_payload(
             compact=True,
         ),
         "active_state_summary": {
-            "todo_active_count": active_state.get("todo", {}).get("active_count", 0),
+            "todo_active_count": admitted_active_summary.get("todo_active_count", active_state.get("todo", {}).get("active_count", 0)),
             "active_execplan": active_execplan,
-            "planning_status": planning_record.get("status", "unavailable") if isinstance(planning_record, dict) else "unavailable",
+            "planning_status": admitted_active_summary.get(
+                "planning_status", planning_record.get("status", "unavailable") if isinstance(planning_record, dict) else "unavailable"
+            ),
+            **(
+                {"owner_admission": admitted_active_summary["owner_admission"]}
+                if isinstance(admitted_active_summary.get("owner_admission"), dict)
+                else {}
+            ),
             **(
                 {
                     "orientation_delta": {
@@ -983,6 +998,8 @@ def _start_payload(
     payload["active_plan_reliance"] = planning_safety_gate.get("active_plan_reliance", {})
     custody_planning = planning_safety_gate.get("custody_planning", {})
     custody_applies = isinstance(custody_planning, dict) and custody_planning.get("status") not in (None, "", "not-applicable")
+    owner_admission = planning_safety_gate.get("owner_admission", {})
+    owner_admission_rejected = isinstance(owner_admission, dict) and owner_admission.get("status") == "rejected"
     route_decision = planning_safety_gate.get("route_decision", {})
     if isinstance(route_decision, dict) and route_decision.get("kind") == "agentic-planning/route-decision/v1":
         route_decision = copy.deepcopy(route_decision)
@@ -997,7 +1014,12 @@ def _start_payload(
     route_transition = str(route_decision.get("required_transition") or "") if isinstance(route_decision, dict) else ""
     route_relation = str(route_decision.get("task_relation") or "") if isinstance(route_decision, dict) else ""
     task_switch_visible_by_default = route_transition in {"closeout-or-archive", "ask-for-route-decision", "reconcile"}
-    if planning_safety_gate["status"] not in {"satisfied", "clear"} or custody_applies or task_switch_visible_by_default:
+    if (
+        planning_safety_gate["status"] not in {"satisfied", "clear"}
+        or custody_applies
+        or task_switch_visible_by_default
+        or owner_admission_rejected
+    ):
         payload["planning_safety_gate"] = planning_safety_gate
     if isinstance(route_decision, dict) and route_transition in {
         "closeout-or-archive",

@@ -30894,6 +30894,388 @@ def _fast_installed_modules(*, target_root: Path) -> list[str]:
     return installed
 
 
+_PLANNING_OWNER_TERMINAL_PHASES = {"complete", "completed", "closeout", "closed", "archived"}
+_PLANNING_OWNER_LIVE_LIFECYCLES = {"live", "planned"}
+
+
+def _planning_owner_repair_route(*, target_root: Path) -> dict[str, Any]:
+    return {
+        "status": "available",
+        "summary": "Refresh or reconcile Planning owner selection before relying on startup routing.",
+        "command": f'agentic-workspace summary --target "{target_root.as_posix()}" --format json',
+        "selector_command": f'agentic-workspace start --target "{target_root.as_posix()}" --select planning_safety_gate --format json',
+        "rule": "Startup remains read-only; repair must happen through a Planning/current-work operation.",
+    }
+
+
+def _repo_relative_ref(*, target_root: Path, owner_ref: str) -> tuple[str, Path | None]:
+    text = str(owner_ref or "").strip().replace("\\", "/")
+    if not text:
+        return "", None
+    try:
+        resolved = (target_root / text).resolve()
+        relative = resolved.relative_to(target_root.resolve()).as_posix()
+    except (OSError, ValueError):
+        return text, None
+    return relative, resolved
+
+
+def _read_planning_owner_record(*, target_root: Path, owner_ref: str) -> tuple[dict[str, Any], str]:
+    relative, owner_path = _repo_relative_ref(target_root=target_root, owner_ref=owner_ref)
+    if not relative or owner_path is None:
+        return {}, "owner-ref-escapes-target"
+    if not relative.startswith(".agentic-workspace/planning/execplans/"):
+        return {}, "owner-ref-outside-execplans"
+    if owner_path.suffix.lower() != ".json" or not owner_path.is_file():
+        return {}, "owner-record-missing"
+    try:
+        payload = json.loads(owner_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {}, "owner-record-unreadable"
+    if not isinstance(payload, dict):
+        return {}, "owner-record-not-object"
+    return payload, ""
+
+
+def _planning_owner_live_graph_entries(*, data: dict[str, Any]) -> list[dict[str, str]]:
+    entries: list[dict[str, str]] = []
+    todo = data.get("todo", {}) if isinstance(data, dict) else {}
+    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
+    for item in active_items if isinstance(active_items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or item.get("maturity") or "").strip().lower()
+        if status in {"closed", "complete", "completed", "archived", "done"}:
+            continue
+        ref = str(item.get("surface") or "").strip()
+        if not ref:
+            continue
+        entries.append(
+            {
+                "source": ".agentic-workspace/planning/state.toml:todo.active_items",
+                "id": str(item.get("id") or "").strip(),
+                "ref": ref,
+                "revision": str(item.get("revision") or "").strip(),
+            }
+        )
+    active = data.get("active", {}) if isinstance(data, dict) else {}
+    execplans = active.get("execplans", []) if isinstance(active, dict) else []
+    for item in execplans if isinstance(execplans, list) else []:
+        if not isinstance(item, dict):
+            continue
+        ref = str(item.get("path") or item.get("surface") or "").strip()
+        if not ref:
+            continue
+        entries.append(
+            {
+                "source": ".agentic-workspace/planning/state.toml:active.execplans",
+                "id": str(item.get("id") or "").strip(),
+                "ref": ref,
+                "revision": str(item.get("revision") or "").strip(),
+            }
+        )
+    return entries
+
+
+def _planning_owner_explicit_residual(record: dict[str, Any]) -> bool:
+    relationships = record.get("relationships", {}) if isinstance(record, dict) else {}
+    selection = relationships.get("selection", {}) if isinstance(relationships, dict) else {}
+    state = str(selection.get("state") or "").strip().lower() if isinstance(selection, dict) else ""
+    admission = str(selection.get("admission") or selection.get("authority") or "").strip().lower() if isinstance(selection, dict) else ""
+    return state in {"explicit-residual", "residual-owner", "selected-residual"} and admission in {
+        "explicit",
+        "admitted",
+        "current-work",
+    }
+
+
+def _planning_owner_current_work_id(*, target_root: Path) -> str:
+    index_path = target_root / ".agentic-workspace" / "local" / "work-threads" / "index.json"
+    try:
+        payload = json.loads(index_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return "default"
+    if not isinstance(payload, dict):
+        return "default"
+    return str(payload.get("selected_thread_id") or "default").strip() or "default"
+
+
+def _planning_owner_short_file_hash(path: Path | None) -> str:
+    if path is None or not path.is_file():
+        return "missing"
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+    except OSError:
+        return "unreadable"
+
+
+def _planning_owner_selection_basis_revision(*, target_root: Path, state_data: dict[str, Any]) -> str:
+    todo = state_data.get("todo", {}) if isinstance(state_data, dict) else {}
+    active_items = todo.get("active_items", []) if isinstance(todo, dict) else []
+    active_items = active_items if isinstance(active_items, list) else []
+    active = state_data.get("active", {}) if isinstance(state_data, dict) else {}
+    active_execplans = active.get("execplans", []) if isinstance(active, dict) else []
+    active_execplans = active_execplans if isinstance(active_execplans, list) else []
+    active_item: dict[str, Any] = {}
+    active_surface = ""
+    for item in active_items:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "").strip().lower()
+        if status in {"closed", "complete", "completed", "archived"}:
+            continue
+        active_item = item
+        active_surface = str(item.get("surface") or "").strip()
+        break
+    if not active_surface:
+        for item in active_execplans:
+            if not isinstance(item, dict):
+                continue
+            active_item = item
+            active_surface = str(item.get("path") or item.get("surface") or "").strip()
+            if active_surface:
+                break
+    if not active_surface:
+        live_paths: list[Path] = []
+        execplans_dir = target_root / ".agentic-workspace" / "planning" / "execplans"
+        for path in sorted(execplans_dir.glob("*.json")) if execplans_dir.is_dir() else []:
+            try:
+                record = json.loads(path.read_text(encoding="utf-8-sig"))
+            except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+                continue
+            if not isinstance(record, dict):
+                continue
+            lifecycle = str(record.get("lifecycle") or "").strip().lower()
+            phase = str(record.get("phase") or "").strip().lower()
+            if lifecycle in _PLANNING_OWNER_LIVE_LIFECYCLES and phase not in _PLANNING_OWNER_TERMINAL_PHASES:
+                live_paths.append(path)
+        if len(live_paths) == 1:
+            active_path = live_paths[0].resolve()
+            try:
+                active_surface = active_path.relative_to(target_root.resolve()).as_posix()
+                record = json.loads(active_path.read_text(encoding="utf-8-sig"))
+                active_item = {"id": str(_as_dict(record).get("id") or "").strip(), "surface": active_surface}
+            except (OSError, ValueError, json.JSONDecodeError, UnicodeDecodeError):
+                active_surface = ""
+    active_path = (target_root / active_surface).resolve() if active_surface else None
+    try:
+        if active_path is not None:
+            active_path.relative_to(target_root.resolve())
+    except ValueError:
+        active_path = None
+    components = {
+        "kind": "planning-revision/v1",
+        "state_path": ".agentic-workspace/planning/state.toml",
+        "state_hash": _planning_owner_short_file_hash(target_root / ".agentic-workspace" / "planning" / "state.toml"),
+        "selection_source": "shared" if active_surface else "none",
+        "selection_path": ".agentic-workspace/local/planning/owner-selection.json",
+        "selection_hash": "missing",
+        "selection_current_work_id": "",
+        "active_execplan": active_surface if active_path is not None else "",
+        "active_execplan_hash": _planning_owner_short_file_hash(active_path),
+        "active_item_id": str(active_item.get("id") or "").strip(),
+        "active_item_surface": active_surface,
+    }
+    revision_material = json.dumps(components, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(revision_material).hexdigest()[:16]
+
+
+def _planning_owner_selection_target_mismatch(*, target_root: Path, selection_payload: dict[str, Any]) -> dict[str, str]:
+    for key in ("target_root", "repo_root", "worktree"):
+        raw_value = str(selection_payload.get(key) or "").strip()
+        if not raw_value:
+            continue
+        try:
+            observed = Path(raw_value).expanduser().resolve()
+            expected = target_root.resolve()
+        except (OSError, ValueError):
+            return {"reason": "local-selection-target-invalid", "selection_target": raw_value}
+        if observed != expected:
+            return {
+                "reason": "local-selection-target-mismatch",
+                "selection_target": str(observed),
+                "current_target": str(expected),
+            }
+    return {}
+
+
+def _planning_owner_admission_candidate(
+    *,
+    target_root: Path,
+    source: str,
+    owner_id: str,
+    owner_ref: str,
+    expected_revision: str = "",
+    live_refs: set[str],
+    require_live_graph_or_residual: bool,
+    selection_payload: dict[str, Any] | None = None,
+    planning_revision: dict[str, Any] | None = None,
+    selection_basis_revision: str = "",
+) -> dict[str, Any]:
+    relative, _owner_path = _repo_relative_ref(target_root=target_root, owner_ref=owner_ref)
+    candidate = {"source": source, "owner": owner_id, "ref": relative or owner_ref}
+    record, read_error = _read_planning_owner_record(target_root=target_root, owner_ref=owner_ref)
+    if read_error:
+        return {**candidate, "status": "rejected", "reason": read_error}
+    record_id = str(record.get("id") or "").strip()
+    if owner_id and record_id != owner_id:
+        return {**candidate, "status": "rejected", "reason": "owner-identity-mismatch", "record_id": record_id}
+    lifecycle = str(record.get("lifecycle") or "").strip().lower()
+    phase = str(record.get("phase") or "").strip().lower()
+    if not lifecycle and not require_live_graph_or_residual:
+        lifecycle = "live"
+    if lifecycle not in _PLANNING_OWNER_LIVE_LIFECYCLES:
+        return {**candidate, "status": "rejected", "reason": "owner-lifecycle-not-live", "lifecycle": lifecycle}
+    if phase in _PLANNING_OWNER_TERMINAL_PHASES:
+        return {**candidate, "status": "rejected", "reason": "owner-phase-terminal", "phase": phase}
+    record_revision = str(record.get("revision") or "").strip()
+    record_planning_revision = str(record.get("planning_revision") or record.get("planning_revision_id") or "").strip()
+    current_revision = str(_as_dict(planning_revision).get("revision_id") or "").strip()
+    if expected_revision and record_revision and expected_revision != record_revision:
+        return {
+            **candidate,
+            "status": "rejected",
+            "reason": "owner-revision-mismatch",
+            "expected_revision": expected_revision,
+            "record_revision": record_revision,
+        }
+    if expected_revision and not record_revision:
+        return {
+            **candidate,
+            "status": "rejected",
+            "reason": "owner-record-missing-live-revision",
+            "expected_revision": expected_revision,
+        }
+    expected_planning_revision = selection_basis_revision or current_revision
+    if expected_planning_revision and record_planning_revision and record_planning_revision != expected_planning_revision:
+        return {
+            **candidate,
+            "status": "rejected",
+            "reason": "owner-record-planning-revision-mismatch",
+            "expected_planning_revision": expected_planning_revision,
+            "record_planning_revision": record_planning_revision,
+        }
+    in_live_graph = (relative or owner_ref) in live_refs
+    explicit_residual = _planning_owner_explicit_residual(record)
+    if source.endswith("owner-selection.json") and selection_payload is not None:
+        selection_revision = str(selection_payload.get("planning_revision") or "").strip()
+        if not selection_revision:
+            return {**candidate, "status": "rejected", "reason": "local-selection-missing-planning-revision"}
+        if expected_planning_revision and selection_revision != expected_planning_revision:
+            return {
+                **candidate,
+                "status": "rejected",
+                "reason": "local-selection-planning-revision-mismatch",
+                "expected_planning_revision": expected_planning_revision,
+                "selection_planning_revision": selection_revision,
+            }
+        target_mismatch = _planning_owner_selection_target_mismatch(target_root=target_root, selection_payload=selection_payload)
+        if target_mismatch:
+            return {**candidate, "status": "rejected", **target_mismatch}
+        expected_work_id = _planning_owner_current_work_id(target_root=target_root)
+        selection_work_id = str(selection_payload.get("current_work_id") or "default").strip() or "default"
+        if selection_work_id != expected_work_id:
+            return {
+                **candidate,
+                "status": "rejected",
+                "reason": "local-selection-current-work-mismatch",
+                "expected_current_work_id": expected_work_id,
+                "selection_current_work_id": selection_work_id,
+            }
+    if require_live_graph_or_residual and not in_live_graph and not explicit_residual:
+        return {**candidate, "status": "rejected", "reason": "owner-not-in-live-graph"}
+    return {
+        **candidate,
+        "status": "accepted",
+        "reason": "explicit-residual-owner" if explicit_residual and not in_live_graph else "current-live-planning-owner",
+        "record_id": record_id,
+        "record_revision": record_revision,
+        "record_planning_revision": record_planning_revision,
+        "lifecycle": lifecycle,
+        "phase": phase,
+    }
+
+
+def _selected_planning_owner_payload(target_root: Path) -> dict[str, Any]:
+    selection_path = target_root / ".agentic-workspace" / "local" / "planning" / "owner-selection.json"
+    try:
+        selection = json.loads(selection_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    if not isinstance(selection, dict) or str(selection.get("kind") or "") != "agentic-planning/owner-selection/v1":
+        return {}
+    if str(selection.get("mode") or "local").strip().lower() != "local":
+        return {}
+    selected = selection.get("selected_owner", {})
+    if not isinstance(selected, dict):
+        return {}
+    owner_id = str(selected.get("id") or "").strip()
+    owner_ref = str(selected.get("ref") or "").strip()
+    if not owner_id or not owner_ref:
+        return {}
+    return {"id": owner_id, "ref": owner_ref, "payload": selection}
+
+
+def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str, Any]) -> dict[str, Any]:
+    planning_revision = _planning_revision_payload(target_root=target_root)
+    selection_basis_revision = _planning_owner_selection_basis_revision(target_root=target_root, state_data=state_data)
+    live_entries = _planning_owner_live_graph_entries(data=state_data)
+    live_refs = {entry["ref"] for entry in live_entries if entry.get("ref")}
+    rejected: list[dict[str, Any]] = []
+    selected = _selected_planning_owner_payload(target_root)
+    if selected:
+        admitted = _planning_owner_admission_candidate(
+            target_root=target_root,
+            source=".agentic-workspace/local/planning/owner-selection.json",
+            owner_id=str(selected.get("id") or ""),
+            owner_ref=str(selected.get("ref") or ""),
+            live_refs=live_refs,
+            require_live_graph_or_residual=True,
+            selection_payload=selected.get("payload") if isinstance(selected.get("payload"), dict) else {},
+            planning_revision=planning_revision,
+            selection_basis_revision=selection_basis_revision,
+        )
+        if admitted["status"] == "accepted":
+            return {
+                "kind": "agentic-workspace/planning-owner-admission/v1",
+                "status": "accepted",
+                "selected_owner": admitted,
+                "rejected_candidates": [],
+                "repair_route": {},
+                "rule": "Startup routing may rely only on a currently admitted Planning/current-work owner.",
+            }
+        rejected.append(admitted)
+    for entry in live_entries:
+        admitted = _planning_owner_admission_candidate(
+            target_root=target_root,
+            source=str(entry.get("source") or ".agentic-workspace/planning/state.toml"),
+            owner_id=str(entry.get("id") or ""),
+            owner_ref=str(entry.get("ref") or ""),
+            expected_revision=str(entry.get("revision") or ""),
+            live_refs=live_refs,
+            require_live_graph_or_residual=False,
+            planning_revision=planning_revision,
+        )
+        if admitted["status"] == "accepted":
+            return {
+                "kind": "agentic-workspace/planning-owner-admission/v1",
+                "status": "accepted",
+                "selected_owner": admitted,
+                "rejected_candidates": rejected,
+                "repair_route": _planning_owner_repair_route(target_root=target_root) if rejected else {},
+                "rule": "Startup routing may rely only on a currently admitted Planning/current-work owner.",
+            }
+        rejected.append(admitted)
+    return {
+        "kind": "agentic-workspace/planning-owner-admission/v1",
+        "status": "rejected" if rejected else "none",
+        "selected_owner": {},
+        "rejected_candidates": rejected,
+        "repair_route": _planning_owner_repair_route(target_root=target_root) if rejected else {},
+        "rule": "Rejected Planning owners are diagnostics only and must not affect task relation, claims, proof, or next action.",
+    }
+
+
 def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     state_path = target_root / ".agentic-workspace" / "planning" / "state.toml"
     if not state_path.exists():
@@ -30908,25 +31290,27 @@ def _fast_planning_active_summary(*, target_root: Path) -> dict[str, Any]:
     active = data.get("active", {}) if isinstance(data, dict) else {}
     active_execplans = active.get("execplans", []) if isinstance(active, dict) else []
     active_execplans = active_execplans if isinstance(active_execplans, list) else []
-    active_execplan = None
-    # Local selection is an exact, validated current-work binding.  Startup
-    # packets must use it before the shared state's first active item so an
-    # isolated worktree cannot inherit another thread's owner.
-    from agentic_workspace.current_work_context import _selected_planning_owner
-
-    _selected_id, selected_ref = _selected_planning_owner(target_root)
-    if selected_ref:
-        active_execplan = selected_ref
-    elif active_items and isinstance(active_items[0], dict):
-        active_execplan = active_items[0].get("surface")
-    if active_execplan is None and active_execplans and isinstance(active_execplans[0], dict):
-        active_execplan = active_execplans[0].get("path")
-    return {
-        "todo_active_count": len(active_items),
-        "active_execplan_count": len(active_execplans),
+    owner_admission = _planning_owner_admission_payload(target_root=target_root, state_data=data)
+    selected_owner = owner_admission.get("selected_owner", {}) if isinstance(owner_admission, dict) else {}
+    active_execplan = selected_owner.get("ref") if isinstance(selected_owner, dict) else None
+    admitted_active_count = 1 if active_execplan else 0
+    summary = {
+        "todo_active_count": admitted_active_count,
+        "state_todo_active_count": len(active_items),
+        "active_execplan_count": admitted_active_count if active_execplan else 0,
+        "state_active_execplan_count": len(active_execplans),
         "active_execplan": active_execplan,
-        "planning_status": "present" if active_items or active_execplans else "unavailable",
+        "planning_status": "present" if active_execplan else "unavailable",
     }
+    selected_source = str(_as_dict(owner_admission.get("selected_owner")).get("source") or "") if isinstance(owner_admission, dict) else ""
+    if isinstance(owner_admission, dict) and (
+        owner_admission.get("status") == "rejected"
+        or owner_admission.get("rejected_candidates")
+        or selected_source.endswith("owner-selection.json")
+        or selected_source.endswith(":active.execplans")
+    ):
+        summary["owner_admission"] = owner_admission
+    return summary
 
 
 def _fast_planning_lane_schema_findings(*, target_root: Path, payload: object) -> list[str]:
