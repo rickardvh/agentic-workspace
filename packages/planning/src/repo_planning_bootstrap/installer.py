@@ -4736,6 +4736,14 @@ def _clear_field_requested(value: str | Iterable[str] | None) -> bool:
     return any(str(item).strip() in {"__clear__", "<clear>"} for item in value)
 
 
+def _external_ref_alias(value: str) -> str:
+    stripped = value.strip()
+    if not stripped:
+        return ""
+    token = _reference_issue_token(stripped) or stripped
+    return token.removeprefix("#").strip().lower()
+
+
 def _load_schema_backed_json_record(path: Path, *, kind: str) -> dict[str, Any] | None:
     try:
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
@@ -4756,6 +4764,173 @@ def _load_integration_proposal(path: Path) -> dict[str, Any] | None:
 
 def _load_integration_receipt(path: Path) -> dict[str, Any] | None:
     return _load_schema_backed_json_record(path, kind=INTEGRATION_RECEIPT_KIND)
+
+
+def _external_refs_from_value(value: Any) -> set[str]:
+    refs: set[str] = set()
+    if isinstance(value, str):
+        token = _reference_issue_token(value)
+        if token:
+            refs.add(_external_ref_alias(token))
+            return refs
+        stripped = value.strip()
+        if re.fullmatch(r"\d{3,}", stripped):
+            refs.add(stripped)
+        return refs
+    if isinstance(value, list):
+        for item in value:
+            refs.update(_external_refs_from_value(item))
+    elif isinstance(value, dict):
+        for key in ("issue", "issue_ref", "external_ref", "ref", "target", "id"):
+            refs.update(_external_refs_from_value(value.get(key)))
+    return refs
+
+
+def _legacy_issue_authority_record(
+    *,
+    target_root: Path,
+    path: str,
+    external_ref: str,
+    fields: list[str],
+    lane_id: str = "",
+    priority: str = "",
+) -> dict[str, Any]:
+    relation_path = _issue_relation_path(target_root, external_ref)
+    relation = _load_issue_relation(relation_path) if relation_path.exists() else None
+    command = f"agentic-planning issue-shape --issue {external_ref}"
+    if lane_id.strip():
+        command += f" --lane {lane_id.strip()}"
+    if priority.strip():
+        command += f" --priority {priority.strip()}"
+    if relation is not None:
+        revision = str(relation.get("relation_revision", "")).strip() or _record_revision(relation)
+        command += f" --expect-relation-revision {revision}"
+    command += " --target . --format json"
+    return {
+        "external_ref": external_ref,
+        "path": path,
+        "fields": _dedupe(fields),
+        "relation_path": relation_path.relative_to(target_root).as_posix(),
+        "relation_status": "present" if relation is not None else "missing",
+        "authority_status": "freshness-demoted",
+        "migration_command": command,
+    }
+
+
+def _legacy_issue_authority_projection(*, target_root: Path) -> dict[str, Any]:
+    records: list[dict[str, Any]] = []
+    state = _read_state_from_toml(target_root)
+    if isinstance(state, dict):
+        for bucket_path, item in _planning_state_v1_items(state):
+            refs = _external_refs_from_value(item.get("issues")) | _external_refs_from_value(item.get("refs"))
+            refs.update(_external_refs_from_value(item.get("issue")))
+            refs.update(_external_refs_from_value(item.get("external_ref")))
+            if not refs:
+                continue
+            fields: list[str] = []
+            lane_id = ""
+            if bucket_path in {"roadmap.lanes", "roadmap.candidates", "work_items"}:
+                fields.append("membership")
+                lane_id = str(item.get("lane_id") or item.get("id") or "").strip()
+            if str(item.get("priority", "")).strip():
+                fields.append("priority")
+            if item.get("depends_on"):
+                fields.append("dependencies")
+            if not fields:
+                continue
+            item_id = str(item.get("id") or item.get("title") or "<item>").strip()
+            for ref in sorted(refs):
+                records.append(
+                    _legacy_issue_authority_record(
+                        target_root=target_root,
+                        path=f"{PLANNING_STATE_PATH.as_posix()}#{bucket_path}.{item_id}",
+                        external_ref=ref,
+                        fields=fields,
+                        lane_id=lane_id,
+                        priority=str(item.get("priority", "")).strip(),
+                    )
+                )
+
+    decomposition_root = target_root / PLANNING_MANAGED_ROOT / "decompositions"
+    if decomposition_root.exists():
+        for path in sorted(decomposition_root.glob("*.decomposition.json")):
+            if path.name == "TEMPLATE.decomposition.json":
+                continue
+            record = _load_lane_candidate_decomposition(path)
+            if record is None:
+                continue
+            lanes = record.get("candidate_lanes", [])
+            for index, lane in enumerate(lanes if isinstance(lanes, list) else []):
+                if not isinstance(lane, dict):
+                    continue
+                refs = _external_refs_from_value(lane.get("issues")) | _external_refs_from_value(lane.get("refs"))
+                refs.update(_external_refs_from_value(lane.get("issue")))
+                refs.update(_external_refs_from_value(lane.get("external_ref")))
+                if not refs:
+                    continue
+                fields = ["membership"]
+                if str(lane.get("priority", "")).strip():
+                    fields.append("priority")
+                if lane.get("depends_on"):
+                    fields.append("dependencies")
+                lane_id = str(lane.get("id") or "").strip()
+                for ref in sorted(refs):
+                    records.append(
+                        _legacy_issue_authority_record(
+                            target_root=target_root,
+                            path=f"{path.relative_to(target_root).as_posix()}#candidate_lanes[{index}]",
+                            external_ref=ref,
+                            fields=fields,
+                            lane_id=lane_id,
+                            priority=str(lane.get("priority", "")).strip(),
+                        )
+                    )
+
+    lane_root = target_root / PLANNING_MANAGED_ROOT / "lanes"
+    if lane_root.exists():
+        for path in sorted(lane_root.glob("*.lane.json")):
+            if path.name == "TEMPLATE.lane.json":
+                continue
+            record = _load_lane_record(path)
+            if record is None:
+                continue
+            lane_id = str(record.get("id") or path.name.removesuffix(".lane.json")).strip()
+            children = record.get("children", [])
+            for index, child in enumerate(children if isinstance(children, list) else []):
+                if not isinstance(child, dict):
+                    continue
+                refs = _external_refs_from_value(child.get("issue_ref"))
+                if not refs:
+                    continue
+                for ref in sorted(refs):
+                    records.append(
+                        _legacy_issue_authority_record(
+                            target_root=target_root,
+                            path=f"{path.relative_to(target_root).as_posix()}#children[{index}]",
+                            external_ref=ref,
+                            fields=["membership"],
+                            lane_id=lane_id,
+                        )
+                    )
+
+    unique: dict[tuple[str, str, tuple[str, ...]], dict[str, Any]] = {}
+    for record in records:
+        key = (
+            str(record.get("external_ref", "")),
+            str(record.get("path", "")),
+            tuple(str(field) for field in record.get("fields", [])),
+        )
+        unique[key] = record
+    deduped = sorted(unique.values(), key=lambda item: (item["external_ref"], item["path"]))
+    return {
+        "status": "attention" if deduped else "none",
+        "record_count": len(deduped),
+        "records": deduped,
+        "rule": (
+            "Legacy state, decomposition, and lane child issue fields are freshness-demoted. "
+            "Issue-relation records are the durable owner for strategic membership, priority, and dependencies."
+        ),
+    }
 
 
 def _issue_relation_projection(*, target_root: Path) -> dict[str, Any]:
@@ -4805,6 +4980,7 @@ def _issue_relation_projection(*, target_root: Path) -> dict[str, Any]:
         "records": records,
         "by_lane": by_lane,
         "invalid_records": invalid_records,
+        "legacy_authority": _legacy_issue_authority_projection(target_root=target_root),
         "rule": (
             "Issue-relation records own strategic lane membership, internal priority, dependencies, rationale, "
             "and shaping maturity. External tracker state, PR state, proof, progress, current selection, and execution lifecycle are derived elsewhere."
@@ -4880,6 +5056,87 @@ def _integration_owner_path(target_root: Path, owner_ref: str) -> tuple[Path | N
     return owner_path, ""
 
 
+def _planning_owner_reference_aliases(target_root: Path, owner_path: Path) -> set[str]:
+    aliases = {_planning_surface_relative(target_root, owner_path.resolve()).replace("\\", "/")}
+    canonical = _canonical_execplan_record_path(owner_path)
+    aliases.add(_planning_surface_relative(target_root, canonical.resolve()).replace("\\", "/"))
+    markdown = _derived_execplan_markdown_path(canonical)
+    aliases.add(_planning_surface_relative(target_root, markdown.resolve()).replace("\\", "/"))
+    return {alias for alias in aliases if alias}
+
+
+def _pending_integration_proposals_for_owner(
+    *, target_root: Path, owner_refs: Iterable[str] = (), owner_ids: Iterable[str] = (), external_refs: Iterable[str] = ()
+) -> list[dict[str, str]]:
+    wanted_refs = {str(ref).strip().replace("\\", "/") for ref in owner_refs if str(ref).strip()}
+    wanted_ids = {str(owner_id).strip() for owner_id in owner_ids if str(owner_id).strip()}
+    wanted_external_refs = {_external_ref_alias(str(ref)) for ref in external_refs if str(ref).strip()}
+    proposal_dir = target_root / PLANNING_INTEGRATION_PROPOSAL_ROOT
+    matches: list[dict[str, str]] = []
+    if not proposal_dir.exists():
+        return matches
+    for path in sorted(proposal_dir.glob("*.integration-proposal.json")):
+        proposal = _load_integration_proposal(path)
+        if proposal is None or str(proposal.get("status", "")).strip() != "pending":
+            continue
+        owner = proposal.get("owner", {}) if isinstance(proposal.get("owner"), dict) else {}
+        proposal_owner_ref = str(owner.get("ref", "")).strip().replace("\\", "/")
+        proposal_owner_id = str(owner.get("id", "")).strip()
+        proposal_external_ref = _external_ref_alias(str(proposal.get("external_ref", "")).strip())
+        if (
+            (proposal_owner_ref and proposal_owner_ref in wanted_refs)
+            or (proposal_owner_id and proposal_owner_id in wanted_ids)
+            or (proposal_external_ref and proposal_external_ref in wanted_external_refs)
+        ):
+            matches.append(
+                {
+                    "id": str(proposal.get("id", "")).strip(),
+                    "path": path.relative_to(target_root).as_posix(),
+                    "requested_transition": str(proposal.get("requested_transition", "")).strip(),
+                }
+            )
+    return matches
+
+
+def _guard_pending_integration_owner_mutation(
+    result: InstallResult,
+    *,
+    target_root: Path,
+    owner_path: Path,
+    owner_id: str,
+    operation: str,
+) -> bool:
+    proposals = _pending_integration_proposals_for_owner(
+        target_root=target_root,
+        owner_refs=_planning_owner_reference_aliases(target_root, owner_path),
+        owner_ids=[owner_id],
+    )
+    if not proposals:
+        return True
+    proposal = proposals[0]
+    proposal_id = proposal.get("id", "")
+    proposal_path = target_root / proposal.get("path", PLANNING_INTEGRATION_PROPOSAL_ROOT.as_posix())
+    result.add(
+        "manual review",
+        owner_path,
+        (
+            f"{operation} is blocked because pending integration proposal '{proposal_id}' owns the next "
+            "terminal lifecycle transition for this owner"
+        ),
+    )
+    result.add(
+        "next safe action",
+        proposal_path,
+        f"agentic-planning integration-apply --proposal {proposal_id} --target . --format json",
+    )
+    result.reason_code = "pending-integration-proposal-required"
+    result.conflict_owner = proposal_path.relative_to(target_root).as_posix()
+    result.recovery_command = (
+        f"{_workspace_cli_invoke(target_root)} planning integration-apply --proposal {proposal_id} --target . --format json"
+    )
+    return False
+
+
 def _apply_owner_integration_transition(
     owner_record: dict[str, Any], *, transition: str, proof_refs: list[str], now: str
 ) -> tuple[dict[str, Any], list[str]]:
@@ -4941,6 +5198,48 @@ def _apply_owner_integration_transition(
     proof_report["integration applied at"] = now
     updated["proof_report"] = proof_report
     changed_fields.append("owner.proof_report")
+    return updated, changed_fields
+
+
+def _apply_lane_integration_transition(
+    lane_record: dict[str, Any], *, transition: str, proof_refs: list[str], now: str
+) -> tuple[dict[str, Any], list[str]]:
+    updated = copy.deepcopy(lane_record)
+    changed_fields: list[str] = []
+    if transition == "keep-open":
+        return updated, changed_fields
+    if transition not in {"mark-integrated", "close-owner", "archive-owner"}:
+        return updated, changed_fields
+
+    proof_text = ", ".join(proof_refs) if proof_refs else "integration proposal applied"
+    proof_aggregation = dict(updated.get("proof_aggregation") or {}) if isinstance(updated.get("proof_aggregation"), dict) else {}
+    evidence = (
+        [str(item).strip() for item in proof_aggregation.get("evidence", []) if str(item).strip()]
+        if isinstance(proof_aggregation.get("evidence"), list)
+        else []
+    )
+    evidence.extend([proof_text, f"integration applied at {now}"])
+    proof_aggregation["evidence"] = _dedupe(evidence)
+    proof_aggregation.setdefault("known_gaps", [])
+    if transition == "mark-integrated" and proof_aggregation.get("status") == "not-started":
+        proof_aggregation["status"] = "partial"
+    updated["proof_aggregation"] = proof_aggregation
+    changed_fields.append("owner.proof_aggregation")
+
+    if transition == "mark-integrated":
+        return updated, changed_fields
+
+    next_status = "archived" if transition == "archive-owner" else "closed"
+    if updated.get("status") != next_status:
+        updated["status"] = next_status
+        changed_fields.append("owner.status")
+    closeout_state = dict(updated.get("closeout_state") or {}) if isinstance(updated.get("closeout_state"), dict) else {}
+    closeout_state["status"] = "closed"
+    closeout_state["summary"] = proof_text
+    closeout_state["residual_work"] = closeout_state.get("residual_work") or "none"
+    closeout_state["next_owner"] = closeout_state.get("next_owner") or "none"
+    updated["closeout_state"] = closeout_state
+    changed_fields.append("owner.closeout_state")
     return updated, changed_fields
 
 
@@ -5103,6 +5402,24 @@ def _planning_branch_safe_surface_warnings(
                 "path": path,
                 "message": f"Planning issue relation is invalid: {reason}.",
                 "suggested_fix": "Repair only the named issue-relation record against planning-issue-relation.schema.json.",
+            }
+        )
+    legacy_authority = relation_projection.get("legacy_authority", {}) if isinstance(relation_projection, dict) else {}
+    for record in legacy_authority.get("records", []) if isinstance(legacy_authority, dict) else []:
+        if not isinstance(record, dict):
+            continue
+        fields = ", ".join(str(field) for field in record.get("fields", []) if str(field).strip())
+        external_ref = str(record.get("external_ref", "")).strip()
+        warnings.append(
+            {
+                "warning_class": "planning_issue_relation_legacy_authority_demoted",
+                "path": str(record.get("path", "")).strip() or PLANNING_STATE_PATH.as_posix(),
+                "message": (
+                    f"Legacy issue fields for {external_ref} ({fields or 'strategic fields'}) are freshness-demoted; "
+                    "the issue-relation record is the durable strategic owner."
+                ),
+                "suggested_fix": str(record.get("migration_command", "")).strip()
+                or f"Run agentic-planning issue-shape --issue {external_ref} --target . --format json.",
             }
         )
     for record in integration_projection.get("invalid_records", []) if isinstance(integration_projection, dict) else []:
@@ -12585,14 +12902,25 @@ def apply_integration_proposal(
     owner_record: dict[str, Any] | None = None
     updated_owner: dict[str, Any] | None = None
     owner_changed_fields: list[str] = []
+    owner_schema_path = EXECPLAN_RECORD_SCHEMA_PATH
+    owner_kind = ""
     if transition != "keep-open":
         if owner_path_error or owner_path is None:
             result.add("manual review", proposal_path, "integration apply requires owner.ref for lifecycle transitions")
             result.reason_code = owner_path_error or "missing-owner-ref"
             return result
         owner_record = _load_schema_backed_json_record(owner_path, kind=EXECPLAN_RECORD_KIND)
+        owner_kind = EXECPLAN_RECORD_KIND if owner_record is not None else ""
         if owner_record is None:
-            result.add("manual review", owner_path, "integration owner record was not found or is not a planning-execplan/v1 record")
+            owner_record = _load_schema_backed_json_record(owner_path, kind=LANE_RECORD_KIND)
+            owner_schema_path = LANE_RECORD_SCHEMA_PATH
+            owner_kind = LANE_RECORD_KIND if owner_record is not None else ""
+        if owner_record is None:
+            result.add(
+                "manual review",
+                owner_path,
+                "integration owner record was not found or is not a planning-execplan/v1 or planning-lane/v1 record",
+            )
             result.reason_code = "integration-owner-not-found"
             return result
         owner_id = str(owner.get("id", "")).strip()
@@ -12619,13 +12947,21 @@ def apply_integration_proposal(
         return result
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     if owner_record is not None:
-        updated_owner, owner_changed_fields = _apply_owner_integration_transition(
-            owner_record,
-            transition=transition,
-            proof_refs=proof_refs,
-            now=now,
-        )
-        owner_findings = _json_schema_findings(payload=updated_owner, schema_path=EXECPLAN_RECORD_SCHEMA_PATH)
+        if owner_kind == LANE_RECORD_KIND:
+            updated_owner, owner_changed_fields = _apply_lane_integration_transition(
+                owner_record,
+                transition=transition,
+                proof_refs=proof_refs,
+                now=now,
+            )
+        else:
+            updated_owner, owner_changed_fields = _apply_owner_integration_transition(
+                owner_record,
+                transition=transition,
+                proof_refs=proof_refs,
+                now=now,
+            )
+        owner_findings = _json_schema_findings(payload=updated_owner, schema_path=owner_schema_path)
         if owner_findings:
             result.add("manual review", owner_path or proposal_path, f"integration owner update is invalid: {'; '.join(owner_findings)}")
             result.reason_code = "integration-owner-validation-failed"
@@ -12705,7 +13041,7 @@ def apply_integration_proposal(
             _write_schema_backed_planning_record(
                 record_path=owner_path,
                 record=updated_owner,
-                schema_path=EXECPLAN_RECORD_SCHEMA_PATH,
+                schema_path=owner_schema_path,
             )
         _write_schema_backed_planning_record(
             record_path=proposal_path,
@@ -13186,6 +13522,14 @@ def close_lane_record(
     if record is None:
         result.add("manual review", record_path, f"lane record '{slug}' was not found")
         return result
+    if not _guard_pending_integration_owner_mutation(
+        result,
+        target_root=target_root,
+        owner_path=record_path,
+        owner_id=str(record.get("id") or slug),
+        operation="lane close",
+    ):
+        return result
     record = copy.deepcopy(record)
     record["status"] = "closed"
     evidence = [str(item).strip() for item in record.get("proof_aggregation", {}).get("evidence", []) if str(item).strip()]
@@ -13273,6 +13617,14 @@ def archive_lane_record(
     record = _load_lane_record(record_path)
     if record is None:
         result.add("manual review", record_path, f"lane record '{slug}' was not found")
+        return result
+    if not _guard_pending_integration_owner_mutation(
+        result,
+        target_root=target_root,
+        owner_path=record_path,
+        owner_id=str(record.get("id") or slug),
+        operation="lane archive",
+    ):
         return result
     closeout_state = record.get("closeout_state", {}) if isinstance(record.get("closeout_state"), dict) else {}
     if record.get("status") != "closed" and closeout_state.get("status") != "closed":
@@ -17256,6 +17608,17 @@ def archive_execplan(
                 continuation_summary=continuation_summary,
             )
         result.add("manual review", plan_path, "execplan is already archived")
+        return result
+
+    owner_record = _load_execplan_record(plan_path)
+    owner_id = str(owner_record.get("id", "")).strip() if isinstance(owner_record, dict) else plan_path.stem.removesuffix(".plan")
+    if not _guard_pending_integration_owner_mutation(
+        result,
+        target_root=target_root,
+        owner_path=_canonical_execplan_record_path(plan_path),
+        owner_id=owner_id,
+        operation="execplan archive",
+    ):
         return result
 
     status = _execplan_status(plan_path)
