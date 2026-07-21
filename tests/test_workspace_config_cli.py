@@ -1896,21 +1896,172 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
     assert evidence["suitability"] == [
         {
             "target": "gpt_5_4_mini",
+            "context_key": "bounded-docs::bounded-docs",
+            "task_class": "bounded-docs",
+            "scope_class": "bounded-docs",
             "profile_status": "configured",
-            "record_count": 3,
-            "average_signal": 1.42,
+            "record_count": 1,
+            "average_signal": 1.5,
             "route_effect": "preferred-for-matching-task-class",
-            "uncertainty": "low",
-            "supported_task_classes": ["bounded-docs", "narrow-tests"],
+            "uncertainty": "medium",
+            "supporting_record_ids": ["gpt_5_4_mini:bounded-docs:bounded-docs:2026-04-17:0"],
+            "supported_task_classes": ["bounded-docs"],
             "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
             "raw_history_retention": "bounded-local-ledger",
-        }
+        },
+        {
+            "target": "gpt_5_4_mini",
+            "context_key": "narrow-tests::narrow-tests",
+            "task_class": "narrow-tests",
+            "scope_class": "narrow-tests",
+            "profile_status": "configured",
+            "record_count": 2,
+            "average_signal": 1.38,
+            "route_effect": "preferred-for-matching-task-class",
+            "uncertainty": "low",
+            "supporting_record_ids": [
+                "gpt_5_4_mini:narrow-tests:narrow-tests:2026-04-17:1",
+                "gpt_5_4_mini:narrow-tests:narrow-tests:2026-04-17:2",
+            ],
+            "supported_task_classes": ["narrow-tests"],
+            "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
+            "raw_history_retention": "bounded-local-ledger",
+        },
     ]
+    assert evidence["lifecycle"]["public_operations"][0]["operation"] == "submit"
+    assert evidence["lifecycle"]["routing_rule"] == (
+        "Assignment may consume only accepted evidence matching the requested task/scope context."
+    )
     decision = payload["mixed_agent"]["assignment_decision"]
     assert decision["kind"] == "agentic-workspace/assignment-decision/v1"
     assert decision["assignment_policy"] == "local-preferred"
     assert decision["decision"] == "keep-local"
     assert decision["record_count"] == 3
+
+
+def test_target_evidence_suitability_is_context_isolated(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    (target / ".agentic-workspace/config.local.toml").write_text(
+        "schema_version = 1\n\n"
+        "[delegation_targets.fast_worker]\n"
+        'strength = "weak"\n'
+        'capability_classes = ["mechanical-follow-through"]\n'
+        'execution_methods = ["cli"]\n',
+        encoding="utf-8",
+    )
+    (target / ".agentic-workspace/delegation-outcomes.json").write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/delegation-outcomes/v1",
+                "records": [
+                    {
+                        "recorded_at": "2026-04-17",
+                        "delegation_target": "fast_worker",
+                        "task_class": "mechanical-follow-through",
+                        "outcome": "success",
+                        "handoff_sufficiency": "sufficient",
+                        "review_burden": "light",
+                        "escalation_required": False,
+                    },
+                    {
+                        "recorded_at": "2026-04-18",
+                        "delegation_target": "fast_worker",
+                        "task_class": "boundary-shaping",
+                        "outcome": "failed",
+                        "handoff_sufficiency": "insufficient",
+                        "review_burden": "high",
+                        "escalation_required": True,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    suitability = payload["mixed_agent"]["target_evidence"]["suitability"]
+    mechanical = next(item for item in suitability if item["context_key"] == "mechanical-follow-through::mechanical-follow-through")
+    boundary = next(item for item in suitability if item["context_key"] == "boundary-shaping::boundary-shaping")
+    assert mechanical["route_effect"] == "preferred-for-matching-task-class"
+    assert mechanical["average_signal"] == 1.5
+    assert boundary["route_effect"] == "strong-review-required"
+    assert boundary["average_signal"] == -2.0
+    assert mechanical["supporting_record_ids"] != boundary["supporting_record_ids"]
+
+
+def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evidence(tmp_path: Path) -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    assignment_policy = {
+        "assignment_policy": {"value": "required-best-fit"},
+        "current_target": {"value": "current_worker"},
+        "binding": {"enforceable": True, "claim_boundary": "assignment policy resolved"},
+    }
+    runtime_resolution = {
+        "recommendation": "stay-local",
+        "capability_context": {"task_class": "mechanical-follow-through", "scope_class": "mechanical-follow-through"},
+        "profile_recommendations": [
+            {
+                "name": "current_worker",
+                "recommendation": "acceptable",
+                "score": 2,
+                "capability_mismatch": False,
+                "required_action": "none",
+            },
+            {
+                "name": "fast_worker",
+                "recommendation": "recommended",
+                "score": 7,
+                "capability_mismatch": False,
+                "required_action": "none",
+            },
+            {
+                "name": "unsafe_worker",
+                "recommendation": "recommended",
+                "score": 99,
+                "capability_mismatch": True,
+                "required_action": "escalate-before-execution",
+            },
+        ],
+    }
+    target_evidence = {
+        "status": "present",
+        "record_count": 2,
+        "suitability": [
+            {
+                "target": "fast_worker",
+                "context_key": "mechanical-follow-through::mechanical-follow-through",
+                "route_effect": "preferred-for-matching-task-class",
+                "record_count": 2,
+                "supporting_record_ids": ["fast_worker:mechanical-follow-through:mechanical-follow-through:2026-04-17:0"],
+            },
+            {
+                "target": "current_worker",
+                "context_key": "boundary-shaping::boundary-shaping",
+                "route_effect": "preferred-for-matching-task-class",
+                "record_count": 4,
+                "supporting_record_ids": ["current_worker:boundary-shaping:boundary-shaping:2026-04-17:0"],
+            },
+        ],
+    }
+
+    decision = assignment_decision_from_policy(
+        assignment_policy=assignment_policy,
+        runtime_resolution=runtime_resolution,
+        target_evidence=target_evidence,
+    )
+
+    assert decision["decision"] == "assign-best-fit"
+    assert decision["selected_target"] == "fast_worker"
+    assert decision["selection_basis"]["requested_context_key"] == "mechanical-follow-through::mechanical-follow-through"
+    current = next(item for item in decision["candidate_scores"] if item["target"] == "current_worker")
+    assert current["evidence_contexts"] == []
+    unsafe = next(item for item in decision["candidate_scores"] if item["target"] == "unsafe_worker")
+    assert unsafe["eligible"] is False
 
 
 def test_repo_config_cli_invoke_sets_repo_owned_invocation_policy(tmp_path: Path, capsys) -> None:

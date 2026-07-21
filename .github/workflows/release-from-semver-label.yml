@@ -1,4 +1,4 @@
-name: Release From Semver Label
+name: Prepare Coordinated Release
 
 on:
   push:
@@ -7,16 +7,16 @@ on:
 
 permissions:
   contents: write
-  issues: read
-  pull-requests: read
+  pull-requests: write
+  actions: write
 
 concurrency:
-  group: release-from-semver-label-${{ github.ref }}
+  group: prepare-coordinated-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  release-from-label:
-    name: Bump coordinated workspace version and tag merged package changes
+  release-state:
+    name: Prepare release PR or tag verified release commit
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -34,441 +34,92 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6.4.0
+      - name: Resolve pending release state
+        id: release-plan
+        run: python scripts/release/coordinated_release.py plan --github-output "$GITHUB_OUTPUT"
+
+      - name: Prepare coordinated release PR changes
+        if: steps.release-plan.outputs.release_required == 'true'
+        run: |
+          python scripts/release/coordinated_release.py prepare
+          uv lock
+          python scripts/release/coordinated_release.py verify
+
+      - name: Open or update coordinated release PR
+        if: steps.release-plan.outputs.release_required == 'true'
+        uses: peter-evans/create-pull-request@v7
         with:
-          node-version: "24"
+          branch: automation/coordinated-release
+          delete-branch: true
+          title: Release v${{ steps.release-plan.outputs.version }}
+          commit-message: Release v${{ steps.release-plan.outputs.version }}
+          body: |
+            Prepare coordinated workspace release v${{ steps.release-plan.outputs.version }}.
 
-      - name: Resolve release bump
-        id: release-bump
-        env:
-          BEFORE_SHA: ${{ github.event.before }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-          GITHUB_EVENT_PATH: ${{ github.event_path }}
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
+            This PR was generated from source-controlled release changesets. It updates every coordinated package version mirror, refreshes `uv.lock`, commits `.release/releases/v${{ steps.release-plan.outputs.version }}.md`, and consumes the pending changesets. Merge this PR before tagging or publishing the release.
+
+      - name: Resolve pending release tag
+        id: release-commit
+        if: steps.release-plan.outputs.release_required != 'true'
         run: |
-          python - <<'PY'
-          import json
-          import os
-          import re
-          import subprocess
-          import sys
-          import tomllib
-          from pathlib import Path
+          git fetch origin master --tags
+          python scripts/release/coordinated_release.py tag-plan --github-output "$GITHUB_OUTPUT"
 
-          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
-          watched_paths = tuple(ownership["package_affecting_paths"])
-          semver_labels = set(ownership["semver_labels"])
-          package_pyprojects = [package["pyproject"] for package in ownership["packages"]]
-          typescript_package_jsons = [package["package_json"] for package in ownership["typescript_packages"]]
-          floor_version = ownership["first_coordinated_release"]["floor_version"]
-
-          def run(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
-              return subprocess.run(args, check=check, capture_output=True, text=True)
-
-          def output(name: str, value: str) -> None:
-              with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
-                  handle.write(f"{name}={value}\n")
-
-          def parse_version(version: str) -> tuple[int, int, int]:
-              try:
-                  parts = tuple(int(part) for part in version.split("."))
-              except ValueError:
-                  raise SystemExit(f"Package version must be numeric semver, got {version!r}")
-              if len(parts) != 3:
-                  raise SystemExit(f"Package version must be MAJOR.MINOR.PATCH, got {version!r}")
-              return parts
-
-          def version_text(path: str) -> str:
-              return tomllib.loads(Path(path).read_text(encoding="utf-8"))["project"]["version"]
-
-          def package_json_version_text(path: str) -> str:
-              return json.loads(Path(path).read_text(encoding="utf-8"))["version"]
-
-          def bump_version(version: str, label: str) -> str:
-              major, minor, patch = parse_version(version)
-              if label == "semver:major":
-                  major += 1
-                  minor = 0
-                  patch = 0
-              elif label == "semver:minor":
-                  minor += 1
-                  patch = 0
-              elif label == "semver:patch":
-                  patch += 1
-              else:
-                  raise SystemExit(f"Unsupported semver label: {label}")
-              return f"{major}.{minor}.{patch}"
-
-          def max_version(versions: list[str]) -> str:
-              return sorted(versions, key=parse_version)[-1]
-
-          def set_release_outputs(version: str) -> None:
-              output("release_needed", "true")
-              output("version", version)
-              output("tag", f"v{version}")
-
-          def skip_release(reason: str) -> None:
-              print(f"::notice::{reason}")
-              output("release_needed", "false")
-              raise SystemExit(0)
-
-          def associated_pr_numbers(commit_sha: str) -> list[str]:
-              result = run(
-                  "gh",
-                  "api",
-                  "-H",
-                  "Accept: application/vnd.github+json",
-                  f"repos/{os.environ['REPOSITORY']}/commits/{commit_sha}/pulls",
-                  "--jq",
-                  ".[].number",
-                  check=False,
-              )
-              if result.returncode != 0:
-                  return []
-              return result.stdout.splitlines()
-
-          def pr_label_names(pr_number: str) -> set[str]:
-              result = run(
-                  "gh",
-                  "api",
-                  f"repos/{os.environ['REPOSITORY']}/issues/{pr_number}/labels",
-              )
-              return {label["name"] for label in json.loads(result.stdout)}
-
-          def pr_changed_files(pr_number: str) -> list[str]:
-              return run(
-                  "gh",
-                  "api",
-                  f"repos/{os.environ['REPOSITORY']}/pulls/{pr_number}/files",
-                  "--paginate",
-                  "--jq",
-                  ".[].filename",
-              ).stdout.splitlines()
-
-          event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
-          message = os.environ.get("HEAD_COMMIT_MESSAGE", "")
-          if (
-              os.environ["GITHUB_ACTOR"] == "github-actions[bot]"
-              and re.match(r"^Release v\d+\.\d+\.\d+$", message.strip())
-          ):
-              skip_release("Release bump commit detected; no additional release bump needed.")
-
-          pr_number = ""
-          selected: list[str] = []
-          associated_prs = associated_pr_numbers(event["after"])
-          if associated_prs:
-              pr_number = associated_prs[0]
-              changed = pr_changed_files(pr_number)
-              labels = pr_label_names(pr_number)
-              selected = sorted(labels & semver_labels)
-          else:
-              before = os.environ["BEFORE_SHA"]
-              if not before or set(before) == {"0"}:
-                  before = run("git", "rev-list", "--max-parents=0", "HEAD").stdout.splitlines()[0]
-              elif run("git", "cat-file", "-e", f"{before}^{{commit}}", check=False).returncode != 0:
-                  before = run("git", "rev-parse", "HEAD^").stdout.strip()
-              changed = run("git", "diff", "--name-only", f"{before}...HEAD").stdout.splitlines()
-
-          package_changed = any(
-              path == watched or path.startswith(watched)
-              for path in changed
-              for watched in watched_paths
-          )
-          if not package_changed:
-              skip_release("No package-affecting changes detected; no release bump needed.")
-
-          versions = [version_text(path) for path in package_pyprojects] + [
-              package_json_version_text(path) for path in typescript_package_jsons
-          ]
-          for version in versions:
-              parse_version(version)
-          current_package_floor = max_version(versions)
-          current_floor = max_version([current_package_floor, floor_version])
-          needs_first_normalization = parse_version(current_package_floor) < parse_version(floor_version)
-
-          if not pr_number:
-              version_files = [*package_pyprojects, *typescript_package_jsons]
-              if not any(path in changed for path in version_files):
-                  skip_release(
-                      "Package-affecting push has no semver-label context and no coordinated explicit version bump."
-                  )
-              explicit_versions = {version_text(path) for path in package_pyprojects} | {
-                  package_json_version_text(path) for path in typescript_package_jsons
-              }
-              if len(explicit_versions) != 1:
-                  skip_release(f"Direct release push must set every package to the same version, got {sorted(explicit_versions)}.")
-              current_version = explicit_versions.pop()
-              if parse_version(current_version) < parse_version(current_floor):
-                  skip_release(f"Direct release version {current_version} would downgrade below floor {current_floor}.")
-              tag = f"v{current_version}"
-              if run("git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}", check=False).returncode == 0:
-                  skip_release(f"Explicit release version {current_version} already has tag {tag}; skipping release.")
-              set_release_outputs(current_version)
-              raise SystemExit(0)
-
-          if len(selected) != 1:
-              skip_release(f"PR #{pr_number} must have exactly one semver label before release; got {selected or 'none'}.")
-
-          if needs_first_normalization:
-              next_version = floor_version
-          else:
-              next_version = bump_version(current_floor, selected[0])
-          tag = f"v{next_version}"
-          if run("git", "rev-parse", "--verify", "--quiet", f"refs/tags/{tag}", check=False).returncode == 0:
-              skip_release(f"Release tag {tag} already exists; skipping release.")
-
-          for pyproject in package_pyprojects:
-              path = Path(pyproject)
-              text = path.read_text(encoding="utf-8")
-              path.write_text(
-                  re.sub(r'^version = "[^"]+"$', f'version = "{next_version}"', text, count=1, flags=re.MULTILINE),
-                  encoding="utf-8",
-              )
-          for package_json in typescript_package_jsons:
-              path = Path(package_json)
-              payload = json.loads(path.read_text(encoding="utf-8"))
-              payload["version"] = next_version
-              path.write_text(json.dumps(payload, indent=2, sort_keys=False) + "\n", encoding="utf-8")
-          set_release_outputs(next_version)
-          output("pr_number", pr_number)
-          output("semver_label", selected[0])
-          PY
-
-      - name: Update lockfile
-        if: steps.release-bump.outputs.release_needed == 'true'
-        run: uv lock
-
-      - name: Install development dependencies
-        if: steps.release-bump.outputs.release_needed == 'true'
-        run: make sync-all
-
-      - name: Run coordinated release proof
-        if: steps.release-bump.outputs.release_needed == 'true'
+      - name: Create annotated release tag
+        if: steps.release-commit.outputs.tag_needed == 'true'
         run: |
-          make test-workspace
-          make lint
-          make typecheck
-          make verify
-          uv run python scripts/check/check_generated_command_packages.py
-          for package in generated/*/typescript; do
-            (cd "$package" && npm test)
-          done
-          uv run python scripts/check/check_no_absolute_paths.py
-
-      - name: Build Agentic Workspace package artifacts
-        if: steps.release-bump.outputs.release_needed == 'true'
-        run: |
-          rm -rf dist
-          mkdir -p dist
-          uv build --wheel --sdist --out-dir dist
-          uv build --wheel --sdist --out-dir dist packages/memory
-          uv build --wheel --sdist --out-dir dist packages/planning
-          uv build --wheel --sdist --out-dir dist packages/verification
-          python scripts/release/patch_workspace_release_wheel.py \
-            --dist-dir dist \
-            --version "${{ steps.release-bump.outputs.version }}" \
-            --release-asset-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${{ steps.release-bump.outputs.tag }}"
-          for package in generated/*/typescript; do
-            (cd "$package" && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
-          done
-
-      - name: Prove built workspace stack installs outside source tree
-        if: steps.release-bump.outputs.release_needed == 'true'
-        run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
-
-      - name: Generate checksums and release manifest
-        if: steps.release-bump.outputs.release_needed == 'true'
-        env:
-          RELEASE_VERSION: ${{ steps.release-bump.outputs.version }}
-          RELEASE_TAG: ${{ steps.release-bump.outputs.tag }}
-        run: |
-          python - <<'PY'
-          import hashlib
-          import json
-          import os
-          import re
-          import tomllib
-          from pathlib import Path
-
-          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
-          command_generation_dependency = ""
-          root_pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
-          for dependency in root_pyproject.get("dependency-groups", {}).get("dev", []):
-              if str(dependency).startswith("command-generation @ "):
-                  command_generation_dependency = str(dependency)
-                  break
-          command_generation_version = ""
-          match = re.search(r"command_generation-(?P<version>[0-9][^-/]*)-py3-none-any\\.whl", command_generation_dependency)
-          if match:
-              command_generation_version = match.group("version")
-
-          def sha256(path: Path) -> str:
-              return hashlib.sha256(path.read_bytes()).hexdigest()
-
-          dist = Path("dist")
-          checksum_lines = []
-          package_entries = []
-          version = os.environ["RELEASE_VERSION"]
-          for package in ownership["packages"]:
-              declared = tomllib.loads(Path(package["pyproject"]).read_text(encoding="utf-8"))["project"]["version"]
-              if declared != version:
-                  raise SystemExit(f"{package['pyproject']} has version {declared}, expected {version}")
-              wheel = next(dist.glob(f"{package['wheel_prefix']}-{version}-*.whl"), None)
-              sdist = next(dist.glob(f"{package['sdist_prefix']}-{version}.tar.gz"), None)
-              if wheel is None or sdist is None:
-                  raise SystemExit(f"Missing wheel or sdist for {package['name']} {version}")
-              for artifact in (wheel, sdist):
-                  checksum_lines.append(f"{sha256(artifact)}  {artifact.name}")
-              package_entries.append(
-                  {
-                      "name": package["name"],
-                      "ecosystem": "python",
-                      "version": version,
-                      "pyproject": package["pyproject"],
-                      "wheel": {"asset": wheel.name, "sha256": sha256(wheel)},
-                      "sdist": {"asset": sdist.name, "sha256": sha256(sdist)},
-                      "payload_schema": package["payload_schema"],
-                      "payload_provenance": package["payload_provenance"],
-                      "generated_command_contract": package["generated_command_contract"],
-                  }
-              )
-          for package in ownership["typescript_packages"]:
-              package_json = json.loads(Path(package["package_json"]).read_text(encoding="utf-8"))
-              declared = package_json["version"]
-              if declared != version:
-                  raise SystemExit(f"{package['package_json']} has version {declared}, expected {version}")
-              if package_json.get("private") is not False:
-                  raise SystemExit(f"{package['package_json']} must be publishable for coordinated release")
-              tarball = next(dist.glob(f"{package['tarball_prefix']}-{version}.tgz"), None)
-              if tarball is None:
-                  raise SystemExit(f"Missing npm tarball for {package['name']} {version}")
-              checksum_lines.append(f"{sha256(tarball)}  {tarball.name}")
-              package_entries.append(
-                  {
-                      "name": package["name"],
-                      "ecosystem": "npm",
-                      "version": version,
-                      "package_json": package["package_json"],
-                      "package_root": package["package_root"],
-                      "tarball": {"asset": tarball.name, "sha256": sha256(tarball)},
-                      "entrypoints": package["entrypoints"],
-                      "python_package": package["python_package"],
-                      "runtime": package["runtime"],
-                      "runtime_requirement": package["runtime_requirement"],
-                      "release_policy": package["release_policy"],
-                      "generated_command_contract": package["generated_command_contract"],
-                  }
-              )
-
-          manifest = {
-              "kind": "agentic-workspace/coordinated-release-manifest/v1",
-              "release_model": ownership["release_model"],
-              "version": version,
-              "tag": os.environ["RELEASE_TAG"],
-              "all_or_nothing": True,
-              "packages": package_entries,
-              "command_generation": {
-                  "dependency": command_generation_dependency,
-                  "version": command_generation_version,
-                  "runtime_required": False,
-              },
-              "release_ownership": {
-                  "path": ".github/release-ownership.json",
-                  "schema_version": ownership["schema_version"],
-              },
-          }
-          manifest_path = dist / "agentic-workspace-release-manifest.json"
-          manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-          checksum_lines.append(f"{sha256(manifest_path)}  {manifest_path.name}")
-          (dist / "SHA256SUMS").write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
-          PY
-
-      - name: Verify release artifacts
-        if: steps.release-bump.outputs.release_needed == 'true'
-        env:
-          RELEASE_VERSION: ${{ steps.release-bump.outputs.version }}
-          RELEASE_TAG: ${{ steps.release-bump.outputs.tag }}
-        run: |
-          python - <<'PY'
-          import hashlib
-          import json
-          import os
-          from pathlib import Path
-
-          dist = Path("dist")
-          manifest = json.loads((dist / "agentic-workspace-release-manifest.json").read_text(encoding="utf-8"))
-          if manifest["version"] != os.environ["RELEASE_VERSION"] or manifest["tag"] != os.environ["RELEASE_TAG"]:
-              raise SystemExit("Release manifest version/tag mismatch")
-          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
-          expected_package_count = len(ownership["packages"]) + len(ownership["typescript_packages"])
-          if len(manifest["packages"]) != expected_package_count:
-              raise SystemExit("Release manifest must list every shipped package")
-          checksums = {}
-          for line in (dist / "SHA256SUMS").read_text(encoding="utf-8").splitlines():
-              digest, asset = line.split("  ", 1)
-              checksums[asset] = digest
-          required_assets = {"agentic-workspace-release-manifest.json"}
-          for package in manifest["packages"]:
-              if package.get("ecosystem") == "npm":
-                  required_assets.add(package["tarball"]["asset"])
-              else:
-                  required_assets.add(package["wheel"]["asset"])
-                  required_assets.add(package["sdist"]["asset"])
-          missing = sorted(required_assets - set(checksums))
-          if missing:
-              raise SystemExit(f"Missing checksums for release assets: {missing}")
-          for asset in required_assets:
-              digest = hashlib.sha256((dist / asset).read_bytes()).hexdigest()
-              if checksums[asset] != digest:
-                  raise SystemExit(f"Checksum mismatch for {asset}")
-          PY
-
-      - name: Commit version bump and push release tag
-        if: steps.release-bump.outputs.release_needed == 'true'
-        run: |
+          git fetch origin master --tags
+          if ! git merge-base --is-ancestor "${{ steps.release-commit.outputs.release_commit }}" origin/master; then
+            echo "Release commit ${{ steps.release-commit.outputs.release_commit }} is no longer reachable from origin/master" >&2
+            exit 1
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pyproject.toml packages/memory/pyproject.toml packages/planning/pyproject.toml packages/verification/pyproject.toml generated/workspace/typescript/package.json generated/memory/typescript/package.json generated/planning/typescript/package.json generated/verification/typescript/package.json uv.lock
-          RELEASE_DIFF="$(git diff --cached --name-only)"
-          if [ -n "$RELEASE_DIFF" ]; then
-            git fetch origin master --tags
-            if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/master)" ]; then
-              echo "::notice::origin/master advanced while this release proof was running; skip this stale release attempt and let the newer master run decide the release."
-              exit 0
-            fi
+          git tag -a "${{ steps.release-commit.outputs.tag }}" "${{ steps.release-commit.outputs.release_commit }}" -m "Release ${{ steps.release-commit.outputs.tag }}"
+          git push origin "${{ steps.release-commit.outputs.tag }}"
+
+      - name: Resolve publisher dispatch
+        id: publisher
+        if: steps.release-commit.outputs.publish_candidate == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release-commit.outputs.tag }}
+          RELEASE_COMMIT: ${{ steps.release-commit.outputs.release_commit }}
+        run: |
+          set -euo pipefail
+          {
+            echo "tag=${RELEASE_TAG}"
+            echo "release_commit=${RELEASE_COMMIT}"
+          } >> "$GITHUB_OUTPUT"
+          if gh release view "${RELEASE_TAG}" --json isDraft,assets > release-state.json 2>/dev/null; then
             python - <<'PY'
           import json
-          import subprocess
-          import sys
+          import os
           from pathlib import Path
 
-          ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
-          allowed = set(ownership["release_commit_allowed_paths"])
-          staged = set(subprocess.run(["git", "diff", "--cached", "--name-only"], check=True, capture_output=True, text=True).stdout.splitlines())
-          unexpected = sorted(staged - allowed)
-          if unexpected:
-              print(f"Release commit contains disallowed product changes: {unexpected}", file=sys.stderr)
-              raise SystemExit(1)
+          release = json.loads(Path("release-state.json").read_text(encoding="utf-8"))
+          assets = {asset.get("name") for asset in release.get("assets", []) if isinstance(asset, dict)}
+          complete = not release.get("isDraft") and {
+              "SHA256SUMS",
+              "agentic-workspace-release-manifest.json",
+          }.issubset(assets)
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
+              handle.write(f"publish_needed={str(not complete).lower()}\n")
+              handle.write(f"reason={'release-assets-complete' if complete else 'release-assets-missing-or-draft'}\n")
           PY
-            git commit -m "Release ${{ steps.release-bump.outputs.tag }}"
+          else
+            {
+              echo "publish_needed=true"
+              echo "reason=github-release-missing"
+            } >> "$GITHUB_OUTPUT"
           fi
-          git tag "${{ steps.release-bump.outputs.tag }}"
-          git push origin HEAD:master
-          git push origin "${{ steps.release-bump.outputs.tag }}"
 
-      - name: Publish GitHub release
-        if: steps.release-bump.outputs.release_needed == 'true'
-        uses: softprops/action-gh-release@v3.0.0
-        with:
-          tag_name: ${{ steps.release-bump.outputs.tag }}
-          files: |
-            dist/*.whl
-            dist/*.tar.gz
-            dist/*.tgz
-            dist/SHA256SUMS
-            dist/agentic-workspace-release-manifest.json
-          generate_release_notes: true
-          fail_on_unmatched_files: true
+      - name: Dispatch release publisher
+        if: steps.publisher.outputs.publish_needed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run release.yml \
+            --ref master \
+            -f tag="${{ steps.publisher.outputs.tag }}" \
+            -f source_commit="${{ steps.publisher.outputs.release_commit }}"
