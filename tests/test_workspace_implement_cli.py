@@ -8094,6 +8094,13 @@ def test_implement_required_best_fit_manual_transport_policy_states(
         "assignment.target",
         "assignment.required_next_action",
         "manual_transport.policy",
+        "assignment.plan_revision",
+        "assignment.slice_revision",
+        "assignment.target_identity_ref",
+        "assignment.allowed_effects",
+        "assignment.allowed_paths",
+        "assignment.proof_obligation_id",
+        "assignment.mutation_baseline",
         "assignment.revision",
     ]
     assert "stale-assignment-revision" in admission_gate["operation"]["rejects"]
@@ -8105,6 +8112,13 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
         "assignment_policy": "required-best-fit",
         "selected_target": "planner",
         "required_next_action": "prepare-assigned-handoff",
+        "target_identity_ref": "target:planner@2026-07-21",
+        "plan_revision": "plan-rev-1",
+        "slice_revision": "slice-rev-1",
+        "allowed_effects": ["repo-write"],
+        "allowed_paths": ["src/feature.py"],
+        "proof_obligation": {"id": "proof:feature"},
+        "mutation_baseline": "baseline-1",
     }
     assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
     delegation_decision = {
@@ -8121,7 +8135,7 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
         assignment_gate=assignment_gate,
         assignment_policy=assignment_policy,
         delegation_decision=delegation_decision,
-        returned_work={"assignment_revision": "sha256:stale", "target": "planner", "proof": {"result": "passed"}},
+        returned_work={"assignment_revision": "sha256:stale", "target": "planner", "aw_proof": {"result": "passed", "verified_by": "aw"}},
     )
     assert stale["admitted"] is False
     assert stale["failures"][0]["reason"] == "stale-assignment-revision"
@@ -8133,9 +8147,9 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
         returned_work={
             "assignment_revision": identity["revision"],
             "target": "planner",
-            "proof": {"result": "passed"},
-            "allowed_paths": ["src/feature.py"],
+            "aw_proof": {"result": "passed", "verified_by": "aw"},
             "changed_paths": ["src/feature.py"],
+            "mutation_baseline": "baseline-1",
         },
     )
     assert admitted["admitted"] is True
@@ -8202,6 +8216,7 @@ def test_delegated_return_admission_rejects_disabled_transport() -> None:
         "assignment_policy": "required-best-fit",
         "selected_target": "planner",
         "required_next_action": "prepare-assigned-handoff",
+        "allowed_paths": ["src/feature.py"],
     }
     assignment_policy = {"manual_transport_policy": {"value": "disabled"}}
     delegation_decision = {
@@ -8218,11 +8233,86 @@ def test_delegated_return_admission_rejects_disabled_transport() -> None:
         assignment_gate=assignment_gate,
         assignment_policy=assignment_policy,
         delegation_decision=delegation_decision,
-        returned_work={"assignment_revision": identity["revision"], "target": "planner", "proof": {"result": "passed"}},
+        returned_work={
+            "assignment_revision": identity["revision"],
+            "target": "planner",
+            "aw_proof": {"result": "passed", "verified_by": "aw"},
+        },
     )
 
     assert result["admitted"] is False
     assert result["failures"][0]["reason"] == "manual-transport-disabled"
+
+
+def test_delegated_return_admission_rejects_worker_self_reported_proof() -> None:
+    assignment_gate = {
+        "status": "handoff-required",
+        "assignment_policy": "required-best-fit",
+        "selected_target": "planner",
+        "required_next_action": "prepare-assigned-handoff",
+        "allowed_paths": ["src/feature.py"],
+    }
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = {
+        "decision": "assignment-handoff-required",
+        "delegation_next_step": {"execution_methods": ["manual"]},
+    }
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+
+    result = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={
+            "assignment_revision": identity["revision"],
+            "target": "planner",
+            "proof": {"result": "passed"},
+            "changed_paths": ["src/feature.py"],
+        },
+    )
+
+    assert result["admitted"] is False
+    assert result["failures"][0]["reason"] == "aw-proof-missing-or-not-passed"
+
+
+def test_delegated_return_admission_uses_canonical_scope_not_returned_allowed_paths() -> None:
+    assignment_gate = {
+        "status": "handoff-required",
+        "assignment_policy": "required-best-fit",
+        "selected_target": "planner",
+        "required_next_action": "prepare-assigned-handoff",
+        "allowed_paths": ["src/feature.py"],
+    }
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = {
+        "decision": "assignment-handoff-required",
+        "delegation_next_step": {"execution_methods": ["manual"]},
+    }
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+
+    result = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={
+            "assignment_revision": identity["revision"],
+            "target": "planner",
+            "aw_proof": {"result": "passed", "verified_by": "aw"},
+            "allowed_paths": ["src/feature.py", "src/escaped.py"],
+            "changed_paths": ["src/escaped.py"],
+        },
+    )
+
+    assert result["admitted"] is False
+    assert result["failures"][0]["reason"] == "changed-path-outside-scope"
 
 
 def test_required_when_no_automatic_method_distinguishes_automatic_execution() -> None:
