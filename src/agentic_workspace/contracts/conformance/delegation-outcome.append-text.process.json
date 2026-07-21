@@ -13,6 +13,8 @@
       "gpt_5_4_mini",
       "--task-class",
       "bounded-docs",
+      "--scope-class",
+      "bounded-docs",
       "--outcome",
       "success",
       "--format",
