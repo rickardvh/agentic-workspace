@@ -1413,28 +1413,37 @@ def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision
             "target_revision": "rev-b",
             "task_class": "mechanical-follow-through",
             "scope_class": "narrow-code-change",
+            "invariant_id": "narrow-edits",
+            "behavior_class": "edit-scope",
             "desired_behavior": "Prefer narrow edits.",
             "replaced_behavior": "Broad edits.",
             "authority": "explicit-user-correction",
             "source": "pr-review",
+            "source_ref": "review-1",
         },
         {
             "target_identity_ref": "user-local:fast-worker",
             "target_revision": "rev-b",
             "task_class": "mechanical-follow-through",
             "scope_class": "narrow-code-change",
-            "desired_behavior": "Prefer narrow edits.",
-            "replaced_behavior": "Broad edits.",
+            "invariant_id": "narrow-edits",
+            "behavior_class": "edit-scope",
+            "desired_behavior": "Keep changes narrow.",
+            "replaced_behavior": "Large broad edits.",
             "authority": "explicit-user-correction",
             "source": "pr-review",
+            "source_ref": "review-2",
         },
         {
             "target_identity_ref": "user-local:fast-worker",
             "target_revision": "old-rev",
+            "invariant_id": "stale-guidance",
+            "behavior_class": "routing",
             "desired_behavior": "Use stale behavior.",
             "replaced_behavior": "Current behavior.",
             "authority": "explicit-user-correction",
             "source": "pr-review",
+            "source_ref": "review-3",
         },
     ]
 
@@ -1447,7 +1456,42 @@ def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision
 
     assert admitted["admitted_events"][0]["target_identity_ref"] == "user-local:fast-worker"
     assert admitted["admitted_events"][0]["profile_name"] == "fast_worker"
-    assert {item["reason"] for item in admitted["rejected_events"]} == {"duplicate-replay", "rejected-stale-revision"}
+    assert admitted["admitted_events"][0]["admission_state"] == "recurrence"
+    assert admitted["admitted_events"][0]["recurrence_count"] == 2
+    assert {item["reason"] for item in admitted["rejected_events"]} == {"rejected-stale-revision"}
+
+
+def test_correction_event_lifecycle_rejects_delivery_replay_separately_from_recurrence() -> None:
+    from agentic_workspace.agent_guidance import admit_correction_events
+
+    subjects = [
+        {
+            "profile_name": "fast_worker",
+            "stable_target_id": "user-local:fast-worker",
+            "target_revision": "rev-b",
+            "aliases": ["fast"],
+            "identity_status": "active",
+            "revision_policy": "preserve",
+        }
+    ]
+    event = {
+        "target_identity_ref": "fast",
+        "target_revision": "rev-b",
+        "task_class": "mechanical-follow-through",
+        "scope_class": "narrow-code-change",
+        "invariant_id": "narrow-edits",
+        "behavior_class": "edit-scope",
+        "desired_behavior": "Prefer narrow edits.",
+        "replaced_behavior": "Broad edits.",
+        "authority": "explicit-user-correction",
+        "source": "pr-review",
+        "source_ref": "review-1",
+    }
+
+    admitted = admit_correction_events(events=[event, dict(event)], subjects=subjects)
+
+    assert admitted["admitted_events"][0]["admission_state"] == "accepted-candidate"
+    assert {item["reason"] for item in admitted["rejected_events"]} == {"duplicate-replay"}
 
 
 def test_correction_event_lifecycle_applies_revision_policies_and_rejects_unknown_or_secret_events() -> None:
@@ -1477,33 +1521,45 @@ def test_correction_event_lifecycle_applies_revision_policies_and_rejects_unknow
             {
                 "target_identity_ref": "user-local:preserve",
                 "target_revision": "rev-a",
+                "invariant_id": "preserved-guidance",
+                "behavior_class": "routing",
                 "desired_behavior": "Keep preserved guidance.",
                 "replaced_behavior": "Old guidance.",
                 "authority": "explicit-user-correction",
                 "source": "pr-review",
+                "source_ref": "preserve-1",
             },
             {
                 "target_identity_ref": "user-local:retired",
                 "target_revision": "rev-a",
+                "invariant_id": "retired-guidance",
+                "behavior_class": "routing",
                 "desired_behavior": "Route retired guidance.",
                 "replaced_behavior": "Old guidance.",
                 "authority": "explicit-user-correction",
                 "source": "pr-review",
+                "source_ref": "retired-1",
             },
             {
                 "target_identity_ref": "missing",
+                "invariant_id": "missing-target",
+                "behavior_class": "routing",
                 "desired_behavior": "Unknown target.",
                 "replaced_behavior": "Old guidance.",
                 "authority": "explicit-user-correction",
                 "source": "pr-review",
+                "source_ref": "missing-1",
             },
             {
                 "target_identity_ref": "user-local:preserve",
                 "target_revision": "rev-b",
+                "invariant_id": "secret-guidance",
+                "behavior_class": "routing",
                 "desired_behavior": "Never store sk-secret.",
                 "replaced_behavior": "Old guidance.",
                 "authority": "explicit-user-correction",
                 "source": "pr-review",
+                "source_ref": "secret-1",
             },
         ],
         subjects=subjects,
