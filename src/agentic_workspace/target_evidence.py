@@ -11,6 +11,14 @@ from agentic_workspace.config import (
 )
 
 
+def _profile_identity_keys(profile: DelegationTargetProfile) -> set[str]:
+    return {key for key in (profile.target_id, profile.name, *profile.aliases) if key}
+
+
+def _canonical_target_key(profile: DelegationTargetProfile | None, fallback: str) -> str:
+    return profile.target_id or profile.name if profile is not None else fallback
+
+
 def _delegation_signal_score(record: DelegationOutcomeRecord) -> float:
     outcome_score = {"success": 1.0, "mixed": 0.0, "failed": -1.0}[record.outcome]
     handoff_score = {"sufficient": 0.25, "borderline": 0.0, "insufficient": -0.25}[record.handoff_sufficiency]
@@ -20,7 +28,7 @@ def _delegation_signal_score(record: DelegationOutcomeRecord) -> float:
 
 
 def _record_scope_class(record: DelegationOutcomeRecord) -> str:
-    return record.task_class
+    return record.scope_class or record.task_class
 
 
 def _context_key(*, task_class: str, scope_class: str | None = None) -> str:
@@ -29,7 +37,32 @@ def _context_key(*, task_class: str, scope_class: str | None = None) -> str:
 
 
 def _target_record_id(*, target_name: str, record: DelegationOutcomeRecord, index: int) -> str:
+    if record.record_id:
+        return record.record_id
     return f"{target_name}:{record.task_class}:{_record_scope_class(record)}:{record.recorded_at}:{index}"
+
+
+def _currently_admitted_records(records: list[tuple[int, DelegationOutcomeRecord]]) -> list[tuple[int, DelegationOutcomeRecord]]:
+    """Return records assignment may consume after lifecycle transitions are applied."""
+
+    superseded_ids = {record.predecessor_id for _, record in records if record.operation == "supersede" and record.predecessor_id}
+    disputed_ids = {
+        record.predecessor_id
+        for _, record in records
+        if record.operation == "correct-or-dispute" and record.predecessor_id and record.outcome in {"mixed", "failed"}
+    }
+    inactive_ids = superseded_ids | disputed_ids
+    admitted: list[tuple[int, DelegationOutcomeRecord]] = []
+    for index, record in records:
+        record_id = _target_record_id(target_name=record.delegation_target, record=record, index=index)
+        if record_id in inactive_ids:
+            continue
+        if record.admission_state not in {"accepted", "accepted-normalized", "recovered"}:
+            continue
+        if record.operation == "prune-or-compact":
+            continue
+        admitted.append((index, record))
+    return admitted
 
 
 def _target_context(profile: DelegationTargetProfile | None) -> dict[str, Any]:
@@ -64,14 +97,32 @@ def target_evidence_posture(
     profiles: Iterable[DelegationTargetProfile],
     records: Iterable[DelegationOutcomeRecord],
 ) -> dict[str, Any]:
-    profile_by_name = {profile.name: profile for profile in profiles}
+    profile_list = list(profiles)
+    profile_by_name = {profile.name: profile for profile in profile_list}
+    profile_by_identity: dict[str, DelegationTargetProfile | None] = {}
+    ambiguous_identities: set[str] = set()
+    for profile in profile_list:
+        for identity in _profile_identity_keys(profile):
+            if identity in profile_by_identity and profile_by_identity[identity] is not profile:
+                ambiguous_identities.add(identity)
+                profile_by_identity[identity] = None
+            else:
+                profile_by_identity[identity] = profile
     records_by_target: dict[str, list[DelegationOutcomeRecord]] = {}
+    canonical_profile_by_target: dict[str, DelegationTargetProfile | None] = {}
     for record in records:
-        records_by_target.setdefault(record.delegation_target, []).append(record)
+        profile = profile_by_identity.get(record.delegation_target)
+        canonical_target = (
+            record.delegation_target
+            if record.delegation_target in ambiguous_identities
+            else _canonical_target_key(profile, record.delegation_target)
+        )
+        records_by_target.setdefault(canonical_target, []).append(record)
+        canonical_profile_by_target[canonical_target] = profile
 
     normalized: list[dict[str, Any]] = []
     for target_name in sorted(records_by_target):
-        profile = profile_by_name.get(target_name)
+        profile = canonical_profile_by_target.get(target_name) or profile_by_name.get(target_name)
         context = _target_context(profile)
         for index, record in enumerate(records_by_target[target_name]):
             scope_class = _record_scope_class(record)
@@ -79,6 +130,7 @@ def target_evidence_posture(
                 {
                     "id": _target_record_id(target_name=target_name, record=record, index=index),
                     "target": target_name,
+                    "target_input_ref": record.delegation_target,
                     "target_identity_ref": context["target_identity_ref"],
                     "target_revision": context["target_revision"],
                     "task_class": record.task_class,
@@ -89,24 +141,29 @@ def target_evidence_posture(
                     "review_burden": record.review_burden,
                     "escalation_required": record.escalation_required,
                     "recorded_at": record.recorded_at,
-                    "authority": "local-outcome-ledger",
-                    "confidence": "medium",
-                    "admission_state": "accepted-normalized",
+                    "operation": record.operation,
+                    "predecessor_id": record.predecessor_id or None,
+                    "authority": record.authority,
+                    "confidence": record.confidence,
+                    "admission_state": record.admission_state,
                     "source": {
                         "type": "local-json-ledger",
                         "ref": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
                         "checked_in": False,
                     },
-                    "routing_relevance": "task-class-bound",
+                    "routing_relevance": "task-and-scope-bound",
                     "signal": _delegation_signal_score(record),
                     **context,
                 }
             )
 
     suitability: list[dict[str, Any]] = []
-    target_names = sorted(set(profile_by_name) | set(records_by_target))
+    target_names = sorted({_canonical_target_key(profile, profile.name) for profile in profile_list} | set(records_by_target))
     for target_name in target_names:
-        profile = profile_by_name.get(target_name)
+        profile = canonical_profile_by_target.get(target_name) or next(
+            (candidate for candidate in profile_list if _canonical_target_key(candidate, candidate.name) == target_name),
+            None,
+        )
         context = _target_context(profile)
         target_records = records_by_target.get(target_name, [])
         if not target_records:
@@ -137,7 +194,9 @@ def target_evidence_posture(
                 (index, record)
             )
         for context_key in sorted(records_by_context):
-            indexed_scoped_records = records_by_context[context_key]
+            indexed_scoped_records = _currently_admitted_records(records_by_context[context_key])
+            if not indexed_scoped_records:
+                continue
             scoped_records = [record for _, record in indexed_scoped_records]
             scores = [_delegation_signal_score(record) for record in scoped_records]
             average = sum(scores) / len(scores)
@@ -171,7 +230,7 @@ def target_evidence_posture(
                     ],
                     "supported_task_classes": sorted({record.task_class for record in scoped_records}),
                     "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
-                    "raw_history_retention": "bounded-local-ledger",
+                    "raw_history_retention": "bounded-local-ledger-with-lifecycle-transitions",
                 }
             )
 
@@ -196,8 +255,8 @@ def target_evidence_posture(
             "public_operations": [
                 {
                     "operation": "submit",
-                    "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --outcome <success|mixed|failed> --handoff-sufficiency <sufficient|borderline|insufficient> --review-burden <light|normal|high> --format json",
-                    "admission": "normalizes scoped local outcome evidence before routing uses it",
+                    "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --scope-class <scope> --operation submit --outcome <success|mixed|failed> --handoff-sufficiency <sufficient|borderline|insufficient> --review-burden <light|normal|high> --format json",
+                    "admission": "requires target, task class, independent scope class, authority, confidence, and duplicate-safe record id before routing uses it",
                 },
                 {
                     "operation": "query",
@@ -206,35 +265,38 @@ def target_evidence_posture(
                 },
                 {
                     "operation": "correct-or-dispute",
-                    "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --outcome <mixed|failed> --review-burden high --escalation-required --format json",
-                    "admission": "records a scoped counter-signal; assignment consumes only matching task/scope records",
+                    "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --scope-class <scope> --operation correct-or-dispute --predecessor-id <record-id> --outcome <mixed|failed> --review-burden high --escalation-required --format json",
+                    "admission": "links to an existing record id and removes the disputed predecessor from current routing consumption",
                 },
                 {
                     "operation": "supersede",
-                    "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --outcome <success|mixed|failed> --format json",
-                    "admission": "records newer scoped evidence without deleting older audit history; recency policy remains explicit",
+                    "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --scope-class <scope> --operation supersede --predecessor-id <record-id> --outcome <success|mixed|failed> --format json",
+                    "admission": "links to an existing predecessor and makes only the superseding record current for matching task/scope routing",
                 },
                 {
                     "operation": "prune-or-compact",
-                    "command": "agentic-workspace config --target . --select mixed_agent.target_evidence.storage --format json",
-                    "admission": "raw local ledger is safe to remove; compact retained signals must preserve target/context ids",
+                    "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --scope-class <scope> --operation prune-or-compact --predecessor-id <record-id> --outcome mixed --format json",
+                    "admission": "records a compaction boundary; retained signals must preserve target/task/scope ids and predecessor lineage",
                 },
             ],
             "admission_rejections": [
                 "malformed records",
-                "duplicate target/task/date evidence without a distinct outcome signal",
+                "duplicate target/task/scope/date evidence without a lifecycle predecessor",
                 "ambiguous or unscoped target",
                 "unsupported outcome enums",
                 "records lacking task/scope context",
+                "transition records without an existing predecessor id",
             ],
             "routing_rule": "Assignment may consume only accepted evidence matching the requested task/scope context.",
         },
         "admission": {
             "rejects": [
                 "malformed records",
-                "duplicate target/task/date evidence without a distinct outcome signal",
+                "duplicate target/task/scope/date evidence without a lifecycle predecessor",
                 "unscoped target",
+                "unscoped task/scope context",
                 "unsupported outcome enums",
+                "unknown predecessor transition",
             ],
             "source": "config.load_delegation_outcomes",
         },
@@ -287,16 +349,18 @@ def assignment_decision_from_policy(
         target = str(profile.get("name") or "")
         if not target:
             continue
-        target_identity_ref = str(profile.get("target_id") or "")
+        target_identity_ref = str(profile.get("target_id") or target)
         target_revision = str(profile.get("target_revision") or "")
         revision_policy = str(profile.get("revision_policy") or "")
+        target_aliases = {str(alias) for alias in profile.get("aliases", [])} if isinstance(profile.get("aliases"), list) else set()
+        current_target_matches_profile = current_target in ({target, target_identity_ref} | target_aliases)
         required_action = str(profile.get("required_action") or "")
         eligible = not bool(profile.get("capability_mismatch")) and required_action not in hard_reject_actions
         score = int(profile.get("score") or 0) + recommendation_score.get(str(profile.get("recommendation") or ""), 0)
-        matching_evidence = evidence_by_target.get(target, [])
+        matching_evidence = evidence_by_target.get(target_identity_ref, []) or evidence_by_target.get(target, [])
         for evidence in matching_evidence:
             score += evidence_score.get(str(evidence.get("route_effect") or ""), 0)
-        if target == current_target:
+        if current_target_matches_profile:
             score += 5
         candidate_scores.append(
             {
@@ -323,21 +387,22 @@ def assignment_decision_from_policy(
         )
     eligible_candidates = [item for item in candidate_scores if item["eligible"]]
     eligible_candidates.sort(key=lambda item: (-int(item["score"]), str(item["target"])))
-    selected_target = eligible_candidates[0]["target"] if eligible_candidates else (current_target or None)
-    if policy_value == "local-preferred":
+    selected_target = eligible_candidates[0]["target"] if eligible_candidates else None
+    if not eligible_candidates:
+        decision = "no-safe-route"
+    elif policy_value == "local-preferred":
         decision = "keep-local"
     elif policy_value == "best-fit-advisory":
         decision = "advise-best-fit"
     elif not enforceable:
         decision = "blocked"
         selected_target = current_target or None
-    elif not eligible_candidates:
-        decision = "no-safe-route"
-        selected_target = None
     elif recommendation in {"external-delegation", "manual-handoff", "stronger-reasoning"}:
         decision = "assign-or-escalate"
     else:
-        decision = "assign-best-fit" if selected_target != current_target else "assign-current-target"
+        selected = eligible_candidates[0] if eligible_candidates else {}
+        selected_target_refs = {str(selected.get("target") or ""), str(selected.get("target_identity_ref") or "")}
+        decision = "assign-current-target" if current_target in selected_target_refs else "assign-best-fit"
     return {
         "kind": "agentic-workspace/assignment-decision/v1",
         "decision": decision,
