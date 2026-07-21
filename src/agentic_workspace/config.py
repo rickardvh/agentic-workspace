@@ -592,10 +592,17 @@ class DelegationOutcomeRecord:
     recorded_at: str
     delegation_target: str
     task_class: str
+    scope_class: str
     outcome: str
     handoff_sufficiency: str
     review_burden: str
     escalation_required: bool
+    operation: str = "submit"
+    record_id: str = ""
+    predecessor_id: str = ""
+    authority: str = "local-outcome-ledger"
+    confidence: str = "medium"
+    admission_state: str = "accepted"
 
 
 def discover_workspace_root(start_path: Path | None = None) -> Path | None:
@@ -1617,16 +1624,25 @@ def normalize_delegation_outcome_record(raw: Any, *, surface_name: str) -> Deleg
     recorded_at = raw.get("recorded_at")
     delegation_target = raw.get("delegation_target")
     task_class = raw.get("task_class")
+    scope_class = raw.get("scope_class")
     outcome = raw.get("outcome")
     handoff_sufficiency = raw.get("handoff_sufficiency")
     review_burden = raw.get("review_burden")
     escalation_required = raw.get("escalation_required")
+    operation = raw.get("operation", "submit")
+    record_id = raw.get("record_id", "")
+    predecessor_id = raw.get("predecessor_id", "")
+    authority = raw.get("authority", "local-outcome-ledger")
+    confidence = raw.get("confidence", "medium")
+    admission_state = raw.get("admission_state", "accepted-normalized")
     if not isinstance(recorded_at, str) or not recorded_at.strip():
         raise WorkspaceUsageError(f"{surface_name} record recorded_at must be a non-empty string.")
     if not isinstance(delegation_target, str) or not delegation_target.strip():
         raise WorkspaceUsageError(f"{surface_name} record delegation_target must be a non-empty string.")
     if not isinstance(task_class, str) or not task_class.strip():
         raise WorkspaceUsageError(f"{surface_name} record task_class must be a non-empty string.")
+    if scope_class is not None and (not isinstance(scope_class, str) or not scope_class.strip()):
+        raise WorkspaceUsageError(f"{surface_name} record scope_class must be a non-empty string when present.")
     if outcome not in SUPPORTED_DELEGATION_OUTCOMES:
         allowed = ", ".join(SUPPORTED_DELEGATION_OUTCOMES)
         raise WorkspaceUsageError(f"{surface_name} record outcome must be one of: {allowed}.")
@@ -1638,14 +1654,34 @@ def normalize_delegation_outcome_record(raw: Any, *, surface_name: str) -> Deleg
         raise WorkspaceUsageError(f"{surface_name} record review_burden must be one of: {allowed}.")
     if not isinstance(escalation_required, bool):
         raise WorkspaceUsageError(f"{surface_name} record escalation_required must be a boolean.")
+    if operation not in {"submit", "correct-or-dispute", "supersede", "prune-or-compact"}:
+        raise WorkspaceUsageError(
+            f"{surface_name} record operation must be one of: submit, correct-or-dispute, supersede, prune-or-compact."
+        )
+    for field_name, value in {
+        "record_id": record_id,
+        "predecessor_id": predecessor_id,
+        "authority": authority,
+        "confidence": confidence,
+        "admission_state": admission_state,
+    }.items():
+        if value is not None and not isinstance(value, str):
+            raise WorkspaceUsageError(f"{surface_name} record {field_name} must be a string when present.")
     return DelegationOutcomeRecord(
         recorded_at=recorded_at.strip(),
         delegation_target=delegation_target.strip(),
         task_class=task_class.strip(),
+        scope_class=(scope_class.strip() if isinstance(scope_class, str) and scope_class.strip() else task_class.strip()),
         outcome=outcome,
         handoff_sufficiency=handoff_sufficiency,
         review_burden=review_burden,
         escalation_required=escalation_required,
+        operation=str(operation).strip(),
+        record_id=str(record_id).strip(),
+        predecessor_id=str(predecessor_id).strip(),
+        authority=str(authority).strip() or "local-outcome-ledger",
+        confidence=str(confidence).strip() or "medium",
+        admission_state=str(admission_state).strip() or "accepted",
     )
 
 

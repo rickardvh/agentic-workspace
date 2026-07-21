@@ -13,6 +13,11 @@ External client input contract for delegation-outcome.append.
 | (root) | object | yes |  | External client input contract for delegation-outcome.append. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `delegation_target` | string | yes |  | Delegation target alias. |  |  |
 | `task_class` | string | yes |  | Bounded task classification. |  |  |
+| `scope_class` | string | yes |  | Independent bounded scope classification. |  |  |
+| `operation` | enum `"submit"`, `"correct-or-dispute"`, `"supersede"`, `"prune-or-compact"` | no |  | Evidence lifecycle operation. |  |  |
+| `predecessor_id` | string | no |  | Existing record id for lifecycle transition operations. |  |  |
+| `authority` | string | no |  | Authority class for the admitted evidence. |  |  |
+| `confidence` | enum `"low"`, `"medium"`, `"high"` | no |  | Confidence classification for the admitted evidence. |  |  |
 | `outcome` | enum `"success"`, `"mixed"`, `"failed"` | yes |  | Observed delegation outcome. |  |  |
 | `handoff_sufficiency` | enum `"sufficient"`, `"borderline"`, `"insufficient"` | no |  | Handoff sufficiency classification. |  |  |
 | `review_burden` | enum `"light"`, `"normal"`, `"high"` | no |  | Review burden classification. |  |  |
