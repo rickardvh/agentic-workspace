@@ -235,6 +235,16 @@ PYTHON_SHIPPED_MODULE_SOURCE_ROOTS = (
     "packages/memory/src/repo_memory_bootstrap/",
     "packages/verification/src/repo_verification_bootstrap/",
 )
+PYTHON_SOURCE_RUNTIME_FIRST_CLI_OPERATION_CONTRACTS = (
+    "operations/evaluation.register.json",
+    "operations/evaluation.observe.json",
+    "operations/evaluation.status.json",
+    "operations/evaluation.transition.json",
+)
+PYTHON_SOURCE_RUNTIME_FIRST_CLI_EXECUTABLE_CATEGORIES = {
+    "command parsing",
+    "subparser ownership",
+}
 PYTHON_PRODUCT_RUNTIME_SOURCE_PATTERNS = (
     "workspace_runtime_cli.py",
     "planning_runtime_cli.py",
@@ -268,6 +278,12 @@ PYTHON_FULL_COMPLETION_BLOCKING_RUNTIME_SOURCE_PATHS = (
     "packages/memory/src/repo_memory_bootstrap/runtime_primitives.py",
     "packages/verification/src/repo_verification_bootstrap/runtime_primitives.py",
 )
+PYTHON_SHIPPED_SOURCE_EXECUTABLE_RETIREMENT_EXCEPTIONS = {
+    "src/agentic_workspace/cli.py": {
+        "command parsing": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
+        "subparser ownership": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
+    },
+}
 RUNTIME_SOURCE_EDIT_ACCEPTED_REASONS = (
     "existing-primitive-bugfix",
     "new-primitive-implementation",
@@ -289,9 +305,7 @@ PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_FACADE_PATHS = (
     "generated/planning/python/primitives/planning_runtime.py",
     "generated/memory/python/primitives/memory_runtime.py",
 )
-PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_HANDLER_COMMAND_PATHS = (
-    "generated/workspace/python/commands/session_log_manage.py",
-)
+PYTHON_FULL_COMPLETION_ACCEPTED_RUNTIME_HANDLER_COMMAND_PATHS = ("generated/workspace/python/commands/session_log_manage.py",)
 PYTHON_ACCEPTED_RUNTIME_BOUNDARY_PERMANENCE_STATUS = "accepted-permanent-package-domain-boundary"
 GENERATED_CLI_COMPATIBILITY_VOCABULARY = (
     "generated_cli_package",
@@ -450,7 +464,7 @@ DOMAIN_RUNTIME_PRIMITIVE_SOURCE_CALLS = {
     "verification.report.load": {
         "import_module": "repo_verification_bootstrap.runtime_primitives",
         "function": "verification_report_payload",
-    }
+    },
 }
 PYTHON_REQUIRED_RUNTIME_PROJECTION_OUTPUTS = {
     "generated/workspace/python/cli.py": (
@@ -638,7 +652,9 @@ def _generated_package_for_package(package_id: str):
 
 def _generated_runtime_module_for_package(package_id: str):
     try:
-        return load_generated_command_module_for_entrypoint(_entrypoint_for_package(package_id), _runtime_module_file_for_package(package_id))
+        return load_generated_command_module_for_entrypoint(
+            _entrypoint_for_package(package_id), _runtime_module_file_for_package(package_id)
+        )
     except ModuleNotFoundError:
         generated_package = {
             "root-workspace": "workspace",
@@ -661,10 +677,7 @@ def _python_command_for_package(package_id: str) -> list[str]:
     return [
         _python_executable(),
         "-c",
-        (
-            f"import sys; from {module} import main; "
-            "raise SystemExit(main(sys.argv[1:]))"
-        ),
+        (f"import sys; from {module} import main; raise SystemExit(main(sys.argv[1:]))"),
     ]
 
 
@@ -766,11 +779,7 @@ def _strict_retry_recovery_enabled() -> bool:
 
 
 def _load_json(relative_path: str) -> dict[str, object]:
-    return (
-        operation_manifest(relative_path)
-        if relative_path.startswith("operations/")
-        else load_contract_json(relative_path)
-    )
+    return operation_manifest(relative_path) if relative_path.startswith("operations/") else load_contract_json(relative_path)
 
 
 def _load_generated_operation_json(generated_root: Path, relative_path: str) -> dict[str, object]:
@@ -884,9 +893,7 @@ def _relative_posix(path: Path) -> str:
         return path.as_posix()
 
 
-def _command_interface_source_hint(
-    *, package_id: str, command_source_id: str, nested_interface_path: tuple[str, ...] = ()
-) -> str:
+def _command_interface_source_hint(*, package_id: str, command_source_id: str, nested_interface_path: tuple[str, ...] = ()) -> str:
     hint = (
         "src/agentic_workspace/contracts/command_package_ir.json "
         f"$.packages[id={package_id}].commands[adapter_id={command_source_id}].interface"
@@ -1327,6 +1334,10 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "output.fields.select",
     "workspace.output.emit",
     "python.function.call",
+    "evaluation.definition.register",
+    "evaluation.lifecycle.transition",
+    "evaluation.observation.append",
+    "evaluation.status.derive",
     "planning.adopt.apply",
     "planning.bootstrap.doctor.load",
     "planning.bootstrap.status.load",
@@ -1417,9 +1428,7 @@ def _validate_typescript_native_operation_execution(
                 if not primitive:
                     errors.append(f"{package} operation {operation_id!r} has an ir_plan step without a primitive")
                 elif not _typescript_primitive_supported(primitive):
-                    errors.append(
-                        f"{package} operation {operation_id!r} uses TypeScript primitive {primitive!r} without runtime support"
-                    )
+                    errors.append(f"{package} operation {operation_id!r} uses TypeScript primitive {primitive!r} without runtime support")
     return errors
 
 
@@ -2195,9 +2204,7 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
         python_runtime_binding = package.get("python_runtime_binding", {}) if isinstance(package, dict) else {}
         operation_executor = python_runtime_binding.get("operation_executor", {}) if isinstance(python_runtime_binding, dict) else {}
         runtime_handlers = {
-            str(handler.get("primitive", "")): handler
-            for handler in operation_executor.get("handlers", [])
-            if isinstance(handler, dict)
+            str(handler.get("primitive", "")): handler for handler in operation_executor.get("handlers", []) if isinstance(handler, dict)
         }
         generated_overrides: dict[tuple[str, str], dict[str, Any]] = {}
         for binding in python_runtime_binding.get("local_runtime_bindings", []) if isinstance(python_runtime_binding, dict) else []:
@@ -2212,7 +2219,9 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
             errors.append(f"{location} adapter {adapter_id!r} must reference operation_id {operation_id!r}")
         runtime_binding = adapter.get("runtime_binding", {})
         primitive_refs = runtime_binding.get("primitive_refs", []) if isinstance(runtime_binding, dict) else []
-        migrated_fields = set(record.get("migrated_behavior_fields", [])) if isinstance(record.get("migrated_behavior_fields"), list) else set()
+        migrated_fields = (
+            set(record.get("migrated_behavior_fields", [])) if isinstance(record.get("migrated_behavior_fields"), list) else set()
+        )
         for required_field in ("command identity", "option schema", "effect hints", "primitive refs", "generated Python command module"):
             if required_field not in migrated_fields:
                 errors.append(f"{location} migrated_behavior_fields must include {required_field!r}")
@@ -2251,7 +2260,9 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
                     expected_implementation = str(generated_handler.get("implementation", ""))
                     handler = runtime_handlers.get(primitive)
                     if handler is None:
-                        errors.append(f"{handler_location} primitive {primitive!r} is not present in command_package_ir operation_executor handlers")
+                        errors.append(
+                            f"{handler_location} primitive {primitive!r} is not present in command_package_ir operation_executor handlers"
+                        )
                     elif handler.get("function") != expected_function:
                         errors.append(
                             f"{handler_location} primitive {primitive!r} must bind function {expected_function!r}, found {handler.get('function')!r}"
@@ -2263,7 +2274,9 @@ def _validate_ordinary_command_migration_inventory() -> list[str]:
                         facade_text = facade_path.read_text(encoding="utf-8")
                         if f"def {expected_function}(" not in facade_text:
                             errors.append(f"{handler_location} facade must define {expected_function!r}")
-                    module_file = str(generated_handler.get("facade_path", "")).removeprefix("generated/workspace/python/").replace("/", ".")
+                    module_file = (
+                        str(generated_handler.get("facade_path", "")).removeprefix("generated/workspace/python/").replace("/", ".")
+                    )
                     if module_file.endswith(".py"):
                         module_file = module_file[:-3]
                     override = generated_overrides.get((module_file, expected_function))
@@ -2310,11 +2323,7 @@ def _source_symbols_for_path(relative_path: str) -> set[str]:
         module = ast.parse(path.read_text(encoding="utf-8"))
     except SyntaxError:
         return set()
-    return {
-        node.name
-        for node in module.body
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
-    }
+    return {node.name for node in module.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))}
 
 
 def _validate_runtime_semantic_exceptions() -> list[str]:
@@ -2372,7 +2381,9 @@ def _validate_runtime_semantic_exceptions() -> list[str]:
             errors.append(f"{location} accepted_runtime_boundary {boundary_key!r} is not accepted at source-symbol granularity")
         else:
             if accepted_entry.get("runtime_boundary_class") != boundary.get("runtime_boundary_class"):
-                errors.append(f"{location} accepted_runtime_boundary runtime_boundary_class must match python_runtime_projection_inventory.json")
+                errors.append(
+                    f"{location} accepted_runtime_boundary runtime_boundary_class must match python_runtime_projection_inventory.json"
+                )
             if operation_id not in set(accepted_entry.get("operation_ids", [])):
                 errors.append(f"{location} accepted_runtime_boundary must name operation_id {operation_id!r}")
 
@@ -2564,14 +2575,14 @@ def _runtime_boundary_minimization_report(metrics: dict[str, object]) -> dict[st
     route_counts = {str(key): int(value) for key, value in route_counts_obj.items()} if isinstance(route_counts_obj, dict) else {}
     tracking_issue_counts_obj = metrics.get("accepted_runtime_symbol_count_by_minimization_tracking_issue", {})
     tracking_issue_counts = (
-        {str(key): int(value) for key, value in tracking_issue_counts_obj.items()}
-        if isinstance(tracking_issue_counts_obj, dict)
-        else {}
+        {str(key): int(value) for key, value in tracking_issue_counts_obj.items()} if isinstance(tracking_issue_counts_obj, dict) else {}
     )
     exact_inventory = metrics.get("exact_minimization_inventory", [])
     if not isinstance(exact_inventory, list):
         exact_inventory = []
-    hand_owned_count = sum(class_counts.get(boundary_class, 0) for boundary_class in PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_HAND_OWNED_CLASSES)
+    hand_owned_count = sum(
+        class_counts.get(boundary_class, 0) for boundary_class in PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_HAND_OWNED_CLASSES
+    )
     move_candidate_count = class_counts.get("generic-deterministic-runtime-debt", 0)
     extraction_candidate_count = route_counts.get("candidate-extract-when-contract-stable", 0)
     minimization_claim_allowed = accepted_symbol_count == 0
@@ -2594,8 +2605,7 @@ def _runtime_boundary_minimization_report(metrics: dict[str, object]) -> dict[st
         "remaining_by_minimization_route": dict(sorted(route_counts.items())),
         "remaining_by_minimization_tracking_issue": dict(sorted(tracking_issue_counts.items())),
         "route_by_runtime_boundary_class": {
-            key: PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_ROUTES[key]
-            for key in sorted(PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_ROUTES)
+            key: PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_ROUTES[key] for key in sorted(PYTHON_RUNTIME_BOUNDARY_MINIMIZATION_ROUTES)
         },
         "move_to_command_generation_candidates": generic_debt_symbols,
         "exact_runtime_boundary_inventory": exact_inventory,
@@ -2766,19 +2776,13 @@ def _operation_lifecycle_dry_run_profile(*, operation_path: Path) -> dict[str, o
             continue
         primitive = str(step.get("uses", ""))
         condition = step.get("when")
-        if primitive == "memory.payload.lifecycle-plan" and _condition_requires_value(
-            condition, value_name="dry_run", expected=True
-        ):
+        if primitive == "memory.payload.lifecycle-plan" and _condition_requires_value(condition, value_name="dry_run", expected=True):
             memory_payload_dry_run_steps.append(str(step.get("id", primitive)))
         if primitive == "python.function.call":
             if condition is None or not _condition_requires_value(condition, value_name="dry_run", expected=False):
                 package_runtime_dry_run_steps.append(str(step.get("id", primitive)))
     default_dry_run_owner = (
-        "memory-payload"
-        if memory_payload_dry_run_steps
-        else "package-runtime"
-        if package_runtime_dry_run_steps
-        else "operation-runtime"
+        "memory-payload" if memory_payload_dry_run_steps else "package-runtime" if package_runtime_dry_run_steps else "operation-runtime"
     )
     return {
         "operation_id": operation_id,
@@ -3146,9 +3150,7 @@ def _aw_primitive_runtime_binding_report(ir: dict[str, object]) -> dict[str, obj
     generated_counts = _operation_usage_counts_by_primitive(generated_usage)
     source_counts = _operation_usage_counts_by_primitive(source_usage)
     aw_owned_primitives = _aw_owned_primitives()
-    missing_generated = sorted(
-        aw_id for aw_id in aw_owned_primitives if aw_id not in generated_counts and aw_id in source_counts
-    )
+    missing_generated = sorted(aw_id for aw_id in aw_owned_primitives if aw_id not in generated_counts and aw_id in source_counts)
     handler_support = {
         "python_support_path": "src/agentic_workspace/contracts/python_primitive_support.py",
         "typescript_support_path": "src/agentic_workspace/contracts/typescript_primitive_support.mjs",
@@ -3191,9 +3193,7 @@ def _aw_primitive_ownership_report(ir: dict[str, object]) -> dict[str, object]:
             "uv run python scripts/check/check_generated_command_packages.py --aw-primitive-ownership --format json"
         ),
         "ordinary_source_operation_ir": {
-            "status": "satisfied"
-            if int(retired_usage.get("ordinary_source_operation_usage_count", 0) or 0) == 0
-            else "blocked",
+            "status": "satisfied" if int(retired_usage.get("ordinary_source_operation_usage_count", 0) or 0) == 0 else "blocked",
             "aw_owned_usage_count": runtime_bindings["source_operation_usage_count"],
             "aw_owned_usage_count_by_primitive": runtime_bindings["source_operation_usage_count_by_primitive"],
             "retired_primitive_usage_count": retired_usage["ordinary_source_operation_usage_count"],
@@ -3343,12 +3343,10 @@ def _validate_retired_command_generation_primitive_usage_inventory() -> list[str
         operation_primitives = _load_json("operation_primitives.json")
     except (OSError, json.JSONDecodeError) as exc:
         return [*errors, f"operation_primitives.json is missing or invalid for retired primitive audit: {exc}"]
-    primitive_ids = {
-        str(primitive.get("id"))
-        for primitive in operation_primitives.get("primitives", [])
-        if isinstance(primitive, dict)
-    }
-    declared_retired = sorted(primitive_id for primitive_id in RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES if primitive_id in primitive_ids)
+    primitive_ids = {str(primitive.get("id")) for primitive in operation_primitives.get("primitives", []) if isinstance(primitive, dict)}
+    declared_retired = sorted(
+        primitive_id for primitive_id in RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES if primitive_id in primitive_ids
+    )
     if declared_retired:
         errors.append(f"retired command-generation transitional primitive IDs remain declared: {declared_retired!r}")
     support_matrix = operation_primitives.get("primitive_extension_boundary", {}).get("target_support_matrix", [])
@@ -3360,7 +3358,9 @@ def _validate_retired_command_generation_primitive_usage_inventory() -> list[str
             if not isinstance(shared, list):
                 continue
             retired_shared = sorted(
-                primitive for primitive in shared if isinstance(primitive, str) and primitive in RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES
+                primitive
+                for primitive in shared
+                if isinstance(primitive, str) and primitive in RETIRED_COMMAND_GENERATION_TRANSITIONAL_PRIMITIVES
             )
             if retired_shared:
                 errors.append(
@@ -3386,9 +3386,7 @@ def _validate_declarative_view_specs() -> list[str]:
             errors.append(f"{spec_path.relative_to(REPO_ROOT).as_posix()} is not a valid view spec: {exc}")
             continue
         operation_id = str(spec.get("operation_id", ""))
-        generated_operation = (
-            REPO_ROOT / "generated" / "memory" / "python" / "operations" / f"{operation_id}.json"
-        )
+        generated_operation = REPO_ROOT / "generated" / "memory" / "python" / "operations" / f"{operation_id}.json"
         if not generated_operation.is_file():
             errors.append(f"{spec_path.relative_to(REPO_ROOT).as_posix()} references missing generated operation {operation_id!r}")
             continue
@@ -3757,6 +3755,24 @@ def _python_executable_behavior_categories(text: str) -> list[str]:
     return sorted(categories)
 
 
+def _operation_declares_source_runtime_first(relative_path: str) -> bool:
+    operation = _load_json(relative_path)
+    ir_plan = operation.get("ir_plan", {})
+    return (
+        operation.get("migration_status") == "runtime-backed-source-command"
+        and isinstance(ir_plan, dict)
+        and ir_plan.get("status") == "source-runtime-first"
+    )
+
+
+def _allowed_source_runtime_first_cli_exception(relative_path: str, matched_categories: list[str]) -> bool:
+    if relative_path != "src/agentic_workspace/cli.py":
+        return False
+    if not set(matched_categories) <= PYTHON_SOURCE_RUNTIME_FIRST_CLI_EXECUTABLE_CATEGORIES:
+        return False
+    return all(_operation_declares_source_runtime_first(path) for path in PYTHON_SOURCE_RUNTIME_FIRST_CLI_OPERATION_CONTRACTS)
+
+
 def _validate_python_shipped_source_executable_retirement() -> list[str]:
     errors: list[str] = []
     tracked_sources = _tracked_python_source_files()
@@ -3770,7 +3786,12 @@ def _validate_python_shipped_source_executable_retirement() -> list[str]:
             continue
         text = path.read_text(encoding="utf-8")
         matched_categories = _python_executable_behavior_categories(text)
+        exceptions = PYTHON_SHIPPED_SOURCE_EXECUTABLE_RETIREMENT_EXCEPTIONS.get(relative_path, {})
+        if exceptions:
+            matched_categories = [category for category in matched_categories if category not in exceptions]
         if matched_categories:
+            if _allowed_source_runtime_first_cli_exception(relative_path, matched_categories):
+                continue
             errors.append(
                 "tracked shipped Python source must stay retired from generated CLI executable ownership; "
                 f"{relative_path} contains retired executable markers: {matched_categories!r}"
@@ -4075,7 +4096,9 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append("generated memory runtime facade must not retain retired memory status source fallback")
     promotion_function_marker = "def _load_memory_promotion_report(*args: Any, **kwargs: Any) -> Any:"
     if promotion_function_marker not in memory_runtime_text:
-        errors.append("generated memory runtime facade must retain _load_memory_promotion_report source fallback for compact JSON compatibility")
+        errors.append(
+            "generated memory runtime facade must retain _load_memory_promotion_report source fallback for compact JSON compatibility"
+        )
     report_function_marker = "def _load_memory_report(*args: Any, **kwargs: Any) -> Any:"
     if report_function_marker not in memory_runtime_text:
         errors.append("generated memory runtime facade must retain _load_memory_report source fallback for verbose/text behavior")
@@ -4485,11 +4508,15 @@ def _validate_generation_metadata_payload(
     actual_generator = metadata.get("generator")
     expected_generator = expected.get("generator")
     if actual_generator != expected_generator:
-        errors.append(f"{relative_path} generation metadata has unexpected generator: {actual_generator!r}, expected {expected_generator!r}")
+        errors.append(
+            f"{relative_path} generation metadata has unexpected generator: {actual_generator!r}, expected {expected_generator!r}"
+        )
     actual_source_ir = metadata.get("source_ir")
     expected_source_ir = expected.get("source_ir")
     if actual_source_ir != expected_source_ir:
-        errors.append(f"{relative_path} generation metadata has unexpected source_ir: {actual_source_ir!r}, expected {expected_source_ir!r}")
+        errors.append(
+            f"{relative_path} generation metadata has unexpected source_ir: {actual_source_ir!r}, expected {expected_source_ir!r}"
+        )
     actual_target = metadata.get("target")
     expected_target = expected.get("target")
     if actual_target != expected_target:
@@ -4508,10 +4535,7 @@ def _validate_generated_artifact_generation_metadata(ir: dict[str, object]) -> l
     source_ir_schema_version = expectations["source_ir_schema_version"]
     target_layout_versions = expectations["target_layout_versions"]
     if ir.get("schema_version") != source_ir_schema_version:
-        errors.append(
-            "canonical command package IR schema mismatch: "
-            f"{ir.get('schema_version')!r}, expected {source_ir_schema_version!r}"
-        )
+        errors.append(f"canonical command package IR schema mismatch: {ir.get('schema_version')!r}, expected {source_ir_schema_version!r}")
     if not _command_generation_package_provenance().get("compatible"):
         errors.append("generated artifact metadata cannot be trusted until command-generation package provenance is compatible")
     for package in ir.get("packages", []):
@@ -4869,8 +4893,7 @@ def _validate_command_generation_extraction_readiness(ir: dict[str, object]) -> 
     missing_inventory = sorted(product_literal_paths - accepted_paths)
     if missing_inventory:
         errors.append(
-            "command-generation source contains product-specific literals without extraction-readiness inventory: "
-            f"{missing_inventory!r}"
+            f"command-generation source contains product-specific literals without extraction-readiness inventory: {missing_inventory!r}"
         )
     stale_inventory = sorted(accepted_paths - product_literal_paths)
     if stale_inventory:
@@ -5030,9 +5053,7 @@ def _validate_command_generation_non_aw_fixture() -> list[str]:
             output.path.parent.mkdir(parents=True, exist_ok=True)
             output.path.write_text(output.content, encoding="utf-8")
         generated_text = "\n".join(
-            output.content
-            for output in outputs
-            if output.path.suffix == ".py" and output.path.name != "primitive_executor.py"
+            output.content for output in outputs if output.path.suffix == ".py" and output.path.name != "primitive_executor.py"
         )
         forbidden = sorted(token for token in COMMAND_GENERATION_PRODUCT_LITERAL_TOKENS if token in generated_text)
         if forbidden:
@@ -5357,9 +5378,7 @@ def _validate_static_surfaces() -> list[str]:
                 errors.append(f"command_package_ir.json package {package_id!r} is missing a Python generated target")
                 continue
             python_target = python_targets[0]
-            expected_maturity = (
-                "runtime-backed-read-only-adapter" if package_id == "verification-cli" else "mutation-capable-adapter"
-            )
+            expected_maturity = "runtime-backed-read-only-adapter" if package_id == "verification-cli" else "mutation-capable-adapter"
             if python_target.get("maturity_level_ref") != expected_maturity:
                 errors.append(
                     f"command_package_ir.json package {package_id!r} Python target maturity drifted; "
@@ -5379,9 +5398,7 @@ def _validate_static_surfaces() -> list[str]:
                 if version_metadata.get("source") != "python-package-metadata":
                     errors.append(f"command_package_ir.json package {package_id!r} version_metadata source is not python-package-metadata")
                 if version_metadata.get("distribution") != program:
-                    errors.append(
-                        f"command_package_ir.json package {package_id!r} version_metadata distribution drifted from {program!r}"
-                    )
+                    errors.append(f"command_package_ir.json package {package_id!r} version_metadata distribution drifted from {program!r}")
                 if not str(version_metadata.get("fallback_version", "")).strip():
                     errors.append(f"command_package_ir.json package {package_id!r} version_metadata fallback_version is missing")
             if python_target.get("generated_root") != generated_root:
@@ -5935,18 +5952,12 @@ def _print_python_completion_blockers_report(report: dict[str, object], *, outpu
     lifecycle_metrics = report.get("lifecycle_dry_run_metrics", {})
     if isinstance(lifecycle_metrics, dict) and lifecycle_metrics.get("status") == "available":
         print(f"Lifecycle dry-run operations: {lifecycle_metrics.get('lifecycle_dry_run_operation_count')}")
-        print(
-            "Memory-payload default dry-run operations: "
-            f"{lifecycle_metrics.get('memory_payload_default_dry_run_operation_count')}"
-        )
+        print(f"Memory-payload default dry-run operations: {lifecycle_metrics.get('memory_payload_default_dry_run_operation_count')}")
         print(f"Package-runtime default dry-run operations: {lifecycle_metrics.get('package_runtime_default_dry_run_operation_count')}")
         print(f"Operation-runtime default dry-run operations: {lifecycle_metrics.get('operation_runtime_default_dry_run_operation_count')}")
     retired_usage = report.get("retired_command_generation_primitive_usage", {})
     if isinstance(retired_usage, dict) and retired_usage.get("status"):
-        print(
-            "Retired command-generation primitive ordinary source usage: "
-            f"{retired_usage.get('ordinary_source_operation_usage_count')}"
-        )
+        print(f"Retired command-generation primitive ordinary source usage: {retired_usage.get('ordinary_source_operation_usage_count')}")
         print(f"Retired command-generation primitive guard references: {retired_usage.get('guard_reference_count')}")
     check_inventory = report.get("generated_command_check_inventory", {})
     if isinstance(check_inventory, dict) and check_inventory.get("status") == "available":

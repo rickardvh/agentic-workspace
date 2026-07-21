@@ -8547,7 +8547,7 @@ def test_report_release_recovery_section_exposes_payload_and_semver_recovery_rou
             "release_ci_failure": {
                 "kind": "agentic-workspace/release-ci-failure-summary/v1",
                 "status": "failed-release-run",
-                "workflow": "Release From Semver Label",
+                "workflow": "Release",
                 "run_url": "https://github.com/example/repo/actions/runs/1",
                 "failed_job": "release",
                 "failed_step": "Run proof",
@@ -8557,6 +8557,10 @@ def test_report_release_recovery_section_exposes_payload_and_semver_recovery_rou
             "release_publication_state": {
                 "status": "failed-release-unpublished",
                 "failed_run_url": "https://github.com/example/repo/actions/runs/1",
+                "publisher_retry": {
+                    "status": "ready",
+                    "command": 'gh workflow run release.yml --ref master -f tag="v0.34.1" -f source_commit="abc123"',
+                },
             },
         },
     )
@@ -8584,6 +8588,7 @@ def test_report_release_recovery_section_exposes_payload_and_semver_recovery_rou
     assert recovery["release_ci_failure"]["status"] == "failed-release-run"
     assert recovery["release_ci_failure"]["failed_step"] == "Run proof"
     assert recovery["release_publication_state"]["status"] == "failed-release-unpublished"
+    assert recovery["release_publication_state"]["publisher_retry"]["status"] == "ready"
     assert "release_recovery_status.py" in recovery["semver_release_action"]["command"]
     assert "repair_route" in recovery["payload_drift"]
     assert "required_version_paths" in recovery["coordinated_recovery"]["pr_shape"]

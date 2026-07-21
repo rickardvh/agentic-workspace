@@ -160,6 +160,64 @@ def _validate_definition(definition: dict[str, Any]) -> None:
         raise WorkspaceUsageError("lifecycle is invalid.")
 
 
+def _evaluation_admission_contract() -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/evaluation-admission-contract/v1",
+        "status": "fail-closed-for-bound-results",
+        "required_context": [
+            "assignment.target_identity_ref",
+            "assignment.context_key",
+            "authority_envelope.mutation_baseline.baseline_id",
+            "authority_envelope.mutation_baseline.head",
+            "proof.provenance",
+        ],
+        "reject_when": [
+            "assignment-target-mismatch",
+            "baseline-head-changed",
+            "scope-expanded",
+            "stale-worktree",
+            "failed-proof",
+            "superseded-result",
+        ],
+        "consumers": ["status", "doctor", "operating-decision", "proof-selection"],
+        "repair_route": "rerun or supersede the evaluation result after refreshing assignment, authority, baseline, and proof context",
+    }
+
+
+def _observation_admission(context: dict[str, Any]) -> dict[str, Any]:
+    authority = context.get("authority_envelope", {}) if isinstance(context.get("authority_envelope"), dict) else {}
+    baseline = authority.get("mutation_baseline", {}) if isinstance(authority.get("mutation_baseline"), dict) else {}
+    proof = context.get("proof", {}) if isinstance(context.get("proof"), dict) else {}
+    assignment = context.get("assignment", {}) if isinstance(context.get("assignment"), dict) else {}
+    stale_reason = str(baseline.get("revalidation_status") or "").strip()
+    if stale_reason in {"stale", "mismatch", "rejected", "failed"}:
+        return {
+            "status": "rejected",
+            "reason": "stale-worktree",
+            "repair_route": "refresh mutation baseline and rerun or supersede this evaluation observation",
+        }
+    if str(proof.get("result") or "").strip() == "failed":
+        return {
+            "status": "rejected",
+            "reason": "failed-proof",
+            "repair_route": "rerun proof before admitting this evaluation observation",
+        }
+    required_present = bool(
+        assignment.get("target_identity_ref")
+        and assignment.get("context_key")
+        and baseline.get("baseline_id")
+        and baseline.get("head")
+        and proof.get("provenance")
+    )
+    return {
+        "status": "admitted" if required_present else "legacy-unbound",
+        "reason": "fresh-bound-context" if required_present else "missing-bound-context",
+        "bound_context": required_present,
+        "baseline_id": baseline.get("baseline_id"),
+        "target_identity_ref": assignment.get("target_identity_ref"),
+    }
+
+
 def register_evaluation(
     *,
     target_root: Path,
@@ -194,6 +252,7 @@ def register_evaluation(
         "report_sinks": report_sinks,
         "conclusion_policy": conclusion_policy or {"rule": "owner-reviews-summary", "terminal_states": sorted(TERMINAL_LIFECYCLES)},
         "action_policy": action_policy or {"material_negative_finding": "create-or-reopen-bounded-follow-up"},
+        "admission_contract": _evaluation_admission_contract(),
         "created_at": str(existing.get("created_at", now)) if existing else now,
         "updated_at": now,
     }
@@ -296,6 +355,10 @@ def append_observation(
         "finding": finding,
         "recommended_action": recommended_action,
     }
+    admission = _observation_admission(observation["context"])
+    if admission["status"] == "rejected":
+        raise WorkspaceUsageError(f"evaluation observation rejected ({admission['reason']}): {admission['repair_route']}.")
+    observation["admission"] = admission
     path = _observation_path(target_root, evaluation_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8", newline="\n") as handle:
@@ -361,14 +424,23 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
     summaries: list[dict[str, Any]] = []
     for definition in selected:
         observations = _load_observations(target_root, str(definition["id"]))
-        criteria = _criterion_status(definition, observations)
+        admitted_observations = [
+            item
+            for item in observations
+            if isinstance(item.get("admission"), dict) and item["admission"].get("status") in {"admitted", "legacy-unbound"}
+        ]
+        bound_observations = [
+            item for item in admitted_observations if isinstance(item.get("admission"), dict) and item["admission"].get("bound_context")
+        ]
+        criteria = _criterion_status(definition, admitted_observations)
         required = [item for item in criteria if item["required"]]
         satisfied = [item for item in required if item["state"] == "satisfied"]
         contradictions = [item for item in criteria if item["state"] == "contradicted"]
         min_observations = int(definition.get("collection_policy", {}).get("minimum_observations", 1))
-        conclusion_ready = len(observations) >= min_observations and (
+        conclusion_ready = len(admitted_observations) >= min_observations and (
             len(satisfied) == len(required) or bool(contradictions) or definition.get("lifecycle") == "enough-signal"
         )
+        freshness_status = "fresh-bound" if bound_observations else "legacy-unbound" if admitted_observations else "missing"
         summaries.append(
             {
                 "evaluation_id": definition["id"],
@@ -377,12 +449,18 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
                 "coverage": {
                     "criterion_count": len(criteria),
                     "observed_criterion_count": len([item for item in criteria if item["observation_count"]]),
-                    "observation_count": len(observations),
+                    "observation_count": len(admitted_observations),
                     "minimum_observations": min_observations,
                 },
                 "criterion_status": criteria,
                 "contradictions": contradictions,
-                "latest_material_changes": observations[-3:],
+                "latest_material_changes": admitted_observations[-3:],
+                "fresh_result_admission": {
+                    "status": freshness_status,
+                    "bound_observation_count": len(bound_observations),
+                    "admission_contract": definition.get("admission_contract", _evaluation_admission_contract()),
+                    "consumer_rule": "status, doctor, operating-decision, and proof-selection consumers must ignore rejected or stale observations",
+                },
                 "conclusion_readiness": {
                     "ready": conclusion_ready,
                     "reason_code": "ready" if conclusion_ready else "needs-more-observations-or-owner-review",
@@ -415,6 +493,58 @@ def transition_evaluation(*, target_root: Path, evaluation_id: str, lifecycle: s
         "from": current,
         "to": lifecycle,
     }
+
+
+def _emit_evaluation_result(payload: dict[str, Any], output_format: str) -> int:
+    if output_format == "json":
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0
+    print(f"Kind: {payload.get('kind', '')}")
+    if "outcome" in payload:
+        print(f"Outcome: {payload['outcome']}")
+    if "evaluation_id" in payload:
+        print(f"Evaluation: {payload['evaluation_id']}")
+    if "path" in payload:
+        print(f"Path: {payload['path']}")
+    if payload.get("summaries"):
+        for item in payload["summaries"]:
+            print(
+                f"- {item['evaluation_id']}: {item['lifecycle']}; "
+                f"observations={item['coverage']['observation_count']}; "
+                f"next={item['next_collection_action']}"
+            )
+    return 0
+
+
+def _evaluation_adapter_payload(args: Any, *, target_root: Path) -> dict[str, Any]:
+    values = vars(args)
+    command = str(getattr(args, "evaluation_command", ""))
+    if command == "register":
+        return register_evaluation_from_values(target_root=target_root, values=values)
+    if command == "observe":
+        return append_observation_from_values(target_root=target_root, values=values)
+    if command == "status":
+        return evaluation_summary(target_root=target_root, evaluation_id=getattr(args, "evaluation_id", None))
+    if command == "transition":
+        return transition_evaluation(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            lifecycle=_require_non_empty(getattr(args, "lifecycle", ""), "lifecycle"),
+            reason=str(getattr(args, "reason", "") or ""),
+        )
+    raise WorkspaceUsageError(f"unsupported evaluation command: {command}")
+
+
+def _run_evaluation_adapter(args: Any) -> int:
+    output_format = str(getattr(args, "format", "text") or "text")
+    try:
+        payload = _evaluation_adapter_payload(args, target_root=Path(str(getattr(args, "target", ".") or ".")).resolve())
+    except WorkspaceUsageError as exc:
+        if output_format == "json":
+            print(json.dumps({"kind": "agentic-workspace/evaluation-error/v1", "status": "failed", "reason": str(exc)}, indent=2))
+            return 2
+        raise
+    return _emit_evaluation_result(payload, output_format)
 
 
 def closure_authority(*, implementation_complete: bool, proof_complete: bool, evaluation: dict[str, Any] | None) -> dict[str, Any]:

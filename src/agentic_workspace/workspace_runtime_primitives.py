@@ -11337,7 +11337,7 @@ def _release_recovery_payload(
     if not release_ci_failure:
         release_ci_failure = {
             "status": "not-fetched",
-            "workflow": "Release From Semver Label",
+            "workflow": "Release",
             "command": _command_with_cli_invoke(
                 command="python scripts/github/release_recovery_status.py --repo <owner/name> --include-release-runs --format json",
                 cli_invoke=cli_invoke,
@@ -11346,6 +11346,16 @@ def _release_recovery_payload(
             "rule": "AW keeps compact run pointers and summaries; full GitHub Actions logs stay outside repo state.",
         }
     release_publication_state = release_state.get("release_publication_state", {})
+    publisher_retry = release_publication_state.get("publisher_retry", {}) if isinstance(release_publication_state, dict) else {}
+    recovery_next_action = (
+        str(publisher_retry.get("command", ""))
+        if isinstance(publisher_retry, dict)
+        and publisher_retry.get("status") == "ready"
+        and release_publication_state.get("status") == "failed-release-unpublished"
+        else "When a failed release remains unpublished without a verified publisher retry, rerun the release recovery helper for an exact existing-tag dispatch command."
+        if isinstance(release_publication_state, dict) and release_publication_state.get("status") == "failed-release-unpublished"
+        else "No failed-release publisher retry is active."
+    )
     return {
         "kind": "agentic-workspace/release-recovery/v1",
         "status": "available" if ownership else "unavailable",
@@ -11359,10 +11369,10 @@ def _release_recovery_payload(
         },
         "semver_release_action": {
             "status": "not-fetched",
-            "rule": "Use the helper to classify whether a PR will publish, is repair-only, or is blocked by semver label state.",
+            "rule": "Use the helper to classify whether a PR will open a release PR, is repair-only, or is blocked by semver label/changeset state.",
             "command": helper,
             "repair_only_boundary": (
-                "A semver-labeled PR that changes no package-affecting path can fix a blocker, but it will not publish the failed release."
+                "A semver-labeled PR that changes no package-affecting path can fix a blocker, but it will not open a release PR."
             ),
         },
         "release_ci_failure": release_ci_failure,
@@ -11373,7 +11383,7 @@ def _release_recovery_payload(
             else "not-required"
             if release_publication_state.get("status") == "cleared-by-newer-success"
             else "available",
-            "next_action": "When a failed release remains unpublished after a repair-only PR, create a coordinated explicit version-bump PR.",
+            "next_action": recovery_next_action,
             "pr_shape": {
                 "required_version_paths": version_paths,
                 "proof": [
@@ -11420,7 +11430,7 @@ def _release_recovery_live_state(*, target_root: Path, cli_invoke: str) -> dict[
             "release_ci_failure": {
                 "kind": "agentic-workspace/release-ci-failure-summary/v1",
                 "status": "release_run_status_unavailable",
-                "workflow": "Release From Semver Label",
+                "workflow": "Release",
                 "reason": "No GitHub origin remote was available for live release-run discovery.",
                 "command": command,
                 "freshness": {"status": "unavailable", "source": "missing-github-remote"},
@@ -11455,7 +11465,7 @@ def _release_recovery_live_state(*, target_root: Path, cli_invoke: str) -> dict[
             "release_ci_failure": {
                 "kind": "agentic-workspace/release-ci-failure-summary/v1",
                 "status": "release_run_status_unavailable",
-                "workflow": "Release From Semver Label",
+                "workflow": "Release",
                 "reason": str(exc),
                 "command": command,
                 "freshness": {"status": "unavailable", "source": "helper-execution-failed"},
@@ -11467,7 +11477,7 @@ def _release_recovery_live_state(*, target_root: Path, cli_invoke: str) -> dict[
             "release_ci_failure": {
                 "kind": "agentic-workspace/release-ci-failure-summary/v1",
                 "status": "release_run_status_unavailable",
-                "workflow": "Release From Semver Label",
+                "workflow": "Release",
                 "reason": (result.stderr or result.stdout).strip(),
                 "command": command,
                 "freshness": {"status": "unavailable", "source": "helper-returned-error"},
@@ -11718,7 +11728,7 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "section": "release_recovery",
         "kind": "agentic-workspace/release-recovery/v1",
         "purpose": "source-checkout release recovery posture for semver PR action, failed release summaries, and payload drift repair",
-        "when_to_use": "during coordinated release, semver-label recovery, payload drift, or failed release CI diagnosis",
+        "when_to_use": "during coordinated release, changeset recovery, payload drift, or failed release CI diagnosis",
     },
 )
 
@@ -35706,6 +35716,16 @@ def _assignment_implementation_gate_payload(
         implementation_allowed = False
         required_next_action = "prepare-assigned-handoff"
         enforcement = "must-route-before-implementation"
+    elif decision == "no-safe-route":
+        status = "blocked-no-safe-route"
+        implementation_allowed = False
+        required_next_action = "resolve-assignment-route"
+        enforcement = "hard-block"
+    elif decision == "assign-best-fit":
+        status = "handoff-required"
+        implementation_allowed = False
+        required_next_action = "prepare-assigned-handoff"
+        enforcement = "must-route-before-implementation"
     elif decision == "assign-current-target":
         status = "assigned-current-target"
         implementation_allowed = True
@@ -35740,10 +35760,14 @@ def _delegated_run_lifecycle_payload(
     delegation_decision: dict[str, Any],
 ) -> dict[str, Any]:
     manual_transport_policy = str(_as_dict(assignment_policy.get("manual_transport_policy")).get("value") or "allowed")
+    manual_export_allowed = manual_transport_policy in {"allowed", "required-when-no-automatic-method"}
+    manual_transport_state = "available" if manual_export_allowed else "disabled"
     handoff_required = assignment_gate.get("implementation_allowed") is False or delegation_decision.get("handoff_command")
     assignment_blocked = str(assignment_gate.get("status", "")).startswith("blocked")
     execution_state = "blocked" if assignment_blocked else "not-started"
     if assignment_blocked:
+        execution_state = "blocked"
+    elif handoff_required and not manual_export_allowed:
         execution_state = "blocked"
     elif delegation_decision.get("required_next_action") == "execute-when-safe":
         execution_state = "ready"
@@ -35760,15 +35784,21 @@ def _delegated_run_lifecycle_payload(
         },
         "manual_transport": {
             "policy": manual_transport_policy,
-            "export_allowed": manual_transport_policy != "forbidden",
+            "state": manual_transport_state,
+            "export_allowed": manual_export_allowed,
             "import_requires_review": True,
-            "rule": "Manual strong-agent transport is copy/paste only; returned work must be reviewed before admission or integration.",
+            "required_when_no_automatic_method": manual_transport_policy == "required-when-no-automatic-method",
+            "rule": "Manual strong-agent transport is copy/paste only; disabled transport must fail closed, and returned work must be reviewed before admission or integration.",
         },
         "states": [
             {"id": "assignment-selected", "status": assignment_gate.get("status")},
             {
                 "id": "handoff-prepared",
-                "status": "required" if handoff_required else "not-required",
+                "status": "blocked-transport-disabled"
+                if handoff_required and not manual_export_allowed
+                else "required"
+                if handoff_required
+                else "not-required",
                 "command": delegation_decision.get("handoff_command"),
             },
             {"id": "delegated-worker-running", "status": execution_state},
@@ -35781,8 +35811,20 @@ def _delegated_run_lifecycle_payload(
                 "id": "admitted-for-integration",
                 "status": "pending-review",
                 "review_rule": "Admit returned work only after scope, proof, and stop-condition evidence match the handoff contract.",
+                "reject_when": [
+                    "assignment target or context revision differs from the handoff",
+                    "returned changed paths exceed allowed scope",
+                    "proof result is missing, stale, or failed",
+                    "stop conditions were hit but not surfaced",
+                ],
             },
         ],
+        "admission_gate": {
+            "status": "closed-until-reviewed",
+            "identity_fields": ["assignment.target", "assignment.required_next_action", "manual_transport.policy"],
+            "required_evidence": ["returned summary", "changed paths or no-change statement", "proof result"],
+            "rule": "Returned work is descriptive until the assignment identity, scope, proof, and stop-condition evidence match.",
+        },
         "return_contract": [
             "what changed",
             "proof run and result",
@@ -47014,6 +47056,12 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
         "reasons": reasons,
         "alternatives": alternatives,
         "profile_recommendations": profile_recommendations,
+        "capability_context": {
+            "task_class": execution_class or None,
+            "scope_class": execution_class or None,
+            "recommended_strength": recommended_strength or None,
+            "preferred_location": preferred_location or None,
+        },
         "guidance": _RUNTIME_RESOLUTION_GUIDANCE[recommendation],
         "posture_source": "provided" if posture else "none",
         "resolution_categories": list(_RUNTIME_RESOLUTION_CATEGORIES),

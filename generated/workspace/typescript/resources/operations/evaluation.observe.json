@@ -1,0 +1,130 @@
+{
+  "classification": "local-record-append",
+  "command_surface": {
+    "command": "evaluation",
+    "format_option": "format",
+    "subcommand": "observe"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Observation criterion must exist in the registered definition.",
+    "Terminal evaluations reject additional observations.",
+    "External evidence is referenced, not copied, unless separately promoted."
+  ],
+  "id": "evaluation.observe",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "evaluation_id",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "criterion",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "result",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "evidence_refs",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "confidence",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "burden",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "representative",
+    "steps": [
+      {
+        "description": "Resolve the target root.",
+        "id": "resolve_root",
+        "uses": "workspace.target-root.resolve"
+      },
+      {
+        "description": "Validate and append the observation.",
+        "id": "append",
+        "uses": "evaluation.observation.append"
+      },
+      {
+        "description": "Emit append result.",
+        "id": "emit_output",
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated command packages execute the evaluation observation operation through runtime-owned evaluation primitives."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "json",
+    "schema_ref": "schemas/evaluation_observation.schema.json"
+  },
+  "proof": [
+    "evaluation unit tests",
+    "operation contract validates against operation.schema.json"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/evaluations.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Validate and append the observation.",
+      "id": "append",
+      "uses": "evaluation.observation.append"
+    },
+    {
+      "description": "Emit append result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Append one local-first evaluation observation without rewriting unrelated state.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.jsonl",
+      "when": "append one observation"
+    }
+  ]
+}

@@ -680,6 +680,107 @@ def _proof_receipt_command_matches(*, required_command: str, receipt_command: st
     return False, "receipt command does not match selected command or its current template expansion"
 
 
+def _command_selector_parameters(command: str) -> dict[str, Any]:
+    try:
+        tokens = shlex.split(command, posix=False)
+    except ValueError:
+        tokens = command.split()
+    selectors: list[str] = []
+    for index, token in enumerate(tokens):
+        if token in {"--select", "--selectors"} and index + 1 < len(tokens):
+            selectors.extend(part.strip() for part in tokens[index + 1].split(",") if part.strip())
+        elif token.startswith("--select=") or token.startswith("--selectors="):
+            selectors.extend(part.strip() for part in token.split("=", 1)[1].split(",") if part.strip())
+    return {"selectors": sorted(set(selectors))}
+
+
+def _proof_template_live_obligation_id(
+    *,
+    required_command: str,
+    changed_paths: list[str],
+    selected_command: dict[str, Any],
+) -> str:
+    canonical = {
+        "template_command": str(required_command).strip(),
+        "changed_paths": [str(path).strip().replace("\\", "/") for path in changed_paths if str(path).strip()],
+        "lane_id": str(selected_command.get("lane") or selected_command.get("lane_id") or "").strip(),
+        "owner_ref": str(selected_command.get("owner_ref") or selected_command.get("owner") or "").strip(),
+        "assignment_target": str(selected_command.get("assignment_target") or "").strip(),
+        "assignment_context_key": str(selected_command.get("assignment_context_key") or "").strip(),
+        "selector_parameters": _command_selector_parameters(required_command),
+    }
+    digest = hashlib.sha256(json.dumps(canonical, sort_keys=True, ensure_ascii=True).encode("utf-8")).hexdigest()
+    return f"proof-template-obligation:{digest[:20]}"
+
+
+def _proof_template_binding_admission(
+    *,
+    receipt: dict[str, Any],
+    required_command: str,
+    changed_paths: list[str],
+    selected_command: dict[str, Any],
+) -> dict[str, Any]:
+    binding = receipt.get("proof_template_binding")
+    expected_id = _proof_template_live_obligation_id(
+        required_command=required_command,
+        changed_paths=changed_paths,
+        selected_command=selected_command,
+    )
+    expected_paths = [str(path).strip().replace("\\", "/") for path in changed_paths if str(path).strip()]
+    expected_selectors = _command_selector_parameters(required_command)
+    repair_route = "Rerun the selected proof template and record a receipt with the current proof_template_binding."
+    base = {
+        "kind": "agentic-workspace/proof-template-binding-admission/v1",
+        "expected_live_obligation_id": expected_id,
+        "repair_route": repair_route,
+    }
+    if not isinstance(binding, dict):
+        return {**base, "status": "rejected", "reason": "missing-live-obligation-binding"}
+    if binding.get("kind") != "agentic-workspace/proof-template-binding/v1":
+        return {**base, "status": "rejected", "reason": "unsupported-template-binding-kind", "binding": binding}
+    if str(binding.get("status") or "").strip() != "current":
+        return {**base, "status": "rejected", "reason": "superseded-template-binding", "binding": binding}
+    if str(binding.get("live_obligation_id") or "").strip() != expected_id:
+        return {**base, "status": "rejected", "reason": "live-obligation-id-mismatch", "binding": binding}
+    command_binding = binding.get("command", {}) if isinstance(binding.get("command"), dict) else {}
+    if str(command_binding.get("template") or "").strip() != str(required_command).strip():
+        return {**base, "status": "rejected", "reason": "template-command-mismatch", "binding": binding}
+    if str(command_binding.get("concrete") or "").strip() != str(receipt.get("command") or "").strip():
+        return {**base, "status": "rejected", "reason": "concrete-command-mismatch", "binding": binding}
+    if command_binding.get("selector_parameters") != expected_selectors:
+        return {**base, "status": "rejected", "reason": "selector-parameters-mismatch", "binding": binding}
+    owner_identity = binding.get("owner_identity", {}) if isinstance(binding.get("owner_identity"), dict) else {}
+    selected_lane = str(selected_command.get("lane") or selected_command.get("lane_id") or "").strip()
+    selected_owner = str(selected_command.get("owner_ref") or selected_command.get("owner") or "").strip()
+    if selected_lane and str(owner_identity.get("lane_id") or "").strip() != selected_lane:
+        return {**base, "status": "rejected", "reason": "cross-lane-receipt", "binding": binding}
+    if selected_owner and str(owner_identity.get("owner_ref") or "").strip() != selected_owner:
+        return {**base, "status": "rejected", "reason": "owner-identity-mismatch", "binding": binding}
+    assignment = binding.get("assignment", {}) if isinstance(binding.get("assignment"), dict) else {}
+    selected_target = str(selected_command.get("assignment_target") or "").strip()
+    selected_context = str(selected_command.get("assignment_context_key") or "").strip()
+    if selected_target and str(assignment.get("target_identity_ref") or "").strip() != selected_target:
+        return {**base, "status": "rejected", "reason": "assignment-target-mismatch", "binding": binding}
+    if selected_context and str(assignment.get("context_key") or "").strip() != selected_context:
+        return {**base, "status": "rejected", "reason": "assignment-context-mismatch", "binding": binding}
+    artifact = binding.get("artifact_provenance", {}) if isinstance(binding.get("artifact_provenance"), dict) else {}
+    if artifact.get("changed_paths") != expected_paths:
+        return {**base, "status": "rejected", "reason": "artifact-provenance-mismatch", "binding": binding}
+    result = binding.get("result_provenance", {}) if isinstance(binding.get("result_provenance"), dict) else {}
+    proof_subject = receipt.get("proof_subject", {}) if isinstance(receipt.get("proof_subject"), dict) else {}
+    if str(result.get("result") or "").strip() != str(receipt.get("result") or "").strip():
+        return {**base, "status": "rejected", "reason": "result-provenance-mismatch", "binding": binding}
+    if str(result.get("recorded_at") or "").strip() != str(receipt.get("recorded_at") or "").strip():
+        return {**base, "status": "rejected", "reason": "result-provenance-mismatch", "binding": binding}
+    if str(result.get("proof_subject_fingerprint") or "").strip() != str(proof_subject.get("fingerprint") or "").strip():
+        return {**base, "status": "rejected", "reason": "proof-subject-provenance-mismatch", "binding": binding}
+    freshness = binding.get("freshness", {}) if isinstance(binding.get("freshness"), dict) else {}
+    freshness_status = str(freshness.get("status") or "current").strip()
+    if freshness_status != "current":
+        return {**base, "status": "rejected", "reason": f"stale-{freshness_status}-template-binding", "binding": binding}
+    return {**base, "status": "accepted", "reason": "live-obligation-binding-accepted", "binding": binding}
+
+
 def _receipt_subject_freshness(*, target_root: Path, receipt: dict[str, Any], changed_paths: list[str], command: str) -> dict[str, Any]:
     """Classify every receipt form through its recorded proof subject.
 
@@ -862,6 +963,7 @@ def _proof_receipt_reconciliation_payload(
         if rejected_latest:
             payload["rejected_latest_receipt"] = rejected_latest
         return payload
+    selected_by_text = {str(command.get("command", "")): command for command in selected_commands or [] if isinstance(command, dict)}
     aggregate_receipts = [
         receipt
         for receipt in receipt_records
@@ -885,7 +987,25 @@ def _proof_receipt_reconciliation_payload(
         template_matched_receipts = [
             receipt for receipt, match in command_receipt_matches if match[0] and match[1].startswith("instantiated")
         ]
-        admissions = [(receipt, proof_receipt_admission(receipt)) for receipt in command_receipts]
+        template_binding_decisions = [
+            (
+                receipt,
+                _proof_template_binding_admission(
+                    receipt=receipt,
+                    required_command=command,
+                    changed_paths=changed_paths,
+                    selected_command=selected_by_text.get(command, {}),
+                ),
+            )
+            for receipt in template_matched_receipts
+        ]
+        eligible_command_receipts = [
+            receipt
+            for receipt in command_receipts
+            if receipt not in template_matched_receipts
+            or any(candidate is receipt and decision["status"] == "accepted" for candidate, decision in template_binding_decisions)
+        ]
+        admissions = [(receipt, proof_receipt_admission(receipt)) for receipt in eligible_command_receipts]
         subject_decisions = [
             (receipt, _receipt_subject_freshness(target_root=target_root, receipt=receipt, changed_paths=changed_paths, command=command))
             for receipt, admission in admissions
@@ -910,6 +1030,10 @@ def _proof_receipt_reconciliation_payload(
             ((receipt, admission) for receipt, admission in admissions if admission["result_class"] in {"skipped", "waived"}),
             None,
         )
+        rejected_template_binding = next(
+            ((receipt, decision) for receipt, decision in template_binding_decisions if decision["status"] != "accepted"),
+            None,
+        )
         if accepted_receipt is not None:
             subject_freshness = _receipt_subject_freshness(
                 target_root=target_root, receipt=accepted_receipt, changed_paths=changed_paths, command=command
@@ -925,6 +1049,19 @@ def _proof_receipt_reconciliation_payload(
                 state["receipt_match"] = "legacy-migration"
             elif accepted_receipt in template_matched_receipts:
                 state["receipt_match"] = "instantiated-template"
+                binding = next(
+                    decision
+                    for receipt, decision in template_binding_decisions
+                    if receipt is accepted_receipt and decision["status"] == "accepted"
+                )
+                state["live_obligation_binding"] = {
+                    "status": binding["status"],
+                    "reason": binding["reason"],
+                    "live_obligation_id": binding["binding"].get("live_obligation_id", ""),
+                    "owner_identity": binding["binding"].get("owner_identity", {}),
+                    "assignment": binding["binding"].get("assignment", {}),
+                    "freshness": binding["binding"].get("freshness", {}),
+                }
         elif aggregate_receipt is not None:
             subject_freshness = _receipt_subject_freshness(
                 target_root=target_root, receipt=aggregate_receipt, changed_paths=changed_paths, command=command
@@ -954,6 +1091,17 @@ def _proof_receipt_reconciliation_payload(
                 "receipt": _proof_receipt_summary(receipt),
                 "result_class": result_class,
                 "proof_sufficient": False,
+            }
+        elif rejected_template_binding is not None:
+            receipt, binding = rejected_template_binding
+            state = {
+                "command": command,
+                "evidence_state": "template-binding-rejected",
+                "diagnostic": str(binding.get("reason") or "template binding rejected"),
+                "receipt": _proof_receipt_summary(receipt),
+                "receipt_match": "instantiated-template",
+                "live_obligation_binding": binding,
+                "minimum_rerun_command": command,
             }
         elif subject_decisions or aggregate_decisions:
             receipt_candidates = subject_decisions or aggregate_decisions

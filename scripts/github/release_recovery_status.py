@@ -1,4 +1,4 @@
-"""Build compact release recovery status packets for semver PRs and release runs."""
+"""Build compact release recovery status packets for release PRs and release runs."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 PACKET_KIND = "agentic-workspace/release-recovery-status/v1"
-DEFAULT_WORKFLOW = "Release From Semver Label"
+DEFAULT_WORKFLOW = "Release"
 ERROR_MARKERS = ("error", "failed", "failure", "traceback", "exception", "assertionerror")
 
 
@@ -39,17 +39,21 @@ def _path_matches(path: str, patterns: list[str]) -> bool:
 def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: dict[str, Any]) -> dict[str, Any]:
     semver_labels = [label for label in labels if label in set(ownership.get("semver_labels", []))]
     package_affecting = any(_path_matches(path, list(ownership.get("package_affecting_paths", []))) for path in changed_files)
+    changeset_dir = str(ownership.get("changeset_dir", ".release/changes")).rstrip("/")
+    changesets = [path for path in changed_files if path.startswith(f"{changeset_dir}/") and path.endswith(".toml")]
     if not package_affecting:
         status = "repair-only-semver-pr" if semver_labels else "no-release-needed"
         return {
             "kind": "agentic-workspace/semver-pr-release-action/v1",
             "status": status,
             "will_publish_release": False,
+            "will_prepare_release_pr": False,
             "package_affecting": False,
             "semver_labels": semver_labels,
+            "changesets": changesets,
             "changed_file_count": len(changed_files),
             "next_action": (
-                "This PR can repair release blockers, but merge will not publish a release; follow with a coordinated explicit version bump if a failed release still needs publication."
+                "This PR can repair release blockers, but merge will not open a release PR; add a changeset-backed package-affecting PR if publication is still needed."
                 if semver_labels
                 else "No release action is expected because no package-affecting paths changed."
             ),
@@ -59,19 +63,97 @@ def semver_pr_status(*, labels: list[str], changed_files: list[str], ownership: 
             "kind": "agentic-workspace/semver-pr-release-action/v1",
             "status": "blocked-semver-label-selection",
             "will_publish_release": False,
+            "will_prepare_release_pr": False,
             "package_affecting": True,
             "semver_labels": semver_labels,
+            "changesets": changesets,
             "changed_file_count": len(changed_files),
-            "next_action": "Apply exactly one semver label before merge so the release workflow can compute the coordinated version.",
+            "next_action": "Apply exactly one semver label and add a matching release changeset before merge.",
+        }
+    if not changesets:
+        return {
+            "kind": "agentic-workspace/semver-pr-release-action/v1",
+            "status": "blocked-release-changeset",
+            "will_publish_release": False,
+            "will_prepare_release_pr": False,
+            "package_affecting": True,
+            "semver_labels": semver_labels,
+            "changesets": changesets,
+            "changed_file_count": len(changed_files),
+            "next_action": f"Add a release changeset under {changeset_dir}/ whose bump matches {semver_labels[0]}.",
         }
     return {
         "kind": "agentic-workspace/semver-pr-release-action/v1",
-        "status": "will-publish-release",
-        "will_publish_release": True,
+        "status": "will-open-release-pr",
+        "will_publish_release": False,
+        "will_prepare_release_pr": True,
         "package_affecting": True,
         "semver_labels": semver_labels,
+        "changesets": changesets,
         "changed_file_count": len(changed_files),
-        "next_action": "Merge will attempt a coordinated release bump through the Release From Semver Label workflow.",
+        "next_action": "Merge will let the Prepare Coordinated Release workflow open or update a release PR from pending changesets.",
+    }
+
+
+def _publisher_retry_command(tag: str, source_commit: str) -> str:
+    return f'gh workflow run release.yml --ref master -f tag="{tag}" -f source_commit="{source_commit}"'
+
+
+def local_publisher_retry_status(*, repo_root: Path) -> dict[str, Any]:
+    script = repo_root / "scripts" / "release" / "coordinated_release.py"
+    if not script.exists():
+        return {
+            "kind": "agentic-workspace/release-publisher-retry/v1",
+            "status": "unavailable",
+            "reason": f"{script} does not exist",
+        }
+    result = subprocess.run(
+        [sys.executable, str(script), "tag-plan"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    if result.returncode != 0:
+        return {
+            "kind": "agentic-workspace/release-publisher-retry/v1",
+            "status": "unavailable",
+            "reason": (result.stderr or result.stdout).strip(),
+        }
+    try:
+        plan = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        return {
+            "kind": "agentic-workspace/release-publisher-retry/v1",
+            "status": "unavailable",
+            "reason": f"tag-plan did not return JSON: {exc}",
+        }
+    tag = _text(plan.get("tag"))
+    source_commit = _text(plan.get("release_commit"))
+    if plan.get("tag_needed"):
+        return {
+            "kind": "agentic-workspace/release-publisher-retry/v1",
+            "status": "tag-not-created",
+            "tag": tag,
+            "source_commit": source_commit,
+            "reason": "The release tag is not present yet; rerun Prepare Coordinated Release before publisher dispatch.",
+        }
+    if not plan.get("publish_candidate") or not tag or not source_commit:
+        return {
+            "kind": "agentic-workspace/release-publisher-retry/v1",
+            "status": "no-existing-publishable-tag",
+            "tag": tag,
+            "source_commit": source_commit,
+            "reason": _text(plan.get("reason")) or "No existing verified release tag is ready for publisher retry.",
+        }
+    return {
+        "kind": "agentic-workspace/release-publisher-retry/v1",
+        "status": "ready",
+        "tag": tag,
+        "source_commit": source_commit,
+        "command": _publisher_retry_command(tag, source_commit),
+        "rule": "Retry publication for the existing verified tag; do not create another changeset release just to recover artifacts.",
     }
 
 
@@ -259,18 +341,23 @@ def recovery_packet(
 ) -> dict[str, Any]:
     ownership = _ownership_payload(repo_root)
     semver = semver_pr_status(labels=labels, changed_files=changed_files, ownership=ownership)
-    release_failure = release_failure or (release_failure_status(run_payload) if run_payload else {
-        "kind": "agentic-workspace/release-ci-failure-summary/v1",
-        "status": "not-fetched",
-        "workflow": DEFAULT_WORKFLOW,
-        "next_command": "gh run list --workflow 'Release From Semver Label' --limit 5",
-        "freshness": {"status": "unavailable", "source": "not-fetched"},
-    })
+    release_failure = release_failure or (
+        release_failure_status(run_payload)
+        if run_payload
+        else {
+            "kind": "agentic-workspace/release-ci-failure-summary/v1",
+            "status": "not-fetched",
+            "workflow": DEFAULT_WORKFLOW,
+            "next_command": "gh run list --workflow 'Release' --limit 5",
+            "freshness": {"status": "unavailable", "source": "not-fetched"},
+        }
+    )
     active_failed_release = (
         release_failure["status"] == "failed-release-run"
         and release_failure.get("freshness", {}).get("status") != "superseded_by_newer_success"
     )
     recovery_needed = semver["status"] == "repair-only-semver-pr" or active_failed_release
+    publisher_retry = local_publisher_retry_status(repo_root=repo_root) if active_failed_release else {}
     version_paths = [package["pyproject"] for package in ownership.get("packages", []) if isinstance(package, dict)] + [
         package["package_json"] for package in ownership.get("typescript_packages", []) if isinstance(package, dict)
     ]
@@ -291,13 +378,18 @@ def recovery_packet(
             if isinstance(release_failure.get("freshness"), dict)
             else "",
             "release_action": semver["status"],
-            "rule": "Repair-only PRs can fix blockers but do not publish; an active failed release needs a coordinated package-affecting release PR unless a newer successful run supersedes it.",
+            "publisher_retry": publisher_retry,
+            "rule": "Repair-only PRs can fix blockers but do not open a release PR; an active failed Release workflow should be retried for the existing verified tag unless a newer successful publisher run supersedes it.",
         },
         "coordinated_recovery": {
             "status": "required" if recovery_needed else "not-required",
             "next_action": (
-                "Create a coordinated explicit version-bump PR touching all release-owned version files, then run release proof."
-                if recovery_needed
+                publisher_retry["command"]
+                if active_failed_release and publisher_retry.get("status") == "ready"
+                else "Rerun Prepare Coordinated Release to create the verified release tag before dispatching the publisher."
+                if active_failed_release
+                else "Create or merge a package-affecting PR with a release changeset, then let the generated release PR carry the version bump."
+                if semver["status"] == "repair-only-semver-pr"
                 else "No failed-release recovery action is active in this packet."
             ),
             "pr_shape": {
