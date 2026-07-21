@@ -50305,6 +50305,12 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
         "reasons": reasons,
         "alternatives": alternatives,
         "profile_recommendations": profile_recommendations,
+        "capability_context": {
+            "task_class": execution_class or None,
+            "scope_class": execution_class or None,
+            "recommended_strength": recommended_strength or None,
+            "preferred_location": preferred_location or None,
+        },
         "guidance": _RUNTIME_RESOLUTION_GUIDANCE[recommendation],
         "posture_source": "provided" if posture else "none",
         "resolution_categories": list(_RUNTIME_RESOLUTION_CATEGORIES),
