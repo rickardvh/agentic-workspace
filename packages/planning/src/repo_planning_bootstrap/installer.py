@@ -2725,6 +2725,7 @@ def planning_report(*, target: str | Path | None = None, audit_cursor: str = "",
                 "health",
                 "status",
                 "completed_execplans",
+                "planning_surface_health",
                 "ownership_review",
                 "work_maturity",
                 "lanes",
@@ -2774,6 +2775,7 @@ def planning_report(*, target: str | Path | None = None, audit_cursor: str = "",
             "warning_count": summary["warning_count"],
         },
         "completed_execplans": completed_execplans,
+        "planning_surface_health": summary.get("planning_surface_health", {}),
         "ownership_review": summary.get("ownership_review", {}),
         "work_maturity": work_maturity,
         "lanes": lanes,
@@ -5925,6 +5927,13 @@ def _planning_lane_surface_warnings(*, target_root: Path, lane_projection: dict[
                         "does not treat completed lane evidence as selectable work."
                     ),
                     "suggested_fix": f"Run agentic-planning lane-archive {lane_id} --target . --format json.",
+                    "repair_affordance": _planning_live_reference_repair_contract(
+                        target_root=target_root,
+                        owner_surface=path,
+                        relation="lane.status",
+                        subject_id=lane_id,
+                        reason_code="closed-lane-live-reference",
+                    ),
                 }
             )
             continue
@@ -6001,10 +6010,64 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
                         f"{_workspace_cli_invoke(target_root)} planning new-plan --id {recovery_slice} "
                         f"--title {json.dumps(recovery_title)} --activate --lane {lane_id} --target . --format json"
                     ),
+                    "repair_contract": _planning_live_reference_repair_contract(
+                        target_root=target_root,
+                        owner_surface=path or (PLANNING_MANAGED_ROOT / "lanes").as_posix(),
+                        relation="lane.current_slice",
+                        subject_id=lane_id,
+                        reason_code=reason_code,
+                    ),
                 },
             }
         )
     return warnings
+
+
+def _planning_live_reference_repair_contract(
+    *,
+    target_root: Path,
+    owner_surface: str,
+    relation: str,
+    subject_id: str,
+    reason_code: str,
+) -> dict[str, Any]:
+    """Shared fail-closed contract for malformed or stale live Planning references."""
+    cli = _workspace_cli_invoke(target_root)
+    reconcile_command = f"{cli} planning reconcile --target . --format json"
+    return {
+        "kind": "agentic-planning/live-reference-repair-contract/v1",
+        "status": "fail-closed",
+        "owner": {
+            "kind": "planning-reconcile-owner/v1",
+            "surface": owner_surface,
+            "subject_id": subject_id,
+            "reconcile_command": reconcile_command,
+        },
+        "relation": relation,
+        "reason_code": reason_code,
+        "consumer_rule": (
+            "Consumers must reject the live relation until the shared Planning reconcile owner either repairs it "
+            "or returns a concrete blocked reason; consumers must not silently select an alternate owner."
+        ),
+        "consumers": ["summary", "status", "start", "next", "implement", "closeout", "doctor", "report"],
+        "reject_on": [
+            "malformed-relation",
+            "stale-owner-revision",
+            "target-identity-mismatch",
+            "evaluation-result-replaced",
+            "deleted-lane-live-reference",
+            "closed-lane-live-reference",
+            "stacked-rebase-head-drift",
+            "closeout-cleanup-drift",
+        ],
+        "preserve": ["unrelated-owners", "historical-archive-evidence", "external-provider-observations"],
+        "residue_policy": "leave-no-checked-in-residue-after-successful-reconcile",
+        "proof_after": [
+            reconcile_command,
+            f"{cli} summary --target . --format json",
+            f"{cli} doctor --target . --format json",
+        ],
+    }
 
 
 def _planning_branch_safe_surface_warnings(
@@ -6850,6 +6913,7 @@ def _planning_summary_tiny_projection(compact_summary: dict[str, Any]) -> dict[s
                 "recovery_required",
                 "unsafe_to_continue_reason",
                 "authoring_affordances",
+                "live_reference_integrity",
             )
             if key in planning_surface_health
         },
@@ -7153,6 +7217,7 @@ def _planning_summary_compact_projection(summary: dict[str, Any]) -> dict[str, A
             "recommended_next_action": planning_surface_health.get("recommended_next_action", ""),
             "collaboration_pressure": planning_surface_health.get("collaboration_pressure", {}),
             "warnings": planning_surface_health.get("warnings", []),
+            "live_reference_integrity": planning_surface_health.get("live_reference_integrity", {}),
         },
         "residue_governance": _compact_residue_governance(residue_governance),
         "projection_state": {
@@ -7875,6 +7940,7 @@ def _planning_surface_health(
         if isinstance(repair_affordance, dict) and repair_affordance:
             health_warning["repair_affordance"] = repair_affordance
         health_warnings.append(health_warning)
+    live_reference_contracts = _live_reference_repair_contracts_from_warnings(health_warnings)
     if not health_warnings:
         return {
             "status": "clean",
@@ -7910,6 +7976,12 @@ def _planning_surface_health(
             else f"{health_warnings[0]['warning_class']}; resolve planning-surface health before treating the repo as safe to continue."
         ),
         "warnings": health_warnings,
+        "live_reference_integrity": {
+            "status": "fail-closed" if live_reference_contracts else "not-applicable",
+            "contract_count": len(live_reference_contracts),
+            "contracts": live_reference_contracts,
+            "rule": "Lifecycle consumers use the same Planning reconcile owner for malformed or stale live references.",
+        },
         "collaboration_pressure": collaboration_pressure or _empty_planning_collaboration_pressure(),
         "authoring_affordances": {
             "live_state_rule": PLANNING_STATE_LIVE_ONLY_RULE,
@@ -7925,6 +7997,20 @@ def _planning_surface_health(
             ],
         },
     }
+
+
+def _live_reference_repair_contracts_from_warnings(warnings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    contracts: list[dict[str, Any]] = []
+    for warning in warnings:
+        repair_affordance = warning.get("repair_affordance")
+        if not isinstance(repair_affordance, dict):
+            continue
+        contract = repair_affordance.get("repair_contract")
+        if not isinstance(contract, dict) and repair_affordance.get("kind") == "agentic-planning/live-reference-repair-contract/v1":
+            contract = repair_affordance
+        if isinstance(contract, dict):
+            contracts.append(contract)
+    return contracts
 
 
 def _empty_planning_collaboration_pressure() -> dict[str, Any]:

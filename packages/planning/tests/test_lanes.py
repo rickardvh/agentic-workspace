@@ -4,6 +4,7 @@ import json
 import tomllib
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from repo_planning_bootstrap.installer import (
     _build_execplan_record_from_todo_item,
@@ -21,6 +22,21 @@ from repo_planning_bootstrap.installer import (
     planning_summary,
     promote_decomposition_lane_to_lane_record,
 )
+
+
+def _assert_live_reference_contract(contract: dict[str, Any], *, reason_code: str, surface_suffix: str) -> None:
+    assert contract["kind"] == "agentic-planning/live-reference-repair-contract/v1"
+    assert contract["status"] == "fail-closed"
+    owner = contract["owner"]
+    assert isinstance(owner, dict)
+    assert str(owner["surface"]).endswith(surface_suffix)
+    assert "planning reconcile --target . --format json" in str(owner["reconcile_command"])
+    assert contract["reason_code"] == reason_code
+    assert {"summary", "status", "start", "next", "implement", "closeout", "doctor", "report"} <= set(contract["consumers"])
+    assert "target-identity-mismatch" in contract["reject_on"]
+    assert "evaluation-result-replaced" in contract["reject_on"]
+    assert "stacked-rebase-head-drift" in contract["reject_on"]
+    assert contract["residue_policy"] == "leave-no-checked-in-residue-after-successful-reconcile"
 
 
 def test_create_decomposition_record_writes_schema_valid_owner(tmp_path: Path) -> None:
@@ -310,6 +326,32 @@ def test_lane_health_rejects_current_slice_missing_execplan(tmp_path: Path) -> N
     assert warning["repair_affordance"]["relation"] == "lane.current_slice"
     assert warning["repair_affordance"]["reason_code"] == "current-slice-execplan-missing"
     assert warning["repair_affordance"]["current_slice"] == "slice-one"
+    contract = warning["repair_affordance"]["repair_contract"]
+    _assert_live_reference_contract(
+        contract,
+        reason_code="current-slice-execplan-missing",
+        surface_suffix="activation-lane.lane.json",
+    )
+    assert health["live_reference_integrity"]["status"] == "fail-closed"
+    assert health["live_reference_integrity"]["contracts"] == [contract]
+
+    report = planning_report(target=tmp_path)
+    report_warning = next(
+        item for item in report["planning_surface_health"]["warnings"] if item["warning_class"] == "lane_current_slice_non_executable"
+    )
+    _assert_live_reference_contract(
+        report_warning["repair_affordance"]["repair_contract"],
+        reason_code="current-slice-execplan-missing",
+        surface_suffix="activation-lane.lane.json",
+    )
+
+    doctor = doctor_bootstrap(target=tmp_path)
+    doctor_warning = next(item for item in doctor.warnings if item["warning_class"] == "lane_current_slice_non_executable")
+    _assert_live_reference_contract(
+        doctor_warning["repair_affordance"]["repair_contract"],
+        reason_code="current-slice-execplan-missing",
+        surface_suffix="activation-lane.lane.json",
+    )
 
 
 def test_lane_activate_demotes_prior_active_slice_when_successor_becomes_current(tmp_path: Path) -> None:
@@ -470,7 +512,15 @@ def test_lane_close_and_archive_preserve_parent_contribution(tmp_path: Path) -> 
     assert any("lane-archive closeable-lane" in action.detail for action in close_result.actions if action.kind == "next safe action")
     summary = planning_summary(target=tmp_path, profile="compact")
     assert summary["planning_surface_health"]["status"] == "not-clean"
-    assert any(warning["warning_class"] == "closed_lane_record_live_state" for warning in summary["planning_surface_health"]["warnings"])
+    warning = next(
+        warning for warning in summary["planning_surface_health"]["warnings"] if warning["warning_class"] == "closed_lane_record_live_state"
+    )
+    _assert_live_reference_contract(
+        warning["repair_affordance"],
+        reason_code="closed-lane-live-reference",
+        surface_suffix="closeable-lane.lane.json",
+    )
+    assert summary["planning_surface_health"]["live_reference_integrity"]["contracts"] == [warning["repair_affordance"]]
     lane = summary["lanes"]["records"][0]
     assert lane["status"] == "closed"
     assert lane["proof_aggregation"]["status"] == "satisfied"
