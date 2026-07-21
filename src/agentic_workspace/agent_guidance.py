@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +12,20 @@ from agentic_workspace.config import (
     DelegationTargetProfile,
     MixedAgentLocalOverride,
 )
+
+
+def _stable_event_id(event: dict[str, Any]) -> str:
+    identity = {
+        "target_identity_ref": event.get("target_identity_ref"),
+        "target_revision": event.get("target_revision"),
+        "task_class": event.get("task_class"),
+        "scope_class": event.get("scope_class"),
+        "desired_behavior": event.get("desired_behavior"),
+        "replaced_behavior": event.get("replaced_behavior"),
+        "source": event.get("source"),
+    }
+    raw = json.dumps(identity, sort_keys=True, separators=(",", ":"), default=str)
+    return "correction:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def _target_identity_subject(profile: DelegationTargetProfile) -> dict[str, Any]:
@@ -35,32 +51,166 @@ def _target_identity_subject(profile: DelegationTargetProfile) -> dict[str, Any]
     }
 
 
+def resolve_target_identity(*, subjects: list[dict[str, Any]], value: str) -> dict[str, Any]:
+    """Resolve profile name or alias inputs to one canonical stable target id."""
+
+    token = value.strip()
+    if not token:
+        return {"status": "unknown", "subject": None, "matched_by": None, "recovery": "set a target id, profile name, or alias"}
+    stable_matches = [subject for subject in subjects if subject.get("stable_target_id") == token]
+    name_matches = [subject for subject in subjects if subject.get("profile_name") == token]
+    alias_matches = [subject for subject in subjects if token in set(subject.get("aliases", []))]
+    matches = stable_matches or name_matches or alias_matches
+    matched_by = "target_id" if stable_matches else "profile_name" if name_matches else "alias" if alias_matches else None
+    unique_ids = {subject.get("stable_target_id") for subject in matches if subject.get("stable_target_id")}
+    if not matches:
+        return {
+            "status": "unavailable",
+            "subject": None,
+            "matched_by": None,
+            "recovery": "configure the target or use a known stable target_id",
+        }
+    if len(matches) > 1 or len(unique_ids) != 1:
+        return {
+            "status": "ambiguous",
+            "subject": None,
+            "matched_by": matched_by,
+            "recovery": "replace the alias with one unambiguous stable target_id",
+            "candidate_target_ids": sorted(str(target_id) for target_id in unique_ids),
+        }
+    subject = matches[0]
+    lifecycle = str(subject.get("identity_status") or "active")
+    if lifecycle != "active":
+        return {
+            "status": lifecycle,
+            "subject": subject,
+            "matched_by": matched_by,
+            "recovery": "revalidate or migrate target guidance before reuse",
+        }
+    if not subject.get("stable_target_id"):
+        return {
+            "status": "unknown",
+            "subject": None,
+            "matched_by": matched_by,
+            "recovery": "set delegation_targets.<target>.target_id before using target guidance",
+        }
+    return {"status": "known", "subject": subject, "matched_by": matched_by, "recovery": "not-needed"}
+
+
+def admit_correction_events(
+    *, events: list[dict[str, Any]], subjects: list[dict[str, Any]], task_class: str | None = None, scope_class: str | None = None
+) -> dict[str, Any]:
+    """Admit local correction events after identity, lifecycle, revision, and context checks."""
+
+    admitted_by_key: dict[str, dict[str, Any]] = {}
+    rejected: list[dict[str, Any]] = []
+    seen_keys: set[str] = set()
+    by_id: dict[str, dict[str, Any]] = {}
+    for index, raw_event in enumerate(events):
+        event = dict(raw_event)
+        event_id = str(event.get("event_id") or _stable_event_id(event))
+        event["event_id"] = event_id
+        operation = str(event.get("operation") or "submit")
+        target_ref = str(event.get("target_identity_ref") or event.get("target") or "")
+        resolution = resolve_target_identity(subjects=subjects, value=target_ref)
+        raw_subject = resolution.get("subject")
+        subject = raw_subject if isinstance(raw_subject, dict) else None
+        desired = str(event.get("desired_behavior") or "")
+        replaced = str(event.get("replaced_behavior") or "")
+        normalized_key = str(
+            event.get("normalized_correction_key")
+            or "|".join(
+                [
+                    str(subject.get("stable_target_id") if subject is not None else target_ref),
+                    str(event.get("task_class") or ""),
+                    str(event.get("scope_class") or event.get("task_class") or ""),
+                    desired.strip().lower(),
+                    replaced.strip().lower(),
+                ]
+            )
+        )
+        event["normalized_correction_key"] = normalized_key
+
+        def reject(reason: str, recovery: str) -> None:
+            rejected.append({"event_id": event_id, "index": index, "reason": reason, "recovery": recovery})
+
+        if resolution["status"] != "known" or subject is None:
+            reject(f"rejected-{resolution['status']}-target", str(resolution.get("recovery") or "resolve target identity"))
+            continue
+        if "sk-" in desired or "BEGIN PRIVATE KEY" in desired or "password=" in desired.lower():
+            reject("rejected-secret-bearing", "Remove secrets and submit only behavioral guidance.")
+            continue
+        if event.get("authority") not in {"explicit-user-correction", "pr-review", "orchestrator-review", "evaluator-finding"}:
+            reject("rejected-unauthorised", "Use an admitted correction authority.")
+            continue
+        revision_policy = str(subject.get("revision_policy") or "preserve")
+        target_revision = str(subject.get("target_revision") or "")
+        event_revision = str(event.get("target_revision") or "")
+        if event_revision and target_revision and event_revision != target_revision:
+            if revision_policy == "retire":
+                reject("rejected-retired-revision", "Retired guidance must not route to new work.")
+                continue
+            if revision_policy == "revalidate" and event.get("admission_state") != "revalidated":
+                reject("rejected-stale-revision", "Revalidate the event against the current target revision.")
+                continue
+            if revision_policy == "migrate" and not event.get("predecessor_event_id"):
+                reject("rejected-missing-migration-provenance", "Record predecessor_event_id before migrating guidance.")
+                continue
+            if revision_policy == "preserve":
+                event["admission_state"] = "accepted-preserved-revision"
+        if task_class and event.get("task_class") not in {None, "", task_class}:
+            reject("rejected-task-context", "Correction applies only to its matching task class.")
+            continue
+        requested_scope = scope_class or task_class
+        if requested_scope and event.get("scope_class") not in {None, "", requested_scope}:
+            reject("rejected-scope-context", "Correction applies only to its matching scope class.")
+            continue
+        if operation in {"dispute", "withdraw", "supersede"}:
+            predecessor_id = str(event.get("predecessor_event_id") or "")
+            predecessor = by_id.get(predecessor_id)
+            if predecessor is None:
+                reject("rejected-unknown-predecessor", "Reference an admitted predecessor event.")
+                continue
+            admitted_by_key.pop(str(predecessor.get("normalized_correction_key")), None)
+            if operation in {"dispute", "withdraw"}:
+                event["admission_state"] = operation
+                by_id[event_id] = event
+                continue
+        if normalized_key in seen_keys and operation == "submit":
+            event["admission_state"] = "duplicate-replay"
+            rejected.append(
+                {
+                    "event_id": event_id,
+                    "index": index,
+                    "reason": "duplicate-replay",
+                    "recovery": "Use recurrence or supersede if the correction carries new evidence.",
+                }
+            )
+            continue
+        seen_keys.add(normalized_key)
+        event["target_identity_ref"] = subject["stable_target_id"]
+        event["target_revision"] = target_revision or event_revision or None
+        event["profile_name"] = subject.get("profile_name")
+        event["admission_state"] = event.get("admission_state") or "accepted-candidate"
+        admitted_by_key[normalized_key] = event
+        by_id[event_id] = event
+    admitted = sorted(admitted_by_key.values(), key=lambda item: str(item.get("event_id")))
+    return {
+        "kind": "agentic-workspace/correction-event-admission/v1",
+        "status": "admitted" if admitted else "no-admitted-events",
+        "admitted_events": admitted,
+        "rejected_events": rejected,
+        "routing_rule": "Only admitted correction events for the resolved target_id and matching task/scope context may affect target guidance.",
+    }
+
+
 def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_root: Path | None) -> dict[str, Any]:
     subjects = [_target_identity_subject(profile) for profile in local_override.delegation_targets]
     current_name = local_override.current_target or ""
-    exact = [subject for subject in subjects if subject["profile_name"] == current_name]
-    alias = [subject for subject in subjects if current_name and current_name in subject["aliases"]]
-    matches = exact or alias
-    if not current_name:
-        current_status = "unknown"
-        recovery = "set delegation.current_target to a configured delegation_targets entry before target guidance can route"
-    elif len(matches) > 1:
-        current_status = "ambiguous"
-        recovery = "replace the alias with one exact delegation target profile name or stable target_id"
-    elif not matches:
-        current_status = "unavailable"
-        recovery = "configure delegation_targets.<current_target> or clear delegation.current_target"
-    else:
-        lifecycle = str(matches[0].get("identity_status") or "active")
-        current_status = "known" if lifecycle == "active" and matches[0].get("stable_target_id") else lifecycle
-        if lifecycle == "active" and not matches[0].get("stable_target_id"):
-            current_status = "unknown"
-            recovery = "set delegation_targets.<target>.target_id before using user-local target guidance"
-        elif lifecycle in {"retired", "superseded", "ambiguous", "unavailable"}:
-            recovery = "revalidate or migrate target guidance before reuse"
-        else:
-            recovery = "not-needed"
-    current_subject = matches[0] if len(matches) == 1 else None
+    resolution = resolve_target_identity(subjects=subjects, value=current_name)
+    current_status = resolution["status"]
+    recovery = str(resolution.get("recovery") or "resolve target identity")
+    current_subject = resolution.get("subject") if isinstance(resolution.get("subject"), dict) else None
     user_root = local_override.user_guidance_root
     overlay_path = local_override.target_guidance_overlay_path or WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH
     correction_path = local_override.correction_events_path or WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH
@@ -78,6 +228,8 @@ def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_r
             "provenance": {
                 "source": local_override.field_sources.get("delegation.current_target", "unset") if current_name else "unset",
                 "binding": "delegation.current_target",
+                "matched_by": resolution.get("matched_by"),
+                "canonical_join_key": "stable_target_id",
                 "raw_runtime_identity_stored": False,
             },
             "recovery": recovery,
@@ -177,6 +329,38 @@ def correction_feedback_contract(*, identity_posture: dict[str, Any]) -> dict[st
             "shared_memory": "only for agent-independent repository knowledge",
             "no_retention": "required for malformed, secret-bearing, or unauthorised submissions",
         },
+        "operations": [
+            {
+                "operation": "submit",
+                "callable": "agentic_workspace.agent_guidance.admit_correction_events",
+                "admission": "resolves profile names and aliases to one stable target_id before event storage or routing",
+            },
+            {
+                "operation": "query",
+                "callable": "agentic_workspace.agent_guidance.admit_correction_events",
+                "admission": "returns only admitted events matching resolved target_id plus task/scope context",
+            },
+            {
+                "operation": "dispute",
+                "callable": "agentic_workspace.agent_guidance.admit_correction_events",
+                "admission": "requires an admitted predecessor_event_id and removes that predecessor from current routing",
+            },
+            {
+                "operation": "supersede",
+                "callable": "agentic_workspace.agent_guidance.admit_correction_events",
+                "admission": "requires an admitted predecessor_event_id, keeps provenance, and routes only the superseding event",
+            },
+            {
+                "operation": "withdraw",
+                "callable": "agentic_workspace.agent_guidance.admit_correction_events",
+                "admission": "requires an admitted predecessor_event_id and excludes withdrawn guidance from routing",
+            },
+            {
+                "operation": "migrate-or-retire",
+                "callable": "agentic_workspace.agent_guidance.admit_correction_events",
+                "admission": "applies the target revision policy before reuse: preserve, revalidate, migrate with predecessor, or retire",
+            },
+        ],
         "storage": {
             "path": correction_storage.get("path", WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH.as_posix()),
             "checked_in": False,

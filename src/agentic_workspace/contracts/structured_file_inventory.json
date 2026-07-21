@@ -227,6 +227,18 @@
       "checked_in_justification": "Release automation, docs, and tests use this manifest as the source of truth for package-affecting paths and shipped package metadata."
     },
     {
+      "pattern": ".release/changes/*.toml",
+      "format": "toml",
+      "owner": "release",
+      "status": "typed-validator-backed",
+      "schema_or_validator": "release changeset parser: scripts/release/coordinated_release.py",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Pending coordinated release changesets are consumed by release automation and must declare schema_version, bump, and summary.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Release automation uses checked-in changesets to derive version bumps, release notes, and pending release PR contents."
+    },
+    {
       "pattern": ".agentic-workspace/agent-aids/**/manifest.json",
       "format": "json",
       "owner": "agent-aids",

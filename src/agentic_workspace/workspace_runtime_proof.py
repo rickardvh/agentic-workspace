@@ -26,6 +26,7 @@ from repo_verification_bootstrap.runtime_primitives import (
 
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor
+from agentic_workspace.authority_envelope import admit_mutation_boundary
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
 from agentic_workspace.current_work_context import resolve_current_work_context
 from agentic_workspace.proof_receipt_admission import (
@@ -1458,6 +1459,16 @@ def _closeout_report_payload(
             option_blockers.setdefault(claim, []).append("applicable_intent_status")
     if architecture_closeout.get("required_claim"):
         option_blockers.setdefault("claim-work-complete", []).append("architecture_principles_status")
+    closeout_mutation_admission = admit_mutation_boundary(
+        boundary_id="closeout",
+        expected=_as_dict(closeout_trust.get("expected_mutation_baseline")),
+        current=_as_dict(closeout_trust.get("current_mutation_baseline") or closeout_trust.get("mutation_baseline")),
+        assignment_target_identity_ref=str(closeout_trust.get("assignment_target_identity_ref") or "").strip() or None,
+        allowed_paths=[str(path) for path in _list_payload(closeout_trust.get("allowed_paths"))] or None,
+    )
+    if closeout_mutation_admission.get("status") == "rejected":
+        option_blockers.setdefault("claim-work-complete", []).append("mutation_baseline_revalidation")
+        option_blockers.setdefault("close-parent-lane", []).append("mutation_baseline_revalidation")
     for option in completion_options:
         blockers_for_option = _dedupe([*(_list_payload(option.get("blocking_fields"))), *option_blockers.get(str(option.get("id")), [])])
         if proof_execution_recorded:
@@ -1484,6 +1495,14 @@ def _closeout_report_payload(
             applicable_intent_status=applicable_intent_status,
             durable_residue_action=_as_dict(closeout_trust.get("durable_residue_action")),
         )
+    if closeout_mutation_admission.get("status") == "rejected":
+        claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
+        claim_authorization["blocked_claim_classes"] = _dedupe(
+            [*_list_payload(claim_authorization.get("blocked_claim_classes")), "mutation_baseline_revalidation"]
+        )
+        completion_gate["claim_authorization"] = claim_authorization
+        completion_gate["status"] = "blocked"
+        completion_gate["mutation_baseline_revalidation"] = closeout_mutation_admission
     task_posture_followthrough = _as_dict(completion_gate.get("task_posture_followthrough"))
     first_blocking_option = next((item for item in completion_options if item.get("allowed") is False and item.get("blocking_fields")), {})
     blockers = first_blocking_option.get("blocking_fields", [])
@@ -1648,6 +1667,7 @@ def _closeout_report_payload(
             "proof": validation_proof,
             "proof_achieved_now": proof_achieved_now,
             "proof_execution": proof_execution,
+            "mutation_baseline_revalidation": closeout_mutation_admission,
             "proof_confidence": closeout_trust.get("proof_confidence", {}),
             "behavior_preservation": behavior_preservation,
         },

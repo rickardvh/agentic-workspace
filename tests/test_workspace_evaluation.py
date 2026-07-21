@@ -84,10 +84,16 @@ def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path
     Draft202012Validator(contract_schema("evaluation_summary.schema.json")).validate(summary)
     item = summary["summaries"][0]
     assert item["coverage"]["observation_count"] == 1
-    assert item["criterion_status"][0]["state"] == "satisfied"
+    assert item["coverage"]["decision_observation_count"] == 0
+    assert item["coverage"]["legacy_unbound_count"] == 1
+    assert item["criterion_status"][0]["state"] == "unobserved"
     assert item["fresh_result_admission"]["status"] == "legacy-unbound"
-    assert item["conclusion_readiness"]["ready"] is True
-    assert item["next_collection_action"] == "owner-review-or-conclude"
+    assert item["fresh_result_admission"]["historical_observation_count"] == 1
+    assert item["conclusion_readiness"] == {
+        "ready": False,
+        "reason_code": "requires-bound-current-observation",
+    }
+    assert item["next_collection_action"] == "migrate-or-append-bound-observation"
 
 
 def test_evaluation_update_increments_revision_without_rewriting_observations(tmp_path: Path) -> None:
@@ -110,6 +116,49 @@ def test_evaluation_update_increments_revision_without_rewriting_observations(tm
     assert result["outcome"] == "updated"
     assert result["revision"] == 2
     assert observation_path.read_text(encoding="utf-8") == before
+
+
+def test_evaluation_summary_excludes_stale_definition_revision_from_readiness(tmp_path: Path) -> None:
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=["proof-receipts/run-1.json"],
+        context={
+            "assignment": {
+                "target_identity_ref": "user-local:codex-current",
+                "context_key": "mechanical-follow-through::mechanical-follow-through",
+            },
+            "authority_envelope": {
+                "mutation_baseline": {
+                    "baseline_id": "abc123",
+                    "head": "def456",
+                    "revalidation_status": "fresh",
+                }
+            },
+            "proof": {"result": "passed", "provenance": "proof-receipts/run-1.json"},
+        },
+    )
+    register_evaluation(
+        target_root=tmp_path,
+        **{**_definition_kwargs(), "question": "Does the operating loop reduce repeated reconstruction and stale proof?"},
+    )
+
+    summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+
+    item = summary["summaries"][0]
+    assert item["revision"] == 2
+    assert item["fresh_result_admission"]["status"] == "stale-bound"
+    assert item["fresh_result_admission"]["bound_observation_count"] == 0
+    assert item["fresh_result_admission"]["current_result_identity"]["status"] == "missing"
+    assert item["coverage"]["stale_revision_count"] == 1
+    assert item["criterion_status"][0]["state"] == "unobserved"
+    assert item["conclusion_readiness"] == {
+        "ready": False,
+        "reason_code": "requires-bound-current-observation",
+    }
 
 
 def test_evaluation_rejects_log_as_decision_owner(tmp_path: Path) -> None:
@@ -166,6 +215,20 @@ def test_evaluation_observation_binds_fresh_assignment_authority_and_proof(tmp_p
     item = summary["summaries"][0]
     assert item["fresh_result_admission"]["status"] == "fresh-bound"
     assert item["fresh_result_admission"]["bound_observation_count"] == 1
+    identity = item["fresh_result_admission"]["current_result_identity"]
+    assert {
+        key: identity[key] for key in ("status", "evaluation_id", "definition_revision", "criterion", "baseline_id", "target_identity_ref")
+    } == {
+        "status": "present",
+        "evaluation_id": "eval-1969-operating-loop",
+        "definition_revision": 1,
+        "criterion": "reconstruction-cost",
+        "baseline_id": "abc123",
+        "target_identity_ref": "user-local:codex-current",
+    }
+    assert identity["recorded_at"]
+    assert item["coverage"]["decision_observation_count"] == 1
+    assert item["conclusion_readiness"]["ready"] is True
     latest = item["latest_material_changes"][0]
     assert latest["admission"]["status"] == "admitted"
     assert latest["admission"]["baseline_id"] == "abc123"
@@ -229,6 +292,50 @@ def test_vague_collect_more_evidence_does_not_authorize_closure() -> None:
     assert result["blocked_reasons"] == ["longitudinal-evaluation-invalid"]
 
 
+def test_evaluation_closure_authority_requires_fresh_bound_summary(tmp_path: Path) -> None:
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=["legacy-log"],
+    )
+    legacy_summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+
+    blocked = closure_authority(implementation_complete=True, proof_complete=True, evaluation=legacy_summary)
+    assert blocked["issue_closure_authorized"] is False
+    assert blocked["evaluation_admission"] == "invalid"
+    assert blocked["blocked_reasons"] == ["longitudinal-evaluation-invalid"]
+
+    append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=["proof-receipts/run-1.json"],
+        context={
+            "assignment": {
+                "target_identity_ref": "user-local:codex-current",
+                "context_key": "mechanical-follow-through::mechanical-follow-through",
+            },
+            "authority_envelope": {
+                "mutation_baseline": {
+                    "baseline_id": "abc123",
+                    "head": "def456",
+                    "revalidation_status": "fresh",
+                }
+            },
+            "proof": {"result": "passed", "provenance": "proof-receipts/run-1.json"},
+        },
+    )
+    fresh_summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+
+    authorized = closure_authority(implementation_complete=True, proof_complete=True, evaluation=fresh_summary)
+    assert authorized["issue_closure_authorized"] is True
+    assert authorized["evaluation_admission"] == "fresh-bound-ready"
+
+
 def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
     criteria = json.dumps({"cost": {"type": "qualitative", "question": "Was cost reduced?", "success_condition": "Cost is lower."}})
     owner = json.dumps({"id": "workspace-maintainer", "class": "maintainer"})
@@ -287,4 +394,7 @@ def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
 
     assert cli.main(["evaluation", "--target", str(tmp_path), "--format", "json", "status", "--evaluation-id", "eval-cost"]) == 0
     status = json.loads(capsys.readouterr().out)
-    assert status["summaries"][0]["conclusion_readiness"]["ready"] is True
+    summary = status["summaries"][0]
+    assert summary["fresh_result_admission"]["status"] == "legacy-unbound"
+    assert summary["conclusion_readiness"]["ready"] is False
+    assert summary["next_collection_action"] == "migrate-or-append-bound-observation"
