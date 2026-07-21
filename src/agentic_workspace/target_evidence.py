@@ -10,6 +10,10 @@ from agentic_workspace.config import (
     DelegationTargetProfile,
 )
 
+CURRENT_ADMISSION_STATES = {"accepted", "accepted-normalized", "recovered"}
+ROUTABLE_AUTHORITIES = {"aw-proof", "human-review", "local-outcome-ledger"}
+ROUTABLE_CONFIDENCE = {"high", "medium"}
+
 
 def _delegation_signal_score(record: DelegationOutcomeRecord) -> float:
     outcome_score = {"success": 1.0, "mixed": 0.0, "failed": -1.0}[record.outcome]
@@ -34,22 +38,33 @@ def _target_record_id(*, target_name: str, record: DelegationOutcomeRecord, inde
     return f"{target_name}:{record.task_class}:{_record_scope_class(record)}:{record.recorded_at}:{index}"
 
 
+def _record_identity(record: DelegationOutcomeRecord, index: int) -> str:
+    return record.record_id or f"{record.delegation_target}:{record.task_class}:{record.scope_class}:{record.recorded_at}:{index}"
+
+
+def _record_routable(record: DelegationOutcomeRecord) -> bool:
+    if record.admission_state not in CURRENT_ADMISSION_STATES:
+        return False
+    if record.authority not in ROUTABLE_AUTHORITIES:
+        return False
+    if record.confidence not in ROUTABLE_CONFIDENCE:
+        return False
+    return True
+
+
 def _currently_admitted_records(records: list[tuple[int, DelegationOutcomeRecord]]) -> list[tuple[int, DelegationOutcomeRecord]]:
     """Return records assignment may consume after lifecycle transitions are applied."""
 
     superseded_ids = {record.predecessor_id for _, record in records if record.operation == "supersede" and record.predecessor_id}
-    disputed_ids = {
-        record.predecessor_id
-        for _, record in records
-        if record.operation == "correct-or-dispute" and record.predecessor_id and record.outcome in {"mixed", "failed"}
-    }
-    inactive_ids = superseded_ids | disputed_ids
+    disputed_ids = {record.predecessor_id for _, record in records if record.operation == "correct-or-dispute" and record.predecessor_id}
+    compacted_ids = {record.predecessor_id for _, record in records if record.operation == "prune-or-compact" and record.predecessor_id}
+    inactive_ids = superseded_ids | disputed_ids | compacted_ids
     admitted: list[tuple[int, DelegationOutcomeRecord]] = []
     for index, record in records:
-        record_id = _target_record_id(target_name=record.delegation_target, record=record, index=index)
+        record_id = _record_identity(record, index)
         if record_id in inactive_ids:
             continue
-        if record.admission_state not in {"accepted", "accepted-normalized", "recovered"}:
+        if not _record_routable(record):
             continue
         if record.operation == "prune-or-compact":
             continue
@@ -109,6 +124,12 @@ def target_evidence_posture(
                     "authority": record.authority,
                     "confidence": record.confidence,
                     "admission_state": record.admission_state,
+                    "admission": {
+                        "routable": _record_routable(record),
+                        "authority": record.authority,
+                        "confidence": record.confidence,
+                        "state": record.admission_state,
+                    },
                     "source": {
                         "type": "local-json-ledger",
                         "ref": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
@@ -245,7 +266,8 @@ def target_evidence_posture(
         "admission": {
             "rejects": [
                 "malformed records",
-                "duplicate target/task/scope/date evidence without a lifecycle predecessor",
+                "duplicate target/task/scope/provenance evidence without a lifecycle predecessor",
+                "low-confidence or untrusted-authority records before routing",
                 "unscoped target",
                 "unscoped task/scope context",
                 "unsupported outcome enums",
@@ -303,7 +325,20 @@ def assignment_decision_from_policy(
         if not target:
             continue
         required_action = str(profile.get("required_action") or "")
-        eligible = not bool(profile.get("capability_mismatch")) and required_action not in hard_reject_actions
+        execution_methods = [str(item) for item in profile.get("execution_methods", []) if str(item).strip()]
+        human_control_modes = [str(item) for item in profile.get("human_control_modes", []) if str(item).strip()]
+        hard_rejection_reasons: list[str] = []
+        if bool(profile.get("capability_mismatch")):
+            hard_rejection_reasons.append("capability-mismatch")
+        if required_action in hard_reject_actions:
+            hard_rejection_reasons.append(required_action)
+        if not execution_methods:
+            hard_rejection_reasons.append("missing-execution-method")
+        if str(profile.get("location") or "") == "external" and not any(method in {"cli", "api", "manual"} for method in execution_methods):
+            hard_rejection_reasons.append("external-transport-unavailable")
+        if "off" in human_control_modes:
+            hard_rejection_reasons.append("human-control-forbids-delegation")
+        eligible = not hard_rejection_reasons
         score = int(profile.get("score") or 0) + recommendation_score.get(str(profile.get("recommendation") or ""), 0)
         matching_evidence = evidence_by_target.get(target, [])
         for evidence in matching_evidence:
@@ -314,6 +349,7 @@ def assignment_decision_from_policy(
             {
                 "target": target,
                 "eligible": eligible,
+                "hard_rejection_reasons": hard_rejection_reasons,
                 "score": score,
                 "runtime_recommendation": profile.get("recommendation"),
                 "required_action": required_action or "none",
@@ -335,6 +371,7 @@ def assignment_decision_from_policy(
         decision = "no-safe-route"
     elif policy_value == "local-preferred":
         decision = "keep-local"
+        selected_target = current_target or None
     elif policy_value == "best-fit-advisory":
         decision = "advise-best-fit"
     elif not enforceable:

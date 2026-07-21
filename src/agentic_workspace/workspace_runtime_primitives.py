@@ -46459,8 +46459,14 @@ def _record_delegation_outcome(
     normalized_scope = scope_class.strip()
     normalized_operation = operation.strip() or "submit"
     normalized_predecessor = predecessor_id.strip()
+    normalized_authority = authority.strip() or "local-outcome-ledger"
+    normalized_confidence = confidence.strip() or "medium"
     if not normalized_scope:
         raise WorkspaceUsageError("note-delegation-outcome requires --scope-class to keep evidence scoped independently from task class.")
+    if normalized_authority not in {"aw-proof", "human-review", "local-outcome-ledger"}:
+        raise WorkspaceUsageError("note-delegation-outcome authority must be one of: aw-proof, human-review, local-outcome-ledger.")
+    if normalized_confidence not in {"high", "medium"}:
+        raise WorkspaceUsageError("note-delegation-outcome confidence must be high or medium before routing can consume it.")
     existing_ids = {
         existing.record_id or f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
         for index, existing in enumerate(records)
@@ -46468,12 +46474,30 @@ def _record_delegation_outcome(
     if normalized_operation != "submit" and normalized_predecessor not in existing_ids:
         raise WorkspaceUsageError("note-delegation-outcome transition operations require --predecessor-id for an existing record.")
     today = date.today().isoformat()
-    duplicate_key = (normalized_target, normalized_task, normalized_scope, today)
+    duplicate_key = (
+        normalized_target,
+        normalized_task,
+        normalized_scope,
+        outcome,
+        handoff_sufficiency,
+        review_burden,
+        escalation_required,
+        normalized_authority,
+    )
     if normalized_operation == "submit":
         for existing in records:
-            if (existing.delegation_target, existing.task_class, existing.scope_class, existing.recorded_at) == duplicate_key:
+            if (
+                existing.delegation_target,
+                existing.task_class,
+                existing.scope_class,
+                existing.outcome,
+                existing.handoff_sufficiency,
+                existing.review_burden,
+                existing.escalation_required,
+                existing.authority,
+            ) == duplicate_key and existing.admission_state in {"accepted", "accepted-normalized", "recovered"}:
                 raise WorkspaceUsageError(
-                    "note-delegation-outcome duplicate evidence for target/task/scope/date must use a lifecycle transition."
+                    "note-delegation-outcome duplicate evidence for target/task/scope/provenance must use a lifecycle transition."
                 )
     record_id = f"{normalized_target}:{normalized_task}:{normalized_scope}:{today}:{len(records)}"
     record = DelegationOutcomeRecord(
@@ -46488,8 +46512,8 @@ def _record_delegation_outcome(
         operation=normalized_operation,
         record_id=record_id,
         predecessor_id=normalized_predecessor,
-        authority=authority.strip() or "local-outcome-ledger",
-        confidence=confidence.strip() or "medium",
+        authority=normalized_authority,
+        confidence=normalized_confidence,
         admission_state="accepted",
     )
     updated_payload = {
@@ -46556,6 +46580,9 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
     local_override = config.local_override
     posture = capability_posture or {}
     execution_class = str(posture.get("execution class", "")).strip()
+    scope_class = str(
+        posture.get("scope class") or posture.get("scope_class") or posture.get("scope") or posture.get("slice scope") or ""
+    ).strip()
     recommended_strength = str(posture.get("recommended strength", "")).strip()
     preferred_location = str(posture.get("preferred location", "")).strip() or "either"
     delegation_friendly = str(posture.get("delegation friendly", "")).strip()
@@ -46707,7 +46734,7 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
         "profile_recommendations": profile_recommendations,
         "capability_context": {
             "task_class": execution_class or None,
-            "scope_class": execution_class or None,
+            "scope_class": scope_class or execution_class or None,
             "recommended_strength": recommended_strength or None,
             "preferred_location": preferred_location or None,
         },
