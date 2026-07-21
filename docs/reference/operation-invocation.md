@@ -16,11 +16,17 @@ Typed invocation for a routed AW action. This object owns machine action identit
 | `contract_version` | const `"agentic-workspace/operation/v1"` | yes |  | Version of the operation contract this invocation targets. |  |  |
 | `arguments` | object | yes |  | Typed operation arguments independent of shell rendering. |  |  |
 | `effect_class` | string | no |  | Effect classification admitted for this invocation. |  |  |
+| `authority_class` | string | no |  | Authority or enforcement class for the invocation. |  |  |
 | `required_authority` | string | yes |  | Authority source required before executing or trusting this invocation. |  |  |
+| `preconditions` | object | no |  | Structured preconditions that must still hold before execution. |  |  |
+| `owner_context_revision` | object | no |  | Owner, target, assignment, and context revision identity admitted into the action. |  |  |
+| `mutation_boundary` | object | no |  | Exact mutation, handoff, or read-only boundary admitted for the action. |  |  |
+| `proof_requirements` | array of  | no |  | Proof requirements that must be satisfied after successful execution. |  |  |
 | `expected_input_revision` | string | no |  | Optional revision or freshness precondition for the input state. |  |  |
 | `expected_transition` | string | no |  | Expected state transition that distinguishes progress from a same-state loop. |  |  |
 | `idempotency_key` | string | yes |  | Stable retry identity derived from operation, arguments, revision, and transition. |  |  |
 | `claim_effect` | string | no |  | Claim or proof effect authorized when the invocation succeeds. |  |  |
+| `stale_action_rejection` | object | no |  | Fail-closed stale-action policy for consumers executing this invocation. |  |  |
 | `renderings` | object | no |  | Display or manual transport renderings derived from the typed invocation. |  |  |
 | `renderings.cli` | string | no |  | CLI rendering for humans or manual execution. |  |  |
 | `renderings.manual` | string | no |  | Manual recovery or adapter rendering when CLI is not the transport. |  |  |

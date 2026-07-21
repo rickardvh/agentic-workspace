@@ -35,10 +35,31 @@
       "type": "string",
       "description": "Effect classification admitted for this invocation."
     },
+    "authority_class": {
+      "type": "string",
+      "description": "Authority or enforcement class for the invocation."
+    },
     "required_authority": {
       "type": "string",
       "minLength": 1,
       "description": "Authority source required before executing or trusting this invocation."
+    },
+    "preconditions": {
+      "type": "object",
+      "description": "Structured preconditions that must still hold before execution."
+    },
+    "owner_context_revision": {
+      "type": "object",
+      "description": "Owner, target, assignment, and context revision identity admitted into the action."
+    },
+    "mutation_boundary": {
+      "type": "object",
+      "description": "Exact mutation, handoff, or read-only boundary admitted for the action."
+    },
+    "proof_requirements": {
+      "type": "array",
+      "items": {},
+      "description": "Proof requirements that must be satisfied after successful execution."
     },
     "expected_input_revision": {
       "type": "string",
@@ -56,6 +77,10 @@
     "claim_effect": {
       "type": "string",
       "description": "Claim or proof effect authorized when the invocation succeeds."
+    },
+    "stale_action_rejection": {
+      "type": "object",
+      "description": "Fail-closed stale-action policy for consumers executing this invocation."
     },
     "renderings": {
       "type": "object",

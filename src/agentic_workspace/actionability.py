@@ -12,19 +12,31 @@ def operation_invocation(
     operation_id: str,
     arguments: dict[str, Any] | None = None,
     effect_class: str = "",
+    authority_class: str = "",
     expected_transition: str = "",
     input_revision: str = "",
     claim_effect: str = "",
     command_rendering: str = "",
+    preconditions: dict[str, Any] | None = None,
+    owner_context_revision: dict[str, Any] | None = None,
+    mutation_boundary: dict[str, Any] | None = None,
+    proof_requirements: list[Any] | None = None,
 ) -> dict[str, Any]:
     """Build a typed operation invocation that owns action identity."""
 
     normalized_arguments = dict(arguments or {})
+    normalized_preconditions = dict(preconditions or {})
+    normalized_owner_context = dict(owner_context_revision or {})
+    normalized_mutation_boundary = dict(mutation_boundary or {})
+    normalized_proof_requirements = list(proof_requirements or [])
     idempotency_input = {
         "operation_id": operation_id,
         "arguments": normalized_arguments,
         "input_revision": input_revision,
         "expected_transition": expected_transition,
+        "owner_context_revision": normalized_owner_context,
+        "mutation_boundary": normalized_mutation_boundary,
+        "proof_requirements": normalized_proof_requirements,
     }
     idempotency_key = hashlib.sha256(json.dumps(idempotency_input, sort_keys=True).encode()).hexdigest()[:16]
     invocation = {
@@ -33,11 +45,26 @@ def operation_invocation(
         "contract_version": "agentic-workspace/operation/v1",
         "arguments": normalized_arguments,
         "effect_class": effect_class,
+        "authority_class": authority_class or "operation-contract",
         "required_authority": "operation-contract",
+        "preconditions": normalized_preconditions,
+        "owner_context_revision": normalized_owner_context,
+        "mutation_boundary": normalized_mutation_boundary,
+        "proof_requirements": normalized_proof_requirements,
         "expected_input_revision": input_revision,
         "expected_transition": expected_transition,
         "idempotency_key": idempotency_key,
         "claim_effect": claim_effect,
+        "stale_action_rejection": {
+            "status": "reject-on-input-revision-mismatch",
+            "comparison_fields": [
+                "expected_input_revision",
+                "owner_context_revision",
+                "mutation_boundary",
+                "proof_requirements",
+            ],
+            "repair": "Refresh the operating decision before executing this typed action.",
+        },
         "renderings": {"cli": command_rendering} if command_rendering else {},
         "rule": "Operation identity and progress checks use this typed invocation; rendered commands are display or manual recovery text.",
     }
@@ -132,6 +159,10 @@ def derive_actionability(
     input_digest = hashlib.sha256(json.dumps(digest_input, sort_keys=True).encode()).hexdigest()[:16]
     proposed_input_digest = str(proposed.get("input_digest") or "").strip()
     same_state = proposed_input_digest == input_digest if proposed_input_digest else not expected_transition
+    expected_input_revision = str(invocation.get("expected_input_revision") or "").strip()
+    stale_action_rejected = bool(
+        invocation.get("stale_action_rejection") and expected_input_revision and expected_input_revision != input_digest
+    )
     self_loop_rejected = same_operation and same_state and not external_condition
     if not action_required:
         next_action = {
@@ -142,6 +173,15 @@ def derive_actionability(
                 else "No immediate action is required."
             ),
             "commands": [],
+        }
+    elif stale_action_rejected:
+        next_action = {
+            "action": "required-action-unavailable",
+            "summary": "Required work remains, but the typed action was derived from stale input state.",
+            "commands": [],
+            "owner": str(proposed.get("owner") or "workspace-or-repo-maintainer"),
+            "missing_precondition": "fresh operating decision with matching owner, context, authority, proof, and mutation baseline revisions",
+            "stale_action_rejection": invocation.get("stale_action_rejection"),
         }
     elif self_loop_rejected:
         next_action = {
@@ -169,8 +209,16 @@ def derive_actionability(
             "same_operation": same_operation,
             "same_state": same_state,
             "expected_transition": expected_transition,
+            "expected_input_revision": expected_input_revision,
+            "stale_action_rejected": stale_action_rejected,
             "external_change_condition": external_condition,
-            "result": "rejected-same-state-loop" if self_loop_rejected else "progress-making" if next_command else "terminal",
+            "result": "rejected-stale-action"
+            if stale_action_rejected
+            else "rejected-same-state-loop"
+            if self_loop_rejected
+            else "progress-making"
+            if next_command
+            else "terminal",
         },
         "rule": "Status, required action, claim limits, and next action derive from one finding classification; ordinary same-state loops are not next actions.",
     }

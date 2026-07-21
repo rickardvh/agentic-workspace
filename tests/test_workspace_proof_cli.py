@@ -3294,7 +3294,7 @@ def test_reconciliation_selects_newest_admitted_history_when_latest_file_is_reje
 
 def test_reconciliation_accepts_instantiated_paths_template_receipt(tmp_path: Path) -> None:
     from agentic_workspace.proof_subject import build_proof_subject
-    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload, _proof_template_live_obligation_id
 
     receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
     receipt_dir.mkdir(parents=True)
@@ -3318,19 +3318,149 @@ def test_reconciliation_accepts_instantiated_paths_template_receipt(tmp_path: Pa
         "changed_paths": changed_paths,
     }
     receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=changed_paths, command=concrete_command)
+    selected_command = {
+        "command": template_command,
+        "lane": "requirement-grounding-delegation",
+        "owner_ref": ".agentic-workspace/planning/execplans/proof-template.plan.json",
+        "assignment_target": "user-local:codex-current",
+        "assignment_context_key": "workspace/proof-template",
+    }
+    receipt["proof_template_binding"] = {
+        "kind": "agentic-workspace/proof-template-binding/v1",
+        "status": "current",
+        "live_obligation_id": _proof_template_live_obligation_id(
+            required_command=template_command,
+            changed_paths=changed_paths,
+            selected_command=selected_command,
+        ),
+        "command": {
+            "template": template_command,
+            "concrete": concrete_command,
+            "selector_parameters": {
+                "selectors": ["context.delegation_decision", "context.plan_delegation_packet", "requirement_grounding"]
+            },
+        },
+        "owner_identity": {
+            "lane_id": "requirement-grounding-delegation",
+            "owner_ref": ".agentic-workspace/planning/execplans/proof-template.plan.json",
+        },
+        "assignment": {"target_identity_ref": "user-local:codex-current", "context_key": "workspace/proof-template"},
+        "artifact_provenance": {"changed_paths": changed_paths},
+        "result_provenance": {
+            "result": "passed",
+            "recorded_at": "2026-07-11T08:00:00+00:00",
+            "proof_subject_fingerprint": receipt["proof_subject"]["fingerprint"],
+        },
+        "freshness": {"status": "current", "baseline_revision": "baseline-1", "evaluation_result": "eval-1"},
+    }
     (receipt_dir / "last.json").write_text(json.dumps(receipt), encoding="utf-8")
 
     reconciliation = _proof_receipt_reconciliation_payload(
         target_root=tmp_path,
         changed_paths=changed_paths,
         required_commands=[template_command],
-        selected_commands=[],
+        selected_commands=[selected_command],
     )
 
     assert reconciliation["status"] == "accepted"
     assert reconciliation["commands"][0]["evidence_state"] == "accepted"
     assert reconciliation["commands"][0]["receipt_match"] == "instantiated-template"
     assert reconciliation["commands"][0]["receipt"]["command"] == concrete_command
+    assert reconciliation["commands"][0]["live_obligation_binding"]["status"] == "accepted"
+    assert reconciliation["commands"][0]["live_obligation_binding"]["assignment"] == {
+        "target_identity_ref": "user-local:codex-current",
+        "context_key": "workspace/proof-template",
+    }
+
+
+@pytest.mark.parametrize(
+    ("mutate", "reason"),
+    [
+        (lambda binding: None, "missing-live-obligation-binding"),
+        (lambda binding: binding["owner_identity"].update({"lane_id": "other-lane"}), "cross-lane-receipt"),
+        (lambda binding: binding.update({"status": "superseded"}), "superseded-template-binding"),
+        (
+            lambda binding: binding["freshness"].update({"status": "evaluation-result-replaced"}),
+            "stale-evaluation-result-replaced-template-binding",
+        ),
+        (lambda binding: binding["result_provenance"].pop("proof_subject_fingerprint"), "proof-subject-provenance-mismatch"),
+    ],
+)
+def test_reconciliation_rejects_stale_or_cross_context_instantiated_template_receipt(tmp_path: Path, mutate, reason: str) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload, _proof_template_live_obligation_id
+
+    receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
+    receipt_dir.mkdir(parents=True)
+    changed_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+    for path in changed_paths:
+        _write(tmp_path / path, f"fixture for {path}\n")
+    template_command = (
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding --format json"
+    )
+    concrete_command = (
+        "uv run python scripts/run_agentic_workspace.py implement "
+        "--changed src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py "
+        "--select requirement_grounding --format json"
+    )
+    selected_command = {
+        "command": template_command,
+        "lane": "proof-template-lane",
+        "owner_ref": ".agentic-workspace/planning/execplans/proof-template.plan.json",
+        "assignment_target": "user-local:codex-current",
+        "assignment_context_key": "workspace/proof-template",
+    }
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": concrete_command,
+        "result": "passed",
+        "recorded_at": "2026-07-11T08:00:00+00:00",
+        "changed_paths": changed_paths,
+    }
+    receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=changed_paths, command=concrete_command)
+    binding = {
+        "kind": "agentic-workspace/proof-template-binding/v1",
+        "status": "current",
+        "live_obligation_id": _proof_template_live_obligation_id(
+            required_command=template_command,
+            changed_paths=changed_paths,
+            selected_command=selected_command,
+        ),
+        "command": {
+            "template": template_command,
+            "concrete": concrete_command,
+            "selector_parameters": {"selectors": ["requirement_grounding"]},
+        },
+        "owner_identity": {
+            "lane_id": "proof-template-lane",
+            "owner_ref": ".agentic-workspace/planning/execplans/proof-template.plan.json",
+        },
+        "assignment": {"target_identity_ref": "user-local:codex-current", "context_key": "workspace/proof-template"},
+        "artifact_provenance": {"changed_paths": changed_paths},
+        "result_provenance": {
+            "result": "passed",
+            "recorded_at": "2026-07-11T08:00:00+00:00",
+            "proof_subject_fingerprint": receipt["proof_subject"]["fingerprint"],
+        },
+        "freshness": {"status": "current", "baseline_revision": "baseline-1", "evaluation_result": "eval-1"},
+    }
+    if reason != "missing-live-obligation-binding":
+        mutate(binding)
+        receipt["proof_template_binding"] = binding
+    (receipt_dir / "last.json").write_text(json.dumps(receipt), encoding="utf-8")
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=changed_paths,
+        required_commands=[template_command],
+        selected_commands=[selected_command],
+    )
+
+    assert reconciliation["status"] == "attention"
+    state = reconciliation["commands"][0]
+    assert state["evidence_state"] == "template-binding-rejected"
+    assert state["diagnostic"] == reason
+    assert state["receipt_match"] == "instantiated-template"
 
 
 @pytest.mark.parametrize(

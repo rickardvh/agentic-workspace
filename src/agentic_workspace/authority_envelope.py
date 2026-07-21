@@ -44,6 +44,23 @@ def mutation_baseline_payload(*, target_root: Path, changed_paths: list[str]) ->
     digest_input = {"head": head, "paths": normalized_paths, "status": entries}
     digest = hashlib.sha256(json.dumps(digest_input, sort_keys=True).encode("utf-8")).hexdigest()[:16]
     dirty = bool(entries)
+    revalidation_command = "git status --porcelain=v1 --untracked-files=all -- <changed-paths>"
+    comparison_fields = [
+        "baseline_id",
+        "head",
+        "scope.allowed_paths",
+        "observed_state.entries",
+        "assignment.target_identity_ref",
+    ]
+    fail_closed_reasons = [
+        "baseline-head-changed",
+        "unexpected-path-overlap",
+        "untracked-managed-state",
+        "dirty-scope-not-accounted",
+        "renamed-managed-path",
+        "assignment-target-mismatch",
+        "scope-expanded",
+    ]
     return {
         "kind": "agentic-workspace/mutation-baseline/v1",
         "status": "dirty-scope-advisory-baseline" if dirty else "clean-scope",
@@ -67,21 +84,55 @@ def mutation_baseline_payload(*, target_root: Path, changed_paths: list[str]) ->
             "claim_boundary": "This is a point-in-time git baseline for the requested changed-path scope; it is not a lock and cannot prove when dirty state was created.",
         },
         "stale_revalidation": {
+            "status": "required",
+            "admission": "fail-closed",
+            "comparison_fields": comparison_fields,
             "required_before": [
                 "destructive action",
                 "returned-worker admission",
                 "integration",
                 "completion claim when dirty scope is material",
             ],
-            "stop_reasons": [
-                "baseline-head-changed",
-                "unexpected-path-overlap",
-                "untracked-managed-state",
-                "dirty-scope-not-accounted",
-            ],
-            "inspect_route": "git status --porcelain=v1 --untracked-files=all -- <changed-paths>",
+            "stop_reasons": fail_closed_reasons,
+            "inspect_route": revalidation_command,
+            "repair_routes": {
+                "baseline-head-changed": "rerun implement after rebasing or refreshing the branch head",
+                "unexpected-path-overlap": "inspect overlapping edits and assign ownership before writing",
+                "untracked-managed-state": "admit, move, or remove managed local state before claiming closure",
+                "renamed-managed-path": "treat rename as scope expansion unless the changed-path owner includes both sides",
+                "assignment-target-mismatch": "recompute assignment and handoff for the current target identity",
+                "scope-expanded": "rerun implement with the widened changed-path scope or ask for authority",
+            },
         },
-        "host_enforcement": "advisory-detect-at-aw-boundaries",
+        "boundary_enforcement": {
+            "kind": "agentic-workspace/mutation-boundary-enforcement/v1",
+            "status": "fail-closed-contract",
+            "baseline_id": digest,
+            "boundaries": [
+                {
+                    "id": "returned-worker-admission",
+                    "read_before": revalidation_command,
+                    "reject_on": fail_closed_reasons,
+                },
+                {
+                    "id": "integration",
+                    "read_before": revalidation_command,
+                    "reject_on": fail_closed_reasons,
+                },
+                {
+                    "id": "destructive-mutation",
+                    "read_before": "git rev-parse HEAD && " + revalidation_command,
+                    "reject_on": fail_closed_reasons,
+                },
+                {
+                    "id": "closeout",
+                    "read_before": revalidation_command,
+                    "reject_on": fail_closed_reasons,
+                },
+            ],
+            "clean_noop_rule": "If head, scoped status, allowed paths, target identity, and managed-state checks still match, revalidation does not require a new baseline.",
+        },
+        "host_enforcement": "fail-closed-at-aw-boundaries",
     }
 
 
@@ -112,7 +163,7 @@ def authority_envelope_payload(*, target_root: Path, changed_paths: list[str], t
         "mutation_baseline": baseline,
         "delegation_rule": "Delegated or manual workers receive the intersection of this envelope, assignment scope, target capability, and host limits; they may only narrow it.",
         "enforcement": {
-            "host_enforceable": ["none in this local CLI projection"],
+            "host_enforceable": ["mutation baseline revalidation fails closed at AW admission/integration/closeout boundaries"],
             "aw_boundary_checks": ["implement context", "handoff packet", "returned-result admission", "proof/closeout"],
             "honesty": "This packet guides and rechecks; it is not a sandbox for unrestricted processes.",
         },

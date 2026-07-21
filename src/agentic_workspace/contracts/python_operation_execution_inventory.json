@@ -211,6 +211,94 @@
       ]
     },
     {
+      "operation_id": "evaluation.transition",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.transition.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.lifecycle.transition",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns evaluation lifecycle policy, local state writes, and compatibility output.",
+      "what_would_make_portable_later": "Represent evaluation lifecycle operations as schema-backed generated operation steps once decision-owner, local-evidence, and closure-authority policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific lifecycle semantics. Lifecycle transition applies AW-specific fail-closed transition policy and definition mutation semantics.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.transition"
+      ]
+    },
+    {
+      "operation_id": "evaluation.status",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.status.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.status.derive",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns evaluation lifecycle policy, local state writes, and compatibility output.",
+      "what_would_make_portable_later": "Represent evaluation lifecycle operations as schema-backed generated operation steps once decision-owner, local-evidence, and closure-authority policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific lifecycle semantics. Status derivation applies AW-specific readiness and criterion-state policy over definitions and local observation streams.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.status"
+      ]
+    },
+    {
+      "operation_id": "evaluation.observe",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.observe.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.observation.append",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns evaluation lifecycle policy, local state writes, and compatibility output.",
+      "what_would_make_portable_later": "Represent evaluation lifecycle operations as schema-backed generated operation steps once decision-owner, local-evidence, and closure-authority policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific lifecycle semantics. Observation append applies registered-criterion validation, terminal-state rejection, local-only JSONL storage, and external-reference policy.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.observe"
+      ]
+    },
+    {
+      "operation_id": "evaluation.register",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.register.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.definition.register",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns evaluation lifecycle policy, local state writes, and compatibility output.",
+      "what_would_make_portable_later": "Represent evaluation lifecycle operations as schema-backed generated operation steps once decision-owner, local-evidence, and closure-authority policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific lifecycle semantics. Register/update evaluation definitions applies owner validation, compact checked-in state policy, and local-first longitudinal evaluation boundaries.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.register"
+      ]
+    },
+    {
       "operation_id": "defaults.report",
       "program": "agentic-workspace",
       "command": "defaults",

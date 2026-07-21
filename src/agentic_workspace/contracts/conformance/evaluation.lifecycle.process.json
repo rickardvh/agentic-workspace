@@ -1,0 +1,87 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "evaluation.lifecycle.process",
+  "operation_id": "evaluation.register",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "evaluation",
+      "--target",
+      ".",
+      "--format",
+      "json",
+      "register",
+      "--evaluation-id",
+      "eval-cost",
+      "--question",
+      "Does the change lower operating cost?",
+      "--criteria",
+      "{\"cost\":{\"type\":\"qualitative\",\"question\":\"Was cost reduced?\",\"success_condition\":\"Cost is lower.\"}}",
+      "--decision-owner",
+      "{\"id\":\"workspace-maintainer\",\"class\":\"maintainer\"}",
+      "--evidence-sources",
+      "session-log",
+      "--report-sinks",
+      "#1969"
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "agentic-workspace/evaluations/v1"
+        },
+        {
+          "path": [
+            "outcome"
+          ],
+          "equals": "registered"
+        },
+        {
+          "path": [
+            "evaluation_id"
+          ],
+          "equals": "eval-cost"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [
+        ".agentic-workspace/evaluations.json"
+      ],
+      "required_paths": [
+        ".git/.keep",
+        "README.md",
+        ".agentic-workspace/evaluations.json"
+      ],
+      "forbidden_paths": []
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

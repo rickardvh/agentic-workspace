@@ -17,7 +17,8 @@
     "confidence",
     "burden",
     "finding",
-    "recommended_action"
+    "recommended_action",
+    "admission"
   ],
   "properties": {
     "kind": {"const": "agentic-workspace/evaluation-observation/v1", "description": "Discriminator identifying one evaluation observation record."},
@@ -31,7 +32,13 @@
     "confidence": {"enum": ["low", "medium", "high"], "description": "Confidence in the observation."},
     "burden": {"enum": ["low", "medium", "high"], "description": "Collection or review burden for this observation."},
     "finding": {"type": "string", "description": "Compact finding text derived from the observation."},
-    "recommended_action": {"type": "string", "description": "Bounded next action recommended by the observer, when any."}
+    "recommended_action": {"type": "string", "description": "Bounded next action recommended by the observer, when any."},
+    "admission": {
+      "type": "object",
+      "required": ["status", "reason"],
+      "additionalProperties": true,
+      "description": "Admission decision binding the observation to current assignment, authority, baseline, and proof context."
+    }
   },
   "additionalProperties": false
 }

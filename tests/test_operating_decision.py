@@ -3,9 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.actionability import operation_invocation
+from agentic_workspace.actionability import derive_actionability, operation_invocation
 from agentic_workspace.operating_decision import (
     compile_operating_decision,
     context_authority_declarations,
@@ -24,7 +25,12 @@ def test_operating_decision_emits_one_typed_primary_action() -> None:
         operation_id="proof.report",
         arguments={"target": ".", "format": "json"},
         effect_class="read-only-report",
+        authority_class="verification-owned",
         expected_transition="proof status refreshed",
+        preconditions={"owner_id": "owner-a", "assignment_context_key": "ctx-a"},
+        owner_context_revision={"owner_id": "owner-a", "target_identity_ref": "target-a", "assignment_context_key": "ctx-a"},
+        mutation_boundary={"effect": "read-only-report", "writes_repo_state": False},
+        proof_requirements=[{"command": "agentic-workspace proof --target . --format json", "owner": "verification"}],
         command_rendering="agentic-workspace proof --target . --format json",
     )
 
@@ -43,6 +49,11 @@ def test_operating_decision_emits_one_typed_primary_action() -> None:
     Draft202012Validator(_schema("operating_decision.schema.json")).validate(decision)
     assert decision["status"] == "actionable"
     assert decision["primary_action"]["operation_invocation"]["operation_id"] == "proof.report"
+    assert decision["primary_action"]["operation_invocation"]["authority_class"] == "verification-owned"
+    assert decision["primary_action"]["operation_invocation"]["preconditions"]["assignment_context_key"] == "ctx-a"
+    assert decision["primary_action"]["operation_invocation"]["owner_context_revision"]["target_identity_ref"] == "target-a"
+    assert decision["primary_action"]["operation_invocation"]["proof_requirements"][0]["owner"] == "verification"
+    assert decision["primary_action"]["operation_invocation"]["stale_action_rejection"]["status"] == "reject-on-input-revision-mismatch"
     assert decision["external_blocker"] == {}
     assert decision["replacement_map"]["next_action.command"].startswith("display rendering only")
 
@@ -78,6 +89,42 @@ def test_operating_decision_blocker_precedence_is_deterministic() -> None:
     assert decision["status"] == "blocked"
     assert decision["primary_action"] == {}
     assert decision["external_blocker"]["reason_code"] == "conflicting-input"
+
+
+def test_stale_typed_action_is_rejected_before_execution() -> None:
+    invocation = operation_invocation(
+        operation_id="proof.report",
+        arguments={"target": ".", "format": "json"},
+        effect_class="read-only-report",
+        authority_class="verification-owned",
+        input_revision="old-input-digest",
+        expected_transition="proof status refreshed",
+        owner_context_revision={"owner_id": "owner-a", "assignment_context_key": "ctx-a"},
+        mutation_boundary={"effect": "read-only-report"},
+        proof_requirements=[{"command": "agentic-workspace proof --target . --format json"}],
+    )
+    actionability = derive_actionability(
+        command_name="implement",
+        health="attention-needed",
+        warnings=[],
+        repair_actions=[{"id": "proof-missing"}],
+        manual_review_actions=[],
+        proposed_next_action={"action": "run-proof", "operation_invocation": invocation},
+    )
+
+    decision = compile_operating_decision(
+        inputs={
+            "revisions": {"current_work": "rev-a", "proof": "rev-proof"},
+            "actionability": actionability,
+        }
+    )
+
+    assert actionability["progress_check"]["result"] == "rejected-stale-action"
+    assert actionability["next_action"]["action"] == "required-action-unavailable"
+    assert decision["status"] == "blocked"
+    assert decision["primary_action"] == {}
+    assert decision["external_blocker"]["reason_code"] == "stale-revision"
+    assert "refresh the operating decision" in decision["external_blocker"]["repair"]
 
 
 def test_context_authority_declarations_and_gap_classes_validate() -> None:
@@ -125,3 +172,47 @@ def test_blocking_context_gap_prevents_primary_action() -> None:
     assert decision["status"] == "blocked"
     assert decision["external_blocker"]["reason_code"] == "context-coverage-gap"
     assert decision["external_blocker"]["owner"] == "verification and proof runtime"
+
+
+@pytest.mark.parametrize(
+    ("case_id", "blocker"),
+    [
+        ("unknown-no-safe-target", {"reason_code": "missing-capability", "owner": "assignment target", "repair": "select a safe target"}),
+        ("disabled-manual-required-transport", {"reason_code": "denied-effect", "owner": "manual transport", "repair": "prepare handoff"}),
+        (
+            "stale-worktree-baseline",
+            {"reason_code": "stale-mutation-baseline", "owner": "mutation authority", "repair": "refresh baseline"},
+        ),
+        ("missing-evaluation", {"reason_code": "context-coverage-gap", "owner": "evaluation", "repair": "register evaluation"}),
+        ("superseded-evaluation", {"reason_code": "stale-proof", "owner": "evaluation", "repair": "rerun evaluation"}),
+        ("stale-planning-owner", {"reason_code": "stale-revision", "owner": "planning owner", "repair": "reselect owner"}),
+        ("invalid-receipt", {"reason_code": "stale-proof", "owner": "proof receipt", "repair": "rerun proof"}),
+        ("unavailable-rebound-executor", {"reason_code": "missing-capability", "owner": "autopilot executor", "repair": "rebind executor"}),
+    ],
+)
+def test_operating_decision_context_gap_recovery_matrix_blocks_invalid_actions(case_id: str, blocker: dict[str, str]) -> None:
+    invocation = operation_invocation(
+        operation_id="implement",
+        arguments={"target": ".", "task": case_id},
+        effect_class="repo-mutation",
+        authority_class="hard-gate",
+        expected_transition="valid terminal recovery",
+        preconditions={"case": case_id},
+        owner_context_revision={"case": case_id, "owner_id": "owner-a"},
+        mutation_boundary={"case": case_id, "writes_repo_state": True},
+        proof_requirements=[{"command": "make typecheck", "case": case_id}],
+    )
+
+    decision = compile_operating_decision(
+        inputs={
+            "revisions": {"case": case_id, "owner": "rev-a"},
+            "actionability": {"next_action": {"action": "recover-context-gap", "operation_invocation": invocation}},
+            "blockers": [blocker],
+        }
+    )
+
+    assert decision["status"] == "blocked"
+    assert decision["primary_action"] == {}
+    assert decision["external_blocker"]["reason_code"] == blocker["reason_code"]
+    assert decision["external_blocker"]["owner"] == blocker["owner"]
+    assert decision["external_blocker"]["repair"] == blocker["repair"]

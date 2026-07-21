@@ -143,17 +143,31 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     revisions = _as_dict(inputs.get("revisions"))
     actionability = _as_dict(inputs.get("actionability"))
     action = _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
+    progress_check = _as_dict(actionability.get("progress_check"))
     invocation = _as_dict(action.get("operation_invocation"))
     blockers = [item for item in _as_list(inputs.get("blockers")) if isinstance(item, dict)]
     for gap in _as_list(inputs.get("context_gaps")):
         if isinstance(gap, dict) and str(gap.get("severity") or "") == "blocking":
             blockers.append({"reason_code": "context-coverage-gap", "owner": gap.get("owner", ""), "repair": gap.get("next_route", "")})
-    if not invocation and action and str(action.get("action") or "") not in {"no-immediate-action", ""}:
+    if (
+        not invocation
+        and action
+        and str(action.get("action") or "") not in {"no-immediate-action", ""}
+        and progress_check.get("result") != "rejected-stale-action"
+    ):
         blockers.append(
             {
                 "reason_code": "missing-authority",
                 "owner": "operation-invocation",
                 "repair": "attach a typed operation_invocation before treating this action as executable",
+            }
+        )
+    if progress_check.get("result") == "rejected-stale-action":
+        blockers.append(
+            {
+                "reason_code": "stale-revision",
+                "owner": "operation-invocation",
+                "repair": "refresh the operating decision and rebuild the typed action from current owner/context/proof state",
             }
         )
     if inputs.get("stale_revision"):

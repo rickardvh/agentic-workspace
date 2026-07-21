@@ -27,6 +27,7 @@ jobs:
       - name: Validate semver label
         env:
           BASE_REF: ${{ github.base_ref }}
+          HEAD_REF: ${{ github.head_ref }}
           EVENT_PATH: ${{ github.event_path }}
         run: |
           python - <<'PY'
@@ -34,11 +35,19 @@ jobs:
           import os
           import subprocess
           import sys
+          import tomllib
           from pathlib import Path
 
           ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
           watched_paths = tuple(ownership["package_affecting_paths"])
           semver_labels = set(ownership["semver_labels"])
+          changeset_dir = ownership["changeset_dir"].rstrip("/")
+          release_pr_branch = ownership["release_pr_branch"]
+          semver_to_bump = {
+              "semver:major": "major",
+              "semver:minor": "minor",
+              "semver:patch": "patch",
+          }
 
           subprocess.run(
               ["git", "fetch", "origin", f"{os.environ['BASE_REF']}:refs/remotes/origin/{os.environ['BASE_REF']}"],
@@ -66,6 +75,11 @@ jobs:
               print("No package-affecting changes detected; semver label not required.")
               raise SystemExit(0)
 
+          if os.environ["HEAD_REF"] == release_pr_branch:
+              subprocess.run(["python", "scripts/release/coordinated_release.py", "verify"], check=True)
+              print("Release PR version state accepted.")
+              raise SystemExit(0)
+
           with open(os.environ["EVENT_PATH"], encoding="utf-8") as handle:
               event = json.load(handle)
           labels = {label["name"] for label in event["pull_request"].get("labels", [])}
@@ -83,6 +97,35 @@ jobs:
                   if any(path == watched or path.startswith(watched) for watched in watched_paths):
                       print(f"  {path}", file=sys.stderr)
               raise SystemExit(1)
+
+          changesets = [
+              Path(path)
+              for path in changed
+              if path.startswith(f"{changeset_dir}/") and path.endswith(".toml")
+          ]
+          if not changesets:
+              print(
+                  f"Package-affecting PRs must add a release changeset under {changeset_dir}/.",
+                  file=sys.stderr,
+              )
+              raise SystemExit(1)
+
+          expected_bump = semver_to_bump[selected[0]]
+          for changeset in changesets:
+              payload = tomllib.loads(changeset.read_text(encoding="utf-8"))
+              if payload.get("schema_version") != "agentic-workspace/release-change/v1":
+                  print(f"{changeset} has an invalid release changeset schema.", file=sys.stderr)
+                  raise SystemExit(1)
+              if payload.get("bump") != expected_bump:
+                  print(
+                      f"{changeset} declares bump={payload.get('bump')!r}, "
+                      f"but the PR label requires bump={expected_bump!r}.",
+                      file=sys.stderr,
+                  )
+                  raise SystemExit(1)
+              if not str(payload.get("summary", "")).strip():
+                  print(f"{changeset} must include a non-empty summary.", file=sys.stderr)
+                  raise SystemExit(1)
 
           print(f"Semver label accepted: {selected[0]}")
           PY

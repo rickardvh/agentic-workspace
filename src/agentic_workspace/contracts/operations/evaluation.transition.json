@@ -2,19 +2,43 @@
   "schema_version": "agentic-workspace/operation/v1",
   "id": "evaluation.transition",
   "command_surface": {
-    "command": "evaluation transition",
-    "format_option": "format"
+    "command": "evaluation",
+    "format_option": "format",
+    "subcommand": "transition"
   },
   "summary": "Apply a validated evaluation lifecycle transition.",
   "classification": "lifecycle-mutation",
   "inputs": [
-    {"name": "target", "source": "cli-option", "required": false},
-    {"name": "evaluation_id", "source": "cli-option", "required": true},
-    {"name": "lifecycle", "source": "cli-option", "required": true},
-    {"name": "reason", "source": "cli-option", "required": false},
-    {"name": "format", "source": "cli-option", "required": false}
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "evaluation_id",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "lifecycle",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "reason",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
   ],
-  "output": {"kind": "json", "schema_ref": "schemas/evaluation_definition.schema.json"},
+  "output": {
+    "kind": "json",
+    "schema_ref": "schemas/evaluation_definition.schema.json"
+  },
   "effects": {
     "read_only": false,
     "destructive": false,
@@ -22,15 +46,68 @@
     "writes_repo_state": true,
     "requires_preflight_gate": false
   },
-  "locality": {"requires_repo": true, "network": "forbidden", "outside_repo_writes": "forbidden"},
-  "reads": [{"surface": ".agentic-workspace/evaluations.json", "required": true}],
-  "writes": [{"surface": ".agentic-workspace/evaluations.json", "required": true, "when": "lifecycle transition accepted"}],
-  "steps": [
-    {"id": "resolve_root", "uses": "workspace.target-root.resolve", "description": "Resolve the target root."},
-    {"id": "transition", "uses": "evaluation.lifecycle.transition", "description": "Validate and apply lifecycle transition."},
-    {"id": "emit_output", "uses": "workspace.output.emit", "description": "Emit transition result."}
+  "locality": {
+    "requires_repo": true,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/evaluations.json",
+      "required": true
+    }
   ],
-  "guards": ["Invalid lifecycle transitions fail closed."],
-  "proof": ["evaluation unit tests", "operation contract validates against operation.schema.json"],
-  "migration_status": "validated-contract"
+  "writes": [
+    {
+      "surface": ".agentic-workspace/evaluations.json",
+      "required": true,
+      "when": "lifecycle transition accepted"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "transition",
+      "uses": "evaluation.lifecycle.transition",
+      "description": "Validate and apply lifecycle transition."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit transition result."
+    }
+  ],
+  "guards": [
+    "Invalid lifecycle transitions fail closed."
+  ],
+  "proof": [
+    "evaluation unit tests",
+    "operation contract validates against operation.schema.json"
+  ],
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Generated command packages execute the evaluation transition operation through runtime-owned evaluation primitives.",
+    "steps": [
+      {
+        "id": "resolve_root",
+        "uses": "workspace.target-root.resolve",
+        "description": "Resolve the target root."
+      },
+      {
+        "id": "transition",
+        "uses": "evaluation.lifecycle.transition",
+        "description": "Validate and apply lifecycle transition."
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit transition result."
+      }
+    ]
+  }
 }

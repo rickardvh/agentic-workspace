@@ -92,7 +92,34 @@ def test_implement_verbose_reports_authority_envelope_and_mutation_baseline(tmp_
     assert baseline["scope"]["allowed_paths"] == ["src/app.py"]
     assert baseline["observed_state"]["entries"][0]["path"] == "src/app.py"
     assert baseline["ownership"]["claim"] == "advisory-observed-baseline"
+    assert baseline["host_enforcement"] == "fail-closed-at-aw-boundaries"
+    assert baseline["stale_revalidation"]["status"] == "required"
+    assert baseline["stale_revalidation"]["admission"] == "fail-closed"
+    assert baseline["stale_revalidation"]["comparison_fields"] == [
+        "baseline_id",
+        "head",
+        "scope.allowed_paths",
+        "observed_state.entries",
+        "assignment.target_identity_ref",
+    ]
     assert "unexpected-path-overlap" in baseline["stale_revalidation"]["stop_reasons"]
+    assert "assignment-target-mismatch" in baseline["stale_revalidation"]["stop_reasons"]
+    assert "scope-expanded" in baseline["stale_revalidation"]["stop_reasons"]
+    boundary = baseline["boundary_enforcement"]
+    assert boundary["status"] == "fail-closed-contract"
+    assert boundary["baseline_id"] == baseline["baseline_id"]
+    assert {item["id"] for item in boundary["boundaries"]} == {
+        "returned-worker-admission",
+        "integration",
+        "destructive-mutation",
+        "closeout",
+    }
+    admission = next(item for item in boundary["boundaries"] if item["id"] == "returned-worker-admission")
+    assert "baseline-head-changed" in admission["reject_on"]
+    assert "assignment-target-mismatch" in admission["reject_on"]
+    assert envelope["enforcement"]["host_enforceable"] == [
+        "mutation baseline revalidation fails closed at AW admission/integration/closeout boundaries"
+    ]
 
 
 def test_implement_tiny_surfaces_local_high_risk_overlay(tmp_path: Path, capsys) -> None:
@@ -7891,6 +7918,85 @@ def test_implement_required_best_fit_requires_assigned_handoff(tmp_path: Path, c
     assert lifecycle["assignment"]["target"] == "planner"
     assert lifecycle["manual_transport"]["export_allowed"] is True
     assert lifecycle["manual_transport"]["import_requires_review"] is True
+
+
+@pytest.mark.parametrize(
+    ("manual_transport_policy", "expected_allowed", "expected_state", "handoff_status"),
+    [
+        ("disabled", False, "disabled", "blocked-transport-disabled"),
+        ("allowed", True, "available", "required"),
+        ("required-when-no-automatic-method", True, "available", "required"),
+    ],
+)
+def test_implement_required_best_fit_manual_transport_policy_states(
+    tmp_path: Path,
+    capsys,
+    manual_transport_policy: str,
+    expected_allowed: bool,
+    expected_state: str,
+    handoff_status: str,
+) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[runtime]",
+                "strong_planner_available = true",
+                "",
+                "[delegation]",
+                'assignment_policy = "required-best-fit"',
+                'current_target = "planner"',
+                'mode = "manual"',
+                f'manual_transport_policy = "{manual_transport_policy}"',
+                "",
+                "[delegation_targets.planner]",
+                'strength = "strong"',
+                'location = "local"',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
+                'execution_methods = ["manual"]',
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+                "--task",
+                "update delegation config schema",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    lifecycle = payload["execution_posture"]["delegated_run_lifecycle"]
+    assert lifecycle["manual_transport"]["policy"] == manual_transport_policy
+    assert lifecycle["manual_transport"]["export_allowed"] is expected_allowed
+    assert lifecycle["manual_transport"]["state"] == expected_state
+    assert lifecycle["manual_transport"]["required_when_no_automatic_method"] is (
+        manual_transport_policy == "required-when-no-automatic-method"
+    )
+    handoff = next(state for state in lifecycle["states"] if state["id"] == "handoff-prepared")
+    assert handoff["status"] == handoff_status
+    if not expected_allowed:
+        assert lifecycle["status"] == "blocked"
+    assert lifecycle["admission_gate"] == {
+        "status": "closed-until-reviewed",
+        "identity_fields": ["assignment.target", "assignment.required_next_action", "manual_transport.policy"],
+        "required_evidence": ["returned summary", "changed paths or no-change statement", "proof result"],
+        "rule": "Returned work is descriptive until the assignment identity, scope, proof, and stop-condition evidence match.",
+    }
 
 
 def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path, capsys) -> None:
