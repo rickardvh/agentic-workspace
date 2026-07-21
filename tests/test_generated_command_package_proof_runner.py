@@ -2283,28 +2283,16 @@ def test_static_generated_package_proof_uses_behavior_detection_not_plain_keywor
     assert errors == []
 
 
-def test_static_generated_package_proof_requires_source_runtime_first_contract_for_root_cli_exception() -> None:
-    errors = _checker_case_errors(
-        r"""
-        original_load_json = checker._load_json
+def test_static_generated_package_proof_accepts_inventory_backed_cli_evaluation_parser() -> None:
+    checker = _load_checker()
 
-        def fake_load_json(relative_path):
-            payload = original_load_json(relative_path)
-            if relative_path == "operations/evaluation.register.json":
-                payload = dict(payload)
-                payload["migration_status"] = "generated-command"
-            return payload
+    errors = checker._validate_python_shipped_source_executable_retirement()
 
-        checker._load_json = fake_load_json
-        checker._tracked_python_source_files = lambda: ["src/agentic_workspace/cli.py"]
-        _emit({"errors": checker._validate_python_shipped_source_executable_retirement()})
-        """
-    )
-
-    assert errors == [
-        "tracked shipped Python source must stay retired from generated CLI executable ownership; "
-        "src/agentic_workspace/cli.py contains retired executable markers: ['command parsing', 'subparser ownership']"
-    ]
+    assert not [error for error in errors if "src/agentic_workspace/cli.py" in error]
+    assert checker.PYTHON_SHIPPED_SOURCE_EXECUTABLE_RETIREMENT_EXCEPTIONS["src/agentic_workspace/cli.py"] == {
+        "command parsing": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
+        "subparser ownership": "hand-owned local evaluation subcommand parser outside generated workspace command package ownership",
+    }
 
 
 def test_tracked_python_source_files_falls_back_without_git(monkeypatch) -> None:

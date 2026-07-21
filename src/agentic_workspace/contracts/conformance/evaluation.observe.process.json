@@ -1,0 +1,95 @@
+{
+  "schema_version": "agentic-workspace/conformance/v1",
+  "id": "evaluation.observe.process",
+  "operation_id": "evaluation.observe",
+  "adapter": {
+    "kind": "process",
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "evaluation",
+      "--target",
+      ".",
+      "--format",
+      "json",
+      "observe",
+      "--evaluation-id",
+      "eval-cost",
+      "--criterion",
+      "cost",
+      "--result",
+      "supports",
+      "--evidence-refs",
+      "session-log",
+      "--context",
+      "{}",
+      "--finding",
+      "Cost reduced."
+    ],
+    "cwd": "fixture_root"
+  },
+  "fixtures": [
+    {
+      "id": "minimal-repo",
+      "files": {
+        ".git/.keep": "",
+        "README.md": "# Fixture\n",
+        ".agentic-workspace/evaluations.json": "{\n  \"kind\": \"agentic-workspace/evaluations/v1\",\n  \"evaluations\": [\n    {\n      \"id\": \"eval-cost\",\n      \"revision\": 1,\n      \"lifecycle\": \"collecting\",\n      \"question\": \"Does the change lower operating cost?\",\n      \"subject\": {\n        \"type\": \"workspace-task\"\n      },\n      \"criteria\": [\n        {\n          \"id\": \"cost\",\n          \"type\": \"qualitative\",\n          \"question\": \"Was cost reduced?\",\n          \"success_condition\": \"Cost is lower.\",\n          \"required\": true\n        }\n      ],\n      \"selectors\": {},\n      \"collection_policy\": {\n        \"mode\": \"local-first\",\n        \"minimum_observations\": 1\n      },\n      \"decision_owner\": {\n        \"id\": \"workspace-maintainer\",\n        \"class\": \"maintainer\"\n      },\n      \"evidence_sources\": [\n        {\n          \"id\": \"session-log\",\n          \"class\": \"external-ref\"\n        }\n      ],\n      \"report_sinks\": [\n        {\n          \"id\": \"#1969\",\n          \"class\": \"issue-or-report\"\n        }\n      ],\n      \"conclusion_policy\": {\n        \"rule\": \"owner-reviews-summary\",\n        \"terminal_states\": [\n          \"archived\",\n          \"contradicted\",\n          \"inconclusive\",\n          \"satisfied\",\n          \"superseded\"\n        ]\n      },\n      \"action_policy\": {\n        \"material_negative_finding\": \"create-or-reopen-bounded-follow-up\"\n      },\n      \"admission_contract\": {\n        \"kind\": \"agentic-workspace/evaluation-admission-contract/v1\",\n        \"status\": \"fail-closed-for-bound-results\",\n        \"required_context\": [\n          \"assignment.target_identity_ref\",\n          \"assignment.context_key\",\n          \"authority_envelope.mutation_baseline.baseline_id\",\n          \"authority_envelope.mutation_baseline.head\",\n          \"proof.provenance\"\n        ],\n        \"reject_when\": [\n          \"assignment-target-mismatch\",\n          \"baseline-head-changed\",\n          \"scope-expanded\",\n          \"stale-worktree\",\n          \"failed-proof\",\n          \"superseded-result\"\n        ],\n        \"consumers\": [\n          \"status\",\n          \"doctor\",\n          \"operating-decision\",\n          \"proof-selection\"\n        ],\n        \"repair_route\": \"rerun or supersede the evaluation result after refreshing assignment, authority, baseline, and proof context\"\n      },\n      \"created_at\": \"2026-07-21T00:00:00Z\",\n      \"updated_at\": \"2026-07-21T00:00:00Z\"\n    }\n  ]\n}\n"
+      }
+    }
+  ],
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "stdout": {
+      "format": "json",
+      "field_assertions": [
+        {
+          "path": [
+            "kind"
+          ],
+          "equals": "agentic-workspace/evaluation-observation/v1"
+        },
+        {
+          "path": [
+            "outcome"
+          ],
+          "equals": "appended"
+        },
+        {
+          "path": [
+            "evaluation_id"
+          ],
+          "equals": "eval-cost"
+        },
+        {
+          "path": [
+            "criterion"
+          ],
+          "equals": "cost"
+        }
+      ]
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "filesystem": {
+      "allowed_write_paths": [
+        ".agentic-workspace/local/evaluations/eval-cost.jsonl"
+      ],
+      "required_paths": [
+        ".git/.keep",
+        "README.md",
+        ".agentic-workspace/evaluations.json",
+        ".agentic-workspace/local/evaluations/eval-cost.jsonl"
+      ],
+      "forbidden_paths": []
+    },
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    }
+  }
+}

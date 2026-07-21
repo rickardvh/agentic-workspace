@@ -1630,6 +1630,36 @@ function domainPrimitive(primitive, values, args, operationId) {
   if (primitive === 'system_intent.result.emit') {
     return emitOutput({ ...values, result: values.result ?? systemIntentMutationResult(values) }, args);
   }
+  if (primitive === 'evaluation.definition.register') return {
+    kind: 'agentic-workspace/evaluation-definition/v1',
+    evaluation_id: values.evaluation_id ?? '',
+    question: values.question ?? '',
+    subject: values.subject ?? '',
+    criteria: values.criteria ?? [],
+    decision_owner: values.decision_owner ?? '',
+    evidence_sources: values.evidence_sources ?? [],
+    report_sinks: values.report_sinks ?? [],
+  };
+  if (primitive === 'evaluation.observation.append') return {
+    kind: 'agentic-workspace/evaluation-observation/v1',
+    evaluation_id: values.evaluation_id ?? '',
+    criterion: values.criterion ?? '',
+    result: values.result ?? '',
+    evidence_ref: values.evidence_ref ?? '',
+    notes: values.notes ?? '',
+  };
+  if (primitive === 'evaluation.status.derive') return {
+    kind: 'agentic-workspace/evaluation-summary/v1',
+    status: 'not-evaluated',
+    evaluation_id: values.evaluation_id ?? '',
+    observations: [],
+  };
+  if (primitive === 'evaluation.lifecycle.transition') return {
+    kind: 'agentic-workspace/evaluation-definition/v1',
+    evaluation_id: values.evaluation_id ?? '',
+    status: values.status ?? 'active',
+    transition_reason: values.reason ?? '',
+  };
   if (primitive === 'workspace.selection.resolve') return { selected_modules: values.modules ?? values.module ?? [], target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'toml.table.counts') return tomlTableCounts(values, args);
   throw new RuntimeError(`unsupported native TypeScript primitive: ${primitive}`);

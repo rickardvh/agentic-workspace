@@ -88,5 +88,26 @@
     "evaluation unit tests",
     "operation contract validates against operation.schema.json"
   ],
-  "migration_status": "runtime-consumed"
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Generated command packages execute the evaluation transition operation through runtime-owned evaluation primitives.",
+    "steps": [
+      {
+        "id": "resolve_root",
+        "uses": "workspace.target-root.resolve",
+        "description": "Resolve the target root."
+      },
+      {
+        "id": "transition",
+        "uses": "evaluation.lifecycle.transition",
+        "description": "Validate and apply lifecycle transition."
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit transition result."
+      }
+    ]
+  }
 }
