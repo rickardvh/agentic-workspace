@@ -93,20 +93,20 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           if gh release view "${RELEASE_TAG}" --json isDraft,assets > release-state.json 2>/dev/null; then
             python - <<'PY'
-            import json
-            import os
-            from pathlib import Path
+          import json
+          import os
+          from pathlib import Path
 
-            release = json.loads(Path("release-state.json").read_text(encoding="utf-8"))
-            assets = {asset.get("name") for asset in release.get("assets", []) if isinstance(asset, dict)}
-            complete = not release.get("isDraft") and {
-                "SHA256SUMS",
-                "agentic-workspace-release-manifest.json",
-            }.issubset(assets)
-            with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
-                handle.write(f"publish_needed={str(not complete).lower()}\n")
-                handle.write(f"reason={'release-assets-complete' if complete else 'release-assets-missing-or-draft'}\n")
-            PY
+          release = json.loads(Path("release-state.json").read_text(encoding="utf-8"))
+          assets = {asset.get("name") for asset in release.get("assets", []) if isinstance(asset, dict)}
+          complete = not release.get("isDraft") and {
+              "SHA256SUMS",
+              "agentic-workspace-release-manifest.json",
+          }.issubset(assets)
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as handle:
+              handle.write(f"publish_needed={str(not complete).lower()}\n")
+              handle.write(f"reason={'release-assets-complete' if complete else 'release-assets-missing-or-draft'}\n")
+          PY
           else
             {
               echo "publish_needed=true"
