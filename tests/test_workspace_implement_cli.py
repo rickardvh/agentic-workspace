@@ -7844,6 +7844,85 @@ def test_implement_required_best_fit_requires_assigned_handoff(tmp_path: Path, c
     assert lifecycle["manual_transport"]["import_requires_review"] is True
 
 
+@pytest.mark.parametrize(
+    ("manual_transport_policy", "expected_allowed", "expected_state", "handoff_status"),
+    [
+        ("disabled", False, "disabled", "blocked-transport-disabled"),
+        ("allowed", True, "available", "required"),
+        ("required-when-no-automatic-method", True, "available", "required"),
+    ],
+)
+def test_implement_required_best_fit_manual_transport_policy_states(
+    tmp_path: Path,
+    capsys,
+    manual_transport_policy: str,
+    expected_allowed: bool,
+    expected_state: str,
+    handoff_status: str,
+) -> None:
+    _init_git_repo(tmp_path)
+    _write(
+        tmp_path / ".agentic-workspace" / "config.local.toml",
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[runtime]",
+                "strong_planner_available = true",
+                "",
+                "[delegation]",
+                'assignment_policy = "required-best-fit"',
+                'current_target = "planner"',
+                'mode = "manual"',
+                f'manual_transport_policy = "{manual_transport_policy}"',
+                "",
+                "[delegation_targets.planner]",
+                'strength = "strong"',
+                'location = "local"',
+                'capability_classes = ["boundary-shaping", "reasoning-heavy"]',
+                'execution_methods = ["manual"]',
+            ]
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/contracts/schemas/workspace_local_override.schema.json",
+                "--task",
+                "update delegation config schema",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    lifecycle = payload["execution_posture"]["delegated_run_lifecycle"]
+    assert lifecycle["manual_transport"]["policy"] == manual_transport_policy
+    assert lifecycle["manual_transport"]["export_allowed"] is expected_allowed
+    assert lifecycle["manual_transport"]["state"] == expected_state
+    assert lifecycle["manual_transport"]["required_when_no_automatic_method"] is (
+        manual_transport_policy == "required-when-no-automatic-method"
+    )
+    handoff = next(state for state in lifecycle["states"] if state["id"] == "handoff-prepared")
+    assert handoff["status"] == handoff_status
+    if not expected_allowed:
+        assert lifecycle["status"] == "blocked"
+    assert lifecycle["admission_gate"] == {
+        "status": "closed-until-reviewed",
+        "identity_fields": ["assignment.target", "assignment.required_next_action", "manual_transport.policy"],
+        "required_evidence": ["returned summary", "changed paths or no-change statement", "proof result"],
+        "rule": "Returned work is descriptive until the assignment identity, scope, proof, and stop-condition evidence match.",
+    }
+
+
 def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path, capsys) -> None:
     _init_git_repo(tmp_path)
     _write(

@@ -35574,6 +35574,16 @@ def _assignment_implementation_gate_payload(
         implementation_allowed = False
         required_next_action = "prepare-assigned-handoff"
         enforcement = "must-route-before-implementation"
+    elif decision == "no-safe-route":
+        status = "blocked-no-safe-route"
+        implementation_allowed = False
+        required_next_action = "resolve-assignment-route"
+        enforcement = "hard-block"
+    elif decision == "assign-best-fit":
+        status = "handoff-required"
+        implementation_allowed = False
+        required_next_action = "prepare-assigned-handoff"
+        enforcement = "must-route-before-implementation"
     elif decision == "assign-current-target":
         status = "assigned-current-target"
         implementation_allowed = True
@@ -35608,10 +35618,14 @@ def _delegated_run_lifecycle_payload(
     delegation_decision: dict[str, Any],
 ) -> dict[str, Any]:
     manual_transport_policy = str(_as_dict(assignment_policy.get("manual_transport_policy")).get("value") or "allowed")
+    manual_export_allowed = manual_transport_policy in {"allowed", "required-when-no-automatic-method"}
+    manual_transport_state = "available" if manual_export_allowed else "disabled"
     handoff_required = assignment_gate.get("implementation_allowed") is False or delegation_decision.get("handoff_command")
     assignment_blocked = str(assignment_gate.get("status", "")).startswith("blocked")
     execution_state = "blocked" if assignment_blocked else "not-started"
     if assignment_blocked:
+        execution_state = "blocked"
+    elif handoff_required and not manual_export_allowed:
         execution_state = "blocked"
     elif delegation_decision.get("required_next_action") == "execute-when-safe":
         execution_state = "ready"
@@ -35628,15 +35642,21 @@ def _delegated_run_lifecycle_payload(
         },
         "manual_transport": {
             "policy": manual_transport_policy,
-            "export_allowed": manual_transport_policy != "forbidden",
+            "state": manual_transport_state,
+            "export_allowed": manual_export_allowed,
             "import_requires_review": True,
-            "rule": "Manual strong-agent transport is copy/paste only; returned work must be reviewed before admission or integration.",
+            "required_when_no_automatic_method": manual_transport_policy == "required-when-no-automatic-method",
+            "rule": "Manual strong-agent transport is copy/paste only; disabled transport must fail closed, and returned work must be reviewed before admission or integration.",
         },
         "states": [
             {"id": "assignment-selected", "status": assignment_gate.get("status")},
             {
                 "id": "handoff-prepared",
-                "status": "required" if handoff_required else "not-required",
+                "status": "blocked-transport-disabled"
+                if handoff_required and not manual_export_allowed
+                else "required"
+                if handoff_required
+                else "not-required",
                 "command": delegation_decision.get("handoff_command"),
             },
             {"id": "delegated-worker-running", "status": execution_state},
@@ -35649,8 +35669,20 @@ def _delegated_run_lifecycle_payload(
                 "id": "admitted-for-integration",
                 "status": "pending-review",
                 "review_rule": "Admit returned work only after scope, proof, and stop-condition evidence match the handoff contract.",
+                "reject_when": [
+                    "assignment target or context revision differs from the handoff",
+                    "returned changed paths exceed allowed scope",
+                    "proof result is missing, stale, or failed",
+                    "stop conditions were hit but not surfaced",
+                ],
             },
         ],
+        "admission_gate": {
+            "status": "closed-until-reviewed",
+            "identity_fields": ["assignment.target", "assignment.required_next_action", "manual_transport.policy"],
+            "required_evidence": ["returned summary", "changed paths or no-change statement", "proof result"],
+            "rule": "Returned work is descriptive until the assignment identity, scope, proof, and stop-condition evidence match.",
+        },
         "return_contract": [
             "what changed",
             "proof run and result",
