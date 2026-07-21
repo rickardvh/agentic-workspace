@@ -16,16 +16,35 @@ from agentic_workspace.config import (
 
 def _stable_event_id(event: dict[str, Any]) -> str:
     identity = {
-        "target_identity_ref": event.get("target_identity_ref"),
-        "target_revision": event.get("target_revision"),
-        "task_class": event.get("task_class"),
-        "scope_class": event.get("scope_class"),
-        "desired_behavior": event.get("desired_behavior"),
-        "replaced_behavior": event.get("replaced_behavior"),
+        "delivery_id": event.get("delivery_id") or event.get("idempotency_key") or event.get("source_ref"),
         "source": event.get("source"),
+        "producer": event.get("producer") or event.get("authority"),
+        "submitted_at": event.get("submitted_at") or event.get("recorded_at"),
+        "target_identity_ref": event.get("target_identity_ref"),
     }
     raw = json.dumps(identity, sort_keys=True, separators=(",", ":"), default=str)
     return "correction:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _semantic_correction_identity(*, event: dict[str, Any], subject: dict[str, Any] | None, target_ref: str) -> dict[str, Any]:
+    applicability = event.get("applicability")
+    if not isinstance(applicability, dict):
+        applicability = {}
+    semantic = {
+        "target_identity_ref": str(subject.get("stable_target_id") if subject is not None else target_ref),
+        "task_class": str(event.get("task_class") or applicability.get("task_class") or ""),
+        "scope_class": str(event.get("scope_class") or applicability.get("scope_class") or event.get("task_class") or ""),
+        "invariant_id": str(event.get("invariant_id") or event.get("semantic_invariant") or applicability.get("invariant_id") or ""),
+        "behavior_class": str(event.get("behavior_class") or applicability.get("behavior_class") or ""),
+        "applies_when": applicability.get("applies_when") or event.get("applies_when") or [],
+        "consequence": str(event.get("consequence") or ""),
+    }
+    return semantic
+
+
+def _semantic_key(identity: dict[str, Any]) -> str:
+    raw = json.dumps(identity, sort_keys=True, separators=(",", ":"), default=str)
+    return "semantic:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def _target_identity_subject(profile: DelegationTargetProfile) -> dict[str, Any]:
@@ -104,7 +123,8 @@ def admit_correction_events(
 
     admitted_by_key: dict[str, dict[str, Any]] = {}
     rejected: list[dict[str, Any]] = []
-    seen_keys: set[str] = set()
+    seen_delivery_ids: set[str] = set()
+    recurrence_counts: dict[str, int] = {}
     by_id: dict[str, dict[str, Any]] = {}
     for index, raw_event in enumerate(events):
         event = dict(raw_event)
@@ -116,20 +136,10 @@ def admit_correction_events(
         raw_subject = resolution.get("subject")
         subject = raw_subject if isinstance(raw_subject, dict) else None
         desired = str(event.get("desired_behavior") or "")
-        replaced = str(event.get("replaced_behavior") or "")
-        normalized_key = str(
-            event.get("normalized_correction_key")
-            or "|".join(
-                [
-                    str(subject.get("stable_target_id") if subject is not None else target_ref),
-                    str(event.get("task_class") or ""),
-                    str(event.get("scope_class") or event.get("task_class") or ""),
-                    desired.strip().lower(),
-                    replaced.strip().lower(),
-                ]
-            )
-        )
+        semantic_identity = _semantic_correction_identity(event=event, subject=subject, target_ref=target_ref)
+        normalized_key = _semantic_key(semantic_identity)
         event["normalized_correction_key"] = normalized_key
+        event["semantic_identity"] = semantic_identity
 
         def reject(reason: str, recovery: str) -> None:
             rejected.append({"event_id": event_id, "index": index, "reason": reason, "recovery": recovery})
@@ -139,6 +149,9 @@ def admit_correction_events(
             continue
         if "sk-" in desired or "BEGIN PRIVATE KEY" in desired or "password=" in desired.lower():
             reject("rejected-secret-bearing", "Remove secrets and submit only behavioral guidance.")
+            continue
+        if not semantic_identity["invariant_id"] or not semantic_identity["behavior_class"]:
+            reject("rejected-missing-semantic-identity", "Submit invariant_id and behavior_class so wording is not the identity.")
             continue
         if event.get("authority") not in {"explicit-user-correction", "pr-review", "orchestrator-review", "evaluator-finding"}:
             reject("rejected-unauthorised", "Use an admitted correction authority.")
@@ -150,7 +163,11 @@ def admit_correction_events(
             if revision_policy == "retire":
                 reject("rejected-retired-revision", "Retired guidance must not route to new work.")
                 continue
-            if revision_policy == "revalidate" and event.get("admission_state") != "revalidated":
+            revalidation = event.get("revalidation")
+            revalidated = (
+                isinstance(revalidation, dict) and revalidation.get("verified_by") == "aw" and revalidation.get("result") == "passed"
+            )
+            if revision_policy == "revalidate" and not revalidated:
                 reject("rejected-stale-revision", "Revalidate the event against the current target revision.")
                 continue
             if revision_policy == "migrate" and not event.get("predecessor_event_id"):
@@ -171,12 +188,15 @@ def admit_correction_events(
             if predecessor is None:
                 reject("rejected-unknown-predecessor", "Reference an admitted predecessor event.")
                 continue
+            if predecessor.get("semantic_identity", {}).get("target_identity_ref") != semantic_identity.get("target_identity_ref"):
+                reject("rejected-predecessor-target-mismatch", "Predecessor transitions must stay within one resolved target identity.")
+                continue
             admitted_by_key.pop(str(predecessor.get("normalized_correction_key")), None)
             if operation in {"dispute", "withdraw"}:
                 event["admission_state"] = operation
                 by_id[event_id] = event
                 continue
-        if normalized_key in seen_keys and operation == "submit":
+        if event_id in seen_delivery_ids and operation == "submit":
             event["admission_state"] = "duplicate-replay"
             rejected.append(
                 {
@@ -187,11 +207,16 @@ def admit_correction_events(
                 }
             )
             continue
-        seen_keys.add(normalized_key)
+        seen_delivery_ids.add(event_id)
         event["target_identity_ref"] = subject["stable_target_id"]
         event["target_revision"] = target_revision or event_revision or None
         event["profile_name"] = subject.get("profile_name")
-        event["admission_state"] = event.get("admission_state") or "accepted-candidate"
+        recurrence_counts[normalized_key] = recurrence_counts.get(normalized_key, 0) + 1
+        event["recurrence_count"] = recurrence_counts[normalized_key]
+        base_admission_state = (
+            "accepted-preserved-revision" if event.get("admission_state") == "accepted-preserved-revision" else "accepted-candidate"
+        )
+        event["admission_state"] = "recurrence" if recurrence_counts[normalized_key] > 1 and operation == "submit" else base_admission_state
         admitted_by_key[normalized_key] = event
         by_id[event_id] = event
     admitted = sorted(admitted_by_key.values(), key=lambda item: str(item.get("event_id")))
@@ -296,11 +321,12 @@ def correction_feedback_contract(*, identity_posture: dict[str, Any]) -> dict[st
                 "desired_behavior",
                 "replaced_behavior",
                 "applicability",
+                "invariant_id",
+                "behavior_class",
                 "source",
+                "source_ref",
                 "authority",
                 "provenance",
-                "admission_state",
-                "normalized_correction_key",
             ],
             "source_types": [
                 "explicit-user-correction",
@@ -313,6 +339,7 @@ def correction_feedback_contract(*, identity_posture: dict[str, Any]) -> dict[st
             ],
             "admission_states": [
                 "accepted-candidate",
+                "accepted-preserved-revision",
                 "duplicate-replay",
                 "recurrence",
                 "contradicted",
@@ -328,6 +355,10 @@ def correction_feedback_contract(*, identity_posture: dict[str, Any]) -> dict[st
             "target_suitability": "allowed when applicability and outcome evidence are scoped",
             "shared_memory": "only for agent-independent repository knowledge",
             "no_retention": "required for malformed, secret-bearing, or unauthorised submissions",
+            "identity_rule": (
+                "Delivery/idempotency identity is separate from semantic correction identity; semantic identity is "
+                "derived from invariant_id, behavior_class, target, task/scope, applicability, and consequence rather than wording."
+            ),
         },
         "operations": [
             {
