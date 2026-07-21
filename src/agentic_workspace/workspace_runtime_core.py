@@ -38648,13 +38648,35 @@ def _manual_transport_admission_payload(
 def _assignment_identity_payload(
     *, assignment_gate: dict[str, Any], assignment_policy: dict[str, Any], delegation_decision: dict[str, Any]
 ) -> dict[str, Any]:
+    next_step = _as_dict(delegation_decision.get("delegation_next_step"))
+    scope = _as_dict(assignment_gate.get("scope"))
+    proof_obligation = _as_dict(assignment_gate.get("proof_obligation") or next_step.get("proof_obligation"))
+    allowed_paths = assignment_gate.get("allowed_paths") or scope.get("allowed_paths") or next_step.get("allowed_paths") or []
+    stop_conditions = assignment_gate.get("stop_conditions") or next_step.get("stop_conditions") or []
     identity = {
         "target": assignment_gate.get("selected_target"),
+        "target_identity_ref": assignment_gate.get("target_identity_ref") or assignment_gate.get("selected_target"),
+        "target_revision": assignment_gate.get("target_revision"),
+        "task_class": assignment_gate.get("task_class"),
+        "scope_class": assignment_gate.get("scope_class") or scope.get("scope_class"),
+        "plan_ref": assignment_gate.get("plan_ref") or next_step.get("plan_ref"),
+        "plan_revision": assignment_gate.get("plan_revision") or next_step.get("plan_revision"),
+        "slice_id": assignment_gate.get("slice_id") or next_step.get("slice_id"),
+        "slice_revision": assignment_gate.get("slice_revision") or next_step.get("slice_revision"),
         "required_next_action": assignment_gate.get("required_next_action"),
         "gate_status": assignment_gate.get("status"),
         "assignment_policy": assignment_gate.get("assignment_policy"),
+        "assignment_decision_revision": assignment_gate.get("assignment_decision_revision"),
         "manual_transport_policy": str(_as_dict(assignment_policy.get("manual_transport_policy")).get("value") or "allowed"),
         "delegation_decision": delegation_decision.get("decision") or delegation_decision.get("recommended_route"),
+        "handoff_run_id": next_step.get("handoff_run_id") or next_step.get("run_id"),
+        "role": next_step.get("role") or assignment_gate.get("role"),
+        "allowed_effects": assignment_gate.get("allowed_effects") or next_step.get("allowed_effects") or [],
+        "allowed_paths": allowed_paths if isinstance(allowed_paths, list) else [],
+        "return_schema": next_step.get("return_schema") or "delegated-return/v1",
+        "proof_obligation_id": proof_obligation.get("id") or next_step.get("proof_obligation_id"),
+        "stop_conditions": stop_conditions if isinstance(stop_conditions, list) else [],
+        "mutation_baseline": assignment_gate.get("mutation_baseline") or next_step.get("mutation_baseline"),
     }
     revision_source = json.dumps(identity, sort_keys=True, separators=(",", ":"), default=str)
     identity["revision"] = "sha256:" + hashlib.sha256(revision_source.encode("utf-8")).hexdigest()
@@ -38694,22 +38716,23 @@ def _admit_delegated_return(
         )
     if returned_work.get("target") != identity["target"]:
         reject("target-mismatch", "target", "Return work from the selected assignment target only.")
-    proof = returned_work.get("proof")
-    if not isinstance(proof, dict) or proof.get("result") != "passed":
-        reject("proof-missing-or-not-passed", "proof.result", "Run the required proof and return a passed result before admission.")
+    proof = returned_work.get("aw_proof") or returned_work.get("proof")
+    if not isinstance(proof, dict) or proof.get("result") != "passed" or proof.get("verified_by") != "aw":
+        reject(
+            "aw-proof-missing-or-not-passed", "aw_proof.result", "Run AW-owned proof and return a verified passed result before admission."
+        )
     if returned_work.get("stop_conditions_hit"):
         reject("stop-condition-hit", "stop_conditions_hit", "Route the stop condition before integration.")
-    allowed_paths = returned_work.get("allowed_paths")
+    allowed_paths = identity.get("allowed_paths")
     changed_paths = returned_work.get("changed_paths")
     if isinstance(allowed_paths, list) and isinstance(changed_paths, list):
         outside_scope = sorted({str(path) for path in changed_paths} - {str(path) for path in allowed_paths})
         if outside_scope:
             reject("changed-path-outside-scope", "changed_paths", "Refresh or widen the handoff before admitting returned changes.")
-    if returned_work.get("mutation_baseline") and returned_work.get("expected_mutation_baseline"):
-        if returned_work.get("mutation_baseline") != returned_work.get("expected_mutation_baseline"):
-            reject(
-                "mutation-baseline-mismatch", "mutation_baseline", "Rebase or regenerate the returned work against the current baseline."
-            )
+    elif changed_paths and not allowed_paths:
+        reject("missing-canonical-scope", "assignment_identity.allowed_paths", "Refresh the assignment so AW can compare returned paths.")
+    if identity.get("mutation_baseline") and returned_work.get("mutation_baseline") != identity.get("mutation_baseline"):
+        reject("mutation-baseline-mismatch", "mutation_baseline", "Rebase or regenerate the returned work against the current baseline.")
 
     admitted = not failures
     return {
@@ -38721,7 +38744,7 @@ def _admit_delegated_return(
         "manual_transport": manual_transport,
         "failures": failures,
         "safe_recovery": "none" if admitted else failures[0]["recovery"],
-        "rule": "Returned delegated work is executable only after current assignment identity, transport authority, scope, proof, stop conditions, and baseline match immediately before admission.",
+        "rule": "Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.",
     }
 
 
@@ -39522,12 +39545,10 @@ def _delegated_run_lifecycle_payload(
         "callable": "agentic_workspace.workspace_runtime_core._admit_delegated_return",
         "assignment_identity": assignment_identity,
         "input_contract": {
-            "required": ["assignment_revision", "target", "proof"],
+            "required": ["assignment_revision", "target", "aw_proof"],
             "optional": [
                 "changed_paths",
-                "allowed_paths",
                 "mutation_baseline",
-                "expected_mutation_baseline",
                 "stop_conditions_hit",
             ],
         },
@@ -39535,8 +39556,9 @@ def _delegated_run_lifecycle_payload(
             "stale-assignment-revision",
             "target-mismatch",
             "manual-transport-disabled",
+            "missing-canonical-scope",
             "changed-path-outside-scope",
-            "proof-missing-or-not-passed",
+            "aw-proof-missing-or-not-passed",
             "stop-condition-hit",
             "mutation-baseline-mismatch",
         ],
@@ -39599,9 +39621,16 @@ def _delegated_run_lifecycle_payload(
                 "assignment.target",
                 "assignment.required_next_action",
                 "manual_transport.policy",
+                "assignment.plan_revision",
+                "assignment.slice_revision",
+                "assignment.target_identity_ref",
+                "assignment.allowed_effects",
+                "assignment.allowed_paths",
+                "assignment.proof_obligation_id",
+                "assignment.mutation_baseline",
                 "assignment.revision",
             ],
-            "required_evidence": ["returned summary", "changed paths or no-change statement", "proof result"],
+            "required_evidence": ["returned summary", "changed paths or no-change statement", "AW-owned proof result"],
             "rule": "Returned work is rejected until delegated-return.admit re-reads assignment identity, scope, proof, stop-condition, transport, and baseline evidence immediately before integration.",
         },
         "return_contract": [
