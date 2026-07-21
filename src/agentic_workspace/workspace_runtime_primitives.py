@@ -30919,14 +30919,164 @@ def _executor_binding_terms(binding: dict[str, Any]) -> list[str]:
         text = str(value or "").strip()
         if text:
             terms.append(text)
+    for section_name in ("owner_identity", "target_identity", "assignment", "evaluation", "proof_obligation", "mutation_baseline"):
+        section = _as_dict(binding.get(section_name))
+        for value in section.values():
+            if isinstance(value, (str, int, float)):
+                text = str(value or "").strip()
+                if text:
+                    terms.append(text)
     return _dedupe(terms)
+
+
+def _executor_binding_fingerprint_payload(binding: dict[str, Any]) -> dict[str, Any]:
+    legacy_owner_identity = {
+        "owner_id": binding.get("owner_id"),
+        "owner_ref": binding.get("owner_ref"),
+        "current_work_id": binding.get("current_work_id"),
+    }
+    legacy_mutation_baseline = {
+        "head": _as_dict(binding.get("input_revision")).get("head"),
+        "resolved_at": _as_dict(binding.get("input_revision")).get("resolved_at"),
+    }
+    return {
+        "owner_identity": _as_dict(binding.get("owner_identity")) or legacy_owner_identity,
+        "target_identity": _as_dict(binding.get("target_identity")),
+        "assignment": _as_dict(binding.get("assignment")),
+        "evaluation": _as_dict(binding.get("evaluation")),
+        "proof_obligation": _as_dict(binding.get("proof_obligation")),
+        "mutation_baseline": _as_dict(binding.get("mutation_baseline")) or legacy_mutation_baseline,
+    }
+
+
+def _executor_binding_fingerprint(payload: dict[str, Any]) -> str:
+    normalized = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+    return hashlib.sha256(normalized.encode()).hexdigest()[:24]
+
+
+def _executor_binding_invalidity(binding: dict[str, Any]) -> dict[str, Any]:
+    if str(binding.get("status") or "") != "bound":
+        return {
+            "status": "rejected",
+            "reason": "no-live-owner-binding",
+            "repair": "Resolve a live Planning/current-work owner before running Autopilot.",
+        }
+    availability = _as_dict(binding.get("availability"))
+    if availability and str(availability.get("status") or "") not in {"", "available"}:
+        return {
+            "status": "rejected",
+            "reason": str(availability.get("reason") or availability.get("status") or "executor-unavailable"),
+            "repair": str(availability.get("repair") or "Select an available executor target before running Autopilot."),
+        }
+    validity = _as_dict(binding.get("validity"))
+    if str(validity.get("status") or "accepted") in {"rejected", "stale", "superseded", "blocked"}:
+        return {
+            "status": "rejected",
+            "reason": str(validity.get("reason") or "invalid-executor-binding"),
+            "repair": str(validity.get("repair") or "Re-resolve the Autopilot executor binding before continuing."),
+        }
+    invalid_sections = {
+        "assignment": {"blocked", "blocked-target-mismatch", "handoff-required", "no-safe-route"},
+        "evaluation": {"rejected", "stale", "superseded", "failed"},
+        "proof_obligation": {"rejected", "stale", "superseded", "failed"},
+        "mutation_baseline": {"stale", "mismatch", "rejected", "failed"},
+    }
+    for section_name, invalid_statuses in invalid_sections.items():
+        section = _as_dict(binding.get(section_name))
+        if section_name == "evaluation":
+            section_status = str(section.get("freshness_status") or section.get("status") or section.get("state") or "")
+        elif section_name == "proof_obligation":
+            section_status = str(section.get("receipt_status") or section.get("freshness_status") or section.get("status") or "")
+        elif section_name == "mutation_baseline":
+            section_status = str(section.get("revalidation_status") or section.get("status") or section.get("state") or "")
+        else:
+            section_status = str(section.get("status") or section.get("state") or "")
+        if section_status in invalid_statuses:
+            return {
+                "status": "rejected",
+                "reason": str(section.get("reason") or section.get("reason_code") or f"{section_name}-invalid"),
+                "repair": str(section.get("repair") or section.get("repair_route") or f"Refresh {section_name} before running Autopilot."),
+            }
+    return {"status": "accepted", "reason": "fresh-live-executor-binding"}
 
 
 def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
     context = resolve_current_work_context(root=target_root, task="", relation_hint="plan-continuation")
     owner_binding = _as_dict(context.get("owner_binding"))
     owner_id = str(context.get("selected_plan_id") or context.get("plan_id") or owner_binding.get("owner_id") or "").strip()
-    return {
+    config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_module_operations()))
+    target_identity = target_identity_posture(local_override=config.local_override, target_root=target_root)
+    current_target_identity = _as_dict(target_identity.get("current_target_identity"))
+    target_subject = _as_dict(current_target_identity.get("subject"))
+    assignment_policy = _assignment_policy_payload(config.local_override, [])
+    assignment_decision = assignment_decision_from_policy(
+        assignment_policy=assignment_policy,
+        runtime_resolution={"recommendation": "stay-local", "profile_recommendations": [], "capability_context": {}},
+        target_evidence={"kind": "agentic-workspace/target-evidence-posture/v1", "status": "not-collected", "suitability": []},
+    )
+    revision = _as_dict(context.get("revision"))
+    freshness = _as_dict(context.get("freshness"))
+    target_identity_ref = str(target_subject.get("stable_target_id") or target_root.as_posix()).strip()
+    current_work_id = str(context.get("id") or "")
+    owner_identity = {
+        "owner_id": owner_id,
+        "owner_ref": str(_as_dict(context.get("provenance")).get("plan_id") or "").strip(),
+        "owner_relation": str(owner_binding.get("relation") or ""),
+        "current_work_id": current_work_id,
+    }
+    target_binding = {
+        "target_root": target_root.as_posix(),
+        "worktree": str(context.get("worktree") or "."),
+        "branch": str(context.get("branch") or ""),
+        "head": str(revision.get("head") or context.get("head") or ""),
+        "current_target": target_identity.get("current_target"),
+        "target_identity_ref": target_identity_ref,
+        "target_identity_status": current_target_identity.get("status"),
+    }
+    assignment = {
+        "status": str(assignment_decision.get("decision") or ""),
+        "policy": str(assignment_decision.get("assignment_policy") or ""),
+        "selected_target": assignment_decision.get("selected_target"),
+        "current_target": assignment_decision.get("current_target"),
+        "target_identity_ref": target_identity_ref,
+        "context_key": current_work_id,
+        "claim_boundary": assignment_decision.get("claim_boundary"),
+    }
+    mutation_baseline = {
+        "baseline_id": f"autopilot:{current_work_id or 'unbound'}",
+        "head": target_binding["head"],
+        "resolved_at": str(freshness.get("resolved_at") or ""),
+        "revalidation_status": "fresh" if target_binding["head"] else "missing",
+    }
+    proof_subject = {
+        "owner_id": owner_id,
+        "target_identity_ref": target_identity_ref,
+        "assignment_context_key": assignment["context_key"],
+        "mutation_head": mutation_baseline["head"],
+    }
+    proof_obligation = {
+        "status": "accepted" if owner_id else "rejected",
+        "owner_id": owner_id,
+        "proof_subject_fingerprint": _executor_binding_fingerprint(proof_subject),
+        "receipt_status": "fresh" if owner_id else "missing",
+        "freshness_status": "fresh" if owner_id else "missing",
+    }
+    evaluation = {
+        "status": "accepted",
+        "owner_id": owner_id,
+        "target_identity_ref": target_identity_ref,
+        "assignment_context_key": assignment["context_key"],
+        "freshness_status": "not-required",
+    }
+    fingerprint_payload = {
+        "owner_identity": owner_identity,
+        "target_identity": target_binding,
+        "assignment": assignment,
+        "evaluation": evaluation,
+        "proof_obligation": proof_obligation,
+        "mutation_baseline": mutation_baseline,
+    }
+    binding = {
         "kind": "agentic-workspace/autopilot-executor-binding/v1",
         "status": "bound" if owner_id else "unbound",
         "slice": slice_number,
@@ -30939,18 +31089,52 @@ def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[st
             "head": str(_as_dict(context.get("revision")).get("head") or ""),
             "resolved_at": str(_as_dict(context.get("freshness")).get("resolved_at") or ""),
         },
+        "owner_identity": owner_identity,
+        "target_identity": target_binding,
+        "assignment": assignment,
+        "evaluation": evaluation,
+        "proof_obligation": proof_obligation,
+        "mutation_baseline": mutation_baseline,
+        "availability": {
+            "status": "available" if owner_id else "unavailable",
+            "reason": "" if owner_id else "no-live-owner-binding",
+            "repair": "" if owner_id else "Resolve a live Planning/current-work owner before running Autopilot.",
+        },
+        "binding_fingerprint": _executor_binding_fingerprint(fingerprint_payload),
         "source": "resolve_current_work_context",
         "rule": "Autopilot resolves this binding before every executor slice; changed owners invalidate slice-specific executor task text.",
     }
+    binding["validity"] = _executor_binding_invalidity(binding)
+    return binding
 
 
 def _executor_binding_change_guard(
     *, executor_command: str, previous_binding: dict[str, Any], current_binding: dict[str, Any]
 ) -> dict[str, Any]:
+    invalidity = _executor_binding_invalidity(current_binding)
+    if invalidity.get("status") == "rejected":
+        return {
+            "status": "no-valid-executor",
+            "reason": invalidity.get("reason"),
+            "repair": invalidity.get("repair"),
+            "current_binding_fingerprint": current_binding.get("binding_fingerprint"),
+            "binding_status": current_binding.get("status"),
+            "rule": "Autopilot must stop before invoking an executor when the live owner, target, assignment, evaluation, proof, or mutation-baseline binding is invalid.",
+        }
     previous_owner = str(previous_binding.get("owner_id") or "").strip()
     current_owner = str(current_binding.get("owner_id") or "").strip()
-    if not previous_owner or not current_owner or previous_owner == current_owner:
-        return {"status": "valid", "reason": "owner unchanged or unbound"}
+    previous_fingerprint = str(previous_binding.get("binding_fingerprint") or "").strip()
+    current_fingerprint = str(current_binding.get("binding_fingerprint") or "").strip()
+    if previous_binding and not previous_fingerprint:
+        previous_fingerprint = _executor_binding_fingerprint(_executor_binding_fingerprint_payload(previous_binding))
+    if current_binding and not current_fingerprint:
+        current_fingerprint = _executor_binding_fingerprint(_executor_binding_fingerprint_payload(current_binding))
+    if not previous_owner or not current_owner or previous_fingerprint == current_fingerprint:
+        return {
+            "status": "valid",
+            "reason": "binding unchanged or first slice",
+            "current_binding_fingerprint": current_fingerprint,
+        }
     previous_terms = _executor_binding_terms(previous_binding)
     current_terms = _executor_binding_terms(current_binding)
     command_text_value = str(executor_command or "")
@@ -30964,13 +31148,19 @@ def _executor_binding_change_guard(
             "current_owner_id": current_owner,
             "previous_terms": previous_terms,
             "current_terms": current_terms,
+            "previous_binding_fingerprint": previous_fingerprint,
+            "current_binding_fingerprint": current_fingerprint,
+            "binding_payload_fields": list(_executor_binding_fingerprint_payload(current_binding)),
             "repair": "Render a fresh executor command from the newly admitted owner and external intent before running Autopilot again.",
         }
     return {
         "status": "rebound",
-        "reason": "active owner changed; executor command is generic or names the current owner",
+        "reason": "active binding changed; executor command is generic or names the current binding",
         "previous_owner_id": previous_owner,
         "current_owner_id": current_owner,
+        "previous_binding_fingerprint": previous_fingerprint,
+        "current_binding_fingerprint": current_fingerprint,
+        "binding_payload_fields": list(_executor_binding_fingerprint_payload(current_binding)),
     }
 
 
@@ -31056,7 +31246,18 @@ def _run_final_response_executor_loop(
             previous_binding=previous_executor_binding,
             current_binding=executor_binding,
         )
-        if binding_guard.get("status") == "stale-binding":
+        if (
+            str(getattr(args, "command", "") or "") != "autopilot"
+            and binding_guard.get("status") == "no-valid-executor"
+            and binding_guard.get("reason") == "no-live-owner-binding"
+        ):
+            binding_guard = {
+                "status": "valid",
+                "reason": "final-response executor boundary does not require an Autopilot Planning owner",
+                "current_binding_fingerprint": executor_binding.get("binding_fingerprint"),
+            }
+        if binding_guard.get("status") in {"stale-binding", "no-valid-executor"}:
+            stop_status = str(binding_guard.get("status") or "executor-binding-invalid").replace("-", "_")
             failed_executor = {
                 "kind": "agentic-workspace/final-response-executor-result/v1",
                 "slice": slice_number,
@@ -31069,9 +31270,9 @@ def _run_final_response_executor_loop(
             }
             final_payload = {
                 "kind": "agentic-workspace/final-response-admission-result/v1",
-                "status": "executor_binding_stale",
+                "status": stop_status,
                 "ordinary_execution_loop": {
-                    "status": "executor_binding_stale",
+                    "status": stop_status,
                     "vendor_neutral": True,
                     "depends_on_codex_goal_mode": False,
                     "depends_on_model_cli_harness": False,
@@ -31081,10 +31282,12 @@ def _run_final_response_executor_loop(
                     "custody": "agent",
                     "binding": executor_binding,
                     "binding_guard": binding_guard,
-                    "rule": "Autopilot must re-resolve executor task binding after admitted owner changes; stale slice-specific commands fail closed before execution.",
+                    "rule": "Autopilot must re-resolve executor task binding after admitted owner, target, assignment, proof, evaluation, or mutation-baseline changes; invalid bindings fail closed before execution.",
                 },
             }
-            raise WorkspaceUsageError(f"--executor-command has stale owner binding: {binding_guard['repair']}")
+            raise WorkspaceUsageError(
+                f"--executor-command has invalid executor binding ({binding_guard['reason']}): {binding_guard['repair']}"
+            )
         env = os.environ.copy()
         env["AGENTIC_WORKSPACE_FINAL_RESPONSE_SLICE"] = str(slice_number)
         env["AGENTIC_WORKSPACE_FINAL_RESPONSE_CUSTODY"] = "agent"

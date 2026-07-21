@@ -2414,8 +2414,119 @@ print("Done too early.")
         )
 
     assert error.value.code == 2
-    assert "stale owner binding" in capsys.readouterr().err
+    assert "invalid executor binding" in capsys.readouterr().err
     assert attempt_log.read_text(encoding="utf-8").splitlines() == ["ran"]
+
+
+@pytest.mark.parametrize(
+    ("invalid_patch", "expected_reason"),
+    [
+        ({"status": "unbound", "availability": {"status": "unavailable", "reason": "no-live-owner-binding"}}, "no-live-owner-binding"),
+        ({"availability": {"status": "unavailable", "reason": "executor-unavailable"}}, "executor-unavailable"),
+        ({"assignment": {"status": "handoff-required", "reason": "required-best-fit-handoff"}}, "required-best-fit-handoff"),
+        ({"evaluation": {"freshness_status": "stale", "reason": "stale-evaluation-result"}}, "stale-evaluation-result"),
+        ({"proof_obligation": {"receipt_status": "stale", "reason": "stale-proof-receipt"}}, "stale-proof-receipt"),
+        ({"mutation_baseline": {"revalidation_status": "stale", "reason": "baseline-head-changed"}}, "baseline-head-changed"),
+        ({"validity": {"status": "rejected", "reason": "lane-superseded"}}, "lane-superseded"),
+    ],
+)
+def test_autopilot_stops_before_executor_when_live_binding_invalid(
+    tmp_path: Path, capsys, monkeypatch, invalid_patch: dict[str, Any], expected_reason: str
+) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    capsys.readouterr()
+
+    def fake_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+        binding = {
+            "kind": "agentic-workspace/autopilot-executor-binding/v1",
+            "status": "bound",
+            "slice": slice_number,
+            "owner_id": "owner-a",
+            "owner_ref": ".agentic-workspace/planning/execplans/owner-a.plan.json",
+            "owner_refs": ["#1"],
+            "issue_refs": ["#1"],
+            "current_work_id": "work-owner-a",
+            "owner_identity": {
+                "owner_id": "owner-a",
+                "owner_ref": ".agentic-workspace/planning/execplans/owner-a.plan.json",
+                "owner_relation": "plan-continuation",
+                "current_work_id": "work-owner-a",
+            },
+            "target_identity": {
+                "target_root": str(tmp_path),
+                "worktree": ".",
+                "branch": "agent/p1-autopilot-executor-binding",
+                "head": "fixture-head",
+                "current_target": "local",
+                "target_identity_ref": "target-local",
+                "target_identity_status": "known",
+            },
+            "assignment": {
+                "status": "keep-local",
+                "policy": "local-preferred",
+                "selected_target": "local",
+                "target_identity_ref": "target-local",
+                "context_key": "work-owner-a",
+            },
+            "evaluation": {
+                "status": "accepted",
+                "freshness_status": "fresh",
+                "owner_id": "owner-a",
+                "target_identity_ref": "target-local",
+            },
+            "proof_obligation": {
+                "status": "accepted",
+                "receipt_status": "fresh",
+                "proof_subject_fingerprint": "proof-fresh",
+            },
+            "mutation_baseline": {
+                "baseline_id": "autopilot:work-owner-a",
+                "head": "fixture-head",
+                "revalidation_status": "fresh",
+            },
+            "availability": {"status": "available"},
+            "validity": {"status": "accepted"},
+            "input_revision": {"head": "fixture-head", "resolved_at": "2026-07-20T00:00:00+00:00"},
+        }
+        for key, value in invalid_patch.items():
+            if isinstance(value, dict) and isinstance(binding.get(key), dict):
+                binding[key] = {**binding[key], **value}
+            else:
+                binding[key] = value
+        return binding
+
+    monkeypatch.setattr(cli, "_active_executor_binding", fake_binding)
+    attempt_log = tmp_path / "attempts.log"
+    monkeypatch.setenv("ATTEMPT_LOG", str(attempt_log))
+    executor_script = tmp_path / "should_not_run.py"
+    executor_script.write_text(
+        """
+import os
+from pathlib import Path
+
+Path(os.environ["ATTEMPT_LOG"]).write_text("ran\\n")
+print("Should not run.")
+""".strip(),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(SystemExit) as error:
+        cli.main(
+            [
+                "autopilot",
+                "--target",
+                str(tmp_path),
+                "--executor-command",
+                subprocess.list2cmdline([sys.executable, str(executor_script)]),
+                "--format",
+                "json",
+            ]
+        )
+
+    assert error.value.code == 2
+    assert expected_reason in capsys.readouterr().err
+    assert not attempt_log.exists()
 
 
 def test_autopilot_rejects_repeated_weak_finals_across_compaction_review_reconciliation_until_delivered(
@@ -2520,6 +2631,35 @@ def test_autopilot_rejects_repeated_weak_finals_across_compaction_review_reconci
     monkeypatch.setattr(cli, "_final_response_closeout_trust_for_admission", fake_closeout_trust)
     monkeypatch.setattr(cli, "_run_final_response_continuation_operation", fake_continuation)
     monkeypatch.setenv("FIXTURE_PATH", str(fixture_path))
+
+    def fake_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
+        return {
+            "kind": "agentic-workspace/autopilot-executor-binding/v1",
+            "status": "bound",
+            "slice": slice_number,
+            "owner_id": "review-stack-owner",
+            "owner_ref": ".agentic-workspace/planning/execplans/review-stack-owner.plan.json",
+            "current_work_id": "review-stack-work",
+            "owner_identity": {
+                "owner_id": "review-stack-owner",
+                "owner_ref": ".agentic-workspace/planning/execplans/review-stack-owner.plan.json",
+                "owner_relation": "plan-continuation",
+                "current_work_id": "review-stack-work",
+            },
+            "target_identity": {
+                "target_root": str(tmp_path),
+                "target_identity_ref": "target-local",
+                "head": "fixture-head",
+            },
+            "assignment": {"status": "keep-local", "target_identity_ref": "target-local", "context_key": "review-stack-work"},
+            "evaluation": {"freshness_status": "fresh"},
+            "proof_obligation": {"receipt_status": "fresh", "proof_subject_fingerprint": "review-stack-proof"},
+            "mutation_baseline": {"baseline_id": "autopilot:review-stack-work", "head": "fixture-head", "revalidation_status": "fresh"},
+            "availability": {"status": "available"},
+            "validity": {"status": "accepted"},
+        }
+
+    monkeypatch.setattr(cli, "_active_executor_binding", fake_binding)
 
     executor_script = tmp_path / "weak_review_executor.py"
     executor_script.write_text(
