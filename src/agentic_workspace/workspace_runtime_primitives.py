@@ -37,6 +37,7 @@ from agentic_workspace import workspace_runtime_core as _workspace_runtime_core
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
 from agentic_workspace.actionability import derive_actionability
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
+from agentic_workspace.authority_envelope import admit_mutation_boundary
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
@@ -35029,8 +35030,42 @@ def _admit_delegated_return(
         outside_scope = sorted({str(path) for path in changed_paths} - {str(path) for path in allowed_paths})
         if outside_scope:
             reject("changed-path-outside-scope", "changed_paths", "Refresh or widen the handoff before admitting returned changes.")
-    if returned_work.get("mutation_baseline") and returned_work.get("expected_mutation_baseline"):
-        if returned_work.get("mutation_baseline") != returned_work.get("expected_mutation_baseline"):
+    mutation_revalidation: dict[str, Any] = {"status": "not-provided", "admitted": False}
+    expected_baseline = returned_work.get("expected_mutation_baseline")
+    current_baseline = returned_work.get("current_mutation_baseline") or returned_work.get("mutation_baseline")
+    if expected_baseline and current_baseline:
+        if isinstance(expected_baseline, dict) and isinstance(current_baseline, dict):
+            mutation_admission = admit_mutation_boundary(
+                boundary_id="returned-worker-admission",
+                expected=expected_baseline,
+                current=current_baseline,
+                assignment_target_identity_ref=(
+                    str(returned_work.get("assignment_target_identity_ref"))
+                    if returned_work.get("assignment_target_identity_ref")
+                    else None
+                ),
+                allowed_paths=[str(path) for path in allowed_paths] if isinstance(allowed_paths, list) else None,
+            )
+            mutation_revalidation = _as_dict(mutation_admission.get("revalidation"))
+            for failure in mutation_revalidation.get("failures", []):
+                if isinstance(failure, dict):
+                    reject(
+                        str(failure.get("reason") or "mutation-baseline-revalidation-failed"),
+                        str(failure.get("field") or "mutation_baseline"),
+                        str(failure.get("repair") or "Rebase or regenerate the returned work against the current baseline."),
+                    )
+        elif current_baseline != expected_baseline:
+            mutation_revalidation = {
+                "status": "rejected",
+                "admitted": False,
+                "failures": [
+                    {
+                        "reason": "mutation-baseline-mismatch",
+                        "field": "mutation_baseline",
+                        "repair": "Rebase or regenerate the returned work against the current baseline.",
+                    }
+                ],
+            }
             reject(
                 "mutation-baseline-mismatch", "mutation_baseline", "Rebase or regenerate the returned work against the current baseline."
             )
@@ -35043,6 +35078,7 @@ def _admit_delegated_return(
         "admitted": admitted,
         "assignment_identity": identity,
         "manual_transport": manual_transport,
+        "mutation_revalidation": mutation_revalidation,
         "failures": failures,
         "safe_recovery": "none" if admitted else failures[0]["recovery"],
         "rule": "Returned delegated work is executable only after current assignment identity, transport authority, scope, proof, stop conditions, and baseline match immediately before admission.",

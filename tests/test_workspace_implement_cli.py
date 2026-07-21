@@ -5,6 +5,12 @@ import shlex
 
 from tests.workspace_cli_support import *
 
+from agentic_workspace.authority_envelope import (
+    admit_mutation_boundary,
+    mutation_baseline_payload,
+    revalidate_mutation_baseline,
+)
+
 
 def _write_empty_planning_state(target_root: Path) -> None:
     _write(
@@ -120,6 +126,88 @@ def test_implement_verbose_reports_authority_envelope_and_mutation_baseline(tmp_
     assert envelope["enforcement"]["host_enforceable"] == [
         "mutation baseline revalidation fails closed at AW admission/integration/closeout boundaries"
     ]
+
+
+def test_mutation_baseline_parses_z_status_renames_and_unusual_paths(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "old name.txt", "baseline\n")
+    subprocess.run(["git", "add", "src/old name.txt"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "mv", "src/old name.txt", "src/new name.txt"], cwd=tmp_path, check=True, capture_output=True, text=True)
+
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src"])
+
+    entry = baseline["observed_state"]["entries"][0]
+    assert entry["rename_or_copy"] is True
+    assert entry["path"] == "src/new name.txt"
+    assert entry["original_path"] == "src/old name.txt"
+    assert entry["paths"] == ["src/new name.txt", "src/old name.txt"]
+
+
+def test_mutation_baseline_revalidation_admits_clean_noop_and_rejects_stale_head(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "baseline\n")
+    subprocess.run(["git", "add", "src/app.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/app.py"])
+
+    clean = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
+    assert clean["admitted"] is True
+    assert clean["clean_noop"] is True
+
+    _write(tmp_path / "src" / "next.py", "next\n")
+    subprocess.run(["git", "add", "src/next.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "move head"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    stale = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
+
+    assert stale["admitted"] is False
+    assert {failure["reason"] for failure in stale["failures"]} == {"baseline-head-changed"}
+
+
+def test_mutation_baseline_revalidation_rejects_untracked_managed_state(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "baseline\n")
+    subprocess.run(["git", "add", "src/app.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["."])
+
+    _write(tmp_path / ".agentic-workspace" / "local" / "state.json", "{}\n")
+    revalidation = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
+
+    assert revalidation["admitted"] is False
+    assert "untracked-managed-state" in {failure["reason"] for failure in revalidation["failures"]}
+
+
+def test_mutation_boundary_admission_rejects_integration_destructive_and_closeout_boundaries() -> None:
+    expected = {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "expected",
+        "head": "HEAD_A",
+        "scope": {"allowed_paths": ["src"]},
+        "assignment": {"target_identity_ref": "target/planner"},
+        "observed_state": {"entries": []},
+    }
+    current = {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "current",
+        "head": "HEAD_B",
+        "scope": {"allowed_paths": ["src"]},
+        "assignment": {"target_identity_ref": "target/planner"},
+        "observed_state": {"entries": []},
+    }
+
+    for boundary_id in ("integration", "destructive-mutation", "closeout"):
+        admission = admit_mutation_boundary(boundary_id=boundary_id, expected=expected, current=current)
+        assert admission["status"] == "rejected"
+        assert admission["admitted"] is False
+        assert admission["boundary_id"] == boundary_id
+        assert admission["failures"][0]["reason"] == "baseline-head-changed"
 
 
 def test_implement_tiny_surfaces_local_high_risk_overlay(tmp_path: Path, capsys) -> None:
@@ -8052,6 +8140,60 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
     )
     assert admitted["admitted"] is True
     assert admitted["status"] == "admitted"
+
+
+def test_delegated_return_admission_rejects_mutation_baseline_drift() -> None:
+    assignment_gate = {
+        "status": "handoff-required",
+        "assignment_policy": "required-best-fit",
+        "selected_target": "planner",
+        "required_next_action": "prepare-assigned-handoff",
+    }
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = {
+        "decision": "assignment-handoff-required",
+        "delegation_next_step": {"execution_methods": ["manual"]},
+    }
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+    expected_baseline = {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "old",
+        "head": "HEAD_A",
+        "scope": {"allowed_paths": ["src"]},
+        "assignment": {"target_identity_ref": "target/planner", "assignment_revision": identity["revision"]},
+        "observed_state": {"entries": []},
+    }
+    current_baseline = {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "new",
+        "head": "HEAD_B",
+        "scope": {"allowed_paths": ["src"]},
+        "assignment": {"target_identity_ref": "target/planner", "assignment_revision": identity["revision"]},
+        "observed_state": {"entries": []},
+    }
+
+    result = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={
+            "assignment_revision": identity["revision"],
+            "target": "planner",
+            "proof": {"result": "passed"},
+            "allowed_paths": ["src"],
+            "changed_paths": ["src/feature.py"],
+            "expected_mutation_baseline": expected_baseline,
+            "current_mutation_baseline": current_baseline,
+        },
+    )
+
+    assert result["admitted"] is False
+    assert result["mutation_revalidation"]["status"] == "rejected"
+    assert "baseline-head-changed" in {failure["reason"] for failure in result["failures"]}
 
 
 def test_delegated_return_admission_rejects_disabled_transport() -> None:
