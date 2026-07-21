@@ -1525,6 +1525,54 @@
       "conformance_ref": "session-log.manage.process plus workspace session logging tests",
       "migration_path": "Keep as workspace runtime until local-only session log status, rotation, and append policy can be represented by portable file primitives with equivalent containment safety.",
       "generic_behavior_audit": "Not counted as portable codegen completion; session log safety depends on AW-owned local-only authority boundaries and compatibility output."
+    },
+    {
+      "id": "evaluation.definition.register",
+      "summary": "Validate and upsert a compact owner-bound evaluation definition.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Evaluation lifecycle semantics enforce AW-specific owner, local evidence, and issue-closure authority boundaries.",
+      "conformance_ref": "evaluation.lifecycle.process plus workspace evaluation tests",
+      "migration_path": "Keep as workspace runtime until evaluation definition, observation, and lifecycle policy can be represented by portable primitives without weakening closure authority.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; evaluation behavior depends on AW-owned decision-owner and local-evidence policy."
+    },
+    {
+      "id": "evaluation.observation.append",
+      "summary": "Validate and append one local-first evaluation observation.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Evaluation lifecycle semantics enforce AW-specific owner, local evidence, and issue-closure authority boundaries.",
+      "conformance_ref": "evaluation.lifecycle.process plus workspace evaluation tests",
+      "migration_path": "Keep as workspace runtime until evaluation definition, observation, and lifecycle policy can be represented by portable primitives without weakening closure authority.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; evaluation behavior depends on AW-owned decision-owner and local-evidence policy."
+    },
+    {
+      "id": "evaluation.status.derive",
+      "summary": "Derive compact evaluation status from definitions and local observation streams.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Evaluation lifecycle semantics enforce AW-specific owner, local evidence, and issue-closure authority boundaries.",
+      "conformance_ref": "evaluation.lifecycle.process plus workspace evaluation tests",
+      "migration_path": "Keep as workspace runtime until evaluation definition, observation, and lifecycle policy can be represented by portable primitives without weakening closure authority.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; evaluation behavior depends on AW-owned decision-owner and local-evidence policy."
+    },
+    {
+      "id": "evaluation.lifecycle.transition",
+      "summary": "Apply a validated evaluation lifecycle transition.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Evaluation lifecycle semantics enforce AW-specific owner, local evidence, and issue-closure authority boundaries.",
+      "conformance_ref": "evaluation.lifecycle.process plus workspace evaluation tests",
+      "migration_path": "Keep as workspace runtime until evaluation definition, observation, and lifecycle policy can be represented by portable primitives without weakening closure authority.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; evaluation behavior depends on AW-owned decision-owner and local-evidence policy."
     }
   ],
   "primitive_taxonomy": {

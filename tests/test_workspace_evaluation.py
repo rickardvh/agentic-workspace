@@ -77,6 +77,7 @@ def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path
     observation_path = tmp_path / WORKSPACE_LOCAL_EVALUATIONS_DIR / "eval-1969-operating-loop.jsonl"
     observation = json.loads(observation_path.read_text(encoding="utf-8").strip())
     Draft202012Validator(contract_schema("evaluation_observation.schema.json")).validate(observation)
+    assert observation["admission"]["status"] == "legacy-unbound"
 
     summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
     assert summary["kind"] == EVALUATION_SUMMARY_KIND
@@ -84,6 +85,7 @@ def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path
     item = summary["summaries"][0]
     assert item["coverage"]["observation_count"] == 1
     assert item["criterion_status"][0]["state"] == "satisfied"
+    assert item["fresh_result_admission"]["status"] == "legacy-unbound"
     assert item["conclusion_readiness"]["ready"] is True
     assert item["next_collection_action"] == "owner-review-or-conclude"
 
@@ -132,6 +134,70 @@ def test_evaluation_lifecycle_transitions_fail_closed(tmp_path: Path) -> None:
 
     with pytest.raises(WorkspaceUsageError, match="invalid evaluation lifecycle transition"):
         transition_evaluation(target_root=tmp_path, evaluation_id="eval-1969-operating-loop", lifecycle="satisfied")
+
+
+def test_evaluation_observation_binds_fresh_assignment_authority_and_proof(tmp_path: Path) -> None:
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+
+    append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=["proof-receipts/run-1.json"],
+        context={
+            "assignment": {
+                "target_identity_ref": "user-local:codex-current",
+                "context_key": "mechanical-follow-through::mechanical-follow-through",
+            },
+            "authority_envelope": {
+                "mutation_baseline": {
+                    "baseline_id": "abc123",
+                    "head": "def456",
+                    "revalidation_status": "fresh",
+                }
+            },
+            "proof": {"result": "passed", "provenance": "proof-receipts/run-1.json"},
+        },
+    )
+
+    summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+
+    item = summary["summaries"][0]
+    assert item["fresh_result_admission"]["status"] == "fresh-bound"
+    assert item["fresh_result_admission"]["bound_observation_count"] == 1
+    latest = item["latest_material_changes"][0]
+    assert latest["admission"]["status"] == "admitted"
+    assert latest["admission"]["baseline_id"] == "abc123"
+    assert latest["admission"]["target_identity_ref"] == "user-local:codex-current"
+    assert "proof-selection" in item["fresh_result_admission"]["admission_contract"]["consumers"]
+
+
+def test_evaluation_rejects_stale_mutation_baseline_observation(tmp_path: Path) -> None:
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+
+    with pytest.raises(WorkspaceUsageError, match="stale-worktree"):
+        append_observation(
+            target_root=tmp_path,
+            evaluation_id="eval-1969-operating-loop",
+            criterion="reconstruction-cost",
+            result="supports",
+            evidence_refs=["proof-receipts/run-1.json"],
+            context={
+                "assignment": {
+                    "target_identity_ref": "user-local:codex-current",
+                    "context_key": "mechanical-follow-through::mechanical-follow-through",
+                },
+                "authority_envelope": {
+                    "mutation_baseline": {
+                        "baseline_id": "abc123",
+                        "head": "def456",
+                        "revalidation_status": "stale",
+                    }
+                },
+                "proof": {"result": "passed", "provenance": "proof-receipts/run-1.json"},
+            },
+        )
 
 
 def test_evaluation_cannot_absorb_missing_implementation_proof() -> None:

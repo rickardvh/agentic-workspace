@@ -58,6 +58,12 @@
       "adapter_kind": "process"
     },
     {
+      "id": "evaluation.lifecycle.process",
+      "operation_id": "evaluation.register",
+      "path": "conformance/evaluation.lifecycle.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "config.report.process",
       "operation_id": "config.report",
       "path": "conformance/config.report.process.json",

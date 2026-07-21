@@ -1,0 +1,142 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "evaluation",
+    "format_option": "format",
+    "subcommand": "register"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Decision owner cannot be a log, transcript, event stream, or metric stream.",
+    "Criteria must be typed without introducing a general expression language.",
+    "Definitions are compact checked-in state; raw observations remain local by default."
+  ],
+  "id": "evaluation.register",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "evaluation_id",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "question",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "subject",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "criteria",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "decision_owner",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "evidence_sources",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "report_sinks",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "evaluation.register"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "json",
+    "schema_ref": "schemas/evaluation_definition.schema.json"
+  },
+  "proof": [
+    "evaluation unit tests",
+    "operation contract validates against operation.schema.json"
+  ],
+  "reads": [
+    {
+      "required": false,
+      "surface": ".agentic-workspace/evaluations.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Validate and upsert the evaluation definition.",
+      "id": "register",
+      "uses": "evaluation.definition.register"
+    },
+    {
+      "description": "Emit registration result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Register or update one compact owner-bound evaluation definition.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/evaluations.json",
+      "when": "definition registered or updated"
+    }
+  ]
+}
