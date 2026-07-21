@@ -30,6 +30,20 @@ def _matching_release_assets(patterns: list[str], assets: list[str]) -> list[str
     return [asset for asset in assets if any(fnmatch.fnmatchcase(asset, pattern) for pattern in patterns)]
 
 
+def _step_run_block(workflow: str, step_name: str) -> str:
+    lines = workflow.splitlines()
+    step_line = f"      - name: {step_name}"
+    step_index = lines.index(step_line)
+    run_index = next(index for index in range(step_index, len(lines)) if lines[index].strip() == "run: |")
+    block_indent = len(lines[run_index]) - len(lines[run_index].lstrip()) + 2
+    block_lines: list[str] = []
+    for line in lines[run_index + 1 :]:
+        if line.strip() and len(line) - len(line.lstrip()) < block_indent:
+            break
+        block_lines.append(line[block_indent:] if line.startswith(" " * block_indent) else "")
+    return "\n".join(block_lines)
+
+
 def _load_workspace_command_generation():
     spec = importlib.util.spec_from_file_location("workspace_command_generation_under_test", GENERATOR_PATH)
     assert spec is not None
@@ -156,6 +170,16 @@ def test_master_release_workflow_prepares_release_pr_and_only_tags_verified_rele
     assert '-f tag="${{ steps.publisher.outputs.tag }}"' in workflow
     assert '-f source_commit="${{ steps.publisher.outputs.release_commit }}"' in workflow
     assert "softprops/action-gh-release" not in workflow
+
+
+def test_release_publisher_dispatch_heredoc_terminates_at_shell_column_zero() -> None:
+    workflow = (WORKFLOW_ROOT / "release-from-semver-label.yml").read_text(encoding="utf-8")
+    run_block = _step_run_block(workflow, "Resolve publisher dispatch")
+
+    assert "python - <<'PY'\n" in run_block
+    assert "\nPY\n" in run_block
+    assert "\n  PY\n" not in run_block
+    assert "\n    PY\n" not in run_block
 
 
 def test_releaseable_typescript_package_generation_preserves_release_owned_versions() -> None:
