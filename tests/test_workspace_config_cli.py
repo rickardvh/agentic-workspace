@@ -1896,6 +1896,9 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
     assert evidence["suitability"] == [
         {
             "target": "gpt_5_4_mini",
+            "target_identity_ref": None,
+            "target_revision": None,
+            "revision_policy": "revalidate",
             "context_key": "bounded-docs::bounded-docs",
             "task_class": "bounded-docs",
             "scope_class": "bounded-docs",
@@ -1911,6 +1914,9 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
         },
         {
             "target": "gpt_5_4_mini",
+            "target_identity_ref": None,
+            "target_revision": None,
+            "revision_policy": "revalidate",
             "context_key": "narrow-tests::narrow-tests",
             "task_class": "narrow-tests",
             "scope_class": "narrow-tests",
@@ -2007,6 +2013,9 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
         "profile_recommendations": [
             {
                 "name": "current_worker",
+                "target_id": "user-local:current-worker",
+                "target_revision": "rev-a",
+                "revision_policy": "revalidate",
                 "recommendation": "acceptable",
                 "score": 2,
                 "capability_mismatch": False,
@@ -2014,6 +2023,9 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
             },
             {
                 "name": "fast_worker",
+                "target_id": "user-local:fast-worker",
+                "target_revision": "rev-b",
+                "revision_policy": "migrate",
                 "recommendation": "recommended",
                 "score": 7,
                 "capability_mismatch": False,
@@ -2021,6 +2033,9 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
             },
             {
                 "name": "unsafe_worker",
+                "target_id": "user-local:unsafe-worker",
+                "target_revision": "rev-c",
+                "revision_policy": "retire",
                 "recommendation": "recommended",
                 "score": 99,
                 "capability_mismatch": True,
@@ -2034,6 +2049,8 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
         "suitability": [
             {
                 "target": "fast_worker",
+                "target_identity_ref": "user-local:fast-worker",
+                "target_revision": "rev-b",
                 "context_key": "mechanical-follow-through::mechanical-follow-through",
                 "route_effect": "preferred-for-matching-task-class",
                 "record_count": 2,
@@ -2058,6 +2075,11 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
     assert decision["decision"] == "assign-best-fit"
     assert decision["selected_target"] == "fast_worker"
     assert decision["selection_basis"]["requested_context_key"] == "mechanical-follow-through::mechanical-follow-through"
+    selected = next(item for item in decision["candidate_scores"] if item["target"] == "fast_worker")
+    assert selected["target_identity_ref"] == "user-local:fast-worker"
+    assert selected["target_revision"] == "rev-b"
+    assert selected["revision_policy"] == "migrate"
+    assert selected["evidence_contexts"][0]["target_identity_ref"] == "user-local:fast-worker"
     current = next(item for item in decision["candidate_scores"] if item["target"] == "current_worker")
     assert current["evidence_contexts"] == []
     unsafe = next(item for item in decision["candidate_scores"] if item["target"] == "unsafe_worker")

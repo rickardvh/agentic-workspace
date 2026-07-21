@@ -36,6 +36,10 @@ def _target_context(profile: DelegationTargetProfile | None) -> dict[str, Any]:
     if profile is None:
         return {
             "profile_status": "unprofiled",
+            "target_identity_ref": None,
+            "target_revision": None,
+            "revision_policy": None,
+            "identity_status": "unprofiled",
             "capability_classes": [],
             "safe_task_classes": [],
             "forbidden_task_classes": [],
@@ -43,6 +47,10 @@ def _target_context(profile: DelegationTargetProfile | None) -> dict[str, Any]:
         }
     return {
         "profile_status": "configured",
+        "target_identity_ref": profile.target_id,
+        "target_revision": profile.target_revision,
+        "revision_policy": profile.revision_policy,
+        "identity_status": profile.identity_status,
         "capability_classes": list(profile.capability_classes),
         "safe_task_classes": list(profile.safe_task_classes),
         "forbidden_task_classes": list(profile.forbidden_task_classes),
@@ -71,6 +79,8 @@ def target_evidence_posture(
                 {
                     "id": _target_record_id(target_name=target_name, record=record, index=index),
                     "target": target_name,
+                    "target_identity_ref": context["target_identity_ref"],
+                    "target_revision": context["target_revision"],
                     "task_class": record.task_class,
                     "scope_class": scope_class,
                     "context_key": _context_key(task_class=record.task_class, scope_class=scope_class),
@@ -97,11 +107,15 @@ def target_evidence_posture(
     target_names = sorted(set(profile_by_name) | set(records_by_target))
     for target_name in target_names:
         profile = profile_by_name.get(target_name)
+        context = _target_context(profile)
         target_records = records_by_target.get(target_name, [])
         if not target_records:
             suitability.append(
                 {
                     "target": target_name,
+                    "target_identity_ref": context["target_identity_ref"],
+                    "target_revision": context["target_revision"],
+                    "revision_policy": context["revision_policy"],
                     "context_key": None,
                     "task_class": None,
                     "scope_class": None,
@@ -140,6 +154,9 @@ def target_evidence_posture(
             suitability.append(
                 {
                     "target": target_name,
+                    "target_identity_ref": context["target_identity_ref"],
+                    "target_revision": context["target_revision"],
+                    "revision_policy": context["revision_policy"],
                     "context_key": context_key,
                     "task_class": first.task_class,
                     "scope_class": _record_scope_class(first),
@@ -270,6 +287,9 @@ def assignment_decision_from_policy(
         target = str(profile.get("name") or "")
         if not target:
             continue
+        target_identity_ref = str(profile.get("target_id") or "")
+        target_revision = str(profile.get("target_revision") or "")
+        revision_policy = str(profile.get("revision_policy") or "")
         required_action = str(profile.get("required_action") or "")
         eligible = not bool(profile.get("capability_mismatch")) and required_action not in hard_reject_actions
         score = int(profile.get("score") or 0) + recommendation_score.get(str(profile.get("recommendation") or ""), 0)
@@ -281,6 +301,9 @@ def assignment_decision_from_policy(
         candidate_scores.append(
             {
                 "target": target,
+                "target_identity_ref": target_identity_ref or None,
+                "target_revision": target_revision or None,
+                "revision_policy": revision_policy or None,
                 "eligible": eligible,
                 "score": score,
                 "runtime_recommendation": profile.get("recommendation"),
@@ -288,6 +311,8 @@ def assignment_decision_from_policy(
                 "evidence_contexts": [
                     {
                         "context_key": evidence.get("context_key"),
+                        "target_identity_ref": evidence.get("target_identity_ref"),
+                        "target_revision": evidence.get("target_revision"),
                         "route_effect": evidence.get("route_effect"),
                         "record_count": evidence.get("record_count"),
                         "supporting_record_ids": evidence.get("supporting_record_ids", []),
@@ -325,7 +350,7 @@ def assignment_decision_from_policy(
             "uses_runtime_candidate_comparison": bool(profile_recommendations),
             "uses_contextual_evidence": bool(suitability),
             "requested_context_key": requested_context_key or None,
-            "tie_breaker": "highest score, then stable target name",
+            "tie_breaker": "highest score, then stable target identity/name",
         },
         "runtime_recommendation": recommendation,
         "evidence_status": target_evidence.get("status", "unknown"),
