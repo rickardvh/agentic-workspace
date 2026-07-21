@@ -30,12 +30,11 @@ def _assert_live_reference_contract(contract: dict[str, Any], *, reason_code: st
     owner = contract["owner"]
     assert isinstance(owner, dict)
     assert str(owner["surface"]).endswith(surface_suffix)
-    assert "planning reconcile --target . --format json" in str(owner["reconcile_command"])
+    assert " planning " in str(owner["repair_command"])
     assert contract["reason_code"] == reason_code
-    assert {"summary", "status", "start", "next", "implement", "closeout", "doctor", "report"} <= set(contract["consumers"])
-    assert "target-identity-mismatch" in contract["reject_on"]
-    assert "evaluation-result-replaced" in contract["reject_on"]
-    assert "stacked-rebase-head-drift" in contract["reject_on"]
+    assert contract["relation_identity"]["detected_reason"] == reason_code
+    assert {"summary", "status", "doctor", "report"} <= set(contract["consumers"])
+    assert contract["reject_on"] == [reason_code]
     assert contract["residue_policy"] == "leave-no-checked-in-residue-after-successful-reconcile"
 
 

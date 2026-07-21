@@ -3054,6 +3054,56 @@
           "help": "Bounded task class label for this delegated run."
         },
         {
+          "name": "scope_class",
+          "flags": [
+            "--scope-class"
+          ],
+          "required": true,
+          "help": "Independent bounded scope class for this delegated run."
+        },
+        {
+          "name": "operation",
+          "flags": [
+            "--operation"
+          ],
+          "choices": [
+            "submit",
+            "correct-or-dispute",
+            "supersede",
+            "prune-or-compact"
+          ],
+          "default": "submit",
+          "help": "Evidence lifecycle operation."
+        },
+        {
+          "name": "predecessor_id",
+          "flags": [
+            "--predecessor-id"
+          ],
+          "help": "Existing record id required for lifecycle transition operations."
+        },
+        {
+          "name": "authority",
+          "flags": [
+            "--authority"
+          ],
+          "default": "local-outcome-ledger",
+          "help": "Authority class for the admitted evidence."
+        },
+        {
+          "name": "confidence",
+          "flags": [
+            "--confidence"
+          ],
+          "choices": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": "medium",
+          "help": "Confidence classification for the admitted evidence."
+        },
+        {
           "name": "outcome",
           "flags": [
             "--outcome"

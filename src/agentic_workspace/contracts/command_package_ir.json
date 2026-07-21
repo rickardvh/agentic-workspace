@@ -388,6 +388,31 @@
               "name": "task_class",
               "arg": "task_class",
               "default": null
+            },
+            {
+              "name": "scope_class",
+              "arg": "scope_class",
+              "default": null
+            },
+            {
+              "name": "operation",
+              "arg": "operation",
+              "default": "submit"
+            },
+            {
+              "name": "predecessor_id",
+              "arg": "predecessor_id",
+              "default": null
+            },
+            {
+              "name": "authority",
+              "arg": "authority",
+              "default": "local-outcome-ledger"
+            },
+            {
+              "name": "confidence",
+              "arg": "confidence",
+              "default": "medium"
             }
           ],
           "handlers": [
@@ -6607,6 +6632,56 @@
                 ],
                 "required": true,
                 "help": "Bounded task class label for this delegated run."
+              },
+              {
+                "name": "scope_class",
+                "flags": [
+                  "--scope-class"
+                ],
+                "required": true,
+                "help": "Independent bounded scope class for this delegated run."
+              },
+              {
+                "name": "operation",
+                "flags": [
+                  "--operation"
+                ],
+                "default": "submit",
+                "help": "Evidence lifecycle operation.",
+                "choices": [
+                  "submit",
+                  "correct-or-dispute",
+                  "supersede",
+                  "prune-or-compact"
+                ]
+              },
+              {
+                "name": "predecessor_id",
+                "flags": [
+                  "--predecessor-id"
+                ],
+                "help": "Existing record id required for lifecycle transition operations."
+              },
+              {
+                "name": "authority",
+                "flags": [
+                  "--authority"
+                ],
+                "default": "local-outcome-ledger",
+                "help": "Authority class for the admitted evidence."
+              },
+              {
+                "name": "confidence",
+                "flags": [
+                  "--confidence"
+                ],
+                "default": "medium",
+                "help": "Confidence classification for the admitted evidence.",
+                "choices": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
               },
               {
                 "name": "outcome",

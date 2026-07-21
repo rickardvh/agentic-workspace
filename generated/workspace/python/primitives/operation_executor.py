@@ -51,6 +51,11 @@ def run_operation_ir(operation: dict[str, Any], args: argparse.Namespace) -> int
                 'sync': getattr(args, 'sync', False),
                 'target': getattr(args, 'target', None),
                 'task_class': getattr(args, 'task_class', None),
+                'scope_class': getattr(args, 'scope_class', None),
+                'operation': getattr(args, 'operation', 'submit'),
+                'predecessor_id': getattr(args, 'predecessor_id', None),
+                'authority': getattr(args, 'authority', 'local-outcome-ledger'),
+                'confidence': getattr(args, 'confidence', 'medium'),
         },
     )
     emitted = values.get('emitted')
@@ -82,6 +87,11 @@ def run_operation_callable(operation: dict[str, Any], values: Mapping[str, Any])
                 'sync': values.get('sync', False),
                 'target': values.get('target', None),
                 'task_class': values.get('task_class', None),
+                'scope_class': values.get('scope_class', None),
+                'operation': values.get('operation', 'submit'),
+                'predecessor_id': values.get('predecessor_id', None),
+                'authority': values.get('authority', 'local-outcome-ledger'),
+                'confidence': values.get('confidence', 'medium'),
             },
         ).get('result')
     return result

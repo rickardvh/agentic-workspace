@@ -21,6 +21,7 @@
           "recorded_at",
           "delegation_target",
           "task_class",
+          "scope_class",
           "outcome",
           "handoff_sufficiency",
           "review_burden",
@@ -41,6 +42,46 @@
             "type": "string",
             "minLength": 1,
             "description": "Task class text value used by this contract."
+          },
+          "scope_class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Independent scope class text value used by this contract."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "submit",
+              "correct-or-dispute",
+              "supersede",
+              "prune-or-compact"
+            ],
+            "description": "Evidence lifecycle operation represented by this record."
+          },
+          "record_id": {
+            "type": "string",
+            "description": "Stable local record id used by lifecycle transitions."
+          },
+          "predecessor_id": {
+            "type": "string",
+            "description": "Prior record id corrected, superseded, disputed, or compacted by this record."
+          },
+          "authority": {
+            "type": "string",
+            "description": "Authority class for the admitted local evidence."
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Confidence classification for the admitted local evidence."
+          },
+          "admission_state": {
+            "type": "string",
+            "description": "Admission state controlling whether routing may consume this record."
           },
           "outcome": {
             "type": "string",

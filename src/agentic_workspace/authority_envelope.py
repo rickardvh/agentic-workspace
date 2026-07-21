@@ -15,33 +15,76 @@ def _git_lines(target_root: Path, *args: str) -> list[str]:
     return [line for line in result.stdout.splitlines() if line.strip()]
 
 
+def _git_bytes(target_root: Path, *args: str) -> bytes:
+    try:
+        result = subprocess.run(["git", *args], cwd=target_root, check=True, capture_output=True)
+    except (OSError, subprocess.CalledProcessError):
+        return b""
+    return result.stdout
+
+
 def _git_value(target_root: Path, *args: str) -> str:
     lines = _git_lines(target_root, *args)
     return lines[0].strip() if lines else ""
 
 
-def _status_entry(line: str) -> dict[str, Any]:
-    status = line[:2]
-    path = line[3:] if len(line) > 3 else ""
+def _status_entry(status: str, path: str, original_path: str | None = None) -> dict[str, Any]:
+    normalized_path = path.replace("\\", "/")
+    normalized_original = original_path.replace("\\", "/") if original_path else None
+    paths = [normalized_path] + ([normalized_original] if normalized_original else [])
     return {
-        "path": path.replace("\\", "/"),
+        "path": normalized_path,
+        "original_path": normalized_original,
+        "paths": paths,
         "index_status": status[0],
         "worktree_status": status[1],
         "untracked": status == "??",
-        "managed_local_state": path.replace("\\", "/").startswith(".agentic-workspace/local/"),
+        "managed_local_state": any(item.startswith(".agentic-workspace/local/") for item in paths),
+        "rename_or_copy": status[0] in {"R", "C"} or status[1] in {"R", "C"},
         "classification": "untracked" if status == "??" else "staged" if status[0] != " " else "unstaged" if status[1] != " " else "clean",
     }
 
 
-def mutation_baseline_payload(*, target_root: Path, changed_paths: list[str]) -> dict[str, Any]:
+def _status_entries_z(target_root: Path, status_args: list[str]) -> list[dict[str, Any]]:
+    raw = _git_bytes(target_root, *status_args)
+    if not raw:
+        return []
+    parts = [item.decode("utf-8", errors="surrogateescape") for item in raw.split(b"\0") if item]
+    entries: list[dict[str, Any]] = []
+    index = 0
+    while index < len(parts):
+        item = parts[index]
+        status = item[:2]
+        path = item[3:] if len(item) > 3 else ""
+        original_path = None
+        if ("R" in status or "C" in status) and index + 1 < len(parts):
+            original_path = parts[index + 1]
+            index += 1
+        entries.append(_status_entry(status=status, path=path, original_path=original_path))
+        index += 1
+    return entries
+
+
+def mutation_baseline_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    assignment_target_identity_ref: str | None = None,
+    assignment_revision: str | None = None,
+) -> dict[str, Any]:
     normalized_paths = [path for path in changed_paths if path]
     head = _git_value(target_root, "rev-parse", "HEAD")
-    status_args = ["status", "--porcelain=v1", "--untracked-files=all"]
+    status_args = ["status", "--porcelain=v1", "-z", "--untracked-files=all"]
     if normalized_paths:
         status_args.extend(["--", *normalized_paths])
-    status_lines = _git_lines(target_root, *status_args)
-    entries = [_status_entry(line) for line in status_lines]
-    digest_input = {"head": head, "paths": normalized_paths, "status": entries}
+    entries = _status_entries_z(target_root, status_args)
+    digest_input = {
+        "head": head,
+        "paths": normalized_paths,
+        "status": entries,
+        "assignment_target_identity_ref": assignment_target_identity_ref,
+        "assignment_revision": assignment_revision,
+    }
     digest = hashlib.sha256(json.dumps(digest_input, sort_keys=True).encode("utf-8")).hexdigest()[:16]
     dirty = bool(entries)
     revalidation_command = "git status --porcelain=v1 --untracked-files=all -- <changed-paths>"
@@ -70,6 +113,11 @@ def mutation_baseline_payload(*, target_root: Path, changed_paths: list[str]) ->
             "allowed_paths": normalized_paths,
             "path_count": len(normalized_paths),
             "comparison": "changed-path-scope" if normalized_paths else "whole-worktree-status",
+        },
+        "assignment": {
+            "target_identity_ref": assignment_target_identity_ref,
+            "assignment_revision": assignment_revision,
+            "comparison": "stable-target-and-assignment-context",
         },
         "observed_state": {
             "entry_count": len(entries),
@@ -134,6 +182,163 @@ def mutation_baseline_payload(*, target_root: Path, changed_paths: list[str]) ->
         },
         "host_enforcement": "fail-closed-at-aw-boundaries",
     }
+
+
+def compare_mutation_baseline(
+    *,
+    expected: dict[str, Any],
+    current: dict[str, Any],
+    assignment_target_identity_ref: str | None = None,
+    allowed_paths: list[str] | None = None,
+) -> dict[str, Any]:
+    failures: list[dict[str, Any]] = []
+
+    def reject(reason: str, field: str, repair: str) -> None:
+        failures.append({"reason": reason, "field": field, "repair": repair})
+
+    def path_in_scope(path: str, scope: set[str]) -> bool:
+        normalized = path.replace("\\", "/").strip("/")
+        for item in scope:
+            allowed = item.replace("\\", "/").strip("/")
+            if allowed in {"", "."}:
+                return True
+            if normalized == allowed or normalized.startswith(f"{allowed}/"):
+                return True
+        return False
+
+    if expected.get("head") != current.get("head"):
+        reject("baseline-head-changed", "head", "Refresh the mutation baseline after rebasing or branch movement.")
+    expected_scope = set(_as_path for _as_path in expected.get("scope", {}).get("allowed_paths", []) if isinstance(_as_path, str))
+    current_scope = set(_as_path for _as_path in current.get("scope", {}).get("allowed_paths", []) if isinstance(_as_path, str))
+    if allowed_paths is not None:
+        requested_scope = {path for path in allowed_paths if path}
+        if not requested_scope.issubset(expected_scope):
+            reject("scope-expanded", "scope.allowed_paths", "Rerun implement with the widened changed-path scope.")
+        if current_scope and not all(path_in_scope(path, expected_scope) for path in current_scope):
+            reject("scope-expanded", "scope.allowed_paths", "Rerun implement with the widened changed-path scope.")
+    elif current_scope != expected_scope:
+        reject("scope-expanded", "scope.allowed_paths", "Rerun implement with the changed path scope.")
+    expected_entries = expected.get("observed_state", {}).get("entries", [])
+    current_entries = current.get("observed_state", {}).get("entries", [])
+    expected_paths = {
+        str(path)
+        for entry in expected_entries
+        if isinstance(entry, dict)
+        for path in (entry.get("paths") if isinstance(entry.get("paths"), list) else [entry.get("path")])
+        if path
+    }
+    current_paths = {
+        str(path)
+        for entry in current_entries
+        if isinstance(entry, dict)
+        for path in (entry.get("paths") if isinstance(entry.get("paths"), list) else [entry.get("path")])
+        if path
+    }
+    if current_paths - expected_paths:
+        reject("unexpected-path-overlap", "observed_state.entries", "Inspect overlapping edits and assign ownership before writing.")
+    if any(isinstance(entry, dict) and entry.get("managed_local_state") and entry.get("untracked") for entry in current_entries):
+        reject("untracked-managed-state", "observed_state.entries", "Admit, move, or remove managed local state before claiming closure.")
+    for entry in current_entries:
+        if not isinstance(entry, dict) or not entry.get("rename_or_copy"):
+            continue
+        entry_paths = entry.get("paths") if isinstance(entry.get("paths"), list) else [entry.get("path")]
+        if not all(path and path_in_scope(str(path), expected_scope) for path in entry_paths):
+            reject(
+                "renamed-managed-path",
+                "observed_state.entries",
+                "Treat rename/copy paths as scope expansion unless both sides are owned.",
+            )
+    expected_assignment = expected.get("assignment", {}) if isinstance(expected.get("assignment"), dict) else {}
+    current_assignment = current.get("assignment", {}) if isinstance(current.get("assignment"), dict) else {}
+    expected_target = assignment_target_identity_ref or expected_assignment.get("target_identity_ref")
+    current_target = current_assignment.get("target_identity_ref")
+    if expected_target and current_target and expected_target != current_target:
+        reject(
+            "assignment-target-mismatch",
+            "assignment.target_identity_ref",
+            "Recompute assignment and handoff for the current target identity.",
+        )
+    admitted = not failures
+    return {
+        "kind": "agentic-workspace/mutation-baseline-revalidation/v1",
+        "status": "admitted" if admitted else "rejected",
+        "admitted": admitted,
+        "baseline_id": expected.get("baseline_id"),
+        "current_baseline_id": current.get("baseline_id"),
+        "failures": failures,
+        "repair": "none" if admitted else failures[0]["repair"],
+        "clean_noop": admitted and expected.get("baseline_id") == current.get("baseline_id"),
+        "rule": "Mutation baselines are re-read and compared at admission, integration, destructive mutation, and closeout boundaries before trusting returned work or claims.",
+    }
+
+
+def admit_mutation_boundary(
+    *,
+    boundary_id: str,
+    expected: dict[str, Any] | None,
+    current: dict[str, Any] | None,
+    assignment_target_identity_ref: str | None = None,
+    allowed_paths: list[str] | None = None,
+) -> dict[str, Any]:
+    boundary = boundary_id.strip() or "unknown"
+    if not isinstance(expected, dict) or not isinstance(current, dict) or not expected or not current:
+        return {
+            "kind": "agentic-workspace/mutation-boundary-admission/v1",
+            "boundary_id": boundary,
+            "status": "not-provided",
+            "admitted": False,
+            "reason": "mutation baseline pair was not supplied to this boundary",
+            "required_for": [
+                "returned-worker-admission",
+                "integration",
+                "destructive-mutation",
+                "closeout",
+            ],
+            "rule": "Mutation boundaries fail closed only when a caller supplies the expected and current baseline pair for comparison.",
+        }
+    revalidation = compare_mutation_baseline(
+        expected=expected,
+        current=current,
+        assignment_target_identity_ref=assignment_target_identity_ref,
+        allowed_paths=allowed_paths,
+    )
+    return {
+        "kind": "agentic-workspace/mutation-boundary-admission/v1",
+        "boundary_id": boundary,
+        "status": "admitted" if revalidation["admitted"] else "rejected",
+        "admitted": revalidation["admitted"],
+        "revalidation": revalidation,
+        "failures": revalidation["failures"],
+        "repair": revalidation["repair"],
+        "rule": (
+            "The boundary revalidates the canonical mutation baseline immediately before admitting the operation; "
+            "rejection blocks returned work, integration, destructive mutation, and closeout claims."
+        ),
+    }
+
+
+def revalidate_mutation_baseline(
+    *,
+    target_root: Path,
+    expected: dict[str, Any],
+    assignment_target_identity_ref: str | None = None,
+    allowed_paths: list[str] | None = None,
+) -> dict[str, Any]:
+    current = mutation_baseline_payload(
+        target_root=target_root,
+        changed_paths=allowed_paths or list(expected.get("scope", {}).get("allowed_paths", [])),
+        assignment_target_identity_ref=assignment_target_identity_ref
+        or (expected.get("assignment", {}) if isinstance(expected.get("assignment"), dict) else {}).get("target_identity_ref"),
+        assignment_revision=(expected.get("assignment", {}) if isinstance(expected.get("assignment"), dict) else {}).get(
+            "assignment_revision"
+        ),
+    )
+    return compare_mutation_baseline(
+        expected=expected,
+        current=current,
+        assignment_target_identity_ref=assignment_target_identity_ref,
+        allowed_paths=allowed_paths,
+    )
 
 
 def authority_envelope_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None) -> dict[str, Any]:

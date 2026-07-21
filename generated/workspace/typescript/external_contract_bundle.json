@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:88f615f66a571744636d6e531b785b633e6d24684801a436ecc4507aa961db09",
+  "profile_fingerprint": "sha256:6a5e4441b0a943cee64e79ad56bd144c3e72c023393c717a38c940056f1ef843",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -576,8 +576,8 @@
     "delegation-outcome.append": {
       "identity": "delegation-outcome.append",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3f4b5cb1a61c106cb52d4016a54eabd37a0899661aacea27aee48bfd439e46ff",
-      "compatibility_fingerprint": "sha256:2c5c33e149040ee8fae0fe89550b107cc12d99ecd64cccfb37420b91515db8dc",
+      "fingerprint": "sha256:2326abaf238202bf7c63a41bea4ccd31a7158dd0d50f19b5fd59458e7eeecb11",
+      "compatibility_fingerprint": "sha256:aa430da37b9fd034ffa4e862969babc8f21c71e936f885a1c7c057e2e03ad939",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "delegation-outcome.append",
@@ -602,6 +602,31 @@
             "name": "task_class",
             "source": "cli-option",
             "required": true
+          },
+          {
+            "name": "scope_class",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "operation",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "predecessor_id",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "authority",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "confidence",
+            "source": "cli-option",
+            "required": false
           },
           {
             "name": "outcome",
@@ -676,6 +701,8 @@
         ],
         "guards": [
           "Required outcome fields must be present and enum-valid.",
+          "New admissions must include independent scope context.",
+          "Lifecycle transitions must reference an existing predecessor id.",
           "Do not treat local outcome records as checked-in repo policy."
         ],
         "proof": [
@@ -821,6 +848,31 @@
               "required": true
             },
             {
+              "name": "scope_class",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "operation",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "predecessor_id",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "authority",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "confidence",
+              "source": "cli-option",
+              "required": false
+            },
+            {
               "name": "outcome",
               "source": "cli-option",
               "required": true
@@ -858,6 +910,8 @@
           },
           "guards": [
             "Required outcome fields must be present and enum-valid.",
+            "New admissions must include independent scope context.",
+            "Lifecycle transitions must reference an existing predecessor id.",
             "Do not treat local outcome records as checked-in repo policy."
           ]
         },
@@ -870,6 +924,7 @@
               "required": [
                 "delegation_target",
                 "task_class",
+                "scope_class",
                 "outcome"
               ],
               "properties": {
@@ -880,6 +935,31 @@
                 "task_class": {
                   "type": "string",
                   "minLength": 1
+                },
+                "scope_class": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "operation": {
+                  "enum": [
+                    "submit",
+                    "correct-or-dispute",
+                    "supersede",
+                    "prune-or-compact"
+                  ]
+                },
+                "predecessor_id": {
+                  "type": "string"
+                },
+                "authority": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
                 },
                 "outcome": {
                   "enum": [
@@ -1069,6 +1149,7 @@
         "required": [
           "delegation_target",
           "task_class",
+          "scope_class",
           "outcome"
         ],
         "properties": {
@@ -1081,6 +1162,36 @@
             "type": "string",
             "minLength": 1,
             "description": "Bounded task classification."
+          },
+          "scope_class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Independent bounded scope classification."
+          },
+          "operation": {
+            "enum": [
+              "submit",
+              "correct-or-dispute",
+              "supersede",
+              "prune-or-compact"
+            ],
+            "description": "Evidence lifecycle operation."
+          },
+          "predecessor_id": {
+            "type": "string",
+            "description": "Existing record id for lifecycle transition operations."
+          },
+          "authority": {
+            "type": "string",
+            "description": "Authority class for the admitted evidence."
+          },
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Confidence classification for the admitted evidence."
           },
           "outcome": {
             "enum": [

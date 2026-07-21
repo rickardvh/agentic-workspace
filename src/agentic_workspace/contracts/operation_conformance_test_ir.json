@@ -912,6 +912,7 @@
           "target": ".",
           "delegation_target": "gpt_5_4_mini",
           "task_class": "bounded-docs",
+          "scope_class": "bounded-docs",
           "outcome": "success",
           "format": "text"
         },
@@ -922,6 +923,8 @@
           "--delegation-target",
           "gpt_5_4_mini",
           "--task-class",
+          "bounded-docs",
+          "--scope-class",
           "bounded-docs",
           "--outcome",
           "success",
@@ -1029,6 +1032,7 @@
           "target": ".",
           "delegation_target": "test-target",
           "task_class": "mechanical-follow-through",
+          "scope_class": "mechanical-follow-through",
           "outcome": "success",
           "format": "json"
         },
@@ -1039,6 +1043,8 @@
           "--delegation-target",
           "test-target",
           "--task-class",
+          "mechanical-follow-through",
+          "--scope-class",
           "mechanical-follow-through",
           "--outcome",
           "success",

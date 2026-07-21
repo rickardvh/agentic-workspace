@@ -5933,6 +5933,7 @@ def _planning_lane_surface_warnings(*, target_root: Path, lane_projection: dict[
                         relation="lane.status",
                         subject_id=lane_id,
                         reason_code="closed-lane-live-reference",
+                        repair_command=f"{_workspace_cli_invoke(target_root)} planning lane-archive {lane_id} --target . --format json",
                     ),
                 }
             )
@@ -5988,6 +5989,10 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
             continue
         recovery_slice = current_slice or (str(active_slices[0].get("id", "")).strip() if active_slices else f"{lane_id}-slice")
         recovery_title = f"{str(record.get('title') or _title_from_slug(lane_id)).strip()} Slice"
+        repair_route = (
+            f"{_workspace_cli_invoke(target_root)} planning new-plan --id {recovery_slice} "
+            f"--title {json.dumps(recovery_title)} --activate --lane {lane_id} --target . --format json"
+        )
         warnings.append(
             {
                 "warning_class": "lane_current_slice_non_executable",
@@ -6006,16 +6011,14 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
                     "current_slice": current_slice,
                     "execplan_ref": execplan_ref,
                     "reason_code": reason_code,
-                    "repair_route": (
-                        f"{_workspace_cli_invoke(target_root)} planning new-plan --id {recovery_slice} "
-                        f"--title {json.dumps(recovery_title)} --activate --lane {lane_id} --target . --format json"
-                    ),
+                    "repair_route": repair_route,
                     "repair_contract": _planning_live_reference_repair_contract(
                         target_root=target_root,
                         owner_surface=path or (PLANNING_MANAGED_ROOT / "lanes").as_posix(),
                         relation="lane.current_slice",
                         subject_id=lane_id,
                         reason_code=reason_code,
+                        repair_command=repair_route,
                     ),
                 },
             }
@@ -6030,10 +6033,11 @@ def _planning_live_reference_repair_contract(
     relation: str,
     subject_id: str,
     reason_code: str,
+    repair_command: str = "",
 ) -> dict[str, Any]:
     """Shared fail-closed contract for malformed or stale live Planning references."""
     cli = _workspace_cli_invoke(target_root)
-    reconcile_command = f"{cli} planning reconcile --target . --format json"
+    repair_command = repair_command or f"{cli} planning reconcile --target . --format json"
     return {
         "kind": "agentic-planning/live-reference-repair-contract/v1",
         "status": "fail-closed",
@@ -6041,29 +6045,27 @@ def _planning_live_reference_repair_contract(
             "kind": "planning-reconcile-owner/v1",
             "surface": owner_surface,
             "subject_id": subject_id,
-            "reconcile_command": reconcile_command,
+            "repair_command": repair_command,
+            "reconcile_command": repair_command,
         },
         "relation": relation,
         "reason_code": reason_code,
+        "relation_identity": {
+            "owner_surface": owner_surface,
+            "relation": relation,
+            "subject_id": subject_id,
+            "detected_reason": reason_code,
+        },
         "consumer_rule": (
-            "Consumers must reject the live relation until the shared Planning reconcile owner either repairs it "
-            "or returns a concrete blocked reason; consumers must not silently select an alternate owner."
+            "Consumers must reject this detected live relation until the named Planning repair command updates the "
+            "same owner relation or returns a concrete blocked reason; consumers must not silently select an alternate owner."
         ),
-        "consumers": ["summary", "status", "start", "next", "implement", "closeout", "doctor", "report"],
-        "reject_on": [
-            "malformed-relation",
-            "stale-owner-revision",
-            "target-identity-mismatch",
-            "evaluation-result-replaced",
-            "deleted-lane-live-reference",
-            "closed-lane-live-reference",
-            "stacked-rebase-head-drift",
-            "closeout-cleanup-drift",
-        ],
+        "consumers": ["summary", "status", "doctor", "report"],
+        "reject_on": [reason_code],
         "preserve": ["unrelated-owners", "historical-archive-evidence", "external-provider-observations"],
         "residue_policy": "leave-no-checked-in-residue-after-successful-reconcile",
         "proof_after": [
-            reconcile_command,
+            repair_command,
             f"{cli} summary --target . --format json",
             f"{cli} doctor --target . --format json",
         ],
