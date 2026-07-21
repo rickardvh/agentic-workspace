@@ -37,7 +37,7 @@ from agentic_workspace import workspace_runtime_core as _workspace_runtime_core
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
 from agentic_workspace.actionability import derive_actionability
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
-from agentic_workspace.authority_envelope import admit_mutation_boundary
+from agentic_workspace.authority_envelope import admit_mutation_boundary, revalidate_mutation_baseline
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
@@ -127,6 +127,7 @@ from agentic_workspace.contract_tooling import (
     workspace_surfaces_manifest,
 )
 from agentic_workspace.current_work_context import resolve_current_work_context
+from agentic_workspace.evaluation import evaluation_summary
 from agentic_workspace.projection_reuse import lookup_projection_reuse, record_projection_reuse
 from agentic_workspace.proof_receipt_admission import proof_receipt_admission
 from agentic_workspace.proof_subject import build_proof_subject
@@ -30976,11 +30977,30 @@ def _executor_binding_invalidity(binding: dict[str, Any]) -> dict[str, Any]:
             "reason": str(validity.get("reason") or "invalid-executor-binding"),
             "repair": str(validity.get("repair") or "Re-resolve the Autopilot executor binding before continuing."),
         }
+    required_sections = {
+        "assignment": "missing-assignment-authority",
+        "proof_obligation": "missing-proof-obligation-authority",
+        "mutation_baseline": "missing-mutation-baseline-authority",
+    }
+    for section_name, reason in required_sections.items():
+        if not _as_dict(binding.get(section_name)):
+            return {
+                "status": "rejected",
+                "reason": reason,
+                "repair": f"Resolve authoritative {section_name} before running Autopilot.",
+            }
+    evaluation = _as_dict(binding.get("evaluation"))
+    if not evaluation:
+        return {
+            "status": "rejected",
+            "reason": "missing-evaluation-authority",
+            "repair": "Resolve evaluation authority or an authoritative not-required evaluation state before running Autopilot.",
+        }
     invalid_sections = {
-        "assignment": {"blocked", "blocked-target-mismatch", "handoff-required", "no-safe-route"},
-        "evaluation": {"rejected", "stale", "superseded", "failed"},
-        "proof_obligation": {"rejected", "stale", "superseded", "failed"},
-        "mutation_baseline": {"stale", "mismatch", "rejected", "failed"},
+        "assignment": {"", "blocked", "blocked-target-mismatch", "handoff-required", "no-safe-route", "missing"},
+        "evaluation": {"", "missing", "rejected", "stale", "stale-bound", "legacy-unbound", "superseded", "failed"},
+        "proof_obligation": {"", "missing", "rejected", "stale", "superseded", "failed"},
+        "mutation_baseline": {"", "missing", "stale", "mismatch", "rejected", "failed"},
     }
     for section_name, invalid_statuses in invalid_sections.items():
         section = _as_dict(binding.get(section_name))
@@ -31001,23 +31021,217 @@ def _executor_binding_invalidity(binding: dict[str, Any]) -> dict[str, Any]:
     return {"status": "accepted", "reason": "fresh-live-executor-binding"}
 
 
+def _executor_context_changed_paths(context: dict[str, Any]) -> list[str]:
+    for key in ("changed_paths", "allowed_paths"):
+        values = [str(path) for path in _list_payload(context.get(key)) if str(path).strip()]
+        if values:
+            return values
+    return []
+
+
+def _executor_context_task_text(context: dict[str, Any]) -> str:
+    for key in ("task", "task_text", "objective", "current_slice"):
+        value = str(context.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def _executor_evaluation_authority(*, target_root: Path, context: dict[str, Any]) -> dict[str, Any]:
+    supplied = _as_dict(context.get("evaluation") or context.get("evaluation_authority"))
+    if supplied:
+        return supplied
+    summary = evaluation_summary(target_root=target_root)
+    summaries = [item for item in _list_payload(summary.get("summaries")) if isinstance(item, dict)]
+    if not summaries:
+        return {
+            "status": "not-required",
+            "freshness_status": "not-required",
+            "reason": "no-registered-evaluations",
+            "source": "evaluation_summary",
+        }
+    current = next(
+        (
+            item
+            for item in summaries
+            if _as_dict(item.get("fresh_result_admission")).get("status") != "fresh-bound"
+            or _as_dict(item.get("conclusion_readiness")).get("ready") is not True
+        ),
+        summaries[-1],
+    )
+    admission = _as_dict(current.get("fresh_result_admission"))
+    readiness = _as_dict(current.get("conclusion_readiness"))
+    status = (
+        "accepted"
+        if admission.get("status") == "fresh-bound" and readiness.get("ready") is True
+        else str(admission.get("status") or "missing")
+    )
+    return {
+        "status": status,
+        "freshness_status": str(admission.get("status") or "missing"),
+        "evaluation_id": current.get("evaluation_id"),
+        "revision": current.get("revision"),
+        "current_result_identity": admission.get("current_result_identity"),
+        "conclusion_readiness": readiness,
+        "reason": readiness.get("reason_code") or admission.get("status") or "evaluation-not-ready",
+        "source": "evaluation_summary",
+    }
+
+
+def _executor_proof_authority(context: dict[str, Any]) -> dict[str, Any]:
+    supplied = _as_dict(
+        context.get("proof_obligation")
+        or context.get("selected_proof_obligation")
+        or context.get("proof_authority")
+        or context.get("proof")
+    )
+    if supplied:
+        return supplied
+    reconciliation = _as_dict(context.get("proof_receipt_reconciliation"))
+    if reconciliation:
+        return {
+            "status": "accepted" if reconciliation.get("status") == "accepted" else str(reconciliation.get("status") or "missing"),
+            "receipt_status": "fresh" if reconciliation.get("status") == "accepted" else str(reconciliation.get("status") or "missing"),
+            "selected_proof_identity": reconciliation.get("selected_proof_identity"),
+            "reason": reconciliation.get("reason") or reconciliation.get("status"),
+            "source": "proof_receipt_reconciliation",
+        }
+    return {
+        "status": "missing",
+        "receipt_status": "missing",
+        "reason": "missing-selected-proof-obligation",
+        "repair": "Run proof selection and record an accepted live proof obligation before running Autopilot.",
+    }
+
+
+def _executor_mutation_baseline_authority(
+    *, target_root: Path, context: dict[str, Any], assignment_identity: dict[str, Any]
+) -> dict[str, Any]:
+    expected = _as_dict(
+        context.get("expected_mutation_baseline") or context.get("mutation_baseline") or assignment_identity.get("mutation_baseline")
+    )
+    if not expected:
+        return {
+            "status": "missing",
+            "revalidation_status": "missing",
+            "reason": "missing-mutation-baseline",
+            "repair": "Resolve and revalidate the current mutation baseline before running Autopilot.",
+        }
+    allowed_paths = [str(path) for path in _list_payload(assignment_identity.get("allowed_paths")) if str(path).strip()]
+    revalidation = revalidate_mutation_baseline(
+        target_root=target_root,
+        expected=expected,
+        assignment_target_identity_ref=str(assignment_identity.get("target_identity_ref") or "") or None,
+        allowed_paths=allowed_paths or None,
+    )
+    return {
+        **expected,
+        "status": "fresh" if revalidation.get("admitted") else "rejected",
+        "revalidation_status": "fresh" if revalidation.get("admitted") else "rejected",
+        "revalidation": revalidation,
+        "reason": revalidation.get("repair") if not revalidation.get("admitted") else "mutation-baseline-revalidated",
+        "source": "revalidate_mutation_baseline",
+    }
+
+
+def _executor_availability(
+    *,
+    owner_id: str,
+    assignment: dict[str, Any],
+    target_binding: dict[str, Any],
+    selected_target: dict[str, Any],
+    assignment_policy: dict[str, Any],
+    delegation_decision: dict[str, Any],
+) -> dict[str, Any]:
+    if not owner_id:
+        return {
+            "status": "unavailable",
+            "reason": "no-live-owner-binding",
+            "repair": "Resolve a live Planning/current-work owner before running Autopilot.",
+        }
+    if not selected_target:
+        return {
+            "status": "unavailable",
+            "reason": "missing-selected-executor-target",
+            "repair": "Resolve an authoritative executor target before running Autopilot.",
+        }
+    execution_methods = [str(method) for method in _list_payload(selected_target.get("execution_methods")) if str(method).strip()]
+    automatic_methods = [method for method in execution_methods if method in {"internal", "cli", "api"}]
+    if not execution_methods:
+        return {
+            "status": "unavailable",
+            "reason": "missing-execution-method",
+            "repair": "Select a target with an executable method before running Autopilot.",
+        }
+    manual_transport = _manual_transport_admission_payload(
+        assignment_policy=assignment_policy,
+        target_execution_methods=execution_methods,
+        handoff_required=bool(delegation_decision.get("handoff_command")),
+    )
+    if not automatic_methods and not manual_transport.get("export_allowed"):
+        return {
+            "status": "unavailable",
+            "reason": "transport-policy-blocked",
+            "repair": str(manual_transport.get("repair") or "Enable transport or choose an automatic executor target."),
+            "manual_transport": manual_transport,
+        }
+    if assignment.get("implementation_allowed") is False:
+        return {
+            "status": "unavailable",
+            "reason": str(assignment.get("reason") or assignment.get("gate_status") or "assignment-gate-blocked"),
+            "repair": str(assignment.get("required_next_action") or "Resolve assignment gate before running Autopilot."),
+            "manual_transport": manual_transport,
+        }
+    if str(target_binding.get("target_identity_status") or "") in {"missing", "stale", "rejected", "unknown"}:
+        return {
+            "status": "unavailable",
+            "reason": "target-identity-not-current",
+            "repair": "Refresh target identity before running Autopilot.",
+            "manual_transport": manual_transport,
+        }
+    return {
+        "status": "available",
+        "execution_methods": execution_methods,
+        "automatic_methods": automatic_methods,
+        "manual_transport": manual_transport,
+    }
+
+
 def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[str, Any]:
     context = resolve_current_work_context(root=target_root, task="", relation_hint="plan-continuation")
     owner_binding = _as_dict(context.get("owner_binding"))
     owner_id = str(context.get("selected_plan_id") or context.get("plan_id") or owner_binding.get("owner_id") or "").strip()
     config = config_lib.load_workspace_config(target_root=target_root, valid_presets=set(_module_operations()))
+    changed_paths = _executor_context_changed_paths(context)
+    task_text = _executor_context_task_text(context)
+    execution_posture = _as_dict(context.get("execution_posture"))
+    if not execution_posture:
+        execution_posture = _execution_posture_payload(
+            config=config,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            target_root=target_root,
+        )
     target_identity = target_identity_posture(local_override=config.local_override, target_root=target_root)
     current_target_identity = _as_dict(target_identity.get("current_target_identity"))
     target_subject = _as_dict(current_target_identity.get("subject"))
-    assignment_policy = _assignment_policy_payload(config.local_override, [])
-    assignment_decision = assignment_decision_from_policy(
-        assignment_policy=assignment_policy,
-        runtime_resolution={"recommendation": "stay-local", "profile_recommendations": [], "capability_context": {}},
-        target_evidence={"kind": "agentic-workspace/target-evidence-posture/v1", "status": "not-collected", "suitability": []},
+    assignment_policy = _as_dict(execution_posture.get("assignment_policy"))
+    assignment_gate = _as_dict(execution_posture.get("assignment_gate"))
+    delegation_decision = _as_dict(execution_posture.get("delegation_decision"))
+    selected_target = _as_dict(execution_posture.get("selected_target"))
+    assignment_identity = (
+        _assignment_identity_payload(
+            assignment_gate=assignment_gate,
+            assignment_policy=assignment_policy,
+            delegation_decision=delegation_decision,
+        )
+        if assignment_gate
+        else {}
     )
     revision = _as_dict(context.get("revision"))
-    freshness = _as_dict(context.get("freshness"))
-    target_identity_ref = str(target_subject.get("stable_target_id") or target_root.as_posix()).strip()
+    target_identity_ref = str(
+        assignment_identity.get("target_identity_ref") or target_subject.get("stable_target_id") or target_root.as_posix()
+    ).strip()
     current_work_id = str(context.get("id") or "")
     owner_identity = {
         "owner_id": owner_id,
@@ -31033,42 +31247,45 @@ def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[st
         "current_target": target_identity.get("current_target"),
         "target_identity_ref": target_identity_ref,
         "target_identity_status": current_target_identity.get("status"),
+        "selected_target": selected_target.get("name"),
+        "target_revision": assignment_identity.get("target_revision"),
+        "execution_methods": selected_target.get("execution_methods") or [],
+        "capability_classes": selected_target.get("capability_classes") or [],
+        "location": selected_target.get("location"),
+        "strength": selected_target.get("strength"),
     }
     assignment = {
-        "status": str(assignment_decision.get("decision") or ""),
-        "policy": str(assignment_decision.get("assignment_policy") or ""),
-        "selected_target": assignment_decision.get("selected_target"),
-        "current_target": assignment_decision.get("current_target"),
+        "status": str(assignment_gate.get("status") or "missing"),
+        "policy": str(assignment_gate.get("assignment_policy") or assignment_identity.get("assignment_policy") or ""),
+        "selected_target": assignment_gate.get("selected_target") or assignment_identity.get("target"),
+        "current_target": target_identity.get("current_target"),
         "target_identity_ref": target_identity_ref,
-        "context_key": current_work_id,
-        "claim_boundary": assignment_decision.get("claim_boundary"),
+        "context_key": assignment_identity.get("slice_id") or current_work_id,
+        "claim_boundary": assignment_gate.get("claim_boundary"),
+        "required_next_action": assignment_gate.get("required_next_action"),
+        "implementation_allowed": assignment_gate.get("implementation_allowed"),
+        "assignment_revision": assignment_identity.get("revision"),
+        "assignment_decision_revision": assignment_identity.get("assignment_decision_revision"),
+        "allowed_effects": assignment_identity.get("allowed_effects") or [],
+        "allowed_paths": assignment_identity.get("allowed_paths") or [],
+        "stop_conditions": assignment_identity.get("stop_conditions") or [],
+        "proof_obligation_id": assignment_identity.get("proof_obligation_id"),
     }
-    mutation_baseline = {
-        "baseline_id": f"autopilot:{current_work_id or 'unbound'}",
-        "head": target_binding["head"],
-        "resolved_at": str(freshness.get("resolved_at") or ""),
-        "revalidation_status": "fresh" if target_binding["head"] else "missing",
-    }
-    proof_subject = {
-        "owner_id": owner_id,
-        "target_identity_ref": target_identity_ref,
-        "assignment_context_key": assignment["context_key"],
-        "mutation_head": mutation_baseline["head"],
-    }
-    proof_obligation = {
-        "status": "accepted" if owner_id else "rejected",
-        "owner_id": owner_id,
-        "proof_subject_fingerprint": _executor_binding_fingerprint(proof_subject),
-        "receipt_status": "fresh" if owner_id else "missing",
-        "freshness_status": "fresh" if owner_id else "missing",
-    }
-    evaluation = {
-        "status": "accepted",
-        "owner_id": owner_id,
-        "target_identity_ref": target_identity_ref,
-        "assignment_context_key": assignment["context_key"],
-        "freshness_status": "not-required",
-    }
+    evaluation = _executor_evaluation_authority(target_root=target_root, context=context)
+    proof_obligation = _executor_proof_authority(context)
+    mutation_baseline = _executor_mutation_baseline_authority(
+        target_root=target_root,
+        context=context,
+        assignment_identity=assignment_identity,
+    )
+    availability = _executor_availability(
+        owner_id=owner_id,
+        assignment=assignment,
+        target_binding=target_binding,
+        selected_target=selected_target,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
     fingerprint_payload = {
         "owner_identity": owner_identity,
         "target_identity": target_binding,
@@ -31096,14 +31313,10 @@ def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[st
         "evaluation": evaluation,
         "proof_obligation": proof_obligation,
         "mutation_baseline": mutation_baseline,
-        "availability": {
-            "status": "available" if owner_id else "unavailable",
-            "reason": "" if owner_id else "no-live-owner-binding",
-            "repair": "" if owner_id else "Resolve a live Planning/current-work owner before running Autopilot.",
-        },
+        "availability": availability,
         "binding_fingerprint": _executor_binding_fingerprint(fingerprint_payload),
         "source": "resolve_current_work_context",
-        "rule": "Autopilot resolves this binding before every executor slice; changed owners invalidate slice-specific executor task text.",
+        "rule": "Autopilot resolves this binding before every executor slice from authoritative owner, target, assignment, evaluation, proof, and mutation-baseline state.",
     }
     binding["validity"] = _executor_binding_invalidity(binding)
     return binding
@@ -31139,12 +31352,11 @@ def _executor_binding_change_guard(
     previous_terms = _executor_binding_terms(previous_binding)
     current_terms = _executor_binding_terms(current_binding)
     command_text_value = str(executor_command or "")
-    names_previous = any(term and term in command_text_value for term in previous_terms)
-    names_current = any(term and term in command_text_value for term in current_terms)
-    if names_previous and not names_current:
+    names_current_fingerprint = bool(current_fingerprint and current_fingerprint in command_text_value)
+    if not names_current_fingerprint:
         return {
             "status": "stale-binding",
-            "reason": "executor command names prior owner after active owner changed",
+            "reason": "executor invocation lacks current binding fingerprint after active binding changed",
             "previous_owner_id": previous_owner,
             "current_owner_id": current_owner,
             "previous_terms": previous_terms,
@@ -31156,7 +31368,7 @@ def _executor_binding_change_guard(
         }
     return {
         "status": "rebound",
-        "reason": "active binding changed; executor command is generic or names the current binding",
+        "reason": "active binding changed; executor invocation carries the current binding fingerprint",
         "previous_owner_id": previous_owner,
         "current_owner_id": current_owner,
         "previous_binding_fingerprint": previous_fingerprint,
