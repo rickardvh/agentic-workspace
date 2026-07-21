@@ -92,7 +92,34 @@ def test_implement_verbose_reports_authority_envelope_and_mutation_baseline(tmp_
     assert baseline["scope"]["allowed_paths"] == ["src/app.py"]
     assert baseline["observed_state"]["entries"][0]["path"] == "src/app.py"
     assert baseline["ownership"]["claim"] == "advisory-observed-baseline"
+    assert baseline["host_enforcement"] == "fail-closed-at-aw-boundaries"
+    assert baseline["stale_revalidation"]["status"] == "required"
+    assert baseline["stale_revalidation"]["admission"] == "fail-closed"
+    assert baseline["stale_revalidation"]["comparison_fields"] == [
+        "baseline_id",
+        "head",
+        "scope.allowed_paths",
+        "observed_state.entries",
+        "assignment.target_identity_ref",
+    ]
     assert "unexpected-path-overlap" in baseline["stale_revalidation"]["stop_reasons"]
+    assert "assignment-target-mismatch" in baseline["stale_revalidation"]["stop_reasons"]
+    assert "scope-expanded" in baseline["stale_revalidation"]["stop_reasons"]
+    boundary = baseline["boundary_enforcement"]
+    assert boundary["status"] == "fail-closed-contract"
+    assert boundary["baseline_id"] == baseline["baseline_id"]
+    assert {item["id"] for item in boundary["boundaries"]} == {
+        "returned-worker-admission",
+        "integration",
+        "destructive-mutation",
+        "closeout",
+    }
+    admission = next(item for item in boundary["boundaries"] if item["id"] == "returned-worker-admission")
+    assert "baseline-head-changed" in admission["reject_on"]
+    assert "assignment-target-mismatch" in admission["reject_on"]
+    assert envelope["enforcement"]["host_enforceable"] == [
+        "mutation baseline revalidation fails closed at AW admission/integration/closeout boundaries"
+    ]
 
 
 def test_implement_tiny_surfaces_local_high_risk_overlay(tmp_path: Path, capsys) -> None:
