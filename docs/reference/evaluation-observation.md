@@ -23,3 +23,4 @@ One local-first append record for an owner-bound evaluation.
 | `burden` | enum `"low"`, `"medium"`, `"high"` | yes |  | Collection or review burden for this observation. |  |  |
 | `finding` | string | yes |  | Compact finding text derived from the observation. |  |  |
 | `recommended_action` | string | yes |  | Bounded next action recommended by the observer, when any. |  |  |
+| `admission` | object | yes |  | Admission decision binding the observation to current assignment, authority, baseline, and proof context. |  |  |

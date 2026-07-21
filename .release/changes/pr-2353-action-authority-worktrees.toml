@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "minor"
+summary = "Add authority effect envelopes and mutation-baseline revalidation surfaces."
