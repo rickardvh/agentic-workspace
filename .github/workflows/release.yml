@@ -4,6 +4,16 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing vMAJOR.MINOR.PATCH tag to publish.
+        required: true
+        type: string
+      source_commit:
+        description: Commit the tag must resolve to.
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,9 +21,15 @@ permissions:
 jobs:
   agentic-workspace-package:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+      EXPECTED_SOURCE_COMMIT: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.source_commit || '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v6.2.0
@@ -31,34 +47,34 @@ jobs:
       - name: Sync workspace dependencies
         run: make sync-all
 
-      - name: Verify tag matches package version
-        shell: python
+      - name: Verify tag targets coordinated release commit
         run: |
-          import os
+          git fetch origin "refs/heads/master:refs/remotes/origin/master" --tags
+          TAG_COMMIT="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          HEAD_COMMIT="$(git rev-parse HEAD)"
+          if [ "$TAG_COMMIT" != "$HEAD_COMMIT" ]; then
+            echo "Release tag ${RELEASE_TAG} resolves to ${TAG_COMMIT}, but checkout is ${HEAD_COMMIT}" >&2
+            exit 1
+          fi
+          if [ -n "${EXPECTED_SOURCE_COMMIT}" ] && [ "$TAG_COMMIT" != "${EXPECTED_SOURCE_COMMIT}" ]; then
+            echo "Release tag ${RELEASE_TAG} resolves to ${TAG_COMMIT}, expected ${EXPECTED_SOURCE_COMMIT}" >&2
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$HEAD_COMMIT" origin/master; then
+            echo "Release tag ${RELEASE_TAG} must point at a commit reachable from origin/master" >&2
+            exit 1
+          fi
+          python scripts/release/coordinated_release.py verify --tag "${RELEASE_TAG}"
+          python - <<'PY'
           import json
-          import tomllib
           from pathlib import Path
 
-          tag = os.environ["GITHUB_REF_NAME"]
-          version = tag.removeprefix("v")
           ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
-          for package in ownership["packages"]:
-              declared = tomllib.loads(Path(package["pyproject"]).read_text(encoding="utf-8"))["project"]["version"]
-              if declared != version:
-                  raise SystemExit(
-                      f"Release tag {tag!r} must match every package version; "
-                      f"{package['pyproject']} declares {declared!r}"
-                  )
           for package in ownership["typescript_packages"]:
               payload = json.loads(Path(package["package_json"]).read_text(encoding="utf-8"))
-              declared = payload["version"]
-              if declared != version:
-                  raise SystemExit(
-                      f"Release tag {tag!r} must match every TypeScript package version; "
-                      f"{package['package_json']} declares {declared!r}"
-                  )
               if payload.get("private") is not False:
                   raise SystemExit(f"{package['package_json']} must be publishable for coordinated release")
+          PY
 
       - name: Build Agentic Workspace package artifacts
         run: |
@@ -70,8 +86,8 @@ jobs:
           uv build --wheel --sdist --out-dir dist packages/verification
           python scripts/release/patch_workspace_release_wheel.py \
             --dist-dir dist \
-            --version "${GITHUB_REF_NAME#v}" \
-            --release-asset-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
+            --version "${RELEASE_TAG#v}" \
+            --release-asset-base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
           for package in generated/*/typescript; do
             (cd "$package" && npm test && npm pack --pack-destination "$GITHUB_WORKSPACE/dist")
           done
@@ -80,14 +96,13 @@ jobs:
         run: uv run pytest tests/test_workspace_packaging.py::test_installed_workspace_wheel_imports_cli_module tests/test_workspace_packaging.py::test_installed_workspace_stack_runs_fresh_repo_cli_sequence tests/test_workspace_packaging.py::test_release_root_wheel_installs_workspace_stack_from_same_release_assets -q
 
       - name: Generate checksums and release manifest
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           python - <<'PY'
           import hashlib
           import json
           import os
           import re
+          import subprocess
           import tomllib
           from pathlib import Path
 
@@ -164,6 +179,12 @@ jobs:
               "release_model": ownership["release_model"],
               "version": version,
               "tag": os.environ["RELEASE_TAG"],
+              "source_commit": subprocess.run(
+                  ["git", "rev-parse", "HEAD"],
+                  check=True,
+                  capture_output=True,
+                  text=True,
+              ).stdout.strip(),
               "all_or_nothing": True,
               "packages": package_entries,
               "command_generation": {
@@ -183,19 +204,26 @@ jobs:
           PY
 
       - name: Verify release artifacts
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           python - <<'PY'
           import hashlib
           import json
           import os
+          import subprocess
           from pathlib import Path
 
           dist = Path("dist")
           manifest = json.loads((dist / "agentic-workspace-release-manifest.json").read_text(encoding="utf-8"))
           if manifest["tag"] != os.environ["RELEASE_TAG"]:
               raise SystemExit("Release manifest tag mismatch")
+          source_commit = subprocess.run(
+              ["git", "rev-parse", "HEAD"],
+              check=True,
+              capture_output=True,
+              text=True,
+          ).stdout.strip()
+          if manifest.get("source_commit") != source_commit:
+              raise SystemExit("Release manifest source_commit mismatch")
           ownership = json.loads(Path(".github/release-ownership.json").read_text(encoding="utf-8"))
           expected_package_count = len(ownership["packages"]) + len(ownership["typescript_packages"])
           if len(manifest["packages"]) != expected_package_count:
@@ -223,11 +251,12 @@ jobs:
       - name: Publish GitHub release assets
         uses: softprops/action-gh-release@v3.0.0
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          body_path: .release/releases/${{ env.RELEASE_TAG }}.md
           files: |
             dist/*.whl
             dist/*.tar.gz
             dist/*.tgz
             dist/SHA256SUMS
             dist/agentic-workspace-release-manifest.json
-          generate_release_notes: true
           fail_on_unmatched_files: true

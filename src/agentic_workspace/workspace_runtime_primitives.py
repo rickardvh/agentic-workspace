@@ -11309,7 +11309,7 @@ def _release_recovery_payload(
     if not release_ci_failure:
         release_ci_failure = {
             "status": "not-fetched",
-            "workflow": "Release From Semver Label",
+            "workflow": "Release",
             "command": _command_with_cli_invoke(
                 command="python scripts/github/release_recovery_status.py --repo <owner/name> --include-release-runs --format json",
                 cli_invoke=cli_invoke,
@@ -11318,6 +11318,16 @@ def _release_recovery_payload(
             "rule": "AW keeps compact run pointers and summaries; full GitHub Actions logs stay outside repo state.",
         }
     release_publication_state = release_state.get("release_publication_state", {})
+    publisher_retry = release_publication_state.get("publisher_retry", {}) if isinstance(release_publication_state, dict) else {}
+    recovery_next_action = (
+        str(publisher_retry.get("command", ""))
+        if isinstance(publisher_retry, dict)
+        and publisher_retry.get("status") == "ready"
+        and release_publication_state.get("status") == "failed-release-unpublished"
+        else "When a failed release remains unpublished without a verified publisher retry, rerun the release recovery helper for an exact existing-tag dispatch command."
+        if isinstance(release_publication_state, dict) and release_publication_state.get("status") == "failed-release-unpublished"
+        else "No failed-release publisher retry is active."
+    )
     return {
         "kind": "agentic-workspace/release-recovery/v1",
         "status": "available" if ownership else "unavailable",
@@ -11331,10 +11341,10 @@ def _release_recovery_payload(
         },
         "semver_release_action": {
             "status": "not-fetched",
-            "rule": "Use the helper to classify whether a PR will publish, is repair-only, or is blocked by semver label state.",
+            "rule": "Use the helper to classify whether a PR will open a release PR, is repair-only, or is blocked by semver label/changeset state.",
             "command": helper,
             "repair_only_boundary": (
-                "A semver-labeled PR that changes no package-affecting path can fix a blocker, but it will not publish the failed release."
+                "A semver-labeled PR that changes no package-affecting path can fix a blocker, but it will not open a release PR."
             ),
         },
         "release_ci_failure": release_ci_failure,
@@ -11345,7 +11355,7 @@ def _release_recovery_payload(
             else "not-required"
             if release_publication_state.get("status") == "cleared-by-newer-success"
             else "available",
-            "next_action": "When a failed release remains unpublished after a repair-only PR, create a coordinated explicit version-bump PR.",
+            "next_action": recovery_next_action,
             "pr_shape": {
                 "required_version_paths": version_paths,
                 "proof": [
@@ -11392,7 +11402,7 @@ def _release_recovery_live_state(*, target_root: Path, cli_invoke: str) -> dict[
             "release_ci_failure": {
                 "kind": "agentic-workspace/release-ci-failure-summary/v1",
                 "status": "release_run_status_unavailable",
-                "workflow": "Release From Semver Label",
+                "workflow": "Release",
                 "reason": "No GitHub origin remote was available for live release-run discovery.",
                 "command": command,
                 "freshness": {"status": "unavailable", "source": "missing-github-remote"},
@@ -11427,7 +11437,7 @@ def _release_recovery_live_state(*, target_root: Path, cli_invoke: str) -> dict[
             "release_ci_failure": {
                 "kind": "agentic-workspace/release-ci-failure-summary/v1",
                 "status": "release_run_status_unavailable",
-                "workflow": "Release From Semver Label",
+                "workflow": "Release",
                 "reason": str(exc),
                 "command": command,
                 "freshness": {"status": "unavailable", "source": "helper-execution-failed"},
@@ -11439,7 +11449,7 @@ def _release_recovery_live_state(*, target_root: Path, cli_invoke: str) -> dict[
             "release_ci_failure": {
                 "kind": "agentic-workspace/release-ci-failure-summary/v1",
                 "status": "release_run_status_unavailable",
-                "workflow": "Release From Semver Label",
+                "workflow": "Release",
                 "reason": (result.stderr or result.stdout).strip(),
                 "command": command,
                 "freshness": {"status": "unavailable", "source": "helper-returned-error"},
@@ -11690,7 +11700,7 @@ _LAZY_REPORT_SECTION_CATALOG: tuple[dict[str, str], ...] = (
         "section": "release_recovery",
         "kind": "agentic-workspace/release-recovery/v1",
         "purpose": "source-checkout release recovery posture for semver PR action, failed release summaries, and payload drift repair",
-        "when_to_use": "during coordinated release, semver-label recovery, payload drift, or failed release CI diagnosis",
+        "when_to_use": "during coordinated release, changeset recovery, payload drift, or failed release CI diagnosis",
     },
 )
 
