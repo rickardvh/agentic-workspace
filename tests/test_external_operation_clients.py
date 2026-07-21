@@ -290,20 +290,23 @@ def test_public_client_classifies_result_and_failure_envelopes(
 
 
 def test_python_and_typescript_mutation_operation_parity(tmp_path: Path) -> None:
-    config = tmp_path / ".agentic-workspace/config.toml"
-    config.parent.mkdir()
-    config.write_text("[workspace]\nenabled = true\n", encoding="utf-8")
-    values = {"delegation_target": "fixture", "task_class": "parity", "outcome": "success"}
+    python_target = tmp_path / "python"
+    typescript_target = tmp_path / "typescript"
+    for target in (python_target, typescript_target):
+        config = target / ".agentic-workspace/config.toml"
+        config.parent.mkdir(parents=True)
+        config.write_text("[workspace]\nenabled = true\n", encoding="utf-8")
+    values = {"delegation_target": "fixture", "task_class": "parity", "scope_class": "parity", "outcome": "success"}
     python_payload = invoke_operation(
         "delegation-outcome.append",
         values,
-        target=tmp_path,
+        target=python_target,
         invocation=[sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")],
         allow_runtime_backed=True,
     )
     script = f"""
 import {{ invokeOperation }} from './generated/workspace/typescript/src/client.mjs';
-const payload = invokeOperation('delegation-outcome.append', {json.dumps(values)}, {{ target: {json.dumps(str(tmp_path))}, invocation: [{json.dumps(sys.executable)}, {json.dumps(str(ROOT / "scripts/run_agentic_workspace.py"))}], allowRuntimeBacked: true }});
+const payload = invokeOperation('delegation-outcome.append', {json.dumps(values)}, {{ target: {json.dumps(str(typescript_target))}, invocation: [{json.dumps(sys.executable)}, {json.dumps(str(ROOT / "scripts/run_agentic_workspace.py"))}], allowRuntimeBacked: true }});
 console.log(JSON.stringify(payload));
 """
     completed = subprocess.run(["node", "--input-type=module", "--eval", script], cwd=ROOT, text=True, capture_output=True, check=False)
@@ -324,7 +327,7 @@ def test_python_and_typescript_reject_same_invalid_result(payload: dict[str, obj
     config = tmp_path / ".agentic-workspace/config.toml"
     config.parent.mkdir()
     config.write_text("[workspace]\nenabled = true\n", encoding="utf-8")
-    values = {"delegation_target": "fixture", "task_class": "parity", "outcome": "success"}
+    values = {"delegation_target": "fixture", "task_class": "parity", "scope_class": "parity", "outcome": "success"}
     with pytest.raises(AWClientError) as python_error:
         invoke_operation(
             "delegation-outcome.append",

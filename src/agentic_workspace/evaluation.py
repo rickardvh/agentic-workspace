@@ -432,15 +432,48 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
         bound_observations = [
             item for item in admitted_observations if isinstance(item.get("admission"), dict) and item["admission"].get("bound_context")
         ]
-        criteria = _criterion_status(definition, admitted_observations)
+        current_revision = int(definition["revision"])
+        current_bound_observations = [
+            item for item in bound_observations if int(item.get("definition_revision", 0) or 0) == current_revision
+        ]
+        historical_observations = [item for item in admitted_observations if item not in current_bound_observations]
+        legacy_unbound_count = len(
+            [
+                item
+                for item in admitted_observations
+                if isinstance(item.get("admission"), dict) and item["admission"].get("status") == "legacy-unbound"
+            ]
+        )
+        stale_revision_count = len(bound_observations) - len(current_bound_observations)
+        criteria = _criterion_status(definition, current_bound_observations)
         required = [item for item in criteria if item["required"]]
         satisfied = [item for item in required if item["state"] == "satisfied"]
         contradictions = [item for item in criteria if item["state"] == "contradicted"]
         min_observations = int(definition.get("collection_policy", {}).get("minimum_observations", 1))
-        conclusion_ready = len(admitted_observations) >= min_observations and (
+        conclusion_ready = len(current_bound_observations) >= min_observations and (
             len(satisfied) == len(required) or bool(contradictions) or definition.get("lifecycle") == "enough-signal"
         )
-        freshness_status = "fresh-bound" if bound_observations else "legacy-unbound" if admitted_observations else "missing"
+        freshness_status = (
+            "fresh-bound"
+            if current_bound_observations
+            else "stale-bound"
+            if bound_observations
+            else "legacy-unbound"
+            if admitted_observations
+            else "missing"
+        )
+        not_ready_reason = "requires-bound-current-observation" if historical_observations else "needs-more-observations-or-owner-review"
+        current_result = current_bound_observations[-1] if current_bound_observations else {}
+        current_admission = current_result.get("admission", {}) if isinstance(current_result.get("admission"), dict) else {}
+        current_result_identity = {
+            "status": "present" if current_result else "missing",
+            "evaluation_id": definition["id"],
+            "definition_revision": current_revision,
+            "criterion": current_result.get("criterion"),
+            "recorded_at": current_result.get("recorded_at"),
+            "baseline_id": current_admission.get("baseline_id"),
+            "target_identity_ref": current_admission.get("target_identity_ref"),
+        }
         summaries.append(
             {
                 "evaluation_id": definition["id"],
@@ -450,24 +483,38 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
                     "criterion_count": len(criteria),
                     "observed_criterion_count": len([item for item in criteria if item["observation_count"]]),
                     "observation_count": len(admitted_observations),
+                    "decision_observation_count": len(current_bound_observations),
+                    "historical_observation_count": len(historical_observations),
+                    "legacy_unbound_count": legacy_unbound_count,
+                    "stale_revision_count": stale_revision_count,
                     "minimum_observations": min_observations,
                 },
                 "criterion_status": criteria,
                 "contradictions": contradictions,
-                "latest_material_changes": admitted_observations[-3:],
+                "latest_material_changes": current_bound_observations[-3:],
                 "fresh_result_admission": {
                     "status": freshness_status,
-                    "bound_observation_count": len(bound_observations),
+                    "bound_observation_count": len(current_bound_observations),
+                    "historical_observation_count": len(historical_observations),
+                    "ignored_statuses": ["legacy-unbound", "stale-definition-revision", "rejected"],
+                    "current_result_identity": current_result_identity,
                     "admission_contract": definition.get("admission_contract", _evaluation_admission_contract()),
-                    "consumer_rule": "status, doctor, operating-decision, and proof-selection consumers must ignore rejected or stale observations",
+                    "consumer_rule": (
+                        "status, doctor, operating-decision, proof-selection, and closure consumers use only current "
+                        "definition-revision observations admitted with bound assignment, authority, baseline, and proof context"
+                    ),
                 },
                 "conclusion_readiness": {
                     "ready": conclusion_ready,
-                    "reason_code": "ready" if conclusion_ready else "needs-more-observations-or-owner-review",
+                    "reason_code": "ready" if conclusion_ready else not_ready_reason,
                 },
                 "owner": definition["decision_owner"],
                 "sinks": definition["report_sinks"],
-                "next_collection_action": "append-observation" if not conclusion_ready else "owner-review-or-conclude",
+                "next_collection_action": "owner-review-or-conclude"
+                if conclusion_ready
+                else "migrate-or-append-bound-observation"
+                if historical_observations
+                else "append-observation",
             }
         )
     return {"kind": EVALUATION_SUMMARY_KIND, "path": WORKSPACE_EVALUATIONS_PATH.as_posix(), "summaries": summaries}
@@ -548,7 +595,12 @@ def _run_evaluation_adapter(args: Any) -> int:
 
 
 def closure_authority(*, implementation_complete: bool, proof_complete: bool, evaluation: dict[str, Any] | None) -> dict[str, Any]:
-    valid_evaluation = bool(
+    summary_entries = []
+    if isinstance(evaluation, dict) and isinstance(evaluation.get("summaries"), list):
+        summary_entries = [item for item in evaluation["summaries"] if isinstance(item, dict)]
+    elif isinstance(evaluation, dict) and isinstance(evaluation.get("fresh_result_admission"), dict):
+        summary_entries = [evaluation]
+    valid_definition = bool(
         isinstance(evaluation, dict)
         and evaluation.get("evaluation_id")
         and evaluation.get("decision_owner")
@@ -558,6 +610,16 @@ def closure_authority(*, implementation_complete: bool, proof_complete: bool, ev
         and evaluation.get("collection_policy")
         and evaluation.get("conclusion_policy")
     )
+    valid_summary = bool(
+        summary_entries
+        and all(
+            _summary_entry.get("conclusion_readiness", {}).get("ready") is True
+            and _summary_entry.get("fresh_result_admission", {}).get("status") == "fresh-bound"
+            and _summary_entry.get("fresh_result_admission", {}).get("current_result_identity", {}).get("status") == "present"
+            for _summary_entry in summary_entries
+        )
+    )
+    valid_evaluation = valid_summary or valid_definition
     authorized = implementation_complete and proof_complete and (evaluation is None or valid_evaluation)
     blocked_reasons: list[str] = []
     if not implementation_complete:
@@ -570,6 +632,13 @@ def closure_authority(*, implementation_complete: bool, proof_complete: bool, ev
         "kind": EVALUATION_CLOSURE_AUTHORITY_KIND,
         "implementation_proof": "complete" if implementation_complete and proof_complete else "blocked",
         "longitudinal_evaluation": "valid" if valid_evaluation else "not-required" if evaluation is None else "invalid",
+        "evaluation_admission": "fresh-bound-ready"
+        if valid_summary
+        else "definition-only"
+        if valid_definition
+        else "not-required"
+        if evaluation is None
+        else "invalid",
         "issue_closure_authorized": authorized,
         "blocked_reasons": blocked_reasons,
         "rule": "Evaluation may carry future uncertainty only after present-tense implementation and proof are complete.",

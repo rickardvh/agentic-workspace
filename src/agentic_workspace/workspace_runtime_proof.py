@@ -26,6 +26,7 @@ from repo_verification_bootstrap.runtime_primitives import (
 
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor
+from agentic_workspace.authority_envelope import admit_mutation_boundary
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
 from agentic_workspace.current_work_context import resolve_current_work_context
 from agentic_workspace.proof_receipt_admission import (
@@ -700,17 +701,31 @@ def _proof_template_live_obligation_id(
     changed_paths: list[str],
     selected_command: dict[str, Any],
 ) -> str:
+    current_identity = _proof_template_current_identity(selected_command=selected_command)
     canonical = {
         "template_command": str(required_command).strip(),
         "changed_paths": [str(path).strip().replace("\\", "/") for path in changed_paths if str(path).strip()],
-        "lane_id": str(selected_command.get("lane") or selected_command.get("lane_id") or "").strip(),
-        "owner_ref": str(selected_command.get("owner_ref") or selected_command.get("owner") or "").strip(),
-        "assignment_target": str(selected_command.get("assignment_target") or "").strip(),
-        "assignment_context_key": str(selected_command.get("assignment_context_key") or "").strip(),
+        "current_identity": current_identity,
         "selector_parameters": _command_selector_parameters(required_command),
     }
     digest = hashlib.sha256(json.dumps(canonical, sort_keys=True, ensure_ascii=True).encode("utf-8")).hexdigest()
     return f"proof-template-obligation:{digest[:20]}"
+
+
+def _proof_template_current_identity(*, selected_command: dict[str, Any]) -> dict[str, str]:
+    return {
+        "lane_id": str(selected_command.get("lane") or selected_command.get("lane_id") or "").strip(),
+        "lane_revision": str(selected_command.get("lane_revision") or "").strip(),
+        "owner_ref": str(selected_command.get("owner_ref") or selected_command.get("owner") or "").strip(),
+        "owner_revision": str(selected_command.get("owner_revision") or "").strip(),
+        "assignment_target": str(selected_command.get("assignment_target") or "").strip(),
+        "assignment_context_key": str(selected_command.get("assignment_context_key") or "").strip(),
+        "assignment_revision": str(selected_command.get("assignment_revision") or "").strip(),
+        "selector_registry_revision": str(selected_command.get("selector_registry_revision") or "").strip(),
+        "template_revision": str(selected_command.get("template_revision") or "").strip(),
+        "evaluation_result_revision": str(selected_command.get("evaluation_result_revision") or "").strip(),
+        "mutation_baseline": str(selected_command.get("mutation_baseline") or "").strip(),
+    }
 
 
 def _proof_template_binding_admission(
@@ -728,20 +743,23 @@ def _proof_template_binding_admission(
     )
     expected_paths = [str(path).strip().replace("\\", "/") for path in changed_paths if str(path).strip()]
     expected_selectors = _command_selector_parameters(required_command)
+    current_identity = _proof_template_current_identity(selected_command=selected_command)
+    missing_identity = [key for key, value in current_identity.items() if not value]
     repair_route = "Rerun the selected proof template and record a receipt with the current proof_template_binding."
     base = {
         "kind": "agentic-workspace/proof-template-binding-admission/v1",
         "expected_live_obligation_id": expected_id,
+        "current_identity": current_identity,
         "repair_route": repair_route,
     }
+    if missing_identity:
+        return {**base, "status": "rejected", "reason": "missing-current-obligation-identity", "missing_identity": missing_identity}
     if not isinstance(binding, dict):
         return {**base, "status": "rejected", "reason": "missing-live-obligation-binding"}
     if binding.get("kind") != "agentic-workspace/proof-template-binding/v1":
         return {**base, "status": "rejected", "reason": "unsupported-template-binding-kind", "binding": binding}
     if str(binding.get("status") or "").strip() != "current":
         return {**base, "status": "rejected", "reason": "superseded-template-binding", "binding": binding}
-    if str(binding.get("live_obligation_id") or "").strip() != expected_id:
-        return {**base, "status": "rejected", "reason": "live-obligation-id-mismatch", "binding": binding}
     command_binding = binding.get("command", {}) if isinstance(binding.get("command"), dict) else {}
     if str(command_binding.get("template") or "").strip() != str(required_command).strip():
         return {**base, "status": "rejected", "reason": "template-command-mismatch", "binding": binding}
@@ -763,6 +781,12 @@ def _proof_template_binding_admission(
         return {**base, "status": "rejected", "reason": "assignment-target-mismatch", "binding": binding}
     if selected_context and str(assignment.get("context_key") or "").strip() != selected_context:
         return {**base, "status": "rejected", "reason": "assignment-context-mismatch", "binding": binding}
+    authority_revisions = binding.get("authority_revisions", {}) if isinstance(binding.get("authority_revisions"), dict) else {}
+    for key, current_value in current_identity.items():
+        if str(authority_revisions.get(key) or "").strip() != current_value:
+            return {**base, "status": "rejected", "reason": f"stale-{key}-template-binding", "binding": binding}
+    if str(binding.get("live_obligation_id") or "").strip() != expected_id:
+        return {**base, "status": "rejected", "reason": "live-obligation-id-mismatch", "binding": binding}
     artifact = binding.get("artifact_provenance", {}) if isinstance(binding.get("artifact_provenance"), dict) else {}
     if artifact.get("changed_paths") != expected_paths:
         return {**base, "status": "rejected", "reason": "artifact-provenance-mismatch", "binding": binding}
@@ -1653,6 +1677,16 @@ def _closeout_report_payload(
             option_blockers.setdefault(claim, []).append("applicable_intent_status")
     if architecture_closeout.get("required_claim"):
         option_blockers.setdefault("claim-work-complete", []).append("architecture_principles_status")
+    closeout_mutation_admission = admit_mutation_boundary(
+        boundary_id="closeout",
+        expected=_as_dict(closeout_trust.get("expected_mutation_baseline")),
+        current=_as_dict(closeout_trust.get("current_mutation_baseline") or closeout_trust.get("mutation_baseline")),
+        assignment_target_identity_ref=str(closeout_trust.get("assignment_target_identity_ref") or "").strip() or None,
+        allowed_paths=[str(path) for path in _list_payload(closeout_trust.get("allowed_paths"))] or None,
+    )
+    if closeout_mutation_admission.get("status") == "rejected":
+        option_blockers.setdefault("claim-work-complete", []).append("mutation_baseline_revalidation")
+        option_blockers.setdefault("close-parent-lane", []).append("mutation_baseline_revalidation")
     for option in completion_options:
         blockers_for_option = _dedupe([*(_list_payload(option.get("blocking_fields"))), *option_blockers.get(str(option.get("id")), [])])
         if proof_execution_recorded:
@@ -1679,6 +1713,14 @@ def _closeout_report_payload(
             applicable_intent_status=applicable_intent_status,
             durable_residue_action=_as_dict(closeout_trust.get("durable_residue_action")),
         )
+    if closeout_mutation_admission.get("status") == "rejected":
+        claim_authorization = _as_dict(completion_gate.get("claim_authorization"))
+        claim_authorization["blocked_claim_classes"] = _dedupe(
+            [*_list_payload(claim_authorization.get("blocked_claim_classes")), "mutation_baseline_revalidation"]
+        )
+        completion_gate["claim_authorization"] = claim_authorization
+        completion_gate["status"] = "blocked"
+        completion_gate["mutation_baseline_revalidation"] = closeout_mutation_admission
     task_posture_followthrough = _as_dict(completion_gate.get("task_posture_followthrough"))
     first_blocking_option = next((item for item in completion_options if item.get("allowed") is False and item.get("blocking_fields")), {})
     blockers = first_blocking_option.get("blocking_fields", [])
@@ -1843,6 +1885,7 @@ def _closeout_report_payload(
             "proof": validation_proof,
             "proof_achieved_now": proof_achieved_now,
             "proof_execution": proof_execution,
+            "mutation_baseline_revalidation": closeout_mutation_admission,
             "proof_confidence": closeout_trust.get("proof_confidence", {}),
             "behavior_preservation": behavior_preservation,
         },
