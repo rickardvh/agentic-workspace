@@ -178,7 +178,9 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     release_text = (WORKSPACE_ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
 
     assert '"v[0-9]+.[0-9]+.[0-9]+"' in release_text
-    assert "must match every package version" in release_text
+    assert "Verify tag targets coordinated release commit" in release_text
+    assert 'coordinated_release.py verify --tag "${RELEASE_TAG}"' in release_text
+    assert "must point at a commit reachable from origin/master" in release_text
     assert ".github/release-ownership.json" in release_text
     assert "uv build --wheel --sdist --out-dir dist" in release_text
     assert "uv build --wheel --sdist --out-dir dist packages/memory" in release_text
@@ -187,6 +189,8 @@ def test_release_workflow_publishes_tagged_root_package_artifacts() -> None:
     assert "scripts/release/patch_workspace_release_wheel.py" in release_text
     assert "test_release_root_wheel_installs_workspace_stack_from_same_release_assets" in release_text
     assert "agentic-workspace-release-manifest.json" in release_text
+    assert "source_commit" in release_text
+    assert "body_path: .release/releases/${{ env.RELEASE_TAG }}.md" in release_text
     assert "SHA256SUMS" in release_text
     assert "softprops/action-gh-release@v3.0.0" in release_text
 
