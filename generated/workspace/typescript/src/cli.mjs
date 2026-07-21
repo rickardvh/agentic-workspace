@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["autopilot", "checkpoint", "config", "defaults", "doctor", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["autopilot.run", "checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
+const supportedCommands = new Set(["autopilot", "checkpoint", "config", "defaults", "doctor", "evaluation", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
+const nativeOperationIds = new Set(["autopilot.run", "checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.observe", "evaluation.register", "evaluation.status", "evaluation.transition", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -2637,6 +2637,356 @@ const commandDefinitions = [
     "operation_ref": {
       "id": "checkpoint.write",
       "path": "operations/checkpoint.write.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Manage local-first workspace evaluations.",
+      "name": "evaluation",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Repository path.",
+          "name": "target"
+        },
+        {
+          "choices": [
+            "text",
+            "json"
+          ],
+          "default": "text",
+          "flags": [
+            "--format"
+          ],
+          "help": "Output format.",
+          "name": "format"
+        }
+      ],
+      "subcommand_dest": "evaluation_command",
+      "subcommands": [
+        {
+          "help": "Register or update one evaluation definition.",
+          "name": "register",
+          "operation_ref": {
+            "id": "evaluation.register",
+            "path": "operations/evaluation.register.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--question"
+              ],
+              "name": "question",
+              "required": true
+            },
+            {
+              "default": "{\"type\":\"workspace-task\"}",
+              "flags": [
+                "--subject"
+              ],
+              "name": "subject"
+            },
+            {
+              "flags": [
+                "--criteria"
+              ],
+              "help": "JSON object keyed by criterion id.",
+              "name": "criteria",
+              "required": true
+            },
+            {
+              "flags": [
+                "--decision-owner"
+              ],
+              "help": "JSON object with id and class.",
+              "name": "decision_owner",
+              "required": true
+            },
+            {
+              "flags": [
+                "--evidence-sources"
+              ],
+              "help": "Comma-separated evidence source ids.",
+              "name": "evidence_sources",
+              "required": true
+            },
+            {
+              "flags": [
+                "--report-sinks"
+              ],
+              "help": "Comma-separated report sink ids.",
+              "name": "report_sinks",
+              "required": true
+            },
+            {
+              "default": "{}",
+              "flags": [
+                "--selectors"
+              ],
+              "name": "selectors"
+            },
+            {
+              "default": "{}",
+              "flags": [
+                "--collection-policy"
+              ],
+              "name": "collection_policy"
+            },
+            {
+              "default": "{}",
+              "flags": [
+                "--conclusion-policy"
+              ],
+              "name": "conclusion_policy"
+            },
+            {
+              "default": "{}",
+              "flags": [
+                "--action-policy"
+              ],
+              "name": "action_policy"
+            }
+          ]
+        },
+        {
+          "help": "Append one local observation.",
+          "name": "observe",
+          "operation_ref": {
+            "id": "evaluation.observe",
+            "path": "operations/evaluation.observe.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--criterion"
+              ],
+              "name": "criterion",
+              "required": true
+            },
+            {
+              "choices": [
+                "supports",
+                "contradicts",
+                "mixed",
+                "not-applicable",
+                "unknown"
+              ],
+              "flags": [
+                "--result"
+              ],
+              "name": "result",
+              "required": true
+            },
+            {
+              "default": "",
+              "flags": [
+                "--evidence-refs"
+              ],
+              "name": "evidence_refs"
+            },
+            {
+              "choices": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "default": "medium",
+              "flags": [
+                "--confidence"
+              ],
+              "name": "confidence"
+            },
+            {
+              "choices": [
+                "low",
+                "medium",
+                "high"
+              ],
+              "default": "medium",
+              "flags": [
+                "--burden"
+              ],
+              "name": "burden"
+            },
+            {
+              "default": "{}",
+              "flags": [
+                "--context"
+              ],
+              "name": "context"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--finding"
+              ],
+              "name": "finding"
+            },
+            {
+              "default": "",
+              "flags": [
+                "--recommended-action"
+              ],
+              "name": "recommended_action"
+            }
+          ]
+        },
+        {
+          "help": "Inspect derived evaluation status.",
+          "name": "status",
+          "operation_ref": {
+            "id": "evaluation.status",
+            "path": "operations/evaluation.status.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id"
+            }
+          ]
+        },
+        {
+          "help": "Move an evaluation through a validated lifecycle transition.",
+          "name": "transition",
+          "operation_ref": {
+            "id": "evaluation.transition",
+            "path": "operations/evaluation.transition.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "choices": [
+                "collecting",
+                "enough-signal",
+                "satisfied",
+                "contradicted",
+                "inconclusive",
+                "paused",
+                "superseded",
+                "archived"
+              ],
+              "flags": [
+                "--lifecycle"
+              ],
+              "name": "lifecycle",
+              "required": true
+            },
+            {
+              "default": "",
+              "flags": [
+                "--reason"
+              ],
+              "name": "reason"
+            }
+          ]
+        }
+      ],
+      "subcommands_required": true
+    },
+    "name": "evaluation",
+    "operation_ref": {
+      "id": "evaluation.register",
+      "path": "operations/evaluation.register.json"
     }
   },
   {

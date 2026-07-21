@@ -477,6 +477,26 @@
             "function": "_run_checkpoint_write_adapter"
           },
           {
+            "operation_id": "evaluation.transition",
+            "import_module": "agentic_workspace.evaluation",
+            "function": "_run_evaluation_adapter"
+          },
+          {
+            "operation_id": "evaluation.status",
+            "import_module": "agentic_workspace.evaluation",
+            "function": "_run_evaluation_adapter"
+          },
+          {
+            "operation_id": "evaluation.observe",
+            "import_module": "agentic_workspace.evaluation",
+            "function": "_run_evaluation_adapter"
+          },
+          {
+            "operation_id": "evaluation.register",
+            "import_module": "agentic_workspace.evaluation",
+            "function": "_run_evaluation_adapter"
+          },
+          {
             "operation_id": "final-response.admit",
             "import_module": "agentic_workspace.workspace_runtime_primitives",
             "function": "_run_final_response_admit_adapter"
@@ -4297,6 +4317,408 @@
             "runtime_owned": [
               "local-only checkpoint write",
               "target root validation",
+              "output emission"
+            ]
+          }
+        },
+        {
+          "adapter_id": "evaluation.lifecycle.cli",
+          "status": "generated",
+          "command": {
+            "name": "evaluation",
+            "manifest_ref": "cli_commands.json"
+          },
+          "interface": {
+            "name": "evaluation",
+            "help": "Manage local-first workspace evaluations.",
+            "options": [
+              {
+                "name": "target",
+                "flags": [
+                  "--target"
+                ],
+                "help": "Repository path."
+              },
+              {
+                "name": "format",
+                "flags": [
+                  "--format"
+                ],
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "help": "Output format."
+              }
+            ],
+            "subcommand_dest": "evaluation_command",
+            "subcommands_required": true,
+            "subcommands": [
+              {
+                "name": "register",
+                "help": "Register or update one evaluation definition.",
+                "operation_ref": {
+                  "id": "evaluation.register",
+                  "path": "operations/evaluation.register.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  },
+                  {
+                    "name": "evaluation_id",
+                    "flags": [
+                      "--evaluation-id"
+                    ],
+                    "required": true
+                  },
+                  {
+                    "name": "question",
+                    "flags": [
+                      "--question"
+                    ],
+                    "required": true
+                  },
+                  {
+                    "name": "subject",
+                    "flags": [
+                      "--subject"
+                    ],
+                    "default": "{\"type\":\"workspace-task\"}"
+                  },
+                  {
+                    "name": "criteria",
+                    "flags": [
+                      "--criteria"
+                    ],
+                    "required": true,
+                    "help": "JSON object keyed by criterion id."
+                  },
+                  {
+                    "name": "decision_owner",
+                    "flags": [
+                      "--decision-owner"
+                    ],
+                    "required": true,
+                    "help": "JSON object with id and class."
+                  },
+                  {
+                    "name": "evidence_sources",
+                    "flags": [
+                      "--evidence-sources"
+                    ],
+                    "required": true,
+                    "help": "Comma-separated evidence source ids."
+                  },
+                  {
+                    "name": "report_sinks",
+                    "flags": [
+                      "--report-sinks"
+                    ],
+                    "required": true,
+                    "help": "Comma-separated report sink ids."
+                  },
+                  {
+                    "name": "selectors",
+                    "flags": [
+                      "--selectors"
+                    ],
+                    "default": "{}"
+                  },
+                  {
+                    "name": "collection_policy",
+                    "flags": [
+                      "--collection-policy"
+                    ],
+                    "default": "{}"
+                  },
+                  {
+                    "name": "conclusion_policy",
+                    "flags": [
+                      "--conclusion-policy"
+                    ],
+                    "default": "{}"
+                  },
+                  {
+                    "name": "action_policy",
+                    "flags": [
+                      "--action-policy"
+                    ],
+                    "default": "{}"
+                  }
+                ]
+              },
+              {
+                "name": "observe",
+                "help": "Append one local observation.",
+                "operation_ref": {
+                  "id": "evaluation.observe",
+                  "path": "operations/evaluation.observe.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  },
+                  {
+                    "name": "evaluation_id",
+                    "flags": [
+                      "--evaluation-id"
+                    ],
+                    "required": true
+                  },
+                  {
+                    "name": "criterion",
+                    "flags": [
+                      "--criterion"
+                    ],
+                    "required": true
+                  },
+                  {
+                    "name": "result",
+                    "flags": [
+                      "--result"
+                    ],
+                    "required": true,
+                    "choices": [
+                      "supports",
+                      "contradicts",
+                      "mixed",
+                      "not-applicable",
+                      "unknown"
+                    ]
+                  },
+                  {
+                    "name": "evidence_refs",
+                    "flags": [
+                      "--evidence-refs"
+                    ],
+                    "default": ""
+                  },
+                  {
+                    "name": "confidence",
+                    "flags": [
+                      "--confidence"
+                    ],
+                    "choices": [
+                      "low",
+                      "medium",
+                      "high"
+                    ],
+                    "default": "medium"
+                  },
+                  {
+                    "name": "burden",
+                    "flags": [
+                      "--burden"
+                    ],
+                    "choices": [
+                      "low",
+                      "medium",
+                      "high"
+                    ],
+                    "default": "medium"
+                  },
+                  {
+                    "name": "context",
+                    "flags": [
+                      "--context"
+                    ],
+                    "default": "{}"
+                  },
+                  {
+                    "name": "finding",
+                    "flags": [
+                      "--finding"
+                    ],
+                    "default": ""
+                  },
+                  {
+                    "name": "recommended_action",
+                    "flags": [
+                      "--recommended-action"
+                    ],
+                    "default": ""
+                  }
+                ]
+              },
+              {
+                "name": "status",
+                "help": "Inspect derived evaluation status.",
+                "operation_ref": {
+                  "id": "evaluation.status",
+                  "path": "operations/evaluation.status.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  },
+                  {
+                    "name": "evaluation_id",
+                    "flags": [
+                      "--evaluation-id"
+                    ]
+                  }
+                ]
+              },
+              {
+                "name": "transition",
+                "help": "Move an evaluation through a validated lifecycle transition.",
+                "operation_ref": {
+                  "id": "evaluation.transition",
+                  "path": "operations/evaluation.transition.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  },
+                  {
+                    "name": "evaluation_id",
+                    "flags": [
+                      "--evaluation-id"
+                    ],
+                    "required": true
+                  },
+                  {
+                    "name": "lifecycle",
+                    "flags": [
+                      "--lifecycle"
+                    ],
+                    "required": true,
+                    "choices": [
+                      "collecting",
+                      "enough-signal",
+                      "satisfied",
+                      "contradicted",
+                      "inconclusive",
+                      "paused",
+                      "superseded",
+                      "archived"
+                    ]
+                  },
+                  {
+                    "name": "reason",
+                    "flags": [
+                      "--reason"
+                    ],
+                    "default": ""
+                  }
+                ]
+              }
+            ]
+          },
+          "operation_ref": {
+            "id": "evaluation.register",
+            "path": "operations/evaluation.register.json"
+          },
+          "runtime_binding": {
+            "kind": "operation-primitive-sequence",
+            "primitive_refs": [
+              "workspace.target-root.resolve",
+              "evaluation.definition.register",
+              "output.emit"
+            ]
+          },
+          "schemas": {
+            "input": [],
+            "output": [
+              "evaluation_definition.schema.json",
+              "evaluation_observation.schema.json",
+              "evaluation_summary.schema.json"
+            ]
+          },
+          "effect_hints": {
+            "read_only": false,
+            "destructive": false,
+            "idempotent": true,
+            "writes_repo_state": true,
+            "requires_preflight_gate": false
+          },
+          "conformance_refs": [
+            "evaluation.lifecycle.process"
+          ],
+          "projection_boundary": {
+            "universal": [
+              "command identity",
+              "option semantics",
+              "operation reference",
+              "effect hints",
+              "runtime primitive reference",
+              "conformance refs"
+            ],
+            "target_specific": [
+              "parser library",
+              "help text layout",
+              "package entrypoint wiring"
+            ],
+            "runtime_owned": [
+              "evaluation definition validation",
+              "local observation append policy",
+              "derived status projection",
               "output emission"
             ]
           }
