@@ -7846,7 +7846,7 @@ def test_implement_required_best_fit_blocks_unknown_current_target(tmp_path: Pat
     posture = payload["execution_posture"]
     decision = payload["delegation_decision"]
     assert posture["assignment_policy"]["status"] == "blocked-unknown-current-target"
-    assert posture["assignment_decision"]["decision"] == "blocked"
+    assert posture["assignment_decision"]["decision"] == "no-safe-route"
     assert posture["assignment_gate"]["implementation_allowed"] is False
     assert posture["assignment_gate"]["required_next_action"] == "resolve-current-target-profile"
     assert posture["implementation_allowed"] is False
@@ -7925,7 +7925,7 @@ def test_implement_required_best_fit_requires_assigned_handoff(tmp_path: Path, c
     [
         ("disabled", False, "disabled", "blocked-transport-disabled"),
         ("allowed", True, "available", "required"),
-        ("required-when-no-automatic-method", True, "available", "required"),
+        ("required-when-no-automatic-method", True, "required", "required"),
     ],
 )
 def test_implement_required_best_fit_manual_transport_policy_states(
@@ -7980,6 +7980,7 @@ def test_implement_required_best_fit_manual_transport_policy_states(
     )
 
     payload = json.loads(capsys.readouterr().out)
+    decision = payload["delegation_decision"]
     lifecycle = payload["execution_posture"]["delegated_run_lifecycle"]
     assert lifecycle["manual_transport"]["policy"] == manual_transport_policy
     assert lifecycle["manual_transport"]["export_allowed"] is expected_allowed
@@ -7991,12 +7992,117 @@ def test_implement_required_best_fit_manual_transport_policy_states(
     assert handoff["status"] == handoff_status
     if not expected_allowed:
         assert lifecycle["status"] == "blocked"
-    assert lifecycle["admission_gate"] == {
-        "status": "closed-until-reviewed",
-        "identity_fields": ["assignment.target", "assignment.required_next_action", "manual_transport.policy"],
-        "required_evidence": ["returned summary", "changed paths or no-change statement", "proof result"],
-        "rule": "Returned work is descriptive until the assignment identity, scope, proof, and stop-condition evidence match.",
+        assert decision["handoff_command"] is None
+        assert decision["delegation_next_step"]["status"] == "blocked-transport-disabled"
+        assert decision["delegation_next_step"]["command"] is None
+        assert decision["transport_blocked_action"]["status"] == "blocked-transport-disabled"
+    else:
+        assert decision["handoff_command"] == "agentic-workspace planning handoff --target . --format json"
+    admission_gate = lifecycle["admission_gate"]
+    assert admission_gate["status"] == "closed-until-reviewed"
+    assert admission_gate["operation"]["operation_id"] == "delegated-return.admit"
+    assert admission_gate["operation"]["assignment_identity"]["revision"].startswith("sha256:")
+    assert admission_gate["identity_fields"] == [
+        "assignment.target",
+        "assignment.required_next_action",
+        "manual_transport.policy",
+        "assignment.revision",
+    ]
+    assert "stale-assignment-revision" in admission_gate["operation"]["rejects"]
+
+
+def test_delegated_return_admission_rejects_stale_and_admits_current_assignment() -> None:
+    assignment_gate = {
+        "status": "handoff-required",
+        "assignment_policy": "required-best-fit",
+        "selected_target": "planner",
+        "required_next_action": "prepare-assigned-handoff",
     }
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = {
+        "decision": "assignment-handoff-required",
+        "delegation_next_step": {"execution_methods": ["manual"]},
+    }
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+
+    stale = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={"assignment_revision": "sha256:stale", "target": "planner", "proof": {"result": "passed"}},
+    )
+    assert stale["admitted"] is False
+    assert stale["failures"][0]["reason"] == "stale-assignment-revision"
+
+    admitted = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={
+            "assignment_revision": identity["revision"],
+            "target": "planner",
+            "proof": {"result": "passed"},
+            "allowed_paths": ["src/feature.py"],
+            "changed_paths": ["src/feature.py"],
+        },
+    )
+    assert admitted["admitted"] is True
+    assert admitted["status"] == "admitted"
+
+
+def test_delegated_return_admission_rejects_disabled_transport() -> None:
+    assignment_gate = {
+        "status": "handoff-required",
+        "assignment_policy": "required-best-fit",
+        "selected_target": "planner",
+        "required_next_action": "prepare-assigned-handoff",
+    }
+    assignment_policy = {"manual_transport_policy": {"value": "disabled"}}
+    delegation_decision = {
+        "decision": "assignment-handoff-required",
+        "delegation_next_step": {"execution_methods": ["manual"]},
+    }
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+
+    result = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={"assignment_revision": identity["revision"], "target": "planner", "proof": {"result": "passed"}},
+    )
+
+    assert result["admitted"] is False
+    assert result["failures"][0]["reason"] == "manual-transport-disabled"
+
+
+def test_required_when_no_automatic_method_distinguishes_automatic_execution() -> None:
+    assignment_policy = {"manual_transport_policy": {"value": "required-when-no-automatic-method"}}
+
+    manual_only = workspace_runtime_core._manual_transport_admission_payload(
+        assignment_policy=assignment_policy,
+        target_execution_methods=["manual"],
+        handoff_required=True,
+    )
+    automatic_available = workspace_runtime_core._manual_transport_admission_payload(
+        assignment_policy=assignment_policy,
+        target_execution_methods=["cli"],
+        handoff_required=True,
+    )
+
+    assert manual_only["required"] is True
+    assert manual_only["state"] == "required"
+    assert manual_only["automatic_method_available"] is False
+    assert automatic_available["required"] is False
+    assert automatic_available["state"] == "available-automatic-method-preferred"
+    assert automatic_available["automatic_method_available"] is True
 
 
 def test_implement_auto_delegation_exposes_bounded_slice_handoff(tmp_path: Path, capsys) -> None:

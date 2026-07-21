@@ -24,6 +24,31 @@
       "required": true
     },
     {
+      "name": "scope_class",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "operation",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "predecessor_id",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "authority",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "confidence",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "outcome",
       "source": "cli-option",
       "required": true
@@ -96,6 +121,8 @@
   ],
   "guards": [
     "Required outcome fields must be present and enum-valid.",
+    "New admissions must include independent scope context.",
+    "Lifecycle transitions must reference an existing predecessor id.",
     "Do not treat local outcome records as checked-in repo policy."
   ],
   "proof": [

@@ -3888,6 +3888,56 @@ const commandDefinitions = [
           "required": true
         },
         {
+          "flags": [
+            "--scope-class"
+          ],
+          "help": "Independent bounded scope class for this delegated run.",
+          "name": "scope_class",
+          "required": true
+        },
+        {
+          "choices": [
+            "submit",
+            "correct-or-dispute",
+            "supersede",
+            "prune-or-compact"
+          ],
+          "default": "submit",
+          "flags": [
+            "--operation"
+          ],
+          "help": "Evidence lifecycle operation.",
+          "name": "operation"
+        },
+        {
+          "flags": [
+            "--predecessor-id"
+          ],
+          "help": "Existing record id required for lifecycle transition operations.",
+          "name": "predecessor_id"
+        },
+        {
+          "default": "local-outcome-ledger",
+          "flags": [
+            "--authority"
+          ],
+          "help": "Authority class for the admitted evidence.",
+          "name": "authority"
+        },
+        {
+          "choices": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "default": "medium",
+          "flags": [
+            "--confidence"
+          ],
+          "help": "Confidence classification for the admitted evidence.",
+          "name": "confidence"
+        },
+        {
           "choices": [
             "success",
             "mixed",
