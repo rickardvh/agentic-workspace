@@ -4773,6 +4773,56 @@
             "required": true
           },
           {
+            "flags": [
+              "--scope-class"
+            ],
+            "help": "Independent bounded scope class for this delegated run.",
+            "name": "scope_class",
+            "required": true
+          },
+          {
+            "choices": [
+              "submit",
+              "correct-or-dispute",
+              "supersede",
+              "prune-or-compact"
+            ],
+            "default": "submit",
+            "flags": [
+              "--operation"
+            ],
+            "help": "Evidence lifecycle operation.",
+            "name": "operation"
+          },
+          {
+            "flags": [
+              "--predecessor-id"
+            ],
+            "help": "Existing record id required for lifecycle transition operations.",
+            "name": "predecessor_id"
+          },
+          {
+            "default": "local-outcome-ledger",
+            "flags": [
+              "--authority"
+            ],
+            "help": "Authority class for the admitted evidence.",
+            "name": "authority"
+          },
+          {
+            "choices": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "default": "medium",
+            "flags": [
+              "--confidence"
+            ],
+            "help": "Confidence classification for the admitted evidence.",
+            "name": "confidence"
+          },
+          {
             "choices": [
               "success",
               "mixed",
@@ -6839,6 +6889,31 @@
           "arg": "task_class",
           "default": null,
           "name": "task_class"
+        },
+        {
+          "arg": "scope_class",
+          "default": null,
+          "name": "scope_class"
+        },
+        {
+          "arg": "operation",
+          "default": "submit",
+          "name": "operation"
+        },
+        {
+          "arg": "predecessor_id",
+          "default": null,
+          "name": "predecessor_id"
+        },
+        {
+          "arg": "authority",
+          "default": "local-outcome-ledger",
+          "name": "authority"
+        },
+        {
+          "arg": "confidence",
+          "default": "medium",
+          "name": "confidence"
         }
       ],
       "module_file": "primitives.operation_executor",

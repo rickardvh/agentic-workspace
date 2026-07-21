@@ -4,10 +4,18 @@
   "description": "External client input contract for delegation-outcome.append.",
   "x-agentic-workspace-doc-role": "contract-reference",
   "type": "object",
-  "required": ["delegation_target", "task_class", "outcome"],
+  "required": ["delegation_target", "task_class", "scope_class", "outcome"],
   "properties": {
     "delegation_target": {"type": "string", "minLength": 1, "description": "Delegation target alias."},
     "task_class": {"type": "string", "minLength": 1, "description": "Bounded task classification."},
+    "scope_class": {"type": "string", "minLength": 1, "description": "Independent bounded scope classification."},
+    "operation": {
+      "enum": ["submit", "correct-or-dispute", "supersede", "prune-or-compact"],
+      "description": "Evidence lifecycle operation."
+    },
+    "predecessor_id": {"type": "string", "description": "Existing record id for lifecycle transition operations."},
+    "authority": {"type": "string", "description": "Authority class for the admitted evidence."},
+    "confidence": {"enum": ["low", "medium", "high"], "description": "Confidence classification for the admitted evidence."},
     "outcome": {"enum": ["success", "mixed", "failed"], "description": "Observed delegation outcome."},
     "handoff_sufficiency": {"enum": ["sufficient", "borderline", "insufficient"], "description": "Handoff sufficiency classification."},
     "review_burden": {"enum": ["light", "normal", "high"], "description": "Review burden classification."},

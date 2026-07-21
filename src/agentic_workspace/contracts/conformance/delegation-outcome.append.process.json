@@ -13,6 +13,8 @@
       "test-target",
       "--task-class",
       "mechanical-follow-through",
+      "--scope-class",
+      "mechanical-follow-through",
       "--outcome",
       "success",
       "--format",
