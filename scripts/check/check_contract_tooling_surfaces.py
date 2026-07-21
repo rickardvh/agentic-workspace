@@ -247,6 +247,7 @@ def _sample_delegation_outcomes_payload() -> dict[str, object]:
                 "recorded_at": "2026-04-17",
                 "delegation_target": "mini_impl",
                 "task_class": "bounded-docs",
+                "scope_class": "bounded-docs",
                 "outcome": "success",
                 "handoff_sufficiency": "sufficient",
                 "review_burden": "light",

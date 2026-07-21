@@ -13,6 +13,8 @@
   },
   "guards": [
     "Required outcome fields must be present and enum-valid.",
+    "New admissions must include independent scope context.",
+    "Lifecycle transitions must reference an existing predecessor id.",
     "Do not treat local outcome records as checked-in repo policy."
   ],
   "id": "delegation-outcome.append",
@@ -30,6 +32,31 @@
     {
       "name": "task_class",
       "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "scope_class",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "operation",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "predecessor_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "authority",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "confidence",
+      "required": false,
       "source": "cli-option"
     },
     {

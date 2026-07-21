@@ -1695,6 +1695,8 @@ def test_note_delegation_outcome_command_writes_local_artifact(tmp_path: Path, c
                 "gpt_5_4_mini",
                 "--task-class",
                 "bounded-docs",
+                "--scope-class",
+                "docs-refresh",
                 "--outcome",
                 "success",
                 "--handoff-sufficiency",
@@ -1714,6 +1716,35 @@ def test_note_delegation_outcome_command_writes_local_artifact(tmp_path: Path, c
     artifact = json.loads((target / ".agentic-workspace/delegation-outcomes.json").read_text(encoding="utf-8"))
     assert artifact["kind"] == "agentic-workspace/delegation-outcomes/v1"
     assert artifact["records"][0]["delegation_target"] == "gpt_5_4_mini"
+    assert artifact["records"][0]["scope_class"] == "docs-refresh"
+    assert artifact["records"][0]["operation"] == "submit"
+    assert artifact["records"][0]["record_id"]
+
+
+def test_note_delegation_outcome_rejects_duplicate_without_lifecycle_transition(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    command = [
+        "note-delegation-outcome",
+        "--target",
+        str(target),
+        "--delegation-target",
+        "gpt_5_4_mini",
+        "--task-class",
+        "bounded-docs",
+        "--scope-class",
+        "docs-refresh",
+        "--outcome",
+        "success",
+        "--format",
+        "json",
+    ]
+
+    assert cli.main(command) == 0
+    with pytest.raises(SystemExit):
+        cli.main(command)
+    assert "duplicate evidence for target/task/scope/date" in capsys.readouterr().err
 
 
 def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, capsys) -> None:
@@ -1798,7 +1829,7 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
     assert evidence["record_count"] == 3
     assert evidence["normalized_records"][0]["target"] == "gpt_5_4_mini"
     assert evidence["normalized_records"][0]["admission_state"] == "accepted-normalized"
-    assert evidence["normalized_records"][0]["routing_relevance"] == "task-class-bound"
+    assert evidence["normalized_records"][0]["routing_relevance"] == "task-and-scope-bound"
     assert evidence["suitability"] == [
         {
             "target": "gpt_5_4_mini",
@@ -1813,7 +1844,7 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
             "supporting_record_ids": ["gpt_5_4_mini:bounded-docs:bounded-docs:2026-04-17:0"],
             "supported_task_classes": ["bounded-docs"],
             "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
-            "raw_history_retention": "bounded-local-ledger",
+            "raw_history_retention": "bounded-local-ledger-with-lifecycle-transitions",
         },
         {
             "target": "gpt_5_4_mini",
@@ -1831,7 +1862,7 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
             ],
             "supported_task_classes": ["narrow-tests"],
             "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
-            "raw_history_retention": "bounded-local-ledger",
+            "raw_history_retention": "bounded-local-ledger-with-lifecycle-transitions",
         },
     ]
     assert evidence["lifecycle"]["public_operations"][0]["operation"] == "submit"
@@ -1866,6 +1897,7 @@ def test_target_evidence_suitability_is_context_isolated(tmp_path: Path, capsys)
                         "recorded_at": "2026-04-17",
                         "delegation_target": "fast_worker",
                         "task_class": "mechanical-follow-through",
+                        "scope_class": "narrow-code-change",
                         "outcome": "success",
                         "handoff_sufficiency": "sufficient",
                         "review_burden": "light",
@@ -1874,7 +1906,8 @@ def test_target_evidence_suitability_is_context_isolated(tmp_path: Path, capsys)
                     {
                         "recorded_at": "2026-04-18",
                         "delegation_target": "fast_worker",
-                        "task_class": "boundary-shaping",
+                        "task_class": "mechanical-follow-through",
+                        "scope_class": "broad-design-change",
                         "outcome": "failed",
                         "handoff_sufficiency": "insufficient",
                         "review_burden": "high",
@@ -1890,13 +1923,52 @@ def test_target_evidence_suitability_is_context_isolated(tmp_path: Path, capsys)
 
     payload = json.loads(capsys.readouterr().out)
     suitability = payload["mixed_agent"]["target_evidence"]["suitability"]
-    mechanical = next(item for item in suitability if item["context_key"] == "mechanical-follow-through::mechanical-follow-through")
-    boundary = next(item for item in suitability if item["context_key"] == "boundary-shaping::boundary-shaping")
-    assert mechanical["route_effect"] == "preferred-for-matching-task-class"
-    assert mechanical["average_signal"] == 1.5
-    assert boundary["route_effect"] == "strong-review-required"
-    assert boundary["average_signal"] == -2.0
-    assert mechanical["supporting_record_ids"] != boundary["supporting_record_ids"]
+    narrow = next(item for item in suitability if item["context_key"] == "mechanical-follow-through::narrow-code-change")
+    broad = next(item for item in suitability if item["context_key"] == "mechanical-follow-through::broad-design-change")
+    assert narrow["route_effect"] == "preferred-for-matching-task-class"
+    assert narrow["average_signal"] == 1.5
+    assert broad["route_effect"] == "strong-review-required"
+    assert broad["average_signal"] == -2.0
+    assert narrow["supporting_record_ids"] != broad["supporting_record_ids"]
+
+
+def test_target_evidence_lifecycle_supersession_replaces_current_signal() -> None:
+    from agentic_workspace.config import DelegationOutcomeRecord
+    from agentic_workspace.target_evidence import target_evidence_posture
+
+    records = [
+        DelegationOutcomeRecord(
+            recorded_at="2026-04-17",
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="narrow-code-change",
+            outcome="failed",
+            handoff_sufficiency="insufficient",
+            review_burden="high",
+            escalation_required=True,
+            record_id="fast_worker:mechanical-follow-through:narrow-code-change:2026-04-17:0",
+        ),
+        DelegationOutcomeRecord(
+            recorded_at="2026-04-18",
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="narrow-code-change",
+            outcome="success",
+            handoff_sufficiency="sufficient",
+            review_burden="light",
+            escalation_required=False,
+            operation="supersede",
+            record_id="fast_worker:mechanical-follow-through:narrow-code-change:2026-04-18:1",
+            predecessor_id="fast_worker:mechanical-follow-through:narrow-code-change:2026-04-17:0",
+        ),
+    ]
+
+    posture = target_evidence_posture(target_root=None, profiles=(), records=records)
+
+    scoped = posture["suitability"][0]
+    assert scoped["record_count"] == 1
+    assert scoped["average_signal"] == 1.5
+    assert scoped["supporting_record_ids"] == ["fast_worker:mechanical-follow-through:narrow-code-change:2026-04-18:1"]
 
 
 def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evidence(tmp_path: Path) -> None:
@@ -1968,6 +2040,35 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
     assert current["evidence_contexts"] == []
     unsafe = next(item for item in decision["candidate_scores"] if item["target"] == "unsafe_worker")
     assert unsafe["eligible"] is False
+
+
+def test_assignment_decision_fails_closed_when_no_candidate_is_eligible() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "local-preferred"},
+            "current_target": {"value": "current_worker"},
+            "binding": {"enforceable": True, "claim_boundary": "assignment policy resolved"},
+        },
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {"task_class": "mechanical-follow-through", "scope_class": "narrow-code-change"},
+            "profile_recommendations": [
+                {
+                    "name": "current_worker",
+                    "recommendation": "recommended",
+                    "score": 99,
+                    "capability_mismatch": True,
+                    "required_action": "escalate-before-execution",
+                }
+            ],
+        },
+        target_evidence={"status": "present", "record_count": 0, "suitability": []},
+    )
+
+    assert decision["decision"] == "no-safe-route"
+    assert decision["selected_target"] is None
 
 
 def test_repo_config_cli_invoke_sets_repo_owned_invocation_policy(tmp_path: Path, capsys) -> None:

@@ -46122,10 +46122,15 @@ def _append_workspace_operation_delegation_outcome(values: dict[str, Any], _argu
         target_root=values["target_root"],
         delegation_target=str(values.get("delegation_target") or ""),
         task_class=str(values.get("task_class") or ""),
+        scope_class=str(values.get("scope_class") or ""),
         outcome=str(values.get("outcome") or ""),
         handoff_sufficiency=str(values.get("handoff_sufficiency") or ""),
         review_burden=str(values.get("review_burden") or ""),
         escalation_required=bool(values.get("escalation_required", False)),
+        operation=str(values.get("operation") or "submit"),
+        predecessor_id=str(values.get("predecessor_id") or ""),
+        authority=str(values.get("authority") or "local-outcome-ledger"),
+        confidence=str(values.get("confidence") or "medium"),
     )
 
 
@@ -50091,20 +50096,54 @@ def _record_delegation_outcome(
     target_root: Path,
     delegation_target: str,
     task_class: str,
+    scope_class: str,
     outcome: str,
     handoff_sufficiency: str,
     review_burden: str,
     escalation_required: bool,
+    operation: str = "submit",
+    predecessor_id: str = "",
+    authority: str = "local-outcome-ledger",
+    confidence: str = "medium",
 ) -> dict[str, Any]:
     path, payload, records = config_lib.load_delegation_outcomes(target_root=target_root)
+    normalized_target = delegation_target.strip()
+    normalized_task = task_class.strip()
+    normalized_scope = scope_class.strip()
+    normalized_operation = operation.strip() or "submit"
+    normalized_predecessor = predecessor_id.strip()
+    if not normalized_scope:
+        raise WorkspaceUsageError("note-delegation-outcome requires --scope-class to keep evidence scoped independently from task class.")
+    existing_ids = {
+        existing.record_id or f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
+        for index, existing in enumerate(records)
+    }
+    if normalized_operation != "submit" and normalized_predecessor not in existing_ids:
+        raise WorkspaceUsageError("note-delegation-outcome transition operations require --predecessor-id for an existing record.")
+    today = date.today().isoformat()
+    duplicate_key = (normalized_target, normalized_task, normalized_scope, today)
+    if normalized_operation == "submit":
+        for existing in records:
+            if (existing.delegation_target, existing.task_class, existing.scope_class, existing.recorded_at) == duplicate_key:
+                raise WorkspaceUsageError(
+                    "note-delegation-outcome duplicate evidence for target/task/scope/date must use a lifecycle transition."
+                )
+    record_id = f"{normalized_target}:{normalized_task}:{normalized_scope}:{today}:{len(records)}"
     record = DelegationOutcomeRecord(
-        recorded_at=date.today().isoformat(),
-        delegation_target=delegation_target.strip(),
-        task_class=task_class.strip(),
+        recorded_at=today,
+        delegation_target=normalized_target,
+        task_class=normalized_task,
+        scope_class=normalized_scope,
         outcome=outcome,
         handoff_sufficiency=handoff_sufficiency,
         review_burden=review_burden,
         escalation_required=escalation_required,
+        operation=normalized_operation,
+        record_id=record_id,
+        predecessor_id=normalized_predecessor,
+        authority=authority.strip() or "local-outcome-ledger",
+        confidence=confidence.strip() or "medium",
+        admission_state="accepted",
     )
     updated_payload = {
         "kind": DELEGATION_OUTCOMES_KIND,
@@ -50114,10 +50153,17 @@ def _record_delegation_outcome(
                     "recorded_at": existing.recorded_at,
                     "delegation_target": existing.delegation_target,
                     "task_class": existing.task_class,
+                    "scope_class": existing.scope_class,
                     "outcome": existing.outcome,
                     "handoff_sufficiency": existing.handoff_sufficiency,
                     "review_burden": existing.review_burden,
                     "escalation_required": existing.escalation_required,
+                    "operation": existing.operation,
+                    "record_id": existing.record_id,
+                    "predecessor_id": existing.predecessor_id,
+                    "authority": existing.authority,
+                    "confidence": existing.confidence,
+                    "admission_state": existing.admission_state,
                 }
                 for existing in records
             ],
@@ -50125,10 +50171,17 @@ def _record_delegation_outcome(
                 "recorded_at": record.recorded_at,
                 "delegation_target": record.delegation_target,
                 "task_class": record.task_class,
+                "scope_class": record.scope_class,
                 "outcome": record.outcome,
                 "handoff_sufficiency": record.handoff_sufficiency,
                 "review_burden": record.review_burden,
                 "escalation_required": record.escalation_required,
+                "operation": record.operation,
+                "record_id": record.record_id,
+                "predecessor_id": record.predecessor_id,
+                "authority": record.authority,
+                "confidence": record.confidence,
+                "admission_state": record.admission_state,
             },
         ],
     }
