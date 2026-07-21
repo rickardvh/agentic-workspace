@@ -13,7 +13,7 @@ Authority and lifecycle declaration for one AW-consumed context surface class.
 | (root) | object | yes |  | Authority and lifecycle declaration for one AW-consumed context surface class. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `surface` | string | yes |  | AW-consumed surface or surface class being declared. |  |  |
 | `owner` | string | yes |  | Canonical owner for this operational input concern. |  |  |
-| `authority_class` | enum `"canonical"`, `"derived"`, `"advisory"`, `"historical/evidence"`, `"local-only"`, `"temporary"`, `"generated"` | yes |  | Authority class that determines whether consumers may route, validate, or only cite this input. |  |  |
+| `authority_class` | enum `"canonical"`, `"derived"`, `"advisory"`, `"historical/evidence"`, `"local-only"`, `"temporary"`, `"generated"`, `"hard-gate"` | yes |  | Authority class that determines whether consumers may route, validate, or only cite this input. |  |  |
 | `consumer` | string | yes |  | AW consumer or capability that reads this surface. |  |  |
 | `activation` | string | yes |  | Task, path, or state condition that makes this surface applicable. |  |  |
 | `editable_by` | string | yes |  | Operation, generator, or owner allowed to mutate this surface. |  |  |

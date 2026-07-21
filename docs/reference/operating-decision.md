@@ -15,6 +15,8 @@ Derived internal decision composed from admitted AW authority surfaces. It emits
 | `decision_id` | string | yes |  | Stable identity derived from input revisions, action, blocker, and terminal state. |  |  |
 | `status` | enum `"actionable"`, `"blocked"`, `"terminal"` | yes |  | Whether the composed decision exposes an action, a blocker, or no immediate action. |  |  |
 | `input_revisions` | object | yes |  | Revision or freshness identifiers supplied by specialist authority inputs. |  |  |
+| `canonical_decision_input_revision` | string | no |  | Canonical revision of the typed action's current owner, context, authority, proof, mutation, evaluation, and executor inputs. |  |  |
+| `context_authority_coverage` | object | no |  | Registry-derived coverage of context authority sources and ordinary consumers considered by the decision compiler. |  |  |
 | `current_work` | object | no |  | Current-work identity admitted into the composed decision. |  |  |
 | `selected_owner` | object | no |  | Selected owner identity admitted into the composed decision. |  |  |
 | `terminal_state` | string | no |  | Terminal outcome state used for continuation or finalization claims. |  |  |

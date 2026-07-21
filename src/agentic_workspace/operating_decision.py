@@ -6,6 +6,8 @@ import hashlib
 import json
 from typing import Any
 
+from agentic_workspace.actionability import invocation_decision_input_revision
+
 BLOCKER_PRECEDENCE = [
     "missing-authority",
     "stale-revision",
@@ -15,6 +17,117 @@ BLOCKER_PRECEDENCE = [
     "stale-proof",
     "context-coverage-gap",
     "missing-capability",
+]
+
+CONTEXT_AUTHORITY_REGISTRY = [
+    {
+        "surface": "system-intent",
+        "owner": "workspace-system-intent",
+        "authority_class": "canonical",
+        "consumers": ["startup", "implement", "proof", "report", "status", "closeout"],
+        "activation": "durable shaping input, not active task state",
+        "editable_by": "system-intent sync and explicit repo edits",
+        "stale_when": "mirror revision differs from source declaration",
+        "proof_route": "system-intent sync and contract tooling checks",
+        "disposition": "retain as durable shaping authority",
+        "revision_fields": ["system_intent_revision", "mirror_revision"],
+    },
+    {
+        "surface": "planning",
+        "owner": "planning package",
+        "authority_class": "canonical",
+        "consumers": ["start", "summary", "next", "implement", "status", "closeout"],
+        "activation": "active TODO item, selected owner, or current lane slice",
+        "editable_by": "planning operations",
+        "stale_when": "planning revision or selected owner revision changes",
+        "proof_route": "planning package tests and lane health checks",
+        "disposition": "retain as current-work authority",
+        "revision_fields": ["owner_ref", "owner_revision", "slice_revision"],
+    },
+    {
+        "surface": "memory",
+        "owner": "memory package",
+        "authority_class": "historical/evidence",
+        "consumers": ["start", "implement", "proof", "report"],
+        "activation": "route-selected by task/path/stage",
+        "editable_by": "memory operations",
+        "stale_when": "manifest route no longer selects or finding is superseded",
+        "proof_route": "memory doctor and freshness checks",
+        "disposition": "retain as routed evidence, not current-task authority",
+        "revision_fields": ["memory_route_revision", "finding_revision"],
+    },
+    {
+        "surface": "assignment",
+        "owner": "workspace assignment gate",
+        "authority_class": "hard-gate",
+        "consumers": ["implement", "next", "autopilot", "closeout"],
+        "activation": "selected target, context, allowed effects, and transport policy",
+        "editable_by": "target evidence and assignment policy operations",
+        "stale_when": "target identity, assignment revision, or transport policy changes",
+        "proof_route": "implementation assignment-gate and delegated-return tests",
+        "disposition": "retain as execution authority",
+        "revision_fields": ["target_identity_ref", "assignment_revision", "manual_transport_policy"],
+    },
+    {
+        "surface": "evaluation",
+        "owner": "evaluation runtime",
+        "authority_class": "canonical",
+        "consumers": ["status", "proof", "operating-decision", "closeout"],
+        "activation": "fresh bound result for the current definition revision",
+        "editable_by": "evaluation operations",
+        "stale_when": "definition revision or bound result identity changes",
+        "proof_route": "evaluation lifecycle tests",
+        "disposition": "retain as longitudinal authority when registered",
+        "revision_fields": ["evaluation_id", "definition_revision", "current_result_identity"],
+    },
+    {
+        "surface": "proof",
+        "owner": "verification and proof runtime",
+        "authority_class": "canonical",
+        "consumers": ["proof", "implement", "status", "closeout", "operating-decision"],
+        "activation": "selected proof subject for current changed paths",
+        "editable_by": "proof receipt admission and verification operations",
+        "stale_when": "proof subject, selected command, or changed-path fingerprint changes",
+        "proof_route": "proof report and receipt reconciliation tests",
+        "disposition": "retain as claim authority",
+        "revision_fields": ["proof_obligation_id", "proof_subject_fingerprint", "receipt_revision"],
+    },
+    {
+        "surface": "mutation-baseline",
+        "owner": "authority envelope",
+        "authority_class": "hard-gate",
+        "consumers": ["implement", "autopilot", "closeout"],
+        "activation": "current head/scope/target baseline before mutation or admission",
+        "editable_by": "authority envelope resolution",
+        "stale_when": "head, scope, target, or managed state changes",
+        "proof_route": "mutation baseline admission tests",
+        "disposition": "retain as mutation authority",
+        "revision_fields": ["baseline_id", "head", "scope", "assignment"],
+    },
+    {
+        "surface": "autopilot-executor",
+        "owner": "autopilot runtime",
+        "authority_class": "hard-gate",
+        "consumers": ["autopilot", "final-response", "operating-decision"],
+        "activation": "valid executor binding for current owner/target/assignment/proof state",
+        "editable_by": "autopilot binding resolver",
+        "stale_when": "executor binding fingerprint changes",
+        "proof_route": "autopilot executor-binding tests",
+        "disposition": "retain as executor authority",
+        "revision_fields": ["binding_fingerprint", "availability", "validity"],
+    },
+    {
+        "surface": "generated-references",
+        "owner": "command-generation and contract tooling",
+        "authority_class": "generated",
+        "consumers": ["cli", "python-adapter", "typescript-adapter", "contract-checks"],
+        "activation": "generated freshness and operation registry selection",
+        "editable_by": "generators only",
+        "stale_when": "source contract revision differs from generated projection",
+        "proof_route": "generated command package checks",
+        "disposition": "regenerate rather than hand edit",
+        "revision_fields": ["command_package_fingerprint", "adapter_fingerprint"],
+    },
 ]
 
 
@@ -31,63 +144,35 @@ def _digest(value: Any) -> str:
 
 
 def context_authority_declarations() -> list[dict[str, Any]]:
+    schema_keys = {
+        "surface",
+        "owner",
+        "authority_class",
+        "consumer",
+        "activation",
+        "editable_by",
+        "stale_when",
+        "proof_route",
+        "disposition",
+    }
     return [
-        {
-            "surface": "system-intent",
-            "owner": "workspace-system-intent",
-            "authority_class": "canonical",
-            "consumer": "startup, implement, proof, report",
-            "activation": "durable shaping input, not active task state",
-            "editable_by": "system-intent sync and explicit repo edits",
-            "stale_when": "mirror revision differs from source declaration",
-            "proof_route": "system-intent sync and contract tooling checks",
-            "disposition": "retain as durable shaping authority",
-        },
-        {
-            "surface": "planning",
-            "owner": "planning package",
-            "authority_class": "canonical",
-            "consumer": "current-work, task relation, owner posture, continuation",
-            "activation": "active TODO item, selected owner, or current lane slice",
-            "editable_by": "planning operations",
-            "stale_when": "planning revision or selected owner revision changes",
-            "proof_route": "planning package tests and lane health checks",
-            "disposition": "retain as current-work authority",
-        },
-        {
-            "surface": "memory",
-            "owner": "memory package",
-            "authority_class": "historical/evidence",
-            "consumer": "reuse, lessons, prior durable findings",
-            "activation": "route-selected by task/path/stage",
-            "editable_by": "memory operations",
-            "stale_when": "manifest route no longer selects or finding is superseded",
-            "proof_route": "memory doctor and freshness checks",
-            "disposition": "retain as routed evidence, not current-task authority",
-        },
-        {
-            "surface": "proof",
-            "owner": "verification and proof runtime",
-            "authority_class": "canonical",
-            "consumer": "completion claims, reusable evidence, proof freshness",
-            "activation": "selected proof subject for current changed paths",
-            "editable_by": "proof receipt admission and verification operations",
-            "stale_when": "proof subject, selected command, or changed-path fingerprint changes",
-            "proof_route": "proof report and receipt reconciliation tests",
-            "disposition": "retain as claim authority",
-        },
-        {
-            "surface": "generated-references",
-            "owner": "command-generation and contract tooling",
-            "authority_class": "generated",
-            "consumer": "CLI, Python, TypeScript, adapter parity",
-            "activation": "generated freshness and operation registry selection",
-            "editable_by": "generators only",
-            "stale_when": "source contract revision differs from generated projection",
-            "proof_route": "generated command package checks",
-            "disposition": "regenerate rather than hand edit",
-        },
+        {key: value for key, value in {**item, "consumer": ", ".join(item["consumers"])}.items() if key in schema_keys}
+        for item in CONTEXT_AUTHORITY_REGISTRY
     ]
+
+
+def context_authority_coverage() -> dict[str, Any]:
+    consumers = sorted({consumer for item in CONTEXT_AUTHORITY_REGISTRY for consumer in _as_list(item.get("consumers"))})
+    surfaces = [str(item.get("surface") or "") for item in CONTEXT_AUTHORITY_REGISTRY]
+    return {
+        "kind": "agentic-workspace/context-authority-coverage/v1",
+        "status": "declared",
+        "surface_count": len(surfaces),
+        "consumer_count": len(consumers),
+        "surfaces": surfaces,
+        "ordinary_consumers": consumers,
+        "rule": "Operating decisions consume source declarations from this registry instead of hard-coded per-caller surface assumptions.",
+    }
 
 
 def derive_context_gaps(*, declarations: list[dict[str, Any]], selected_surfaces: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -137,6 +222,40 @@ def derive_context_gaps(*, declarations: list[dict[str, Any]], selected_surfaces
     return gaps
 
 
+def derive_operating_blockers_from_authorities(*, authorities: dict[str, Any]) -> list[dict[str, str]]:
+    blockers: list[dict[str, str]] = []
+    target = _as_dict(authorities.get("target"))
+    assignment = _as_dict(authorities.get("assignment_gate") or authorities.get("assignment"))
+    transport = _as_dict(authorities.get("manual_transport"))
+    mutation = _as_dict(authorities.get("mutation_baseline"))
+    evaluation = _as_dict(authorities.get("evaluation"))
+    planning = _as_dict(authorities.get("planning_owner") or authorities.get("planning"))
+    proof = _as_dict(authorities.get("proof") or authorities.get("proof_obligation"))
+    executor = _as_dict(authorities.get("executor") or authorities.get("autopilot_executor"))
+
+    if str(target.get("status") or "") in {"unknown", "missing", "no-safe-target"}:
+        blockers.append({"reason_code": "missing-capability", "owner": "assignment target", "repair": "select a safe target"})
+    if str(transport.get("status") or "") in {"blocked", "disabled"} or str(assignment.get("status") or "") == "handoff-required":
+        blockers.append({"reason_code": "denied-effect", "owner": "manual transport", "repair": "prepare handoff"})
+    if str(mutation.get("revalidation_status") or mutation.get("status") or "") in {"stale", "rejected", "failed"}:
+        blockers.append({"reason_code": "stale-mutation-baseline", "owner": "mutation authority", "repair": "refresh baseline"})
+    if str(evaluation.get("freshness_status") or evaluation.get("status") or "") in {"missing", "not-registered"}:
+        blockers.append({"reason_code": "context-coverage-gap", "owner": "evaluation", "repair": "register evaluation"})
+    if str(evaluation.get("freshness_status") or evaluation.get("status") or "") in {"stale", "superseded", "stale-bound"}:
+        blockers.append({"reason_code": "stale-proof", "owner": "evaluation", "repair": "rerun evaluation"})
+    if str(planning.get("freshness_status") or planning.get("status") or "") in {"stale", "superseded", "malformed"}:
+        blockers.append({"reason_code": "stale-revision", "owner": "planning owner", "repair": "reselect owner"})
+    if str(proof.get("receipt_status") or proof.get("status") or "") in {"invalid", "stale", "rejected", "missing"}:
+        blockers.append({"reason_code": "stale-proof", "owner": "proof receipt", "repair": "rerun proof"})
+    if str(executor.get("availability_status") or _as_dict(executor.get("availability")).get("status") or executor.get("status") or "") in {
+        "unavailable",
+        "stale-binding",
+        "no-valid-executor",
+    }:
+        blockers.append({"reason_code": "missing-capability", "owner": "autopilot executor", "repair": "rebind executor"})
+    return blockers
+
+
 def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     """Return one primary typed action or one typed external blocker."""
 
@@ -145,7 +264,11 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
     action = _as_dict(actionability.get("next_action") or inputs.get("primary_action"))
     progress_check = _as_dict(actionability.get("progress_check"))
     invocation = _as_dict(action.get("operation_invocation"))
+    invocation_expected_revision = str(invocation.get("expected_input_revision") or "").strip()
+    invocation_current_revision = invocation_decision_input_revision(invocation) if invocation else ""
     blockers = [item for item in _as_list(inputs.get("blockers")) if isinstance(item, dict)]
+    authority_blockers = derive_operating_blockers_from_authorities(authorities=_as_dict(inputs.get("authorities")))
+    blockers.extend(authority_blockers)
     for gap in _as_list(inputs.get("context_gaps")):
         if isinstance(gap, dict) and str(gap.get("severity") or "") == "blocking":
             blockers.append({"reason_code": "context-coverage-gap", "owner": gap.get("owner", ""), "repair": gap.get("next_route", "")})
@@ -168,6 +291,14 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
                 "reason_code": "stale-revision",
                 "owner": "operation-invocation",
                 "repair": "refresh the operating decision and rebuild the typed action from current owner/context/proof state",
+            }
+        )
+    elif invocation and (not invocation_expected_revision or invocation_expected_revision != invocation_current_revision):
+        blockers.append(
+            {
+                "reason_code": "stale-revision",
+                "owner": "operation-invocation",
+                "repair": "refresh the operating decision and rebuild the typed action from current canonical decision inputs",
             }
         )
     if inputs.get("stale_revision"):
@@ -214,6 +345,8 @@ def compile_operating_decision(*, inputs: dict[str, Any]) -> dict[str, Any]:
         "decision_id": f"operating-decision:{_digest(identity_input)[:16]}",
         "status": status,
         "input_revisions": revisions,
+        "canonical_decision_input_revision": invocation_current_revision,
+        "context_authority_coverage": context_authority_coverage(),
         "current_work": _as_dict(inputs.get("current_work")),
         "selected_owner": _as_dict(inputs.get("selected_owner")),
         "terminal_state": str(inputs.get("terminal_state") or "CONTINUE"),

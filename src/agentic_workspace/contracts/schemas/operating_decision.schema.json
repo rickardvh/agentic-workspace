@@ -10,6 +10,8 @@
     "decision_id": {"type": "string", "pattern": "^operating-decision:[0-9a-f]{16}$", "description": "Stable identity derived from input revisions, action, blocker, and terminal state."},
     "status": {"type": "string", "enum": ["actionable", "blocked", "terminal"], "description": "Whether the composed decision exposes an action, a blocker, or no immediate action."},
     "input_revisions": {"type": "object", "description": "Revision or freshness identifiers supplied by specialist authority inputs."},
+    "canonical_decision_input_revision": {"type": "string", "description": "Canonical revision of the typed action's current owner, context, authority, proof, mutation, evaluation, and executor inputs."},
+    "context_authority_coverage": {"type": "object", "description": "Registry-derived coverage of context authority sources and ordinary consumers considered by the decision compiler."},
     "current_work": {"type": "object", "description": "Current-work identity admitted into the composed decision."},
     "selected_owner": {"type": "object", "description": "Selected owner identity admitted into the composed decision."},
     "terminal_state": {"type": "string", "description": "Terminal outcome state used for continuation or finalization claims."},

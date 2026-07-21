@@ -7,6 +7,53 @@ import json
 from typing import Any
 
 
+def decision_input_revision(
+    *,
+    operation_id: str = "",
+    arguments: dict[str, Any] | None = None,
+    effect_class: str = "",
+    authority_class: str = "",
+    preconditions: dict[str, Any] | None = None,
+    owner_context_revision: dict[str, Any] | None = None,
+    mutation_boundary: dict[str, Any] | None = None,
+    proof_requirements: list[Any] | None = None,
+    evaluation_revision: dict[str, Any] | None = None,
+    executor_revision: dict[str, Any] | None = None,
+) -> str:
+    """Canonical revision for a typed operating action's current decision inputs."""
+
+    canonical = {
+        "operation_id": operation_id,
+        "arguments": dict(arguments or {}),
+        "effect_class": effect_class,
+        "authority_class": authority_class or "operation-contract",
+        "preconditions": dict(preconditions or {}),
+        "owner_context_revision": dict(owner_context_revision or {}),
+        "mutation_boundary": dict(mutation_boundary or {}),
+        "proof_requirements": list(proof_requirements or []),
+        "evaluation_revision": dict(evaluation_revision or {}),
+        "executor_revision": dict(executor_revision or {}),
+    }
+    return "sha256:" + hashlib.sha256(json.dumps(canonical, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def invocation_decision_input_revision(invocation: dict[str, Any]) -> str:
+    return decision_input_revision(
+        operation_id=str(invocation.get("operation_id") or invocation.get("operation") or ""),
+        arguments=invocation.get("arguments") if isinstance(invocation.get("arguments"), dict) else {},
+        effect_class=str(invocation.get("effect_class") or ""),
+        authority_class=str(invocation.get("authority_class") or ""),
+        preconditions=invocation.get("preconditions") if isinstance(invocation.get("preconditions"), dict) else {},
+        owner_context_revision=invocation.get("owner_context_revision")
+        if isinstance(invocation.get("owner_context_revision"), dict)
+        else {},
+        mutation_boundary=invocation.get("mutation_boundary") if isinstance(invocation.get("mutation_boundary"), dict) else {},
+        proof_requirements=invocation.get("proof_requirements") if isinstance(invocation.get("proof_requirements"), list) else [],
+        evaluation_revision=invocation.get("evaluation_revision") if isinstance(invocation.get("evaluation_revision"), dict) else {},
+        executor_revision=invocation.get("executor_revision") if isinstance(invocation.get("executor_revision"), dict) else {},
+    )
+
+
 def operation_invocation(
     *,
     operation_id: str,
@@ -21,6 +68,8 @@ def operation_invocation(
     owner_context_revision: dict[str, Any] | None = None,
     mutation_boundary: dict[str, Any] | None = None,
     proof_requirements: list[Any] | None = None,
+    evaluation_revision: dict[str, Any] | None = None,
+    executor_revision: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a typed operation invocation that owns action identity."""
 
@@ -29,14 +78,30 @@ def operation_invocation(
     normalized_owner_context = dict(owner_context_revision or {})
     normalized_mutation_boundary = dict(mutation_boundary or {})
     normalized_proof_requirements = list(proof_requirements or [])
+    normalized_evaluation_revision = dict(evaluation_revision or {})
+    normalized_executor_revision = dict(executor_revision or {})
+    canonical_input_revision = input_revision or decision_input_revision(
+        operation_id=operation_id,
+        arguments=normalized_arguments,
+        effect_class=effect_class,
+        authority_class=authority_class,
+        preconditions=normalized_preconditions,
+        owner_context_revision=normalized_owner_context,
+        mutation_boundary=normalized_mutation_boundary,
+        proof_requirements=normalized_proof_requirements,
+        evaluation_revision=normalized_evaluation_revision,
+        executor_revision=normalized_executor_revision,
+    )
     idempotency_input = {
         "operation_id": operation_id,
         "arguments": normalized_arguments,
-        "input_revision": input_revision,
+        "input_revision": canonical_input_revision,
         "expected_transition": expected_transition,
         "owner_context_revision": normalized_owner_context,
         "mutation_boundary": normalized_mutation_boundary,
         "proof_requirements": normalized_proof_requirements,
+        "evaluation_revision": normalized_evaluation_revision,
+        "executor_revision": normalized_executor_revision,
     }
     idempotency_key = hashlib.sha256(json.dumps(idempotency_input, sort_keys=True).encode()).hexdigest()[:16]
     invocation = {
@@ -51,7 +116,9 @@ def operation_invocation(
         "owner_context_revision": normalized_owner_context,
         "mutation_boundary": normalized_mutation_boundary,
         "proof_requirements": normalized_proof_requirements,
-        "expected_input_revision": input_revision,
+        "evaluation_revision": normalized_evaluation_revision,
+        "executor_revision": normalized_executor_revision,
+        "expected_input_revision": canonical_input_revision,
         "expected_transition": expected_transition,
         "idempotency_key": idempotency_key,
         "claim_effect": claim_effect,
@@ -64,6 +131,7 @@ def operation_invocation(
                 "proof_requirements",
             ],
             "repair": "Refresh the operating decision before executing this typed action.",
+            "revision_source": "canonical-decision-input",
         },
         "renderings": {"cli": command_rendering} if command_rendering else {},
         "rule": "Operation identity and progress checks use this typed invocation; rendered commands are display or manual recovery text.",
@@ -160,8 +228,9 @@ def derive_actionability(
     proposed_input_digest = str(proposed.get("input_digest") or "").strip()
     same_state = proposed_input_digest == input_digest if proposed_input_digest else not expected_transition
     expected_input_revision = str(invocation.get("expected_input_revision") or "").strip()
+    current_input_revision = invocation_decision_input_revision(invocation) if invocation else ""
     stale_action_rejected = bool(
-        invocation.get("stale_action_rejection") and expected_input_revision and expected_input_revision != input_digest
+        invocation.get("stale_action_rejection") and (not expected_input_revision or expected_input_revision != current_input_revision)
     )
     self_loop_rejected = same_operation and same_state and not external_condition
     if not action_required:
@@ -203,6 +272,7 @@ def derive_actionability(
         "next_action": next_action,
         "progress_check": {
             "input_digest": input_digest,
+            "current_input_revision": current_input_revision,
             "proposed_operation": proposed_operation,
             "operation_invocation": invocation,
             "command_identity_authority": "typed-operation-invocation" if invocation else "absent-display-command-only",

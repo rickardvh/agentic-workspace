@@ -6,11 +6,13 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.actionability import derive_actionability, operation_invocation
+from agentic_workspace.actionability import derive_actionability, invocation_decision_input_revision, operation_invocation
 from agentic_workspace.operating_decision import (
     compile_operating_decision,
+    context_authority_coverage,
     context_authority_declarations,
     derive_context_gaps,
+    derive_operating_blockers_from_authorities,
 )
 
 SCHEMA_ROOT = Path("src/agentic_workspace/contracts/schemas")
@@ -53,6 +55,8 @@ def test_operating_decision_emits_one_typed_primary_action() -> None:
     assert decision["primary_action"]["operation_invocation"]["preconditions"]["assignment_context_key"] == "ctx-a"
     assert decision["primary_action"]["operation_invocation"]["owner_context_revision"]["target_identity_ref"] == "target-a"
     assert decision["primary_action"]["operation_invocation"]["proof_requirements"][0]["owner"] == "verification"
+    assert decision["canonical_decision_input_revision"] == invocation_decision_input_revision(invocation)
+    assert "status" in decision["context_authority_coverage"]["ordinary_consumers"]
     assert decision["primary_action"]["operation_invocation"]["stale_action_rejection"]["status"] == "reject-on-input-revision-mismatch"
     assert decision["external_blocker"] == {}
     assert decision["replacement_map"]["next_action.command"].startswith("display rendering only")
@@ -127,12 +131,41 @@ def test_stale_typed_action_is_rejected_before_execution() -> None:
     assert "refresh the operating decision" in decision["external_blocker"]["repair"]
 
 
+def test_missing_expected_revision_is_rejected_before_execution() -> None:
+    invocation = operation_invocation(
+        operation_id="proof.report",
+        arguments={"target": ".", "format": "json"},
+        owner_context_revision={"owner_id": "owner-a", "assignment_context_key": "ctx-a"},
+        mutation_boundary={"effect": "read-only-report"},
+        proof_requirements=[{"command": "agentic-workspace proof --target . --format json"}],
+    )
+    invocation.pop("expected_input_revision")
+    actionability = derive_actionability(
+        command_name="implement",
+        health="attention-needed",
+        warnings=[],
+        repair_actions=[{"id": "proof-missing"}],
+        manual_review_actions=[],
+        proposed_next_action={"action": "run-proof", "operation_invocation": invocation},
+    )
+
+    decision = compile_operating_decision(inputs={"actionability": actionability})
+
+    assert actionability["progress_check"]["result"] == "rejected-stale-action"
+    assert actionability["progress_check"]["expected_input_revision"] == ""
+    assert decision["status"] == "blocked"
+    assert decision["external_blocker"]["reason_code"] == "stale-revision"
+
+
 def test_context_authority_declarations_and_gap_classes_validate() -> None:
     declarations = context_authority_declarations()
+    coverage = context_authority_coverage()
     declaration_schema = _schema("context_authority_declaration.schema.json")
     for declaration in declarations:
         Draft202012Validator(declaration_schema).validate(declaration)
 
+    assert "implement" in coverage["ordinary_consumers"]
+    assert "autopilot-executor" in coverage["surfaces"]
     gaps = derive_context_gaps(
         declarations=declarations,
         selected_surfaces=[
@@ -175,22 +208,53 @@ def test_blocking_context_gap_prevents_primary_action() -> None:
 
 
 @pytest.mark.parametrize(
-    ("case_id", "blocker"),
+    ("case_id", "authorities", "blocker"),
     [
-        ("unknown-no-safe-target", {"reason_code": "missing-capability", "owner": "assignment target", "repair": "select a safe target"}),
-        ("disabled-manual-required-transport", {"reason_code": "denied-effect", "owner": "manual transport", "repair": "prepare handoff"}),
+        (
+            "unknown-no-safe-target",
+            {"target": {"status": "unknown"}},
+            {"reason_code": "missing-capability", "owner": "assignment target", "repair": "select a safe target"},
+        ),
+        (
+            "disabled-manual-required-transport",
+            {"manual_transport": {"status": "disabled"}},
+            {"reason_code": "denied-effect", "owner": "manual transport", "repair": "prepare handoff"},
+        ),
         (
             "stale-worktree-baseline",
+            {"mutation_baseline": {"revalidation_status": "rejected"}},
             {"reason_code": "stale-mutation-baseline", "owner": "mutation authority", "repair": "refresh baseline"},
         ),
-        ("missing-evaluation", {"reason_code": "context-coverage-gap", "owner": "evaluation", "repair": "register evaluation"}),
-        ("superseded-evaluation", {"reason_code": "stale-proof", "owner": "evaluation", "repair": "rerun evaluation"}),
-        ("stale-planning-owner", {"reason_code": "stale-revision", "owner": "planning owner", "repair": "reselect owner"}),
-        ("invalid-receipt", {"reason_code": "stale-proof", "owner": "proof receipt", "repair": "rerun proof"}),
-        ("unavailable-rebound-executor", {"reason_code": "missing-capability", "owner": "autopilot executor", "repair": "rebind executor"}),
+        (
+            "missing-evaluation",
+            {"evaluation": {"freshness_status": "missing"}},
+            {"reason_code": "context-coverage-gap", "owner": "evaluation", "repair": "register evaluation"},
+        ),
+        (
+            "superseded-evaluation",
+            {"evaluation": {"freshness_status": "superseded"}},
+            {"reason_code": "stale-proof", "owner": "evaluation", "repair": "rerun evaluation"},
+        ),
+        (
+            "stale-planning-owner",
+            {"planning_owner": {"freshness_status": "stale"}},
+            {"reason_code": "stale-revision", "owner": "planning owner", "repair": "reselect owner"},
+        ),
+        (
+            "invalid-receipt",
+            {"proof": {"receipt_status": "invalid"}},
+            {"reason_code": "stale-proof", "owner": "proof receipt", "repair": "rerun proof"},
+        ),
+        (
+            "unavailable-rebound-executor",
+            {"executor": {"availability": {"status": "unavailable"}}},
+            {"reason_code": "missing-capability", "owner": "autopilot executor", "repair": "rebind executor"},
+        ),
     ],
 )
-def test_operating_decision_context_gap_recovery_matrix_blocks_invalid_actions(case_id: str, blocker: dict[str, str]) -> None:
+def test_operating_decision_context_gap_recovery_matrix_blocks_invalid_actions(
+    case_id: str, authorities: dict, blocker: dict[str, str]
+) -> None:
     invocation = operation_invocation(
         operation_id="implement",
         arguments={"target": ".", "task": case_id},
@@ -207,10 +271,11 @@ def test_operating_decision_context_gap_recovery_matrix_blocks_invalid_actions(c
         inputs={
             "revisions": {"case": case_id, "owner": "rev-a"},
             "actionability": {"next_action": {"action": "recover-context-gap", "operation_invocation": invocation}},
-            "blockers": [blocker],
+            "authorities": authorities,
         }
     )
 
+    assert derive_operating_blockers_from_authorities(authorities=authorities) == [blocker]
     assert decision["status"] == "blocked"
     assert decision["primary_action"] == {}
     assert decision["external_blocker"]["reason_code"] == blocker["reason_code"]

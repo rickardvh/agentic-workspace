@@ -10,7 +10,7 @@
     "owner": {"type": "string", "minLength": 1, "description": "Canonical owner for this operational input concern."},
     "authority_class": {
       "type": "string",
-      "enum": ["canonical", "derived", "advisory", "historical/evidence", "local-only", "temporary", "generated"],
+      "enum": ["canonical", "derived", "advisory", "historical/evidence", "local-only", "temporary", "generated", "hard-gate"],
       "description": "Authority class that determines whether consumers may route, validate, or only cite this input."
     },
     "consumer": {"type": "string", "minLength": 1, "description": "AW consumer or capability that reads this surface."},
