@@ -38533,8 +38533,20 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
     configured_role = local_override.execution_role or "ordinary-executor"
     configured_policy = local_override.assignment_policy or "local-preferred"
     configured_target = local_override.current_target
-    known_targets = {str(profile.get("name") or "") for profile in profile_payloads if isinstance(profile, dict)}
-    current_target_known = configured_target in known_targets if configured_target else False
+    target_matches = [
+        profile
+        for profile in profile_payloads
+        if isinstance(profile, dict)
+        and configured_target
+        and configured_target
+        in {
+            str(profile.get("name") or ""),
+            str(profile.get("target_id") or ""),
+            *(str(alias) for alias in profile.get("aliases", []) if isinstance(profile.get("aliases"), list)),
+        }
+    ]
+    current_target_known = len({str(profile.get("target_id") or profile.get("name") or "") for profile in target_matches}) == 1
+    resolved_current_target = target_matches[0] if current_target_known else {}
     binding_requested = configured_policy == "required-best-fit"
     enforceable = not binding_requested or bool(current_target_known)
     status = "configured" if local_override.assignment_policy is not None or local_override.execution_role is not None else "default-quiet"
@@ -38567,6 +38579,8 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             source=local_override.field_sources.get("delegation.current_target", "unset") if configured_target is not None else "unset",
         ),
         "current_target_status": "known-profile" if current_target_known else "unknown" if configured_target else "not-configured",
+        "current_target_profile_name": resolved_current_target.get("name") if isinstance(resolved_current_target, dict) else None,
+        "current_target_identity_ref": resolved_current_target.get("target_id") if isinstance(resolved_current_target, dict) else None,
         "underfit_behavior": _sourced_value(
             local_override.underfit_behavior or "stay-when-safe",
             source=local_override.field_sources.get("delegation.underfit_behavior", "default")
@@ -39460,7 +39474,17 @@ def _assignment_implementation_gate_payload(
     decision = str(assignment_decision.get("decision") or "")
     binding = _as_dict(assignment_policy.get("binding"))
     selected_profile = str(selected_target.get("name") or "") if isinstance(selected_target, dict) else ""
-    target_mismatch = bool(current_target and selected_profile and current_target != selected_profile)
+    selected_profile_id = str(selected_target.get("target_id") or "") if isinstance(selected_target, dict) else ""
+    selected_aliases = (
+        set(selected_target.get("aliases", []))
+        if isinstance(selected_target, dict) and isinstance(selected_target.get("aliases"), list)
+        else set()
+    )
+    target_mismatch = bool(
+        current_target
+        and selected_profile
+        and current_target not in ({selected_profile, selected_profile_id} | {str(alias) for alias in selected_aliases})
+    )
     if decision == "blocked" or assignment_policy.get("status") == "blocked-unknown-current-target":
         status = "blocked"
         implementation_allowed = False

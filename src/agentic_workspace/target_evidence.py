@@ -11,6 +11,14 @@ from agentic_workspace.config import (
 )
 
 
+def _profile_identity_keys(profile: DelegationTargetProfile) -> set[str]:
+    return {key for key in (profile.target_id, profile.name, *profile.aliases) if key}
+
+
+def _canonical_target_key(profile: DelegationTargetProfile | None, fallback: str) -> str:
+    return profile.target_id or profile.name if profile is not None else fallback
+
+
 def _delegation_signal_score(record: DelegationOutcomeRecord) -> float:
     outcome_score = {"success": 1.0, "mixed": 0.0, "failed": -1.0}[record.outcome]
     handoff_score = {"sufficient": 0.25, "borderline": 0.0, "insufficient": -0.25}[record.handoff_sufficiency]
@@ -89,14 +97,32 @@ def target_evidence_posture(
     profiles: Iterable[DelegationTargetProfile],
     records: Iterable[DelegationOutcomeRecord],
 ) -> dict[str, Any]:
-    profile_by_name = {profile.name: profile for profile in profiles}
+    profile_list = list(profiles)
+    profile_by_name = {profile.name: profile for profile in profile_list}
+    profile_by_identity: dict[str, DelegationTargetProfile | None] = {}
+    ambiguous_identities: set[str] = set()
+    for profile in profile_list:
+        for identity in _profile_identity_keys(profile):
+            if identity in profile_by_identity and profile_by_identity[identity] is not profile:
+                ambiguous_identities.add(identity)
+                profile_by_identity[identity] = None
+            else:
+                profile_by_identity[identity] = profile
     records_by_target: dict[str, list[DelegationOutcomeRecord]] = {}
+    canonical_profile_by_target: dict[str, DelegationTargetProfile | None] = {}
     for record in records:
-        records_by_target.setdefault(record.delegation_target, []).append(record)
+        profile = profile_by_identity.get(record.delegation_target)
+        canonical_target = (
+            record.delegation_target
+            if record.delegation_target in ambiguous_identities
+            else _canonical_target_key(profile, record.delegation_target)
+        )
+        records_by_target.setdefault(canonical_target, []).append(record)
+        canonical_profile_by_target[canonical_target] = profile
 
     normalized: list[dict[str, Any]] = []
     for target_name in sorted(records_by_target):
-        profile = profile_by_name.get(target_name)
+        profile = canonical_profile_by_target.get(target_name) or profile_by_name.get(target_name)
         context = _target_context(profile)
         for index, record in enumerate(records_by_target[target_name]):
             scope_class = _record_scope_class(record)
@@ -104,6 +130,7 @@ def target_evidence_posture(
                 {
                     "id": _target_record_id(target_name=target_name, record=record, index=index),
                     "target": target_name,
+                    "target_input_ref": record.delegation_target,
                     "target_identity_ref": context["target_identity_ref"],
                     "target_revision": context["target_revision"],
                     "task_class": record.task_class,
@@ -131,9 +158,12 @@ def target_evidence_posture(
             )
 
     suitability: list[dict[str, Any]] = []
-    target_names = sorted(set(profile_by_name) | set(records_by_target))
+    target_names = sorted({_canonical_target_key(profile, profile.name) for profile in profile_list} | set(records_by_target))
     for target_name in target_names:
-        profile = profile_by_name.get(target_name)
+        profile = canonical_profile_by_target.get(target_name) or next(
+            (candidate for candidate in profile_list if _canonical_target_key(candidate, candidate.name) == target_name),
+            None,
+        )
         context = _target_context(profile)
         target_records = records_by_target.get(target_name, [])
         if not target_records:
@@ -319,16 +349,18 @@ def assignment_decision_from_policy(
         target = str(profile.get("name") or "")
         if not target:
             continue
-        target_identity_ref = str(profile.get("target_id") or "")
+        target_identity_ref = str(profile.get("target_id") or target)
         target_revision = str(profile.get("target_revision") or "")
         revision_policy = str(profile.get("revision_policy") or "")
+        target_aliases = {str(alias) for alias in profile.get("aliases", [])} if isinstance(profile.get("aliases"), list) else set()
+        current_target_matches_profile = current_target in ({target, target_identity_ref} | target_aliases)
         required_action = str(profile.get("required_action") or "")
         eligible = not bool(profile.get("capability_mismatch")) and required_action not in hard_reject_actions
         score = int(profile.get("score") or 0) + recommendation_score.get(str(profile.get("recommendation") or ""), 0)
-        matching_evidence = evidence_by_target.get(target, [])
+        matching_evidence = evidence_by_target.get(target_identity_ref, []) or evidence_by_target.get(target, [])
         for evidence in matching_evidence:
             score += evidence_score.get(str(evidence.get("route_effect") or ""), 0)
-        if target == current_target:
+        if current_target_matches_profile:
             score += 5
         candidate_scores.append(
             {
@@ -368,7 +400,9 @@ def assignment_decision_from_policy(
     elif recommendation in {"external-delegation", "manual-handoff", "stronger-reasoning"}:
         decision = "assign-or-escalate"
     else:
-        decision = "assign-best-fit" if selected_target != current_target else "assign-current-target"
+        selected = eligible_candidates[0] if eligible_candidates else {}
+        selected_target_refs = {str(selected.get("target") or ""), str(selected.get("target_identity_ref") or "")}
+        decision = "assign-current-target" if current_target in selected_target_refs else "assign-best-fit"
     return {
         "kind": "agentic-workspace/assignment-decision/v1",
         "decision": decision,

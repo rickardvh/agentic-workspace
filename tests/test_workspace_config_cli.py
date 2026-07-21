@@ -1239,13 +1239,14 @@ def test_config_command_reports_assignment_policy_separate_from_delegation_mode(
                 'execution_role = "orchestrator"',
                 'assignment_policy = "required-best-fit"',
                 'selection_objective = "minimize successful completion cost after quality and proof"',
-                'current_target = "codex_current"',
+                'current_target = "user-local:codex-current"',
                 'underfit_behavior = "require-delegation"',
                 'down_routing_behavior = "bounded-mechanical-work"',
                 'human_override_policy = "allowed-with-recorded-reason"',
                 'manual_transport_policy = "required-when-no-automatic-method"',
                 "",
                 "[delegation_targets.codex_current]",
+                'target_id = "user-local:codex-current"',
                 'strength = "strong"',
                 'execution_methods = ["internal"]',
             ]
@@ -1260,7 +1261,7 @@ def test_config_command_reports_assignment_policy_separate_from_delegation_mode(
     assert policy["status"] == "configured"
     assert policy["execution_role"] == {"value": "orchestrator", "source": "local-override"}
     assert policy["assignment_policy"] == {"value": "required-best-fit", "source": "local-override"}
-    assert policy["current_target"] == {"value": "codex_current", "source": "local-override"}
+    assert policy["current_target"] == {"value": "user-local:codex-current", "source": "local-override"}
     assert policy["current_target_status"] == "known-profile"
     assert policy["binding"] == {
         "required_best_fit_requested": True,
@@ -1307,7 +1308,7 @@ def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: P
                 "schema_version = 1",
                 "",
                 "[delegation]",
-                'current_target = "codex_current"',
+                'current_target = "user-local:codex-current"',
                 "",
                 "[local_memory]",
                 "target_guidance_enabled = true",
@@ -1341,6 +1342,8 @@ def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: P
     identity = payload["mixed_agent"]["target_identity"]
     assert identity["current_target_identity"]["status"] == "known"
     assert identity["current_target_identity"]["subject"]["stable_target_id"] == "user-local:codex-current"
+    assert identity["current_target_identity"]["provenance"]["matched_by"] == "target_id"
+    assert identity["current_target_identity"]["provenance"]["canonical_join_key"] == "stable_target_id"
     assert identity["storage"]["status"] == "available"
     assert "repo-local target overlay under .agentic-workspace/local/" in identity["precedence"]
     correction = payload["mixed_agent"]["correction_feedback"]
@@ -1387,8 +1390,131 @@ def test_config_command_target_identity_ambiguous_alias_fails_closed(tmp_path: P
     identity = payload["mixed_agent"]["target_identity"]
     assert identity["current_target_identity"]["status"] == "ambiguous"
     assert identity["current_target_identity"]["fail_closed"] is True
-    assert "exact delegation target profile name" in identity["current_target_identity"]["recovery"]
+    assert "stable target_id" in identity["current_target_identity"]["recovery"]
     assert payload["mixed_agent"]["correction_feedback"]["status"] == "fail-closed"
+
+
+def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision() -> None:
+    from agentic_workspace.agent_guidance import admit_correction_events
+
+    subjects = [
+        {
+            "profile_name": "fast_worker",
+            "stable_target_id": "user-local:fast-worker",
+            "target_revision": "rev-b",
+            "aliases": ["fast"],
+            "identity_status": "active",
+            "revision_policy": "revalidate",
+        }
+    ]
+    events = [
+        {
+            "target_identity_ref": "fast",
+            "target_revision": "rev-b",
+            "task_class": "mechanical-follow-through",
+            "scope_class": "narrow-code-change",
+            "desired_behavior": "Prefer narrow edits.",
+            "replaced_behavior": "Broad edits.",
+            "authority": "explicit-user-correction",
+            "source": "pr-review",
+        },
+        {
+            "target_identity_ref": "user-local:fast-worker",
+            "target_revision": "rev-b",
+            "task_class": "mechanical-follow-through",
+            "scope_class": "narrow-code-change",
+            "desired_behavior": "Prefer narrow edits.",
+            "replaced_behavior": "Broad edits.",
+            "authority": "explicit-user-correction",
+            "source": "pr-review",
+        },
+        {
+            "target_identity_ref": "user-local:fast-worker",
+            "target_revision": "old-rev",
+            "desired_behavior": "Use stale behavior.",
+            "replaced_behavior": "Current behavior.",
+            "authority": "explicit-user-correction",
+            "source": "pr-review",
+        },
+    ]
+
+    admitted = admit_correction_events(
+        events=events,
+        subjects=subjects,
+        task_class="mechanical-follow-through",
+        scope_class="narrow-code-change",
+    )
+
+    assert admitted["admitted_events"][0]["target_identity_ref"] == "user-local:fast-worker"
+    assert admitted["admitted_events"][0]["profile_name"] == "fast_worker"
+    assert {item["reason"] for item in admitted["rejected_events"]} == {"duplicate-replay", "rejected-stale-revision"}
+
+
+def test_correction_event_lifecycle_applies_revision_policies_and_rejects_unknown_or_secret_events() -> None:
+    from agentic_workspace.agent_guidance import admit_correction_events
+
+    subjects = [
+        {
+            "profile_name": "preserve_worker",
+            "stable_target_id": "user-local:preserve",
+            "target_revision": "rev-b",
+            "aliases": [],
+            "identity_status": "active",
+            "revision_policy": "preserve",
+        },
+        {
+            "profile_name": "retired_worker",
+            "stable_target_id": "user-local:retired",
+            "target_revision": "rev-b",
+            "aliases": [],
+            "identity_status": "active",
+            "revision_policy": "retire",
+        },
+    ]
+
+    admitted = admit_correction_events(
+        events=[
+            {
+                "target_identity_ref": "user-local:preserve",
+                "target_revision": "rev-a",
+                "desired_behavior": "Keep preserved guidance.",
+                "replaced_behavior": "Old guidance.",
+                "authority": "explicit-user-correction",
+                "source": "pr-review",
+            },
+            {
+                "target_identity_ref": "user-local:retired",
+                "target_revision": "rev-a",
+                "desired_behavior": "Route retired guidance.",
+                "replaced_behavior": "Old guidance.",
+                "authority": "explicit-user-correction",
+                "source": "pr-review",
+            },
+            {
+                "target_identity_ref": "missing",
+                "desired_behavior": "Unknown target.",
+                "replaced_behavior": "Old guidance.",
+                "authority": "explicit-user-correction",
+                "source": "pr-review",
+            },
+            {
+                "target_identity_ref": "user-local:preserve",
+                "target_revision": "rev-b",
+                "desired_behavior": "Never store sk-secret.",
+                "replaced_behavior": "Old guidance.",
+                "authority": "explicit-user-correction",
+                "source": "pr-review",
+            },
+        ],
+        subjects=subjects,
+    )
+
+    assert admitted["admitted_events"][0]["admission_state"] == "accepted-preserved-revision"
+    assert {item["reason"] for item in admitted["rejected_events"]} == {
+        "rejected-retired-revision",
+        "rejected-unavailable-target",
+        "rejected-secret-bearing",
+    }
 
 
 def test_config_command_layers_assignment_policy_from_shared_local_config(tmp_path: Path, capsys) -> None:
@@ -2120,7 +2246,7 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
         "record_count": 2,
         "suitability": [
             {
-                "target": "fast_worker",
+                "target": "user-local:fast-worker",
                 "target_identity_ref": "user-local:fast-worker",
                 "target_revision": "rev-b",
                 "context_key": "mechanical-follow-through::mechanical-follow-through",
