@@ -53,6 +53,7 @@ WORKSPACE_TEST_CONTRACTS = \
 WORKSPACE_TEST_GENERATED_RELEASE = \
 	tests/test_command_generation_integration.py \
 	tests/test_command_generation_release_promotion.py \
+	tests/test_coordinated_release.py \
 	tests/test_generated_tool_conformance.py \
 	tests/test_release_recovery_status.py \
 	tests/test_release_workflows.py \

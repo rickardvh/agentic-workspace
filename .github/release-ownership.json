@@ -2,6 +2,14 @@
   "schema_version": "agentic-workspace/release-ownership/v1",
   "release_model": "coordinated-workspace",
   "canonical_version_source": "pyproject.toml",
+  "changeset_dir": ".release/changes",
+  "release_notes_dir": ".release/releases",
+  "release_pr_branch": "automation/coordinated-release",
+  "publisher": {
+    "workflow": ".github/workflows/release.yml",
+    "trigger": "existing-tag-only",
+    "tag_rule": "vMAJOR.MINOR.PATCH must point at a commit whose coordinated package manifests declare the same version"
+  },
   "semver_labels": [
     "semver:major",
     "semver:minor",
@@ -16,6 +24,7 @@
     "generated/memory/typescript/package.json",
     "generated/planning/typescript/package.json",
     "generated/verification/typescript/package.json",
+    ".release/releases/",
     "uv.lock"
   ],
   "package_affecting_paths": [
@@ -25,6 +34,8 @@
     ".github/workflows/pr-semver-label.yml",
     ".github/workflows/release-from-semver-label.yml",
     ".github/workflows/release.yml",
+    ".release/changes/",
+    ".release/releases/",
     "docs/release-and-versioning.md",
     "generated/",
     "packages/",
@@ -130,8 +141,5 @@
       "generated_command_contract": "agentic-workspace/command-package-ir/v1"
     }
   ],
-  "first_coordinated_release": {
-    "floor_version": "0.4.0",
-    "rule": "The first coordinated release must not downgrade any package version."
-  }
+  "version_floor_rule": "The next coordinated version must be greater than every shipped package version and every existing vMAJOR.MINOR.PATCH tag."
 }
