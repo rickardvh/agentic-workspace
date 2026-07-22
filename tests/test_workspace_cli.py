@@ -2290,7 +2290,7 @@ def _autopilot_authoritative_context_fixture(*, target_root: Path, proof: dict[s
     from agentic_workspace.authority_envelope import mutation_baseline_payload
 
     baseline = mutation_baseline_payload(target_root=target_root, changed_paths=[])
-    return {
+    context = {
         "selected_plan_id": "owner-a",
         "id": "work-owner-a",
         "owner_binding": {"owner_id": "owner-a", "relation": "plan-continuation"},
@@ -2327,8 +2327,18 @@ def _autopilot_authoritative_context_fixture(*, target_root: Path, proof: dict[s
         },
         "evaluation": {"status": "not-required", "freshness_status": "not-required", "reason": "no-registered-evaluations"},
         "expected_mutation_baseline": baseline,
-        **({"proof_obligation": proof} if proof is not None else {}),
     }
+    if proof is not None:
+        context["proof_obligation"] = proof
+        context["proof_receipt_reconciliation"] = {
+            "status": "accepted",
+            "selected_proof_identity": {
+                "owner_id": "owner-a",
+                "proof_subject_fingerprint": proof.get("proof_subject_fingerprint"),
+            },
+            "reason": "accepted-current-proof-receipt",
+        }
+    return context
 
 
 def test_active_executor_binding_consumes_authoritative_context_and_revalidates_baseline(tmp_path: Path, monkeypatch) -> None:
@@ -2355,6 +2365,12 @@ def test_active_executor_binding_consumes_authoritative_context_and_revalidates_
     assert binding["assignment"]["assignment_revision"].startswith("sha256:")
     assert binding["mutation_baseline"]["revalidation_status"] == "fresh"
     assert binding["proof_obligation"]["proof_subject_fingerprint"] == "proof-owner-a"
+    invocation = binding["executor_invocation"]
+    assert invocation["kind"] == "agentic-workspace/autopilot-executor-invocation/v1"
+    assert invocation["role"] == "ordinary-executor"
+    assert invocation["binding_fingerprint"] == binding["binding_fingerprint"]
+    assert invocation["return_schema"] == "agentic-workspace/terminal-outcome-contract/v1"
+    assert invocation["allowed_effects"] == ["edit", "test"]
 
 
 def test_active_executor_binding_rejects_missing_authoritative_proof(tmp_path: Path, monkeypatch) -> None:
@@ -2378,14 +2394,14 @@ def test_active_executor_binding_rejects_missing_authoritative_proof(tmp_path: P
     assert binding["proof_obligation"]["receipt_status"] == "missing"
 
 
-def test_active_executor_binding_rejects_stale_authoritative_evaluation(tmp_path: Path, monkeypatch) -> None:
+def test_active_executor_binding_rejects_injected_proof_without_live_reconciliation(tmp_path: Path, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
     context = _autopilot_authoritative_context_fixture(
         target_root=tmp_path,
         proof={"status": "accepted", "receipt_status": "fresh", "proof_subject_fingerprint": "proof-owner-a"},
     )
-    context["evaluation"] = {"freshness_status": "stale", "reason": "stale-evaluation-result"}
+    context.pop("proof_receipt_reconciliation")
     monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
     monkeypatch.setattr(
         cli,
@@ -2399,7 +2415,92 @@ def test_active_executor_binding_rejects_stale_authoritative_evaluation(tmp_path
     binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
 
     assert binding["validity"]["status"] == "rejected"
+    assert binding["validity"]["reason"] == "missing-live-proof-reconciliation"
+    assert binding["proof_obligation"]["source"] == "caller-expected-proof"
+
+
+def test_active_executor_binding_rejects_stale_authoritative_evaluation(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={"status": "accepted", "receipt_status": "fresh", "proof_subject_fingerprint": "proof-owner-a"},
+    )
+    context["evaluation"] = {"evaluation_id": "eval-owner-a"}
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(
+        cli,
+        "evaluation_summary",
+        lambda **_: {
+            "summaries": [
+                {
+                    "evaluation_id": "eval-owner-a",
+                    "revision": 1,
+                    "owner": {"id": "owner-a"},
+                    "fresh_result_admission": {
+                        "status": "stale-bound",
+                        "current_result_identity": {"status": "missing"},
+                    },
+                    "conclusion_readiness": {"ready": False, "reason_code": "stale-evaluation-result"},
+                }
+            ]
+        },
+    )
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "rejected"
     assert binding["validity"]["reason"] == "stale-evaluation-result"
+
+
+def test_active_executor_binding_ignores_unrelated_stale_evaluation(tmp_path: Path, monkeypatch) -> None:
+    _init_git_repo(tmp_path)
+    assert cli.main(["init", "--target", str(tmp_path), "--mirror-payload", "--format", "json"]) == 0
+    context = _autopilot_authoritative_context_fixture(
+        target_root=tmp_path,
+        proof={"status": "accepted", "receipt_status": "fresh", "proof_subject_fingerprint": "proof-owner-a"},
+    )
+    monkeypatch.setattr(cli, "resolve_current_work_context", lambda **_: context)
+    monkeypatch.setattr(
+        cli,
+        "evaluation_summary",
+        lambda **_: {
+            "summaries": [
+                {
+                    "evaluation_id": "eval-other-owner",
+                    "revision": 1,
+                    "owner": {"id": "other-owner"},
+                    "fresh_result_admission": {
+                        "status": "stale-bound",
+                        "current_result_identity": {"status": "missing"},
+                    },
+                    "conclusion_readiness": {"ready": False, "reason_code": "stale-evaluation-result"},
+                }
+            ]
+        },
+    )
+    monkeypatch.setattr(
+        cli,
+        "target_identity_posture",
+        lambda **_: {
+            "current_target": "local-codex",
+            "current_target_identity": {"status": "current", "subject": {"stable_target_id": "target-local"}},
+        },
+    )
+
+    binding = cli._active_executor_binding(target_root=tmp_path.resolve(), slice_number=1)
+
+    assert binding["validity"]["status"] == "accepted"
+    assert binding["evaluation"]["freshness_status"] == "not-required"
+    assert binding["evaluation"]["ignored_evaluation_count"] == 1
 
 
 def test_autopilot_rebinds_executor_with_current_binding_fingerprint_after_active_owner_changes(
@@ -5336,6 +5437,21 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
     assert admission["rejected_candidates"][0]["ref"] == ".agentic-workspace/planning/execplans/issue-1981.plan.json"
     assert admission["rejected_candidates"][0]["reason"] == "owner-lifecycle-not-live"
     assert admission["repair_route"]["status"] == "available"
+    assert admission["admission_contract"]["consumers"] == [
+        "start",
+        "next",
+        "implement",
+        "autopilot",
+        "proof",
+        "closeout",
+        "archive",
+        "status",
+        "doctor",
+        "report",
+    ]
+    assert admission["action_effect"]["force"] == "required_before_action"
+    assert "closeout" in admission["action_effect"]["blocked_until_reconciled"]
+    assert "archive" in admission["action_effect"]["blocked_until_reconciled"]
     assert route.get("selected_owner_identity", {}).get("ref", "") == ""
 
     assert (
@@ -5733,6 +5849,13 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
     assert route["selected_owner"] == selected_ref
     assert route["task_relation"] == "continues-selected-owner"
     assert route["owner_admission"]["selected_owner"]["reason"] == "explicit-residual-owner"
+    assert "proof" in route["owner_admission"]["admission_contract"]["consumers"]
+    assert "closeout" in route["owner_admission"]["admission_contract"]["consumers"]
+    assert "archive" in route["owner_admission"]["admission_contract"]["consumers"]
+    reference_identity = route["owner_admission"]["selected_owner"]["reference_identity"]
+    assert reference_identity["owner_ref"] == selected_ref
+    assert reference_identity["owner_id"] == "issue-2281"
+    assert reference_identity["current_planning_revision"]
 
 
 def test_start_route_rejects_stale_local_selection_revision(tmp_path: Path, capsys) -> None:
@@ -5921,7 +6044,21 @@ execplans = [{ id = "issue-2290", path = ".agentic-workspace/planning/execplans/
     )
     _write(
         tmp_path / selected_ref,
-        json.dumps({"kind": "planning-execplan/v1", "id": "issue-2290", "lifecycle": "live", "phase": "implementation"}),
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2290",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "revision": "owner-rev-1",
+                "assignment_target_identity_ref": "assignment-target:issue-2290",
+                "assignment_revision": "assignment-rev-1",
+                "evaluation_result_identity": "evaluation-result:issue-2290:passed",
+                "proof_obligation_revision": "proof-obligation-rev-1",
+                "mutation_baseline_id": "mutation-baseline-1",
+                "integration_revision": "integration-rev-1",
+            }
+        ),
     )
 
     assert (
@@ -5944,6 +6081,17 @@ execplans = [{ id = "issue-2290", path = ".agentic-workspace/planning/execplans/
     route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
     assert route["selected_owner"] == selected_ref
     assert route["owner_admission"]["selected_owner"]["source"] == ".agentic-workspace/planning/state.toml:active.execplans"
+    reference_identity = route["owner_admission"]["selected_owner"]["reference_identity"]
+    assert reference_identity["owner_ref"] == selected_ref
+    assert reference_identity["owner_id"] == "issue-2290"
+    assert reference_identity["record_revision"] == "owner-rev-1"
+    assert reference_identity["assignment_target_identity_ref"] == "assignment-target:issue-2290"
+    assert reference_identity["assignment_revision"] == "assignment-rev-1"
+    assert reference_identity["evaluation_result_identity"] == "evaluation-result:issue-2290:passed"
+    assert reference_identity["proof_obligation_revision"] == "proof-obligation-rev-1"
+    assert reference_identity["mutation_baseline_id"] == "mutation-baseline-1"
+    assert reference_identity["integration_revision"] == "integration-rev-1"
+    assert reference_identity["identity_completeness"] == "partial"
 
 
 def test_start_route_replays_stale_2290_local_selection_without_claim_constraints(tmp_path: Path, capsys) -> None:

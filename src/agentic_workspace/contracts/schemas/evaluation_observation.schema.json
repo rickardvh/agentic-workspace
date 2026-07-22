@@ -18,7 +18,9 @@
     "burden",
     "finding",
     "recommended_action",
-    "admission"
+    "admission",
+    "result_identity",
+    "supersedes"
   ],
   "properties": {
     "kind": {"const": "agentic-workspace/evaluation-observation/v1", "description": "Discriminator identifying one evaluation observation record."},
@@ -33,6 +35,17 @@
     "burden": {"enum": ["low", "medium", "high"], "description": "Collection or review burden for this observation."},
     "finding": {"type": "string", "description": "Compact finding text derived from the observation."},
     "recommended_action": {"type": "string", "description": "Bounded next action recommended by the observer, when any."},
+    "result_identity": {
+      "type": "object",
+      "required": ["kind", "id", "status", "evaluation_id", "definition_revision", "criterion"],
+      "additionalProperties": true,
+      "description": "Stable identity for the admitted decision-bearing evaluation result."
+    },
+    "supersedes": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "description": "Result identities superseded by this admitted observation."
+    },
     "admission": {
       "type": "object",
       "required": ["status", "reason"],

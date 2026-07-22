@@ -31079,10 +31079,48 @@ def _executor_context_task_text(context: dict[str, Any]) -> str:
     return ""
 
 
-def _executor_evaluation_authority(*, target_root: Path, context: dict[str, Any]) -> dict[str, Any]:
-    supplied = _as_dict(context.get("evaluation") or context.get("evaluation_authority"))
-    if supplied:
-        return supplied
+def _executor_evaluation_matches(
+    *,
+    summary_item: dict[str, Any],
+    expected: dict[str, Any],
+    assignment: dict[str, Any],
+    owner_identity: dict[str, Any],
+) -> bool:
+    admission = _as_dict(summary_item.get("fresh_result_admission"))
+    identity = _as_dict(admission.get("current_result_identity"))
+    expected_evaluation_id = str(expected.get("evaluation_id") or "").strip()
+    if expected_evaluation_id and str(summary_item.get("evaluation_id") or "").strip() != expected_evaluation_id:
+        return False
+    expected_target = str(assignment.get("target_identity_ref") or expected.get("target_identity_ref") or "").strip()
+    observed_target = str(identity.get("target_identity_ref") or "").strip()
+    if expected_target and observed_target and observed_target != expected_target:
+        return False
+    expected_assignment = str(assignment.get("assignment_revision") or expected.get("assignment_revision") or "").strip()
+    observed_assignment = str(identity.get("assignment_revision") or "").strip()
+    if expected_assignment and observed_assignment and observed_assignment != expected_assignment:
+        return False
+    expected_owner = str(owner_identity.get("owner_id") or expected.get("owner_id") or "").strip()
+    owner = _as_dict(summary_item.get("owner"))
+    observed_owner = str(owner.get("id") or owner.get("owner_id") or "").strip()
+    if expected_owner and observed_owner and observed_owner != expected_owner:
+        return False
+    return True
+
+
+def _executor_evaluation_authority(
+    *,
+    target_root: Path,
+    context: dict[str, Any],
+    assignment: dict[str, Any],
+    owner_identity: dict[str, Any],
+) -> dict[str, Any]:
+    expected = _as_dict(context.get("evaluation") or context.get("evaluation_authority"))
+    expected_status = str(expected.get("freshness_status") or expected.get("status") or "").strip()
+    expected_required = (
+        bool(expected)
+        and expected_status != "not-required"
+        and bool(str(expected.get("evaluation_id") or expected.get("current_result_identity") or "").strip())
+    )
     summary = evaluation_summary(target_root=target_root)
     summaries = [item for item in _list_payload(summary.get("summaries")) if isinstance(item, dict)]
     if not summaries:
@@ -31091,15 +31129,36 @@ def _executor_evaluation_authority(*, target_root: Path, context: dict[str, Any]
             "freshness_status": "not-required",
             "reason": "no-registered-evaluations",
             "source": "evaluation_summary",
+            "expected_authority": expected,
+        }
+    relevant = [
+        item
+        for item in summaries
+        if _executor_evaluation_matches(
+            summary_item=item,
+            expected=expected,
+            assignment=assignment,
+            owner_identity=owner_identity,
+        )
+    ]
+    if not relevant:
+        return {
+            "status": "missing" if expected_required else "not-required",
+            "freshness_status": "missing" if expected_required else "not-required",
+            "reason": "missing-relevant-evaluation" if expected_required else "no-relevant-evaluation-required",
+            "source": "evaluation_summary",
+            "expected_authority": expected,
+            "ignored_evaluation_count": len(summaries),
+            "rule": "Autopilot ignores unrelated evaluation summaries; only current owner/target/assignment matches can bind the executor.",
         }
     current = next(
         (
             item
-            for item in summaries
+            for item in relevant
             if _as_dict(item.get("fresh_result_admission")).get("status") != "fresh-bound"
             or _as_dict(item.get("conclusion_readiness")).get("ready") is not True
         ),
-        summaries[-1],
+        relevant[-1],
     )
     admission = _as_dict(current.get("fresh_result_admission"))
     readiness = _as_dict(current.get("conclusion_readiness"))
@@ -31117,7 +31176,41 @@ def _executor_evaluation_authority(*, target_root: Path, context: dict[str, Any]
         "conclusion_readiness": readiness,
         "reason": readiness.get("reason_code") or admission.get("status") or "evaluation-not-ready",
         "source": "evaluation_summary",
+        "expected_authority": expected,
+        "matched_evaluation_count": len(relevant),
+        "ignored_evaluation_count": len(summaries) - len(relevant),
     }
+
+
+def _executor_invocation_plan(
+    *,
+    binding_fingerprint: str,
+    owner_identity: dict[str, Any],
+    target_binding: dict[str, Any],
+    assignment: dict[str, Any],
+    proof_obligation: dict[str, Any],
+    task_text: str,
+) -> dict[str, Any]:
+    plan = {
+        "kind": "agentic-workspace/autopilot-executor-invocation/v1",
+        "role": "ordinary-executor",
+        "task_scope": task_text or str(assignment.get("context_key") or owner_identity.get("current_work_id") or ""),
+        "owner_identity": owner_identity,
+        "target": {
+            "target_identity_ref": target_binding.get("target_identity_ref"),
+            "selected_target": target_binding.get("selected_target"),
+            "execution_methods": target_binding.get("execution_methods") or [],
+        },
+        "allowed_effects": assignment.get("allowed_effects") or [],
+        "allowed_paths": assignment.get("allowed_paths") or [],
+        "stop_conditions": assignment.get("stop_conditions") or [],
+        "proof_obligation": proof_obligation,
+        "return_schema": "agentic-workspace/terminal-outcome-contract/v1",
+        "binding_fingerprint": binding_fingerprint,
+    }
+    plan["invocation_revision"] = binding_fingerprint
+    plan["rule"] = "Executor commands must be rendered from this typed invocation after each binding change."
+    return plan
 
 
 def _executor_proof_authority(context: dict[str, Any]) -> dict[str, Any]:
@@ -31127,16 +31220,26 @@ def _executor_proof_authority(context: dict[str, Any]) -> dict[str, Any]:
         or context.get("proof_authority")
         or context.get("proof")
     )
-    if supplied:
-        return supplied
     reconciliation = _as_dict(context.get("proof_receipt_reconciliation"))
     if reconciliation:
         return {
             "status": "accepted" if reconciliation.get("status") == "accepted" else str(reconciliation.get("status") or "missing"),
             "receipt_status": "fresh" if reconciliation.get("status") == "accepted" else str(reconciliation.get("status") or "missing"),
             "selected_proof_identity": reconciliation.get("selected_proof_identity"),
+            "proof_subject_fingerprint": _as_dict(reconciliation.get("selected_proof_identity")).get("proof_subject_fingerprint")
+            or supplied.get("proof_subject_fingerprint"),
             "reason": reconciliation.get("reason") or reconciliation.get("status"),
             "source": "proof_receipt_reconciliation",
+            "expected_authority": supplied,
+        }
+    if supplied:
+        return {
+            "status": "missing",
+            "receipt_status": "missing",
+            "reason": "missing-live-proof-reconciliation",
+            "expected_authority": supplied,
+            "source": "caller-expected-proof",
+            "repair": "Resolve proof receipt reconciliation from the current selected proof obligation before running Autopilot.",
         }
     return {
         "status": "missing",
@@ -31280,6 +31383,15 @@ def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[st
         "owner_ref": str(_as_dict(context.get("provenance")).get("plan_id") or "").strip(),
         "owner_relation": str(owner_binding.get("relation") or ""),
         "current_work_id": current_work_id,
+        "owner_revision": str(context.get("owner_revision") or revision.get("owner_revision") or revision.get("head") or "").strip(),
+        "external_intent_revision": _executor_binding_fingerprint(
+            {
+                "task_text": task_text,
+                "current_slice": context.get("current_slice"),
+                "issue_refs": _list_payload(context.get("issue_refs")),
+                "plan_refs": _list_payload(context.get("plan_refs")),
+            }
+        ),
     }
     target_binding = {
         "target_root": target_root.as_posix(),
@@ -31313,7 +31425,12 @@ def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[st
         "stop_conditions": assignment_identity.get("stop_conditions") or [],
         "proof_obligation_id": assignment_identity.get("proof_obligation_id"),
     }
-    evaluation = _executor_evaluation_authority(target_root=target_root, context=context)
+    evaluation = _executor_evaluation_authority(
+        target_root=target_root,
+        context=context,
+        assignment=assignment,
+        owner_identity=owner_identity,
+    )
     proof_obligation = _executor_proof_authority(context)
     mutation_baseline = _executor_mutation_baseline_authority(
         target_root=target_root,
@@ -31336,6 +31453,15 @@ def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[st
         "proof_obligation": proof_obligation,
         "mutation_baseline": mutation_baseline,
     }
+    binding_fingerprint = _executor_binding_fingerprint(fingerprint_payload)
+    executor_invocation = _executor_invocation_plan(
+        binding_fingerprint=binding_fingerprint,
+        owner_identity=owner_identity,
+        target_binding=target_binding,
+        assignment=assignment,
+        proof_obligation=proof_obligation,
+        task_text=task_text,
+    )
     binding = {
         "kind": "agentic-workspace/autopilot-executor-binding/v1",
         "status": "bound" if owner_id else "unbound",
@@ -31356,7 +31482,8 @@ def _active_executor_binding(*, target_root: Path, slice_number: int) -> dict[st
         "proof_obligation": proof_obligation,
         "mutation_baseline": mutation_baseline,
         "availability": availability,
-        "binding_fingerprint": _executor_binding_fingerprint(fingerprint_payload),
+        "executor_invocation": executor_invocation,
+        "binding_fingerprint": binding_fingerprint,
         "source": "resolve_current_work_context",
         "rule": "Autopilot resolves this binding before every executor slice from authoritative owner, target, assignment, evaluation, proof, and mutation-baseline state.",
     }
@@ -31394,17 +31521,21 @@ def _executor_binding_change_guard(
     previous_terms = _executor_binding_terms(previous_binding)
     current_terms = _executor_binding_terms(current_binding)
     command_text_value = str(executor_command or "")
-    names_current_fingerprint = bool(current_fingerprint and current_fingerprint in command_text_value)
-    if not names_current_fingerprint:
+    current_invocation = _as_dict(current_binding.get("executor_invocation"))
+    current_invocation_revision = str(current_invocation.get("invocation_revision") or current_fingerprint).strip()
+    names_current_invocation = bool(current_invocation_revision and current_invocation_revision in command_text_value)
+    if not names_current_invocation:
         return {
             "status": "stale-binding",
-            "reason": "executor invocation lacks current binding fingerprint after active binding changed",
+            "reason": "executor invocation lacks current typed binding revision after active binding changed",
             "previous_owner_id": previous_owner,
             "current_owner_id": current_owner,
             "previous_terms": previous_terms,
             "current_terms": current_terms,
             "previous_binding_fingerprint": previous_fingerprint,
             "current_binding_fingerprint": current_fingerprint,
+            "current_invocation_revision": current_invocation_revision,
+            "current_executor_invocation": current_invocation,
             "binding_payload_fields": list(_executor_binding_fingerprint_payload(current_binding)),
             "repair": "Render a fresh executor command from the newly admitted owner and external intent before running Autopilot again.",
         }
@@ -31415,6 +31546,8 @@ def _executor_binding_change_guard(
         "current_owner_id": current_owner,
         "previous_binding_fingerprint": previous_fingerprint,
         "current_binding_fingerprint": current_fingerprint,
+        "current_invocation_revision": current_invocation_revision,
+        "current_executor_invocation": current_invocation,
         "binding_payload_fields": list(_executor_binding_fingerprint_payload(current_binding)),
     }
 
@@ -35517,7 +35650,9 @@ def _manual_transport_admission_payload(
         state = "disabled"
         export_allowed = False
         required = False
-        status = "blocked-transport-disabled" if handoff_required else "disabled"
+        status = (
+            "automatic-route-available" if automatic_method_available else "blocked-transport-disabled" if handoff_required else "disabled"
+        )
     elif policy == "required-when-no-automatic-method":
         export_allowed = True
         required = not automatic_method_available
@@ -35572,9 +35707,35 @@ def _assignment_identity_payload(
         "allowed_paths": allowed_paths if isinstance(allowed_paths, list) else [],
         "return_schema": next_step.get("return_schema") or "delegated-return/v1",
         "proof_obligation_id": proof_obligation.get("id") or next_step.get("proof_obligation_id"),
+        "proof_obligation_revision": proof_obligation.get("revision") or next_step.get("proof_obligation_revision"),
         "stop_conditions": stop_conditions if isinstance(stop_conditions, list) else [],
         "mutation_baseline": assignment_gate.get("mutation_baseline") or next_step.get("mutation_baseline"),
+        "return_admission_owner": "delegated-return.admit",
     }
+    required_fields = [
+        "target",
+        "target_identity_ref",
+        "target_revision",
+        "task_class",
+        "scope_class",
+        "plan_ref",
+        "plan_revision",
+        "slice_id",
+        "slice_revision",
+        "assignment_decision_revision",
+        "handoff_run_id",
+        "role",
+        "allowed_effects",
+        "allowed_paths",
+        "return_schema",
+        "proof_obligation_id",
+        "proof_obligation_revision",
+        "stop_conditions",
+        "mutation_baseline",
+    ]
+    missing_required = [field for field in required_fields if identity.get(field) in (None, "", [])]
+    identity["complete"] = not missing_required
+    identity["missing_required_fields"] = missing_required
     revision_source = json.dumps(identity, sort_keys=True, separators=(",", ":"), default=str)
     identity["revision"] = "sha256:" + hashlib.sha256(revision_source.encode("utf-8")).hexdigest()
     return identity
@@ -35600,23 +35761,28 @@ def _admit_delegated_return(
         else [],
         handoff_required=True,
     )
+    current_proof = _as_dict(assignment_gate.get("aw_proof_receipt") or assignment_gate.get("proof_receipt"))
+    current_baseline = assignment_gate.get("live_mutation_baseline")
     failures: list[dict[str, str]] = []
 
     def reject(reason: str, field: str, recovery: str) -> None:
         failures.append({"reason": reason, "field": field, "recovery": recovery})
 
-    if not manual_transport["export_allowed"]:
+    if not manual_transport["export_allowed"] and not manual_transport["automatic_method_available"]:
         reject("manual-transport-disabled", "manual_transport.policy", "Enable an allowed transport or use an automatic method.")
+    if not identity.get("complete"):
+        reject("incomplete-assignment-identity", "assignment_identity", "Regenerate the assignment with all required identity fields.")
     if returned_work.get("assignment_revision") != identity["revision"]:
         reject(
             "stale-assignment-revision", "assignment_revision", "Refresh the handoff and resubmit against the current assignment revision."
         )
     if returned_work.get("target") != identity["target"]:
         reject("target-mismatch", "target", "Return work from the selected assignment target only.")
-    proof = returned_work.get("aw_proof") or returned_work.get("proof")
-    if not isinstance(proof, dict) or proof.get("result") != "passed" or proof.get("verified_by") != "aw":
+    if current_proof.get("result") != "passed" or current_proof.get("verified_by") != "aw":
         reject(
-            "aw-proof-missing-or-not-passed", "aw_proof.result", "Run AW-owned proof and return a verified passed result before admission."
+            "aw-proof-missing-or-not-passed",
+            "assignment_gate.aw_proof_receipt",
+            "Run AW-owned proof and record the current receipt before admission.",
         )
     if returned_work.get("stop_conditions_hit"):
         reject("stop-condition-hit", "stop_conditions_hit", "Route the stop condition before integration.")
@@ -35629,43 +35795,21 @@ def _admit_delegated_return(
     elif changed_paths and not allowed_paths:
         reject("missing-canonical-scope", "assignment_identity.allowed_paths", "Refresh the assignment so AW can compare returned paths.")
     mutation_revalidation: dict[str, Any] = {"status": "not-provided", "admitted": False}
-    expected_baseline = returned_work.get("expected_mutation_baseline") or identity.get("mutation_baseline")
-    current_baseline = returned_work.get("current_mutation_baseline") or returned_work.get("mutation_baseline")
-    if expected_baseline and current_baseline:
-        if isinstance(expected_baseline, dict) and isinstance(current_baseline, dict):
-            mutation_admission = admit_mutation_boundary(
-                boundary_id="returned-worker-admission",
-                expected=expected_baseline,
-                current=current_baseline,
-                assignment_target_identity_ref=(
-                    str(returned_work.get("assignment_target_identity_ref"))
-                    if returned_work.get("assignment_target_identity_ref")
-                    else None
-                ),
-                allowed_paths=[str(path) for path in allowed_paths] if isinstance(allowed_paths, list) else None,
-            )
-            mutation_revalidation = _as_dict(mutation_admission.get("revalidation"))
-            for failure in mutation_revalidation.get("failures", []):
-                if isinstance(failure, dict):
-                    reject(
-                        str(failure.get("reason") or "mutation-baseline-revalidation-failed"),
-                        str(failure.get("field") or "mutation_baseline"),
-                        str(failure.get("repair") or "Rebase or regenerate the returned work against the current baseline."),
-                    )
-        elif current_baseline != expected_baseline:
-            mutation_revalidation = {
-                "status": "rejected",
-                "admitted": False,
-                "failures": [
-                    {
-                        "reason": "mutation-baseline-mismatch",
-                        "field": "mutation_baseline",
-                        "repair": "Rebase or regenerate the returned work against the current baseline.",
-                    }
-                ],
-            }
+    expected_baseline = identity.get("mutation_baseline")
+    mutation_admission = admit_mutation_boundary(
+        boundary_id="returned-worker-admission",
+        expected=expected_baseline if isinstance(expected_baseline, dict) else None,
+        current=current_baseline if isinstance(current_baseline, dict) else None,
+        assignment_target_identity_ref=str(identity.get("target_identity_ref") or "").strip() or None,
+        allowed_paths=[str(path) for path in allowed_paths] if isinstance(allowed_paths, list) else None,
+    )
+    mutation_revalidation = _as_dict(mutation_admission.get("revalidation")) or mutation_admission
+    for failure in mutation_admission.get("failures", []):
+        if isinstance(failure, dict):
             reject(
-                "mutation-baseline-mismatch", "mutation_baseline", "Rebase or regenerate the returned work against the current baseline."
+                str(failure.get("reason") or "mutation-baseline-revalidation-failed"),
+                str(failure.get("field") or "mutation_baseline"),
+                str(failure.get("repair") or "Rebase or regenerate the returned work against the current baseline."),
             )
 
     admitted = not failures
@@ -35677,6 +35821,14 @@ def _admit_delegated_return(
         "assignment_identity": identity,
         "manual_transport": manual_transport,
         "mutation_revalidation": mutation_revalidation,
+        "current_authority": {
+            "proof_receipt": current_proof or None,
+            "mutation_baseline": current_baseline,
+            "proof_source": "assignment_gate.aw_proof_receipt",
+            "baseline_source": "assignment_gate.live_mutation_baseline",
+            "worker_reported_proof_trusted": False,
+            "worker_reported_baseline_trusted": False,
+        },
         "failures": failures,
         "safe_recovery": "none" if admitted else failures[0]["recovery"],
         "rule": "Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.",
@@ -36488,17 +36640,19 @@ def _delegated_run_lifecycle_payload(
     admission_operation = {
         "operation_id": "delegated-return.admit",
         "callable": "agentic_workspace.workspace_runtime_core._admit_delegated_return",
+        "public": True,
+        "generated_operation": True,
         "assignment_identity": assignment_identity,
         "input_contract": {
-            "required": ["assignment_revision", "target", "aw_proof"],
+            "required": ["assignment_revision", "target", "return_artifact_ref"],
             "optional": [
                 "changed_paths",
-                "mutation_baseline",
                 "stop_conditions_hit",
             ],
         },
         "rejects": [
             "stale-assignment-revision",
+            "incomplete-assignment-identity",
             "target-mismatch",
             "manual-transport-disabled",
             "missing-canonical-scope",
@@ -36517,6 +36671,8 @@ def _delegated_run_lifecycle_payload(
             "target": assignment_gate.get("selected_target"),
             "required_next_action": assignment_gate.get("required_next_action"),
             "implementation_allowed": assignment_gate.get("implementation_allowed"),
+            "identity_complete": assignment_identity["complete"],
+            "missing_identity_fields": assignment_identity["missing_required_fields"],
         },
         "manual_transport": {
             "policy": manual_transport["policy"],
@@ -36534,8 +36690,10 @@ def _delegated_run_lifecycle_payload(
             {"id": "assignment-selected", "status": assignment_gate.get("status")},
             {
                 "id": "handoff-prepared",
-                "status": "blocked-transport-disabled"
-                if handoff_required and not manual_export_allowed
+                "status": "automatic-route-available"
+                if handoff_required and (not manual_export_allowed) and manual_transport["automatic_method_available"]
+                else "blocked-transport-disabled"
+                if handoff_required and (not manual_export_allowed)
                 else "required"
                 if handoff_required
                 else "not-required",
@@ -36562,21 +36720,68 @@ def _delegated_run_lifecycle_payload(
         "admission_gate": {
             "status": "closed-until-reviewed",
             "operation": admission_operation,
+            "public_operations": [
+                {
+                    "operation_id": "delegated-run.export",
+                    "state_transition": "assignment-selected -> handoff-prepared",
+                    "artifact_state": "local/exported",
+                    "idempotency": "assignment_identity.revision + transport route",
+                },
+                {
+                    "operation_id": "delegated-return.import",
+                    "state_transition": "worker-returned -> received/awaiting-admission",
+                    "artifact_state": "local/received/awaiting-admission",
+                    "idempotency": "handoff_run_id + return artifact digest",
+                },
+                {
+                    "operation_id": "delegated-return.admit",
+                    "state_transition": "received/awaiting-admission -> admitted|rejected|repair-requested",
+                    "artifact_state": "local/admission-review",
+                    "idempotency": "assignment_identity.revision + current authority revisions",
+                },
+                {
+                    "operation_id": "delegated-return.integrate",
+                    "state_transition": "admitted -> integrated",
+                    "artifact_state": "repo mutation boundary",
+                    "idempotency": "admission receipt + live mutation baseline",
+                },
+                {
+                    "operation_id": "delegated-run.close",
+                    "state_transition": "integrated -> closed",
+                    "artifact_state": "closeout/proof receipt",
+                    "idempotency": "integration receipt + closeout proof",
+                },
+            ],
             "identity_fields": [
                 "assignment.target",
+                "assignment.target_identity_ref",
+                "assignment.target_revision",
+                "assignment.task_class",
+                "assignment.scope_class",
+                "assignment.plan_ref",
+                "assignment.plan_revision",
+                "assignment.slice_id",
+                "assignment.slice_revision",
                 "assignment.required_next_action",
                 "manual_transport.policy",
-                "assignment.plan_revision",
-                "assignment.slice_revision",
-                "assignment.target_identity_ref",
                 "assignment.allowed_effects",
                 "assignment.allowed_paths",
+                "assignment.role",
+                "assignment.handoff_run_id",
+                "assignment.return_schema",
                 "assignment.proof_obligation_id",
+                "assignment.proof_obligation_revision",
+                "assignment.stop_conditions",
                 "assignment.mutation_baseline",
                 "assignment.revision",
             ],
-            "required_evidence": ["returned summary", "changed paths or no-change statement", "AW-owned proof result"],
-            "rule": "Returned work is rejected until delegated-return.admit re-reads assignment identity, scope, proof, stop-condition, transport, and baseline evidence immediately before integration.",
+            "required_evidence": [
+                "received/awaiting-admission return artifact",
+                "changed paths or no-change statement",
+                "current AW-owned proof receipt",
+                "live mutation baseline",
+            ],
+            "rule": "Returned work is rejected until delegated-return.admit re-reads assignment identity, scope, proof, stop-condition, transport, and baseline evidence from current AW authorities immediately before integration.",
         },
         "return_contract": [
             "what changed",
@@ -42121,6 +42326,16 @@ def _record_proof_receipt_payload(
         changed_paths=receipt["changed_paths"],
         command=command,
     )
+    from agentic_workspace.workspace_runtime_proof import _proof_template_binding_for_recorded_receipt
+
+    template_binding = _proof_template_binding_for_recorded_receipt(target_root=target_root, receipt=receipt)
+    if template_binding.get("status") == "rejected":
+        raise WorkspaceUsageError(
+            f"Proof receipt template binding rejected ({template_binding['reason']}): "
+            "rerun proof selection and record the concrete command from the current selected obligation."
+        )
+    if template_binding.get("status") == "bound" and isinstance(template_binding.get("binding"), dict):
+        receipt["proof_template_binding"] = template_binding["binding"]
     admission = proof_receipt_admission(receipt)
     if not admission["admitted"]:
         raise WorkspaceUsageError(f"Proof receipt rejected ({admission['reason']}): {admission['safe_recovery']}")
@@ -47634,22 +47849,87 @@ def _record_delegation_outcome(
         raise WorkspaceUsageError("note-delegation-outcome authority must be one of: aw-proof, human-review, local-outcome-ledger.")
     if normalized_confidence not in {"high", "medium"}:
         raise WorkspaceUsageError("note-delegation-outcome confidence must be high or medium before routing can consume it.")
-    existing_ids = {
-        existing.record_id or f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
-        for index, existing in enumerate(records)
+
+    def _identity(existing: DelegationOutcomeRecord, index: int) -> str:
+        return (
+            existing.record_id
+            or f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
+        )
+
+    def _record_payload(existing: DelegationOutcomeRecord) -> dict[str, Any]:
+        return {
+            "recorded_at": existing.recorded_at,
+            "delegation_target": existing.delegation_target,
+            "task_class": existing.task_class,
+            "scope_class": existing.scope_class,
+            "outcome": existing.outcome,
+            "handoff_sufficiency": existing.handoff_sufficiency,
+            "review_burden": existing.review_burden,
+            "escalation_required": existing.escalation_required,
+            "operation": existing.operation,
+            "record_id": existing.record_id,
+            "predecessor_id": existing.predecessor_id,
+            "authority": existing.authority,
+            "confidence": existing.confidence,
+            "admission_state": existing.admission_state,
+            "source_type": existing.source_type,
+            "source_ref": existing.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+            "producer_class": existing.producer_class,
+            "route_outcome": existing.route_outcome,
+            "assignment_route": existing.assignment_route,
+            "proof_observation": existing.proof_observation,
+            "review_observation": existing.review_observation,
+            "handoff_burden": existing.handoff_burden,
+            "repair_burden": existing.repair_burden,
+            "retry_burden": existing.retry_burden,
+            "restart_burden": existing.restart_burden,
+            "expected_burden": existing.expected_burden,
+            "observed_burden": existing.observed_burden,
+            "scope_drift": existing.scope_drift,
+            "contradiction_state": existing.contradiction_state,
+            "uncertainty_state": existing.uncertainty_state,
+            "idempotency_key": existing.idempotency_key,
+        }
+
+    by_id = {_identity(existing, index): (index, existing) for index, existing in enumerate(records)}
+    transitioned_predecessors = {
+        existing.predecessor_id
+        for existing in records
+        if existing.operation in {"correct-or-dispute", "supersede", "prune-or-compact"} and existing.predecessor_id
     }
-    if normalized_operation != "submit" and normalized_predecessor not in existing_ids:
+    predecessor: DelegationOutcomeRecord | None = None
+    if normalized_operation != "submit" and normalized_predecessor not in by_id:
         raise WorkspaceUsageError("note-delegation-outcome transition operations require --predecessor-id for an existing record.")
+    if normalized_operation != "submit":
+        predecessor = by_id[normalized_predecessor][1]
+        if (
+            predecessor.delegation_target,
+            predecessor.task_class,
+            predecessor.scope_class,
+        ) != (normalized_target, normalized_task, normalized_scope):
+            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must match target/task/scope.")
+        if predecessor.admission_state not in {"accepted", "accepted-normalized", "recovered", "compacted-summary"}:
+            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must be current admitted evidence.")
+        if normalized_predecessor in transitioned_predecessors:
+            raise WorkspaceUsageError("note-delegation-outcome transition predecessor is already superseded, disputed, or compacted.")
     today = date.today().isoformat()
+    source_ref = WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix()
+    producer_class = {
+        "aw-proof": "aw-proof",
+        "human-review": "human-review",
+        "local-outcome-ledger": "local-operator",
+    }[normalized_authority]
+    idempotency_key = (
+        f"{normalized_operation}:{normalized_target}:{normalized_task}:{normalized_scope}:"
+        f"{normalized_authority}:{source_ref}:{outcome}:{handoff_sufficiency}:{review_burden}:{escalation_required}"
+    )
     duplicate_key = (
         normalized_target,
         normalized_task,
         normalized_scope,
-        outcome,
-        handoff_sufficiency,
-        review_burden,
-        escalation_required,
         normalized_authority,
+        source_ref,
+        idempotency_key,
     )
     if normalized_operation == "submit":
         for existing in records:
@@ -47657,11 +47937,9 @@ def _record_delegation_outcome(
                 existing.delegation_target,
                 existing.task_class,
                 existing.scope_class,
-                existing.outcome,
-                existing.handoff_sufficiency,
-                existing.review_burden,
-                existing.escalation_required,
                 existing.authority,
+                existing.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+                existing.idempotency_key,
             ) == duplicate_key and existing.admission_state in {"accepted", "accepted-normalized", "recovered"}:
                 raise WorkspaceUsageError(
                     "note-delegation-outcome duplicate evidence for target/task/scope/provenance must use a lifecycle transition."
@@ -47681,47 +47959,48 @@ def _record_delegation_outcome(
         predecessor_id=normalized_predecessor,
         authority=normalized_authority,
         confidence=normalized_confidence,
-        admission_state="accepted",
+        admission_state="compacted-summary" if normalized_operation == "prune-or-compact" else "accepted",
+        source_type="local-json-ledger",
+        source_ref=source_ref,
+        producer_class=producer_class,
+        route_outcome=outcome,
+        assignment_route="current-target" if normalized_target else "",
+        proof_observation="not-recorded",
+        review_observation="recorded" if normalized_authority == "human-review" else "not-recorded",
+        handoff_burden=handoff_sufficiency,
+        repair_burden=review_burden,
+        retry_burden="required" if escalation_required else "not-required",
+        restart_burden="not-recorded",
+        expected_burden="not-recorded",
+        observed_burden=review_burden,
+        scope_drift="none",
+        contradiction_state="none" if normalized_operation != "correct-or-dispute" else "disputed-predecessor",
+        uncertainty_state="medium" if normalized_confidence == "medium" else "low",
+        idempotency_key=idempotency_key,
     )
+    retained_records: list[DelegationOutcomeRecord] = list(records)
+    if normalized_operation == "prune-or-compact" and predecessor is not None:
+        retained_records = [
+            existing
+            for index, existing in enumerate(records)
+            if not (
+                existing.delegation_target == normalized_target
+                and existing.task_class == normalized_task
+                and existing.scope_class == normalized_scope
+                and (
+                    _identity(existing, index) == normalized_predecessor
+                    or existing.admission_state in {"superseded", "disputed", "compacted-raw"}
+                )
+            )
+        ]
     updated_payload = {
         "kind": DELEGATION_OUTCOMES_KIND,
-        "records": [
-            *[
-                {
-                    "recorded_at": existing.recorded_at,
-                    "delegation_target": existing.delegation_target,
-                    "task_class": existing.task_class,
-                    "scope_class": existing.scope_class,
-                    "outcome": existing.outcome,
-                    "handoff_sufficiency": existing.handoff_sufficiency,
-                    "review_burden": existing.review_burden,
-                    "escalation_required": existing.escalation_required,
-                    "operation": existing.operation,
-                    "record_id": existing.record_id,
-                    "predecessor_id": existing.predecessor_id,
-                    "authority": existing.authority,
-                    "confidence": existing.confidence,
-                    "admission_state": existing.admission_state,
-                }
-                for existing in records
-            ],
-            {
-                "recorded_at": record.recorded_at,
-                "delegation_target": record.delegation_target,
-                "task_class": record.task_class,
-                "scope_class": record.scope_class,
-                "outcome": record.outcome,
-                "handoff_sufficiency": record.handoff_sufficiency,
-                "review_burden": record.review_burden,
-                "escalation_required": record.escalation_required,
-                "operation": record.operation,
-                "record_id": record.record_id,
-                "predecessor_id": record.predecessor_id,
-                "authority": record.authority,
-                "confidence": record.confidence,
-                "admission_state": record.admission_state,
-            },
-        ],
+        "retention": {
+            "mode": "bounded-current-calibration",
+            "compaction_cap": 20,
+            "rule": "prune-or-compact rewrites same-context raw predecessor history into a compact current calibration summary with lineage.",
+        },
+        "records": [*[_record_payload(existing) for existing in retained_records], _record_payload(record)],
     }
     config_lib.write_delegation_outcomes(path=path, payload=updated_payload)
     return {
