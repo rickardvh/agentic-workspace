@@ -7,7 +7,7 @@
   },
   "effects": {
     "destructive": false,
-    "idempotent": false,
+    "idempotent": true,
     "read_only": false,
     "requires_preflight_gate": false,
     "writes_repo_state": false
@@ -15,7 +15,8 @@
   "guards": [
     "Observation criterion must exist in the registered definition.",
     "Terminal evaluations reject additional observations.",
-    "Observation context must be current and revalidated against live assignment, mutation baseline, and AW proof authority.",
+    "Observation context is comparison evidence only; assignment, mutation baseline, and AW proof authority resolve from the local authority receipt and live Git.",
+    "Concurrent/retried observations use a local lock, store revision, and idempotency key.",
     "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
     "External evidence is referenced, not copied, unless separately promoted."
   ],
@@ -116,6 +117,14 @@
     {
       "required": true,
       "surface": ".agentic-workspace/evaluations.json"
+    },
+    {
+      "required": true,
+      "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.authority.json"
+    },
+    {
+      "required": true,
+      "surface": "git HEAD and scoped status"
     }
   ],
   "schema_version": "agentic-workspace/operation/v1",
@@ -126,7 +135,7 @@
       "uses": "workspace.target-root.resolve"
     },
     {
-      "description": "Validate and append the observation.",
+      "description": "Resolve authority, take the local lock, detect duplicates, and atomically append or return the prior record.",
       "id": "append",
       "uses": "evaluation.observation.append"
     },
@@ -136,12 +145,12 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Append one local-first evaluation observation without rewriting unrelated state.",
+  "summary": "Append one local-first evaluation observation after resolving current assignment, proof, and mutation authority.",
   "writes": [
     {
       "required": true,
       "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.jsonl",
-      "when": "append one observation"
+      "when": "locked atomic append or idempotent duplicate return"
     }
   ]
 }

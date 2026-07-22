@@ -3230,6 +3230,58 @@
                   "--reason"
                 ],
                 "name": "reason"
+              },
+              {
+                "default": 0,
+                "flags": [
+                  "--expected-revision"
+                ],
+                "name": "expected_revision",
+                "type": "integer"
+              }
+            ]
+          },
+          {
+            "help": "Prune or compact local evaluation observation history.",
+            "name": "prune",
+            "operation_ref": {
+              "id": "evaluation.prune",
+              "path": "operations/evaluation.prune.json"
+            },
+            "options": [
+              {
+                "flags": [
+                  "--target"
+                ],
+                "help": "Repository path.",
+                "name": "target"
+              },
+              {
+                "choices": [
+                  "text",
+                  "json"
+                ],
+                "default": "text",
+                "flags": [
+                  "--format"
+                ],
+                "help": "Output format.",
+                "name": "format"
+              },
+              {
+                "flags": [
+                  "--evaluation-id"
+                ],
+                "name": "evaluation_id",
+                "required": true
+              },
+              {
+                "action": "store_true",
+                "default": false,
+                "flags": [
+                  "--dry-run"
+                ],
+                "name": "dry_run"
               }
             ]
           }

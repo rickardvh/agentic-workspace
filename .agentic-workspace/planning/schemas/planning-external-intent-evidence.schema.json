@@ -189,10 +189,7 @@
             "type": "integer",
             "minimum": 0
           },
-          "observation_id": {
-            "type": "string",
-            "minLength": 1
-          },
+          "observation_id": { "type": "string", "minLength": 1 },
           "owner": {
             "type": "object",
             "additionalProperties": false,
@@ -215,9 +212,7 @@
               "evidence_refs": { "type": "array", "items": { "type": "string" } }
             }
           },
-          "status_class": {
-            "enum": ["current", "blocked", "completed", "failed", "unavailable", "unknown"]
-          },
+          "status_class": { "enum": ["current", "blocked", "completed", "failed", "unavailable", "unknown"] },
           "external_revision": { "type": "string", "minLength": 1 },
           "observed_at": { "type": "string", "minLength": 1 },
           "freshness": {
@@ -269,16 +264,7 @@
             "required": ["state", "reason_code"],
             "properties": {
               "state": {
-                "enum": [
-                  "current",
-                  "externally-blocked",
-                  "externally-completed-awaiting-admission",
-                  "contradicted",
-                  "stale",
-                  "unavailable",
-                  "ambiguous",
-                  "unrelated"
-                ]
+                "enum": ["current", "externally-blocked", "externally-completed-awaiting-admission", "contradicted", "stale", "unavailable", "ambiguous", "unrelated"]
               },
               "reason_code": { "type": "string", "minLength": 1 }
             }

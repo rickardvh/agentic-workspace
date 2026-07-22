@@ -1978,6 +1978,13 @@
               ]
             },
             {
+              "name": "expected_revision",
+              "flags": [
+                "--expected-revision"
+              ],
+              "type": "integer"
+            },
+            {
               "name": "reason",
               "flags": [
                 "--reason"
@@ -1988,6 +1995,41 @@
           "role": "core_lifecycle",
           "audience": "ordinary_host_repo",
           "classification_note": "validated lifecycle transition writes the local evaluation ledger",
+          "mutates_state": true
+        },
+        {
+          "name": "prune",
+          "help": "Prune or compact local evaluation observation history.",
+          "uses_option_groups": [
+            "format"
+          ],
+          "options": [
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path."
+            },
+            {
+              "name": "evaluation_id",
+              "flags": [
+                "--evaluation-id"
+              ],
+              "required": true
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "default": false
+            }
+          ],
+          "role": "core_lifecycle",
+          "audience": "ordinary_host_repo",
+          "classification_note": "local evaluation observation retention compaction",
           "mutates_state": true
         }
       ],
