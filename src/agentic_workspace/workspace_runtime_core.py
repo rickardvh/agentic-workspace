@@ -38719,21 +38719,26 @@ def _resolve_delegated_return_authorities(
     current_authorities: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     live = _as_dict(current_authorities)
-    resolved_assignment_gate = _as_dict(live.get("assignment_gate")) or assignment_gate
-    resolved_assignment_policy = _as_dict(live.get("assignment_policy")) or assignment_policy
-    resolved_delegation_decision = _as_dict(live.get("delegation_decision")) or delegation_decision
-    proof_receipt = _as_dict(live.get("aw_proof_receipt") or live.get("proof_receipt")) or _as_dict(
-        resolved_assignment_gate.get("aw_proof_receipt") or resolved_assignment_gate.get("proof_receipt")
-    )
-    mutation_baseline = (
-        live.get("live_mutation_baseline")
-        or live.get("mutation_baseline")
-        or resolved_assignment_gate.get("live_mutation_baseline")
-        or resolved_assignment_gate.get("mutation_baseline")
-    )
+    resolved_assignment_gate = _as_dict(live.get("assignment_gate"))
+    resolved_assignment_policy = _as_dict(live.get("assignment_policy"))
+    resolved_delegation_decision = _as_dict(live.get("delegation_decision"))
+    proof_receipt = _as_dict(live.get("aw_proof_receipt") or live.get("proof_receipt"))
+    mutation_baseline = live.get("live_mutation_baseline") or live.get("mutation_baseline")
+    missing_required_authorities: list[str] = []
+    if not resolved_assignment_gate:
+        missing_required_authorities.append("current_authorities.assignment_gate")
+    if not resolved_assignment_policy:
+        missing_required_authorities.append("current_authorities.assignment_policy")
+    if not resolved_delegation_decision:
+        missing_required_authorities.append("current_authorities.delegation_decision")
+    if not proof_receipt:
+        missing_required_authorities.append("current_authorities.aw_proof_receipt")
+    if mutation_baseline in (None, ""):
+        missing_required_authorities.append("current_authorities.live_mutation_baseline")
+    status = "live-resolved" if not missing_required_authorities else "missing-current-authority"
     return {
         "kind": "agentic-workspace/delegated-return-authority-resolution/v1",
-        "status": "live-resolved" if live else "caller-compatible-fallback",
+        "status": status,
         "assignment_gate": resolved_assignment_gate,
         "assignment_policy": resolved_assignment_policy,
         "delegation_decision": resolved_delegation_decision,
@@ -38741,16 +38746,17 @@ def _resolve_delegated_return_authorities(
         "mutation_baseline": mutation_baseline,
         "run_state": _as_dict(live.get("run_state")),
         "competing_assignment": _as_dict(live.get("competing_assignment")),
+        "missing_required_authorities": missing_required_authorities,
         "sources": {
-            "assignment_gate": "current_authorities.assignment_gate" if live.get("assignment_gate") else "caller.assignment_gate",
+            "assignment_gate": "current_authorities.assignment_gate" if resolved_assignment_gate else "missing",
             "proof_receipt": "current_authorities.proof_receipt"
             if live.get("aw_proof_receipt") or live.get("proof_receipt")
-            else "resolved_assignment_gate.aw_proof_receipt",
+            else "missing",
             "mutation_baseline": "current_authorities.live_mutation_baseline"
             if live.get("live_mutation_baseline") or live.get("mutation_baseline")
-            else "resolved_assignment_gate.live_mutation_baseline",
+            else "missing",
         },
-        "rule": "Admission and integration compare returned work to authorities resolved immediately before admission; worker-returned proof or baseline fields are never current authority.",
+        "rule": "Admission and integration require current_authorities resolved from Planning, proof, assignment, run, and worktree owners immediately before admission; caller-supplied packets are not a fallback authority.",
     }
 
 
@@ -38793,6 +38799,12 @@ def _admit_delegated_return(
     def reject(reason: str, field: str, recovery: str) -> None:
         failures.append({"reason": reason, "field": field, "recovery": recovery})
 
+    if authority_resolution.get("status") != "live-resolved":
+        reject(
+            "live-authority-missing",
+            "current_authorities",
+            "Resolve the current assignment/run/proof/baseline authorities and retry admission.",
+        )
     if not manual_transport["export_allowed"] and not manual_transport["automatic_method_available"]:
         reject("manual-transport-disabled", "manual_transport.policy", "Enable an allowed transport or use an automatic method.")
     if not identity.get("complete"):
@@ -39644,7 +39656,7 @@ def _delegated_run_lifecycle_payload(
         delegation_decision=delegation_decision,
     )
     admission_operation = {
-        "operation_id": "delegated-return.admit",
+        "operation_id": "assignment.admit",
         "callable": "agentic_workspace.workspace_runtime_core._admit_delegated_return",
         "public": True,
         "generated_operation": True,
@@ -39728,34 +39740,58 @@ def _delegated_run_lifecycle_payload(
             "operation": admission_operation,
             "public_operations": [
                 {
-                    "operation_id": "delegated-run.export",
+                    "operation_id": "assignment.export",
                     "state_transition": "assignment-selected -> handoff-prepared",
                     "artifact_state": "local/exported",
                     "idempotency": "assignment_identity.revision + transport route",
                 },
                 {
-                    "operation_id": "delegated-return.import",
+                    "operation_id": "assignment.import",
                     "state_transition": "worker-returned -> received/awaiting-admission",
                     "artifact_state": "local/received/awaiting-admission",
                     "idempotency": "handoff_run_id + return artifact digest",
                 },
                 {
-                    "operation_id": "delegated-return.admit",
+                    "operation_id": "assignment.admit",
                     "state_transition": "received/awaiting-admission -> admitted|rejected|repair-requested",
                     "artifact_state": "local/admission-review",
                     "idempotency": "assignment_identity.revision + current authority revisions",
                 },
                 {
-                    "operation_id": "delegated-return.integrate",
+                    "operation_id": "assignment.integrate",
                     "state_transition": "admitted -> integrated",
                     "artifact_state": "repo mutation boundary",
                     "idempotency": "admission receipt + live mutation baseline",
                 },
                 {
-                    "operation_id": "delegated-run.close",
+                    "operation_id": "assignment.close",
                     "state_transition": "integrated -> closed",
                     "artifact_state": "closeout/proof receipt",
                     "idempotency": "integration receipt + closeout proof",
+                },
+                {
+                    "operation_id": "assignment.repair",
+                    "state_transition": "rejected -> repair-requested",
+                    "artifact_state": "local/admission-review",
+                    "idempotency": "return id + repair reason",
+                },
+                {
+                    "operation_id": "assignment.reassign",
+                    "state_transition": "current-run -> superseded/new-owner",
+                    "artifact_state": "local/reassignment",
+                    "idempotency": "run id + new target + reason",
+                },
+                {
+                    "operation_id": "assignment.cleanup",
+                    "state_transition": "closed -> archived",
+                    "artifact_state": "local/archive-receipt",
+                    "idempotency": "run id + closeout receipt",
+                },
+                {
+                    "operation_id": "assignment.override",
+                    "state_transition": "blocked -> scoped-authorised-override",
+                    "artifact_state": "local/override-receipt",
+                    "idempotency": "assignment id + scope + expiry",
                 },
             ],
             "identity_fields": [
@@ -39787,7 +39823,7 @@ def _delegated_run_lifecycle_payload(
                 "current AW-owned proof receipt",
                 "live mutation baseline",
             ],
-            "rule": "Returned work is rejected until delegated-return.admit re-reads assignment identity, scope, proof, stop-condition, transport, and baseline evidence from current AW authorities immediately before integration.",
+            "rule": "Returned work is rejected until assignment.admit re-reads assignment identity, scope, proof, stop-condition, transport, and baseline evidence from current AW authorities immediately before integration.",
         },
         "return_contract": [
             "what changed",

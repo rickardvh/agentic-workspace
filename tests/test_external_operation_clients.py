@@ -23,7 +23,15 @@ from agentic_workspace import (
     require_operations,
     resolve_invocation,
 )
-from agentic_workspace.generated_operations import config_report, delegation_outcome_append
+from agentic_workspace.generated_operations import (
+    assignment_admit,
+    assignment_export,
+    assignment_import,
+    assignment_integrate,
+    assignment_override,
+    config_report,
+    delegation_outcome_append,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -127,6 +135,76 @@ def test_public_operation_client_invokes_by_operation_identity() -> None:
         allow_runtime_backed=True,
     )
     assert payload["kind"] == "agentic-workspace/config-tiny/v1"
+
+
+def test_assignment_lifecycle_operations_are_generated_runtime_backed() -> None:
+    operation_ids = [
+        "assignment.export",
+        "assignment.import",
+        "assignment.admit",
+        "assignment.reject",
+        "assignment.repair",
+        "assignment.reassign",
+        "assignment.integrate",
+        "assignment.close",
+        "assignment.cleanup",
+        "assignment.override",
+    ]
+    assert require_operations(operation_ids, allow_runtime_backed=True) is None
+    statuses = {
+        entry["identity"]: entry["external_consumption"]["status"]
+        for entry in external_contract_bundle()["operations"].values()
+        if entry["identity"] in operation_ids
+    }
+    assert set(statuses) == set(operation_ids)
+    assert set(statuses.values()) == {"runtime-backed"}
+
+
+def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_path: Path) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
+    invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
+    export = assignment_export(
+        {"assignment_id": "assign-1", "assignment_revision": "rev-1", "target_name": "planner", "run_id": "run-1"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    imported = assignment_import(
+        {"run_id": "run-1", "return_json": json.dumps({"changed_paths": ["src/feature.py"]})},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    blocked = assignment_integrate(
+        {"run_id": "run-1", "current_authority_ref": "planning:rev", "live_mutation_baseline": "baseline-1"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    admitted = assignment_admit(
+        {"run_id": "run-1", "current_authority_ref": "planning:rev", "live_mutation_baseline": "baseline-1"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    integrated = assignment_integrate(
+        {"run_id": "run-1", "current_authority_ref": "planning:rev", "live_mutation_baseline": "baseline-1"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    override = assignment_override(
+        {"assignment_id": "assign-1", "reason": "maintainer approved", "scope": "src/feature.py", "expires_at": "2026-07-23T00:00:00Z"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+
+    assert export["status"] == "handoff-prepared"
+    assert imported["status"] == "awaiting-admission"
+    assert blocked["reason_code"] == "return-not-admitted"
+    assert admitted["status"] == "admitted"
+    assert integrated["status"] == "integrated"
+    assert override["status"] == "override-recorded"
+    assert (tmp_path / ".agentic-workspace/local/assignment-runs/run-1/received/awaiting-admission").is_dir()
+    override_ref = next(ref for ref in override["artifact_refs"] if ref.endswith("override/override.json"))
+    override_receipt = json.loads((tmp_path / override_ref).read_text())
+    assert override_receipt["claim_effect"] == "downgrade-until-revalidated"
 
 
 def test_contract_requirement_negotiation_distinguishes_change_classes() -> None:

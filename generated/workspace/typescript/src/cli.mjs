@@ -8,8 +8,8 @@
 import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
-const supportedCommands = new Set(["autopilot", "checkpoint", "config", "defaults", "doctor", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["autopilot.run", "checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
+const supportedCommands = new Set(["assignment", "autopilot", "checkpoint", "config", "defaults", "doctor", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
+const nativeOperationIds = new Set(["assignment.admit", "assignment.cleanup", "assignment.close", "assignment.export", "assignment.import", "assignment.integrate", "assignment.override", "assignment.reassign", "assignment.reject", "assignment.repair", "autopilot.run", "checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -4109,6 +4109,1585 @@ const commandDefinitions = [
     "operation_ref": {
       "id": "delegation-outcome.append",
       "path": "operations/delegation-outcome.append.json"
+    }
+  },
+  {
+    "interface": {
+      "help": "Execute public assignment/run lifecycle operations.",
+      "name": "assignment",
+      "options": [],
+      "subcommand_dest": "assignment_command",
+      "subcommands": [
+        {
+          "help": "Prepare a durable assignment handoff packet and pasteable prompt from one assignment authority.",
+          "name": "export",
+          "operation_ref": {
+            "id": "assignment.export",
+            "path": "operations/assignment.export.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision",
+              "required": true
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id"
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name",
+              "required": true
+            },
+            {
+              "choices": [
+                "manual",
+                "internal",
+                "cli",
+                "api"
+              ],
+              "default": "manual",
+              "flags": [
+                "--transport"
+              ],
+              "help": "Selected transport route.",
+              "name": "transport"
+            },
+            {
+              "flags": [
+                "--packet-json"
+              ],
+              "help": "Structured assignment packet JSON.",
+              "name": "packet_json"
+            },
+            {
+              "flags": [
+                "--return-json"
+              ],
+              "help": "Returned worker-result JSON.",
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-id"
+              ],
+              "help": "Stable imported return id.",
+              "name": "return_id"
+            },
+            {
+              "flags": [
+                "--artifact-ref"
+              ],
+              "help": "Local artifact reference for the transition.",
+              "name": "artifact_ref"
+            },
+            {
+              "flags": [
+                "--current-authority-ref"
+              ],
+              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
+              "name": "current_authority_ref"
+            },
+            {
+              "flags": [
+                "--live-mutation-baseline"
+              ],
+              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
+              "name": "live_mutation_baseline"
+            },
+            {
+              "choices": [
+                "admitted",
+                "rejected",
+                "repair-requested"
+              ],
+              "flags": [
+                "--admission-status"
+              ],
+              "help": "Admission result to record.",
+              "name": "admission_status"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Bounded override or assignment scope.",
+              "name": "scope"
+            },
+            {
+              "flags": [
+                "--expires-at"
+              ],
+              "help": "Override expiry or revalidation timestamp.",
+              "name": "expires_at"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Import returned delegated work into received/awaiting-admission without proof or integration.",
+          "name": "import",
+          "operation_ref": {
+            "id": "assignment.import",
+            "path": "operations/assignment.import.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name"
+            },
+            {
+              "choices": [
+                "manual",
+                "internal",
+                "cli",
+                "api"
+              ],
+              "default": "manual",
+              "flags": [
+                "--transport"
+              ],
+              "help": "Selected transport route.",
+              "name": "transport"
+            },
+            {
+              "flags": [
+                "--packet-json"
+              ],
+              "help": "Structured assignment packet JSON.",
+              "name": "packet_json"
+            },
+            {
+              "flags": [
+                "--return-json"
+              ],
+              "help": "Returned worker-result JSON.",
+              "name": "return_json",
+              "required": true
+            },
+            {
+              "flags": [
+                "--return-id"
+              ],
+              "help": "Stable imported return id.",
+              "name": "return_id"
+            },
+            {
+              "flags": [
+                "--artifact-ref"
+              ],
+              "help": "Local artifact reference for the transition.",
+              "name": "artifact_ref"
+            },
+            {
+              "flags": [
+                "--current-authority-ref"
+              ],
+              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
+              "name": "current_authority_ref"
+            },
+            {
+              "flags": [
+                "--live-mutation-baseline"
+              ],
+              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
+              "name": "live_mutation_baseline"
+            },
+            {
+              "choices": [
+                "admitted",
+                "rejected",
+                "repair-requested"
+              ],
+              "flags": [
+                "--admission-status"
+              ],
+              "help": "Admission result to record.",
+              "name": "admission_status"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Bounded override or assignment scope.",
+              "name": "scope"
+            },
+            {
+              "flags": [
+                "--expires-at"
+              ],
+              "help": "Override expiry or revalidation timestamp.",
+              "name": "expires_at"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Record an AW-owned admission decision after current authority revalidation.",
+          "name": "admit",
+          "operation_ref": {
+            "id": "assignment.admit",
+            "path": "operations/assignment.admit.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name"
+            },
+            {
+              "choices": [
+                "manual",
+                "internal",
+                "cli",
+                "api"
+              ],
+              "default": "manual",
+              "flags": [
+                "--transport"
+              ],
+              "help": "Selected transport route.",
+              "name": "transport"
+            },
+            {
+              "flags": [
+                "--packet-json"
+              ],
+              "help": "Structured assignment packet JSON.",
+              "name": "packet_json"
+            },
+            {
+              "flags": [
+                "--return-json"
+              ],
+              "help": "Returned worker-result JSON.",
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-id"
+              ],
+              "help": "Stable imported return id.",
+              "name": "return_id"
+            },
+            {
+              "flags": [
+                "--artifact-ref"
+              ],
+              "help": "Local artifact reference for the transition.",
+              "name": "artifact_ref"
+            },
+            {
+              "flags": [
+                "--current-authority-ref"
+              ],
+              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
+              "name": "current_authority_ref",
+              "required": true
+            },
+            {
+              "flags": [
+                "--live-mutation-baseline"
+              ],
+              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
+              "name": "live_mutation_baseline",
+              "required": true
+            },
+            {
+              "choices": [
+                "admitted",
+                "rejected",
+                "repair-requested"
+              ],
+              "flags": [
+                "--admission-status"
+              ],
+              "help": "Admission result to record.",
+              "name": "admission_status"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Bounded override or assignment scope.",
+              "name": "scope"
+            },
+            {
+              "flags": [
+                "--expires-at"
+              ],
+              "help": "Override expiry or revalidation timestamp.",
+              "name": "expires_at"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Reject a returned assignment result with stable recovery evidence.",
+          "name": "reject",
+          "operation_ref": {
+            "id": "assignment.reject",
+            "path": "operations/assignment.reject.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name"
+            },
+            {
+              "choices": [
+                "manual",
+                "internal",
+                "cli",
+                "api"
+              ],
+              "default": "manual",
+              "flags": [
+                "--transport"
+              ],
+              "help": "Selected transport route.",
+              "name": "transport"
+            },
+            {
+              "flags": [
+                "--packet-json"
+              ],
+              "help": "Structured assignment packet JSON.",
+              "name": "packet_json"
+            },
+            {
+              "flags": [
+                "--return-json"
+              ],
+              "help": "Returned worker-result JSON.",
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-id"
+              ],
+              "help": "Stable imported return id.",
+              "name": "return_id"
+            },
+            {
+              "flags": [
+                "--artifact-ref"
+              ],
+              "help": "Local artifact reference for the transition.",
+              "name": "artifact_ref"
+            },
+            {
+              "flags": [
+                "--current-authority-ref"
+              ],
+              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
+              "name": "current_authority_ref"
+            },
+            {
+              "flags": [
+                "--live-mutation-baseline"
+              ],
+              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
+              "name": "live_mutation_baseline"
+            },
+            {
+              "choices": [
+                "admitted",
+                "rejected",
+                "repair-requested"
+              ],
+              "flags": [
+                "--admission-status"
+              ],
+              "help": "Admission result to record.",
+              "name": "admission_status"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable transition reason.",
+              "name": "reason",
+              "required": true
+            },
+            {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Bounded override or assignment scope.",
+              "name": "scope"
+            },
+            {
+              "flags": [
+                "--expires-at"
+              ],
+              "help": "Override expiry or revalidation timestamp.",
+              "name": "expires_at"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Request repair for a returned assignment result without admitting mutation.",
+          "name": "repair",
+          "operation_ref": {
+            "id": "assignment.repair",
+            "path": "operations/assignment.repair.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name"
+            },
+            {
+              "choices": [
+                "manual",
+                "internal",
+                "cli",
+                "api"
+              ],
+              "default": "manual",
+              "flags": [
+                "--transport"
+              ],
+              "help": "Selected transport route.",
+              "name": "transport"
+            },
+            {
+              "flags": [
+                "--packet-json"
+              ],
+              "help": "Structured assignment packet JSON.",
+              "name": "packet_json"
+            },
+            {
+              "flags": [
+                "--return-json"
+              ],
+              "help": "Returned worker-result JSON.",
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-id"
+              ],
+              "help": "Stable imported return id.",
+              "name": "return_id"
+            },
+            {
+              "flags": [
+                "--artifact-ref"
+              ],
+              "help": "Local artifact reference for the transition.",
+              "name": "artifact_ref"
+            },
+            {
+              "flags": [
+                "--current-authority-ref"
+              ],
+              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
+              "name": "current_authority_ref"
+            },
+            {
+              "flags": [
+                "--live-mutation-baseline"
+              ],
+              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
+              "name": "live_mutation_baseline"
+            },
+            {
+              "choices": [
+                "admitted",
+                "rejected",
+                "repair-requested"
+              ],
+              "flags": [
+                "--admission-status"
+              ],
+              "help": "Admission result to record.",
+              "name": "admission_status"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable transition reason.",
+              "name": "reason",
+              "required": true
+            },
+            {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Bounded override or assignment scope.",
+              "name": "scope"
+            },
+            {
+              "flags": [
+                "--expires-at"
+              ],
+              "help": "Override expiry or revalidation timestamp.",
+              "name": "expires_at"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Supersede one assignment run and bind follow-up ownership to a new target.",
+          "name": "reassign",
+          "operation_ref": {
+            "id": "assignment.reassign",
+            "path": "operations/assignment.reassign.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name",
+              "required": true
+            },
+            {
+              "choices": [
+                "manual",
+                "internal",
+                "cli",
+                "api"
+              ],
+              "default": "manual",
+              "flags": [
+                "--transport"
+              ],
+              "help": "Selected transport route.",
+              "name": "transport"
+            },
+            {
+              "flags": [
+                "--packet-json"
+              ],
+              "help": "Structured assignment packet JSON.",
+              "name": "packet_json"
+            },
+            {
+              "flags": [
+                "--return-json"
+              ],
+              "help": "Returned worker-result JSON.",
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-id"
+              ],
+              "help": "Stable imported return id.",
+              "name": "return_id"
+            },
+            {
+              "flags": [
+                "--artifact-ref"
+              ],
+              "help": "Local artifact reference for the transition.",
+              "name": "artifact_ref"
+            },
+            {
+              "flags": [
+                "--current-authority-ref"
+              ],
+              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
+              "name": "current_authority_ref"
+            },
+            {
+              "flags": [
+                "--live-mutation-baseline"
+              ],
+              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
+              "name": "live_mutation_baseline"
+            },
+            {
+              "choices": [
+                "admitted",
+                "rejected",
+                "repair-requested"
+              ],
+              "flags": [
+                "--admission-status"
+              ],
+              "help": "Admission result to record.",
+              "name": "admission_status"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable transition reason.",
+              "name": "reason",
+              "required": true
+            },
+            {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Bounded override or assignment scope.",
+              "name": "scope"
+            },
+            {
+              "flags": [
+                "--expires-at"
+              ],
+              "help": "Override expiry or revalidation timestamp.",
+              "name": "expires_at"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Move an admitted return through the protected integration boundary.",
+          "name": "integrate",
+          "operation_ref": {
+            "id": "assignment.integrate",
+            "path": "operations/assignment.integrate.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name"
+            },
+            {
+              "choices": [
+                "manual",
+                "internal",
+                "cli",
+                "api"
+              ],
+              "default": "manual",
+              "flags": [
+                "--transport"
+              ],
+              "help": "Selected transport route.",
+              "name": "transport"
+            },
+            {
+              "flags": [
+                "--packet-json"
+              ],
+              "help": "Structured assignment packet JSON.",
+              "name": "packet_json"
+            },
+            {
+              "flags": [
+                "--return-json"
+              ],
+              "help": "Returned worker-result JSON.",
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-id"
+              ],
+              "help": "Stable imported return id.",
+              "name": "return_id"
+            },
+            {
+              "flags": [
+                "--artifact-ref"
+              ],
+              "help": "Local artifact reference for the transition.",
+              "name": "artifact_ref"
+            },
+            {
+              "flags": [
+                "--current-authority-ref"
+              ],
+              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
+              "name": "current_authority_ref",
+              "required": true
+            },
+            {
+              "flags": [
+                "--live-mutation-baseline"
+              ],
+              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
+              "name": "live_mutation_baseline",
+              "required": true
+            },
+            {
+              "choices": [
+                "admitted",
+                "rejected",
+                "repair-requested"
+              ],
+              "flags": [
+                "--admission-status"
+              ],
+              "help": "Admission result to record.",
+              "name": "admission_status"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Bounded override or assignment scope.",
+              "name": "scope"
+            },
+            {
+              "flags": [
+                "--expires-at"
+              ],
+              "help": "Override expiry or revalidation timestamp.",
+              "name": "expires_at"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Close an integrated or intentionally rejected assignment run with a local receipt.",
+          "name": "close",
+          "operation_ref": {
+            "id": "assignment.close",
+            "path": "operations/assignment.close.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name"
+            },
+            {
+              "choices": [
+                "manual",
+                "internal",
+                "cli",
+                "api"
+              ],
+              "default": "manual",
+              "flags": [
+                "--transport"
+              ],
+              "help": "Selected transport route.",
+              "name": "transport"
+            },
+            {
+              "flags": [
+                "--packet-json"
+              ],
+              "help": "Structured assignment packet JSON.",
+              "name": "packet_json"
+            },
+            {
+              "flags": [
+                "--return-json"
+              ],
+              "help": "Returned worker-result JSON.",
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-id"
+              ],
+              "help": "Stable imported return id.",
+              "name": "return_id"
+            },
+            {
+              "flags": [
+                "--artifact-ref"
+              ],
+              "help": "Local artifact reference for the transition.",
+              "name": "artifact_ref"
+            },
+            {
+              "flags": [
+                "--current-authority-ref"
+              ],
+              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
+              "name": "current_authority_ref"
+            },
+            {
+              "flags": [
+                "--live-mutation-baseline"
+              ],
+              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
+              "name": "live_mutation_baseline"
+            },
+            {
+              "choices": [
+                "admitted",
+                "rejected",
+                "repair-requested"
+              ],
+              "flags": [
+                "--admission-status"
+              ],
+              "help": "Admission result to record.",
+              "name": "admission_status"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Bounded override or assignment scope.",
+              "name": "scope"
+            },
+            {
+              "flags": [
+                "--expires-at"
+              ],
+              "help": "Override expiry or revalidation timestamp.",
+              "name": "expires_at"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Archive disposable local assignment run artifacts after closeout.",
+          "name": "cleanup",
+          "operation_ref": {
+            "id": "assignment.cleanup",
+            "path": "operations/assignment.cleanup.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id"
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name"
+            },
+            {
+              "choices": [
+                "manual",
+                "internal",
+                "cli",
+                "api"
+              ],
+              "default": "manual",
+              "flags": [
+                "--transport"
+              ],
+              "help": "Selected transport route.",
+              "name": "transport"
+            },
+            {
+              "flags": [
+                "--packet-json"
+              ],
+              "help": "Structured assignment packet JSON.",
+              "name": "packet_json"
+            },
+            {
+              "flags": [
+                "--return-json"
+              ],
+              "help": "Returned worker-result JSON.",
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-id"
+              ],
+              "help": "Stable imported return id.",
+              "name": "return_id"
+            },
+            {
+              "flags": [
+                "--artifact-ref"
+              ],
+              "help": "Local artifact reference for the transition.",
+              "name": "artifact_ref"
+            },
+            {
+              "flags": [
+                "--current-authority-ref"
+              ],
+              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
+              "name": "current_authority_ref"
+            },
+            {
+              "flags": [
+                "--live-mutation-baseline"
+              ],
+              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
+              "name": "live_mutation_baseline"
+            },
+            {
+              "choices": [
+                "admitted",
+                "rejected",
+                "repair-requested"
+              ],
+              "flags": [
+                "--admission-status"
+              ],
+              "help": "Admission result to record.",
+              "name": "admission_status"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable transition reason.",
+              "name": "reason"
+            },
+            {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Bounded override or assignment scope.",
+              "name": "scope"
+            },
+            {
+              "flags": [
+                "--expires-at"
+              ],
+              "help": "Override expiry or revalidation timestamp.",
+              "name": "expires_at"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts.",
+              "name": "dry_run"
+            }
+          ]
+        },
+        {
+          "help": "Record a scoped authorised human override with expiry and proof/claim consequences.",
+          "name": "override",
+          "operation_ref": {
+            "id": "assignment.override",
+            "path": "operations/assignment.override.json"
+          },
+          "options": [
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "flags": [
+                "--assignment-id"
+              ],
+              "help": "Stable Planning assignment id.",
+              "name": "assignment_id",
+              "required": true
+            },
+            {
+              "flags": [
+                "--assignment-revision"
+              ],
+              "help": "Current assignment identity revision.",
+              "name": "assignment_revision"
+            },
+            {
+              "flags": [
+                "--run-id"
+              ],
+              "help": "Stable assignment run id.",
+              "name": "run_id"
+            },
+            {
+              "flags": [
+                "--target-name"
+              ],
+              "help": "Selected target name.",
+              "name": "target_name"
+            },
+            {
+              "choices": [
+                "manual",
+                "internal",
+                "cli",
+                "api"
+              ],
+              "default": "manual",
+              "flags": [
+                "--transport"
+              ],
+              "help": "Selected transport route.",
+              "name": "transport"
+            },
+            {
+              "flags": [
+                "--packet-json"
+              ],
+              "help": "Structured assignment packet JSON.",
+              "name": "packet_json"
+            },
+            {
+              "flags": [
+                "--return-json"
+              ],
+              "help": "Returned worker-result JSON.",
+              "name": "return_json"
+            },
+            {
+              "flags": [
+                "--return-id"
+              ],
+              "help": "Stable imported return id.",
+              "name": "return_id"
+            },
+            {
+              "flags": [
+                "--artifact-ref"
+              ],
+              "help": "Local artifact reference for the transition.",
+              "name": "artifact_ref"
+            },
+            {
+              "flags": [
+                "--current-authority-ref"
+              ],
+              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
+              "name": "current_authority_ref"
+            },
+            {
+              "flags": [
+                "--live-mutation-baseline"
+              ],
+              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
+              "name": "live_mutation_baseline"
+            },
+            {
+              "choices": [
+                "admitted",
+                "rejected",
+                "repair-requested"
+              ],
+              "flags": [
+                "--admission-status"
+              ],
+              "help": "Admission result to record.",
+              "name": "admission_status"
+            },
+            {
+              "flags": [
+                "--reason"
+              ],
+              "help": "Human-readable transition reason.",
+              "name": "reason",
+              "required": true
+            },
+            {
+              "flags": [
+                "--scope"
+              ],
+              "help": "Bounded override or assignment scope.",
+              "name": "scope",
+              "required": true
+            },
+            {
+              "flags": [
+                "--expires-at"
+              ],
+              "help": "Override expiry or revalidation timestamp.",
+              "name": "expires_at",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Report the transition without writing local artifacts.",
+              "name": "dry_run"
+            }
+          ]
+        }
+      ]
+    },
+    "name": "assignment",
+    "operation_ref": {
+      "id": "assignment.export",
+      "path": "operations/assignment.export.json"
     }
   },
   {

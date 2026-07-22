@@ -7924,11 +7924,22 @@ def test_implement_required_best_fit_manual_transport_policy_states(
         assert decision["handoff_command"] == "agentic-workspace planning handoff --target . --format json"
     admission_gate = lifecycle["admission_gate"]
     assert admission_gate["status"] == "closed-until-reviewed"
-    assert admission_gate["operation"]["operation_id"] == "delegated-return.admit"
+    assert admission_gate["operation"]["operation_id"] == "assignment.admit"
     assert admission_gate["operation"]["public"] is True
     assert admission_gate["operation"]["generated_operation"] is True
     assert admission_gate["operation"]["assignment_identity"]["revision"].startswith("sha256:")
-    assert "delegated-return.import" in {item["operation_id"] for item in admission_gate["public_operations"]}
+    public_operations = {item["operation_id"] for item in admission_gate["public_operations"]}
+    assert {
+        "assignment.export",
+        "assignment.import",
+        "assignment.admit",
+        "assignment.integrate",
+        "assignment.close",
+        "assignment.repair",
+        "assignment.reassign",
+        "assignment.cleanup",
+        "assignment.override",
+    }.issubset(public_operations)
     assert admission_gate["identity_fields"] == [
         "assignment.target",
         "assignment.target_identity_ref",
@@ -7992,6 +8003,59 @@ def _complete_delegation_decision(execution_methods: list[str] | None = None) ->
     }
 
 
+def _current_delegated_authorities(
+    assignment_gate: dict[str, object],
+    assignment_policy: dict[str, object],
+    delegation_decision: dict[str, object],
+    *,
+    proof_receipt: dict[str, object] | None = None,
+    mutation_baseline: str = "baseline-1",
+    run_state: dict[str, object] | None = None,
+) -> dict[str, object]:
+    return {
+        "assignment_gate": assignment_gate,
+        "assignment_policy": assignment_policy,
+        "delegation_decision": delegation_decision,
+        "aw_proof_receipt": proof_receipt or {"result": "passed", "verified_by": "aw", "revision": "proof-rev-1"},
+        "live_mutation_baseline": mutation_baseline,
+        "run_state": run_state or {"status": "awaiting-admission", "run_id": "run-1"},
+    }
+
+
+def test_delegated_return_admission_rejects_caller_supplied_authority_without_live_resolution() -> None:
+    assignment_gate = _complete_assignment_gate()
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = _complete_delegation_decision()
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+
+    result = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={
+            "assignment_revision": identity["revision"],
+            "target": "planner",
+            "changed_paths": ["src/feature.py"],
+            "proof": {"result": "passed", "verified_by": "aw"},
+            "mutation_baseline": "baseline-1",
+        },
+    )
+
+    assert result["admitted"] is False
+    assert result["authority_resolution"]["status"] == "missing-current-authority"
+    assert result["authority_resolution"]["sources"] == {
+        "assignment_gate": "missing",
+        "proof_receipt": "missing",
+        "mutation_baseline": "missing",
+    }
+    assert result["failures"][0]["reason"] == "live-authority-missing"
+    assert "current_authorities.assignment_gate" in result["authority_resolution"]["missing_required_authorities"]
+
+
 def test_delegated_return_admission_rejects_stale_and_admits_current_assignment() -> None:
     assignment_gate = _complete_assignment_gate()
     assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
@@ -8007,6 +8071,7 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
         assignment_policy=assignment_policy,
         delegation_decision=delegation_decision,
         returned_work={"assignment_revision": "sha256:stale", "target": "planner", "aw_proof": {"result": "passed", "verified_by": "aw"}},
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
     assert stale["admitted"] is False
     assert stale["failures"][0]["reason"] == "stale-assignment-revision"
@@ -8021,6 +8086,7 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
             "changed_paths": ["src/feature.py"],
             "proof": {"result": "failed"},
         },
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
     assert admitted["admitted"] is True
     assert admitted["status"] == "admitted"
@@ -8048,6 +8114,8 @@ def test_delegated_return_admission_reresolves_live_authorities_before_admission
         delegation_decision=delegation_decision,
         current_authorities={
             "assignment_gate": live_assignment_gate,
+            "assignment_policy": assignment_policy,
+            "delegation_decision": delegation_decision,
             "aw_proof_receipt": {"result": "passed", "verified_by": "aw", "revision": "proof-rev-live"},
             "live_mutation_baseline": "baseline-1",
             "run_state": {"status": "awaiting-admission", "run_id": "run-1"},
@@ -8083,6 +8151,8 @@ def test_delegated_return_admission_rejects_duplicate_or_closed_live_run_state()
         delegation_decision=delegation_decision,
         current_authorities={
             "assignment_gate": assignment_gate,
+            "assignment_policy": assignment_policy,
+            "delegation_decision": delegation_decision,
             "aw_proof_receipt": {"result": "passed", "verified_by": "aw", "revision": "proof-rev-1"},
             "live_mutation_baseline": "baseline-1",
             "run_state": {"status": "duplicate", "run_id": "run-1"},
@@ -8117,6 +8187,7 @@ def test_delegated_return_admission_rejects_disabled_transport() -> None:
             "target": "planner",
             "aw_proof": {"result": "passed", "verified_by": "aw"},
         },
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
 
     assert result["admitted"] is False
@@ -8143,6 +8214,12 @@ def test_delegated_return_admission_rejects_worker_self_reported_proof() -> None
             "proof": {"result": "passed"},
             "changed_paths": ["src/feature.py"],
         },
+        current_authorities=_current_delegated_authorities(
+            assignment_gate,
+            assignment_policy,
+            delegation_decision,
+            proof_receipt={"result": "failed", "verified_by": "aw", "revision": "proof-rev-1"},
+        ),
     )
 
     assert result["admitted"] is False
@@ -8170,6 +8247,7 @@ def test_delegated_return_admission_uses_canonical_scope_not_returned_allowed_pa
             "allowed_paths": ["src/feature.py", "src/escaped.py"],
             "changed_paths": ["src/escaped.py"],
         },
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
 
     assert result["admitted"] is False
@@ -8191,6 +8269,7 @@ def test_delegated_return_admission_rejects_incomplete_identity_before_revision_
         assignment_policy=assignment_policy,
         delegation_decision=delegation_decision,
         returned_work={"assignment_revision": identity["revision"], "target": "planner"},
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
 
     assert result["admitted"] is False
@@ -8217,6 +8296,7 @@ def test_delegated_return_admission_disabled_manual_allows_current_automatic_rou
             "target": "planner",
             "changed_paths": ["src/feature.py"],
         },
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
 
     assert result["admitted"] is True

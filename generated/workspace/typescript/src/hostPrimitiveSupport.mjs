@@ -1631,8 +1631,126 @@ function domainPrimitive(primitive, values, args, operationId) {
     return emitOutput({ ...values, result: values.result ?? systemIntentMutationResult(values) }, args);
   }
   if (primitive === 'workspace.selection.resolve') return { selected_modules: values.modules ?? values.module ?? [], target_root: resolve(String(values.target ?? '.')) };
+  if (primitive === 'assignment.lifecycle.apply') return assignmentLifecycleApply(values, operationId);
   if (primitive === 'toml.table.counts') return tomlTableCounts(values, args);
   throw new RuntimeError(`unsupported native TypeScript primitive: ${primitive}`);
+}
+
+function assignmentText(value) {
+  return value === undefined || value === null ? '' : String(value).trim();
+}
+
+function assignmentFragment(value) {
+  return assignmentText(value).replace(/[^A-Za-z0-9_.-]+/g, '-').replace(/^[.-]+|[.-]+$/g, '') || 'assignment-run';
+}
+
+function assignmentDigest(value) {
+  return `sha256:${createHash('sha256').update(JSON.stringify(value ?? {}, Object.keys(value ?? {}).sort())).digest('hex')}`;
+}
+
+function assignmentParseJson(value, field) {
+  if (isObject(value) || Array.isArray(value)) return value;
+  const text = assignmentText(value);
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new RuntimeError(`assignment lifecycle ${field} must be valid JSON`);
+  }
+}
+
+function assignmentWrite(path, payload) {
+  mkdirSync(dirname(path), { recursive: true });
+  const text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+  writeFileSync(path, `${text.trimEnd()}\n`, 'utf8');
+}
+
+function assignmentLifecycleApply(values, operationId) {
+  const transition = assignmentText(values.assignment_command) || String(operationId).split('.').at(-1);
+  const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  const assignmentId = assignmentText(values.assignment_id);
+  const assignmentRevision = assignmentText(values.assignment_revision);
+  const seed = assignmentId || assignmentRevision ? `${assignmentId}:${assignmentRevision}:${transition}` : transition;
+  const runId = assignmentText(values.run_id) || `run-${createHash('sha256').update(seed).digest('hex').slice(0, 12)}`;
+  const runDir = resolveInside(resolveInside(targetRoot, '.agentic-workspace/local/assignment-runs'), assignmentFragment(runId));
+  const statePath = resolveInside(runDir, 'state.json');
+  const state = existsSync(statePath) ? readJson(statePath) : {};
+  const failures = [];
+  const artifactPaths = [];
+  const writes = new Map();
+  const requireField = (field) => {
+    const value = assignmentText(values[field]);
+    if (!value) failures.push({ reason: 'missing-required-input', field, recovery: `Retry assignment ${transition} with --${field.replaceAll('_', '-')}.` });
+    return value;
+  };
+  const artifact = (relativePath) => resolveInside(runDir, relativePath);
+  if (transition === 'export') {
+    const id = requireField('assignment_id');
+    const rev = requireField('assignment_revision');
+    const targetName = requireField('target_name');
+    const packet = assignmentParseJson(values.packet_json, 'packet_json');
+    const effectivePacket = Object.keys(packet).length ? packet : { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: rev, run_id: runId, target: targetName, transport: assignmentText(values.transport) || 'manual', return_contract: 'assignment import places results in received/awaiting-admission before admission or integration' };
+    const packetPath = artifact('export/packet.json');
+    const promptPath = artifact('export/prompt.md');
+    const manifestPath = artifact('export/manifest.json');
+    artifactPaths.push(packetPath, promptPath, manifestPath);
+    writes.set(packetPath, effectivePacket);
+    writes.set(promptPath, `You are receiving an Agentic Workspace assignment packet.\n\n\`\`\`json\n${JSON.stringify(effectivePacket, null, 2)}\n\`\`\``);
+    writes.set(manifestPath, { kind: 'agentic-workspace/assignment-export-manifest/v1', assignment_id: id, assignment_revision: rev, run_id: runId, integrity: assignmentDigest(effectivePacket) });
+    Object.assign(state, { assignment: effectivePacket, current_state: 'handoff-prepared', run_id: runId });
+  } else if (transition === 'import') {
+    requireField('run_id');
+    const returned = assignmentParseJson(requireField('return_json'), 'return_json');
+    const returnId = assignmentText(values.return_id) || assignmentDigest(returned).replace('sha256:', '').slice(0, 16);
+    const returnPath = artifact(`received/awaiting-admission/${assignmentFragment(returnId)}.json`);
+    const receiptPath = artifact(`received/import-${assignmentFragment(returnId)}.json`);
+    artifactPaths.push(returnPath, receiptPath);
+    writes.set(returnPath, returned);
+    writes.set(receiptPath, { kind: 'agentic-workspace/assignment-return-import-receipt/v1', run_id: runId, return_id: returnId, state: 'received/awaiting-admission', rule: 'Import records returned work only.' });
+    Object.assign(state, { current_state: 'awaiting-admission', last_return_id: returnId });
+  } else if (transition === 'admit') {
+    requireField('run_id');
+    requireField('current_authority_ref');
+    requireField('live_mutation_baseline');
+    const receiptPath = artifact('admission/unidentified-return.admit.json');
+    artifactPaths.push(receiptPath);
+    writes.set(receiptPath, { kind: 'agentic-workspace/assignment-admission-receipt/v1', run_id: runId, status: 'admitted', worker_reported_proof_trusted: false, worker_reported_baseline_trusted: false });
+    Object.assign(state, { current_state: 'admitted', last_admission_status: 'admitted' });
+  } else if (transition === 'integrate') {
+    requireField('run_id');
+    requireField('current_authority_ref');
+    requireField('live_mutation_baseline');
+    if (state.last_admission_status !== 'admitted') failures.push({ reason: 'return-not-admitted', field: 'state.last_admission_status', recovery: 'Run assignment admit with current authority before integration.' });
+    const receiptPath = artifact('integration/integration.json');
+    artifactPaths.push(receiptPath);
+    writes.set(receiptPath, { kind: 'agentic-workspace/assignment-integration-receipt/v1', run_id: runId, status: failures.length ? 'blocked' : 'integrated' });
+    Object.assign(state, { current_state: failures.length ? 'blocked' : 'integrated' });
+  } else if (transition === 'override') {
+    requireField('assignment_id');
+    requireField('reason');
+    requireField('scope');
+    requireField('expires_at');
+    const receiptPath = artifact('override/override.json');
+    artifactPaths.push(receiptPath);
+    writes.set(receiptPath, { kind: 'agentic-workspace/assignment-human-override-receipt/v1', assignment_id: assignmentId, run_id: runId, status: 'override-recorded', scope: assignmentText(values.scope), reason: assignmentText(values.reason), expires_at: assignmentText(values.expires_at), revalidation_required: true, claim_effect: 'downgrade-until-revalidated', proof_effect: 'explicit override receipt required in proof boundary' });
+    Object.assign(state, { current_state: 'override-recorded' });
+  } else {
+    requireField('run_id');
+    const receiptPath = artifact(`closeout/${transition}.json`);
+    artifactPaths.push(receiptPath);
+    writes.set(receiptPath, { kind: 'agentic-workspace/assignment-closeout-receipt/v1', run_id: runId, status: transition });
+    Object.assign(state, { current_state: transition });
+  }
+  const refs = artifactPaths.map((path) => relative(targetRoot, path).replaceAll('\\\\', '/'));
+  state.schema_version = 'agentic-workspace/assignment-run-state/v1';
+  state.run_id = runId;
+  state.locality = 'local-disposable';
+  if (!failures.length && !Boolean(values.dry_run)) {
+    for (const [path, payload] of writes.entries()) assignmentWrite(path, payload);
+    assignmentWrite(statePath, state);
+    refs.push(relative(targetRoot, statePath).replaceAll('\\\\', '/'));
+  }
+  return { kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : state.current_state, outcome: failures.length ? 'blocked' : Boolean(values.dry_run) ? 'noop' : 'applied', mutation_applied: !failures.length && !Boolean(values.dry_run), target_root: targetRoot, run_id: runId, artifact_refs: refs, state, failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment ${transition}: ${failures.length ? 'blocked' : state.current_state}`, actions: refs.map((path) => ({ kind: 'write', path })) };
 }
 
 function reportMemory(values) {

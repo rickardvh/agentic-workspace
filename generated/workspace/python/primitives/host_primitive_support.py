@@ -11,6 +11,7 @@ Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import tomllib
@@ -43,6 +44,8 @@ def execute_host_primitive(
         return _verify_payload(values=values, arguments=arguments, context=context)
     if primitive == "workspace.output.emit":
         return _emit_output(values=values, arguments=arguments)
+    if primitive == "assignment.lifecycle.apply":
+        return _assignment_lifecycle_apply(values=values, arguments=arguments, context=context)
     raise PrimitiveExecutionError(f"unsupported AW host primitive: {primitive!r}")
 
 
@@ -597,6 +600,317 @@ def _resolve_template(template: Any, *, values: dict[str, Any]) -> Any:
         base = Path(str(values.get(str(spec.get("base", "")), "")))
         return (base / str(spec.get("path", ""))).as_posix()
     return {str(key): _resolve_template(value, values=values) for key, value in template.items()}
+
+
+def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, Any], context: PrimitiveContext) -> dict[str, Any]:
+    del arguments
+    operation_id = str(values.get("operation_id") or "")
+    transition = str(values.get("assignment_command") or operation_id.rsplit(".", 1)[-1])
+    supported = {"export", "import", "admit", "reject", "repair", "reassign", "integrate", "close", "cleanup", "override"}
+    if transition not in supported:
+        raise PrimitiveExecutionError(f"unsupported assignment lifecycle transition: {transition!r}")
+    target_root = Path(str(values.get("target_root") or values.get("target") or context.cwd)).resolve()
+    local_root = _resolve_inside(target_root, ".agentic-workspace/local/assignment-runs")
+    dry_run = bool(values.get("dry_run", False))
+
+    assignment_id = _optional_text(values.get("assignment_id"))
+    assignment_revision = _optional_text(values.get("assignment_revision"))
+    run_id = _optional_text(values.get("run_id")) or _assignment_default_run_id(
+        assignment_id=assignment_id, assignment_revision=assignment_revision, transition=transition
+    )
+    run_dir = _resolve_inside(local_root, _safe_assignment_fragment(run_id))
+    state_path = _resolve_inside(run_dir, "state.json")
+    state = _read_assignment_state(state_path=state_path)
+    artifact_paths: list[Path] = []
+    failures: list[dict[str, str]] = []
+    writes: dict[Path, Any] = {}
+
+    def require(field: str) -> str:
+        value = _optional_text(values.get(field))
+        if not value:
+            failures.append(
+                {
+                    "reason": "missing-required-input",
+                    "field": field,
+                    "recovery": f"Retry assignment {transition} with --{field.replace('_', '-')}.",
+                }
+            )
+        return value
+
+    def artifact(relative: str) -> Path:
+        return _resolve_inside(run_dir, relative)
+
+    if transition == "export":
+        assignment_id = require("assignment_id")
+        assignment_revision = require("assignment_revision")
+        target_name = require("target_name")
+        packet = _assignment_json_value(values.get("packet_json"), field="packet_json") or {
+            "kind": "agentic-workspace/assignment-export-packet/v1",
+            "assignment_id": assignment_id,
+            "assignment_revision": assignment_revision,
+            "run_id": run_id,
+            "target": target_name,
+            "transport": _optional_text(values.get("transport")) or "manual",
+            "scope": _optional_text(values.get("scope")),
+            "return_contract": "assignment import places results in received/awaiting-admission before admission or integration",
+        }
+        packet_path = artifact("export/packet.json")
+        prompt_path = artifact("export/prompt.md")
+        manifest_path = artifact("export/manifest.json")
+        prompt = _assignment_export_prompt(packet)
+        manifest = {
+            "kind": "agentic-workspace/assignment-export-manifest/v1",
+            "assignment_id": assignment_id,
+            "assignment_revision": assignment_revision,
+            "run_id": run_id,
+            "packet_ref": _assignment_relative(packet_path, root=target_root),
+            "prompt_ref": _assignment_relative(prompt_path, root=target_root),
+            "integrity": _assignment_digest(packet),
+        }
+        artifact_paths.extend([packet_path, prompt_path, manifest_path])
+        state.update({"assignment": packet, "current_state": "handoff-prepared", "run_id": run_id})
+        writes = {packet_path: packet, prompt_path: prompt, manifest_path: manifest}
+    elif transition == "import":
+        require("run_id")
+        returned = _assignment_json_value(require("return_json"), field="return_json")
+        return_id = _optional_text(values.get("return_id")) or _assignment_digest(returned).removeprefix("sha256:")[:16]
+        return_path = artifact(f"received/awaiting-admission/{_safe_assignment_fragment(return_id)}.json")
+        receipt_path = artifact(f"received/import-{_safe_assignment_fragment(return_id)}.json")
+        receipt = {
+            "kind": "agentic-workspace/assignment-return-import-receipt/v1",
+            "run_id": run_id,
+            "return_id": return_id,
+            "state": "received/awaiting-admission",
+            "return_artifact_ref": _assignment_relative(return_path, root=target_root),
+            "integrity": _assignment_digest(returned),
+            "rule": "Import records returned work only; AW-owned review, proof, admission, and integration remain pending.",
+        }
+        artifact_paths.extend([return_path, receipt_path])
+        state.update({"current_state": "awaiting-admission", "last_return_id": return_id})
+        writes = {return_path: returned, receipt_path: receipt}
+    elif transition in {"admit", "reject", "repair"}:
+        require("run_id")
+        if transition == "admit":
+            require("current_authority_ref")
+            require("live_mutation_baseline")
+        if transition in {"reject", "repair"}:
+            require("reason")
+        return_id = _optional_text(values.get("return_id")) or str(state.get("last_return_id") or "unidentified-return")
+        admission_status = (
+            _optional_text(values.get("admission_status"))
+            or {"admit": "admitted", "reject": "rejected", "repair": "repair-requested"}[transition]
+        )
+        receipt_path = artifact(f"admission/{_safe_assignment_fragment(return_id)}.{transition}.json")
+        receipt = {
+            "kind": "agentic-workspace/assignment-admission-receipt/v1",
+            "run_id": run_id,
+            "return_id": return_id,
+            "status": admission_status,
+            "current_authority_ref": _optional_text(values.get("current_authority_ref")),
+            "live_mutation_baseline": _optional_text(values.get("live_mutation_baseline")),
+            "reason": _optional_text(values.get("reason")),
+            "worker_reported_proof_trusted": False,
+            "worker_reported_baseline_trusted": False,
+            "rule": "Admission receipts are valid only after current authority and live baseline are resolved at this boundary.",
+        }
+        artifact_paths.append(receipt_path)
+        state.update({"current_state": admission_status, "last_admission_status": admission_status, "last_return_id": return_id})
+        writes = {receipt_path: receipt}
+    elif transition == "integrate":
+        require("run_id")
+        require("current_authority_ref")
+        require("live_mutation_baseline")
+        admitted = state.get("last_admission_status") == "admitted"
+        if not admitted:
+            failures.append(
+                {
+                    "reason": "return-not-admitted",
+                    "field": "state.last_admission_status",
+                    "recovery": "Run assignment admit with current authority before integration.",
+                }
+            )
+        receipt_path = artifact("integration/integration.json")
+        receipt = {
+            "kind": "agentic-workspace/assignment-integration-receipt/v1",
+            "run_id": run_id,
+            "status": "integrated" if admitted and not failures else "blocked",
+            "current_authority_ref": _optional_text(values.get("current_authority_ref")),
+            "live_mutation_baseline": _optional_text(values.get("live_mutation_baseline")),
+        }
+        artifact_paths.append(receipt_path)
+        state.update({"current_state": receipt["status"]})
+        writes = {receipt_path: receipt}
+    elif transition == "reassign":
+        require("run_id")
+        target_name = require("target_name")
+        reason = require("reason")
+        receipt_path = artifact("reassignment/reassign.json")
+        receipt = {
+            "kind": "agentic-workspace/assignment-reassignment-receipt/v1",
+            "run_id": run_id,
+            "status": "superseded",
+            "new_target": target_name,
+            "reason": reason,
+        }
+        artifact_paths.append(receipt_path)
+        state.update({"current_state": "superseded", "reassigned_to": target_name})
+        writes = {receipt_path: receipt}
+    elif transition == "override":
+        assignment_id = require("assignment_id")
+        reason = require("reason")
+        scope = require("scope")
+        expires_at = require("expires_at")
+        receipt_path = artifact("override/override.json")
+        receipt = {
+            "kind": "agentic-workspace/assignment-human-override-receipt/v1",
+            "assignment_id": assignment_id,
+            "run_id": run_id,
+            "status": "override-recorded",
+            "scope": scope,
+            "reason": reason,
+            "expires_at": expires_at,
+            "revalidation_required": True,
+            "claim_effect": "downgrade-until-revalidated",
+            "proof_effect": "explicit override receipt required in proof boundary",
+        }
+        artifact_paths.append(receipt_path)
+        state.update({"current_state": "override-recorded", "override": receipt})
+        writes = {receipt_path: receipt}
+    else:
+        require("run_id")
+        receipt_path = artifact(f"closeout/{transition}.json")
+        receipt = {
+            "kind": "agentic-workspace/assignment-closeout-receipt/v1",
+            "run_id": run_id,
+            "status": "closed" if transition == "close" else "archived",
+            "cleanup_deletes_files": False,
+            "reason": _optional_text(values.get("reason")),
+        }
+        artifact_paths.append(receipt_path)
+        state.update({"current_state": receipt["status"]})
+        writes = {receipt_path: receipt}
+
+    transition_receipt = {
+        "transition": transition,
+        "operation_id": operation_id,
+        "status": "blocked" if failures else str(state.get("current_state") or transition),
+        "artifacts": [_assignment_relative(path, root=target_root) for path in artifact_paths],
+        "dry_run": dry_run,
+    }
+    transitions = state.get("transitions")
+    if not isinstance(transitions, list):
+        transitions = []
+    transitions.append(transition_receipt)
+    state["transitions"] = transitions
+    state["run_id"] = run_id
+    state["schema_version"] = "agentic-workspace/assignment-run-state/v1"
+    state["locality"] = "local-disposable"
+
+    if failures:
+        outcome = "blocked"
+        status = "blocked"
+    elif dry_run:
+        outcome = "noop"
+        status = str(state.get("current_state") or transition)
+    else:
+        outcome = "applied"
+        status = str(state.get("current_state") or transition)
+        for path, payload in writes.items():
+            _write_assignment_artifact(path=path, payload=payload)
+        _write_assignment_artifact(path=state_path, payload=state)
+        artifact_paths.append(state_path)
+
+    artifact_refs = [_assignment_relative(path, root=target_root) for path in artifact_paths]
+    return {
+        "kind": "agentic-workspace/assignment-lifecycle-result/v1",
+        "operation_id": operation_id,
+        "transition": transition,
+        "status": status,
+        "outcome": outcome,
+        "mutation_applied": outcome == "applied",
+        "target_root": target_root.as_posix(),
+        "run_id": run_id,
+        "artifact_refs": artifact_refs,
+        "state": state,
+        "failures": failures,
+        "reason_code": failures[0]["reason"] if failures else None,
+        "recovery_command": failures[0]["recovery"] if failures else None,
+        "message": f"assignment {transition}: {status}",
+        "actions": [{"kind": "write", "path": ref} for ref in artifact_refs],
+    }
+
+
+def _optional_text(value: Any) -> str:
+    return str(value).strip() if value not in (None, "") else ""
+
+
+def _safe_assignment_fragment(value: str) -> str:
+    text = re.sub(r"[^A-Za-z0-9_.-]+", "-", value.strip()).strip(".-")
+    return text or "assignment-run"
+
+
+def _assignment_default_run_id(*, assignment_id: str, assignment_revision: str, transition: str) -> str:
+    seed = f"{assignment_id}:{assignment_revision}:{transition}" if assignment_id or assignment_revision else transition
+    return f"run-{hashlib.sha256(seed.encode('utf-8')).hexdigest()[:12]}"
+
+
+def _assignment_json_value(value: Any, *, field: str) -> Any:
+    if isinstance(value, (dict, list)):
+        return value
+    text = _optional_text(value)
+    if not text:
+        return {}
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise PrimitiveExecutionError(f"assignment lifecycle {field} must be valid JSON") from exc
+
+
+def _assignment_digest(value: Any) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def _assignment_relative(path: Path, *, root: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError as exc:
+        raise PrimitiveExecutionError(f"assignment artifact escaped target root: {path}") from exc
+
+
+def _read_assignment_state(*, state_path: Path) -> dict[str, Any]:
+    if not state_path.is_file():
+        return {}
+    try:
+        payload = json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise PrimitiveExecutionError(f"assignment run state is unreadable: {state_path}") from exc
+    if not isinstance(payload, dict):
+        raise PrimitiveExecutionError("assignment run state must be a JSON object")
+    return payload
+
+
+def _write_assignment_artifact(*, path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(payload, str):
+        text = payload
+    else:
+        text = json.dumps(payload, indent=2, sort_keys=True, default=str)
+    path.write_text(text.rstrip() + "\n", encoding="utf-8")
+
+
+def _assignment_export_prompt(packet: Any) -> str:
+    return "\n".join(
+        [
+            "You are receiving an Agentic Workspace assignment packet.",
+            "Use only the bounded scope and return contract in the JSON below.",
+            "Return a structured result for `agentic-workspace assignment import`; do not claim AW proof or integration.",
+            "",
+            "```json",
+            json.dumps(packet, indent=2, sort_keys=True, default=str),
+            "```",
+        ]
+    )
 
 
 def _emit_output(*, values: dict[str, Any], arguments: dict[str, Any] | None = None) -> str:

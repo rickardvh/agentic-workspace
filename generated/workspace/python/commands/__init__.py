@@ -11,6 +11,16 @@ from __future__ import annotations
 # Command module changes belong in src/agentic_workspace/contracts/command_package_ir.json.
 # Regenerate with: uv run python scripts/generate/generate_command_packages.py
 
+from . import assignment_admit as _command_assignment_admit
+from . import assignment_cleanup as _command_assignment_cleanup
+from . import assignment_close as _command_assignment_close
+from . import assignment_export as _command_assignment_export
+from . import assignment_import as _command_assignment_import
+from . import assignment_integrate as _command_assignment_integrate
+from . import assignment_override as _command_assignment_override
+from . import assignment_reassign as _command_assignment_reassign
+from . import assignment_reject as _command_assignment_reject
+from . import assignment_repair as _command_assignment_repair
 from . import autopilot_run as _command_autopilot_run
 from . import checkpoint_write as _command_checkpoint_write
 from . import config_report as _command_config_report
@@ -50,6 +60,16 @@ from . import work_thread_select as _command_work_thread_select
 
 
 GENERATED_COMMAND_HANDLERS = {
+    'assignment.admit': _command_assignment_admit.run,
+    'assignment.cleanup': _command_assignment_cleanup.run,
+    'assignment.close': _command_assignment_close.run,
+    'assignment.export': _command_assignment_export.run,
+    'assignment.import': _command_assignment_import.run,
+    'assignment.integrate': _command_assignment_integrate.run,
+    'assignment.override': _command_assignment_override.run,
+    'assignment.reassign': _command_assignment_reassign.run,
+    'assignment.reject': _command_assignment_reject.run,
+    'assignment.repair': _command_assignment_repair.run,
     'autopilot.run': _command_autopilot_run.run,
     'checkpoint.write': _command_checkpoint_write.run,
     'config.report': _command_config_report.run,
