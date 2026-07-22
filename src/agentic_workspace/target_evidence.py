@@ -10,9 +10,10 @@ from agentic_workspace.config import (
     DelegationTargetProfile,
 )
 
-CURRENT_ADMISSION_STATES = {"accepted", "accepted-normalized", "recovered"}
+CURRENT_ADMISSION_STATES = {"accepted", "accepted-normalized", "recovered", "compacted-summary"}
 ROUTABLE_AUTHORITIES = {"aw-proof", "human-review", "local-outcome-ledger"}
 ROUTABLE_CONFIDENCE = {"high", "medium"}
+INACTIVE_ADMISSION_STATES = {"disputed", "superseded", "stale", "compacted-raw", "rejected"}
 
 
 def _delegation_signal_score(record: DelegationOutcomeRecord) -> float:
@@ -49,24 +50,29 @@ def _record_routable(record: DelegationOutcomeRecord) -> bool:
         return False
     if record.confidence not in ROUTABLE_CONFIDENCE:
         return False
+    if record.contradiction_state in {"contradicted", "disputed"}:
+        return False
     return True
 
 
 def _currently_admitted_records(records: list[tuple[int, DelegationOutcomeRecord]]) -> list[tuple[int, DelegationOutcomeRecord]]:
     """Return records assignment may consume after lifecycle transitions are applied."""
 
-    superseded_ids = {record.predecessor_id for _, record in records if record.operation == "supersede" and record.predecessor_id}
-    disputed_ids = {record.predecessor_id for _, record in records if record.operation == "correct-or-dispute" and record.predecessor_id}
-    compacted_ids = {record.predecessor_id for _, record in records if record.operation == "prune-or-compact" and record.predecessor_id}
-    inactive_ids = superseded_ids | disputed_ids | compacted_ids
+    superseded_ids = {
+        record.predecessor_id
+        for _, record in records
+        if record.operation in {"supersede", "correct-or-dispute", "prune-or-compact"} and record.predecessor_id
+    }
+    inactive_state_ids = {
+        _record_identity(record, index) for index, record in records if record.admission_state in INACTIVE_ADMISSION_STATES
+    }
+    inactive_ids = superseded_ids | inactive_state_ids
     admitted: list[tuple[int, DelegationOutcomeRecord]] = []
     for index, record in records:
         record_id = _record_identity(record, index)
         if record_id in inactive_ids:
             continue
         if not _record_routable(record):
-            continue
-        if record.operation == "prune-or-compact":
             continue
         admitted.append((index, record))
     return admitted
@@ -124,6 +130,31 @@ def target_evidence_posture(
                     "authority": record.authority,
                     "confidence": record.confidence,
                     "admission_state": record.admission_state,
+                    "provenance": {
+                        "source_type": record.source_type,
+                        "source_ref": record.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+                        "producer_class": record.producer_class,
+                        "idempotency_key": record.idempotency_key or None,
+                    },
+                    "route_observations": {
+                        "route_outcome": record.route_outcome or None,
+                        "assignment_route": record.assignment_route or None,
+                        "proof": record.proof_observation or None,
+                        "review": record.review_observation or None,
+                    },
+                    "burden": {
+                        "handoff": record.handoff_burden or None,
+                        "repair": record.repair_burden or None,
+                        "retry": record.retry_burden or None,
+                        "restart": record.restart_burden or None,
+                        "expected": record.expected_burden or None,
+                        "observed": record.observed_burden or None,
+                    },
+                    "lifecycle_state": {
+                        "scope_drift": record.scope_drift,
+                        "contradiction": record.contradiction_state,
+                        "uncertainty": record.uncertainty_state,
+                    },
                     "admission": {
                         "routable": _record_routable(record),
                         "authority": record.authority,
@@ -131,8 +162,8 @@ def target_evidence_posture(
                         "state": record.admission_state,
                     },
                     "source": {
-                        "type": "local-json-ledger",
-                        "ref": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+                        "type": record.source_type or "local-json-ledger",
+                        "ref": record.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
                         "checked_in": False,
                     },
                     "routing_relevance": "task-and-scope-bound",
@@ -205,6 +236,11 @@ def target_evidence_posture(
                     "supported_task_classes": sorted({record.task_class for record in scoped_records}),
                     "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
                     "raw_history_retention": "bounded-local-ledger-with-lifecycle-transitions",
+                    "retention": {
+                        "status": "bounded-current-calibration",
+                        "current_records": len(scoped_records),
+                        "raw_history_rule": "Superseded, disputed, stale, and compacted raw records are excluded from routing; compact summaries remain routable only with lineage/provenance.",
+                    },
                 }
             )
 
@@ -219,6 +255,7 @@ def target_evidence_posture(
             "exists": (target_root / WORKSPACE_DELEGATION_OUTCOMES_PATH).exists() if target_root is not None else False,
             "safe_to_remove": True,
             "raw_transcripts_stored": False,
+            "retention_rule": "bounded by lifecycle transitions; prune-or-compact records replace raw predecessors with provenance-preserving calibration summaries",
         },
         "record_count": len(normalized),
         "normalized_records": normalized[:20],
@@ -230,7 +267,7 @@ def target_evidence_posture(
                 {
                     "operation": "submit",
                     "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --scope-class <scope> --operation submit --outcome <success|mixed|failed> --handoff-sufficiency <sufficient|borderline|insufficient> --review-burden <light|normal|high> --format json",
-                    "admission": "requires target, task class, independent scope class, authority, confidence, and duplicate-safe record id before routing uses it",
+                    "admission": "resolves target, task class, independent scope class, source ref, producer class, route observations, authority, confidence, idempotency key, and duplicate-safe record id before routing uses it",
                 },
                 {
                     "operation": "query",
@@ -250,7 +287,7 @@ def target_evidence_posture(
                 {
                     "operation": "prune-or-compact",
                     "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --scope-class <scope> --operation prune-or-compact --predecessor-id <record-id> --outcome mixed --format json",
-                    "admission": "records a compaction boundary; retained signals must preserve target/task/scope ids and predecessor lineage",
+                    "admission": "replaces bounded raw predecessors with a compact current calibration summary preserving target/task/scope ids, source lineage, uncertainty, and predecessor provenance",
                 },
             ],
             "admission_rejections": [
@@ -261,7 +298,7 @@ def target_evidence_posture(
                 "records lacking task/scope context",
                 "transition records without an existing predecessor id",
             ],
-            "routing_rule": "Assignment may consume only accepted evidence matching the requested task/scope context.",
+            "routing_rule": "Assignment may consume only current, admitted, non-contradicted evidence matching the requested target/task/scope context.",
         },
         "admission": {
             "rejects": [
@@ -272,8 +309,11 @@ def target_evidence_posture(
                 "unscoped task/scope context",
                 "unsupported outcome enums",
                 "unknown predecessor transition",
+                "cross-context predecessor transition",
+                "stale, contradicted, or already transitioned predecessor",
             ],
             "source": "config.load_delegation_outcomes",
+            "producer_boundary": "AW-owned producers may record proof/review/retry/closeout observations only when those semantics come from the corresponding proof, review, or lifecycle owner; local notes remain advisory evidence.",
         },
         "authority_order": [
             "explicit human policy",
@@ -290,6 +330,7 @@ def assignment_decision_from_policy(
 ) -> dict[str, Any]:
     policy_value = str(assignment_policy.get("assignment_policy", {}).get("value") or "local-preferred")
     current_target = str(assignment_policy.get("current_target", {}).get("value") or "")
+    manual_transport_policy = str(assignment_policy.get("manual_transport_policy", {}).get("value") or "allowed")
     recommendation = str(runtime_resolution.get("recommendation") or "stay-local")
     enforceable = bool(assignment_policy.get("binding", {}).get("enforceable", False))
     profile_recommendations = [item for item in runtime_resolution.get("profile_recommendations", []) if isinstance(item, dict)]
@@ -325,8 +366,10 @@ def assignment_decision_from_policy(
         if not target:
             continue
         required_action = str(profile.get("required_action") or "")
+        location = str(profile.get("location") or "")
         execution_methods = [str(item) for item in profile.get("execution_methods", []) if str(item).strip()]
         human_control_modes = [str(item) for item in profile.get("human_control_modes", []) if str(item).strip()]
+        proof_requirements = [str(item) for item in profile.get("proof_requirements", []) if str(item).strip()]
         hard_rejection_reasons: list[str] = []
         if bool(profile.get("capability_mismatch")):
             hard_rejection_reasons.append("capability-mismatch")
@@ -334,10 +377,17 @@ def assignment_decision_from_policy(
             hard_rejection_reasons.append(required_action)
         if not execution_methods:
             hard_rejection_reasons.append("missing-execution-method")
-        if str(profile.get("location") or "") == "external" and not any(method in {"cli", "api", "manual"} for method in execution_methods):
+        if location == "external" and not any(method in {"cli", "api", "manual"} for method in execution_methods):
             hard_rejection_reasons.append("external-transport-unavailable")
+        if location == "external" and set(execution_methods) == {"manual"} and manual_transport_policy == "disabled":
+            hard_rejection_reasons.append("manual-transport-disabled")
+        if location == "external" and "manual" in execution_methods and manual_transport_policy == "required-when-no-automatic-method":
+            if not any(method in {"cli", "api"} for method in execution_methods):
+                required_action = "manual-handoff-required"
         if "off" in human_control_modes:
             hard_rejection_reasons.append("human-control-forbids-delegation")
+        if "required-proof-missing" in proof_requirements:
+            hard_rejection_reasons.append("required-proof-missing")
         eligible = not hard_rejection_reasons
         score = int(profile.get("score") or 0) + recommendation_score.get(str(profile.get("recommendation") or ""), 0)
         matching_evidence = evidence_by_target.get(target, [])
@@ -353,6 +403,11 @@ def assignment_decision_from_policy(
                 "score": score,
                 "runtime_recommendation": profile.get("recommendation"),
                 "required_action": required_action or "none",
+                "continuation": "manual-handoff"
+                if required_action == "manual-handoff-required"
+                else "execute"
+                if eligible
+                else "not-executable",
                 "evidence_contexts": [
                     {
                         "context_key": evidence.get("context_key"),
@@ -367,20 +422,60 @@ def assignment_decision_from_policy(
     eligible_candidates = [item for item in candidate_scores if item["eligible"]]
     eligible_candidates.sort(key=lambda item: (-int(item["score"]), str(item["target"])))
     selected_target = eligible_candidates[0]["target"] if eligible_candidates else None
+    current_candidate = next((item for item in candidate_scores if item["target"] == current_target), None)
+    current_is_eligible = bool(current_candidate and current_candidate["eligible"])
+    tied_candidates: list[dict[str, Any]] = []
+    if eligible_candidates:
+        top_score = int(eligible_candidates[0]["score"])
+        tied_candidates = [item for item in eligible_candidates if int(item["score"]) == top_score]
+    next_action = "continue locally"
+    alternatives = [
+        {
+            "target": item["target"],
+            "score": item["score"],
+            "eligible": item["eligible"],
+            "hard_rejection_reasons": item["hard_rejection_reasons"],
+        }
+        for item in candidate_scores
+        if item["target"] != selected_target
+    ][:5]
     if not eligible_candidates:
         decision = "no-safe-route"
+        selected_target = None
+        next_action = "shape the task, adjust transport/proof authority, or ask for a manual handoff before execution"
     elif policy_value == "local-preferred":
-        decision = "keep-local"
-        selected_target = current_target or None
+        if not current_target:
+            decision = "keep-local"
+            selected_target = None
+            next_action = "continue locally without claiming a configured delegation target"
+        elif current_is_eligible:
+            decision = "keep-local"
+            selected_target = current_target or None
+            next_action = "execute with the eligible current target"
+        else:
+            decision = "policy-conflict"
+            selected_target = None
+            next_action = "resolve local-preferred current_target eligibility before execution"
+    elif len(tied_candidates) > 1:
+        decision = "tie"
+        selected_target = None
+        next_action = "choose between tied eligible targets or add disambiguating evidence"
     elif policy_value == "best-fit-advisory":
         decision = "advise-best-fit"
+        next_action = (
+            f"consider {selected_target} as advisory best fit" if selected_target else "retain current execution until a fit exists"
+        )
     elif not enforceable:
         decision = "blocked"
-        selected_target = current_target or None
+        selected_target = None
+        next_action = "repair assignment policy binding before execution"
     elif recommendation in {"external-delegation", "manual-handoff", "stronger-reasoning"}:
-        decision = "assign-or-escalate"
+        selected = eligible_candidates[0]
+        decision = "manual-handoff" if selected.get("continuation") == "manual-handoff" else "assign-or-escalate"
+        next_action = "prepare manual handoff packet" if decision == "manual-handoff" else f"assign or escalate to {selected_target}"
     else:
         decision = "assign-best-fit" if selected_target != current_target else "assign-current-target"
+        next_action = f"execute with {selected_target}" if selected_target else "hold execution until assignment is resolved"
     return {
         "kind": "agentic-workspace/assignment-decision/v1",
         "decision": decision,
@@ -393,8 +488,14 @@ def assignment_decision_from_policy(
             "uses_runtime_candidate_comparison": bool(profile_recommendations),
             "uses_contextual_evidence": bool(suitability),
             "requested_context_key": requested_context_key or None,
-            "tie_breaker": "highest score, then stable target name",
+            "tie_breaker": "ties are surfaced as a non-executable tie outcome; no lexical tie-break selects an executor",
+            "current_target_eligible": current_is_eligible,
+            "manual_transport_policy": manual_transport_policy,
         },
+        "alternatives": alternatives,
+        "uncertainty": "tie" if len(tied_candidates) > 1 else "sparse-evidence" if not suitability else "ranked",
+        "override_authority": assignment_policy.get("human_override_policy", {}).get("value", "explicit-only"),
+        "next_action": next_action,
         "runtime_recommendation": recommendation,
         "evidence_status": target_evidence.get("status", "unknown"),
         "record_count": target_evidence.get("record_count", 0),

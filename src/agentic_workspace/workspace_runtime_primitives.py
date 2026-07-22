@@ -46467,22 +46467,87 @@ def _record_delegation_outcome(
         raise WorkspaceUsageError("note-delegation-outcome authority must be one of: aw-proof, human-review, local-outcome-ledger.")
     if normalized_confidence not in {"high", "medium"}:
         raise WorkspaceUsageError("note-delegation-outcome confidence must be high or medium before routing can consume it.")
-    existing_ids = {
-        existing.record_id or f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
-        for index, existing in enumerate(records)
+
+    def _identity(existing: DelegationOutcomeRecord, index: int) -> str:
+        return (
+            existing.record_id
+            or f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
+        )
+
+    def _record_payload(existing: DelegationOutcomeRecord) -> dict[str, Any]:
+        return {
+            "recorded_at": existing.recorded_at,
+            "delegation_target": existing.delegation_target,
+            "task_class": existing.task_class,
+            "scope_class": existing.scope_class,
+            "outcome": existing.outcome,
+            "handoff_sufficiency": existing.handoff_sufficiency,
+            "review_burden": existing.review_burden,
+            "escalation_required": existing.escalation_required,
+            "operation": existing.operation,
+            "record_id": existing.record_id,
+            "predecessor_id": existing.predecessor_id,
+            "authority": existing.authority,
+            "confidence": existing.confidence,
+            "admission_state": existing.admission_state,
+            "source_type": existing.source_type,
+            "source_ref": existing.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+            "producer_class": existing.producer_class,
+            "route_outcome": existing.route_outcome,
+            "assignment_route": existing.assignment_route,
+            "proof_observation": existing.proof_observation,
+            "review_observation": existing.review_observation,
+            "handoff_burden": existing.handoff_burden,
+            "repair_burden": existing.repair_burden,
+            "retry_burden": existing.retry_burden,
+            "restart_burden": existing.restart_burden,
+            "expected_burden": existing.expected_burden,
+            "observed_burden": existing.observed_burden,
+            "scope_drift": existing.scope_drift,
+            "contradiction_state": existing.contradiction_state,
+            "uncertainty_state": existing.uncertainty_state,
+            "idempotency_key": existing.idempotency_key,
+        }
+
+    by_id = {_identity(existing, index): (index, existing) for index, existing in enumerate(records)}
+    transitioned_predecessors = {
+        existing.predecessor_id
+        for existing in records
+        if existing.operation in {"correct-or-dispute", "supersede", "prune-or-compact"} and existing.predecessor_id
     }
-    if normalized_operation != "submit" and normalized_predecessor not in existing_ids:
+    predecessor: DelegationOutcomeRecord | None = None
+    if normalized_operation != "submit" and normalized_predecessor not in by_id:
         raise WorkspaceUsageError("note-delegation-outcome transition operations require --predecessor-id for an existing record.")
+    if normalized_operation != "submit":
+        predecessor = by_id[normalized_predecessor][1]
+        if (
+            predecessor.delegation_target,
+            predecessor.task_class,
+            predecessor.scope_class,
+        ) != (normalized_target, normalized_task, normalized_scope):
+            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must match target/task/scope.")
+        if predecessor.admission_state not in {"accepted", "accepted-normalized", "recovered", "compacted-summary"}:
+            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must be current admitted evidence.")
+        if normalized_predecessor in transitioned_predecessors:
+            raise WorkspaceUsageError("note-delegation-outcome transition predecessor is already superseded, disputed, or compacted.")
     today = date.today().isoformat()
+    source_ref = WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix()
+    producer_class = {
+        "aw-proof": "aw-proof",
+        "human-review": "human-review",
+        "local-outcome-ledger": "local-operator",
+    }[normalized_authority]
+    idempotency_key = (
+        f"{normalized_operation}:{normalized_target}:{normalized_task}:{normalized_scope}:"
+        f"{normalized_authority}:{source_ref}:{outcome}:{handoff_sufficiency}:{review_burden}:{escalation_required}"
+    )
     duplicate_key = (
         normalized_target,
         normalized_task,
         normalized_scope,
-        outcome,
-        handoff_sufficiency,
-        review_burden,
-        escalation_required,
         normalized_authority,
+        source_ref,
+        idempotency_key,
     )
     if normalized_operation == "submit":
         for existing in records:
@@ -46490,11 +46555,9 @@ def _record_delegation_outcome(
                 existing.delegation_target,
                 existing.task_class,
                 existing.scope_class,
-                existing.outcome,
-                existing.handoff_sufficiency,
-                existing.review_burden,
-                existing.escalation_required,
                 existing.authority,
+                existing.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+                existing.idempotency_key,
             ) == duplicate_key and existing.admission_state in {"accepted", "accepted-normalized", "recovered"}:
                 raise WorkspaceUsageError(
                     "note-delegation-outcome duplicate evidence for target/task/scope/provenance must use a lifecycle transition."
@@ -46514,47 +46577,48 @@ def _record_delegation_outcome(
         predecessor_id=normalized_predecessor,
         authority=normalized_authority,
         confidence=normalized_confidence,
-        admission_state="accepted",
+        admission_state="compacted-summary" if normalized_operation == "prune-or-compact" else "accepted",
+        source_type="local-json-ledger",
+        source_ref=source_ref,
+        producer_class=producer_class,
+        route_outcome=outcome,
+        assignment_route="current-target" if normalized_target else "",
+        proof_observation="not-recorded",
+        review_observation="recorded" if normalized_authority == "human-review" else "not-recorded",
+        handoff_burden=handoff_sufficiency,
+        repair_burden=review_burden,
+        retry_burden="required" if escalation_required else "not-required",
+        restart_burden="not-recorded",
+        expected_burden="not-recorded",
+        observed_burden=review_burden,
+        scope_drift="none",
+        contradiction_state="none" if normalized_operation != "correct-or-dispute" else "disputed-predecessor",
+        uncertainty_state="medium" if normalized_confidence == "medium" else "low",
+        idempotency_key=idempotency_key,
     )
+    retained_records: list[DelegationOutcomeRecord] = list(records)
+    if normalized_operation == "prune-or-compact" and predecessor is not None:
+        retained_records = [
+            existing
+            for index, existing in enumerate(records)
+            if not (
+                existing.delegation_target == normalized_target
+                and existing.task_class == normalized_task
+                and existing.scope_class == normalized_scope
+                and (
+                    _identity(existing, index) == normalized_predecessor
+                    or existing.admission_state in {"superseded", "disputed", "compacted-raw"}
+                )
+            )
+        ]
     updated_payload = {
         "kind": DELEGATION_OUTCOMES_KIND,
-        "records": [
-            *[
-                {
-                    "recorded_at": existing.recorded_at,
-                    "delegation_target": existing.delegation_target,
-                    "task_class": existing.task_class,
-                    "scope_class": existing.scope_class,
-                    "outcome": existing.outcome,
-                    "handoff_sufficiency": existing.handoff_sufficiency,
-                    "review_burden": existing.review_burden,
-                    "escalation_required": existing.escalation_required,
-                    "operation": existing.operation,
-                    "record_id": existing.record_id,
-                    "predecessor_id": existing.predecessor_id,
-                    "authority": existing.authority,
-                    "confidence": existing.confidence,
-                    "admission_state": existing.admission_state,
-                }
-                for existing in records
-            ],
-            {
-                "recorded_at": record.recorded_at,
-                "delegation_target": record.delegation_target,
-                "task_class": record.task_class,
-                "scope_class": record.scope_class,
-                "outcome": record.outcome,
-                "handoff_sufficiency": record.handoff_sufficiency,
-                "review_burden": record.review_burden,
-                "escalation_required": record.escalation_required,
-                "operation": record.operation,
-                "record_id": record.record_id,
-                "predecessor_id": record.predecessor_id,
-                "authority": record.authority,
-                "confidence": record.confidence,
-                "admission_state": record.admission_state,
-            },
-        ],
+        "retention": {
+            "mode": "bounded-current-calibration",
+            "compaction_cap": 20,
+            "rule": "prune-or-compact rewrites same-context raw predecessor history into a compact current calibration summary with lineage.",
+        },
+        "records": [*[_record_payload(existing) for existing in retained_records], _record_payload(record)],
     }
     config_lib.write_delegation_outcomes(path=path, payload=updated_payload)
     return {
