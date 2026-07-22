@@ -1350,6 +1350,10 @@ def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: P
     assert correction["status"] == "ready"
     assert "explicit-user-correction" in correction["event_schema"]["source_types"]
     assert "rejected-secret-bearing" in correction["event_schema"]["admission_states"]
+    assert "correction-event.submit" in {item["operation_id"] for item in correction["operations"]}
+    assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in correction["operations"])
+    assert correction["storage"]["retention_cap"] == 20
+    assert correction["storage"]["retention_operations"] == ["correction-event.prune-compact"]
 
 
 def test_config_command_target_identity_ambiguous_alias_fails_closed(tmp_path: Path, capsys) -> None:
@@ -1394,6 +1398,28 @@ def test_config_command_target_identity_ambiguous_alias_fails_closed(tmp_path: P
     assert payload["mixed_agent"]["correction_feedback"]["status"] == "fail-closed"
 
 
+def _correction_event(**overrides: object) -> dict[str, object]:
+    event: dict[str, object] = {
+        "target_identity_ref": "fast",
+        "target_revision": "rev-b",
+        "task_class": "mechanical-follow-through",
+        "scope_class": "narrow-code-change",
+        "invariant_id": "narrow-edits",
+        "behavior_class": "edit-scope",
+        "desired_behavior": "Prefer narrow edits.",
+        "replaced_behavior": "Broad edits.",
+        "authority": "explicit-user-correction",
+        "source": "pr-review",
+        "source_ref": "review-1",
+        "producer_class": "human-reviewer",
+        "producer_id": "reviewer-1",
+        "evidence_hash": "sha256:review-1",
+        "route_decisions": ["target-guidance", "target-suitability"],
+    }
+    event.update(overrides)
+    return event
+
+
 def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision() -> None:
     from agentic_workspace.agent_guidance import admit_correction_events
 
@@ -1408,43 +1434,24 @@ def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision
         }
     ]
     events = [
-        {
-            "target_identity_ref": "fast",
-            "target_revision": "rev-b",
-            "task_class": "mechanical-follow-through",
-            "scope_class": "narrow-code-change",
-            "invariant_id": "narrow-edits",
-            "behavior_class": "edit-scope",
-            "desired_behavior": "Prefer narrow edits.",
-            "replaced_behavior": "Broad edits.",
-            "authority": "explicit-user-correction",
-            "source": "pr-review",
-            "source_ref": "review-1",
-        },
-        {
-            "target_identity_ref": "user-local:fast-worker",
-            "target_revision": "rev-b",
-            "task_class": "mechanical-follow-through",
-            "scope_class": "narrow-code-change",
-            "invariant_id": "narrow-edits",
-            "behavior_class": "edit-scope",
-            "desired_behavior": "Keep changes narrow.",
-            "replaced_behavior": "Large broad edits.",
-            "authority": "explicit-user-correction",
-            "source": "pr-review",
-            "source_ref": "review-2",
-        },
-        {
-            "target_identity_ref": "user-local:fast-worker",
-            "target_revision": "old-rev",
-            "invariant_id": "stale-guidance",
-            "behavior_class": "routing",
-            "desired_behavior": "Use stale behavior.",
-            "replaced_behavior": "Current behavior.",
-            "authority": "explicit-user-correction",
-            "source": "pr-review",
-            "source_ref": "review-3",
-        },
+        _correction_event(),
+        _correction_event(
+            target_identity_ref="user-local:fast-worker",
+            desired_behavior="Keep changes narrow.",
+            replaced_behavior="Large broad edits.",
+            source_ref="review-2",
+            evidence_hash="sha256:review-2",
+        ),
+        _correction_event(
+            target_identity_ref="user-local:fast-worker",
+            target_revision="old-rev",
+            invariant_id="stale-guidance",
+            behavior_class="routing",
+            desired_behavior="Use stale behavior.",
+            replaced_behavior="Current behavior.",
+            source_ref="review-3",
+            evidence_hash="sha256:review-3",
+        ),
     ]
 
     admitted = admit_correction_events(
@@ -1458,6 +1465,10 @@ def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision
     assert admitted["admitted_events"][0]["profile_name"] == "fast_worker"
     assert admitted["admitted_events"][0]["admission_state"] == "recurrence"
     assert admitted["admitted_events"][0]["recurrence_count"] == 2
+    assert admitted["admitted_events"][0]["contradiction_account"]["status"] == "recurrence-preserved"
+    assert admitted["derived_routes"]["target_guidance"] == [admitted["admitted_events"][0]["event_id"]]
+    assert admitted["retention"]["mode"] == "bounded-local-retention"
+    assert "correction-event.submit" in {item["operation_id"] for item in admitted["public_operations"]}
     assert {item["reason"] for item in admitted["rejected_events"]} == {"rejected-stale-revision"}
 
 
@@ -1474,19 +1485,7 @@ def test_correction_event_lifecycle_rejects_delivery_replay_separately_from_recu
             "revision_policy": "preserve",
         }
     ]
-    event = {
-        "target_identity_ref": "fast",
-        "target_revision": "rev-b",
-        "task_class": "mechanical-follow-through",
-        "scope_class": "narrow-code-change",
-        "invariant_id": "narrow-edits",
-        "behavior_class": "edit-scope",
-        "desired_behavior": "Prefer narrow edits.",
-        "replaced_behavior": "Broad edits.",
-        "authority": "explicit-user-correction",
-        "source": "pr-review",
-        "source_ref": "review-1",
-    }
+    event = _correction_event()
 
     admitted = admit_correction_events(events=[event, dict(event)], subjects=subjects)
 
@@ -1519,47 +1518,51 @@ def test_correction_event_lifecycle_applies_revision_policies_and_rejects_unknow
     admitted = admit_correction_events(
         events=[
             {
-                "target_identity_ref": "user-local:preserve",
+                **_correction_event(
+                    target_identity_ref="user-local:preserve",
+                    source_ref="preserve-1",
+                    evidence_hash="sha256:preserve-1",
+                ),
                 "target_revision": "rev-a",
                 "invariant_id": "preserved-guidance",
                 "behavior_class": "routing",
                 "desired_behavior": "Keep preserved guidance.",
                 "replaced_behavior": "Old guidance.",
-                "authority": "explicit-user-correction",
-                "source": "pr-review",
-                "source_ref": "preserve-1",
             },
             {
-                "target_identity_ref": "user-local:retired",
+                **_correction_event(
+                    target_identity_ref="user-local:retired",
+                    source_ref="retired-1",
+                    evidence_hash="sha256:retired-1",
+                ),
                 "target_revision": "rev-a",
                 "invariant_id": "retired-guidance",
                 "behavior_class": "routing",
                 "desired_behavior": "Route retired guidance.",
                 "replaced_behavior": "Old guidance.",
-                "authority": "explicit-user-correction",
-                "source": "pr-review",
-                "source_ref": "retired-1",
             },
             {
-                "target_identity_ref": "missing",
+                **_correction_event(
+                    target_identity_ref="missing",
+                    source_ref="missing-1",
+                    evidence_hash="sha256:missing-1",
+                ),
                 "invariant_id": "missing-target",
                 "behavior_class": "routing",
                 "desired_behavior": "Unknown target.",
                 "replaced_behavior": "Old guidance.",
-                "authority": "explicit-user-correction",
-                "source": "pr-review",
-                "source_ref": "missing-1",
             },
             {
-                "target_identity_ref": "user-local:preserve",
+                **_correction_event(
+                    target_identity_ref="user-local:preserve",
+                    source_ref="secret-1",
+                    evidence_hash="sha256:secret-1",
+                ),
                 "target_revision": "rev-b",
                 "invariant_id": "secret-guidance",
                 "behavior_class": "routing",
                 "desired_behavior": "Never store sk-secret.",
                 "replaced_behavior": "Old guidance.",
-                "authority": "explicit-user-correction",
-                "source": "pr-review",
-                "source_ref": "secret-1",
             },
         ],
         subjects=subjects,
