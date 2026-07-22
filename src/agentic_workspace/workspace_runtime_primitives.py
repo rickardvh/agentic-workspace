@@ -46486,6 +46486,7 @@ def _record_delegation_outcome(
     contradiction_state: str = "none",
     uncertainty_state: str = "",
     idempotency_key: str = "",
+    trusted_producer_receipt: str = "",
 ) -> dict[str, Any]:
     path, payload, records = config_lib.load_delegation_outcomes(target_root=target_root)
     normalized_target = delegation_target.strip()
@@ -46499,12 +46500,15 @@ def _record_delegation_outcome(
     normalized_source_ref = source_ref.strip() or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix()
     normalized_producer_class = producer_class.strip()
     normalized_idempotency_key = idempotency_key.strip()
+    normalized_trusted_producer_receipt = trusted_producer_receipt.strip()
     if not normalized_scope:
         raise WorkspaceUsageError("note-delegation-outcome requires --scope-class to keep evidence scoped independently from task class.")
     if not normalized_source_ref:
         raise WorkspaceUsageError("note-delegation-outcome requires a non-empty source reference.")
     if normalized_confidence not in {"high", "medium", "low"}:
         raise WorkspaceUsageError("note-delegation-outcome confidence must be low, medium, or high.")
+    requested_authority = normalized_authority
+    requested_producer_class = normalized_producer_class
     default_producer_class = {
         "aw-proof": "aw-proof",
         "human-review": "human-review",
@@ -46521,7 +46525,42 @@ def _record_delegation_outcome(
     }.get(normalized_producer_class)
     if trusted_authority_for_producer is None:
         raise WorkspaceUsageError("note-delegation-outcome producer class is not authorized for evidence admission.")
-    if normalized_authority != trusted_authority_for_producer:
+    if normalized_trusted_producer_receipt:
+        trusted_receipt_authority = {
+            "aw-proof-receipt": "aw-proof",
+            "verified-human-review": "human-review",
+            "retry-outcome": "local-outcome-ledger",
+            "handoff-outcome": "local-outcome-ledger",
+            "closeout-outcome": "local-outcome-ledger",
+        }.get(normalized_trusted_producer_receipt)
+        if trusted_receipt_authority is None:
+            raise WorkspaceUsageError("note-delegation-outcome trusted producer receipt is not authorized for evidence admission.")
+        if normalized_authority != trusted_receipt_authority or normalized_producer_class != trusted_receipt_authority:
+            raise WorkspaceUsageError(
+                "note-delegation-outcome trusted producer receipt must match the authority and producer class it admits."
+            )
+        if normalized_source_ref == WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix():
+            raise WorkspaceUsageError("note-delegation-outcome trusted producer receipt requires a stable non-ledger source reference.")
+        expected_source_types = {
+            "aw-proof-receipt": {"aw-proof-receipt", "proof-receipt"},
+            "verified-human-review": {"human-review", "github-review", "review-thread"},
+            "retry-outcome": {"retry-outcome", "execution-retry"},
+            "handoff-outcome": {"handoff-outcome", "delegation-handoff"},
+            "closeout-outcome": {"closeout-outcome", "closeout-report"},
+        }[normalized_trusted_producer_receipt]
+        if normalized_source_type not in expected_source_types:
+            allowed_sources = ", ".join(sorted(expected_source_types))
+            raise WorkspaceUsageError(f"note-delegation-outcome trusted producer receipt requires source type one of: {allowed_sources}.")
+    elif normalized_authority in {"aw-proof", "human-review"} or normalized_producer_class in {"aw-proof", "human-review"}:
+        normalized_authority = "model-self-report"
+        normalized_producer_class = "agent-self-observation"
+        normalized_confidence = "low"
+        proof_observation = "forged-or-unverified-proof-authority"
+        review_observation = "forged-or-unverified-review-authority"
+        uncertainty_state = (
+            uncertainty_state or f"caller-requested-untrusted-authority:{requested_authority}:{requested_producer_class or 'default'}"
+        )
+    elif normalized_authority != trusted_authority_for_producer:
         normalized_authority = "model-self-report"
 
     def _identity(existing: DelegationOutcomeRecord, index: int) -> str:
@@ -46707,8 +46746,77 @@ def _record_delegation_outcome(
         "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
         "recorded": updated_payload["records"][-1],
         "record_count": len(updated_payload["records"]),
-        "rule": "local-only delegation outcome evidence; advisory input for tuning only",
+        "rule": (
+            "local-only delegation outcome evidence; public input cannot mint aw-proof or human-review authority; "
+            "trusted producer receipts admit routable proof/review evidence"
+        ),
     }
+
+
+def _record_aw_proof_delegation_outcome(
+    *,
+    target_root: Path,
+    delegation_target: str,
+    task_class: str,
+    scope_class: str,
+    outcome: str,
+    proof_receipt_ref: str,
+    idempotency_key: str,
+    handoff_sufficiency: str = "sufficient",
+    review_burden: str = "normal",
+    escalation_required: bool = False,
+) -> dict[str, Any]:
+    return _record_delegation_outcome(
+        target_root=target_root,
+        delegation_target=delegation_target,
+        task_class=task_class,
+        scope_class=scope_class,
+        outcome=outcome,
+        handoff_sufficiency=handoff_sufficiency,
+        review_burden=review_burden,
+        escalation_required=escalation_required,
+        authority="aw-proof",
+        confidence="high",
+        source_type="aw-proof-receipt",
+        source_ref=proof_receipt_ref,
+        producer_class="aw-proof",
+        proof_observation="passed" if outcome == "success" else "failed",
+        idempotency_key=idempotency_key,
+        trusted_producer_receipt="aw-proof-receipt",
+    )
+
+
+def _record_human_review_delegation_outcome(
+    *,
+    target_root: Path,
+    delegation_target: str,
+    task_class: str,
+    scope_class: str,
+    outcome: str,
+    review_ref: str,
+    idempotency_key: str,
+    handoff_sufficiency: str = "sufficient",
+    review_burden: str = "normal",
+    escalation_required: bool = False,
+) -> dict[str, Any]:
+    return _record_delegation_outcome(
+        target_root=target_root,
+        delegation_target=delegation_target,
+        task_class=task_class,
+        scope_class=scope_class,
+        outcome=outcome,
+        handoff_sufficiency=handoff_sufficiency,
+        review_burden=review_burden,
+        escalation_required=escalation_required,
+        authority="human-review",
+        confidence="high",
+        source_type="human-review",
+        source_ref=review_ref,
+        producer_class="human-review",
+        review_observation="verified",
+        idempotency_key=idempotency_key,
+        trusted_producer_receipt="verified-human-review",
+    )
 
 
 _RUNTIME_RESOLUTION_CATEGORIES = ("stay-local", "stronger-reasoning", "external-delegation", "manual-handoff")

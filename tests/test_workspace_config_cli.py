@@ -2530,6 +2530,173 @@ def test_note_delegation_outcome_admits_low_authority_as_non_routing_uncertainty
     assert "low-confidence:low" in evidence["uncertainty_accounts"][0]["uncertainty_reasons"]
 
 
+def test_note_delegation_outcome_downgrades_forged_public_high_authority(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    assert (
+        cli.main(
+            [
+                "note-delegation-outcome",
+                "--target",
+                str(target),
+                "--delegation-target",
+                "fast_worker",
+                "--task-class",
+                "mechanical-follow-through",
+                "--scope-class",
+                "narrow-code-change",
+                "--outcome",
+                "success",
+                "--authority",
+                "aw-proof",
+                "--confidence",
+                "high",
+                "--source-type",
+                "aw-proof-receipt",
+                "--source-ref",
+                "proof://caller-controlled",
+                "--producer-class",
+                "aw-proof",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["recorded"]["authority"] == "model-self-report"
+    assert payload["recorded"]["producer_class"] == "agent-self-observation"
+    assert payload["recorded"]["confidence"] == "low"
+    assert payload["recorded"]["proof_observation"] == "forged-or-unverified-proof-authority"
+
+    assert cli.main(["config", "--verbose", "--target", str(target), "--format", "json"]) == 0
+    config_payload = json.loads(capsys.readouterr().out)
+    evidence = config_payload["mixed_agent"]["target_evidence"]
+    assert evidence["suitability"] == []
+    assert evidence["uncertainty_accounts"][0]["routing_effect"] == "visible-uncertainty-only"
+    assert "low-authority:model-self-report" in evidence["uncertainty_accounts"][0]["uncertainty_reasons"]
+
+
+def test_internal_delegation_outcome_proof_receipt_can_emit_routable_aw_proof(tmp_path: Path) -> None:
+    from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    payload = _record_aw_proof_delegation_outcome(
+        target_root=target,
+        delegation_target="fast_worker",
+        task_class="mechanical-follow-through",
+        scope_class="narrow-code-change",
+        outcome="success",
+        proof_receipt_ref="proof://receipts/abc123",
+        idempotency_key="proof-receipt-abc123",
+        review_burden="light",
+    )
+
+    assert payload["recorded"]["authority"] == "aw-proof"
+    assert payload["recorded"]["producer_class"] == "aw-proof"
+    assert payload["recorded"]["source_ref"] == "proof://receipts/abc123"
+
+    from agentic_workspace.config import load_delegation_outcomes
+    from agentic_workspace.target_evidence import target_evidence_posture
+
+    _, _, records = load_delegation_outcomes(target_root=target)
+    posture = target_evidence_posture(target_root=target, profiles=(), records=records)
+    assert posture["suitability"][0]["route_effect"] == "preferred-for-matching-task-class"
+    assert posture["normalized_records"][0]["admission"] == {
+        "routable": True,
+        "authority": "aw-proof",
+        "confidence": "high",
+        "state": "accepted",
+    }
+
+
+def test_internal_delegation_outcome_rejects_mismatched_trusted_receipt(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_delegation_outcome
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    with pytest.raises(WorkspaceUsageError, match="trusted producer receipt must match"):
+        _record_delegation_outcome(
+            target_root=target,
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="narrow-code-change",
+            outcome="success",
+            handoff_sufficiency="sufficient",
+            review_burden="light",
+            escalation_required=False,
+            authority="human-review",
+            confidence="high",
+            source_type="aw-proof-receipt",
+            source_ref="proof://receipts/abc123",
+            producer_class="human-review",
+            trusted_producer_receipt="aw-proof-receipt",
+        )
+
+
+def test_complexity_reduction_signal_requires_repeated_admitted_burden_not_compaction() -> None:
+    from agentic_workspace.config import DelegationOutcomeRecord
+    from agentic_workspace.target_evidence import target_evidence_posture
+
+    records = [
+        DelegationOutcomeRecord(
+            recorded_at="2026-07-01",
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="narrow-code-change",
+            outcome="mixed",
+            handoff_sufficiency="borderline",
+            review_burden="high",
+            escalation_required=True,
+            record_id="burden-1",
+            retry_burden="required",
+        ),
+        DelegationOutcomeRecord(
+            recorded_at="2026-07-02",
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="narrow-code-change",
+            outcome="failed",
+            handoff_sufficiency="insufficient",
+            review_burden="high",
+            escalation_required=True,
+            record_id="burden-2",
+            repair_burden="required",
+        ),
+        DelegationOutcomeRecord(
+            recorded_at="2026-07-03",
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="broad-design-change",
+            outcome="mixed",
+            handoff_sufficiency="borderline",
+            review_burden="normal",
+            escalation_required=False,
+            operation="prune-or-compact",
+            record_id="compaction-only",
+            admission_state="compacted-summary",
+        ),
+    ]
+
+    posture = target_evidence_posture(target_root=None, profiles=(), records=records)
+
+    signal = posture["complexity_reduction_signal"]
+    assert signal["status"] == "available"
+    assert signal["repeated_context_count"] == 1
+    assert signal["contexts"][0]["context_key"] == "mechanical-follow-through::narrow-code-change"
+    assert signal["contexts"][0]["supporting_record_ids"] == ["burden-1", "burden-2"]
+    assert "ledger compaction alone is not a complexity signal" in signal["rule"]
+
+
 def test_note_delegation_outcome_enforces_append_time_retention_cap(tmp_path: Path, capsys) -> None:
     target = tmp_path / "repo"
     target.mkdir()
