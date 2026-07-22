@@ -6990,6 +6990,208 @@
       "conformance_refs": [
         "verification.report.process"
       ]
+    },
+    {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "assignment",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommands": [
+          "admit",
+          "cleanup",
+          "close",
+          "export",
+          "import",
+          "integrate",
+          "override",
+          "reassign",
+          "reject",
+          "repair"
+        ]
+      },
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command and subcommand names",
+          "argument and option shape",
+          "operation ids",
+          "effect/read/write hints",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into operation input shape",
+          "dispatch wiring from subcommand to operation id"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "assignment lifecycle local artifacts",
+          "current authority admission receipts",
+          "output emission"
+        ]
+      },
+      "id": "assignment.lifecycle.cli",
+      "operation_ref": {
+        "id": "assignment.export",
+        "path": "operations/assignment.export.json",
+        "registry": "operation_contracts.json"
+      },
+      "projection_hints": {
+        "adapter_specific_fields": [
+          {
+            "fields": [
+              "program",
+              "subcommand rendering",
+              "help rendering",
+              "exit-code rendering"
+            ],
+            "kind": "process-cli"
+          }
+        ],
+        "universal_fields": [
+          "command.name",
+          "command.subcommands",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "assignment.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
+    {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "correction-event",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommands": [
+          "submit",
+          "query",
+          "correct-dispute",
+          "withdraw-supersede",
+          "prune-compact"
+        ]
+      },
+      "conformance_refs": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "generation_boundary": {
+        "contract_owns": [
+          "visible command and subcommand names",
+          "argument and option shape",
+          "operation ids",
+          "effect/read/write hints",
+          "schema refs",
+          "conformance refs"
+        ],
+        "generated_adapter_owns": [
+          "parser and usage wiring",
+          "argument normalization into operation input shape",
+          "dispatch wiring from subcommand to operation id"
+        ],
+        "runtime_owns": [
+          "target root resolution",
+          "correction-event authority admission",
+          "bounded local correction-event storage",
+          "low-authority preservation",
+          "output emission"
+        ]
+      },
+      "id": "correction-event.lifecycle.cli",
+      "operation_ref": {
+        "id": "correction-event.submit",
+        "path": "operations/correction-event.submit.json",
+        "registry": "operation_contracts.json"
+      },
+      "projection_hints": {
+        "adapter_specific_fields": [
+          {
+            "fields": [
+              "program",
+              "subcommand rendering",
+              "help rendering",
+              "exit-code rendering"
+            ],
+            "kind": "process-cli"
+          }
+        ],
+        "universal_fields": [
+          "command.name",
+          "command.subcommands",
+          "command.options",
+          "operation_ref.id",
+          "runtime_binding.primitive_refs",
+          "schemas.output",
+          "effect_hints",
+          "conformance_refs"
+        ]
+      },
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "correction.event.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ]
+      },
+      "status": "generated"
     }
   ]
 }

@@ -1,0 +1,86 @@
+{
+  "adapter": {
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "assignment",
+      "export",
+      "--target",
+      ".",
+      "--assignment-id",
+      "assign-1",
+      "--assignment-revision",
+      "rev-1",
+      "--target-name",
+      "planner",
+      "--run-id",
+      "run-1",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root",
+    "kind": "process"
+  },
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "filesystem": {
+      "allowed_write_directories": [
+        ".agentic-workspace/local/assignment-runs/run-1"
+      ],
+      "allowed_write_paths": [],
+      "forbidden_paths": [],
+      "required_paths": [
+        ".agentic-workspace/local/assignment-runs/run-1/export/packet.json",
+        ".agentic-workspace/local/assignment-runs/run-1/export/prompt.md",
+        ".agentic-workspace/local/assignment-runs/run-1/state.json"
+      ]
+    },
+    "idempotency": {
+      "run_twice": true
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "stdout": {
+      "field_assertions": [
+        {
+          "equals": "agentic-workspace/assignment-lifecycle-result/v1",
+          "path": [
+            "kind"
+          ]
+        },
+        {
+          "equals": "handoff-prepared",
+          "path": [
+            "status"
+          ]
+        },
+        {
+          "equals": "handoff-prepared",
+          "path": [
+            "state",
+            "current_state"
+          ]
+        }
+      ],
+      "format": "json"
+    }
+  },
+  "fixtures": [
+    {
+      "files": {
+        ".agentic-workspace/config.toml": "[workspace]\ncli_invoke = \"agentic-workspace\"\n",
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      },
+      "id": "minimal-repo"
+    }
+  ],
+  "id": "assignment.lifecycle.process",
+  "operation_id": "assignment.export",
+  "schema_version": "agentic-workspace/conformance/v1"
+}
