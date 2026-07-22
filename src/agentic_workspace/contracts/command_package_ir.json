@@ -630,13 +630,8 @@
               "default": null
             },
             {
-              "name": "subjects_json",
-              "arg": "subjects_json",
-              "default": null
-            },
-            {
-              "name": "trusted_authority_receipt_json",
-              "arg": "trusted_authority_receipt_json",
+              "name": "trusted_authority_receipt_ref",
+              "arg": "trusted_authority_receipt_ref",
               "default": null
             },
             {
@@ -11072,18 +11067,11 @@
                     "help": "Serialized correction event JSON."
                   },
                   {
-                    "name": "subjects_json",
+                    "name": "trusted_authority_receipt_ref",
                     "flags": [
-                      "--subjects-json"
+                      "--trusted-authority-receipt-ref"
                     ],
-                    "help": "Serialized target identity subjects for fixtures."
-                  },
-                  {
-                    "name": "trusted_authority_receipt_json",
-                    "flags": [
-                      "--trusted-authority-receipt-json"
-                    ],
-                    "help": "Trusted host/proof authority receipt JSON."
+                    "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary."
                   },
                   {
                     "name": "idempotency_key",
@@ -11276,18 +11264,11 @@
                     "help": "Serialized correction event JSON."
                   },
                   {
-                    "name": "subjects_json",
+                    "name": "trusted_authority_receipt_ref",
                     "flags": [
-                      "--subjects-json"
+                      "--trusted-authority-receipt-ref"
                     ],
-                    "help": "Serialized target identity subjects for fixtures."
-                  },
-                  {
-                    "name": "trusted_authority_receipt_json",
-                    "flags": [
-                      "--trusted-authority-receipt-json"
-                    ],
-                    "help": "Trusted host/proof authority receipt JSON."
+                    "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary."
                   },
                   {
                     "name": "idempotency_key",
@@ -11480,18 +11461,11 @@
                     "help": "Serialized correction event JSON."
                   },
                   {
-                    "name": "subjects_json",
+                    "name": "trusted_authority_receipt_ref",
                     "flags": [
-                      "--subjects-json"
+                      "--trusted-authority-receipt-ref"
                     ],
-                    "help": "Serialized target identity subjects for fixtures."
-                  },
-                  {
-                    "name": "trusted_authority_receipt_json",
-                    "flags": [
-                      "--trusted-authority-receipt-json"
-                    ],
-                    "help": "Trusted host/proof authority receipt JSON."
+                    "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary."
                   },
                   {
                     "name": "idempotency_key",
@@ -11684,18 +11658,11 @@
                     "help": "Serialized correction event JSON."
                   },
                   {
-                    "name": "subjects_json",
+                    "name": "trusted_authority_receipt_ref",
                     "flags": [
-                      "--subjects-json"
+                      "--trusted-authority-receipt-ref"
                     ],
-                    "help": "Serialized target identity subjects for fixtures."
-                  },
-                  {
-                    "name": "trusted_authority_receipt_json",
-                    "flags": [
-                      "--trusted-authority-receipt-json"
-                    ],
-                    "help": "Trusted host/proof authority receipt JSON."
+                    "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary."
                   },
                   {
                     "name": "idempotency_key",
@@ -11888,18 +11855,11 @@
                     "help": "Serialized correction event JSON."
                   },
                   {
-                    "name": "subjects_json",
+                    "name": "trusted_authority_receipt_ref",
                     "flags": [
-                      "--subjects-json"
+                      "--trusted-authority-receipt-ref"
                     ],
-                    "help": "Serialized target identity subjects for fixtures."
-                  },
-                  {
-                    "name": "trusted_authority_receipt_json",
-                    "flags": [
-                      "--trusted-authority-receipt-json"
-                    ],
-                    "help": "Trusted host/proof authority receipt JSON."
+                    "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary."
                   },
                   {
                     "name": "idempotency_key",

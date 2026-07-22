@@ -11,16 +11,20 @@ from agentic_workspace import cli
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.contract_tooling import contract_schema
 from agentic_workspace.evaluation import (
+    ASSIGNMENT_AUTHORITY_RECEIPT_DIR,
     EVALUATION_OBSERVATION_KIND,
     EVALUATION_SUMMARY_KIND,
     EVALUATIONS_KIND,
     OBSERVATION_RETENTION_CAP,
+    PROOF_AUTHORITY_RECEIPT_DIR,
     WORKSPACE_EVALUATIONS_PATH,
     WORKSPACE_LOCAL_EVALUATIONS_DIR,
+    _write_indexed_owner_receipt,
     append_observation,
     closure_authority,
     evaluation_summary,
     prune_observations,
+    record_material_finding_followup,
     register_evaluation,
     transition_evaluation,
     write_observation_authority,
@@ -46,6 +50,34 @@ def _bound_context(
     proof_revision: str = "proof-rev-1",
 ) -> dict:
     target_identity_ref = "user-local:codex-current"
+    assignment_ref = _write_indexed_owner_receipt(
+        target_root=target_root,
+        store_root=ASSIGNMENT_AUTHORITY_RECEIPT_DIR,
+        receipt_id=f"assignment-receipt-{assignment_revision}",
+        payload={
+            "kind": "agentic-workspace/assignment-authority-receipt/v1",
+            "receipt_id": f"assignment-receipt:{assignment_revision}",
+            "producer": "assignment.lifecycle",
+            "revision": assignment_revision,
+            "target_identity_ref": target_identity_ref,
+            "context_key": "mechanical-follow-through::mechanical-follow-through",
+        },
+    )
+    proof_ref = _write_indexed_owner_receipt(
+        target_root=target_root,
+        store_root=PROOF_AUTHORITY_RECEIPT_DIR,
+        receipt_id=f"proof-receipt-{proof_revision}",
+        payload={
+            "kind": "agentic-workspace/proof-receipt/v1",
+            "receipt_id": f"proof-receipt:{proof_revision}",
+            "producer": "aw-proof",
+            "revision": proof_revision,
+            "result": "passed",
+            "verified_by": "aw",
+            "provenance": "proof-receipts/run-1.json",
+            "subject": {"target_identity_ref": target_identity_ref},
+        },
+    )
     assignment = {
         "target_identity_ref": target_identity_ref,
         "context_key": "mechanical-follow-through::mechanical-follow-through",
@@ -55,6 +87,7 @@ def _bound_context(
             "receipt_id": f"assignment-receipt:{assignment_revision}",
             "producer": "assignment.lifecycle",
             "revision": assignment_revision,
+            "source_ref": assignment_ref,
         },
     }
     proof = {
@@ -67,6 +100,7 @@ def _bound_context(
             "receipt_id": f"proof-receipt:{proof_revision}",
             "producer": "aw-proof",
             "revision": proof_revision,
+            "source_ref": proof_ref,
             "subject": {"target_identity_ref": target_identity_ref},
         },
     }
@@ -629,23 +663,34 @@ def test_evaluation_material_finding_requires_bounded_followup_before_closure(tm
     blocked_closure = closure_authority(implementation_complete=True, proof_complete=True, evaluation=blocked_summary)
     assert blocked_closure["issue_closure_authorized"] is False
 
-    append_observation(
+    continued_observation = append_observation(
         target_root=tmp_path,
         evaluation_id="eval-1969-operating-loop",
         criterion="reconstruction-cost",
         result="contradicts",
         evidence_refs=["proof-receipts/run-2.json"],
-        context={
-            **_bound_context(tmp_path, proof_revision="proof-rev-2"),
-            "finding_followup": {"status": "continued", "owner_ref": "#2272-follow-up"},
-        },
+        context=_bound_context(tmp_path, proof_revision="proof-rev-2"),
         finding="The ordinary path still loses review ownership.",
         recommended_action="Continue under #2272-follow-up.",
+    )
+    followup_owner = tmp_path / ".agentic-workspace" / "planning" / "execplans" / "eval-follow-up.plan.json"
+    followup_owner.parent.mkdir(parents=True, exist_ok=True)
+    followup_owner.write_text(
+        json.dumps({"kind": "agentic-planning/execplan/v1", "id": "eval-follow-up", "status": "active"}),
+        encoding="utf-8",
+    )
+    record_material_finding_followup(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        result_identity=continued_observation["result_identity"]["id"],
+        owner_ref=".agentic-workspace/planning/execplans/eval-follow-up.plan.json",
+        status="continued",
     )
     continued_summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
 
     continued_item = continued_summary["summaries"][0]
     assert continued_item["fresh_result_admission"]["finding_followup"]["status"] == "resolved"
+    assert continued_item["fresh_result_admission"]["finding_followup"]["routing_receipt_count"] == 1
     assert continued_item["conclusion_readiness"] == {"ready": True, "reason_code": "ready"}
     assert (
         closure_authority(implementation_complete=True, proof_complete=True, evaluation=continued_summary)["issue_closure_authorized"]

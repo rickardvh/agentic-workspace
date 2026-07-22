@@ -7613,17 +7613,10 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--subjects-json"
+                "--trusted-authority-receipt-ref"
               ],
-              "help": "Serialized target identity subjects for fixtures.",
-              "name": "subjects_json"
-            },
-            {
-              "flags": [
-                "--trusted-authority-receipt-json"
-              ],
-              "help": "Trusted host/proof authority receipt JSON.",
-              "name": "trusted_authority_receipt_json"
+              "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary.",
+              "name": "trusted_authority_receipt_ref"
             },
             {
               "flags": [
@@ -7817,17 +7810,10 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--subjects-json"
+                "--trusted-authority-receipt-ref"
               ],
-              "help": "Serialized target identity subjects for fixtures.",
-              "name": "subjects_json"
-            },
-            {
-              "flags": [
-                "--trusted-authority-receipt-json"
-              ],
-              "help": "Trusted host/proof authority receipt JSON.",
-              "name": "trusted_authority_receipt_json"
+              "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary.",
+              "name": "trusted_authority_receipt_ref"
             },
             {
               "flags": [
@@ -8021,17 +8007,10 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--subjects-json"
+                "--trusted-authority-receipt-ref"
               ],
-              "help": "Serialized target identity subjects for fixtures.",
-              "name": "subjects_json"
-            },
-            {
-              "flags": [
-                "--trusted-authority-receipt-json"
-              ],
-              "help": "Trusted host/proof authority receipt JSON.",
-              "name": "trusted_authority_receipt_json"
+              "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary.",
+              "name": "trusted_authority_receipt_ref"
             },
             {
               "flags": [
@@ -8225,17 +8204,10 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--subjects-json"
+                "--trusted-authority-receipt-ref"
               ],
-              "help": "Serialized target identity subjects for fixtures.",
-              "name": "subjects_json"
-            },
-            {
-              "flags": [
-                "--trusted-authority-receipt-json"
-              ],
-              "help": "Trusted host/proof authority receipt JSON.",
-              "name": "trusted_authority_receipt_json"
+              "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary.",
+              "name": "trusted_authority_receipt_ref"
             },
             {
               "flags": [
@@ -8429,17 +8401,10 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--subjects-json"
+                "--trusted-authority-receipt-ref"
               ],
-              "help": "Serialized target identity subjects for fixtures.",
-              "name": "subjects_json"
-            },
-            {
-              "flags": [
-                "--trusted-authority-receipt-json"
-              ],
-              "help": "Trusted host/proof authority receipt JSON.",
-              "name": "trusted_authority_receipt_json"
+              "help": "Repo-relative AW/human authority receipt reference resolved by the host boundary.",
+              "name": "trusted_authority_receipt_ref"
             },
             {
               "flags": [
