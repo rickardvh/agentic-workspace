@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
 
 from agentic_workspace import cli
+from agentic_workspace.authority_envelope import mutation_baseline_payload
 from agentic_workspace.config import WorkspaceUsageError
 from agentic_workspace.contract_tooling import contract_schema
 from agentic_workspace.evaluation import (
@@ -21,6 +23,41 @@ from agentic_workspace.evaluation import (
     register_evaluation,
     transition_evaluation,
 )
+
+
+def _init_git_repo(target_root: Path) -> None:
+    subprocess.run(["git", "init"], cwd=target_root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=target_root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=target_root, check=True, capture_output=True, text=True)
+    source = target_root / "src" / "feature.py"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text("print('baseline')\n", encoding="utf-8")
+    subprocess.run(["git", "add", "src/feature.py"], cwd=target_root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=target_root, check=True, capture_output=True, text=True)
+
+
+def _bound_context(target_root: Path, *, assignment_revision: str = "assignment-rev-1") -> dict:
+    target_identity_ref = "user-local:codex-current"
+    baseline = mutation_baseline_payload(
+        target_root=target_root,
+        changed_paths=["src/feature.py"],
+        assignment_target_identity_ref=target_identity_ref,
+        assignment_revision=assignment_revision,
+    )
+    return {
+        "assignment": {
+            "target_identity_ref": target_identity_ref,
+            "context_key": "mechanical-follow-through::mechanical-follow-through",
+            "assignment_revision": assignment_revision,
+        },
+        "authority_envelope": {"mutation_baseline": baseline, "changed_paths": ["src/feature.py"]},
+        "proof": {
+            "result": "passed",
+            "verified_by": "aw",
+            "revision": "proof-rev-1",
+            "provenance": "proof-receipts/run-1.json",
+        },
+    }
 
 
 def _definition_kwargs() -> dict:
@@ -55,11 +92,25 @@ def _definition_kwargs() -> dict:
 
 
 def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     result = register_evaluation(target_root=tmp_path, **_definition_kwargs())
 
     assert result["kind"] == EVALUATIONS_KIND
     definitions = json.loads((tmp_path / WORKSPACE_EVALUATIONS_PATH).read_text(encoding="utf-8"))
     Draft202012Validator(contract_schema("evaluation_definition.schema.json")).validate(definitions)
+
+    with pytest.raises(WorkspaceUsageError, match="missing-bound-context"):
+        append_observation(
+            target_root=tmp_path,
+            evaluation_id="eval-1969-operating-loop",
+            criterion="reconstruction-cost",
+            result="supports",
+            evidence_refs=["docs/reviews/session-1.md#turn-3"],
+            confidence="high",
+            burden="low",
+            finding="Startup routed directly to current-decision evidence.",
+            recommended_action="Continue collection.",
+        )
 
     observed = append_observation(
         target_root=tmp_path,
@@ -69,34 +120,35 @@ def test_evaluation_register_observe_and_summary_are_schema_valid(tmp_path: Path
         evidence_refs=["docs/reviews/session-1.md#turn-3"],
         confidence="high",
         burden="low",
+        context=_bound_context(tmp_path),
         finding="Startup routed directly to current-decision evidence.",
         recommended_action="Continue collection.",
     )
 
     assert observed["kind"] == EVALUATION_OBSERVATION_KIND
+    assert observed["result_identity"]["id"].startswith("sha256:")
     observation_path = tmp_path / WORKSPACE_LOCAL_EVALUATIONS_DIR / "eval-1969-operating-loop.jsonl"
     observation = json.loads(observation_path.read_text(encoding="utf-8").strip())
     Draft202012Validator(contract_schema("evaluation_observation.schema.json")).validate(observation)
-    assert observation["admission"]["status"] == "legacy-unbound"
+    assert observation["admission"]["status"] == "admitted"
 
     summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
     assert summary["kind"] == EVALUATION_SUMMARY_KIND
     Draft202012Validator(contract_schema("evaluation_summary.schema.json")).validate(summary)
     item = summary["summaries"][0]
     assert item["coverage"]["observation_count"] == 1
-    assert item["coverage"]["decision_observation_count"] == 0
-    assert item["coverage"]["legacy_unbound_count"] == 1
-    assert item["criterion_status"][0]["state"] == "unobserved"
-    assert item["fresh_result_admission"]["status"] == "legacy-unbound"
-    assert item["fresh_result_admission"]["historical_observation_count"] == 1
-    assert item["conclusion_readiness"] == {
-        "ready": False,
-        "reason_code": "requires-bound-current-observation",
-    }
-    assert item["next_collection_action"] == "migrate-or-append-bound-observation"
+    assert item["coverage"]["decision_observation_count"] == 1
+    assert item["coverage"]["legacy_unbound_count"] == 0
+    assert item["criterion_status"][0]["state"] == "satisfied"
+    assert item["fresh_result_admission"]["status"] == "fresh-bound"
+    assert item["fresh_result_admission"]["current_result_identity"]["id"] == observed["result_identity"]["id"]
+    assert item["fresh_result_admission"]["local_retention"]["max_current_results_per_criterion"] == 1
+    assert item["conclusion_readiness"] == {"ready": True, "reason_code": "ready"}
+    assert item["next_collection_action"] == "owner-review-or-conclude"
 
 
 def test_evaluation_update_increments_revision_without_rewriting_observations(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
     append_observation(
         target_root=tmp_path,
@@ -104,6 +156,7 @@ def test_evaluation_update_increments_revision_without_rewriting_observations(tm
         criterion="reconstruction-cost",
         result="supports",
         evidence_refs=["ref"],
+        context=_bound_context(tmp_path),
     )
     observation_path = tmp_path / WORKSPACE_LOCAL_EVALUATIONS_DIR / "eval-1969-operating-loop.jsonl"
     before = observation_path.read_text(encoding="utf-8")
@@ -119,6 +172,7 @@ def test_evaluation_update_increments_revision_without_rewriting_observations(tm
 
 
 def test_evaluation_summary_excludes_stale_definition_revision_from_readiness(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
     append_observation(
         target_root=tmp_path,
@@ -126,20 +180,7 @@ def test_evaluation_summary_excludes_stale_definition_revision_from_readiness(tm
         criterion="reconstruction-cost",
         result="supports",
         evidence_refs=["proof-receipts/run-1.json"],
-        context={
-            "assignment": {
-                "target_identity_ref": "user-local:codex-current",
-                "context_key": "mechanical-follow-through::mechanical-follow-through",
-            },
-            "authority_envelope": {
-                "mutation_baseline": {
-                    "baseline_id": "abc123",
-                    "head": "def456",
-                    "revalidation_status": "fresh",
-                }
-            },
-            "proof": {"result": "passed", "provenance": "proof-receipts/run-1.json"},
-        },
+        context=_bound_context(tmp_path),
     )
     register_evaluation(
         target_root=tmp_path,
@@ -186,6 +227,7 @@ def test_evaluation_lifecycle_transitions_fail_closed(tmp_path: Path) -> None:
 
 
 def test_evaluation_observation_binds_fresh_assignment_authority_and_proof(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
 
     append_observation(
@@ -194,20 +236,7 @@ def test_evaluation_observation_binds_fresh_assignment_authority_and_proof(tmp_p
         criterion="reconstruction-cost",
         result="supports",
         evidence_refs=["proof-receipts/run-1.json"],
-        context={
-            "assignment": {
-                "target_identity_ref": "user-local:codex-current",
-                "context_key": "mechanical-follow-through::mechanical-follow-through",
-            },
-            "authority_envelope": {
-                "mutation_baseline": {
-                    "baseline_id": "abc123",
-                    "head": "def456",
-                    "revalidation_status": "fresh",
-                }
-            },
-            "proof": {"result": "passed", "provenance": "proof-receipts/run-1.json"},
-        },
+        context=_bound_context(tmp_path),
     )
 
     summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
@@ -223,43 +252,69 @@ def test_evaluation_observation_binds_fresh_assignment_authority_and_proof(tmp_p
         "evaluation_id": "eval-1969-operating-loop",
         "definition_revision": 1,
         "criterion": "reconstruction-cost",
-        "baseline_id": "abc123",
+        "baseline_id": _bound_context(tmp_path)["authority_envelope"]["mutation_baseline"]["baseline_id"],
         "target_identity_ref": "user-local:codex-current",
     }
+    assert identity["assignment_revision"] == "assignment-rev-1"
     assert identity["recorded_at"]
     assert item["coverage"]["decision_observation_count"] == 1
     assert item["conclusion_readiness"]["ready"] is True
     latest = item["latest_material_changes"][0]
     assert latest["admission"]["status"] == "admitted"
-    assert latest["admission"]["baseline_id"] == "abc123"
+    assert latest["admission"]["baseline_id"] == identity["baseline_id"]
     assert latest["admission"]["target_identity_ref"] == "user-local:codex-current"
     assert "proof-selection" in item["fresh_result_admission"]["admission_contract"]["consumers"]
 
 
-def test_evaluation_rejects_stale_mutation_baseline_observation(tmp_path: Path) -> None:
+def test_evaluation_observation_supersedes_previous_current_result(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
 
-    with pytest.raises(WorkspaceUsageError, match="stale-worktree"):
+    first = append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="supports",
+        evidence_refs=["proof-receipts/run-1.json"],
+        context=_bound_context(tmp_path),
+    )
+    second_context = _bound_context(tmp_path)
+    second_context["proof"]["revision"] = "proof-rev-2"
+    second = append_observation(
+        target_root=tmp_path,
+        evaluation_id="eval-1969-operating-loop",
+        criterion="reconstruction-cost",
+        result="contradicts",
+        evidence_refs=["proof-receipts/run-2.json"],
+        context=second_context,
+    )
+
+    summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+
+    item = summary["summaries"][0]
+    assert second["supersedes"] == [first["result_identity"]["id"]]
+    assert item["coverage"]["decision_observation_count"] == 1
+    assert item["coverage"]["superseded_result_count"] == 1
+    assert item["criterion_status"][0]["state"] == "contradicted"
+    assert item["fresh_result_admission"]["current_result_identity"]["id"] == second["result_identity"]["id"]
+    assert item["fresh_result_admission"]["superseded_result_ids"] == [first["result_identity"]["id"]]
+    assert item["fresh_result_admission"]["local_retention"]["historical_record_count"] == 1
+
+
+def test_evaluation_rejects_stale_mutation_baseline_observation(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    register_evaluation(target_root=tmp_path, **_definition_kwargs())
+    context = _bound_context(tmp_path)
+    (tmp_path / "src" / "feature.py").write_text("print('changed')\n", encoding="utf-8")
+
+    with pytest.raises(WorkspaceUsageError, match="unexpected-path-overlap"):
         append_observation(
             target_root=tmp_path,
             evaluation_id="eval-1969-operating-loop",
             criterion="reconstruction-cost",
             result="supports",
             evidence_refs=["proof-receipts/run-1.json"],
-            context={
-                "assignment": {
-                    "target_identity_ref": "user-local:codex-current",
-                    "context_key": "mechanical-follow-through::mechanical-follow-through",
-                },
-                "authority_envelope": {
-                    "mutation_baseline": {
-                        "baseline_id": "abc123",
-                        "head": "def456",
-                        "revalidation_status": "stale",
-                    }
-                },
-                "proof": {"result": "passed", "provenance": "proof-receipts/run-1.json"},
-            },
+            context=context,
         )
 
 
@@ -293,17 +348,11 @@ def test_vague_collect_more_evidence_does_not_authorize_closure() -> None:
 
 
 def test_evaluation_closure_authority_requires_fresh_bound_summary(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
     register_evaluation(target_root=tmp_path, **_definition_kwargs())
-    append_observation(
-        target_root=tmp_path,
-        evaluation_id="eval-1969-operating-loop",
-        criterion="reconstruction-cost",
-        result="supports",
-        evidence_refs=["legacy-log"],
-    )
-    legacy_summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
+    empty_summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
 
-    blocked = closure_authority(implementation_complete=True, proof_complete=True, evaluation=legacy_summary)
+    blocked = closure_authority(implementation_complete=True, proof_complete=True, evaluation=empty_summary)
     assert blocked["issue_closure_authorized"] is False
     assert blocked["evaluation_admission"] == "invalid"
     assert blocked["blocked_reasons"] == ["longitudinal-evaluation-invalid"]
@@ -314,20 +363,7 @@ def test_evaluation_closure_authority_requires_fresh_bound_summary(tmp_path: Pat
         criterion="reconstruction-cost",
         result="supports",
         evidence_refs=["proof-receipts/run-1.json"],
-        context={
-            "assignment": {
-                "target_identity_ref": "user-local:codex-current",
-                "context_key": "mechanical-follow-through::mechanical-follow-through",
-            },
-            "authority_envelope": {
-                "mutation_baseline": {
-                    "baseline_id": "abc123",
-                    "head": "def456",
-                    "revalidation_status": "fresh",
-                }
-            },
-            "proof": {"result": "passed", "provenance": "proof-receipts/run-1.json"},
-        },
+        context=_bound_context(tmp_path),
     )
     fresh_summary = evaluation_summary(target_root=tmp_path, evaluation_id="eval-1969-operating-loop")
 
@@ -337,6 +373,7 @@ def test_evaluation_closure_authority_requires_fresh_bound_summary(tmp_path: Pat
 
 
 def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
     criteria = json.dumps({"cost": {"type": "qualitative", "question": "Was cost reduced?", "success_condition": "Cost is lower."}})
     owner = json.dumps({"id": "workspace-maintainer", "class": "maintainer"})
 
@@ -385,6 +422,8 @@ def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
                 "supports",
                 "--evidence-refs",
                 "session-log#1",
+                "--context",
+                json.dumps(_bound_context(tmp_path)),
             ]
         )
         == 0
@@ -395,6 +434,6 @@ def test_evaluation_cli_register_observe_status(tmp_path: Path, capsys) -> None:
     assert cli.main(["evaluation", "--target", str(tmp_path), "--format", "json", "status", "--evaluation-id", "eval-cost"]) == 0
     status = json.loads(capsys.readouterr().out)
     summary = status["summaries"][0]
-    assert summary["fresh_result_admission"]["status"] == "legacy-unbound"
-    assert summary["conclusion_readiness"]["ready"] is False
-    assert summary["next_collection_action"] == "migrate-or-append-bound-observation"
+    assert summary["fresh_result_admission"]["status"] == "fresh-bound"
+    assert summary["conclusion_readiness"]["ready"] is True
+    assert summary["next_collection_action"] == "owner-review-or-conclude"
