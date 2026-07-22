@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
 import tomllib
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -642,10 +643,17 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
 
     if transition == "export":
         assignment_id = require("assignment_id")
-        assignment_revision = require("assignment_revision")
-        target_name = require("target_name")
-        current_authorities = _assignment_current_authorities_from_values(values=values, failures=failures)
+        current_authorities = _assignment_current_authorities_from_store(
+            target_root=target_root,
+            assignment_id=assignment_id,
+            assignment_revision=assignment_revision,
+            run_id=run_id,
+            state=state,
+            values=values,
+            failures=failures,
+        )
         identity = _assignment_identity(current_authorities) if current_authorities else {}
+        target_name = require("target_name") or _optional_text(identity.get("target"))
         if identity and assignment_revision and identity.get("revision") != assignment_revision:
             failures.append(
                 {
@@ -661,14 +669,12 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "run_id": run_id,
             "target": target_name,
             "transport": _optional_text(values.get("transport")) or "manual",
-            "scope": _optional_text(values.get("scope")),
+            "scope": _assignment_list(identity.get("allowed_paths")) or _optional_text(values.get("scope")),
             "assignment_identity": identity,
             "authority_refs": {
-                "assignment_gate": "current_authorities.assignment_gate",
-                "assignment_policy": "current_authorities.assignment_policy",
-                "delegation_decision": "current_authorities.delegation_decision",
-                "proof_receipt": "current_authorities.aw_proof_receipt",
-                "mutation_baseline": "current_authorities.live_mutation_baseline",
+                "planning_assignment": current_authorities.get("planning_assignment_ref"),
+                "proof_receipt": current_authorities.get("proof_receipt_ref"),
+                "mutation_baseline": "host-resolved:git-or-aw-baseline",
             },
             "return_contract": "assignment import places results in received/awaiting-admission before admission or integration",
         }
@@ -689,7 +695,8 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         state.update(
             {
                 "assignment": packet,
-                "current_authorities": current_authorities,
+                "planning_assignment_ref": current_authorities.get("planning_assignment_ref"),
+                "proof_receipt_ref": current_authorities.get("proof_receipt_ref"),
                 "current_state": "handoff-prepared",
                 "run_id": run_id,
             }
@@ -738,8 +745,15 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             require("reason")
         return_id = _optional_text(values.get("return_id")) or str(state.get("last_return_id") or "unidentified-return")
         returned = _assignment_return_for_state(state=state, target_root=target_root, run_dir=run_dir, return_id=return_id)
-        raw_current_authorities = state.get("current_authorities")
-        current_authorities = cast(dict[str, Any], raw_current_authorities) if isinstance(raw_current_authorities, dict) else {}
+        current_authorities = _assignment_current_authorities_from_store(
+            target_root=target_root,
+            assignment_id=assignment_id or _optional_text(state.get("assignment_id")),
+            assignment_revision=assignment_revision,
+            run_id=run_id,
+            state=state,
+            values=values,
+            failures=failures,
+        )
         admission = (
             _assignment_admit_with_current_authority(current_authorities=current_authorities, returned_work=returned)
             if transition == "admit"
@@ -768,7 +782,7 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "reason": _optional_text(values.get("reason")),
             "worker_reported_proof_trusted": False,
             "worker_reported_baseline_trusted": False,
-            "rule": "Admission receipts are valid only after the host primitive resolves current authorities and strict return admission succeeds.",
+            "rule": "Admission receipts are valid only after the host primitive re-resolves current Planning, proof, run, and mutation baseline authorities and strict return admission succeeds.",
         }
         artifact_paths.append(receipt_path)
         state.update(
@@ -784,8 +798,15 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         require("run_id")
         return_id = _optional_text(values.get("return_id")) or str(state.get("last_return_id") or "unidentified-return")
         returned = _assignment_return_for_state(state=state, target_root=target_root, run_dir=run_dir, return_id=return_id)
-        raw_current_authorities = state.get("current_authorities")
-        current_authorities = cast(dict[str, Any], raw_current_authorities) if isinstance(raw_current_authorities, dict) else {}
+        current_authorities = _assignment_current_authorities_from_store(
+            target_root=target_root,
+            assignment_id=assignment_id or _optional_text(state.get("assignment_id")),
+            assignment_revision=assignment_revision,
+            run_id=run_id,
+            state=state,
+            values=values,
+            failures=failures,
+        )
         admission = _assignment_admit_with_current_authority(current_authorities=current_authorities, returned_work=returned)
         admitted = state.get("last_admission_status") == "admitted" and bool(admission.get("admitted"))
         if not admitted:
@@ -872,6 +893,8 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     transitions.append(transition_receipt)
     state["transitions"] = transitions
     state["run_id"] = run_id
+    if assignment_id:
+        state["assignment_id"] = assignment_id
     state["schema_version"] = "agentic-workspace/assignment-run-state/v1"
     state["locality"] = "local-disposable"
 
@@ -909,40 +932,94 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
     }
 
 
-def _assignment_current_authorities_from_values(*, values: Mapping[str, Any], failures: list[dict[str, str]]) -> dict[str, Any]:
-    def read_object(field: str) -> dict[str, Any]:
-        value = values.get(field)
-        if value in (None, "") and not field.endswith("_json"):
-            value = values.get(f"{field}_json")
-        parsed = _assignment_json_value(value, field=field) if value not in (None, "") else None
-        if isinstance(parsed, dict):
-            return parsed
+def _assignment_current_authorities_from_store(
+    *,
+    target_root: Path,
+    assignment_id: str,
+    assignment_revision: str,
+    run_id: str,
+    state: Mapping[str, Any],
+    values: Mapping[str, Any],
+    failures: list[dict[str, str]],
+) -> dict[str, Any]:
+    if not assignment_id:
         failures.append(
             {
                 "reason": "missing-current-authority",
-                "field": field,
-                "recovery": f"Prepare/export from the current Planning assignment so {field} is resolved by AW.",
+                "field": "assignment_id",
+                "recovery": "Retry with the stable assignment id so AW can resolve Planning authority.",
             }
         )
         return {}
-
-    assignment_gate = read_object("assignment_gate")
-    assignment_policy = read_object("assignment_policy")
-    delegation_decision = read_object("delegation_decision")
-    proof_receipt = read_object("aw_proof_receipt")
-    live_mutation_baseline = _optional_text(values.get("live_mutation_baseline"))
+    planning_assignment_ref = _assignment_planning_ref(values=values, assignment_id=assignment_id)
+    planning_assignment = _read_assignment_json_ref(
+        target_root=target_root,
+        ref=planning_assignment_ref,
+        field="planning_assignment_ref",
+        failures=failures,
+    )
+    if not planning_assignment:
+        return {}
+    if planning_assignment.get("kind") != "agentic-workspace/planning-assignment/v1":
+        failures.append(
+            {
+                "reason": "invalid-current-authority",
+                "field": "planning_assignment_ref.kind",
+                "recovery": "Regenerate the checked-in Planning assignment record.",
+            }
+        )
+    if _optional_text(planning_assignment.get("assignment_id")) != assignment_id:
+        failures.append(
+            {
+                "reason": "assignment-id-mismatch",
+                "field": "planning_assignment_ref.assignment_id",
+                "recovery": "Retry with the assignment id owned by the Planning assignment record.",
+            }
+        )
+    assignment_gate = _assignment_mapping(planning_assignment.get("assignment_gate"))
+    assignment_policy = _assignment_mapping(planning_assignment.get("assignment_policy"))
+    delegation_decision = _assignment_mapping(planning_assignment.get("delegation_decision"))
+    identity = _assignment_identity(
+        {
+            "assignment_gate": assignment_gate,
+            "assignment_policy": assignment_policy,
+            "delegation_decision": delegation_decision,
+        }
+    )
+    current_revision = _optional_text(planning_assignment.get("current_revision") or identity.get("revision"))
+    if assignment_revision and assignment_revision != current_revision:
+        failures.append(
+            {
+                "reason": "assignment-revision-mismatch",
+                "field": "assignment_revision",
+                "recovery": "Refresh from the current checked-in Planning assignment revision.",
+            }
+        )
+    if _optional_text(planning_assignment.get("status") or "current") in {"superseded", "closed", "archived"}:
+        failures.append(
+            {
+                "reason": "assignment-not-current",
+                "field": "planning_assignment_ref.status",
+                "recovery": "Reassign or reopen a current Planning assignment before continuing.",
+            }
+        )
+    proof_ref = _optional_text(planning_assignment.get("aw_proof_receipt_ref") or planning_assignment.get("proof_receipt_ref"))
+    proof_receipt = _read_assignment_json_ref(
+        target_root=target_root,
+        ref=proof_ref,
+        field="planning_assignment_ref.aw_proof_receipt_ref",
+        failures=failures,
+    )
+    live_mutation_baseline = _assignment_live_mutation_baseline(target_root=target_root)
     if not live_mutation_baseline:
         failures.append(
             {
                 "reason": "missing-current-authority",
                 "field": "live_mutation_baseline",
-                "recovery": "Prepare/export from the current Planning assignment so the live mutation baseline is resolved by AW.",
+                "recovery": "Record an AW mutation baseline file or run inside a Git checkout before admission.",
             }
         )
-    run_state = _assignment_json_value(values.get("run_state") or values.get("run_state_json"), field="run_state") or {
-        "status": "awaiting-admission",
-        "run_id": _optional_text(values.get("run_id")),
-    }
+    run_state = _assignment_current_run_state(run_id=run_id, state=state, planning_assignment=planning_assignment)
     return {
         "assignment_gate": assignment_gate,
         "assignment_policy": assignment_policy,
@@ -950,7 +1027,76 @@ def _assignment_current_authorities_from_values(*, values: Mapping[str, Any], fa
         "aw_proof_receipt": proof_receipt,
         "live_mutation_baseline": live_mutation_baseline,
         "run_state": run_state,
+        "planning_assignment_ref": planning_assignment_ref,
+        "proof_receipt_ref": proof_ref,
     }
+
+
+def _assignment_planning_ref(*, values: Mapping[str, Any], assignment_id: str) -> str:
+    return _optional_text(values.get("planning_assignment_ref") or values.get("assignment_ref")) or (
+        f".agentic-workspace/planning/assignments/{_safe_assignment_fragment(assignment_id)}.assignment.json"
+    )
+
+
+def _read_assignment_json_ref(
+    *, target_root: Path, ref: str, field: str, failures: list[dict[str, str]]
+) -> dict[str, Any]:
+    if not ref:
+        failures.append(
+            {
+                "reason": "missing-current-authority",
+                "field": field,
+                "recovery": "Resolve the current AW-owned authority ref and retry.",
+            }
+        )
+        return {}
+    path = _resolve_inside(target_root, ref)
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        failures.append(
+            {
+                "reason": "missing-current-authority",
+                "field": field,
+                "recovery": f"Create or refresh {ref} before continuing.",
+            }
+        )
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _assignment_live_mutation_baseline(*, target_root: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=target_root,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        result = None
+    if result is not None and result.returncode == 0:
+        return result.stdout.strip()
+    baseline_file = target_root / ".agentic-workspace/planning/mutation-baseline.json"
+    try:
+        payload = json.loads(baseline_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    return _optional_text(payload.get("current_baseline") or payload.get("live_mutation_baseline") or payload.get("baseline"))
+
+
+def _assignment_current_run_state(
+    *, run_id: str, state: Mapping[str, Any], planning_assignment: Mapping[str, Any]
+) -> dict[str, Any]:
+    current_attempt = _assignment_mapping(planning_assignment.get("current_attempt"))
+    if current_attempt and _optional_text(current_attempt.get("run_id")) not in {"", run_id}:
+        return {"status": "superseded", "run_id": run_id, "current_run_id": current_attempt.get("run_id")}
+    status = _optional_text(state.get("current_state")) or _optional_text(current_attempt.get("status")) or "awaiting-admission"
+    return {"status": status, "run_id": run_id, "owner": current_attempt.get("owner")}
 
 
 def _assignment_identity(current_authorities: Mapping[str, Any]) -> dict[str, Any]:
@@ -1060,6 +1206,24 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
                 "recovery": "Resolve the current assignment/run/proof/baseline authorities and retry admission.",
             }
         )
+    current_proof = _assignment_mapping(current_authorities.get("aw_proof_receipt") or current_authorities.get("proof_receipt"))
+    if current_proof.get("result") != "passed" or current_proof.get("verified_by") != "aw":
+        failures.append(
+            {
+                "reason": "aw-proof-missing-or-not-passed",
+                "field": "current_authorities.aw_proof_receipt",
+                "recovery": "Run AW-owned proof and record the current receipt before admission.",
+            }
+        )
+    run_state = _assignment_mapping(current_authorities.get("run_state"))
+    if _optional_text(run_state.get("status")) in {"duplicate", "malformed", "superseded", "closed"}:
+        failures.append(
+            {
+                "reason": "return-run-not-awaiting-admission",
+                "field": "current_authorities.run_state",
+                "recovery": "Import a fresh return or route repair/reassignment.",
+            }
+        )
     if _optional_text(returned_work.get("assignment_revision")) != _optional_text(identity.get("revision")):
         failures.append(
             {
@@ -1112,7 +1276,13 @@ def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str
         "failures": failures,
         "assignment_revision": identity.get("revision"),
         "assignment_identity": identity,
-        "current_authority": {"mutation_baseline": mutation_baseline},
+        "current_authority": {
+            "planning_assignment": current_authorities.get("planning_assignment_ref"),
+            "proof_receipt": current_proof or None,
+            "proof_source": current_authorities.get("proof_receipt_ref"),
+            "mutation_baseline": mutation_baseline,
+            "baseline_source": "host-resolved:git-or-aw-baseline",
+        },
         "rule": "Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.",
     }
 

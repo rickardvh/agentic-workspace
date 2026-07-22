@@ -202,17 +202,39 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
         assignment_policy=assignment_policy,
         delegation_decision=delegation_decision,
     )
+    assignment_dir = tmp_path / ".agentic-workspace/planning/assignments"
+    assignment_dir.mkdir(parents=True)
+    proof_dir = tmp_path / ".agentic-workspace/proof/receipts"
+    proof_dir.mkdir(parents=True)
+    baseline_file = tmp_path / ".agentic-workspace/planning/mutation-baseline.json"
+    baseline_file.parent.mkdir(parents=True, exist_ok=True)
+    proof_ref = ".agentic-workspace/proof/receipts/proof-feature.json"
+    (tmp_path / proof_ref).write_text(json.dumps(proof_receipt), encoding="utf-8")
+    baseline_file.write_text(json.dumps({"current_baseline": "baseline-1"}), encoding="utf-8")
+    (assignment_dir / "assign-1.assignment.json").write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/planning-assignment/v1",
+                "assignment_id": "assign-1",
+                "current_revision": identity["revision"],
+                "status": "current",
+                "target_name": "planner",
+                "assignment_gate": assignment_gate,
+                "assignment_policy": assignment_policy,
+                "delegation_decision": delegation_decision,
+                "aw_proof_receipt_ref": proof_ref,
+                "current_attempt": {"run_id": "run-1", "owner": "planner", "status": "handoff-prepared"},
+                "accepted_result_refs": [],
+            }
+        ),
+        encoding="utf-8",
+    )
     export = assignment_export(
         {
             "assignment_id": "assign-1",
             "assignment_revision": identity["revision"],
             "target_name": "planner",
             "run_id": "run-1",
-            "assignment_gate_json": json.dumps(assignment_gate),
-            "assignment_policy_json": json.dumps(assignment_policy),
-            "delegation_decision_json": json.dumps(delegation_decision),
-            "aw_proof_receipt_json": json.dumps(proof_receipt),
-            "live_mutation_baseline": "baseline-1",
         },
         target=tmp_path,
         invocation=invocation,
@@ -258,20 +280,44 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     override_ref = next(ref for ref in override["artifact_refs"] if ref.endswith("override/override.json"))
     override_receipt = json.loads((tmp_path / override_ref).read_text())
     assert override_receipt["claim_effect"] == "downgrade-until-revalidated"
+    packet_ref = next(ref for ref in export["artifact_refs"] if ref.endswith("export/packet.json"))
+    packet = json.loads((tmp_path / packet_ref).read_text())
+    assert packet["authority_refs"]["planning_assignment"] == ".agentic-workspace/planning/assignments/assign-1.assignment.json"
+    assert "current_authorities" not in export["state"]
 
 
 def test_assignment_lifecycle_public_admit_rejects_caller_authority_strings(tmp_path: Path) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
     (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
     invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
-    result = assignment_admit(
-        {"run_id": "run-1", "current_authority_ref": "planning:rev", "live_mutation_baseline": "baseline-1"},
-        target=tmp_path,
-        invocation=invocation,
-    )
+    with pytest.raises(AWClientError) as excinfo:
+        assignment_admit(
+            {"run_id": "run-1", "current_authority_ref": "planning:rev", "live_mutation_baseline": "baseline-1"},
+            target=tmp_path,
+            invocation=invocation,
+        )
 
-    assert result["status"] == "blocked"
-    assert result["reason_code"] == "missing-current-authority"
+    assert excinfo.value.kind == "malformed"
+    assert "current_authority_ref" in excinfo.value.details["errors"][0]
+    assert "live_mutation_baseline" in excinfo.value.details["errors"][0]
+
+
+def test_assignment_lifecycle_public_contract_omits_caller_authority_inputs() -> None:
+    authority_inputs = {
+        "assignment_gate_json",
+        "assignment_policy_json",
+        "delegation_decision_json",
+        "aw_proof_receipt_json",
+        "run_state_json",
+        "current_authority_ref",
+        "live_mutation_baseline",
+        "packet_json",
+    }
+    for operation in external_contract_bundle()["operations"].values():
+        if not operation["identity"].startswith("assignment."):
+            continue
+        input_names = {entry["name"] for entry in operation["contract"]["inputs"]}
+        assert not authority_inputs & input_names
 
 
 def test_contract_requirement_negotiation_distinguishes_change_classes() -> None:
