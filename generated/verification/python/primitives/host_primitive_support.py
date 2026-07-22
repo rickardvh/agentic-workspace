@@ -1038,9 +1038,7 @@ def _assignment_planning_ref(*, values: Mapping[str, Any], assignment_id: str) -
     )
 
 
-def _read_assignment_json_ref(
-    *, target_root: Path, ref: str, field: str, failures: list[dict[str, str]]
-) -> dict[str, Any]:
+def _read_assignment_json_ref(*, target_root: Path, ref: str, field: str, failures: list[dict[str, str]]) -> dict[str, Any]:
     if not ref:
         failures.append(
             {
@@ -1089,9 +1087,7 @@ def _assignment_live_mutation_baseline(*, target_root: Path) -> str:
     return _optional_text(payload.get("current_baseline") or payload.get("live_mutation_baseline") or payload.get("baseline"))
 
 
-def _assignment_current_run_state(
-    *, run_id: str, state: Mapping[str, Any], planning_assignment: Mapping[str, Any]
-) -> dict[str, Any]:
+def _assignment_current_run_state(*, run_id: str, state: Mapping[str, Any], planning_assignment: Mapping[str, Any]) -> dict[str, Any]:
     current_attempt = _assignment_mapping(planning_assignment.get("current_attempt"))
     if current_attempt and _optional_text(current_attempt.get("run_id")) not in {"", run_id}:
         return {"status": "superseded", "run_id": run_id, "current_run_id": current_attempt.get("run_id")}
