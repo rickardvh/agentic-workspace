@@ -227,6 +227,71 @@ def _string_list(value: Any) -> list[str]:
     return [str(item) for item in value if str(item or "").strip()]
 
 
+def _producer_receipt(payload: dict[str, Any], *, field: str, expected_kind: str, expected_producer: str) -> dict[str, Any]:
+    raw_receipt = payload.get("receipt")
+    receipt: dict[str, Any] = raw_receipt if isinstance(raw_receipt, dict) else {}
+    missing = [
+        key
+        for key, value in {
+            f"{field}.receipt.kind": receipt.get("kind"),
+            f"{field}.receipt.receipt_id": receipt.get("receipt_id"),
+            f"{field}.receipt.producer": receipt.get("producer"),
+            f"{field}.receipt.revision": receipt.get("revision"),
+        }.items()
+        if value in (None, "", [], {})
+    ]
+    mismatches: list[str] = []
+    if receipt.get("kind") not in (None, expected_kind):
+        mismatches.append(f"{field}.receipt.kind")
+    if receipt.get("producer") not in (None, expected_producer):
+        mismatches.append(f"{field}.receipt.producer")
+    return {
+        "status": "resolved" if not missing and not mismatches else "rejected",
+        "receipt_id": receipt.get("receipt_id"),
+        "revision": receipt.get("revision"),
+        "producer": receipt.get("producer"),
+        "missing_fields": missing,
+        "mismatched_fields": mismatches,
+    }
+
+
+def _authority_producer_resolution(*, assignment: dict[str, Any], proof: dict[str, Any]) -> dict[str, Any]:
+    assignment_receipt = _producer_receipt(
+        assignment,
+        field="assignment",
+        expected_kind="agentic-workspace/assignment-authority-receipt/v1",
+        expected_producer="assignment.lifecycle",
+    )
+    proof_receipt = _producer_receipt(
+        proof,
+        field="proof",
+        expected_kind="agentic-workspace/proof-receipt/v1",
+        expected_producer="aw-proof",
+    )
+    mismatches: list[str] = []
+    if assignment_receipt.get("revision") not in (None, assignment.get("assignment_revision")):
+        mismatches.append("assignment.receipt.revision")
+    if proof_receipt.get("revision") not in (None, proof.get("revision")):
+        mismatches.append("proof.receipt.revision")
+    if str(proof.get("verified_by") or "").strip() != "aw":
+        mismatches.append("proof.verified_by")
+    missing = [*assignment_receipt["missing_fields"], *proof_receipt["missing_fields"]]
+    mismatches.extend([*assignment_receipt["mismatched_fields"], *proof_receipt["mismatched_fields"]])
+    status = "resolved" if not missing and not mismatches else "rejected"
+    return {
+        "kind": "agentic-workspace/evaluation-authority-producer-resolution/v1",
+        "status": status,
+        "assignment_receipt": assignment_receipt,
+        "proof_receipt": proof_receipt,
+        "missing_fields": missing,
+        "mismatched_fields": mismatches,
+        "rule": (
+            "Evaluation observation authority is derived from assignment and proof owner receipts; caller dictionaries "
+            "are comparison input only and cannot manufacture producer authority."
+        ),
+    }
+
+
 def _result_identity_payload(
     *,
     evaluation_id: str,
@@ -249,6 +314,7 @@ def _result_identity_payload(
         "assignment_revision": admission.get("assignment_revision"),
         "proof_revision": proof.get("revision"),
         "proof_provenance": proof.get("provenance"),
+        "proof_receipt_id": proof.get("receipt", {}).get("receipt_id") if isinstance(proof.get("receipt"), dict) else None,
     }
     digest = hashlib.sha256(json.dumps(identity_source, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
     return {
@@ -275,6 +341,7 @@ def _observation_admission(
     baseline = envelope.get("mutation_baseline", {}) if isinstance(envelope.get("mutation_baseline"), dict) else {}
     proof = authority.get("proof", {}) if isinstance(authority.get("proof"), dict) else {}
     assignment = authority.get("assignment", {}) if isinstance(authority.get("assignment"), dict) else {}
+    producer_resolution = authority.get("producer_resolution", {}) if isinstance(authority.get("producer_resolution"), dict) else {}
     submitted_proof = context.get("proof", {}) if isinstance(context.get("proof"), dict) else {}
     submitted_assignment = context.get("assignment", {}) if isinstance(context.get("assignment"), dict) else {}
     submitted_authority = context.get("authority_envelope", {}) if isinstance(context.get("authority_envelope"), dict) else {}
@@ -301,16 +368,27 @@ def _observation_admission(
             "missing_fields": submitted_missing_context,
             "repair_route": "observe with submitted context copied from the current AW authority receipt",
         }
+    if producer_resolution.get("status") != "resolved":
+        return {
+            "status": "rejected",
+            "reason": "authority-producer-unresolved",
+            "producer_resolution": producer_resolution,
+            "repair_route": "record observation authority from assignment/proof owner receipts before observing",
+        }
     missing_context = [
         field
         for field, value in {
             "assignment.target_identity_ref": assignment.get("target_identity_ref"),
             "assignment.context_key": assignment.get("context_key"),
             "assignment.assignment_revision": assignment.get("assignment_revision"),
+            "assignment.receipt.receipt_id": assignment.get("receipt", {}).get("receipt_id")
+            if isinstance(assignment.get("receipt"), dict)
+            else None,
             "authority_envelope.mutation_baseline": baseline if baseline else None,
             "proof.result": proof.get("result"),
             "proof.verified_by": proof.get("verified_by"),
             "proof.provenance": proof.get("provenance"),
+            "proof.receipt.receipt_id": proof.get("receipt", {}).get("receipt_id") if isinstance(proof.get("receipt"), dict) else None,
         }.items()
         if value in (None, "", [], {})
     ]
@@ -328,6 +406,18 @@ def _observation_admission(
             ("assignment.context_key", submitted_assignment.get("context_key"), assignment.get("context_key")),
             ("assignment.assignment_revision", submitted_assignment.get("assignment_revision"), assignment.get("assignment_revision")),
             ("proof.revision", submitted_proof.get("revision"), proof.get("revision")),
+            (
+                "assignment.receipt.receipt_id",
+                submitted_assignment.get("receipt", {}).get("receipt_id")
+                if isinstance(submitted_assignment.get("receipt"), dict)
+                else None,
+                assignment.get("receipt", {}).get("receipt_id") if isinstance(assignment.get("receipt"), dict) else None,
+            ),
+            (
+                "proof.receipt.receipt_id",
+                submitted_proof.get("receipt", {}).get("receipt_id") if isinstance(submitted_proof.get("receipt"), dict) else None,
+                proof.get("receipt", {}).get("receipt_id") if isinstance(proof.get("receipt"), dict) else None,
+            ),
             (
                 "authority_envelope.mutation_baseline.baseline_id",
                 submitted_baseline.get("baseline_id"),
@@ -401,9 +491,10 @@ def _observation_admission(
         "mutation_baseline_revalidation": mutation_admission,
         "proof": {"result": proof.get("result"), "verified_by": proof.get("verified_by"), "revision": proof.get("revision")},
         "authority_resolution": {
-            "status": "resolved-from-local-authority-store",
+            "status": "resolved-from-owner-receipts",
             "source": WORKSPACE_LOCAL_EVALUATIONS_DIR.joinpath(f"{evaluation_id}.authority.json").as_posix(),
             "caller_context_trusted": False,
+            "producer_resolution": producer_resolution,
         },
         "result_identity": result_identity,
         "supersedes": supersedes,
@@ -503,6 +594,13 @@ def write_observation_authority(
     proof: dict[str, Any],
     changed_paths: list[str],
 ) -> dict[str, Any]:
+    producer_resolution = _authority_producer_resolution(assignment=assignment, proof=proof)
+    if producer_resolution["status"] != "resolved":
+        missing = ", ".join([*producer_resolution["missing_fields"], *producer_resolution["mismatched_fields"]])
+        raise WorkspaceUsageError(
+            "evaluation observation authority rejected (authority-producer-unresolved): "
+            f"assignment/proof producer receipts are required ({missing})."
+        )
     baseline = mutation_baseline_payload(
         target_root=target_root,
         changed_paths=changed_paths,
@@ -514,9 +612,11 @@ def write_observation_authority(
         "evaluation_id": evaluation_id,
         "assignment": assignment,
         "proof": proof,
+        "producer_resolution": producer_resolution,
         "authority_envelope": {"mutation_baseline": baseline, "changed_paths": changed_paths},
         "recorded_at": _now(),
         "owner": "aw-evaluation-authority-store",
+        "owner_rule": "Only assignment/proof owner receipts can advance this local authority record; observe callers supply stale/forgery comparison context only.",
     }
     _write_json(_observation_authority_path(target_root, evaluation_id), payload)
     return payload
@@ -569,6 +669,65 @@ def _observation_idempotency_key(observation: dict[str, Any], authority: dict[st
         "evaluation-observe:"
         + hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()[:24]
     )
+
+
+def _jsonl_bytes(observations: list[dict[str, Any]]) -> int:
+    return len("".join(json.dumps(item, sort_keys=True) + "\n" for item in observations).encode("utf-8"))
+
+
+def _retention_plan(observations: list[dict[str, Any]]) -> dict[str, Any]:
+    retained = list(observations)
+
+    def removable_indexes() -> list[int]:
+        admitted = [item for item in retained if isinstance(item.get("admission"), dict) and item["admission"].get("status") == "admitted"]
+        superseded_ids = {
+            str(result_id)
+            for item in admitted
+            for result_id in _string_list(item.get("supersedes") or item.get("admission", {}).get("supersedes"))
+        }
+        current_ids = {
+            str(item.get("result_identity", {}).get("id") or "")
+            for item in admitted
+            if isinstance(item.get("result_identity"), dict) and str(item.get("result_identity", {}).get("id") or "") not in superseded_ids
+        }
+        removable: list[int] = []
+        for index, item in enumerate(retained):
+            result_id = str(item.get("result_identity", {}).get("id") or "") if isinstance(item.get("result_identity"), dict) else ""
+            if result_id and result_id in current_ids:
+                continue
+            removable.append(index)
+        return removable
+
+    compacted: list[dict[str, Any]] = []
+    while len(retained) > OBSERVATION_RETENTION_CAP:
+        removable = removable_indexes()
+        if not removable:
+            break
+        compacted.append(retained.pop(removable[0]))
+    while _jsonl_bytes(retained) > OBSERVATION_BYTE_CAP:
+        removable = removable_indexes()
+        if not removable:
+            break
+        compacted.append(retained.pop(removable[0]))
+    within_cap = len(retained) <= OBSERVATION_RETENTION_CAP and _jsonl_bytes(retained) <= OBSERVATION_BYTE_CAP
+    return {
+        "status": "within-cap" if within_cap and not compacted else "compacted" if within_cap else "rejected-over-cap",
+        "retained": retained,
+        "compacted": compacted,
+        "retained_count": len(retained),
+        "compacted_count": len(compacted),
+        "byte_count": _jsonl_bytes(retained),
+        "record_cap": OBSERVATION_RETENTION_CAP,
+        "byte_cap": OBSERVATION_BYTE_CAP,
+        "lineage_summary": [
+            {
+                "result_identity": item.get("result_identity", {}).get("id") if isinstance(item.get("result_identity"), dict) else None,
+                "criterion": item.get("criterion"),
+                "result": item.get("result"),
+            }
+            for item in compacted
+        ],
+    }
 
 
 def append_observation(
@@ -661,8 +820,31 @@ def append_observation(
         observation["result_identity"] = admission["result_identity"]
         observation["supersedes"] = admission["supersedes"]
         next_observations = [*previous_observations, observation]
-        _atomic_write_text(path, "".join(json.dumps(item, sort_keys=True) + "\n" for item in next_observations))
-        store_revision = _observation_store_revision(next_observations)
+        retention = _retention_plan(next_observations)
+        if retention["status"] == "rejected-over-cap":
+            raise WorkspaceUsageError(
+                "evaluation observation rejected (retention-cap-exceeded): no safe historical compaction can keep "
+                f"{OBSERVATION_RETENTION_CAP} records and {OBSERVATION_BYTE_CAP} bytes."
+            )
+        retained_observations = [item for item in retention["retained"] if isinstance(item, dict)]
+        _atomic_write_text(path, "".join(json.dumps(item, sort_keys=True) + "\n" for item in retained_observations))
+        if retention["compacted"]:
+            _write_json(
+                target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.compaction.json",
+                {
+                    "kind": "agentic-workspace/evaluation-append-compaction-receipt/v1",
+                    "operation_id": "evaluation.observe",
+                    "evaluation_id": evaluation_id,
+                    "status": retention["status"],
+                    "store_revision_before": previous_revision,
+                    "store_revision_after": _observation_store_revision(retained_observations),
+                    "lineage_summary": retention["lineage_summary"],
+                    "compacted_count": retention["compacted_count"],
+                    "retained_count": retention["retained_count"],
+                    "byte_count": retention["byte_count"],
+                },
+            )
+        store_revision = _observation_store_revision(retained_observations)
     return {
         "kind": EVALUATION_OBSERVATION_KIND,
         "path": WORKSPACE_LOCAL_EVALUATIONS_DIR.joinpath(f"{evaluation_id}.jsonl").as_posix(),
@@ -679,6 +861,10 @@ def append_observation(
             "lock": WORKSPACE_LOCAL_EVALUATIONS_DIR.joinpath(f"{evaluation_id}.jsonl.lock").as_posix(),
             "retention_cap": OBSERVATION_RETENTION_CAP,
             "byte_cap": OBSERVATION_BYTE_CAP,
+            "retention_status": retention["status"],
+            "retained_count": retention["retained_count"],
+            "compacted_count": retention["compacted_count"],
+            "byte_count": retention["byte_count"],
         },
     }
 
@@ -724,7 +910,108 @@ def _criterion_status(definition: dict[str, Any], observations: list[dict[str, A
     return status
 
 
-def current_evaluation_results(definition: dict[str, Any], observations: list[dict[str, Any]]) -> dict[str, Any]:
+def _current_result_freshness(
+    *,
+    target_root: Path | None,
+    evaluation_id: str,
+    observation: dict[str, Any],
+    authority: dict[str, Any],
+) -> dict[str, Any]:
+    if target_root is None:
+        return {"status": "not-checked", "stale": False, "reason": "target-root-not-supplied"}
+    producer_resolution = authority.get("producer_resolution", {}) if isinstance(authority.get("producer_resolution"), dict) else {}
+    if producer_resolution.get("status") != "resolved":
+        return {"status": "stale", "stale": True, "reason": "authority-producer-unresolved"}
+    assignment = authority.get("assignment", {}) if isinstance(authority.get("assignment"), dict) else {}
+    proof = authority.get("proof", {}) if isinstance(authority.get("proof"), dict) else {}
+    envelope = authority.get("authority_envelope", {}) if isinstance(authority.get("authority_envelope"), dict) else {}
+    baseline = envelope.get("mutation_baseline", {}) if isinstance(envelope.get("mutation_baseline"), dict) else {}
+    admission = observation.get("admission", {}) if isinstance(observation.get("admission"), dict) else {}
+    identity = observation.get("result_identity", {}) if isinstance(observation.get("result_identity"), dict) else {}
+    mismatches = [
+        field
+        for field, observed, current in [
+            ("assignment.target_identity_ref", admission.get("target_identity_ref"), assignment.get("target_identity_ref")),
+            ("assignment.assignment_revision", admission.get("assignment_revision"), assignment.get("assignment_revision")),
+            ("proof.revision", identity.get("proof_revision"), proof.get("revision")),
+            ("proof.provenance", identity.get("proof_provenance"), proof.get("provenance")),
+            (
+                "proof.receipt_id",
+                identity.get("proof_receipt_id"),
+                proof.get("receipt", {}).get("receipt_id") if isinstance(proof.get("receipt"), dict) else None,
+            ),
+            ("authority_envelope.mutation_baseline.baseline_id", admission.get("baseline_id"), baseline.get("baseline_id")),
+            ("authority_envelope.mutation_baseline.head", admission.get("baseline_head"), baseline.get("head")),
+        ]
+        if observed not in (None, "", [], {}) and observed != current
+    ]
+    if mismatches:
+        return {"status": "stale", "stale": True, "reason": "authority-context-changed", "mismatched_fields": mismatches}
+    expected_scope = baseline.get("scope", {}) if isinstance(baseline.get("scope"), dict) else {}
+    changed_paths = _string_list(envelope.get("changed_paths")) or _string_list(expected_scope.get("allowed_paths"))
+    mutation_admission = admit_live_mutation_boundary(
+        boundary_id="evaluation-current-result-consumption",
+        target_root=target_root,
+        expected=baseline,
+        assignment_target_identity_ref=str(assignment.get("target_identity_ref") or "").strip() or None,
+        assignment_revision=str(assignment.get("assignment_revision") or "").strip() or None,
+        allowed_paths=changed_paths or None,
+    )
+    if mutation_admission.get("status") == "rejected":
+        first_failure = next((item for item in mutation_admission.get("failures", []) if isinstance(item, dict)), {})
+        return {
+            "status": "stale",
+            "stale": True,
+            "reason": str(first_failure.get("reason") or "mutation-baseline-revalidation-failed"),
+            "mutation_baseline_revalidation": mutation_admission,
+        }
+    return {
+        "status": "fresh",
+        "stale": False,
+        "reason": "live-authority-revalidated",
+        "mutation_baseline_revalidation": mutation_admission,
+        "authority_source": WORKSPACE_LOCAL_EVALUATIONS_DIR.joinpath(f"{evaluation_id}.authority.json").as_posix(),
+    }
+
+
+def _material_finding_followup(definition: dict[str, Any], observations: list[dict[str, Any]]) -> dict[str, Any]:
+    material = [
+        item
+        for item in observations
+        if item.get("result") in {"contradicts", "mixed"}
+        and (str(item.get("finding") or "").strip() or str(item.get("recommended_action") or "").strip())
+    ]
+    unresolved = []
+    for item in material:
+        context = item.get("context", {}) if isinstance(item.get("context"), dict) else {}
+        followup = context.get("finding_followup", {}) if isinstance(context.get("finding_followup"), dict) else {}
+        if followup.get("status") not in {"resolved", "continued"} or not followup.get("owner_ref"):
+            unresolved.append(
+                {
+                    "result_identity": item.get("result_identity", {}).get("id") if isinstance(item.get("result_identity"), dict) else None,
+                    "criterion": item.get("criterion"),
+                    "result": item.get("result"),
+                    "finding": item.get("finding"),
+                    "recommended_action": item.get("recommended_action"),
+                }
+            )
+    return {
+        "status": "unresolved" if unresolved else "resolved" if material else "not-material",
+        "material_finding_count": len(material),
+        "unresolved_count": len(unresolved),
+        "unresolved": unresolved,
+        "issue_shaping_authority": "repo-owned bounded issue/Planning owner workflow",
+        "required_action": "create-or-reopen-bounded-follow-up" if unresolved else "none",
+        "policy": definition.get("action_policy", {}),
+    }
+
+
+def current_evaluation_results(
+    definition: dict[str, Any],
+    observations: list[dict[str, Any]],
+    *,
+    target_root: Path | None = None,
+) -> dict[str, Any]:
     admitted_observations = [
         item for item in observations if isinstance(item.get("admission"), dict) and item["admission"].get("status") == "admitted"
     ]
@@ -744,14 +1031,48 @@ def current_evaluation_results(definition: dict[str, Any], observations: list[di
         and isinstance(item.get("result_identity"), dict)
     ]
     current_revision = int(definition["revision"])
-    current_bound_observations = [
-        item
-        for item in bound_observations
-        if int(item.get("definition_revision", 0) or 0) == current_revision
-        and str(item.get("result_identity", {}).get("id") or "") not in superseded_ids
-    ]
+    authority: dict[str, Any] = {}
+    authority_error = ""
+    if target_root is not None:
+        try:
+            authority = _load_observation_authority(target_root, str(definition["id"]))
+        except WorkspaceUsageError as exc:
+            authority_error = str(exc)
+    current_bound_observations: list[dict[str, Any]] = []
+    stale_observations: list[dict[str, Any]] = []
+    freshness_records: list[dict[str, Any]] = []
+    for item in bound_observations:
+        if int(item.get("definition_revision", 0) or 0) != current_revision:
+            continue
+        if str(item.get("result_identity", {}).get("id") or "") in superseded_ids:
+            continue
+        freshness = (
+            {"status": "stale", "stale": True, "reason": "authority-record-unavailable", "error": authority_error}
+            if target_root is not None and not authority
+            else _current_result_freshness(
+                target_root=target_root,
+                evaluation_id=str(definition["id"]),
+                observation=item,
+                authority=authority,
+            )
+        )
+        freshness_records.append(
+            {
+                "result_identity": item.get("result_identity", {}).get("id") if isinstance(item.get("result_identity"), dict) else None,
+                **freshness,
+            }
+        )
+        if freshness.get("stale"):
+            stale_item = dict(item)
+            stale_item["stale_reason"] = freshness.get("reason")
+            stale_item["freshness"] = freshness
+            stale_observations.append(stale_item)
+        else:
+            current_bound_observations.append(item)
     historical_observations = [
-        item for item in [*admitted_observations, *legacy_unbound_observations] if item not in current_bound_observations
+        item
+        for item in [*admitted_observations, *legacy_unbound_observations, *stale_observations]
+        if item not in current_bound_observations
     ]
     return {
         "kind": "agentic-workspace/evaluation-current-result-resolution/v1",
@@ -762,6 +1083,8 @@ def current_evaluation_results(definition: dict[str, Any], observations: list[di
         "admitted_observations": admitted_observations,
         "legacy_unbound_observations": legacy_unbound_observations,
         "bound_observations": bound_observations,
+        "stale_observations": stale_observations,
+        "freshness_records": freshness_records,
         "superseded_ids": sorted(superseded_ids),
         "recovery": "append-observation-with-current-authority" if not current_bound_observations else "none",
         "consumer_rule": (
@@ -781,10 +1104,11 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
     summaries: list[dict[str, Any]] = []
     for definition in selected:
         observations = _load_observations(target_root, str(definition["id"]))
-        current_results = current_evaluation_results(definition, observations)
+        current_results = current_evaluation_results(definition, observations, target_root=target_root)
         admitted_observations = current_results["admitted_observations"]
         legacy_unbound_observations = current_results["legacy_unbound_observations"]
         bound_observations = current_results["bound_observations"]
+        stale_observations = current_results["stale_observations"]
         current_revision = current_results["current_revision"]
         current_bound_observations = current_results["current_observations"]
         historical_observations = current_results["historical_observations"]
@@ -799,8 +1123,11 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
         satisfied = [item for item in required if item["state"] == "satisfied"]
         contradictions = [item for item in criteria if item["state"] == "contradicted"]
         min_observations = int(definition.get("collection_policy", {}).get("minimum_observations", 1))
-        conclusion_ready = len(current_bound_observations) >= min_observations and (
-            len(satisfied) == len(required) or bool(contradictions) or definition.get("lifecycle") == "enough-signal"
+        finding_followup = _material_finding_followup(definition, current_bound_observations)
+        conclusion_ready = (
+            len(current_bound_observations) >= min_observations
+            and (len(satisfied) == len(required) or bool(contradictions) or definition.get("lifecycle") == "enough-signal")
+            and finding_followup["status"] != "unresolved"
         )
         freshness_status = (
             "fresh-bound"
@@ -811,7 +1138,13 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
             if legacy_unbound_observations
             else "missing"
         )
-        not_ready_reason = "requires-bound-current-observation" if historical_observations else "needs-more-observations-or-owner-review"
+        not_ready_reason = (
+            "material-finding-followup-unresolved"
+            if finding_followup["status"] == "unresolved"
+            else "requires-bound-current-observation"
+            if historical_observations
+            else "needs-more-observations-or-owner-review"
+        )
         current_result = current_bound_observations[-1] if current_bound_observations else {}
         current_admission = current_result.get("admission", {}) if isinstance(current_result.get("admission"), dict) else {}
         current_result_identity = {
@@ -843,6 +1176,7 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
                     "historical_observation_count": len(historical_observations),
                     "legacy_unbound_count": legacy_unbound_count,
                     "stale_revision_count": stale_revision_count,
+                    "stale_authority_count": len(stale_observations),
                     "superseded_result_count": superseded_count,
                     "minimum_observations": min_observations,
                 },
@@ -859,8 +1193,11 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
                     "current_result_resolution": {
                         "status": current_results["status"],
                         "recovery": current_results["recovery"],
+                        "freshness_records": current_results["freshness_records"],
+                        "stale_count": len(stale_observations),
                         "consumer_rule": current_results["consumer_rule"],
                     },
+                    "finding_followup": finding_followup,
                     "local_retention": {
                         "status": "within-cap"
                         if len(observations) <= OBSERVATION_RETENTION_CAP
@@ -889,6 +1226,8 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
                 "sinks": definition["report_sinks"],
                 "next_collection_action": "owner-review-or-conclude"
                 if conclusion_ready
+                else "shape-or-resolve-material-finding-owner"
+                if finding_followup["status"] == "unresolved"
                 else "migrate-or-append-bound-observation"
                 if historical_observations
                 else "append-observation",
@@ -906,7 +1245,7 @@ def prune_observations(*, target_root: Path, evaluation_id: str, dry_run: bool =
     lock_path = path.with_suffix(path.suffix + ".lock")
     with _LocalFileLock(lock_path):
         observations = _load_observations(target_root, evaluation_id)
-        current_results = current_evaluation_results(definition, observations)
+        current_results = current_evaluation_results(definition, observations, target_root=target_root)
         keep_ids = {str(item.get("idempotency_key") or "") for item in current_results["current_observations"]}
         retained = [item for item in observations if str(item.get("idempotency_key") or "") in keep_ids]
         if len(retained) > OBSERVATION_RETENTION_CAP:

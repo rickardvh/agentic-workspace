@@ -1,0 +1,123 @@
+{
+  "$id": "agentic-workspace/assignment_lifecycle_input.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Input accepted by public assignment lifecycle operations that prepare handoff packets, import returns, admit or reject results, integrate admitted work, and record lifecycle maintenance actions.",
+  "properties": {
+    "admission_status": {
+      "description": "Reviewer decision recorded for an imported assignment return.",
+      "enum": [
+        "admitted",
+        "rejected",
+        "repair-requested"
+      ],
+      "type": "string"
+    },
+    "artifact_ref": {
+      "description": "Path or durable reference to a lifecycle artifact, such as an export packet or imported return record.",
+      "type": "string"
+    },
+    "assignment_id": {
+      "description": "Stable Planning assignment identifier for the delegated run.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "assignment_revision": {
+      "description": "Current assignment authority revision that the lifecycle operation is scoped to.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "assignment_gate_json": {
+      "description": "Serialized current assignment gate resolved by the workspace before export/admission.",
+      "type": "string"
+    },
+    "assignment_policy_json": {
+      "description": "Serialized current assignment policy resolved by the workspace before export/admission.",
+      "type": "string"
+    },
+    "aw_proof_receipt_json": {
+      "description": "Serialized AW-owned proof receipt resolved by the workspace before export/admission.",
+      "type": "string"
+    },
+    "current_authority_ref": {
+      "description": "Live authority reference resolved by the receiving workspace before admission or protected mutation.",
+      "type": "string"
+    },
+    "delegation_decision_json": {
+      "description": "Serialized current delegation decision resolved by the workspace before export/admission.",
+      "type": "string"
+    },
+    "dry_run": {
+      "description": "Whether to compute the lifecycle transition without applying local artifact writes.",
+      "type": "boolean"
+    },
+    "expires_at": {
+      "description": "Optional expiration timestamp for temporary overrides or lifecycle decisions.",
+      "type": "string"
+    },
+    "format": {
+      "description": "Requested command output format.",
+      "enum": [
+        "text",
+        "json"
+      ],
+      "type": "string"
+    },
+    "live_mutation_baseline": {
+      "description": "Current protected mutation baseline observed by the admitting workspace.",
+      "type": "string"
+    },
+    "packet_json": {
+      "description": "Serialized assignment handoff packet for import or repair workflows.",
+      "type": "string"
+    },
+    "reason": {
+      "description": "Human-readable reason for rejection, repair, reassignment, cleanup, close, or override actions.",
+      "type": "string"
+    },
+    "return_id": {
+      "description": "Stable identifier for a returned assignment result packet.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "return_json": {
+      "description": "Serialized worker return payload awaiting admission.",
+      "type": "string"
+    },
+    "run_state_json": {
+      "description": "Serialized current run-state authority resolved by the workspace before export/admission.",
+      "type": "string"
+    },
+    "run_id": {
+      "description": "Stable assignment run identifier used for local lifecycle artifact storage.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "scope": {
+      "description": "Bounded scope for reassignment, repair, cleanup, close, or override records.",
+      "type": "string"
+    },
+    "target": {
+      "description": "Target repository path for the lifecycle operation.",
+      "type": "string"
+    },
+    "target_name": {
+      "description": "Named target or worker lane that receives the assignment packet.",
+      "minLength": 1,
+      "type": "string"
+    },
+    "transport": {
+      "description": "Transport channel used for the assignment packet or returned result.",
+      "enum": [
+        "manual",
+        "internal",
+        "cli",
+        "api"
+      ],
+      "type": "string"
+    }
+  },
+  "title": "Assignment lifecycle operation input",
+  "type": "object",
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

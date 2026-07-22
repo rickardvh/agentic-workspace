@@ -105,11 +105,15 @@ def test_implement_verbose_reports_authority_envelope_and_mutation_baseline(tmp_
         "baseline_id",
         "head",
         "scope.allowed_paths",
-        "observed_state.entries",
+        "observed_state.enforcement_fingerprint",
+        "observed_state.entry_count",
         "assignment.target_identity_ref",
         "assignment.assignment_revision",
     ]
+    assert baseline["observed_state"]["enforcement_fingerprint"]
     assert "unexpected-path-overlap" in baseline["stale_revalidation"]["stop_reasons"]
+    assert "baseline-observation-failed" in baseline["stale_revalidation"]["stop_reasons"]
+    assert "scoped-state-fingerprint-changed" in baseline["stale_revalidation"]["stop_reasons"]
     assert "assignment-target-mismatch" in baseline["stale_revalidation"]["stop_reasons"]
     assert "scope-expanded" in baseline["stale_revalidation"]["stop_reasons"]
     boundary = baseline["boundary_enforcement"]
@@ -128,9 +132,27 @@ def test_implement_verbose_reports_authority_envelope_and_mutation_baseline(tmp_
     assert "assignment-revision-mismatch" in admission["reject_on"]
     assert envelope["enforcement"]["host_enforceable"] == [
         "live mutation baseline admission",
+        "full scoped mutation fingerprint comparison",
+        "mutation claim overlap admission",
+        "trusted governance receipt binding",
         "side-effect taxonomy decisions",
         "delegated authority narrowing",
     ]
+
+
+def test_mutation_baseline_fails_closed_when_git_unreadable(tmp_path: Path) -> None:
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/app.py"])
+
+    assert baseline["status"] == "baseline-observation-failed"
+    assert baseline["observation"]["ok"] is False
+    admission = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=baseline,
+        allowed_paths=["src/app.py"],
+    )
+    assert admission["status"] == "rejected"
+    assert "baseline-observation-failed" in {failure["reason"] for failure in admission["failures"]}
 
 
 def test_mutation_baseline_parses_z_status_renames_and_unusual_paths(tmp_path: Path) -> None:
@@ -170,7 +192,44 @@ def test_mutation_baseline_revalidation_admits_clean_noop_and_rejects_stale_head
     stale = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
 
     assert stale["admitted"] is False
-    assert {failure["reason"] for failure in stale["failures"]} == {"baseline-head-changed"}
+    assert {"baseline-head-changed", "scoped-state-fingerprint-changed"}.issubset({failure["reason"] for failure in stale["failures"]})
+
+
+def test_mutation_baseline_revalidation_rejects_same_path_content_drift(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "baseline\n")
+    subprocess.run(["git", "add", "src/app.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "first dirty state\n")
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/app.py"])
+    _write(tmp_path / "src" / "app.py", "second dirty state\n")
+
+    revalidation = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
+
+    assert revalidation["admitted"] is False
+    assert "scoped-state-fingerprint-changed" in {failure["reason"] for failure in revalidation["failures"]}
+
+
+def test_mutation_baseline_revalidation_rejects_post_cap_content_drift(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    for index in range(25):
+        _write(tmp_path / "src" / f"file_{index:02d}.py", "baseline\n")
+    subprocess.run(["git", "add", "src"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    for index in range(25):
+        _write(tmp_path / "src" / f"file_{index:02d}.py", f"dirty {index}\n")
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src"])
+    _write(tmp_path / "src" / "file_24.py", "post cap drift\n")
+
+    revalidation = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
+
+    assert baseline["observed_state"]["omitted_entry_count"] == 5
+    assert revalidation["admitted"] is False
+    assert "scoped-state-fingerprint-changed" in {failure["reason"] for failure in revalidation["failures"]}
 
 
 def test_mutation_baseline_revalidation_rejects_untracked_managed_state(tmp_path: Path) -> None:
@@ -282,6 +341,47 @@ def test_live_mutation_boundary_snapshots_current_git_instead_of_trusting_suppli
     assert "baseline-head-changed" in {failure["reason"] for failure in admission["failures"]}
 
 
+def test_live_mutation_boundary_rejects_overlapping_claim_and_cleans_up_owner_claim(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "feature.py", "baseline\n")
+    subprocess.run(["git", "add", "src/feature.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    expected = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/feature.py"])
+
+    first = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=expected,
+        allowed_paths=["src/feature.py"],
+        owner_id="worker-a",
+        claim_action="acquire",
+    )
+    second = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=expected,
+        allowed_paths=["src"],
+        owner_id="worker-b",
+        claim_action="inspect",
+    )
+    cleanup = admit_live_mutation_boundary(
+        boundary_id="closeout",
+        target_root=tmp_path,
+        expected=expected,
+        allowed_paths=["src/feature.py"],
+        owner_id="worker-a",
+        claim_action="release",
+    )
+
+    assert first["claim_lifecycle"]["status"] == "acquired"
+    assert second["status"] == "rejected"
+    assert "overlapping-mutation-claim" in {failure["reason"] for failure in second["failures"]}
+    assert cleanup["claim_lifecycle"]["status"] == "released"
+    assert not (tmp_path / ".agentic-workspace/local/mutation-claims.json").exists()
+
+
 def test_authority_effect_resolver_rejects_untrusted_widening_and_policy_mutation(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     resolution = resolve_authority_effect_envelope(
@@ -308,6 +408,64 @@ def test_authority_effect_resolver_rejects_untrusted_widening_and_policy_mutatio
         "write-outside-scope",
         "repository-policy-mutation",
     ]
+
+
+def test_authority_effect_resolver_downgrades_self_asserted_trusted_instruction_source(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    resolution = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Fix the requested file only.",
+        instruction_sources=[
+            {
+                "class": "repo-policy",
+                "source": "artifact-controlled-input",
+                "requested_effects": ["write-outside-scope"],
+                "authorises_effects": ["write-outside-scope"],
+            }
+        ],
+        requested_effects=["write-outside-scope"],
+    )
+
+    artifact_source = next(item for item in resolution["instruction_provenance"] if item["source"] == "artifact-controlled-input")
+    decision = next(item for item in resolution["side_effect_decisions"] if item["class"] == "write-outside-scope")
+    assert artifact_source["class"] == "untrusted-content"
+    assert artifact_source["claimed_class"] == "repo-policy"
+    assert artifact_source["authority_resolution_status"] == "blocked-self-asserted-provenance"
+    assert decision["decision"] == "deny"
+
+
+def test_authority_effect_resolver_requires_trusted_governance_receipt_for_policy_mutation(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    blocked = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Promote this policy.",
+        requested_effects=["repository-policy-mutation"],
+        policy_mutation={"requested": True, "authority_class": "repo-policy"},
+    )
+    authorised = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Promote this policy.",
+        requested_effects=["repository-policy-mutation"],
+        policy_mutation={
+            "requested": True,
+            "authority_class": "repo-policy",
+            "trusted_governance_receipt": {
+                "operation_id": "repository-policy-mutation.authorise",
+                "authority_class": "repo-policy",
+                "authoriser": "maintainer",
+                "policy_revision": "policy-rev-1",
+                "scope": ["src/feature.py"],
+            },
+        },
+    )
+
+    assert blocked["repository_policy_mutation"]["status"] == "blocked"
+    assert blocked["repository_policy_mutation"]["trusted_governance_receipt"] is None
+    assert authorised["repository_policy_mutation"]["status"] == "authorised"
+    assert authorised["repository_policy_mutation"]["trusted_governance_receipt"]["authoriser"] == "maintainer"
 
 
 def test_authority_effect_resolver_intersects_delegated_authority(tmp_path: Path) -> None:
@@ -8207,11 +8365,22 @@ def test_implement_required_best_fit_manual_transport_policy_states(
         assert decision["handoff_command"] == "agentic-workspace planning handoff --target . --format json"
     admission_gate = lifecycle["admission_gate"]
     assert admission_gate["status"] == "closed-until-reviewed"
-    assert admission_gate["operation"]["operation_id"] == "delegated-return.admit"
+    assert admission_gate["operation"]["operation_id"] == "assignment.admit"
     assert admission_gate["operation"]["public"] is True
     assert admission_gate["operation"]["generated_operation"] is True
     assert admission_gate["operation"]["assignment_identity"]["revision"].startswith("sha256:")
-    assert "delegated-return.import" in {item["operation_id"] for item in admission_gate["public_operations"]}
+    public_operations = {item["operation_id"] for item in admission_gate["public_operations"]}
+    assert {
+        "assignment.export",
+        "assignment.import",
+        "assignment.admit",
+        "assignment.integrate",
+        "assignment.close",
+        "assignment.repair",
+        "assignment.reassign",
+        "assignment.cleanup",
+        "assignment.override",
+    }.issubset(public_operations)
     assert admission_gate["identity_fields"] == [
         "assignment.target",
         "assignment.target_identity_ref",
@@ -8301,6 +8470,59 @@ def _repo_with_assignment_baseline(tmp_path: Path) -> dict[str, object]:
     )
 
 
+def _current_delegated_authorities(
+    assignment_gate: dict[str, object],
+    assignment_policy: dict[str, object],
+    delegation_decision: dict[str, object],
+    *,
+    proof_receipt: dict[str, object] | None = None,
+    mutation_baseline: str = "baseline-1",
+    run_state: dict[str, object] | None = None,
+) -> dict[str, object]:
+    return {
+        "assignment_gate": assignment_gate,
+        "assignment_policy": assignment_policy,
+        "delegation_decision": delegation_decision,
+        "aw_proof_receipt": proof_receipt or {"result": "passed", "verified_by": "aw", "revision": "proof-rev-1"},
+        "live_mutation_baseline": mutation_baseline,
+        "run_state": run_state or {"status": "awaiting-admission", "run_id": "run-1"},
+    }
+
+
+def test_delegated_return_admission_rejects_caller_supplied_authority_without_live_resolution() -> None:
+    assignment_gate = _complete_assignment_gate()
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = _complete_delegation_decision()
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+
+    result = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={
+            "assignment_revision": identity["revision"],
+            "target": "planner",
+            "changed_paths": ["src/feature.py"],
+            "proof": {"result": "passed", "verified_by": "aw"},
+            "mutation_baseline": "baseline-1",
+        },
+    )
+
+    assert result["admitted"] is False
+    assert result["authority_resolution"]["status"] == "missing-current-authority"
+    assert result["authority_resolution"]["sources"] == {
+        "assignment_gate": "missing",
+        "proof_receipt": "missing",
+        "mutation_baseline": "missing",
+    }
+    assert result["failures"][0]["reason"] == "live-authority-missing"
+    assert "current_authorities.assignment_gate" in result["authority_resolution"]["missing_required_authorities"]
+
+
 def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(tmp_path: Path) -> None:
     assignment_gate = _complete_assignment_gate(_repo_with_assignment_baseline(tmp_path))
     assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
@@ -8317,6 +8539,7 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
         delegation_decision=delegation_decision,
         target_root=tmp_path,
         returned_work={"assignment_revision": "sha256:stale", "target": "planner", "aw_proof": {"result": "passed", "verified_by": "aw"}},
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
     assert stale["admitted"] is False
     assert stale["failures"][0]["reason"] == "stale-assignment-revision"
@@ -8332,6 +8555,7 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
             "changed_paths": ["src/feature.py"],
             "proof": {"result": "failed"},
         },
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
     assert admitted["admitted"] is True
     assert admitted["status"] == "admitted"
@@ -8398,6 +8622,8 @@ def test_delegated_return_admission_reresolves_live_authorities_before_admission
         delegation_decision=delegation_decision,
         current_authorities={
             "assignment_gate": live_assignment_gate,
+            "assignment_policy": assignment_policy,
+            "delegation_decision": delegation_decision,
             "aw_proof_receipt": {"result": "passed", "verified_by": "aw", "revision": "proof-rev-live"},
             "live_mutation_baseline": "baseline-1",
             "run_state": {"status": "awaiting-admission", "run_id": "run-1"},
@@ -8460,6 +8686,8 @@ def test_delegated_return_admission_rejects_duplicate_or_closed_live_run_state()
         delegation_decision=delegation_decision,
         current_authorities={
             "assignment_gate": assignment_gate,
+            "assignment_policy": assignment_policy,
+            "delegation_decision": delegation_decision,
             "aw_proof_receipt": {"result": "passed", "verified_by": "aw", "revision": "proof-rev-1"},
             "live_mutation_baseline": "baseline-1",
             "run_state": {"status": "duplicate", "run_id": "run-1"},
@@ -8494,6 +8722,7 @@ def test_delegated_return_admission_rejects_disabled_transport() -> None:
             "target": "planner",
             "aw_proof": {"result": "passed", "verified_by": "aw"},
         },
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
 
     assert result["admitted"] is False
@@ -8520,6 +8749,12 @@ def test_delegated_return_admission_rejects_worker_self_reported_proof() -> None
             "proof": {"result": "passed"},
             "changed_paths": ["src/feature.py"],
         },
+        current_authorities=_current_delegated_authorities(
+            assignment_gate,
+            assignment_policy,
+            delegation_decision,
+            proof_receipt={"result": "failed", "verified_by": "aw", "revision": "proof-rev-1"},
+        ),
     )
 
     assert result["admitted"] is False
@@ -8547,6 +8782,7 @@ def test_delegated_return_admission_uses_canonical_scope_not_returned_allowed_pa
             "allowed_paths": ["src/feature.py", "src/escaped.py"],
             "changed_paths": ["src/escaped.py"],
         },
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
 
     assert result["admitted"] is False
@@ -8568,6 +8804,7 @@ def test_delegated_return_admission_rejects_incomplete_identity_before_revision_
         assignment_policy=assignment_policy,
         delegation_decision=delegation_decision,
         returned_work={"assignment_revision": identity["revision"], "target": "planner"},
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
 
     assert result["admitted"] is False
@@ -8595,6 +8832,7 @@ def test_delegated_return_admission_disabled_manual_allows_current_automatic_rou
             "target": "planner",
             "changed_paths": ["src/feature.py"],
         },
+        current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
 
     assert result["admitted"] is True

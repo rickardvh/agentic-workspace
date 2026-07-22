@@ -247,17 +247,85 @@
         {
           "name": "owner-select",
           "help": "Select an existing Planning owner without creating or overwriting it.",
-          "uses_option_groups": ["format"],
+          "uses_option_groups": [
+            "format"
+          ],
           "options": [
-            {"name": "owner", "flags": ["--owner"], "default": "", "help": "Stable existing owner id."},
-            {"name": "owner_ref", "flags": ["--owner-ref"], "default": "", "help": "Explicit repo-relative existing owner reference."},
-            {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-            {"name": "mode", "flags": ["--mode"], "choices": ["local", "shared"], "default": "local", "help": "Selection scope; local is advisory and current-work scoped."},
-            {"name": "reason", "flags": ["--reason"], "default": "", "help": "Required reason for explicit shared checked-in selection."},
-            {"name": "current_work_id", "flags": ["--current-work-id"], "default": "", "help": "Stable current-work context id; defaults to the local context."},
-            {"name": "expect_planning_revision", "flags": ["--expect-planning-revision"], "default": "", "help": "Optimistic Planning revision id."},
-            {"name": "expect_current_work_revision", "flags": ["--expect-current-work-revision"], "default": "", "help": "Optimistic current-work selection revision."},
-            {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Return the exact proposed delta without writing files."}
+            {
+              "name": "owner",
+              "flags": [
+                "--owner"
+              ],
+              "default": "",
+              "help": "Stable existing owner id."
+            },
+            {
+              "name": "owner_ref",
+              "flags": [
+                "--owner-ref"
+              ],
+              "default": "",
+              "help": "Explicit repo-relative existing owner reference."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "mode",
+              "flags": [
+                "--mode"
+              ],
+              "choices": [
+                "local",
+                "shared"
+              ],
+              "default": "local",
+              "help": "Selection scope; local is advisory and current-work scoped."
+            },
+            {
+              "name": "reason",
+              "flags": [
+                "--reason"
+              ],
+              "default": "",
+              "help": "Required reason for explicit shared checked-in selection."
+            },
+            {
+              "name": "current_work_id",
+              "flags": [
+                "--current-work-id"
+              ],
+              "default": "",
+              "help": "Stable current-work context id; defaults to the local context."
+            },
+            {
+              "name": "expect_planning_revision",
+              "flags": [
+                "--expect-planning-revision"
+              ],
+              "default": "",
+              "help": "Optimistic Planning revision id."
+            },
+            {
+              "name": "expect_current_work_revision",
+              "flags": [
+                "--expect-current-work-revision"
+              ],
+              "default": "",
+              "help": "Optimistic current-work selection revision."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Return the exact proposed delta without writing files."
+            }
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
@@ -267,14 +335,57 @@
         {
           "name": "decomposition-create",
           "help": "Create a first-class Planning decomposition record.",
-          "uses_option_groups": ["format"],
+          "uses_option_groups": [
+            "format"
+          ],
           "options": [
-            {"name": "id", "flags": ["--id"], "required": true, "help": "Stable decomposition id."},
-            {"name": "title", "flags": ["--title"], "required": true, "help": "Human-readable decomposition title."},
-            {"name": "outcome", "flags": ["--outcome"], "required": true, "help": "Larger intended outcome."},
-            {"name": "promotion_rule", "flags": ["--promotion-rule"], "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.", "help": "Candidate-lane promotion rule."},
-            {"name": "target", "flags": ["--target"], "help": "Optional repository path."},
-            {"name": "dry_run", "flags": ["--dry-run"], "action": "store_true", "help": "Show planned changes without mutating files."}
+            {
+              "name": "id",
+              "flags": [
+                "--id"
+              ],
+              "required": true,
+              "help": "Stable decomposition id."
+            },
+            {
+              "name": "title",
+              "flags": [
+                "--title"
+              ],
+              "required": true,
+              "help": "Human-readable decomposition title."
+            },
+            {
+              "name": "outcome",
+              "flags": [
+                "--outcome"
+              ],
+              "required": true,
+              "help": "Larger intended outcome."
+            },
+            {
+              "name": "promotion_rule",
+              "flags": [
+                "--promotion-rule"
+              ],
+              "default": "Promote a candidate lane only after its scope, owner surface, and proof are ready.",
+              "help": "Candidate-lane promotion rule."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Optional repository path."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Show planned changes without mutating files."
+            }
           ],
           "role": "core_context_router",
           "audience": "ordinary_host_repo",
@@ -2637,17 +2748,23 @@
           "options": [
             {
               "name": "target",
-              "flags": ["--target"],
+              "flags": [
+                "--target"
+              ],
               "help": "Optional repository path."
             },
             {
               "name": "path",
-              "flags": ["--path"],
+              "flags": [
+                "--path"
+              ],
               "help": "Optional repo-relative session log path; defaults to the current session pointer."
             },
             {
               "name": "id",
-              "flags": ["--id"],
+              "flags": [
+                "--id"
+              ],
               "help": "Optional session id or aw-session-<id> directory name to repair."
             }
           ],
@@ -2665,22 +2782,30 @@
           "options": [
             {
               "name": "target",
-              "flags": ["--target"],
+              "flags": [
+                "--target"
+              ],
               "help": "Optional repository path."
             },
             {
               "name": "path",
-              "flags": ["--path"],
+              "flags": [
+                "--path"
+              ],
               "help": "Optional repo-relative session log path; defaults to the current session pointer."
             },
             {
               "name": "id",
-              "flags": ["--id"],
+              "flags": [
+                "--id"
+              ],
               "help": "Optional session id or aw-session-<id> directory name to export."
             },
             {
               "name": "no_artifacts",
-              "flags": ["--no-artifacts"],
+              "flags": [
+                "--no-artifacts"
+              ],
               "action": "store_true",
               "help": "Exclude raw-output artifacts from the exported bundle."
             }
@@ -3707,6 +3832,1540 @@
       "audience": "ordinary_host_repo",
       "classification_note": "conservative lifecycle removal mutation",
       "mutates_state": true
+    },
+    {
+      "audience": "advanced_host_repo",
+      "classification_note": "public adapter-neutral assignment/run lifecycle front door",
+      "help": "Execute public assignment/run lifecycle operations.",
+      "mutates_state": false,
+      "name": "assignment",
+      "options": [
+        {
+          "flags": [
+            "--target"
+          ],
+          "help": "Target repository path. Defaults to the current directory.",
+          "name": "target"
+        }
+      ],
+      "role": "core_context_router",
+      "subcommand_dest": "assignment_command",
+      "subcommands": [
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.admit.",
+          "mutates_state": false,
+          "name": "admit",
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.cleanup.",
+          "mutates_state": false,
+          "name": "cleanup",
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.close.",
+          "mutates_state": false,
+          "name": "close",
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.export.",
+          "mutates_state": false,
+          "name": "export",
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.import.",
+          "mutates_state": false,
+          "name": "import",
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.integrate.",
+          "mutates_state": false,
+          "name": "integrate",
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.override.",
+          "mutates_state": false,
+          "name": "override",
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.reassign.",
+          "mutates_state": false,
+          "name": "reassign",
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.reject.",
+          "mutates_state": false,
+          "name": "reject",
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        },
+        {
+          "audience": "advanced_host_repo",
+          "classification_note": "assignment lifecycle subcommand",
+          "help": "Run assignment.repair.",
+          "mutates_state": false,
+          "name": "repair",
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
+          "role": "core_context_router",
+          "uses_option_groups": [
+            "format"
+          ]
+        }
+      ],
+      "subcommands_required": true,
+      "uses_option_groups": [
+        "format"
+      ]
+    },
+    {
+      "name": "correction-event",
+      "help": "Submit, query, and compact local correction events through generated operations.",
+      "subcommand_dest": "correction_event_command",
+      "subcommands": [
+        {
+          "name": "submit",
+          "help": "Submit a correction event through the public local operation boundary.",
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "ordinary_host_repo",
+          "classification_note": "correction event lifecycle subcommand",
+          "mutates_state": true,
+          "options": [
+            {
+              "name": "format",
+              "flags": [
+                "--format"
+              ],
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "help": "Output format."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory."
+            },
+            {
+              "name": "event_json",
+              "flags": [
+                "--event-json"
+              ],
+              "help": "Serialized correction event JSON."
+            },
+            {
+              "name": "subjects_json",
+              "flags": [
+                "--subjects-json"
+              ],
+              "help": "Serialized target identity subjects for fixtures."
+            },
+            {
+              "name": "trusted_authority_receipt_json",
+              "flags": [
+                "--trusted-authority-receipt-json"
+              ],
+              "help": "Trusted host/proof authority receipt JSON."
+            },
+            {
+              "name": "idempotency_key",
+              "flags": [
+                "--idempotency-key"
+              ],
+              "help": "Stable delivery idempotency key."
+            },
+            {
+              "name": "delivery_id",
+              "flags": [
+                "--delivery-id"
+              ],
+              "help": "Stable delivery id."
+            },
+            {
+              "name": "target_identity_ref",
+              "flags": [
+                "--target-identity-ref"
+              ],
+              "help": "Target id/name/alias to resolve."
+            },
+            {
+              "name": "target_revision",
+              "flags": [
+                "--target-revision"
+              ],
+              "help": "Submitted target revision."
+            },
+            {
+              "name": "source_ref",
+              "flags": [
+                "--source-ref"
+              ],
+              "help": "Stable source reference."
+            },
+            {
+              "name": "source",
+              "flags": [
+                "--source"
+              ],
+              "help": "Submitted source label."
+            },
+            {
+              "name": "producer_class",
+              "flags": [
+                "--producer-class"
+              ],
+              "help": "Submitted producer class; cannot upgrade authority without a trusted receipt."
+            },
+            {
+              "name": "producer_id",
+              "flags": [
+                "--producer-id"
+              ],
+              "help": "Producer id."
+            },
+            {
+              "name": "authority",
+              "flags": [
+                "--authority"
+              ],
+              "help": "Claimed authority; ignored for upgrade without trusted receipt."
+            },
+            {
+              "name": "desired_behavior",
+              "flags": [
+                "--desired-behavior"
+              ],
+              "help": "Desired behavior."
+            },
+            {
+              "name": "replaced_behavior",
+              "flags": [
+                "--replaced-behavior"
+              ],
+              "help": "Replaced behavior."
+            },
+            {
+              "name": "invariant_id",
+              "flags": [
+                "--invariant-id"
+              ],
+              "help": "Structured invariant id."
+            },
+            {
+              "name": "behavior_class",
+              "flags": [
+                "--behavior-class"
+              ],
+              "help": "Structured behavior class."
+            },
+            {
+              "name": "task_class",
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Task class applicability."
+            },
+            {
+              "name": "scope_class",
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Scope class applicability."
+            },
+            {
+              "name": "route_decisions",
+              "flags": [
+                "--route-decision"
+              ],
+              "action": "append",
+              "default": [],
+              "help": "Route decision. Repeat for multiple routes."
+            },
+            {
+              "name": "evidence_hash",
+              "flags": [
+                "--evidence-hash"
+              ],
+              "help": "Evidence hash."
+            },
+            {
+              "name": "evidence_ref",
+              "flags": [
+                "--evidence-ref"
+              ],
+              "help": "Evidence reference."
+            },
+            {
+              "name": "predecessor_event_id",
+              "flags": [
+                "--predecessor-event-id"
+              ],
+              "help": "Predecessor event id for lifecycle transitions."
+            },
+            {
+              "name": "lifecycle_action",
+              "flags": [
+                "--lifecycle-action"
+              ],
+              "choices": [
+                "withdraw",
+                "supersede"
+              ],
+              "help": "Withdraw/supersede action."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Report without mutation."
+            }
+          ]
+        },
+        {
+          "name": "query",
+          "help": "Query admitted and low-authority correction events from bounded local storage.",
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "ordinary_host_repo",
+          "classification_note": "correction event lifecycle subcommand",
+          "mutates_state": false,
+          "options": [
+            {
+              "name": "format",
+              "flags": [
+                "--format"
+              ],
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "help": "Output format."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory."
+            },
+            {
+              "name": "event_json",
+              "flags": [
+                "--event-json"
+              ],
+              "help": "Serialized correction event JSON."
+            },
+            {
+              "name": "subjects_json",
+              "flags": [
+                "--subjects-json"
+              ],
+              "help": "Serialized target identity subjects for fixtures."
+            },
+            {
+              "name": "trusted_authority_receipt_json",
+              "flags": [
+                "--trusted-authority-receipt-json"
+              ],
+              "help": "Trusted host/proof authority receipt JSON."
+            },
+            {
+              "name": "idempotency_key",
+              "flags": [
+                "--idempotency-key"
+              ],
+              "help": "Stable delivery idempotency key."
+            },
+            {
+              "name": "delivery_id",
+              "flags": [
+                "--delivery-id"
+              ],
+              "help": "Stable delivery id."
+            },
+            {
+              "name": "target_identity_ref",
+              "flags": [
+                "--target-identity-ref"
+              ],
+              "help": "Target id/name/alias to resolve."
+            },
+            {
+              "name": "target_revision",
+              "flags": [
+                "--target-revision"
+              ],
+              "help": "Submitted target revision."
+            },
+            {
+              "name": "source_ref",
+              "flags": [
+                "--source-ref"
+              ],
+              "help": "Stable source reference."
+            },
+            {
+              "name": "source",
+              "flags": [
+                "--source"
+              ],
+              "help": "Submitted source label."
+            },
+            {
+              "name": "producer_class",
+              "flags": [
+                "--producer-class"
+              ],
+              "help": "Submitted producer class; cannot upgrade authority without a trusted receipt."
+            },
+            {
+              "name": "producer_id",
+              "flags": [
+                "--producer-id"
+              ],
+              "help": "Producer id."
+            },
+            {
+              "name": "authority",
+              "flags": [
+                "--authority"
+              ],
+              "help": "Claimed authority; ignored for upgrade without trusted receipt."
+            },
+            {
+              "name": "desired_behavior",
+              "flags": [
+                "--desired-behavior"
+              ],
+              "help": "Desired behavior."
+            },
+            {
+              "name": "replaced_behavior",
+              "flags": [
+                "--replaced-behavior"
+              ],
+              "help": "Replaced behavior."
+            },
+            {
+              "name": "invariant_id",
+              "flags": [
+                "--invariant-id"
+              ],
+              "help": "Structured invariant id."
+            },
+            {
+              "name": "behavior_class",
+              "flags": [
+                "--behavior-class"
+              ],
+              "help": "Structured behavior class."
+            },
+            {
+              "name": "task_class",
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Task class applicability."
+            },
+            {
+              "name": "scope_class",
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Scope class applicability."
+            },
+            {
+              "name": "route_decisions",
+              "flags": [
+                "--route-decision"
+              ],
+              "action": "append",
+              "default": [],
+              "help": "Route decision. Repeat for multiple routes."
+            },
+            {
+              "name": "evidence_hash",
+              "flags": [
+                "--evidence-hash"
+              ],
+              "help": "Evidence hash."
+            },
+            {
+              "name": "evidence_ref",
+              "flags": [
+                "--evidence-ref"
+              ],
+              "help": "Evidence reference."
+            },
+            {
+              "name": "predecessor_event_id",
+              "flags": [
+                "--predecessor-event-id"
+              ],
+              "help": "Predecessor event id for lifecycle transitions."
+            },
+            {
+              "name": "lifecycle_action",
+              "flags": [
+                "--lifecycle-action"
+              ],
+              "choices": [
+                "withdraw",
+                "supersede"
+              ],
+              "help": "Withdraw/supersede action."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Report without mutation."
+            }
+          ]
+        },
+        {
+          "name": "correct-dispute",
+          "help": "Record a dispute/correction transition for a prior correction event.",
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "ordinary_host_repo",
+          "classification_note": "correction event lifecycle subcommand",
+          "mutates_state": true,
+          "options": [
+            {
+              "name": "format",
+              "flags": [
+                "--format"
+              ],
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "help": "Output format."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory."
+            },
+            {
+              "name": "event_json",
+              "flags": [
+                "--event-json"
+              ],
+              "help": "Serialized correction event JSON."
+            },
+            {
+              "name": "subjects_json",
+              "flags": [
+                "--subjects-json"
+              ],
+              "help": "Serialized target identity subjects for fixtures."
+            },
+            {
+              "name": "trusted_authority_receipt_json",
+              "flags": [
+                "--trusted-authority-receipt-json"
+              ],
+              "help": "Trusted host/proof authority receipt JSON."
+            },
+            {
+              "name": "idempotency_key",
+              "flags": [
+                "--idempotency-key"
+              ],
+              "help": "Stable delivery idempotency key."
+            },
+            {
+              "name": "delivery_id",
+              "flags": [
+                "--delivery-id"
+              ],
+              "help": "Stable delivery id."
+            },
+            {
+              "name": "target_identity_ref",
+              "flags": [
+                "--target-identity-ref"
+              ],
+              "help": "Target id/name/alias to resolve."
+            },
+            {
+              "name": "target_revision",
+              "flags": [
+                "--target-revision"
+              ],
+              "help": "Submitted target revision."
+            },
+            {
+              "name": "source_ref",
+              "flags": [
+                "--source-ref"
+              ],
+              "help": "Stable source reference."
+            },
+            {
+              "name": "source",
+              "flags": [
+                "--source"
+              ],
+              "help": "Submitted source label."
+            },
+            {
+              "name": "producer_class",
+              "flags": [
+                "--producer-class"
+              ],
+              "help": "Submitted producer class; cannot upgrade authority without a trusted receipt."
+            },
+            {
+              "name": "producer_id",
+              "flags": [
+                "--producer-id"
+              ],
+              "help": "Producer id."
+            },
+            {
+              "name": "authority",
+              "flags": [
+                "--authority"
+              ],
+              "help": "Claimed authority; ignored for upgrade without trusted receipt."
+            },
+            {
+              "name": "desired_behavior",
+              "flags": [
+                "--desired-behavior"
+              ],
+              "help": "Desired behavior."
+            },
+            {
+              "name": "replaced_behavior",
+              "flags": [
+                "--replaced-behavior"
+              ],
+              "help": "Replaced behavior."
+            },
+            {
+              "name": "invariant_id",
+              "flags": [
+                "--invariant-id"
+              ],
+              "help": "Structured invariant id."
+            },
+            {
+              "name": "behavior_class",
+              "flags": [
+                "--behavior-class"
+              ],
+              "help": "Structured behavior class."
+            },
+            {
+              "name": "task_class",
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Task class applicability."
+            },
+            {
+              "name": "scope_class",
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Scope class applicability."
+            },
+            {
+              "name": "route_decisions",
+              "flags": [
+                "--route-decision"
+              ],
+              "action": "append",
+              "default": [],
+              "help": "Route decision. Repeat for multiple routes."
+            },
+            {
+              "name": "evidence_hash",
+              "flags": [
+                "--evidence-hash"
+              ],
+              "help": "Evidence hash."
+            },
+            {
+              "name": "evidence_ref",
+              "flags": [
+                "--evidence-ref"
+              ],
+              "help": "Evidence reference."
+            },
+            {
+              "name": "predecessor_event_id",
+              "flags": [
+                "--predecessor-event-id"
+              ],
+              "help": "Predecessor event id for lifecycle transitions."
+            },
+            {
+              "name": "lifecycle_action",
+              "flags": [
+                "--lifecycle-action"
+              ],
+              "choices": [
+                "withdraw",
+                "supersede"
+              ],
+              "help": "Withdraw/supersede action."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Report without mutation."
+            }
+          ]
+        },
+        {
+          "name": "withdraw-supersede",
+          "help": "Withdraw or supersede a prior correction event.",
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "ordinary_host_repo",
+          "classification_note": "correction event lifecycle subcommand",
+          "mutates_state": true,
+          "options": [
+            {
+              "name": "format",
+              "flags": [
+                "--format"
+              ],
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "help": "Output format."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory."
+            },
+            {
+              "name": "event_json",
+              "flags": [
+                "--event-json"
+              ],
+              "help": "Serialized correction event JSON."
+            },
+            {
+              "name": "subjects_json",
+              "flags": [
+                "--subjects-json"
+              ],
+              "help": "Serialized target identity subjects for fixtures."
+            },
+            {
+              "name": "trusted_authority_receipt_json",
+              "flags": [
+                "--trusted-authority-receipt-json"
+              ],
+              "help": "Trusted host/proof authority receipt JSON."
+            },
+            {
+              "name": "idempotency_key",
+              "flags": [
+                "--idempotency-key"
+              ],
+              "help": "Stable delivery idempotency key."
+            },
+            {
+              "name": "delivery_id",
+              "flags": [
+                "--delivery-id"
+              ],
+              "help": "Stable delivery id."
+            },
+            {
+              "name": "target_identity_ref",
+              "flags": [
+                "--target-identity-ref"
+              ],
+              "help": "Target id/name/alias to resolve."
+            },
+            {
+              "name": "target_revision",
+              "flags": [
+                "--target-revision"
+              ],
+              "help": "Submitted target revision."
+            },
+            {
+              "name": "source_ref",
+              "flags": [
+                "--source-ref"
+              ],
+              "help": "Stable source reference."
+            },
+            {
+              "name": "source",
+              "flags": [
+                "--source"
+              ],
+              "help": "Submitted source label."
+            },
+            {
+              "name": "producer_class",
+              "flags": [
+                "--producer-class"
+              ],
+              "help": "Submitted producer class; cannot upgrade authority without a trusted receipt."
+            },
+            {
+              "name": "producer_id",
+              "flags": [
+                "--producer-id"
+              ],
+              "help": "Producer id."
+            },
+            {
+              "name": "authority",
+              "flags": [
+                "--authority"
+              ],
+              "help": "Claimed authority; ignored for upgrade without trusted receipt."
+            },
+            {
+              "name": "desired_behavior",
+              "flags": [
+                "--desired-behavior"
+              ],
+              "help": "Desired behavior."
+            },
+            {
+              "name": "replaced_behavior",
+              "flags": [
+                "--replaced-behavior"
+              ],
+              "help": "Replaced behavior."
+            },
+            {
+              "name": "invariant_id",
+              "flags": [
+                "--invariant-id"
+              ],
+              "help": "Structured invariant id."
+            },
+            {
+              "name": "behavior_class",
+              "flags": [
+                "--behavior-class"
+              ],
+              "help": "Structured behavior class."
+            },
+            {
+              "name": "task_class",
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Task class applicability."
+            },
+            {
+              "name": "scope_class",
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Scope class applicability."
+            },
+            {
+              "name": "route_decisions",
+              "flags": [
+                "--route-decision"
+              ],
+              "action": "append",
+              "default": [],
+              "help": "Route decision. Repeat for multiple routes."
+            },
+            {
+              "name": "evidence_hash",
+              "flags": [
+                "--evidence-hash"
+              ],
+              "help": "Evidence hash."
+            },
+            {
+              "name": "evidence_ref",
+              "flags": [
+                "--evidence-ref"
+              ],
+              "help": "Evidence reference."
+            },
+            {
+              "name": "predecessor_event_id",
+              "flags": [
+                "--predecessor-event-id"
+              ],
+              "help": "Predecessor event id for lifecycle transitions."
+            },
+            {
+              "name": "lifecycle_action",
+              "flags": [
+                "--lifecycle-action"
+              ],
+              "choices": [
+                "withdraw",
+                "supersede"
+              ],
+              "help": "Withdraw/supersede action."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Report without mutation."
+            }
+          ]
+        },
+        {
+          "name": "prune-compact",
+          "help": "Compact bounded local correction-event storage while preserving lineage.",
+          "role": "reusable_host_repo_diagnostics",
+          "audience": "ordinary_host_repo",
+          "classification_note": "correction event lifecycle subcommand",
+          "mutates_state": true,
+          "options": [
+            {
+              "name": "format",
+              "flags": [
+                "--format"
+              ],
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "help": "Output format."
+            },
+            {
+              "name": "target",
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to current directory."
+            },
+            {
+              "name": "event_json",
+              "flags": [
+                "--event-json"
+              ],
+              "help": "Serialized correction event JSON."
+            },
+            {
+              "name": "subjects_json",
+              "flags": [
+                "--subjects-json"
+              ],
+              "help": "Serialized target identity subjects for fixtures."
+            },
+            {
+              "name": "trusted_authority_receipt_json",
+              "flags": [
+                "--trusted-authority-receipt-json"
+              ],
+              "help": "Trusted host/proof authority receipt JSON."
+            },
+            {
+              "name": "idempotency_key",
+              "flags": [
+                "--idempotency-key"
+              ],
+              "help": "Stable delivery idempotency key."
+            },
+            {
+              "name": "delivery_id",
+              "flags": [
+                "--delivery-id"
+              ],
+              "help": "Stable delivery id."
+            },
+            {
+              "name": "target_identity_ref",
+              "flags": [
+                "--target-identity-ref"
+              ],
+              "help": "Target id/name/alias to resolve."
+            },
+            {
+              "name": "target_revision",
+              "flags": [
+                "--target-revision"
+              ],
+              "help": "Submitted target revision."
+            },
+            {
+              "name": "source_ref",
+              "flags": [
+                "--source-ref"
+              ],
+              "help": "Stable source reference."
+            },
+            {
+              "name": "source",
+              "flags": [
+                "--source"
+              ],
+              "help": "Submitted source label."
+            },
+            {
+              "name": "producer_class",
+              "flags": [
+                "--producer-class"
+              ],
+              "help": "Submitted producer class; cannot upgrade authority without a trusted receipt."
+            },
+            {
+              "name": "producer_id",
+              "flags": [
+                "--producer-id"
+              ],
+              "help": "Producer id."
+            },
+            {
+              "name": "authority",
+              "flags": [
+                "--authority"
+              ],
+              "help": "Claimed authority; ignored for upgrade without trusted receipt."
+            },
+            {
+              "name": "desired_behavior",
+              "flags": [
+                "--desired-behavior"
+              ],
+              "help": "Desired behavior."
+            },
+            {
+              "name": "replaced_behavior",
+              "flags": [
+                "--replaced-behavior"
+              ],
+              "help": "Replaced behavior."
+            },
+            {
+              "name": "invariant_id",
+              "flags": [
+                "--invariant-id"
+              ],
+              "help": "Structured invariant id."
+            },
+            {
+              "name": "behavior_class",
+              "flags": [
+                "--behavior-class"
+              ],
+              "help": "Structured behavior class."
+            },
+            {
+              "name": "task_class",
+              "flags": [
+                "--task-class"
+              ],
+              "help": "Task class applicability."
+            },
+            {
+              "name": "scope_class",
+              "flags": [
+                "--scope-class"
+              ],
+              "help": "Scope class applicability."
+            },
+            {
+              "name": "route_decisions",
+              "flags": [
+                "--route-decision"
+              ],
+              "action": "append",
+              "default": [],
+              "help": "Route decision. Repeat for multiple routes."
+            },
+            {
+              "name": "evidence_hash",
+              "flags": [
+                "--evidence-hash"
+              ],
+              "help": "Evidence hash."
+            },
+            {
+              "name": "evidence_ref",
+              "flags": [
+                "--evidence-ref"
+              ],
+              "help": "Evidence reference."
+            },
+            {
+              "name": "predecessor_event_id",
+              "flags": [
+                "--predecessor-event-id"
+              ],
+              "help": "Predecessor event id for lifecycle transitions."
+            },
+            {
+              "name": "lifecycle_action",
+              "flags": [
+                "--lifecycle-action"
+              ],
+              "choices": [
+                "withdraw",
+                "supersede"
+              ],
+              "help": "Withdraw/supersede action."
+            },
+            {
+              "name": "dry_run",
+              "flags": [
+                "--dry-run"
+              ],
+              "action": "store_true",
+              "help": "Report without mutation."
+            }
+          ]
+        }
+      ],
+      "options": [],
+      "role": "reusable_host_repo_diagnostics",
+      "audience": "ordinary_host_repo"
     }
   ]
 }

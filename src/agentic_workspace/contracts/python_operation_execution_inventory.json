@@ -2073,6 +2073,341 @@
       "runtime_boundary_reason": "Planning integration apply owns target-branch lifecycle truth, subject CAS policy, and atomic proposal/receipt mutation.",
       "what_would_make_portable_later": "Represent the deterministic file/schema portions as portable primitives once Planning lifecycle authority and branch-safety policy can remain as smaller explicit domain steps.",
       "generic_behavior_audit": "Generated parser, command metadata, operation resource loading, and dataflow execution are codegen-owned; Planning runtime owns policy-heavy mutation semantics and exact authority boundaries. This is not accepted as portable codegen coverage."
+    },
+    {
+      "command": "assignment",
+      "conformance_ref": "assignment.admit.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, current-authority boundaries, and local disposable artifact state.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle local artifact transition"
+      ],
+      "operation_contract": "operations/assignment.admit.json",
+      "operation_id": "assignment.admit",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for local artifact writes, admission/current-authority receipts, and override/cleanup state.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
+    },
+    {
+      "command": "assignment",
+      "conformance_ref": "assignment.cleanup.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, current-authority boundaries, and local disposable artifact state.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle local artifact transition"
+      ],
+      "operation_contract": "operations/assignment.cleanup.json",
+      "operation_id": "assignment.cleanup",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for local artifact writes, admission/current-authority receipts, and override/cleanup state.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
+    },
+    {
+      "command": "assignment",
+      "conformance_ref": "assignment.close.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, current-authority boundaries, and local disposable artifact state.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle local artifact transition"
+      ],
+      "operation_contract": "operations/assignment.close.json",
+      "operation_id": "assignment.close",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for local artifact writes, admission/current-authority receipts, and override/cleanup state.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
+    },
+    {
+      "command": "assignment",
+      "conformance_ref": "assignment.export.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, current-authority boundaries, and local disposable artifact state.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle local artifact transition"
+      ],
+      "operation_contract": "operations/assignment.export.json",
+      "operation_id": "assignment.export",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for local artifact writes, admission/current-authority receipts, and override/cleanup state.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
+    },
+    {
+      "command": "assignment",
+      "conformance_ref": "assignment.import.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, current-authority boundaries, and local disposable artifact state.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle local artifact transition"
+      ],
+      "operation_contract": "operations/assignment.import.json",
+      "operation_id": "assignment.import",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for local artifact writes, admission/current-authority receipts, and override/cleanup state.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
+    },
+    {
+      "command": "assignment",
+      "conformance_ref": "assignment.integrate.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, current-authority boundaries, and local disposable artifact state.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle local artifact transition"
+      ],
+      "operation_contract": "operations/assignment.integrate.json",
+      "operation_id": "assignment.integrate",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for local artifact writes, admission/current-authority receipts, and override/cleanup state.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
+    },
+    {
+      "command": "assignment",
+      "conformance_ref": "assignment.override.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, current-authority boundaries, and local disposable artifact state.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle local artifact transition"
+      ],
+      "operation_contract": "operations/assignment.override.json",
+      "operation_id": "assignment.override",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for local artifact writes, admission/current-authority receipts, and override/cleanup state.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
+    },
+    {
+      "command": "assignment",
+      "conformance_ref": "assignment.reassign.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, current-authority boundaries, and local disposable artifact state.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle local artifact transition"
+      ],
+      "operation_contract": "operations/assignment.reassign.json",
+      "operation_id": "assignment.reassign",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for local artifact writes, admission/current-authority receipts, and override/cleanup state.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
+    },
+    {
+      "command": "assignment",
+      "conformance_ref": "assignment.reject.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, current-authority boundaries, and local disposable artifact state.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle local artifact transition"
+      ],
+      "operation_contract": "operations/assignment.reject.json",
+      "operation_id": "assignment.reject",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for local artifact writes, admission/current-authority receipts, and override/cleanup state.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
+    },
+    {
+      "command": "assignment",
+      "conformance_ref": "assignment.repair.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "assignment.lifecycle.apply"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Classified as mutation-orchestration; this is not accepted as generic deterministic runtime debt because the primitive owns AW-specific assignment/run lifecycle safety, current-authority boundaries, and local disposable artifact state.",
+      "hand_owned_runtime_code": [
+        "workspace.target-root.resolve",
+        "assignment lifecycle local artifact transition"
+      ],
+      "operation_contract": "operations/assignment.repair.json",
+      "operation_id": "assignment.repair",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "Generated parser, operation IR, client negotiation, and output emission own the command shape; assignment.lifecycle.apply remains a package-domain lifecycle primitive for local artifact writes, admission/current-authority receipts, and override/cleanup state.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split packet rendering, local artifact IO, and transition validation into schema-backed portable primitives after the assignment/run lifecycle schema is stable."
+    },
+    {
+      "command": "correction-event",
+      "conformance_ref": "correction-event.submit.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "correction.event.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; correction.event.apply remains a package-domain lifecycle primitive for target identity resolution, authority derivation, low-authority retention, bounded local storage, and receipt semantics.",
+      "hand_owned_runtime_code": [
+        "workspace target identity correction admission",
+        "correction-event bounded local storage and receipts"
+      ],
+      "operation_contract": "operations/correction-event.submit.json",
+      "operation_id": "correction-event.submit",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but writes local-only correction-event storage through a workspace-specific admission and authority boundary.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split bounded JSON store IO, receipt emission, and target identity matching into schema-backed portable primitives after correction-event lifecycle semantics stabilize."
+    },
+    {
+      "command": "correction-event",
+      "conformance_ref": "correction-event.query.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "correction.event.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; correction.event.apply remains a package-domain lifecycle primitive for target identity resolution, authority derivation, low-authority retention, bounded local storage, and receipt semantics.",
+      "hand_owned_runtime_code": [
+        "workspace target identity correction admission",
+        "correction-event bounded local storage and receipts"
+      ],
+      "operation_contract": "operations/correction-event.query.json",
+      "operation_id": "correction-event.query",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "package-specific-judgment",
+      "runtime_boundary_reason": "The operation uses generated IR transport but reads and re-admits workspace-specific local correction-event evidence.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split bounded JSON store IO, receipt emission, and target identity matching into schema-backed portable primitives after correction-event lifecycle semantics stabilize."
+    },
+    {
+      "command": "correction-event",
+      "conformance_ref": "correction-event.correct-dispute.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "correction.event.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; correction.event.apply remains a package-domain lifecycle primitive for target identity resolution, authority derivation, low-authority retention, bounded local storage, and receipt semantics.",
+      "hand_owned_runtime_code": [
+        "workspace target identity correction admission",
+        "correction-event bounded local storage and receipts"
+      ],
+      "operation_contract": "operations/correction-event.correct-dispute.json",
+      "operation_id": "correction-event.correct-dispute",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but writes local-only correction-event lifecycle evidence through a workspace-specific admission and authority boundary.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split bounded JSON store IO, receipt emission, and target identity matching into schema-backed portable primitives after correction-event lifecycle semantics stabilize."
+    },
+    {
+      "command": "correction-event",
+      "conformance_ref": "correction-event.withdraw-supersede.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "correction.event.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; correction.event.apply remains a package-domain lifecycle primitive for target identity resolution, authority derivation, low-authority retention, bounded local storage, and receipt semantics.",
+      "hand_owned_runtime_code": [
+        "workspace target identity correction admission",
+        "correction-event bounded local storage and receipts"
+      ],
+      "operation_contract": "operations/correction-event.withdraw-supersede.json",
+      "operation_id": "correction-event.withdraw-supersede",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but writes local-only correction-event lifecycle evidence through a workspace-specific admission and authority boundary.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split bounded JSON store IO, receipt emission, and target identity matching into schema-backed portable primitives after correction-event lifecycle semantics stabilize."
+    },
+    {
+      "command": "correction-event",
+      "conformance_ref": "correction-event.prune-compact.process",
+      "domain_runtime_primitive_refs": [
+        "workspace.target-root.resolve",
+        "correction.event.apply",
+        "output.emit"
+      ],
+      "generated_transport": "generated/workspace/python/cli.py",
+      "generic_behavior_audit": "Generated parser, operation IR, client negotiation, and output emission own the command shape; correction.event.apply remains a package-domain lifecycle primitive for target identity resolution, authority derivation, low-authority retention, bounded local storage, compaction lineage, and receipt semantics.",
+      "hand_owned_runtime_code": [
+        "workspace target identity correction admission",
+        "correction-event bounded local storage and receipts"
+      ],
+      "operation_contract": "operations/correction-event.prune-compact.json",
+      "operation_id": "correction-event.prune-compact",
+      "primitive_executor": "command_generation/primitive_executor.py",
+      "program": "agentic-workspace",
+      "runtime_boundary_class": "mutation-orchestration",
+      "runtime_boundary_reason": "The operation uses generated IR transport but rewrites local-only correction-event storage and compaction lineage through a workspace-specific retention boundary.",
+      "status": "domain-runtime-primitive-via-ir",
+      "what_would_make_portable_later": "Split bounded JSON store IO, receipt emission, and target identity matching into schema-backed portable primitives after correction-event lifecycle semantics stabilize."
     }
   ],
   "completion_rule": "Python completion can be claimed only when every generated Python operation is inventoried as portable-codegen-primitive-executed, generated-runtime-handler, domain-runtime-primitive-via-ir, or accepted-hand-owned-runtime-primitive; domain-runtime-primitive-via-ir and accepted-hand-owned-runtime-primitive entries are transitional unless their audit proves they do not hide generic deterministic runtime debt."
