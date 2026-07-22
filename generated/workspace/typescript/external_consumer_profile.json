@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:5348a06aafa4fc11a5e3de8ae1ef1307e8dd9e4c8bda4a8f19bfd26ddc44d25b",
+    "fingerprint": "sha256:e83f571df1cc17aa2fe94977970a9478215b3c37512d247373f30e8378141e56",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -14,7 +14,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.admit.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:c48a402a4eb530c7d158ceb03c39c9a449c3aa18faae4b651d6fca994074b085"
+        "fingerprint": "sha256:b27c677fdaef6306a3a5c5d59f115a95296fbbfa2dfafff444828595163eaa63"
       },
       "operation_resources": {
         "python": {
@@ -166,7 +166,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.cleanup.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:49e15447d2769a66a276db929d650170370cda9015dc75a2cb35bb7e10c677f3"
+        "fingerprint": "sha256:bf591857b9783bb9a0416b97d7511934d5f201dc368a1c565601696e29f8d906"
       },
       "operation_resources": {
         "python": {
@@ -318,7 +318,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.close.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:8ae938d4a0b988aa042ff1d13ed9a706e670327cb9fc7a44d94c3c8ba9831d74"
+        "fingerprint": "sha256:de91d27a257d54ba68ab1158641a38ec8706f8231f620d73936b7ede6398a6c3"
       },
       "operation_resources": {
         "python": {
@@ -470,7 +470,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.export.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:16069af3c5259ebaddaa32f323238bb39e727f34ddc03864b9f32dc1021ef69f"
+        "fingerprint": "sha256:e9809348472a0f86c0c820163523418b7ea9c214c43fe9cf74ca0043e1e65e61"
       },
       "operation_resources": {
         "python": {
@@ -622,7 +622,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.import.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:051d81d47f49e61525dcb3fc06ea7e2db850cafd0a460b96a8d1e0e215a1aa4a"
+        "fingerprint": "sha256:20af56d2b995d5dd6bf426cc9a8b52fba6891bbd20e2517732e679d76b00e7d2"
       },
       "operation_resources": {
         "python": {
@@ -774,7 +774,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.integrate.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:e1d34ba52cbc714d138de6dd1dbe1003ce4a2d0abc9da5cdd0242895b1a624e8"
+        "fingerprint": "sha256:856c9b22266b1cd52a381e0379f6fe7a250b66d98bff62a5a2b44184c0553338"
       },
       "operation_resources": {
         "python": {
@@ -926,7 +926,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.override.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:5a61b2505b199de1cc16d6bc4a2eb85bd9c70546db949895f4571ea1f1f394f1"
+        "fingerprint": "sha256:1237e1825bad04a7da4a358e5a7078518b530d660328e59bf945fb351ced80e7"
       },
       "operation_resources": {
         "python": {
@@ -1078,7 +1078,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.reassign.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:23cc00f3ff84bb40f0bffbf0b10eda4280c9b34071cd84521a77409ffa4adc82"
+        "fingerprint": "sha256:26bd5e76f1307f0e48033c91f724796d02272399f3826436bd0fa79c6a82d125"
       },
       "operation_resources": {
         "python": {
@@ -1230,7 +1230,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.reject.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:bf7c74b61b0931333c0bce116dd2a9ab6d29b142126f024cde00887f9cd98eb1"
+        "fingerprint": "sha256:0f6a6554c213b26771aab3184d0ddb945fd7c17faef9f22d26f022bb93a80c7a"
       },
       "operation_resources": {
         "python": {
@@ -1382,7 +1382,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/assignment.repair.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:17bd2e85f989e7009a176182b0dc25b1a8a898c3dc45dab425b9cca9db810600"
+        "fingerprint": "sha256:518e8776a9fd9f1b606a6e3f64312e614fc986e6a331130cb7794ff74921f2d3"
       },
       "operation_resources": {
         "python": {
@@ -1856,7 +1856,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.correct-dispute.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:60067dbe1e0d28c87011c83536eceb3d3d21e491210f8da6177be1eaf001723f"
+        "fingerprint": "sha256:527fa9a77837f96c67977bb4990a2ef8bdf39fa0188f824e0f3fd01f3a247a0f"
       },
       "operation_resources": {
         "python": {
@@ -1983,7 +1983,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.prune-compact.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:0d45af48882901667ca57ec310c838830b3a02f0a1d9578af3888bcab9002f2f"
+        "fingerprint": "sha256:0aa88948543870c67bcb00c6652ff03d509d05f00c5fd850a35819732e158c47"
       },
       "operation_resources": {
         "python": {
@@ -2110,7 +2110,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.query.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:cac6b367cefaacec45173fa88159ec0048c780d3d98bb5f85ccce7139884f46b"
+        "fingerprint": "sha256:c6fcc74d77b199332351fd9076167023b032afb5401b65aa6c46408fc97d8f9f"
       },
       "operation_resources": {
         "python": {
@@ -2237,7 +2237,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.submit.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:12d00033ffa5d81442e2172af644da321d988ce2508a3885c5364955f41c80fa"
+        "fingerprint": "sha256:8e2ee32b12ab1d08fb8d7c8bac0643fc4efc7bd2cf9762812c88c4ed81184ce9"
       },
       "operation_resources": {
         "python": {
@@ -2364,7 +2364,7 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.withdraw-supersede.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:60e5c906ac4e6cbf1e64f15db7647994e0007529cf597d4edddd3dad3f76ae0c"
+        "fingerprint": "sha256:4f712c97101aee8b6f78d4201abf8401ab6e5b47dfc229922c8fd0ab46aef652"
       },
       "operation_resources": {
         "python": {

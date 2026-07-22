@@ -2966,12 +2966,9 @@ def test_planning_front_door_new_plan_binds_explicit_active_lane(tmp_path: Path,
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
 
     blocked_reconcile = payload["lane_current_slice_reconciliation"]
-    assert blocked_reconcile["status"] == "blocked"
-    assert blocked_reconcile["reason_code"] == "missing-restore-source"
-    assert blocked_reconcile["relation_identity"] == "lane:lane-alpha:current_slice:lane-alpha-slice"
-    assert blocked_reconcile["owner_surface"] == ".agentic-workspace/planning/lanes/lane-alpha.lane.json"
-    assert blocked_reconcile["subject_id"] == "lane-alpha-slice"
-    assert blocked_reconcile["transition"] == "restore"
+    assert blocked_reconcile["status"] == "human-selection-required"
+    assert blocked_reconcile["reason_code"] == "human-owner-selection-required"
+    assert blocked_reconcile["decision"] == "no-write"
     assert state["roadmap"]["lanes"][0].get("execplan", "") == ""
     lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/lane-alpha.lane.json").read_text(encoding="utf-8"))
     assert lane["status"] != "active"
@@ -2995,23 +2992,75 @@ def test_planning_front_door_new_plan_binds_explicit_active_lane(tmp_path: Path,
         == 0
     )
     capsys.readouterr()
+    lane["status"] = "active"
+    lane["current_slice"] = "lane-alpha-slice"
+    lane["slice_sequence"] = [
+        {
+            "id": "lane-alpha-slice",
+            "title": "Lane Alpha Slice",
+            "status": "active",
+            "execplan_ref": "",
+            "depends_on": [],
+            "purpose_for_lane": "Malformed existing relation repaired by guarded reconciliation.",
+        }
+    ]
+    (tmp_path / ".agentic-workspace/planning/lanes/lane-alpha.lane.json").write_text(json.dumps(lane, indent=2) + "\n", encoding="utf-8")
 
-    assert cli.main(recovery_args[planning_index:]) == 0
+    preview_args = [
+        "planning",
+        "reconcile",
+        "--lane",
+        "lane-alpha",
+        "--transition",
+        "relink",
+        "--expected-execplan",
+        ".agentic-workspace/planning/execplans/lane-alpha-slice.plan.json",
+        "--target",
+        str(tmp_path),
+        "--format",
+        "json",
+    ]
+    assert cli.main(preview_args) == 0
+    preview_payload = json.loads(capsys.readouterr().out)
+    preview_reconcile = preview_payload["lane_current_slice_reconciliation"]
+    assert preview_reconcile["status"] == "preview"
+    apply_args = [
+        *preview_args,
+        "--apply-lane-current-slice-reconcile",
+        "--owner-surface",
+        preview_reconcile["owner_surface"],
+        "--relation-identity",
+        preview_reconcile["relation_identity"],
+        "--subject",
+        preview_reconcile["subject_id"],
+        "--expect-lane-revision",
+        preview_reconcile["current_lane_revision"],
+        "--expect-planning-revision",
+        preview_reconcile["current_planning_revision"],
+    ]
+    assert cli.main(apply_args) == 0
     payload = json.loads(capsys.readouterr().out)
     restored_reconcile = payload["lane_current_slice_reconciliation"]
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
 
     assert restored_reconcile["status"] == "applied"
-    assert restored_reconcile["transition"] == "restore"
+    assert restored_reconcile["transition"] == "relink"
     assert restored_reconcile["expected_lane_revision"]
+    assert restored_reconcile["receipt"]["planning_revision_before"] == preview_reconcile["current_planning_revision"]
+    assert restored_reconcile["receipt"]["changed_fields"]["lane"] == ["slice_sequence"]
     assert any(
-        "attached execplan 'lane-alpha-slice' to active lane 'lane-alpha'" in action["detail"] for action in restored_reconcile["actions"]
+        "relink lane current-slice relation 'lane-alpha-slice' on lane 'lane-alpha'" in action["detail"]
+        for action in restored_reconcile["actions"]
     )
     assert state["roadmap"]["lanes"][0]["execplan"] == ".agentic-workspace/planning/execplans/lane-alpha-slice.plan.json"
     lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/lane-alpha.lane.json").read_text(encoding="utf-8"))
     assert lane["status"] == "active"
     assert lane["current_slice"] == "lane-alpha-slice"
     assert lane["slice_sequence"][0]["execplan_ref"] == state["roadmap"]["lanes"][0]["execplan"]
+    assert cli.main(apply_args) == 0
+    replay = json.loads(capsys.readouterr().out)["lane_current_slice_reconciliation"]
+    assert replay["status"] == "already-applied"
+    assert replay["reason_code"] == "idempotent-replay"
 
     assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
     summary = json.loads(capsys.readouterr().out)
@@ -5248,6 +5297,12 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
                 "id": "issue-2281",
                 "lifecycle": "live",
                 "phase": "implementation",
+                "assignment_target_identity_ref": "assignment-target:issue-2281",
+                "assignment_revision": "assignment-rev-1",
+                "evaluation_result_identity": "evaluation-result:issue-2281:passed",
+                "proof_obligation_revision": "proof-obligation-rev-1",
+                "mutation_baseline_id": "mutation-baseline-1",
+                "integration_revision": "integration-rev-1",
                 "relationships": {"selection": {"state": "explicit-residual", "admission": "explicit"}},
                 "references": [{"kind": "issue", "target": "#2281"}],
             }
@@ -5316,7 +5371,20 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
     )
     _write(
         tmp_path / selected_ref,
-        json.dumps({"kind": "planning-execplan/v1", "id": "issue-2290", "lifecycle": "live", "phase": "implementation"}),
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2290",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "assignment_target_identity_ref": "assignment-target:issue-2290",
+                "assignment_revision": "assignment-rev-1",
+                "evaluation_result_identity": "evaluation-result:issue-2290:passed",
+                "proof_obligation_revision": "proof-obligation-rev-1",
+                "mutation_baseline_id": "mutation-baseline-1",
+                "integration_revision": "integration-rev-1",
+            }
+        ),
     )
     assert planning_revision(tmp_path)["revision_id"] != "stale-revision"
     _write(
@@ -5534,7 +5602,60 @@ execplans = [{ id = "issue-2290", path = ".agentic-workspace/planning/execplans/
     assert reference_identity["proof_obligation_revision"] == "proof-obligation-rev-1"
     assert reference_identity["mutation_baseline_id"] == "mutation-baseline-1"
     assert reference_identity["integration_revision"] == "integration-rev-1"
-    assert reference_identity["identity_completeness"] == "partial"
+    assert reference_identity["identity_completeness"] == "complete"
+    assert reference_identity["missing_required_fields"] == []
+
+
+def test_start_route_rejects_active_execplan_missing_required_authority_identity(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    selected_ref = ".agentic-workspace/planning/execplans/issue-2290.plan.json"
+    _write(
+        tmp_path / ".agentic-workspace/planning/state.toml",
+        """schema_version = 1
+
+[todo]
+active_items = []
+
+[active]
+execplans = [{ id = "issue-2290", path = ".agentic-workspace/planning/execplans/issue-2290.plan.json" }]
+""",
+    )
+    _write(
+        tmp_path / selected_ref,
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2290",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "revision": "owner-rev-1",
+                "assignment_target_identity_ref": "assignment-target:issue-2290",
+            }
+        ),
+    )
+
+    assert (
+        cli.main(
+            [
+                "start",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "Continue #2290",
+                "--select",
+                "planning_safety_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
+    assert route["selected_owner"] == ""
+    rejected = route["owner_admission"]["rejected_candidates"][0]
+    assert rejected["reason"] == "required-authority-identity-missing"
+    assert "assignment_revision" in rejected["missing_required_fields"]
 
 
 def test_start_route_replays_stale_2290_local_selection_without_claim_constraints(tmp_path: Path, capsys) -> None:

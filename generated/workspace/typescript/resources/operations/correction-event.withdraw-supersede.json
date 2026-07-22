@@ -14,7 +14,7 @@
   },
   "guards": [
     "Generated operation boundary resolves target subjects from workspace config by default.",
-    "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+    "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
     "Agent self-observation is preserved as low-authority non-routing evidence.",
     "Correction storage is local-only and has no checked-in repo meaning."
   ],
@@ -36,12 +36,7 @@
       "source": "cli-option"
     },
     {
-      "name": "subjects_json",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
-      "name": "trusted_authority_receipt_json",
+      "name": "trusted_authority_receipt_ref",
       "required": false,
       "source": "cli-option"
     },
