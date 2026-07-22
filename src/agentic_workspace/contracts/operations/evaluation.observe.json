@@ -45,6 +45,21 @@
       "required": false
     },
     {
+      "name": "context",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "finding",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "recommended_action",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false
@@ -99,6 +114,8 @@
   "guards": [
     "Observation criterion must exist in the registered definition.",
     "Terminal evaluations reject additional observations.",
+    "Observation context must be current and revalidated against live assignment, mutation baseline, and AW proof authority.",
+    "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
     "External evidence is referenced, not copied, unless separately promoted."
   ],
   "proof": [

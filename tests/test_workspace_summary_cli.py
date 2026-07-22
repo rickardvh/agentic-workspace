@@ -288,7 +288,7 @@ def test_closeout_report_rejects_stale_mutation_baseline(tmp_path: Path) -> None
         "baseline_id": "expected",
         "head": "HEAD_A",
         "scope": {"allowed_paths": ["src"]},
-        "assignment": {"target_identity_ref": "target/planner"},
+        "assignment": {"target_identity_ref": "target/planner", "assignment_revision": "assignment-rev-1"},
         "observed_state": {"entries": []},
     }
     current = {
@@ -296,7 +296,7 @@ def test_closeout_report_rejects_stale_mutation_baseline(tmp_path: Path) -> None
         "baseline_id": "current",
         "head": "HEAD_B",
         "scope": {"allowed_paths": ["src"]},
-        "assignment": {"target_identity_ref": "target/planner"},
+        "assignment": {"target_identity_ref": "target/planner", "assignment_revision": "assignment-rev-1"},
         "observed_state": {"entries": []},
     }
     report = _closeout_report_with_installed_state(
@@ -316,6 +316,21 @@ def test_closeout_report_rejects_stale_mutation_baseline(tmp_path: Path) -> None
     remaining = {item["id"]: item for item in report["closeout_ready"]["remaining_actions"]}
     assert "mutation_baseline_revalidation" in report["completion_gate"]["claim_authorization"]["blocked_claim_classes"]
     assert "claim_authorization" in remaining
+
+
+def test_closeout_report_rejects_missing_mutation_baseline(tmp_path: Path) -> None:
+    report = _closeout_report_with_installed_state(
+        tmp_path,
+        changed_surfaces="src/agentic_workspace/workspace_runtime_core.py",
+        requested_outcome="Close after mutation baseline revalidation.",
+        closeout_trust={"allowed_paths": ["src"]},
+    )
+
+    revalidation = report["validation"]["mutation_baseline_revalidation"]
+    assert revalidation["status"] == "rejected"
+    assert revalidation["boundary_id"] == "closeout"
+    assert revalidation["failures"][0]["reason"] == "mutation-baseline-missing"
+    assert "mutation_baseline_revalidation" in report["completion_gate"]["claim_authorization"]["blocked_claim_classes"]
 
 
 def test_closeout_ready_phase_answer_surfaces_unsafe_closure_actions() -> None:

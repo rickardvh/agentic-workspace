@@ -94,6 +94,7 @@ def mutation_baseline_payload(
         "scope.allowed_paths",
         "observed_state.entries",
         "assignment.target_identity_ref",
+        "assignment.assignment_revision",
     ]
     fail_closed_reasons = [
         "baseline-head-changed",
@@ -102,6 +103,7 @@ def mutation_baseline_payload(
         "dirty-scope-not-accounted",
         "renamed-managed-path",
         "assignment-target-mismatch",
+        "assignment-revision-mismatch",
         "scope-expanded",
     ]
     return {
@@ -149,6 +151,7 @@ def mutation_baseline_payload(
                 "untracked-managed-state": "admit, move, or remove managed local state before claiming closure",
                 "renamed-managed-path": "treat rename as scope expansion unless the changed-path owner includes both sides",
                 "assignment-target-mismatch": "recompute assignment and handoff for the current target identity",
+                "assignment-revision-mismatch": "recompute assignment and handoff for the current assignment revision",
                 "scope-expanded": "rerun implement with the widened changed-path scope or ask for authority",
             },
         },
@@ -170,6 +173,11 @@ def mutation_baseline_payload(
                 {
                     "id": "destructive-mutation",
                     "read_before": "git rev-parse HEAD && " + revalidation_command,
+                    "reject_on": fail_closed_reasons,
+                },
+                {
+                    "id": "proof-admission",
+                    "read_before": revalidation_command,
                     "reject_on": fail_closed_reasons,
                 },
                 {
@@ -252,11 +260,19 @@ def compare_mutation_baseline(
     current_assignment = current.get("assignment", {}) if isinstance(current.get("assignment"), dict) else {}
     expected_target = assignment_target_identity_ref or expected_assignment.get("target_identity_ref")
     current_target = current_assignment.get("target_identity_ref")
+    expected_assignment_revision = expected_assignment.get("assignment_revision")
+    current_assignment_revision = current_assignment.get("assignment_revision")
     if expected_target and current_target and expected_target != current_target:
         reject(
             "assignment-target-mismatch",
             "assignment.target_identity_ref",
             "Recompute assignment and handoff for the current target identity.",
+        )
+    if expected_assignment_revision and current_assignment_revision and expected_assignment_revision != current_assignment_revision:
+        reject(
+            "assignment-revision-mismatch",
+            "assignment.assignment_revision",
+            "Recompute assignment and handoff for the current assignment revision.",
         )
     admitted = not failures
     return {
@@ -282,19 +298,33 @@ def admit_mutation_boundary(
 ) -> dict[str, Any]:
     boundary = boundary_id.strip() or "unknown"
     if not isinstance(expected, dict) or not isinstance(current, dict) or not expected or not current:
+        missing = []
+        if not isinstance(expected, dict) or not expected:
+            missing.append("expected_mutation_baseline")
+        if not isinstance(current, dict) or not current:
+            missing.append("current_mutation_baseline")
         return {
             "kind": "agentic-workspace/mutation-boundary-admission/v1",
             "boundary_id": boundary,
-            "status": "not-provided",
+            "status": "rejected",
             "admitted": False,
             "reason": "mutation baseline pair was not supplied to this boundary",
+            "failures": [
+                {
+                    "reason": "mutation-baseline-missing",
+                    "field": ",".join(missing) or "mutation_baseline",
+                    "repair": "Re-read the live repository baseline and compare it to the stored expected baseline before this boundary.",
+                }
+            ],
+            "repair": "Re-read the live repository baseline and compare it to the stored expected baseline before this boundary.",
             "required_for": [
                 "returned-worker-admission",
                 "integration",
                 "destructive-mutation",
+                "proof-admission",
                 "closeout",
             ],
-            "rule": "Mutation boundaries fail closed only when a caller supplies the expected and current baseline pair for comparison.",
+            "rule": "Mutation boundaries fail closed: missing expected or current baselines are typed rejections at return, integration, destructive mutation, proof, and closeout boundaries.",
         }
     revalidation = compare_mutation_baseline(
         expected=expected,

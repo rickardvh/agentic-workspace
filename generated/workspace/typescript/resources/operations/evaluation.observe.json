@@ -15,6 +15,8 @@
   "guards": [
     "Observation criterion must exist in the registered definition.",
     "Terminal evaluations reject additional observations.",
+    "Observation context must be current and revalidated against live assignment, mutation baseline, and AW proof authority.",
+    "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
     "External evidence is referenced, not copied, unless separately promoted."
   ],
   "id": "evaluation.observe",
@@ -51,6 +53,21 @@
     },
     {
       "name": "burden",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "context",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "finding",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "recommended_action",
       "required": false,
       "source": "cli-option"
     },
