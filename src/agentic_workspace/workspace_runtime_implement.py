@@ -79,6 +79,7 @@ from agentic_workspace.workspace_runtime_core import (
     _read_changed_surface_text,
     _read_task_text_from_file,
     _record_decision_point_confirmation,
+    _record_trusted_assignment_outcome_from_ordinary_boundary,
     _replacement_or_removal_intent,
     _requested_outcome_present,
     _requirement_grounding_payload,
@@ -244,6 +245,32 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         )
         if transition.get("status") not in {"skipped", ""}:
             payload["review_stack_transition"] = transition
+            payload["calibration_admissions"] = [
+                _record_trusted_assignment_outcome_from_ordinary_boundary(
+                    target_root=target_root,
+                    producer_class="human-review",
+                    outcome="failed",
+                    source_payload={"kind": "review-stack-transition", **transition},
+                    idempotency_key=(
+                        f"human-review:review-stack:{transition.get('pr_number', '')}:{transition.get('path', '')}:changes-requested"
+                    ),
+                    handoff_sufficiency="insufficient",
+                    review_burden="high",
+                    escalation_required=True,
+                ),
+                _record_trusted_assignment_outcome_from_ordinary_boundary(
+                    target_root=target_root,
+                    producer_class="retry-outcome",
+                    outcome="success",
+                    source_payload={"kind": "review-stack-transition", **transition},
+                    idempotency_key=(
+                        f"retry-outcome:review-stack:{transition.get('pr_number', '')}:{transition.get('path', '')}:correction-executed"
+                    ),
+                    handoff_sufficiency="sufficient",
+                    review_burden="normal",
+                    escalation_required=False,
+                ),
+            ]
     _emit_payload(payload=payload, format_name=args.format)
     return 0
 
