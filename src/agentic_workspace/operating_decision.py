@@ -30,12 +30,23 @@ ORDINARY_DECISION_CONSUMERS = [
     "summary",
 ]
 
+ORDINARY_DECISION_CONSUMER_REQUIREMENTS = {
+    "autopilot": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "autopilot-executor"],
+    "closeout": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "terminal-outcome"],
+    "implement": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "skills", "target-guidance"],
+    "next": ["planning", "assignment", "skills", "target-guidance"],
+    "proof": ["planning", "proof", "mutation-baseline", "evaluation"],
+    "start": ["system-intent", "planning", "memory", "skills", "target-guidance"],
+    "status": ["planning", "assignment", "proof", "evaluation", "terminal-outcome"],
+    "summary": ["planning", "memory", "terminal-outcome"],
+}
+
 CONTEXT_AUTHORITY_REGISTRY = [
     {
         "surface": "system-intent",
         "owner": "workspace-system-intent",
         "authority_class": "canonical",
-        "consumers": ["startup", "implement", "proof", "report", "status", "closeout"],
+        "consumers": ["start", "startup", "implement", "proof", "report", "status", "closeout"],
         "activation": "durable shaping input, not active task state",
         "editable_by": "system-intent sync and explicit repo edits",
         "stale_when": "mirror revision differs from source declaration",
@@ -47,7 +58,7 @@ CONTEXT_AUTHORITY_REGISTRY = [
         "surface": "planning",
         "owner": "planning package",
         "authority_class": "canonical",
-        "consumers": ["start", "summary", "next", "implement", "status", "closeout"],
+        "consumers": ["start", "summary", "next", "implement", "proof", "autopilot", "status", "closeout"],
         "activation": "active TODO item, selected owner, or current lane slice",
         "editable_by": "planning operations",
         "stale_when": "planning revision or selected owner revision changes",
@@ -59,7 +70,7 @@ CONTEXT_AUTHORITY_REGISTRY = [
         "surface": "memory",
         "owner": "memory package",
         "authority_class": "historical/evidence",
-        "consumers": ["start", "implement", "proof", "report"],
+        "consumers": ["start", "summary", "implement", "proof", "report"],
         "activation": "route-selected by task/path/stage",
         "editable_by": "memory operations",
         "stale_when": "manifest route no longer selects or finding is superseded",
@@ -71,7 +82,7 @@ CONTEXT_AUTHORITY_REGISTRY = [
         "surface": "assignment",
         "owner": "workspace assignment gate",
         "authority_class": "hard-gate",
-        "consumers": ["implement", "next", "autopilot", "closeout"],
+        "consumers": ["implement", "next", "autopilot", "closeout", "status"],
         "activation": "selected target, context, allowed effects, and transport policy",
         "editable_by": "target evidence and assignment policy operations",
         "stale_when": "target identity, assignment revision, or transport policy changes",
@@ -83,7 +94,7 @@ CONTEXT_AUTHORITY_REGISTRY = [
         "surface": "evaluation",
         "owner": "evaluation runtime",
         "authority_class": "canonical",
-        "consumers": ["status", "proof", "operating-decision", "closeout"],
+        "consumers": ["status", "proof", "implement", "autopilot", "operating-decision", "closeout"],
         "activation": "fresh bound result for the current definition revision",
         "editable_by": "evaluation operations",
         "stale_when": "definition revision or bound result identity changes",
@@ -95,7 +106,7 @@ CONTEXT_AUTHORITY_REGISTRY = [
         "surface": "proof",
         "owner": "verification and proof runtime",
         "authority_class": "canonical",
-        "consumers": ["proof", "implement", "status", "closeout", "operating-decision"],
+        "consumers": ["proof", "implement", "status", "autopilot", "closeout", "operating-decision"],
         "activation": "selected proof subject for current changed paths",
         "editable_by": "proof receipt admission and verification operations",
         "stale_when": "proof subject, selected command, or changed-path fingerprint changes",
@@ -107,7 +118,7 @@ CONTEXT_AUTHORITY_REGISTRY = [
         "surface": "mutation-baseline",
         "owner": "authority envelope",
         "authority_class": "hard-gate",
-        "consumers": ["implement", "autopilot", "closeout"],
+        "consumers": ["implement", "autopilot", "proof", "closeout"],
         "activation": "current head/scope/target baseline before mutation or admission",
         "editable_by": "authority envelope resolution",
         "stale_when": "head, scope, target, or managed state changes",
@@ -126,6 +137,42 @@ CONTEXT_AUTHORITY_REGISTRY = [
         "proof_route": "autopilot executor-binding tests",
         "disposition": "retain as executor authority",
         "revision_fields": ["binding_fingerprint", "availability", "validity"],
+    },
+    {
+        "surface": "skills",
+        "owner": "workspace skill registry",
+        "authority_class": "canonical",
+        "consumers": ["start", "next", "implement"],
+        "activation": "task-routed skill viability and dependency checks",
+        "editable_by": "skill registry and installed skill metadata",
+        "stale_when": "skill registry, dependency status, or routed task shape changes",
+        "proof_route": "skill registry and workspace startup tests",
+        "disposition": "retain as routed operating guidance",
+        "revision_fields": ["skill_id", "registry_revision", "dependency_status"],
+    },
+    {
+        "surface": "target-guidance",
+        "owner": "target guidance runtime",
+        "authority_class": "canonical",
+        "consumers": ["start", "next", "implement"],
+        "activation": "target identity, guidance overlay, and execution posture selection",
+        "editable_by": "target evidence and guidance identity operations",
+        "stale_when": "target identity, guidance overlay, or execution posture changes",
+        "proof_route": "target guidance identity and assignment tests",
+        "disposition": "retain as target-specific operating context",
+        "revision_fields": ["target_identity_ref", "guidance_revision", "execution_posture_revision"],
+    },
+    {
+        "surface": "terminal-outcome",
+        "owner": "final-response admission runtime",
+        "authority_class": "canonical",
+        "consumers": ["summary", "status", "closeout"],
+        "activation": "terminal outcome contract, custody, and final-response admission state",
+        "editable_by": "final-response admission and continuation operations",
+        "stale_when": "terminal outcome, custody, or continuation state changes",
+        "proof_route": "final-response and autopilot continuation tests",
+        "disposition": "retain as final-claim and continuation authority",
+        "revision_fields": ["terminal_state", "custody_owner", "continuation_revision"],
     },
     {
         "surface": "generated-references",
@@ -190,9 +237,15 @@ def context_authority_coverage(
     *,
     declarations: list[dict[str, Any]] | None = None,
     observed_consumers: list[str] | None = None,
+    consumer_requirements: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     registry = _context_authority_registry_items(declarations)
     expected_consumers = sorted({str(item).strip() for item in (observed_consumers or ORDINARY_DECISION_CONSUMERS) if str(item).strip()})
+    requirements = {
+        str(consumer): [str(surface) for surface in surfaces]
+        for consumer, surfaces in (consumer_requirements or ORDINARY_DECISION_CONSUMER_REQUIREMENTS).items()
+        if str(consumer).strip()
+    }
     consumer_to_surfaces: dict[str, list[str]] = {consumer: [] for consumer in expected_consumers}
     missing_owner_surfaces: list[str] = []
     duplicate_surfaces: list[str] = []
@@ -220,6 +273,11 @@ def context_authority_coverage(
         owner for owner, owner_surfaces in owner_to_canonical_surfaces.items() if owner and len(owner_surfaces) > 1
     )
     uncovered_consumers = sorted(consumer for consumer, consumer_surfaces in consumer_to_surfaces.items() if not consumer_surfaces)
+    missing_required_sources = {
+        consumer: sorted(set(requirements.get(consumer, [])) - set(consumer_to_surfaces.get(consumer, [])))
+        for consumer in expected_consumers
+        if set(requirements.get(consumer, [])) - set(consumer_to_surfaces.get(consumer, []))
+    }
     duplicate_consumer_authorities = sorted(
         consumer
         for consumer, consumer_surfaces in consumer_to_surfaces.items()
@@ -233,7 +291,7 @@ def context_authority_coverage(
         > 4
     )
     status = "measured"
-    if uncovered_consumers or missing_owner_surfaces or duplicate_surfaces or duplicate_canonical_owners:
+    if uncovered_consumers or missing_required_sources or missing_owner_surfaces or duplicate_surfaces or duplicate_canonical_owners:
         status = "coverage-gap"
     return {
         "kind": "agentic-workspace/context-authority-coverage/v1",
@@ -243,6 +301,8 @@ def context_authority_coverage(
         "surfaces": surfaces,
         "ordinary_consumers": expected_consumers,
         "consumer_to_surfaces": consumer_to_surfaces,
+        "consumer_requirements": {consumer: requirements.get(consumer, []) for consumer in expected_consumers},
+        "missing_required_sources": missing_required_sources,
         "uncovered_consumers": uncovered_consumers,
         "missing_owner_surfaces": missing_owner_surfaces,
         "duplicate_surfaces": sorted(set(duplicate_surfaces)),

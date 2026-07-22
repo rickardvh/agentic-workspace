@@ -164,6 +164,34 @@ def test_live_authority_revision_drift_is_rejected_before_execution() -> None:
     assert "refresh the operating decision" in decision["external_blocker"]["repair"]
 
 
+def test_actionability_rejects_typed_action_against_live_revision_drift() -> None:
+    invocation = operation_invocation(
+        operation_id="proof.report",
+        arguments={"target": ".", "format": "json"},
+        owner_context_revision={"owner_id": "owner-a", "assignment_context_key": "ctx-a"},
+        mutation_boundary={"baseline_id": "baseline-a"},
+        proof_requirements=[{"command": "agentic-workspace proof --target . --format json"}],
+    )
+
+    actionability = derive_actionability(
+        command_name="implement",
+        health="attention-needed",
+        warnings=[],
+        repair_actions=[{"id": "proof-missing"}],
+        manual_review_actions=[],
+        proposed_next_action={
+            "action": "run-proof",
+            "operation_invocation": invocation,
+            "current_input_revision": "sha256:live-authority-changed",
+        },
+    )
+
+    assert actionability["progress_check"]["result"] == "rejected-stale-action"
+    assert actionability["progress_check"]["live_revision_checked"] is True
+    assert actionability["progress_check"]["live_input_revision"] == "sha256:live-authority-changed"
+    assert actionability["next_action"]["action"] == "required-action-unavailable"
+
+
 def test_missing_expected_revision_is_rejected_before_execution() -> None:
     invocation = operation_invocation(
         operation_id="proof.report",
@@ -211,7 +239,7 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
                 "surface": "system-intent",
                 "admitted_state": {"requirement_status": "required", "population_status": "below-minimum"},
             },
-            {"surface": "skills", "admitted_state": {"requirement_status": "required", "population_status": "present"}},
+            {"surface": "undiscovered-surface", "admitted_state": {"requirement_status": "required", "population_status": "present"}},
             {"surface": "proof", "admitted_state": {"freshness_status": "inference-fallback"}},
         ],
     )
@@ -225,6 +253,17 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
         "consumer-without-source",
         "inference-fallback",
     ]
+
+
+def test_context_authority_coverage_fails_when_required_consumer_source_is_missing() -> None:
+    coverage = context_authority_coverage(
+        declarations=[item for item in context_authority_declarations() if item["surface"] != "proof"],
+        consumer_requirements={"proof": ["planning", "proof"]},
+        observed_consumers=["proof"],
+    )
+
+    assert coverage["status"] == "coverage-gap"
+    assert coverage["missing_required_sources"] == {"proof": ["proof"]}
 
 
 def test_blocking_context_gap_prevents_primary_action() -> None:

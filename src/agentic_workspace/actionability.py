@@ -7,6 +7,10 @@ import json
 from typing import Any
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
 def decision_input_revision(
     *,
     operation_id: str = "",
@@ -162,6 +166,7 @@ def derive_actionability(
     manual_review_actions: list[Any],
     proposed_next_action: dict[str, Any] | None,
     claim_limits: list[str] | None = None,
+    current_input_revision: str = "",
 ) -> dict[str, Any]:
     """Derive one coherent action decision and reject ordinary same-operation loops."""
 
@@ -233,9 +238,17 @@ def derive_actionability(
     proposed_input_digest = str(proposed.get("input_digest") or "").strip()
     same_state = proposed_input_digest == input_digest if proposed_input_digest else not expected_transition
     expected_input_revision = str(invocation.get("expected_input_revision") or "").strip()
-    current_input_revision = invocation_decision_input_revision(invocation) if invocation else ""
+    embedded_input_revision = invocation_decision_input_revision(invocation) if invocation else ""
+    live_input_revision = str(
+        current_input_revision
+        or proposed.get("current_input_revision")
+        or invocation.get("current_input_revision")
+        or _as_dict(invocation.get("live_authority_revision")).get("canonical_decision_input_revision")
+        or ""
+    ).strip()
+    compared_input_revision = live_input_revision or embedded_input_revision
     stale_action_rejected = bool(
-        invocation.get("stale_action_rejection") and (not expected_input_revision or expected_input_revision != current_input_revision)
+        invocation.get("stale_action_rejection") and (not expected_input_revision or expected_input_revision != compared_input_revision)
     )
     self_loop_rejected = same_operation and same_state and not external_condition
     if not action_required:
@@ -277,7 +290,10 @@ def derive_actionability(
         "next_action": next_action,
         "progress_check": {
             "input_digest": input_digest,
-            "current_input_revision": current_input_revision,
+            "current_input_revision": compared_input_revision,
+            "embedded_input_revision": embedded_input_revision,
+            "live_input_revision": live_input_revision,
+            "live_revision_checked": bool(live_input_revision),
             "proposed_operation": proposed_operation,
             "operation_invocation": invocation,
             "command_identity_authority": "typed-operation-invocation" if invocation else "absent-display-command-only",
