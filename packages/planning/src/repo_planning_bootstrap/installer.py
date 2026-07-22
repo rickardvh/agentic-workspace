@@ -3068,6 +3068,7 @@ def planning_reconcile(
             expected_lane_revision=expected_lane_revision,
             transition=transition,
             expected_execplan=expected_execplan,
+            expected_planning_revision=expected_planning_revision,
         )
         return payload
     if lane or apply_lane_reconcile:
@@ -3419,6 +3420,7 @@ def _reconcile_lane_current_slice(
     expected_lane_revision: str = "",
     transition: str = "",
     expected_execplan: str = "",
+    expected_planning_revision: str = "",
 ) -> dict[str, Any]:
     lane_path = _lane_record_path(target_root, lane_id)
     lane_record = _load_lane_record(lane_path)
@@ -3432,7 +3434,11 @@ def _reconcile_lane_current_slice(
             "dry_run": dry_run,
         }
     actual_owner_surface = _planning_surface_relative(target_root, lane_path)
-    current_slice = str(subject or lane_record.get("current_slice") or "").strip() or f"{lane_id}-slice"
+    current_slice = str(lane_record.get("current_slice") or "").strip()
+    requested_subject = subject.strip()
+    subject_id = requested_subject or current_slice
+    if not subject_id:
+        subject_id = f"{lane_id}-slice"
     actual_relation_identity = f"lane:{lane_id}:current_slice:{current_slice}"
     requested_transition = (transition or "restore").strip()
     if requested_transition not in {"restore", "relink", "supersede", "cancel", "human"}:
@@ -3443,50 +3449,143 @@ def _reconcile_lane_current_slice(
             "lane": lane_id,
             "relation_identity": actual_relation_identity,
             "owner_surface": actual_owner_surface,
-            "subject_id": current_slice,
+            "subject_id": subject_id,
             "requested_transition": requested_transition,
             "allowed_transitions": ["restore", "relink", "supersede", "cancel", "human"],
             "applied": False,
             "dry_run": dry_run,
         }
-    if requested_transition != "restore":
+    planning_revision_before = str(planning_revision(target_root).get("revision_id") or "")
+    requested_owner_surface = owner_surface.strip()
+    requested_relation_identity = relation_identity.strip()
+    requested_expected_lane_revision = expected_lane_revision.strip()
+    requested_expected_planning_revision = expected_planning_revision.strip()
+    requested_expected_execplan = expected_execplan.strip()
+    request = {
+        "kind": "planning-lane-current-slice-reconciliation-request/v1",
+        "lane": lane_id,
+        "owner_surface": requested_owner_surface,
+        "relation_identity": requested_relation_identity,
+        "subject": requested_subject,
+        "expected_lane_revision": requested_expected_lane_revision,
+        "expected_planning_revision": requested_expected_planning_revision,
+        "transition": requested_transition,
+        "expected_execplan": requested_expected_execplan,
+    }
+    idempotency_key = hashlib.sha256(json.dumps(request, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()[:20]
+    receipt_path = target_root / PLANNING_RECONCILIATION_RECEIPT_ROOT / f"lane-current-slice-{idempotency_key}.json"
+    if apply and receipt_path.is_file():
+        try:
+            receipt = json.loads(receipt_path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            receipt = {}
+        if isinstance(receipt, dict) and receipt.get("request") == request:
+            return {
+                "kind": "planning-lane-current-slice-reconciliation/v1",
+                "status": "already-applied",
+                "reason_code": "idempotent-replay",
+                "lane": lane_id,
+                "relation_identity": requested_relation_identity,
+                "owner_surface": requested_owner_surface,
+                "subject_id": requested_subject,
+                "transition": requested_transition,
+                "applied": False,
+                "dry_run": dry_run,
+                "receipt": receipt,
+                "receipt_path": _planning_surface_relative(target_root, receipt_path),
+            }
         return {
             "kind": "planning-lane-current-slice-reconciliation/v1",
             "status": "blocked",
+            "reason_code": "idempotency-receipt-mismatch",
+            "lane": lane_id,
+            "idempotency_key": idempotency_key,
+            "receipt_path": _planning_surface_relative(target_root, receipt_path),
+            "applied": False,
+            "dry_run": dry_run,
+        }
+    if requested_transition == "human":
+        return {
+            "kind": "planning-lane-current-slice-reconciliation/v1",
+            "status": "human-selection-required",
             "reason_code": "human-owner-selection-required",
             "lane": lane_id,
             "relation_identity": actual_relation_identity,
             "owner_surface": actual_owner_surface,
-            "subject_id": current_slice,
+            "subject_id": subject_id,
             "transition": requested_transition,
             "applied": False,
             "dry_run": dry_run,
-            "repair": "choose the new owner/subject explicitly, then rerun with transition restore for that exact source or perform the human decision outside this repair",
+            "decision": "no-write",
+            "repair": "choose the exact owner relation and rerun a guarded restore, relink, supersede, or cancel transaction",
         }
-    if owner_surface.strip() and owner_surface.strip() != actual_owner_surface:
+    if apply:
+        missing_apply_fields = [
+            field
+            for field, value in {
+                "owner_surface": requested_owner_surface,
+                "relation_identity": requested_relation_identity,
+                "subject": requested_subject,
+                "expected_lane_revision": requested_expected_lane_revision,
+                "expected_planning_revision": requested_expected_planning_revision,
+                "transition": transition.strip(),
+            }.items()
+            if not value
+        ]
+        if missing_apply_fields:
+            return {
+                "kind": "planning-lane-current-slice-reconciliation/v1",
+                "status": "blocked",
+                "reason_code": "guarded-apply-fields-required",
+                "lane": lane_id,
+                "missing_fields": missing_apply_fields,
+                "required_fields": [
+                    "owner_surface",
+                    "relation_identity",
+                    "subject",
+                    "expected_lane_revision",
+                    "expected_planning_revision",
+                    "transition",
+                ],
+                "applied": False,
+                "dry_run": dry_run,
+                "preview_required": True,
+            }
+    if requested_owner_surface and requested_owner_surface != actual_owner_surface:
         return {
             "kind": "planning-lane-current-slice-reconciliation/v1",
             "status": "blocked",
             "reason_code": "owner-surface-mismatch",
             "lane": lane_id,
-            "expected_owner_surface": owner_surface.strip(),
+            "expected_owner_surface": requested_owner_surface,
             "actual_owner_surface": actual_owner_surface,
             "applied": False,
             "dry_run": dry_run,
         }
-    if relation_identity.strip() and relation_identity.strip() != actual_relation_identity:
+    if requested_relation_identity and requested_relation_identity != actual_relation_identity:
         return {
             "kind": "planning-lane-current-slice-reconciliation/v1",
             "status": "blocked",
             "reason_code": "relation-identity-mismatch",
             "lane": lane_id,
-            "expected_relation_identity": relation_identity.strip(),
+            "expected_relation_identity": requested_relation_identity,
             "actual_relation_identity": actual_relation_identity,
             "applied": False,
             "dry_run": dry_run,
         }
+    if requested_subject and requested_subject != current_slice:
+        return {
+            "kind": "planning-lane-current-slice-reconciliation/v1",
+            "status": "blocked",
+            "reason_code": "subject-mismatch",
+            "lane": lane_id,
+            "expected_subject": requested_subject,
+            "actual_subject": current_slice,
+            "applied": False,
+            "dry_run": dry_run,
+        }
     current_lane_revision = _record_revision(lane_record)
-    if expected_lane_revision.strip() and expected_lane_revision.strip() != current_lane_revision:
+    if requested_expected_lane_revision and requested_expected_lane_revision != current_lane_revision:
         return {
             "kind": "planning-lane-current-slice-reconciliation/v1",
             "status": "blocked",
@@ -3494,11 +3593,25 @@ def _reconcile_lane_current_slice(
             "lane": lane_id,
             "relation_identity": actual_relation_identity,
             "owner_surface": actual_owner_surface,
-            "expected_lane_revision": expected_lane_revision.strip(),
+            "expected_lane_revision": requested_expected_lane_revision,
             "current_lane_revision": current_lane_revision,
             "applied": False,
             "dry_run": dry_run,
             "repair": "refresh the lane relation before applying a reconciliation transaction",
+        }
+    if requested_expected_planning_revision and requested_expected_planning_revision != planning_revision_before:
+        return {
+            "kind": "planning-lane-current-slice-reconciliation/v1",
+            "status": "blocked",
+            "reason_code": "planning-revision-mismatch",
+            "lane": lane_id,
+            "relation_identity": actual_relation_identity,
+            "owner_surface": actual_owner_surface,
+            "expected_planning_revision": requested_expected_planning_revision,
+            "current_planning_revision": planning_revision_before,
+            "applied": False,
+            "dry_run": dry_run,
+            "repair": "refresh Planning state before applying a reconciliation transaction",
         }
     selected_slice = next(
         (
@@ -3508,14 +3621,58 @@ def _reconcile_lane_current_slice(
         ),
         {},
     )
+    if not isinstance(selected_slice, dict) or not selected_slice:
+        return {
+            "kind": "planning-lane-current-slice-reconciliation/v1",
+            "status": "blocked",
+            "reason_code": "relation-subject-not-found",
+            "lane": lane_id,
+            "relation_identity": actual_relation_identity,
+            "owner_surface": actual_owner_surface,
+            "subject_id": subject_id,
+            "expected_lane_revision": requested_expected_lane_revision,
+            "current_lane_revision": current_lane_revision,
+            "transition": requested_transition,
+            "applied": False,
+            "dry_run": dry_run,
+            "repair": "restore or choose the exact pre-existing slice relation before applying; this transaction will not append inferred slices",
+        }
     execplan_ref = (
         str(selected_slice.get("execplan_ref") or selected_slice.get("execplan") or "").strip() if isinstance(selected_slice, dict) else ""
     )
-    if expected_execplan.strip():
-        execplan_ref = expected_execplan.strip()
-    if not execplan_ref:
-        execplan_ref = (Path(".agentic-workspace") / "planning" / "execplans" / f"{_slugify(current_slice)}.plan.json").as_posix()
-    if not (target_root / execplan_ref).exists():
+    if requested_transition in {"relink", "supersede"} and not requested_expected_execplan:
+        return {
+            "kind": "planning-lane-current-slice-reconciliation/v1",
+            "status": "blocked",
+            "reason_code": "expected-execplan-required",
+            "lane": lane_id,
+            "relation_identity": actual_relation_identity,
+            "owner_surface": actual_owner_surface,
+            "subject_id": subject_id,
+            "transition": requested_transition,
+            "applied": False,
+            "dry_run": dry_run,
+        }
+    if requested_transition == "restore":
+        if requested_expected_execplan and requested_expected_execplan != execplan_ref:
+            return {
+                "kind": "planning-lane-current-slice-reconciliation/v1",
+                "status": "blocked",
+                "reason_code": "restore-source-mismatch",
+                "lane": lane_id,
+                "relation_identity": actual_relation_identity,
+                "owner_surface": actual_owner_surface,
+                "subject_id": subject_id,
+                "expected_execplan": requested_expected_execplan,
+                "current_execplan": execplan_ref,
+                "transition": requested_transition,
+                "applied": False,
+                "dry_run": dry_run,
+            }
+        target_execplan = execplan_ref
+    else:
+        target_execplan = requested_expected_execplan
+    if requested_transition in {"restore", "relink", "supersede"} and (not target_execplan or not (target_root / target_execplan).exists()):
         return {
             "kind": "planning-lane-current-slice-reconciliation/v1",
             "status": "blocked",
@@ -3523,18 +3680,69 @@ def _reconcile_lane_current_slice(
             "lane": lane_id,
             "relation_identity": actual_relation_identity,
             "owner_surface": actual_owner_surface,
-            "subject_id": current_slice,
-            "expected_lane_revision": expected_lane_revision.strip(),
+            "subject_id": subject_id,
+            "expected_lane_revision": requested_expected_lane_revision,
             "current_lane_revision": current_lane_revision,
-            "expected_execplan": execplan_ref,
+            "expected_execplan": target_execplan,
             "transition": requested_transition,
             "applied": False,
             "dry_run": dry_run,
             "repair": "restore the exact execplan, relink explicitly, supersede/cancel the slice, or request human owner selection",
         }
+    source_owner_revision = ""
+    if target_execplan:
+        source_owner_record = _load_execplan_record(target_root / target_execplan)
+        source_owner_revision = _record_revision(source_owner_record) if isinstance(source_owner_record, dict) else ""
+    replacement_slice_id = Path(target_execplan).name.removesuffix(".plan.json") if requested_transition == "supersede" else ""
+    if requested_transition == "supersede":
+        replacement_slice = next(
+            (
+                item
+                for item in lane_record.get("slice_sequence", [])
+                if isinstance(item, dict) and str(item.get("id") or "").strip() == replacement_slice_id
+            ),
+            None,
+        )
+        if not isinstance(replacement_slice, dict) or not replacement_slice:
+            return {
+                "kind": "planning-lane-current-slice-reconciliation/v1",
+                "status": "blocked",
+                "reason_code": "replacement-relation-not-found",
+                "lane": lane_id,
+                "relation_identity": actual_relation_identity,
+                "owner_surface": actual_owner_surface,
+                "subject_id": subject_id,
+                "replacement_subject": replacement_slice_id,
+                "expected_execplan": target_execplan,
+                "transition": requested_transition,
+                "applied": False,
+                "dry_run": dry_run,
+                "repair": "declare the replacement slice relation before superseding; this transaction will not append inferred slices",
+            }
     state = _read_state_from_toml(target_root) or {}
     updated_state = copy.deepcopy(state)
-    attached_lane = _attach_execplan_to_active_lane(updated_state, lane_id=lane_id, execplan_ref=execplan_ref)
+    if requested_transition in {"restore", "relink"}:
+        attached_lane = _attach_execplan_to_active_lane(updated_state, lane_id=lane_id, execplan_ref=target_execplan)
+    else:
+        attached_lane = lane_id
+        roadmap_raw = updated_state.get("roadmap")
+        roadmap = roadmap_raw if isinstance(roadmap_raw, dict) else {}
+        lanes = roadmap.get("lanes")
+        if isinstance(lanes, list):
+            for index, item in enumerate(lanes):
+                if isinstance(item, dict) and str(item.get("id") or "").strip() == lane_id:
+                    lane_item = {str(key): value for key, value in item.items()}
+                    lane_item["execplan"] = "" if requested_transition == "cancel" else target_execplan
+                    lane_item["status"] = "ready" if requested_transition == "cancel" else "active"
+                    lane_item["maturity"] = "ready" if requested_transition == "cancel" else "active"
+                    lanes[index] = lane_item
+                    roadmap["lanes"] = lanes
+                    updated_state["roadmap"] = roadmap
+                    break
+            else:
+                attached_lane = ""
+        else:
+            attached_lane = ""
     if not attached_lane:
         return {
             "kind": "planning-lane-current-slice-reconciliation/v1",
@@ -3543,72 +3751,164 @@ def _reconcile_lane_current_slice(
             "lane": lane_id,
             "relation_identity": actual_relation_identity,
             "owner_surface": ".agentic-workspace/planning/state.toml",
-            "subject_id": current_slice,
-            "expected_lane_revision": expected_lane_revision.strip(),
+            "subject_id": subject_id,
+            "expected_lane_revision": requested_expected_lane_revision,
             "current_lane_revision": current_lane_revision,
-            "expected_execplan": execplan_ref,
+            "expected_execplan": target_execplan,
             "transition": requested_transition,
             "applied": False,
             "dry_run": dry_run,
             "repair": "select the exact lane relation and resolve conflicting roadmap lane state before applying",
         }
     updated_record = copy.deepcopy(lane_record)
-    updated_record["status"] = "active"
-    updated_record["current_slice"] = current_slice
+    updated_record["status"] = "ready" if requested_transition == "cancel" else "active"
+    updated_record["current_slice"] = (
+        "" if requested_transition == "cancel" else replacement_slice_id if requested_transition == "supersede" else current_slice
+    )
     raw_slice_sequence = updated_record.get("slice_sequence")
     slice_sequence: list[Any] = list(raw_slice_sequence) if isinstance(raw_slice_sequence, list) else []
-    found_slice = False
     for item in slice_sequence:
         if isinstance(item, dict) and str(item.get("id") or "").strip() == current_slice:
+            if requested_transition in {"restore", "relink"}:
+                item["status"] = "active"
+                item["execplan_ref"] = target_execplan
+            elif requested_transition == "supersede":
+                item["status"] = "skipped"
+                item["proof"] = item.get("proof") or f"superseded by {target_execplan}"
+                item["residual_after_slice"] = (
+                    item.get("residual_after_slice") or "Residual intent preserved for explicit superseding owner."
+                )
+            elif requested_transition == "cancel":
+                item["status"] = "skipped"
+                item["proof"] = item.get("proof") or "cancelled by explicit planning reconciliation"
+                item["residual_after_slice"] = (
+                    item.get("residual_after_slice") or "Cancelled by explicit lane current-slice reconciliation."
+                )
+        elif requested_transition == "supersede" and isinstance(item, dict) and str(item.get("id") or "").strip() == replacement_slice_id:
             item["status"] = "active"
-            item["execplan_ref"] = execplan_ref
-            found_slice = True
-    if not found_slice:
-        slice_sequence.append(
-            {
-                "id": current_slice,
-                "title": current_slice,
-                "status": "active",
-                "execplan_ref": execplan_ref,
-                "depends_on": [],
-                "purpose_for_lane": "Restored by owner-specific lane reconciliation.",
-            }
-        )
+            item["execplan_ref"] = target_execplan
     updated_record["slice_sequence"] = slice_sequence
+    changed_lane_fields = [key for key in sorted(set(lane_record) | set(updated_record)) if lane_record.get(key) != updated_record.get(key)]
+    changed_state_fields = ["roadmap.lanes"] if state.get("roadmap") != updated_state.get("roadmap") else []
+    before_lane_revision = current_lane_revision
+    after_lane_revision = _record_revision(updated_record)
+    state_lane_before = [
+        item for item in state.get("roadmap", {}).get("lanes", []) if isinstance(state.get("roadmap"), dict) and isinstance(item, dict)
+    ]
+    state_lane_after = [
+        item
+        for item in updated_state.get("roadmap", {}).get("lanes", [])
+        if isinstance(updated_state.get("roadmap"), dict) and isinstance(item, dict)
+    ]
+    preserved_unrelated_lanes = [
+        str(item.get("id") or "").strip()
+        for item in state_lane_before
+        if str(item.get("id") or "").strip() != lane_id
+        and item
+        == next(
+            (
+                after_item
+                for after_item in state_lane_after
+                if isinstance(after_item, dict) and str(after_item.get("id") or "").strip() == str(item.get("id") or "").strip()
+            ),
+            None,
+        )
+    ]
+    receipt = {
+        "kind": "agentic-planning/lane-current-slice-reconciliation-receipt/v1",
+        "idempotency_key": idempotency_key,
+        "request": request,
+        "transition": requested_transition,
+        "owner_surface": actual_owner_surface,
+        "relation_identity": actual_relation_identity,
+        "subject_id": current_slice,
+        "source_owner": target_execplan,
+        "source_owner_revision": source_owner_revision,
+        "lane_revision_before": before_lane_revision,
+        "lane_revision_after": after_lane_revision,
+        "planning_revision_before": planning_revision_before,
+        "planning_revision_after": "",
+        "changed_fields": {"lane": changed_lane_fields, "planning_state": changed_state_fields},
+        "exact_delta": {
+            "lane": {key: {"before": lane_record.get(key), "after": updated_record.get(key)} for key in changed_lane_fields},
+            "planning_state": {
+                "roadmap.lanes": {
+                    "before": state.get("roadmap", {}).get("lanes", []) if isinstance(state.get("roadmap"), dict) else [],
+                    "after": updated_state.get("roadmap", {}).get("lanes", []) if isinstance(updated_state.get("roadmap"), dict) else [],
+                }
+            }
+            if changed_state_fields
+            else {},
+        },
+        "preserved": {
+            "unrelated_owner_rule": "Only the named lane record and its roadmap.lanes entry may change.",
+            "unrelated_roadmap_lanes": preserved_unrelated_lanes,
+            "todo_active_items_preserved": state.get("todo", {}).get("active_items", [])
+            == updated_state.get("todo", {}).get("active_items", [])
+            if isinstance(state.get("todo"), dict) and isinstance(updated_state.get("todo"), dict)
+            else True,
+            "todo_queued_items_preserved": state.get("todo", {}).get("queued_items", [])
+            == updated_state.get("todo", {}).get("queued_items", [])
+            if isinstance(state.get("todo"), dict) and isinstance(updated_state.get("todo"), dict)
+            else True,
+        },
+        "result": "applied" if apply and not dry_run else "preview",
+    }
     if apply and not dry_run:
 
         def write_lane_and_state() -> None:
             _write_lane_record(record_path=lane_path, record=updated_record)
             _write_state_to_toml(target_root, updated_state)
+            receipt["planning_revision_after"] = str(planning_revision(target_root).get("revision_id") or "")
+            receipt_path.parent.mkdir(parents=True, exist_ok=True)
+            receipt_path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8", newline="\n")
 
-        _apply_planning_writes_atomically([lane_path, target_root / PLANNING_STATE_PATH], write_lane_and_state)
+        _apply_planning_writes_atomically([lane_path, target_root / PLANNING_STATE_PATH, receipt_path], write_lane_and_state)
     return {
         "kind": "planning-lane-current-slice-reconciliation/v1",
         "status": "applied" if apply and not dry_run else "preview",
-        "reason_code": "lane-current-slice-restored",
+        "reason_code": f"lane-current-slice-{requested_transition}",
         "lane": lane_id,
         "relation_identity": actual_relation_identity,
         "owner_surface": actual_owner_surface,
-        "subject_id": current_slice,
-        "expected_lane_revision": expected_lane_revision.strip(),
+        "subject_id": subject_id,
+        "expected_lane_revision": requested_expected_lane_revision,
         "current_lane_revision": current_lane_revision,
-        "expected_execplan": execplan_ref,
+        "expected_planning_revision": requested_expected_planning_revision,
+        "current_planning_revision": planning_revision_before,
+        "expected_execplan": target_execplan,
         "transition": requested_transition,
+        "idempotency_key": idempotency_key,
+        "receipt_path": _planning_surface_relative(target_root, receipt_path),
+        "receipt": receipt if apply and not dry_run else {},
         "applied": bool(apply and not dry_run),
         "dry_run": dry_run,
+        "required_apply_fields": [
+            "owner_surface",
+            "relation_identity",
+            "subject",
+            "expected_lane_revision",
+            "expected_planning_revision",
+            "transition",
+        ],
         "actions": [
             {
                 "kind": "updated" if apply and not dry_run else "would update",
                 "path": _planning_surface_relative(target_root, lane_path),
-                "detail": f"attached execplan '{current_slice}' to active lane '{lane_id}'",
+                "detail": f"{requested_transition} lane current-slice relation '{current_slice}' on lane '{lane_id}'",
             },
             {
                 "kind": "updated" if apply and not dry_run else "would update",
                 "path": PLANNING_STATE_PATH.as_posix(),
-                "detail": f"registered execplan '{execplan_ref}' on roadmap lane '{lane_id}'",
+                "detail": f"{requested_transition} roadmap lane '{lane_id}' owner reference",
+            },
+            {
+                "kind": "created" if apply and not dry_run else "would create",
+                "path": _planning_surface_relative(target_root, receipt_path),
+                "detail": "record durable lane current-slice reconciliation receipt",
             },
         ],
-        "preserved": {"unrelated_owner_rule": "Only the named lane record and its roadmap.lanes entry may change."},
+        "preserved": receipt["preserved"],
     }
 
 
@@ -6214,7 +6514,16 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
         if not reason_code:
             continue
         recovery_slice = current_slice or (str(active_slices[0].get("id", "")).strip() if active_slices else f"{lane_id}-slice")
-        repair_route = f"{_workspace_cli_invoke(target_root)} planning report --target . --format json"
+        relation_identity = f"lane:{lane_id}:current_slice:{recovery_slice}"
+        current_lane_revision = _record_revision(lane_record) if isinstance(lane_record, dict) else ""
+        current_planning_revision = str(planning_revision(target_root).get("revision_id") or "")
+        repair_route = (
+            f"{_workspace_cli_invoke(target_root)} planning reconcile --lane {lane_id} "
+            f"--owner-surface {path or (PLANNING_MANAGED_ROOT / 'lanes').as_posix()} "
+            f"--relation-identity {relation_identity} --subject {recovery_slice} "
+            f"--expect-lane-revision {current_lane_revision} --expect-planning-revision {current_planning_revision} "
+            "--transition human --target . --format json"
+        )
         repair_options = [
             {
                 "action": "restore-referenced-owner",
@@ -6257,7 +6566,7 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
                         target_root=target_root,
                         owner_surface=path or (PLANNING_MANAGED_ROOT / "lanes").as_posix(),
                         relation="lane.current_slice",
-                        subject_id=lane_id,
+                        subject_id=recovery_slice,
                         reason_code=reason_code,
                         repair_command=repair_route,
                         repair_options=repair_options,
@@ -6298,8 +6607,17 @@ def _planning_live_reference_repair_contract(
             "owner_surface": owner_surface,
             "relation": relation,
             "subject_id": subject_id,
+            "identity": f"{Path(owner_surface).stem.removesuffix('.lane')}:current_slice:{subject_id}",
             "detected_reason": reason_code,
         },
+        "required_apply_fields": [
+            "owner_surface",
+            "relation_identity",
+            "subject",
+            "expected_lane_revision",
+            "expected_planning_revision",
+            "transition",
+        ],
         "consumer_rule": (
             "Consumers must reject this detected live relation until the named Planning repair command updates the "
             "same owner relation or returns a concrete blocked reason; consumers must not silently select an alternate owner."
@@ -14816,6 +15134,7 @@ def activate_lane_record(
         recovery_owner_surface = _planning_surface_relative(target_root, record_path)
         recovery_relation = f"lane:{slug}:current_slice:{recovery_slice}"
         recovery_lane_revision = _record_revision(record)
+        recovery_planning_revision = str(planning_revision(target_root).get("revision_id") or "")
         result.add(
             "manual review",
             record_path,
@@ -14826,9 +15145,10 @@ def activate_lane_record(
         )
         result.reason_code = "lane-execplan-required"
         result.recovery_command = (
-            f"{_workspace_cli_invoke(target_root)} planning reconcile --lane {slug} --apply-lane-current-slice-reconcile "
+            f"{_workspace_cli_invoke(target_root)} planning reconcile --lane {slug} "
             f"--owner-surface {recovery_owner_surface} --relation-identity {recovery_relation} --subject {recovery_slice} "
-            f"--expect-lane-revision {recovery_lane_revision} --transition restore --expected-execplan {recovery_execplan} "
+            f"--expect-lane-revision {recovery_lane_revision} --expect-planning-revision {recovery_planning_revision} "
+            f"--transition human --expected-execplan {recovery_execplan} "
             "--target . --format json"
         )
         return result
@@ -14847,6 +15167,7 @@ def activate_lane_record(
         recovery_owner_surface = _planning_surface_relative(target_root, record_path)
         recovery_relation = f"lane:{slug}:current_slice:{recovery_slice}"
         recovery_lane_revision = _record_revision(record)
+        recovery_planning_revision = str(planning_revision(target_root).get("revision_id") or "")
         result.add(
             "manual review",
             record_path,
@@ -14857,9 +15178,10 @@ def activate_lane_record(
         )
         result.reason_code = "multiple-active-slices"
         result.recovery_command = (
-            f"{_workspace_cli_invoke(target_root)} planning reconcile --lane {slug} --apply-lane-current-slice-reconcile "
+            f"{_workspace_cli_invoke(target_root)} planning reconcile --lane {slug} "
             f"--owner-surface {recovery_owner_surface} --relation-identity {recovery_relation} --subject {recovery_slice} "
-            f"--expect-lane-revision {recovery_lane_revision} --transition restore --expected-execplan {recovery_execplan} "
+            f"--expect-lane-revision {recovery_lane_revision} --expect-planning-revision {recovery_planning_revision} "
+            f"--transition human --expected-execplan {recovery_execplan} "
             "--target . --format json"
         )
         return result

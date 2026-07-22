@@ -14,6 +14,7 @@ import {
   writeSync,
 } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -1698,22 +1699,74 @@ function assignmentWrite(path, payload) {
   writeFileSync(path, `${text.trimEnd()}\n`, 'utf8');
 }
 
-function assignmentCurrentAuthorities(values, failures) {
-  const readObject = (key) => {
-    const parsed = assignmentParseJson(values[key] ?? values[`${key}_json`], key);
-    if (isObject(parsed) && Object.keys(parsed).length) return parsed;
-    failures.push({ reason: 'missing-current-authority', field: key, recovery: `Prepare/export from the current Planning assignment so ${key} is resolved by AW.` });
+function assignmentReadJsonRef(targetRoot, ref, field, failures) {
+  if (!assignmentText(ref)) {
+    failures.push({ reason: 'missing-current-authority', field, recovery: 'Resolve the current AW-owned authority ref and retry.' });
     return {};
-  };
-  const liveMutationBaseline = assignmentText(values.live_mutation_baseline);
-  if (!liveMutationBaseline) failures.push({ reason: 'missing-current-authority', field: 'live_mutation_baseline', recovery: 'Prepare/export from the current Planning assignment so the live mutation baseline is resolved by AW.' });
+  }
+  try {
+    const payload = readJson(resolveInside(targetRoot, ref));
+    return isObject(payload) ? payload : {};
+  } catch (_error) {
+    failures.push({ reason: 'missing-current-authority', field, recovery: `Create or refresh ${ref} before continuing.` });
+    return {};
+  }
+}
+
+function assignmentPlanningRef(values, assignmentId) {
+  return assignmentText(values.planning_assignment_ref ?? values.assignment_ref) || `.agentic-workspace/planning/assignments/${assignmentFragment(assignmentId)}.assignment.json`;
+}
+
+function assignmentLiveMutationBaseline(targetRoot) {
+  const git = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: targetRoot, encoding: 'utf8' });
+  if (git.status === 0 && assignmentText(git.stdout)) return assignmentText(git.stdout);
+  const baselinePath = resolveInside(targetRoot, '.agentic-workspace/planning/mutation-baseline.json');
+  if (!existsSync(baselinePath)) return '';
+  try {
+    const payload = readJson(baselinePath);
+    return assignmentText(payload.current_baseline ?? payload.live_mutation_baseline ?? payload.baseline);
+  } catch (_error) {
+    return '';
+  }
+}
+
+function assignmentCurrentRunState(runId, state, planningAssignment) {
+  const attempt = isObject(planningAssignment.current_attempt) ? planningAssignment.current_attempt : {};
+  if (assignmentText(attempt.run_id) && assignmentText(attempt.run_id) !== runId) return { status: 'superseded', run_id: runId, current_run_id: attempt.run_id };
+  return { status: assignmentText(state.current_state) || assignmentText(attempt.status) || 'awaiting-admission', run_id: runId, owner: attempt.owner };
+}
+
+function assignmentCurrentAuthorities(targetRoot, values, state, runId, failures) {
+  const assignmentId = assignmentText(values.assignment_id ?? state.assignment_id);
+  if (!assignmentId) {
+    failures.push({ reason: 'missing-current-authority', field: 'assignment_id', recovery: 'Retry with the stable assignment id so AW can resolve Planning authority.' });
+    return {};
+  }
+  const planningRef = assignmentPlanningRef(values, assignmentId);
+  const planning = assignmentReadJsonRef(targetRoot, planningRef, 'planning_assignment_ref', failures);
+  if (!Object.keys(planning).length) return {};
+  if (planning.kind !== 'agentic-workspace/planning-assignment/v1') failures.push({ reason: 'invalid-current-authority', field: 'planning_assignment_ref.kind', recovery: 'Regenerate the checked-in Planning assignment record.' });
+  if (assignmentText(planning.assignment_id) !== assignmentId) failures.push({ reason: 'assignment-id-mismatch', field: 'planning_assignment_ref.assignment_id', recovery: 'Retry with the assignment id owned by the Planning assignment record.' });
+  const assignmentGate = isObject(planning.assignment_gate) ? planning.assignment_gate : {};
+  const assignmentPolicy = isObject(planning.assignment_policy) ? planning.assignment_policy : {};
+  const delegationDecision = isObject(planning.delegation_decision) ? planning.delegation_decision : {};
+  const identity = assignmentIdentity({ assignment_gate: assignmentGate, assignment_policy: assignmentPolicy, delegation_decision: delegationDecision });
+  const currentRevision = assignmentText(planning.current_revision) || assignmentText(identity.revision);
+  if (assignmentText(values.assignment_revision) && assignmentText(values.assignment_revision) !== currentRevision) failures.push({ reason: 'assignment-revision-mismatch', field: 'assignment_revision', recovery: 'Refresh from the current checked-in Planning assignment revision.' });
+  if (['superseded', 'closed', 'archived'].includes(assignmentText(planning.status))) failures.push({ reason: 'assignment-not-current', field: 'planning_assignment_ref.status', recovery: 'Reassign or reopen a current Planning assignment before continuing.' });
+  const proofRef = assignmentText(planning.aw_proof_receipt_ref ?? planning.proof_receipt_ref);
+  const proof = assignmentReadJsonRef(targetRoot, proofRef, 'planning_assignment_ref.aw_proof_receipt_ref', failures);
+  const liveMutationBaseline = assignmentLiveMutationBaseline(targetRoot);
+  if (!liveMutationBaseline) failures.push({ reason: 'missing-current-authority', field: 'live_mutation_baseline', recovery: 'Record an AW mutation baseline file or run inside a Git checkout before admission.' });
   return {
-    assignment_gate: readObject('assignment_gate'),
-    assignment_policy: readObject('assignment_policy'),
-    delegation_decision: readObject('delegation_decision'),
-    aw_proof_receipt: readObject('aw_proof_receipt'),
+    assignment_gate: assignmentGate,
+    assignment_policy: assignmentPolicy,
+    delegation_decision: delegationDecision,
+    aw_proof_receipt: proof,
     live_mutation_baseline: liveMutationBaseline,
-    run_state: assignmentParseJson(values.run_state ?? values.run_state_json, 'run_state') || { status: 'awaiting-admission', run_id: assignmentText(values.run_id) },
+    run_state: assignmentCurrentRunState(runId, state, planning),
+    planning_assignment_ref: planningRef,
+    proof_receipt_ref: proofRef,
   };
 }
 
@@ -1782,6 +1835,10 @@ function assignmentAdmitWithCurrentAuthority(authorities, returned) {
   if (!assignmentText(authorities.live_mutation_baseline)) failures.push({ reason: 'missing-current-authority', field: 'current_authorities.live_mutation_baseline', recovery: 'Resolve the current assignment/run/proof/baseline authorities and retry admission.' });
   const identity = assignmentIdentity(authorities);
   if (!identity.complete) failures.push({ reason: 'incomplete-assignment-identity', field: 'assignment_identity', recovery: 'Regenerate the assignment with all required identity fields.' });
+  const proof = isObject(authorities.aw_proof_receipt) ? authorities.aw_proof_receipt : {};
+  if (proof.result !== 'passed' || proof.verified_by !== 'aw') failures.push({ reason: 'aw-proof-missing-or-not-passed', field: 'current_authorities.aw_proof_receipt', recovery: 'Run AW-owned proof and record the current receipt before admission.' });
+  const runState = isObject(authorities.run_state) ? authorities.run_state : {};
+  if (['duplicate', 'malformed', 'superseded', 'closed'].includes(assignmentText(runState.status))) failures.push({ reason: 'return-run-not-awaiting-admission', field: 'current_authorities.run_state', recovery: 'Import a fresh return or route repair/reassignment.' });
   if (assignmentText(returned.assignment_revision) !== assignmentText(identity.revision)) failures.push({ reason: 'stale-assignment-revision', field: 'assignment_revision', recovery: 'Refresh the handoff and resubmit against the current assignment revision.' });
   if (assignmentText(returned.target) && assignmentText(returned.target) !== assignmentText(identity.target)) failures.push({ reason: 'target-mismatch', field: 'target', recovery: 'Return work from the selected assignment target only.' });
   if (assignmentText(authorities.live_mutation_baseline) !== assignmentText(identity.mutation_baseline)) failures.push({ reason: 'mutation-baseline-mismatch', field: 'live_mutation_baseline', recovery: 'Rebase or regenerate the returned work against the current baseline.' });
@@ -1791,7 +1848,7 @@ function assignmentAdmitWithCurrentAuthority(authorities, returned) {
   for (const path of changed) {
     if (!allowed.has(path)) failures.push({ reason: 'scope-escape', field: 'changed_paths', recovery: 'Repair returned work to stay inside the assigned scope.' });
   }
-  return { admitted: failures.length === 0, status: failures.length ? 'rejected' : 'admitted', failures, assignment_revision: identity.revision, assignment_identity: identity, current_authority: { mutation_baseline: authorities.live_mutation_baseline }, rule: 'Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.' };
+  return { admitted: failures.length === 0, status: failures.length ? 'rejected' : 'admitted', failures, assignment_revision: identity.revision, assignment_identity: identity, current_authority: { planning_assignment: authorities.planning_assignment_ref, proof_receipt: proof, proof_source: authorities.proof_receipt_ref, mutation_baseline: authorities.live_mutation_baseline, baseline_source: 'host-resolved:git-or-aw-baseline' }, rule: 'Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.' };
 }
 
 function assignmentLifecycleApply(values, operationId) {
@@ -1815,12 +1872,13 @@ function assignmentLifecycleApply(values, operationId) {
   const artifact = (relativePath) => resolveInside(runDir, relativePath);
   if (transition === 'export') {
     const id = requireField('assignment_id');
-    const rev = requireField('assignment_revision');
-    const targetName = requireField('target_name');
-    const authorities = assignmentCurrentAuthorities(values, failures);
+    const rev = assignmentRevision;
+    const authorities = assignmentCurrentAuthorities(targetRoot, values, state, runId, failures);
     const identity = assignmentIdentity(authorities);
-    if (identity.revision !== rev) failures.push({ reason: 'assignment-revision-mismatch', field: 'assignment_revision', recovery: 'Export from the current Planning assignment identity revision.' });
-    const effectivePacket = { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: identity.revision, run_id: runId, target: targetName, transport: assignmentText(values.transport) || 'manual', assignment_identity: identity, authority_refs: { assignment_gate: 'current_authorities.assignment_gate', assignment_policy: 'current_authorities.assignment_policy', delegation_decision: 'current_authorities.delegation_decision', proof_receipt: 'current_authorities.aw_proof_receipt', mutation_baseline: 'current_authorities.live_mutation_baseline' }, return_contract: 'assignment import places results in received/awaiting-admission before admission or integration' };
+    if (rev && identity.revision !== rev) failures.push({ reason: 'assignment-revision-mismatch', field: 'assignment_revision', recovery: 'Export from the current Planning assignment identity revision.' });
+    const targetName = assignmentText(values.target_name) || assignmentText(identity.target);
+    if (!targetName) failures.push({ reason: 'missing-required-input', field: 'target_name', recovery: 'Retry assignment export with a current Planning assignment target.' });
+    const effectivePacket = { kind: 'agentic-workspace/assignment-export-packet/v1', assignment_id: id, assignment_revision: identity.revision, run_id: runId, target: targetName, transport: assignmentText(values.transport) || 'manual', scope: identity.allowed_paths ?? [], assignment_identity: identity, authority_refs: { planning_assignment: authorities.planning_assignment_ref, proof_receipt: authorities.proof_receipt_ref, mutation_baseline: 'host-resolved:git-or-aw-baseline' }, return_contract: 'assignment import places results in received/awaiting-admission before admission or integration' };
     const packetPath = artifact('export/packet.json');
     const promptPath = artifact('export/prompt.md');
     const manifestPath = artifact('export/manifest.json');
@@ -1828,7 +1886,7 @@ function assignmentLifecycleApply(values, operationId) {
     writes.set(packetPath, effectivePacket);
     writes.set(promptPath, `You are receiving an Agentic Workspace assignment packet.\n\n\`\`\`json\n${JSON.stringify(effectivePacket, null, 2)}\n\`\`\``);
     writes.set(manifestPath, { kind: 'agentic-workspace/assignment-export-manifest/v1', assignment_id: id, assignment_revision: rev, run_id: runId, integrity: assignmentDigest(effectivePacket) });
-    Object.assign(state, { assignment: effectivePacket, current_authorities: authorities, current_state: 'handoff-prepared', run_id: runId });
+    Object.assign(state, { assignment: effectivePacket, planning_assignment_ref: authorities.planning_assignment_ref, proof_receipt_ref: authorities.proof_receipt_ref, current_state: 'handoff-prepared', run_id: runId, assignment_id: id });
   } else if (transition === 'import') {
     requireField('run_id');
     const returned = assignmentParseJson(requireField('return_json'), 'return_json');
@@ -1852,7 +1910,7 @@ function assignmentLifecycleApply(values, operationId) {
     } catch (error) {
       failures.push({ reason: 'missing-return', field: 'return_id', recovery: 'Import returned work before admission.' });
     }
-    const authorities = isObject(state.current_authorities) ? state.current_authorities : {};
+    const authorities = assignmentCurrentAuthorities(targetRoot, values, state, runId, failures);
     const admission = assignmentAdmitWithCurrentAuthority(authorities, returned);
     if (!admission.admitted) failures.push(...admission.failures);
     const receiptPath = artifact(`admission/${assignmentFragment(returnId)}.admit.json`);
@@ -1868,7 +1926,7 @@ function assignmentLifecycleApply(values, operationId) {
     } catch (error) {
       failures.push({ reason: 'missing-return', field: 'return_id', recovery: 'Import returned work before integration.' });
     }
-    const authorities = isObject(state.current_authorities) ? state.current_authorities : {};
+    const authorities = assignmentCurrentAuthorities(targetRoot, values, state, runId, failures);
     const admission = assignmentAdmitWithCurrentAuthority(authorities, returned);
     if (!admission.admitted) failures.push(...admission.failures);
     if (state.last_admission_status !== 'admitted') failures.push({ reason: 'return-not-admitted', field: 'state.last_admission_status', recovery: 'Run assignment admit with current authority before integration.' });
@@ -1906,59 +1964,48 @@ function assignmentLifecycleApply(values, operationId) {
 
 function correctionEventApply(values, operationId) {
   const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  const scriptPath = resolve(process.cwd(), 'scripts/run_agentic_workspace.py');
+  const blocked = (reason, recovery) => ({
+    kind: 'agentic-workspace/correction-event-operation-result/v1',
+    operation_id: operationId,
+    status: 'blocked',
+    mutation_applied: false,
+    store_ref: '.agentic-workspace/local/correction-events.json',
+    admission: {
+      kind: 'agentic-workspace/correction-event-admission/v1',
+      status: 'blocked',
+      admitted_events: [],
+      low_authority_events: [],
+      rejected_events: [{ reason, recovery }],
+    },
+    checked_in_repo_effect: 'none',
+    rule: 'TypeScript correction-event operations delegate to the Python AW authority boundary; reduced TypeScript admission is fail-closed.',
+  });
+  if (!existsSync(scriptPath)) return blocked('authoritative-python-boundary-unavailable', 'Run correction-event through the Agentic Workspace Python host boundary.');
   const operation = String(operationId).replace(/^correction-event\./, '');
-  const storePath = resolveInside(targetRoot, '.agentic-workspace/local/correction-events.json');
-  const receiptDir = resolveInside(targetRoot, '.agentic-workspace/local/correction-event-receipts');
-  const store = existsSync(storePath) ? readJson(storePath) : { kind: 'agentic-workspace/correction-event-store/v1', events: [], compacted_lineage: [] };
-  const existing = Array.isArray(store.events) ? store.events.filter((item) => isObject(item)) : [];
-  let subjects = [];
-  if (values.subjects_json) {
-    try {
-      const parsed = JSON.parse(String(values.subjects_json));
-      subjects = Array.isArray(parsed) ? parsed.filter((item) => isObject(item)) : [];
-    } catch {
-      subjects = [];
-    }
+  const args = ['run', 'python', scriptPath, 'correction-event', operation, '--target', targetRoot, '--format', 'json'];
+  for (const [key, value] of Object.entries(values)) {
+    if (
+      ['target', 'target_root', 'format', 'operation_id', 'correction_event_command'].includes(key)
+      || key.endsWith('_command')
+      || value === undefined
+      || value === null
+      || value === ''
+      || value === false
+      || Array.isArray(value)
+    ) continue;
+    args.push(`--${key.replaceAll('_', '-')}`, String(value));
   }
-  const event = values.event_json ? assignmentParseJson(values.event_json, 'event_json') : {};
-  for (const key of ['delivery_id', 'target_identity_ref', 'target_revision', 'source_ref', 'desired_behavior', 'replaced_behavior', 'invariant_id', 'behavior_class', 'task_class', 'scope_class', 'evidence_hash', 'evidence_ref', 'predecessor_event_id']) {
-    if (values[key] !== undefined && values[key] !== null && values[key] !== '') event[key] = values[key];
+  const completed = spawnSync('uv', args, { cwd: targetRoot, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  const text = completed.stdout || completed.stderr || '';
+  try {
+    const payload = JSON.parse(text);
+    return completed.status === 0
+      ? payload
+      : blocked('authoritative-python-boundary-failed', JSON.stringify(payload).slice(0, 500));
+  } catch {
+    return blocked('authoritative-python-boundary-non-json', text.slice(0, 500) || 'Install uv/python and retry through AW.');
   }
-  event.operation = operation === 'correct-dispute' ? 'dispute' : operation === 'withdraw-supersede' ? String(values.lifecycle_action ?? 'withdraw') : operation;
-  if (values.trusted_authority_receipt_json) {
-    try {
-      const receipt = JSON.parse(String(values.trusted_authority_receipt_json));
-      event.authority = receipt.authority;
-      event.producer_class = receipt.producer_class;
-      event.producer_id = receipt.producer_id ?? receipt.producer_class;
-      event.source = receipt.source ?? receipt.authority;
-      event.source_ref = event.source_ref ?? receipt.source_ref;
-    } catch {
-      event.authority = 'agent-self-observation';
-      event.producer_class = 'agent';
-    }
-  } else {
-    event.authority = 'agent-self-observation';
-    event.producer_class = 'agent';
-    event.producer_id = event.producer_id ?? 'agent-self-observation';
-    event.source = event.source ?? 'agent-local-observation';
-  }
-  const admitted = subjects.length && (operation === 'query' || operation === 'prune-compact') ? existing : [...existing, event];
-  const status = subjects.length ? operation === 'query' ? 'queried' : operation === 'prune-compact' ? 'compacted' : 'stored' : 'blocked';
-  const mutation = subjects.length && operation !== 'query' && !Boolean(values.dry_run);
-  if (mutation) {
-    mkdirSync(dirname(storePath), { recursive: true });
-    writeFileSync(storePath, `${JSON.stringify({ kind: 'agentic-workspace/correction-event-store/v1', events: admitted.slice(-20), compacted_lineage: [], retention_cap: 20, checked_in_repo_effect: 'none' }, null, 2)}\n`, 'utf8');
-  }
-  const result = { kind: 'agentic-workspace/correction-event-operation-result/v1', operation_id: operationId, status, mutation_applied: mutation, store_ref: relative(targetRoot, storePath).replaceAll('\\\\', '/'), admission: { kind: 'agentic-workspace/correction-event-admission/v1', status: admitted.length ? 'admitted' : 'no-admitted-events', admitted_events: [], low_authority_events: admitted, rejected_events: subjects.length ? [] : [{ reason: 'missing-target-subjects', recovery: 'Provide subjects_json or use the Python host operation with workspace config resolution.' }] }, checked_in_repo_effect: 'none', rule: 'Generated correction-event operations are the authoritative public boundary; raw local file writes are compatibility-only.' };
-  const receiptId = createHash('sha256').update(JSON.stringify(result)).digest('hex').slice(0, 16);
-  const receiptPath = resolveInside(receiptDir, `${receiptId}.json`);
-  if (!Boolean(values.dry_run)) {
-    mkdirSync(dirname(receiptPath), { recursive: true });
-    writeFileSync(receiptPath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
-  }
-  result.receipt_ref = relative(targetRoot, receiptPath).replaceAll('\\\\', '/');
-  return result;
 }
 
 function reportMemory(values) {
