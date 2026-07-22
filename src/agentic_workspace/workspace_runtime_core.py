@@ -38774,7 +38774,7 @@ def _admit_delegated_return(
         handoff_required=True,
     )
     current_proof = _as_dict(assignment_gate.get("aw_proof_receipt") or assignment_gate.get("proof_receipt"))
-    current_baseline = assignment_gate.get("live_mutation_baseline") or assignment_gate.get("mutation_baseline")
+    current_baseline = assignment_gate.get("live_mutation_baseline")
     failures: list[dict[str, str]] = []
 
     def reject(reason: str, field: str, recovery: str) -> None:
@@ -38808,41 +38808,20 @@ def _admit_delegated_return(
         reject("missing-canonical-scope", "assignment_identity.allowed_paths", "Refresh the assignment so AW can compare returned paths.")
     mutation_revalidation: dict[str, Any] = {"status": "not-provided", "admitted": False}
     expected_baseline = identity.get("mutation_baseline")
-    if expected_baseline and current_baseline:
-        if isinstance(expected_baseline, dict) and isinstance(current_baseline, dict):
-            mutation_admission = admit_mutation_boundary(
-                boundary_id="returned-worker-admission",
-                expected=expected_baseline,
-                current=current_baseline,
-                assignment_target_identity_ref=(
-                    str(returned_work.get("assignment_target_identity_ref"))
-                    if returned_work.get("assignment_target_identity_ref")
-                    else None
-                ),
-                allowed_paths=[str(path) for path in allowed_paths] if isinstance(allowed_paths, list) else None,
-            )
-            mutation_revalidation = _as_dict(mutation_admission.get("revalidation"))
-            for failure in mutation_revalidation.get("failures", []):
-                if isinstance(failure, dict):
-                    reject(
-                        str(failure.get("reason") or "mutation-baseline-revalidation-failed"),
-                        str(failure.get("field") or "mutation_baseline"),
-                        str(failure.get("repair") or "Rebase or regenerate the returned work against the current baseline."),
-                    )
-        elif current_baseline != expected_baseline:
-            mutation_revalidation = {
-                "status": "rejected",
-                "admitted": False,
-                "failures": [
-                    {
-                        "reason": "mutation-baseline-mismatch",
-                        "field": "mutation_baseline",
-                        "repair": "Rebase or regenerate the returned work against the current baseline.",
-                    }
-                ],
-            }
+    mutation_admission = admit_mutation_boundary(
+        boundary_id="returned-worker-admission",
+        expected=expected_baseline if isinstance(expected_baseline, dict) else None,
+        current=current_baseline if isinstance(current_baseline, dict) else None,
+        assignment_target_identity_ref=str(identity.get("target_identity_ref") or "").strip() or None,
+        allowed_paths=[str(path) for path in allowed_paths] if isinstance(allowed_paths, list) else None,
+    )
+    mutation_revalidation = _as_dict(mutation_admission.get("revalidation")) or mutation_admission
+    for failure in mutation_admission.get("failures", []):
+        if isinstance(failure, dict):
             reject(
-                "mutation-baseline-mismatch", "mutation_baseline", "Rebase or regenerate the returned work against the current baseline."
+                str(failure.get("reason") or "mutation-baseline-revalidation-failed"),
+                str(failure.get("field") or "mutation_baseline"),
+                str(failure.get("repair") or "Rebase or regenerate the returned work against the current baseline."),
             )
 
     admitted = not failures
