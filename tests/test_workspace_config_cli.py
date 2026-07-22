@@ -2070,6 +2070,10 @@ def test_target_evidence_excludes_low_authority_records_from_assignment() -> Non
     assert posture["suitability"] == []
     assert posture["normalized_records"][0]["admission"]["routable"] is False
     assert posture["normalized_records"][1]["admission"]["routable"] is False
+    assert [item["uncertainty_reasons"][0] for item in posture["uncertainty_accounts"]] == [
+        "low-authority:model-self-report",
+        "low-confidence:low",
+    ]
 
 
 def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evidence(tmp_path: Path) -> None:
@@ -2141,12 +2145,28 @@ def test_assignment_decision_derives_best_fit_from_candidates_and_contextual_evi
     )
 
     assert decision["decision"] == "assign-best-fit"
+    assert decision["canonical_outcome"] == "delegated-implementation"
     assert decision["selected_target"] == "fast_worker"
     assert decision["selection_basis"]["requested_context_key"] == "mechanical-follow-through::mechanical-follow-through"
+    assert decision["selection_basis"]["component_order"] == [
+        "task_requirements",
+        "hard_eligibility",
+        "declared_fit",
+        "contextual_evidence",
+        "expected_burden",
+        "uncertainty",
+        "probe_value",
+        "policy",
+    ]
     current = next(item for item in decision["candidate_scores"] if item["target"] == "current_worker")
     assert current["evidence_contexts"] == []
     unsafe = next(item for item in decision["candidate_scores"] if item["target"] == "unsafe_worker")
     assert unsafe["eligible"] is False
+    assert unsafe["eligibility"]["capability"] == "rejected"
+    fast = next(item for item in decision["candidate_scores"] if item["target"] == "fast_worker")
+    assert fast["ranking_components"]["declared_fit"] == 7
+    assert fast["ranking_components"]["contextual_evidence"] == 15
+    assert fast["permitted_continuation"] == "delegated-implementation"
 
 
 def test_assignment_decision_fails_closed_when_no_candidate_is_eligible() -> None:
@@ -2177,6 +2197,7 @@ def test_assignment_decision_fails_closed_when_no_candidate_is_eligible() -> Non
     )
 
     assert decision["decision"] == "no-safe-route"
+    assert decision["canonical_outcome"] == "no-safe-route"
     assert decision["selected_target"] is None
 
 
@@ -2218,6 +2239,7 @@ def test_assignment_decision_keep_local_selects_current_target_not_higher_extern
     )
 
     assert decision["decision"] == "keep-local"
+    assert decision["canonical_outcome"] == "retain-local"
     assert decision["selected_target"] == "current_worker"
 
 
@@ -2261,6 +2283,7 @@ def test_assignment_decision_local_preferred_does_not_select_ineligible_current_
     )
 
     assert decision["decision"] == "policy-conflict"
+    assert decision["canonical_outcome"] == "planning-review-escalation"
     assert decision["selected_target"] is None
     assert decision["selection_basis"]["current_target_eligible"] is False
     assert decision["next_action"] == "resolve local-preferred current_target eligibility before execution"
@@ -2305,8 +2328,64 @@ def test_assignment_decision_surfaces_tie_without_lexical_target_selection() -> 
     )
 
     assert decision["decision"] == "tie"
+    assert decision["canonical_outcome"] == "planning-review-escalation"
     assert decision["selected_target"] is None
     assert decision["uncertainty"] == "tie"
+
+
+def test_assignment_decision_preserves_uncertain_evidence_without_routing_it() -> None:
+    from agentic_workspace.config import DelegationOutcomeRecord
+    from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
+
+    posture = target_evidence_posture(
+        target_root=None,
+        profiles=(),
+        records=[
+            DelegationOutcomeRecord(
+                recorded_at="2026-04-17",
+                delegation_target="fast_worker",
+                task_class="mechanical-follow-through",
+                scope_class="narrow-code-change",
+                outcome="success",
+                handoff_sufficiency="sufficient",
+                review_burden="light",
+                escalation_required=False,
+                authority="model-self-report",
+                confidence="low",
+            )
+        ],
+    )
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "required-best-fit"},
+            "current_target": {"value": "current_worker"},
+            "binding": {"enforceable": True, "claim_boundary": "assignment policy resolved"},
+        },
+        runtime_resolution={
+            "recommendation": "external-delegation",
+            "capability_context": {"task_class": "mechanical-follow-through", "scope_class": "narrow-code-change"},
+            "profile_recommendations": [
+                {
+                    "name": "fast_worker",
+                    "recommendation": "acceptable",
+                    "score": 3,
+                    "capability_mismatch": False,
+                    "required_action": "none",
+                    "location": "external",
+                    "execution_methods": ["cli"],
+                    "human_control_modes": ["auto"],
+                }
+            ],
+        },
+        target_evidence=posture,
+    )
+
+    candidate = decision["candidate_scores"][0]
+    assert candidate["evidence_contexts"] == []
+    assert "low-authority:model-self-report" in candidate["uncertainty_contexts"][0]["uncertainty_reasons"]
+    assert "low-confidence:low" in candidate["uncertainty_contexts"][0]["uncertainty_reasons"]
+    assert candidate["ranking_components"]["uncertainty"] == -5
+    assert decision["selected_target"] == "fast_worker"
 
 
 def test_note_delegation_outcome_compaction_rewrites_same_context_raw_history(tmp_path: Path, capsys) -> None:
