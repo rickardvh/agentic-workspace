@@ -1145,6 +1145,11 @@
                 "command": "closeout",
                 "import_module": "agentic_workspace.workspace_runtime_primitives",
                 "function": "_run_planning_closeout_adapter"
+              },
+              {
+                "command": "reconcile",
+                "import_module": "agentic_workspace.workspace_runtime_planning",
+                "function": "_run_reconcile_report_adapter"
               }
             ],
             "positionals": [
@@ -3850,6 +3855,103 @@
                     ],
                     "default": "text",
                     "help": "Output format."
+                  }
+                ]
+              },
+              {
+                "name": "reconcile",
+                "help": "Preview or apply bounded Planning reconciliation transactions.",
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Target repository path. Defaults to the current directory."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "help": "Preview --apply-safe-prune without writing files."
+                  },
+                  {
+                    "name": "lane",
+                    "flags": [
+                      "--lane"
+                    ],
+                    "help": "Lane id whose machine-readable child outcomes should be reconciled."
+                  },
+                  {
+                    "name": "apply_lane_current_slice_reconcile",
+                    "flags": [
+                      "--apply-lane-current-slice-reconcile"
+                    ],
+                    "action": "store_true",
+                    "help": "Apply one owner-specific current-slice lane reconciliation transaction."
+                  },
+                  {
+                    "name": "owner_surface",
+                    "flags": [
+                      "--owner-surface"
+                    ],
+                    "help": "Repo-relative owner surface guarded by current-slice reconciliation."
+                  },
+                  {
+                    "name": "relation_identity",
+                    "flags": [
+                      "--relation-identity"
+                    ],
+                    "help": "Expected lane current-slice relation identity."
+                  },
+                  {
+                    "name": "subject",
+                    "flags": [
+                      "--subject"
+                    ],
+                    "help": "Expected current-slice subject id."
+                  },
+                  {
+                    "name": "expected_lane_revision",
+                    "flags": [
+                      "--expect-lane-revision"
+                    ],
+                    "help": "Current lane-record revision required before applying current-slice reconciliation."
+                  },
+                  {
+                    "name": "transition",
+                    "flags": [
+                      "--transition"
+                    ],
+                    "choices": [
+                      "restore",
+                      "relink",
+                      "supersede",
+                      "cancel",
+                      "human"
+                    ],
+                    "help": "Requested current-slice reconciliation transition."
+                  },
+                  {
+                    "name": "expected_execplan",
+                    "flags": [
+                      "--expected-execplan"
+                    ],
+                    "help": "Repo-relative execplan source required for restore/relink reconciliation."
                   }
                 ]
               }
@@ -16321,6 +16423,63 @@
                 ],
                 "action": "store_true",
                 "help": "Apply the reported child-outcome delta without closing the parent lane."
+              },
+              {
+                "name": "apply_lane_current_slice_reconcile",
+                "flags": [
+                  "--apply-lane-current-slice-reconcile"
+                ],
+                "action": "store_true",
+                "help": "Apply one owner-specific current-slice lane reconciliation transaction."
+              },
+              {
+                "name": "owner_surface",
+                "flags": [
+                  "--owner-surface"
+                ],
+                "help": "Repo-relative owner surface guarded by current-slice reconciliation."
+              },
+              {
+                "name": "relation_identity",
+                "flags": [
+                  "--relation-identity"
+                ],
+                "help": "Expected lane current-slice relation identity."
+              },
+              {
+                "name": "subject",
+                "flags": [
+                  "--subject"
+                ],
+                "help": "Expected current-slice subject id."
+              },
+              {
+                "name": "expected_lane_revision",
+                "flags": [
+                  "--expect-lane-revision"
+                ],
+                "help": "Current lane-record revision required before applying current-slice reconciliation."
+              },
+              {
+                "name": "transition",
+                "flags": [
+                  "--transition"
+                ],
+                "choices": [
+                  "restore",
+                  "relink",
+                  "supersede",
+                  "cancel",
+                  "human"
+                ],
+                "help": "Requested current-slice reconciliation transition."
+              },
+              {
+                "name": "expected_execplan",
+                "flags": [
+                  "--expected-execplan"
+                ],
+                "help": "Repo-relative execplan source required for restore/relink reconciliation."
               },
               {
                 "name": "issue",

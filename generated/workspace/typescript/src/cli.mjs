@@ -1987,6 +1987,103 @@ const commandDefinitions = [
               "name": "format"
             }
           ]
+        },
+        {
+          "help": "Preview or apply bounded Planning reconciliation transactions.",
+          "name": "reconcile",
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Target repository path. Defaults to the current directory.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--dry-run"
+              ],
+              "help": "Preview --apply-safe-prune without writing files.",
+              "name": "dry_run"
+            },
+            {
+              "flags": [
+                "--lane"
+              ],
+              "help": "Lane id whose machine-readable child outcomes should be reconciled.",
+              "name": "lane"
+            },
+            {
+              "action": "store_true",
+              "flags": [
+                "--apply-lane-current-slice-reconcile"
+              ],
+              "help": "Apply one owner-specific current-slice lane reconciliation transaction.",
+              "name": "apply_lane_current_slice_reconcile"
+            },
+            {
+              "flags": [
+                "--owner-surface"
+              ],
+              "help": "Repo-relative owner surface guarded by current-slice reconciliation.",
+              "name": "owner_surface"
+            },
+            {
+              "flags": [
+                "--relation-identity"
+              ],
+              "help": "Expected lane current-slice relation identity.",
+              "name": "relation_identity"
+            },
+            {
+              "flags": [
+                "--subject"
+              ],
+              "help": "Expected current-slice subject id.",
+              "name": "subject"
+            },
+            {
+              "flags": [
+                "--expect-lane-revision"
+              ],
+              "help": "Current lane-record revision required before applying current-slice reconciliation.",
+              "name": "expected_lane_revision"
+            },
+            {
+              "choices": [
+                "restore",
+                "relink",
+                "supersede",
+                "cancel",
+                "human"
+              ],
+              "flags": [
+                "--transition"
+              ],
+              "help": "Requested current-slice reconciliation transition.",
+              "name": "transition"
+            },
+            {
+              "flags": [
+                "--expected-execplan"
+              ],
+              "help": "Repo-relative execplan source required for restore/relink reconciliation.",
+              "name": "expected_execplan"
+            }
+          ]
         }
       ],
       "subcommands_required": false
