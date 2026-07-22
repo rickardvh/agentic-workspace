@@ -8026,6 +8026,78 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
     assert admitted["status"] == "admitted"
 
 
+def test_delegated_return_admission_reresolves_live_authorities_before_admission() -> None:
+    stale_assignment_gate = _complete_assignment_gate()
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = _complete_delegation_decision()
+    stale_identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=stale_assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+    live_assignment_gate = {
+        **stale_assignment_gate,
+        "target_revision": "target-rev-2",
+        "assignment_decision_revision": "assignment-rev-2",
+        "aw_proof_receipt": {"result": "failed", "verified_by": "aw"},
+        "live_mutation_baseline": "stale-baseline",
+    }
+    result = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=stale_assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        current_authorities={
+            "assignment_gate": live_assignment_gate,
+            "aw_proof_receipt": {"result": "passed", "verified_by": "aw", "revision": "proof-rev-live"},
+            "live_mutation_baseline": "baseline-1",
+            "run_state": {"status": "awaiting-admission", "run_id": "run-1"},
+        },
+        returned_work={
+            "assignment_revision": stale_identity["revision"],
+            "target": "planner",
+            "changed_paths": ["src/feature.py"],
+        },
+    )
+
+    assert result["admitted"] is False
+    assert result["authority_resolution"]["status"] == "live-resolved"
+    assert result["authority_resolution"]["sources"]["assignment_gate"] == "current_authorities.assignment_gate"
+    assert result["current_authority"]["proof_source"] == "current_authorities.proof_receipt"
+    assert result["current_authority"]["baseline_source"] == "current_authorities.live_mutation_baseline"
+    assert result["failures"][0]["reason"] == "stale-assignment-revision"
+
+
+def test_delegated_return_admission_rejects_duplicate_or_closed_live_run_state() -> None:
+    assignment_gate = _complete_assignment_gate()
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = _complete_delegation_decision()
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+
+    result = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        current_authorities={
+            "assignment_gate": assignment_gate,
+            "aw_proof_receipt": {"result": "passed", "verified_by": "aw", "revision": "proof-rev-1"},
+            "live_mutation_baseline": "baseline-1",
+            "run_state": {"status": "duplicate", "run_id": "run-1"},
+        },
+        returned_work={
+            "assignment_revision": identity["revision"],
+            "target": "planner",
+            "changed_paths": ["src/feature.py"],
+        },
+    )
+
+    assert result["admitted"] is False
+    assert result["failures"][0]["reason"] == "return-run-not-awaiting-admission"
+
+
 def test_delegated_return_admission_rejects_disabled_transport() -> None:
     assignment_gate = _complete_assignment_gate()
     assignment_policy = {"manual_transport_policy": {"value": "disabled"}}
