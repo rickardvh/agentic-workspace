@@ -30937,6 +30937,18 @@ def _fast_installed_modules(*, target_root: Path) -> list[str]:
 
 _PLANNING_OWNER_TERMINAL_PHASES = {"complete", "completed", "closeout", "closed", "archived"}
 _PLANNING_OWNER_LIVE_LIFECYCLES = {"live", "planned"}
+_PLANNING_OWNER_ADMISSION_CONSUMERS = [
+    "start",
+    "next",
+    "implement",
+    "autopilot",
+    "proof",
+    "closeout",
+    "archive",
+    "status",
+    "doctor",
+    "report",
+]
 
 
 def _planning_owner_repair_route(*, target_root: Path) -> dict[str, Any]:
@@ -30946,6 +30958,55 @@ def _planning_owner_repair_route(*, target_root: Path) -> dict[str, Any]:
         "command": f'agentic-workspace summary --target "{target_root.as_posix()}" --format json',
         "selector_command": f'agentic-workspace start --target "{target_root.as_posix()}" --select planning_safety_gate --format json',
         "rule": "Startup remains read-only; repair must happen through a Planning/current-work operation.",
+    }
+
+
+def _planning_owner_admission_contract() -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/planning-owner-admission-contract/v1",
+        "status": "authoritative",
+        "consumers": _PLANNING_OWNER_ADMISSION_CONSUMERS,
+        "reject_when": [
+            "owner-record-missing",
+            "owner-lifecycle-not-live",
+            "owner-phase-terminal",
+            "owner-revision-mismatch",
+            "owner-record-missing-live-revision",
+            "owner-record-planning-revision-mismatch",
+            "local-selection-missing-planning-revision",
+            "local-selection-planning-revision-mismatch",
+            "local-selection-target-mismatch",
+            "local-selection-current-work-mismatch",
+            "owner-not-in-live-graph",
+            "authority-identity-mismatch",
+        ],
+        "repair_owner": "planning-owner-reconciliation",
+        "repair_route": (
+            "planning owner-select --dry-run against an existing owner, or explicit owner supersession "
+            "confirmation before creating a new owner"
+        ),
+        "rule": "Every lifecycle consumer must use the same admitted live owner/reference tuple before acting.",
+    }
+
+
+def _planning_owner_action_effect(*, accepted: bool, rejected: bool) -> dict[str, Any]:
+    if accepted and not rejected:
+        return {
+            "force": "none",
+            "consumers": _PLANNING_OWNER_ADMISSION_CONSUMERS,
+            "rule": "Accepted owner identity may be reused by lifecycle consumers until a bound revision changes.",
+        }
+    if accepted:
+        return {
+            "force": "warn-before-action",
+            "consumers": _PLANNING_OWNER_ADMISSION_CONSUMERS,
+            "rule": "Use the accepted owner, but surface rejected stale projections as repair diagnostics.",
+        }
+    return {
+        "force": "required_before_action",
+        "blocked_until_reconciled": _PLANNING_OWNER_ADMISSION_CONSUMERS,
+        "repair_owner": "planning-owner-reconciliation",
+        "rule": "Do not continue lifecycle actions from rejected or missing owner references.",
     }
 
 
@@ -31174,6 +31235,142 @@ def _planning_owner_selection_target_mismatch(*, target_root: Path, selection_pa
     return {}
 
 
+def _planning_owner_nested_text(payload: dict[str, Any], paths: list[tuple[str, ...]]) -> str:
+    for path in paths:
+        current: Any = payload
+        for part in path:
+            if not isinstance(current, dict):
+                current = None
+                break
+            current = current.get(part)
+        text = str(current or "").strip()
+        if text:
+            return text
+    return ""
+
+
+def _planning_owner_authority_identity(
+    *,
+    owner_id: str,
+    owner_ref: str,
+    record: dict[str, Any],
+    planning_revision: dict[str, Any],
+    expected_planning_revision: str,
+) -> tuple[dict[str, Any], dict[str, str]]:
+    current_revision = str(planning_revision.get("revision_id") or "").strip()
+    current_target_authority = str(planning_revision.get("target_authority_revision") or "").strip()
+    target_authority = _planning_owner_nested_text(
+        record,
+        [
+            ("target_authority_revision",),
+            ("authority", "target_authority_revision"),
+            ("authority_envelope", "target_authority_revision"),
+        ],
+    )
+    identity = {
+        "kind": "agentic-workspace/planning-live-reference-identity/v1",
+        "owner_id": owner_id,
+        "owner_ref": owner_ref,
+        "record_revision": str(record.get("revision") or "").strip(),
+        "record_planning_revision": str(record.get("planning_revision") or record.get("planning_revision_id") or "").strip(),
+        "current_planning_revision": current_revision,
+        "expected_planning_revision": expected_planning_revision,
+        "target_authority_revision": target_authority,
+        "current_target_authority_revision": current_target_authority,
+        "assignment_target_identity_ref": _planning_owner_nested_text(
+            record,
+            [
+                ("assignment_target_identity_ref",),
+                ("assignment", "target_identity_ref"),
+                ("authority_envelope", "assignment_target_identity_ref"),
+            ],
+        ),
+        "assignment_revision": _planning_owner_nested_text(
+            record,
+            [
+                ("assignment_revision",),
+                ("assignment", "assignment_revision"),
+                ("authority_envelope", "assignment_revision"),
+            ],
+        ),
+        "evaluation_result_identity": _planning_owner_nested_text(
+            record,
+            [
+                ("evaluation_result_identity",),
+                ("evaluation", "result_identity"),
+                ("authority_envelope", "evaluation_result_identity"),
+            ],
+        ),
+        "proof_obligation_revision": _planning_owner_nested_text(
+            record,
+            [
+                ("proof_obligation_revision",),
+                ("proof_obligation", "revision"),
+                ("proof", "obligation_revision"),
+                ("authority_envelope", "proof_obligation_revision"),
+            ],
+        ),
+        "mutation_baseline_id": _planning_owner_nested_text(
+            record,
+            [
+                ("mutation_baseline_id",),
+                ("mutation_baseline", "baseline_id"),
+                ("authority_envelope", "mutation_baseline", "baseline_id"),
+                ("authority_envelope", "mutation_baseline_id"),
+            ],
+        ),
+        "integration_revision": _planning_owner_nested_text(
+            record,
+            [
+                ("integration_revision",),
+                ("integration_receipt_revision",),
+                ("integration", "revision"),
+                ("authority_envelope", "integration_revision"),
+            ],
+        ),
+        "comparison_fields": [
+            "owner_id",
+            "owner_ref",
+            "record_revision",
+            "record_planning_revision",
+            "current_planning_revision",
+            "target_authority_revision",
+            "assignment_target_identity_ref",
+            "assignment_revision",
+            "evaluation_result_identity",
+            "proof_obligation_revision",
+            "mutation_baseline_id",
+            "integration_revision",
+        ],
+        "stale_when": [
+            "owner_ref changes",
+            "record_revision changes",
+            "record_planning_revision differs from expected_planning_revision",
+            "target_authority_revision differs from current_target_authority_revision when recorded",
+            "assignment, evaluation, proof, mutation baseline, or integration revision changes",
+        ],
+    }
+    optional_fields = [
+        "target_authority_revision",
+        "assignment_target_identity_ref",
+        "assignment_revision",
+        "evaluation_result_identity",
+        "proof_obligation_revision",
+        "mutation_baseline_id",
+        "integration_revision",
+    ]
+    missing = [field for field in optional_fields if not str(identity.get(field) or "")]
+    identity["identity_completeness"] = "complete" if not missing else "partial"
+    identity["missing_optional_fields"] = missing
+    if target_authority and current_target_authority and target_authority != current_target_authority:
+        return identity, {
+            "reason": "authority-identity-mismatch",
+            "expected_target_authority_revision": current_target_authority,
+            "record_target_authority_revision": target_authority,
+        }
+    return identity, {}
+
+
 def _planning_owner_admission_candidate(
     *,
     target_root: Path,
@@ -31259,6 +31456,15 @@ def _planning_owner_admission_candidate(
             }
     if require_live_graph_or_residual and not in_live_graph and not explicit_residual:
         return {**candidate, "status": "rejected", "reason": "owner-not-in-live-graph"}
+    reference_identity, authority_mismatch = _planning_owner_authority_identity(
+        owner_id=record_id,
+        owner_ref=relative or owner_ref,
+        record=record,
+        planning_revision=_as_dict(planning_revision),
+        expected_planning_revision=expected_planning_revision,
+    )
+    if authority_mismatch:
+        return {**candidate, "status": "rejected", **authority_mismatch, "reference_identity": reference_identity}
     return {
         **candidate,
         "status": "accepted",
@@ -31268,6 +31474,7 @@ def _planning_owner_admission_candidate(
         "record_planning_revision": record_planning_revision,
         "lifecycle": lifecycle,
         "phase": phase,
+        "reference_identity": reference_identity,
     }
 
 
@@ -31293,6 +31500,7 @@ def _selected_planning_owner_payload(target_root: Path) -> dict[str, Any]:
 
 def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str, Any]) -> dict[str, Any]:
     planning_revision = _planning_revision_payload(target_root=target_root)
+    admission_contract = _planning_owner_admission_contract()
     selection_basis_revision = _planning_owner_selection_basis_revision(target_root=target_root, state_data=state_data)
     live_entries = _planning_owner_live_graph_entries(data=state_data)
     live_refs = {entry["ref"] for entry in live_entries if entry.get("ref")}
@@ -31317,6 +31525,8 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
                 "selected_owner": admitted,
                 "rejected_candidates": [],
                 "repair_route": {},
+                "admission_contract": admission_contract,
+                "action_effect": _planning_owner_action_effect(accepted=True, rejected=False),
                 "rule": "Startup routing may rely only on a currently admitted Planning/current-work owner.",
             }
         rejected.append(admitted)
@@ -31338,6 +31548,8 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
                 "selected_owner": admitted,
                 "rejected_candidates": rejected,
                 "repair_route": _planning_owner_repair_route(target_root=target_root) if rejected else {},
+                "admission_contract": admission_contract,
+                "action_effect": _planning_owner_action_effect(accepted=True, rejected=bool(rejected)),
                 "rule": "Startup routing may rely only on a currently admitted Planning/current-work owner.",
             }
         rejected.append(admitted)
@@ -31347,6 +31559,8 @@ def _planning_owner_admission_payload(*, target_root: Path, state_data: dict[str
         "selected_owner": {},
         "rejected_candidates": rejected,
         "repair_route": _planning_owner_repair_route(target_root=target_root) if rejected else {},
+        "admission_contract": admission_contract,
+        "action_effect": _planning_owner_action_effect(accepted=False, rejected=bool(rejected)),
         "rule": "Rejected Planning owners are diagnostics only and must not affect task relation, claims, proof, or next action.",
     }
 
@@ -38662,7 +38876,9 @@ def _manual_transport_admission_payload(
         state = "disabled"
         export_allowed = False
         required = False
-        status = "blocked-transport-disabled" if handoff_required else "disabled"
+        status = (
+            "automatic-route-available" if automatic_method_available else "blocked-transport-disabled" if handoff_required else "disabled"
+        )
     elif policy == "required-when-no-automatic-method":
         export_allowed = True
         required = not automatic_method_available
@@ -38717,9 +38933,35 @@ def _assignment_identity_payload(
         "allowed_paths": allowed_paths if isinstance(allowed_paths, list) else [],
         "return_schema": next_step.get("return_schema") or "delegated-return/v1",
         "proof_obligation_id": proof_obligation.get("id") or next_step.get("proof_obligation_id"),
+        "proof_obligation_revision": proof_obligation.get("revision") or next_step.get("proof_obligation_revision"),
         "stop_conditions": stop_conditions if isinstance(stop_conditions, list) else [],
         "mutation_baseline": assignment_gate.get("mutation_baseline") or next_step.get("mutation_baseline"),
+        "return_admission_owner": "delegated-return.admit",
     }
+    required_fields = [
+        "target",
+        "target_identity_ref",
+        "target_revision",
+        "task_class",
+        "scope_class",
+        "plan_ref",
+        "plan_revision",
+        "slice_id",
+        "slice_revision",
+        "assignment_decision_revision",
+        "handoff_run_id",
+        "role",
+        "allowed_effects",
+        "allowed_paths",
+        "return_schema",
+        "proof_obligation_id",
+        "proof_obligation_revision",
+        "stop_conditions",
+        "mutation_baseline",
+    ]
+    missing_required = [field for field in required_fields if identity.get(field) in (None, "", [])]
+    identity["complete"] = not missing_required
+    identity["missing_required_fields"] = missing_required
     revision_source = json.dumps(identity, sort_keys=True, separators=(",", ":"), default=str)
     identity["revision"] = "sha256:" + hashlib.sha256(revision_source.encode("utf-8")).hexdigest()
     return identity
@@ -38745,23 +38987,28 @@ def _admit_delegated_return(
         else [],
         handoff_required=True,
     )
+    current_proof = _as_dict(assignment_gate.get("aw_proof_receipt") or assignment_gate.get("proof_receipt"))
+    current_baseline = assignment_gate.get("live_mutation_baseline")
     failures: list[dict[str, str]] = []
 
     def reject(reason: str, field: str, recovery: str) -> None:
         failures.append({"reason": reason, "field": field, "recovery": recovery})
 
-    if not manual_transport["export_allowed"]:
+    if not manual_transport["export_allowed"] and not manual_transport["automatic_method_available"]:
         reject("manual-transport-disabled", "manual_transport.policy", "Enable an allowed transport or use an automatic method.")
+    if not identity.get("complete"):
+        reject("incomplete-assignment-identity", "assignment_identity", "Regenerate the assignment with all required identity fields.")
     if returned_work.get("assignment_revision") != identity["revision"]:
         reject(
             "stale-assignment-revision", "assignment_revision", "Refresh the handoff and resubmit against the current assignment revision."
         )
     if returned_work.get("target") != identity["target"]:
         reject("target-mismatch", "target", "Return work from the selected assignment target only.")
-    proof = returned_work.get("aw_proof") or returned_work.get("proof")
-    if not isinstance(proof, dict) or proof.get("result") != "passed" or proof.get("verified_by") != "aw":
+    if current_proof.get("result") != "passed" or current_proof.get("verified_by") != "aw":
         reject(
-            "aw-proof-missing-or-not-passed", "aw_proof.result", "Run AW-owned proof and return a verified passed result before admission."
+            "aw-proof-missing-or-not-passed",
+            "assignment_gate.aw_proof_receipt",
+            "Run AW-owned proof and record the current receipt before admission.",
         )
     if returned_work.get("stop_conditions_hit"):
         reject("stop-condition-hit", "stop_conditions_hit", "Route the stop condition before integration.")
@@ -38774,43 +39021,21 @@ def _admit_delegated_return(
     elif changed_paths and not allowed_paths:
         reject("missing-canonical-scope", "assignment_identity.allowed_paths", "Refresh the assignment so AW can compare returned paths.")
     mutation_revalidation: dict[str, Any] = {"status": "not-provided", "admitted": False}
-    expected_baseline = returned_work.get("expected_mutation_baseline") or identity.get("mutation_baseline")
-    current_baseline = returned_work.get("current_mutation_baseline") or returned_work.get("mutation_baseline")
-    if expected_baseline and current_baseline:
-        if isinstance(expected_baseline, dict) and isinstance(current_baseline, dict):
-            mutation_admission = admit_mutation_boundary(
-                boundary_id="returned-worker-admission",
-                expected=expected_baseline,
-                current=current_baseline,
-                assignment_target_identity_ref=(
-                    str(returned_work.get("assignment_target_identity_ref"))
-                    if returned_work.get("assignment_target_identity_ref")
-                    else None
-                ),
-                allowed_paths=[str(path) for path in allowed_paths] if isinstance(allowed_paths, list) else None,
-            )
-            mutation_revalidation = _as_dict(mutation_admission.get("revalidation"))
-            for failure in mutation_revalidation.get("failures", []):
-                if isinstance(failure, dict):
-                    reject(
-                        str(failure.get("reason") or "mutation-baseline-revalidation-failed"),
-                        str(failure.get("field") or "mutation_baseline"),
-                        str(failure.get("repair") or "Rebase or regenerate the returned work against the current baseline."),
-                    )
-        elif current_baseline != expected_baseline:
-            mutation_revalidation = {
-                "status": "rejected",
-                "admitted": False,
-                "failures": [
-                    {
-                        "reason": "mutation-baseline-mismatch",
-                        "field": "mutation_baseline",
-                        "repair": "Rebase or regenerate the returned work against the current baseline.",
-                    }
-                ],
-            }
+    expected_baseline = identity.get("mutation_baseline")
+    mutation_admission = admit_mutation_boundary(
+        boundary_id="returned-worker-admission",
+        expected=expected_baseline if isinstance(expected_baseline, dict) else None,
+        current=current_baseline if isinstance(current_baseline, dict) else None,
+        assignment_target_identity_ref=str(identity.get("target_identity_ref") or "").strip() or None,
+        allowed_paths=[str(path) for path in allowed_paths] if isinstance(allowed_paths, list) else None,
+    )
+    mutation_revalidation = _as_dict(mutation_admission.get("revalidation")) or mutation_admission
+    for failure in mutation_admission.get("failures", []):
+        if isinstance(failure, dict):
             reject(
-                "mutation-baseline-mismatch", "mutation_baseline", "Rebase or regenerate the returned work against the current baseline."
+                str(failure.get("reason") or "mutation-baseline-revalidation-failed"),
+                str(failure.get("field") or "mutation_baseline"),
+                str(failure.get("repair") or "Rebase or regenerate the returned work against the current baseline."),
             )
 
     admitted = not failures
@@ -38822,6 +39047,14 @@ def _admit_delegated_return(
         "assignment_identity": identity,
         "manual_transport": manual_transport,
         "mutation_revalidation": mutation_revalidation,
+        "current_authority": {
+            "proof_receipt": current_proof or None,
+            "mutation_baseline": current_baseline,
+            "proof_source": "assignment_gate.aw_proof_receipt",
+            "baseline_source": "assignment_gate.live_mutation_baseline",
+            "worker_reported_proof_trusted": False,
+            "worker_reported_baseline_trusted": False,
+        },
         "failures": failures,
         "safe_recovery": "none" if admitted else failures[0]["recovery"],
         "rule": "Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.",
@@ -39633,17 +39866,19 @@ def _delegated_run_lifecycle_payload(
     admission_operation = {
         "operation_id": "delegated-return.admit",
         "callable": "agentic_workspace.workspace_runtime_core._admit_delegated_return",
+        "public": True,
+        "generated_operation": True,
         "assignment_identity": assignment_identity,
         "input_contract": {
-            "required": ["assignment_revision", "target", "aw_proof"],
+            "required": ["assignment_revision", "target", "return_artifact_ref"],
             "optional": [
                 "changed_paths",
-                "mutation_baseline",
                 "stop_conditions_hit",
             ],
         },
         "rejects": [
             "stale-assignment-revision",
+            "incomplete-assignment-identity",
             "target-mismatch",
             "manual-transport-disabled",
             "missing-canonical-scope",
@@ -39662,6 +39897,8 @@ def _delegated_run_lifecycle_payload(
             "target": assignment_gate.get("selected_target"),
             "required_next_action": assignment_gate.get("required_next_action"),
             "implementation_allowed": assignment_gate.get("implementation_allowed"),
+            "identity_complete": assignment_identity["complete"],
+            "missing_identity_fields": assignment_identity["missing_required_fields"],
         },
         "manual_transport": {
             "policy": manual_transport["policy"],
@@ -39679,8 +39916,10 @@ def _delegated_run_lifecycle_payload(
             {"id": "assignment-selected", "status": assignment_gate.get("status")},
             {
                 "id": "handoff-prepared",
-                "status": "blocked-transport-disabled"
-                if handoff_required and not manual_export_allowed
+                "status": "automatic-route-available"
+                if handoff_required and (not manual_export_allowed) and manual_transport["automatic_method_available"]
+                else "blocked-transport-disabled"
+                if handoff_required and (not manual_export_allowed)
                 else "required"
                 if handoff_required
                 else "not-required",
@@ -39707,21 +39946,68 @@ def _delegated_run_lifecycle_payload(
         "admission_gate": {
             "status": "closed-until-reviewed",
             "operation": admission_operation,
+            "public_operations": [
+                {
+                    "operation_id": "delegated-run.export",
+                    "state_transition": "assignment-selected -> handoff-prepared",
+                    "artifact_state": "local/exported",
+                    "idempotency": "assignment_identity.revision + transport route",
+                },
+                {
+                    "operation_id": "delegated-return.import",
+                    "state_transition": "worker-returned -> received/awaiting-admission",
+                    "artifact_state": "local/received/awaiting-admission",
+                    "idempotency": "handoff_run_id + return artifact digest",
+                },
+                {
+                    "operation_id": "delegated-return.admit",
+                    "state_transition": "received/awaiting-admission -> admitted|rejected|repair-requested",
+                    "artifact_state": "local/admission-review",
+                    "idempotency": "assignment_identity.revision + current authority revisions",
+                },
+                {
+                    "operation_id": "delegated-return.integrate",
+                    "state_transition": "admitted -> integrated",
+                    "artifact_state": "repo mutation boundary",
+                    "idempotency": "admission receipt + live mutation baseline",
+                },
+                {
+                    "operation_id": "delegated-run.close",
+                    "state_transition": "integrated -> closed",
+                    "artifact_state": "closeout/proof receipt",
+                    "idempotency": "integration receipt + closeout proof",
+                },
+            ],
             "identity_fields": [
                 "assignment.target",
+                "assignment.target_identity_ref",
+                "assignment.target_revision",
+                "assignment.task_class",
+                "assignment.scope_class",
+                "assignment.plan_ref",
+                "assignment.plan_revision",
+                "assignment.slice_id",
+                "assignment.slice_revision",
                 "assignment.required_next_action",
                 "manual_transport.policy",
-                "assignment.plan_revision",
-                "assignment.slice_revision",
-                "assignment.target_identity_ref",
                 "assignment.allowed_effects",
                 "assignment.allowed_paths",
+                "assignment.role",
+                "assignment.handoff_run_id",
+                "assignment.return_schema",
                 "assignment.proof_obligation_id",
+                "assignment.proof_obligation_revision",
+                "assignment.stop_conditions",
                 "assignment.mutation_baseline",
                 "assignment.revision",
             ],
-            "required_evidence": ["returned summary", "changed paths or no-change statement", "AW-owned proof result"],
-            "rule": "Returned work is rejected until delegated-return.admit re-reads assignment identity, scope, proof, stop-condition, transport, and baseline evidence immediately before integration.",
+            "required_evidence": [
+                "received/awaiting-admission return artifact",
+                "changed paths or no-change statement",
+                "current AW-owned proof receipt",
+                "live mutation baseline",
+            ],
+            "rule": "Returned work is rejected until delegated-return.admit re-reads assignment identity, scope, proof, stop-condition, transport, and baseline evidence from current AW authorities immediately before integration.",
         },
         "return_contract": [
             "what changed",
@@ -45371,6 +45657,16 @@ def _record_proof_receipt_payload(
         changed_paths=receipt["changed_paths"],
         command=command,
     )
+    from agentic_workspace.workspace_runtime_proof import _proof_template_binding_for_recorded_receipt
+
+    template_binding = _proof_template_binding_for_recorded_receipt(target_root=target_root, receipt=receipt)
+    if template_binding.get("status") == "rejected":
+        raise WorkspaceUsageError(
+            f"Proof receipt template binding rejected ({template_binding['reason']}): "
+            "rerun proof selection and record the concrete command from the current selected obligation."
+        )
+    if template_binding.get("status") == "bound" and isinstance(template_binding.get("binding"), dict):
+        receipt["proof_template_binding"] = template_binding["binding"]
     admission = proof_receipt_admission(receipt)
     if not admission["admitted"]:
         raise WorkspaceUsageError(f"Proof receipt rejected ({admission['reason']}): {admission['safe_recovery']}")

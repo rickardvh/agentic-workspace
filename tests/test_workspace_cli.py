@@ -5336,6 +5336,21 @@ def test_start_routes_completed_active_plan_to_archive_before_new_reflection(tmp
     assert admission["rejected_candidates"][0]["ref"] == ".agentic-workspace/planning/execplans/issue-1981.plan.json"
     assert admission["rejected_candidates"][0]["reason"] == "owner-lifecycle-not-live"
     assert admission["repair_route"]["status"] == "available"
+    assert admission["admission_contract"]["consumers"] == [
+        "start",
+        "next",
+        "implement",
+        "autopilot",
+        "proof",
+        "closeout",
+        "archive",
+        "status",
+        "doctor",
+        "report",
+    ]
+    assert admission["action_effect"]["force"] == "required_before_action"
+    assert "closeout" in admission["action_effect"]["blocked_until_reconciled"]
+    assert "archive" in admission["action_effect"]["blocked_until_reconciled"]
     assert route.get("selected_owner_identity", {}).get("ref", "") == ""
 
     assert (
@@ -5733,6 +5748,13 @@ active_items = [{ id = "issue-2290", status = "active", surface = ".agentic-work
     assert route["selected_owner"] == selected_ref
     assert route["task_relation"] == "continues-selected-owner"
     assert route["owner_admission"]["selected_owner"]["reason"] == "explicit-residual-owner"
+    assert "proof" in route["owner_admission"]["admission_contract"]["consumers"]
+    assert "closeout" in route["owner_admission"]["admission_contract"]["consumers"]
+    assert "archive" in route["owner_admission"]["admission_contract"]["consumers"]
+    reference_identity = route["owner_admission"]["selected_owner"]["reference_identity"]
+    assert reference_identity["owner_ref"] == selected_ref
+    assert reference_identity["owner_id"] == "issue-2281"
+    assert reference_identity["current_planning_revision"]
 
 
 def test_start_route_rejects_stale_local_selection_revision(tmp_path: Path, capsys) -> None:
@@ -5921,7 +5943,21 @@ execplans = [{ id = "issue-2290", path = ".agentic-workspace/planning/execplans/
     )
     _write(
         tmp_path / selected_ref,
-        json.dumps({"kind": "planning-execplan/v1", "id": "issue-2290", "lifecycle": "live", "phase": "implementation"}),
+        json.dumps(
+            {
+                "kind": "planning-execplan/v1",
+                "id": "issue-2290",
+                "lifecycle": "live",
+                "phase": "implementation",
+                "revision": "owner-rev-1",
+                "assignment_target_identity_ref": "assignment-target:issue-2290",
+                "assignment_revision": "assignment-rev-1",
+                "evaluation_result_identity": "evaluation-result:issue-2290:passed",
+                "proof_obligation_revision": "proof-obligation-rev-1",
+                "mutation_baseline_id": "mutation-baseline-1",
+                "integration_revision": "integration-rev-1",
+            }
+        ),
     )
 
     assert (
@@ -5944,6 +5980,17 @@ execplans = [{ id = "issue-2290", path = ".agentic-workspace/planning/execplans/
     route = json.loads(capsys.readouterr().out)["values"]["planning_safety_gate"]["route_decision"]
     assert route["selected_owner"] == selected_ref
     assert route["owner_admission"]["selected_owner"]["source"] == ".agentic-workspace/planning/state.toml:active.execplans"
+    reference_identity = route["owner_admission"]["selected_owner"]["reference_identity"]
+    assert reference_identity["owner_ref"] == selected_ref
+    assert reference_identity["owner_id"] == "issue-2290"
+    assert reference_identity["record_revision"] == "owner-rev-1"
+    assert reference_identity["assignment_target_identity_ref"] == "assignment-target:issue-2290"
+    assert reference_identity["assignment_revision"] == "assignment-rev-1"
+    assert reference_identity["evaluation_result_identity"] == "evaluation-result:issue-2290:passed"
+    assert reference_identity["proof_obligation_revision"] == "proof-obligation-rev-1"
+    assert reference_identity["mutation_baseline_id"] == "mutation-baseline-1"
+    assert reference_identity["integration_revision"] == "integration-rev-1"
+    assert reference_identity["identity_completeness"] == "partial"
 
 
 def test_start_route_replays_stale_2290_local_selection_without_claim_constraints(tmp_path: Path, capsys) -> None:

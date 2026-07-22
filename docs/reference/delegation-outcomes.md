@@ -12,4 +12,8 @@ Local delegation outcome log used to tune target-profile recommendations.
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Local delegation outcome log used to tune target-profile recommendations. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `kind` | const `"agentic-workspace/delegation-outcomes/v1"` | yes |  | Discriminator identifying the payload or record shape. |  |  |
+| `retention` | object | no |  | Bounded retention and compaction policy for the local evidence ledger. |  |  |
+| `retention.mode` | string | no |  | Retention mode applied to this ledger. |  |  |
+| `retention.compaction_cap` | integer | no |  | Maximum raw same-context record count expected before compaction. |  |  |
+| `retention.rule` | string | no |  | Human-readable retention rule. |  |  |
 | `records` | array of object | yes |  | Ordered records entries used by this contract. |  |  |
