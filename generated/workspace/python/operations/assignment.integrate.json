@@ -42,7 +42,32 @@
     },
     {
       "name": "run_id",
-      "required": true,
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "assignment_gate_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "assignment_policy_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "delegation_decision_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "aw_proof_receipt_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "run_state_json",
+      "required": false,
       "source": "cli-option"
     },
     {
@@ -77,12 +102,12 @@
     },
     {
       "name": "current_authority_ref",
-      "required": true,
+      "required": false,
       "source": "cli-option"
     },
     {
       "name": "live_mutation_baseline",
-      "required": true,
+      "required": false,
       "source": "cli-option"
     },
     {

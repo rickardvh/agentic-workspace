@@ -15,7 +15,11 @@ Input accepted by public assignment lifecycle operations that prepare handoff pa
 | `artifact_ref` | string | no |  | Path or durable reference to a lifecycle artifact, such as an export packet or imported return record. |  |  |
 | `assignment_id` | string | no |  | Stable Planning assignment identifier for the delegated run. |  |  |
 | `assignment_revision` | string | no |  | Current assignment authority revision that the lifecycle operation is scoped to. |  |  |
+| `assignment_gate_json` | string | no |  | Serialized current assignment gate resolved by the workspace before export/admission. |  |  |
+| `assignment_policy_json` | string | no |  | Serialized current assignment policy resolved by the workspace before export/admission. |  |  |
+| `aw_proof_receipt_json` | string | no |  | Serialized AW-owned proof receipt resolved by the workspace before export/admission. |  |  |
 | `current_authority_ref` | string | no |  | Live authority reference resolved by the receiving workspace before admission or protected mutation. |  |  |
+| `delegation_decision_json` | string | no |  | Serialized current delegation decision resolved by the workspace before export/admission. |  |  |
 | `dry_run` | boolean | no |  | Whether to compute the lifecycle transition without applying local artifact writes. |  |  |
 | `expires_at` | string | no |  | Optional expiration timestamp for temporary overrides or lifecycle decisions. |  |  |
 | `format` | enum `"text"`, `"json"` | no |  | Requested command output format. |  |  |
@@ -24,6 +28,7 @@ Input accepted by public assignment lifecycle operations that prepare handoff pa
 | `reason` | string | no |  | Human-readable reason for rejection, repair, reassignment, cleanup, close, or override actions. |  |  |
 | `return_id` | string | no |  | Stable identifier for a returned assignment result packet. |  |  |
 | `return_json` | string | no |  | Serialized worker return payload awaiting admission. |  |  |
+| `run_state_json` | string | no |  | Serialized current run-state authority resolved by the workspace before export/admission. |  |  |
 | `run_id` | string | no |  | Stable assignment run identifier used for local lifecycle artifact storage. |  |  |
 | `scope` | string | no |  | Bounded scope for reassignment, repair, cleanup, close, or override records. |  |  |
 | `target` | string | no |  | Target repository path for the lifecycle operation. |  |  |

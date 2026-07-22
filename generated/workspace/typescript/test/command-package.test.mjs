@@ -32,7 +32,7 @@ test('generated package metadata exposes maturity and weak-agent routing status'
 
 test('generated runnable adapter executes supported command without Python runtime', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, ...["assignment", "admit", "--dry-run", "--run-id", "value", "--current-authority-ref", "value", "--live-mutation-baseline", "value", "--format", "json"]], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [cli, ...["assignment", "admit", "--dry-run", "--run-id", "value", "--format", "json"]], { encoding: 'utf8' });
   assert.equal(result.status, 0);
   const payload = JSON.parse(result.stdout);
   assert.equal(typeof payload, 'object');
@@ -44,7 +44,7 @@ test('generated runnable adapter preserves spaced argv values during native exec
   const spacedTarget = fileURLToPath(new URL('../tmp target with spaces', import.meta.url));
   mkdirSync(spacedTarget, { recursive: true });
   try {
-    const args = ["assignment", "admit", "--dry-run", "--run-id", "__SPACED_TARGET__", "--current-authority-ref", "value", "--live-mutation-baseline", "value"].map((token) => token === '__SPACED_TARGET__' ? spacedTarget : token);
+    const args = ["assignment", "admit", "--dry-run", "--run-id", "__SPACED_TARGET__"].map((token) => token === '__SPACED_TARGET__' ? spacedTarget : token);
     const result = spawnSync(process.execPath, [cli, ...args], { encoding: 'utf8' });
     assert.equal(result.status, 0);
     assert.doesNotMatch(result.stderr, /runtime handoff/i);
@@ -85,7 +85,7 @@ test('generated runnable adapter renders command help without executing runtime'
 
 test('generated runnable adapter validates choices before command execution', () => {
   const cli = fileURLToPath(new URL('../src/cli.mjs', import.meta.url));
-  const result = spawnSync(process.execPath, [cli, ...["assignment", "admit", "--run-id", "value", "--current-authority-ref", "value", "--live-mutation-baseline", "value"], '--format', '__invalid__'], {
+  const result = spawnSync(process.execPath, [cli, ...["assignment", "admit", "--run-id", "value"], '--format', '__invalid__'], {
     encoding: 'utf8',
   });
   assert.equal(result.status, 2);

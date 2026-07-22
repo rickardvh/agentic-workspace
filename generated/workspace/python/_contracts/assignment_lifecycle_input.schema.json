@@ -27,8 +27,24 @@
       "minLength": 1,
       "type": "string"
     },
+    "assignment_gate_json": {
+      "description": "Serialized current assignment gate resolved by the workspace before export/admission.",
+      "type": "string"
+    },
+    "assignment_policy_json": {
+      "description": "Serialized current assignment policy resolved by the workspace before export/admission.",
+      "type": "string"
+    },
+    "aw_proof_receipt_json": {
+      "description": "Serialized AW-owned proof receipt resolved by the workspace before export/admission.",
+      "type": "string"
+    },
     "current_authority_ref": {
       "description": "Live authority reference resolved by the receiving workspace before admission or protected mutation.",
+      "type": "string"
+    },
+    "delegation_decision_json": {
+      "description": "Serialized current delegation decision resolved by the workspace before export/admission.",
       "type": "string"
     },
     "dry_run": {
@@ -66,6 +82,10 @@
     },
     "return_json": {
       "description": "Serialized worker return payload awaiting admission.",
+      "type": "string"
+    },
+    "run_state_json": {
+      "description": "Serialized current run-state authority resolved by the workspace before export/admission.",
       "type": "string"
     },
     "run_id": {

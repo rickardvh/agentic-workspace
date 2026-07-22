@@ -161,31 +161,84 @@ def test_assignment_lifecycle_operations_are_generated_runtime_backed() -> None:
 
 
 def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_path: Path) -> None:
+    from agentic_workspace import workspace_runtime_core
+
     (tmp_path / ".agentic-workspace").mkdir()
     (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
     invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
+    assignment_gate = {
+        "status": "handoff-required",
+        "assignment_policy": "required-best-fit",
+        "selected_target": "planner",
+        "required_next_action": "prepare-assigned-handoff",
+        "target_identity_ref": "target:planner@2026-07-21",
+        "target_revision": "target-rev-1",
+        "task_class": "mechanical-follow-through",
+        "scope_class": "narrow-code-change",
+        "plan_ref": ".agentic-workspace/planning/execplans/plan.plan.json",
+        "plan_revision": "plan-rev-1",
+        "slice_id": "slice-1",
+        "slice_revision": "slice-rev-1",
+        "assignment_decision_revision": "assignment-rev-1",
+        "role": "implementer",
+        "allowed_effects": ["repo-write"],
+        "allowed_paths": ["src/feature.py"],
+        "proof_obligation": {"id": "proof:feature", "revision": "proof-rev-1"},
+        "stop_conditions": ["scope-expanded"],
+        "mutation_baseline": "baseline-1",
+    }
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = {
+        "decision": "assignment-handoff-required",
+        "delegation_next_step": {
+            "execution_methods": ["manual"],
+            "handoff_run_id": "run-1",
+            "return_schema": "delegated-return/v1",
+        },
+    }
+    proof_receipt = {"result": "passed", "verified_by": "aw", "revision": "proof-rev-1"}
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
     export = assignment_export(
-        {"assignment_id": "assign-1", "assignment_revision": "rev-1", "target_name": "planner", "run_id": "run-1"},
+        {
+            "assignment_id": "assign-1",
+            "assignment_revision": identity["revision"],
+            "target_name": "planner",
+            "run_id": "run-1",
+            "assignment_gate_json": json.dumps(assignment_gate),
+            "assignment_policy_json": json.dumps(assignment_policy),
+            "delegation_decision_json": json.dumps(delegation_decision),
+            "aw_proof_receipt_json": json.dumps(proof_receipt),
+            "live_mutation_baseline": "baseline-1",
+        },
         target=tmp_path,
         invocation=invocation,
     )
     imported = assignment_import(
-        {"run_id": "run-1", "return_json": json.dumps({"changed_paths": ["src/feature.py"]})},
+        {
+            "run_id": "run-1",
+            "return_json": json.dumps(
+                {"assignment_revision": identity["revision"], "target": "planner", "changed_paths": ["src/feature.py"]}
+            ),
+        },
         target=tmp_path,
         invocation=invocation,
     )
     blocked = assignment_integrate(
-        {"run_id": "run-1", "current_authority_ref": "planning:rev", "live_mutation_baseline": "baseline-1"},
+        {"run_id": "run-1"},
         target=tmp_path,
         invocation=invocation,
     )
     admitted = assignment_admit(
-        {"run_id": "run-1", "current_authority_ref": "planning:rev", "live_mutation_baseline": "baseline-1"},
+        {"run_id": "run-1"},
         target=tmp_path,
         invocation=invocation,
     )
     integrated = assignment_integrate(
-        {"run_id": "run-1", "current_authority_ref": "planning:rev", "live_mutation_baseline": "baseline-1"},
+        {"run_id": "run-1"},
         target=tmp_path,
         invocation=invocation,
     )
@@ -205,6 +258,20 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     override_ref = next(ref for ref in override["artifact_refs"] if ref.endswith("override/override.json"))
     override_receipt = json.loads((tmp_path / override_ref).read_text())
     assert override_receipt["claim_effect"] == "downgrade-until-revalidated"
+
+
+def test_assignment_lifecycle_public_admit_rejects_caller_authority_strings(tmp_path: Path) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
+    invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
+    result = assignment_admit(
+        {"run_id": "run-1", "current_authority_ref": "planning:rev", "live_mutation_baseline": "baseline-1"},
+        target=tmp_path,
+        invocation=invocation,
+    )
+
+    assert result["status"] == "blocked"
+    assert result["reason_code"] == "missing-current-authority"
 
 
 def test_contract_requirement_negotiation_distinguishes_change_classes() -> None:

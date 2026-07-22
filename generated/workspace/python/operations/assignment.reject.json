@@ -46,6 +46,31 @@
       "source": "cli-option"
     },
     {
+      "name": "assignment_gate_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "assignment_policy_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "delegation_decision_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "aw_proof_receipt_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "run_state_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
       "name": "target_name",
       "required": false,
       "source": "cli-option"

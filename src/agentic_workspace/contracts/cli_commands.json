@@ -24,7 +24,43 @@
           "help": "Run assignment.admit.",
           "mutates_state": false,
           "name": "admit",
-          "options": [],
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
           "role": "core_context_router",
           "uses_option_groups": [
             "format"
@@ -36,7 +72,43 @@
           "help": "Run assignment.cleanup.",
           "mutates_state": false,
           "name": "cleanup",
-          "options": [],
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
           "role": "core_context_router",
           "uses_option_groups": [
             "format"
@@ -48,7 +120,43 @@
           "help": "Run assignment.close.",
           "mutates_state": false,
           "name": "close",
-          "options": [],
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
           "role": "core_context_router",
           "uses_option_groups": [
             "format"
@@ -60,7 +168,43 @@
           "help": "Run assignment.export.",
           "mutates_state": false,
           "name": "export",
-          "options": [],
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
           "role": "core_context_router",
           "uses_option_groups": [
             "format"
@@ -72,7 +216,43 @@
           "help": "Run assignment.import.",
           "mutates_state": false,
           "name": "import",
-          "options": [],
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
           "role": "core_context_router",
           "uses_option_groups": [
             "format"
@@ -84,7 +264,43 @@
           "help": "Run assignment.integrate.",
           "mutates_state": false,
           "name": "integrate",
-          "options": [],
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
           "role": "core_context_router",
           "uses_option_groups": [
             "format"
@@ -96,7 +312,43 @@
           "help": "Run assignment.override.",
           "mutates_state": false,
           "name": "override",
-          "options": [],
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
           "role": "core_context_router",
           "uses_option_groups": [
             "format"
@@ -108,7 +360,43 @@
           "help": "Run assignment.reassign.",
           "mutates_state": false,
           "name": "reassign",
-          "options": [],
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
           "role": "core_context_router",
           "uses_option_groups": [
             "format"
@@ -120,7 +408,43 @@
           "help": "Run assignment.reject.",
           "mutates_state": false,
           "name": "reject",
-          "options": [],
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
           "role": "core_context_router",
           "uses_option_groups": [
             "format"
@@ -132,7 +456,43 @@
           "help": "Run assignment.repair.",
           "mutates_state": false,
           "name": "repair",
-          "options": [],
+          "options": [
+            {
+              "name": "assignment_gate_json",
+              "flags": [
+                "--assignment-gate-json"
+              ],
+              "help": "Serialized current assignment gate authority."
+            },
+            {
+              "name": "assignment_policy_json",
+              "flags": [
+                "--assignment-policy-json"
+              ],
+              "help": "Serialized current assignment policy authority."
+            },
+            {
+              "name": "delegation_decision_json",
+              "flags": [
+                "--delegation-decision-json"
+              ],
+              "help": "Serialized current delegation decision authority."
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "flags": [
+                "--aw-proof-receipt-json"
+              ],
+              "help": "Serialized AW proof receipt authority."
+            },
+            {
+              "name": "run_state_json",
+              "flags": [
+                "--run-state-json"
+              ],
+              "help": "Serialized current assignment run state authority."
+            }
+          ],
           "role": "core_context_router",
           "uses_option_groups": [
             "format"

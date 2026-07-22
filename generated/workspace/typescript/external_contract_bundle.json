@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:f0a16fbc5064df43a3a01a14e17b898d04ae4ec0244d04a97bfd9c1f64bed48f",
+  "profile_fingerprint": "sha256:8376fb49b781d9616d8f119a2dbe032232c165ffcefdf8676d6d862cd0d124c5",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -20,8 +20,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f8ecacd6e7d0729c7ddba8a82f55b24a168e51214102787ed7a09b36aeab6b2d",
-      "compatibility_fingerprint": "sha256:c451d0ed7e256b4b06b3738bf89ef09d5e5048768c1a50300d4346d2fe2918cf",
+      "fingerprint": "sha256:efbba3ae4033ad4494174d78a950ecda72fee949c9d9a730d64e8272b7325ccf",
+      "compatibility_fingerprint": "sha256:330b2dc8266b54aa75b5a328cd8c9930f78778c784559cba5de06b83466583d3",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -66,7 +66,32 @@
           },
           {
             "name": "run_id",
-            "required": true,
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_gate_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_policy_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delegation_decision_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "aw_proof_receipt_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_state_json",
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -101,12 +126,12 @@
           },
           {
             "name": "current_authority_ref",
-            "required": true,
+            "required": false,
             "source": "cli-option"
           },
           {
             "name": "live_mutation_baseline",
-            "required": true,
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -364,7 +389,32 @@
             },
             {
               "name": "run_id",
-              "required": true,
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_gate_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_policy_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delegation_decision_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_state_json",
+              "required": false,
               "source": "cli-option"
             },
             {
@@ -399,12 +449,12 @@
             },
             {
               "name": "current_authority_ref",
-              "required": true,
+              "required": false,
               "source": "cli-option"
             },
             {
               "name": "live_mutation_baseline",
-              "required": true,
+              "required": false,
               "source": "cli-option"
             },
             {
@@ -476,7 +526,19 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_gate_json": {
+                  "type": "string"
+                },
+                "assignment_policy_json": {
+                  "type": "string"
+                },
+                "aw_proof_receipt_json": {
+                  "type": "string"
+                },
                 "current_authority_ref": {
+                  "type": "string"
+                },
+                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -506,6 +568,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -645,8 +710,8 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:cd9ad4c46de5071ce64950f9efe4497b8cbbe5e82578a725d921351c5d408bca",
-      "compatibility_fingerprint": "sha256:978f704997489ccab60705c44b32680569e3035af75fa9aee4156e60e623c3fd",
+      "fingerprint": "sha256:bd815e5054bb5f32a9f7c36124f303c16df4a8adbed2a77a010a41ccbcceace2",
+      "compatibility_fingerprint": "sha256:cac32ec70d717a1dc8f421bc35d4dc8388d71c63b50566e024448b50ba358f55",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -692,6 +757,31 @@
           {
             "name": "run_id",
             "required": true,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_gate_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_policy_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delegation_decision_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "aw_proof_receipt_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_state_json",
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -993,6 +1083,31 @@
               "source": "cli-option"
             },
             {
+              "name": "assignment_gate_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_policy_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delegation_decision_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_state_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
@@ -1101,7 +1216,19 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_gate_json": {
+                  "type": "string"
+                },
+                "assignment_policy_json": {
+                  "type": "string"
+                },
+                "aw_proof_receipt_json": {
+                  "type": "string"
+                },
                 "current_authority_ref": {
+                  "type": "string"
+                },
+                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -1131,6 +1258,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -1270,8 +1400,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:55158b123967a1c7403305c3acd87ad681c07b07cf9dc0e0c639dd2796a40e99",
-      "compatibility_fingerprint": "sha256:2c5d0184f094919c0356e7170a206dfc8bc98cf19ee11ca21faa518ca5af89aa",
+      "fingerprint": "sha256:e33342017489a03c9ded40e48fdaa572c994013bafe805d07679f68a86fb2f56",
+      "compatibility_fingerprint": "sha256:6e9c99c2edafc2875a73554ff9320c37ffd3996c50942197225ce49ec72fafe2",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1317,6 +1447,31 @@
           {
             "name": "run_id",
             "required": true,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_gate_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_policy_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delegation_decision_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "aw_proof_receipt_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_state_json",
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -1618,6 +1773,31 @@
               "source": "cli-option"
             },
             {
+              "name": "assignment_gate_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_policy_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delegation_decision_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_state_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
@@ -1726,7 +1906,19 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_gate_json": {
+                  "type": "string"
+                },
+                "assignment_policy_json": {
+                  "type": "string"
+                },
+                "aw_proof_receipt_json": {
+                  "type": "string"
+                },
                 "current_authority_ref": {
+                  "type": "string"
+                },
+                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -1756,6 +1948,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -1895,8 +2090,8 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:5f760ed2f48c2c7968ca09334f3d9d3cbfdd8b3f1daa0e46ebe8faaa60c370bf",
-      "compatibility_fingerprint": "sha256:efa88ac79433b05f1477f8a5a8c763a8678e1f92afe24f1c830d16a088efe4a0",
+      "fingerprint": "sha256:38ca34e687946388996fdeba57207f5080adbda219fac123d05f2d548d7cb142",
+      "compatibility_fingerprint": "sha256:8f293b0fd7ec7e68fe37f7e34e25274dc275c864ebbea5d9ac90ea6f34257896",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1941,6 +2136,31 @@
           },
           {
             "name": "run_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_gate_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_policy_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delegation_decision_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "aw_proof_receipt_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_state_json",
             "required": false,
             "source": "cli-option"
           },
@@ -2243,6 +2463,31 @@
               "source": "cli-option"
             },
             {
+              "name": "assignment_gate_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_policy_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delegation_decision_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_state_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target_name",
               "required": true,
               "source": "cli-option"
@@ -2351,7 +2596,19 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_gate_json": {
+                  "type": "string"
+                },
+                "assignment_policy_json": {
+                  "type": "string"
+                },
+                "aw_proof_receipt_json": {
+                  "type": "string"
+                },
                 "current_authority_ref": {
+                  "type": "string"
+                },
+                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -2381,6 +2638,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -2520,8 +2780,8 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b0df47eee5d4608f538326fa64bab4cbc81516892aec0bf756c4f780eda63d75",
-      "compatibility_fingerprint": "sha256:ceabe74b0a699df1e4963335500346da87c3e50dd056d9b25e4e020ca61e52f5",
+      "fingerprint": "sha256:2fa16468d73fa5105f8033f35fb8640ff08277fa47a60f860bc26ca8070c6da0",
+      "compatibility_fingerprint": "sha256:123271b3f8749e71bb4ea38794ede6e2e1bfa8a46e8847a9f9dbdb88abdce9f6",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -2567,6 +2827,31 @@
           {
             "name": "run_id",
             "required": true,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_gate_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_policy_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delegation_decision_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "aw_proof_receipt_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_state_json",
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -2868,6 +3153,31 @@
               "source": "cli-option"
             },
             {
+              "name": "assignment_gate_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_policy_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delegation_decision_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_state_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
@@ -2976,7 +3286,19 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_gate_json": {
+                  "type": "string"
+                },
+                "assignment_policy_json": {
+                  "type": "string"
+                },
+                "aw_proof_receipt_json": {
+                  "type": "string"
+                },
                 "current_authority_ref": {
+                  "type": "string"
+                },
+                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -3006,6 +3328,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -3145,8 +3470,8 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b45cc4679990861ba9d333bff41dd9337fdaa7e4097a74b26ec41d28f9d23971",
-      "compatibility_fingerprint": "sha256:9d95f3b6873d3e3d13900e0fea795fcd4d4c2073a7e3395883084dad18f2b3fa",
+      "fingerprint": "sha256:35833d75fb21751973f88d51e9022a596622a1a57e511bd6691f93550c4f7c26",
+      "compatibility_fingerprint": "sha256:935c0d17705a8cf0757271d5652eda0b39af2b907442b3870fe22580384c70b1",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -3191,7 +3516,32 @@
           },
           {
             "name": "run_id",
-            "required": true,
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_gate_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_policy_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delegation_decision_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "aw_proof_receipt_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_state_json",
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -3226,12 +3576,12 @@
           },
           {
             "name": "current_authority_ref",
-            "required": true,
+            "required": false,
             "source": "cli-option"
           },
           {
             "name": "live_mutation_baseline",
-            "required": true,
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -3489,7 +3839,32 @@
             },
             {
               "name": "run_id",
-              "required": true,
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_gate_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_policy_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delegation_decision_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_state_json",
+              "required": false,
               "source": "cli-option"
             },
             {
@@ -3524,12 +3899,12 @@
             },
             {
               "name": "current_authority_ref",
-              "required": true,
+              "required": false,
               "source": "cli-option"
             },
             {
               "name": "live_mutation_baseline",
-              "required": true,
+              "required": false,
               "source": "cli-option"
             },
             {
@@ -3601,7 +3976,19 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_gate_json": {
+                  "type": "string"
+                },
+                "assignment_policy_json": {
+                  "type": "string"
+                },
+                "aw_proof_receipt_json": {
+                  "type": "string"
+                },
                 "current_authority_ref": {
+                  "type": "string"
+                },
+                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -3631,6 +4018,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -3770,8 +4160,8 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:6bc6dc5694d0f65f399ede056a8fd11ae014ff0f0f81bc0b7ad3b5152fbe266b",
-      "compatibility_fingerprint": "sha256:ea7dc314f9dfd6f70d04a170711de44064b435a87de0569bfd8eff5cc94827ff",
+      "fingerprint": "sha256:07701b007154ee2dfb87239bc1a1f08183214a4a85d561afbf890d04ae965b46",
+      "compatibility_fingerprint": "sha256:51bdcb07c85c25aeb1bc461957c2a8d58edbaa8538bda0af6a3905f28fec20c3",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -3816,6 +4206,31 @@
           },
           {
             "name": "run_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_gate_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_policy_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delegation_decision_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "aw_proof_receipt_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_state_json",
             "required": false,
             "source": "cli-option"
           },
@@ -4118,6 +4533,31 @@
               "source": "cli-option"
             },
             {
+              "name": "assignment_gate_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_policy_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delegation_decision_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_state_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
@@ -4226,7 +4666,19 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_gate_json": {
+                  "type": "string"
+                },
+                "assignment_policy_json": {
+                  "type": "string"
+                },
+                "aw_proof_receipt_json": {
+                  "type": "string"
+                },
                 "current_authority_ref": {
+                  "type": "string"
+                },
+                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -4256,6 +4708,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -4395,8 +4850,8 @@
     "assignment.reassign": {
       "identity": "assignment.reassign",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:0475725fede6a464411d6f69dd38d6562b5fcd3a0e311e64c61e81c1cf680c91",
-      "compatibility_fingerprint": "sha256:805bf001ffa0dd268a93cbe4baaa6f4ee10b3db608bb9b1c6c09af5a1be1b77f",
+      "fingerprint": "sha256:82695cb5a99d925c88b02da27438fe0b1139950afa595287bbf997c6aae8c4b1",
+      "compatibility_fingerprint": "sha256:93a31e39ef65dd24d37b8b4ab73e1068dde82f934647d352ea4a441b88949ff7",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -4442,6 +4897,31 @@
           {
             "name": "run_id",
             "required": true,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_gate_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_policy_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delegation_decision_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "aw_proof_receipt_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_state_json",
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -4743,6 +5223,31 @@
               "source": "cli-option"
             },
             {
+              "name": "assignment_gate_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_policy_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delegation_decision_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_state_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target_name",
               "required": true,
               "source": "cli-option"
@@ -4851,7 +5356,19 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_gate_json": {
+                  "type": "string"
+                },
+                "assignment_policy_json": {
+                  "type": "string"
+                },
+                "aw_proof_receipt_json": {
+                  "type": "string"
+                },
                 "current_authority_ref": {
+                  "type": "string"
+                },
+                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -4881,6 +5398,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -5020,8 +5540,8 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b3004a25892812ccf84dbfe74e5b1304c8db7be89df5fc3ca80e6511d09eb6ba",
-      "compatibility_fingerprint": "sha256:64215a401320986025b01ef1b16f12a8eb0528017e492d75986adf64fc308e7b",
+      "fingerprint": "sha256:7c7264b966bd720bffee75baf61d5502d281e250e0bb0dacd4a24156af32dbe5",
+      "compatibility_fingerprint": "sha256:fc182ab9013e1b4eeaa3acb7e54f1bfe4c1f2a3ab88a6e032a8a50fd006ce1aa",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5067,6 +5587,31 @@
           {
             "name": "run_id",
             "required": true,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_gate_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_policy_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delegation_decision_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "aw_proof_receipt_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_state_json",
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -5368,6 +5913,31 @@
               "source": "cli-option"
             },
             {
+              "name": "assignment_gate_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_policy_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delegation_decision_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_state_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
@@ -5476,7 +6046,19 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_gate_json": {
+                  "type": "string"
+                },
+                "assignment_policy_json": {
+                  "type": "string"
+                },
+                "aw_proof_receipt_json": {
+                  "type": "string"
+                },
                 "current_authority_ref": {
+                  "type": "string"
+                },
+                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -5506,6 +6088,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -5645,8 +6230,8 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b1112e1f56ee7cf7a5e1fead52c99c9b74e80e0cfae749867c23ef7efd34e754",
-      "compatibility_fingerprint": "sha256:0bef0645b9dea52d730b2c781f953f9166528d9efee4a10ad23b6bab0b2c0627",
+      "fingerprint": "sha256:07dd2f9c07b79957764f3c066cd29ac2239f16128c58fde3e7091254d96172a5",
+      "compatibility_fingerprint": "sha256:5bd20d310fb423681ba13daced76f10592bfc1b4e4b7262715f680a3e0e05780",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5692,6 +6277,31 @@
           {
             "name": "run_id",
             "required": true,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_gate_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "assignment_policy_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delegation_decision_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "aw_proof_receipt_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "run_state_json",
+            "required": false,
             "source": "cli-option"
           },
           {
@@ -5993,6 +6603,31 @@
               "source": "cli-option"
             },
             {
+              "name": "assignment_gate_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "assignment_policy_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delegation_decision_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "aw_proof_receipt_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "run_state_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
@@ -6101,7 +6736,19 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_gate_json": {
+                  "type": "string"
+                },
+                "assignment_policy_json": {
+                  "type": "string"
+                },
+                "aw_proof_receipt_json": {
+                  "type": "string"
+                },
                 "current_authority_ref": {
+                  "type": "string"
+                },
+                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -6131,6 +6778,9 @@
                   "type": "string"
                 },
                 "return_json": {
+                  "type": "string"
+                },
+                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -7563,8 +8213,24 @@
             "minLength": 1,
             "type": "string"
           },
+          "assignment_gate_json": {
+            "description": "Serialized current assignment gate resolved by the workspace before export/admission.",
+            "type": "string"
+          },
+          "assignment_policy_json": {
+            "description": "Serialized current assignment policy resolved by the workspace before export/admission.",
+            "type": "string"
+          },
+          "aw_proof_receipt_json": {
+            "description": "Serialized AW-owned proof receipt resolved by the workspace before export/admission.",
+            "type": "string"
+          },
           "current_authority_ref": {
             "description": "Live authority reference resolved by the receiving workspace before admission or protected mutation.",
+            "type": "string"
+          },
+          "delegation_decision_json": {
+            "description": "Serialized current delegation decision resolved by the workspace before export/admission.",
             "type": "string"
           },
           "dry_run": {
@@ -7602,6 +8268,10 @@
           },
           "return_json": {
             "description": "Serialized worker return payload awaiting admission.",
+            "type": "string"
+          },
+          "run_state_json": {
+            "description": "Serialized current run-state authority resolved by the workspace before export/admission.",
             "type": "string"
           },
           "run_id": {

@@ -644,14 +644,32 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         assignment_id = require("assignment_id")
         assignment_revision = require("assignment_revision")
         target_name = require("target_name")
-        packet = _assignment_json_value(values.get("packet_json"), field="packet_json") or {
+        current_authorities = _assignment_current_authorities_from_values(values=values, failures=failures)
+        identity = _assignment_identity(current_authorities) if current_authorities else {}
+        if identity and assignment_revision and identity.get("revision") != assignment_revision:
+            failures.append(
+                {
+                    "reason": "assignment-revision-mismatch",
+                    "field": "assignment_revision",
+                    "recovery": "Export from the current Planning assignment identity revision.",
+                }
+            )
+        packet = {
             "kind": "agentic-workspace/assignment-export-packet/v1",
             "assignment_id": assignment_id,
-            "assignment_revision": assignment_revision,
+            "assignment_revision": identity.get("revision") if identity else assignment_revision,
             "run_id": run_id,
             "target": target_name,
             "transport": _optional_text(values.get("transport")) or "manual",
             "scope": _optional_text(values.get("scope")),
+            "assignment_identity": identity,
+            "authority_refs": {
+                "assignment_gate": "current_authorities.assignment_gate",
+                "assignment_policy": "current_authorities.assignment_policy",
+                "delegation_decision": "current_authorities.delegation_decision",
+                "proof_receipt": "current_authorities.aw_proof_receipt",
+                "mutation_baseline": "current_authorities.live_mutation_baseline",
+            },
             "return_contract": "assignment import places results in received/awaiting-admission before admission or integration",
         }
         packet_path = artifact("export/packet.json")
@@ -668,12 +686,31 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "integrity": _assignment_digest(packet),
         }
         artifact_paths.extend([packet_path, prompt_path, manifest_path])
-        state.update({"assignment": packet, "current_state": "handoff-prepared", "run_id": run_id})
+        state.update(
+            {
+                "assignment": packet,
+                "current_authorities": current_authorities,
+                "current_state": "handoff-prepared",
+                "run_id": run_id,
+            }
+        )
         writes = {packet_path: packet, prompt_path: prompt, manifest_path: manifest}
     elif transition == "import":
         require("run_id")
         returned = _assignment_json_value(require("return_json"), field="return_json")
         return_id = _optional_text(values.get("return_id")) or _assignment_digest(returned).removeprefix("sha256:")[:16]
+        assignment = state.get("assignment") if isinstance(state.get("assignment"), dict) else {}
+        if assignment:
+            expected_revision = _optional_text(assignment.get("assignment_revision"))
+            returned_revision = _optional_text(returned.get("assignment_revision")) if isinstance(returned, dict) else ""
+            if expected_revision and returned_revision != expected_revision:
+                failures.append(
+                    {
+                        "reason": "assignment-revision-mismatch",
+                        "field": "return_json.assignment_revision",
+                        "recovery": "Return work generated from the current exported assignment packet.",
+                    }
+                )
         return_path = artifact(f"received/awaiting-admission/{_safe_assignment_fragment(return_id)}.json")
         receipt_path = artifact(f"received/import-{_safe_assignment_fragment(return_id)}.json")
         receipt = {
@@ -686,19 +723,34 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "rule": "Import records returned work only; AW-owned review, proof, admission, and integration remain pending.",
         }
         artifact_paths.extend([return_path, receipt_path])
-        state.update({"current_state": "awaiting-admission", "last_return_id": return_id})
+        raw_returns = state.get("returns")
+        returns = cast(dict[str, Any], raw_returns) if isinstance(raw_returns, dict) else {}
+        returns[return_id] = {
+            "artifact_ref": _assignment_relative(return_path, root=target_root),
+            "integrity": _assignment_digest(returned),
+            "state": "received/awaiting-admission",
+        }
+        state.update({"current_state": "awaiting-admission", "last_return_id": return_id, "returns": returns})
         writes = {return_path: returned, receipt_path: receipt}
     elif transition in {"admit", "reject", "repair"}:
         require("run_id")
-        if transition == "admit":
-            require("current_authority_ref")
-            require("live_mutation_baseline")
         if transition in {"reject", "repair"}:
             require("reason")
         return_id = _optional_text(values.get("return_id")) or str(state.get("last_return_id") or "unidentified-return")
+        returned = _assignment_return_for_state(state=state, target_root=target_root, run_dir=run_dir, return_id=return_id)
+        raw_current_authorities = state.get("current_authorities")
+        current_authorities = cast(dict[str, Any], raw_current_authorities) if isinstance(raw_current_authorities, dict) else {}
+        admission = (
+            _assignment_admit_with_current_authority(current_authorities=current_authorities, returned_work=returned)
+            if transition == "admit"
+            else {"admitted": False, "status": {"reject": "rejected", "repair": "repair-requested"}[transition], "failures": []}
+        )
+        if transition == "admit" and not admission.get("admitted"):
+            failures.extend(_assignment_failures_from_admission(admission))
         admission_status = (
-            _optional_text(values.get("admission_status"))
-            or {"admit": "admitted", "reject": "rejected", "repair": "repair-requested"}[transition]
+            (_optional_text(values.get("admission_status")) or ("admitted" if admission.get("admitted") else "blocked"))
+            if transition == "admit"
+            else {"reject": "rejected", "repair": "repair-requested"}[transition]
         )
         receipt_path = artifact(f"admission/{_safe_assignment_fragment(return_id)}.{transition}.json")
         receipt = {
@@ -706,36 +758,53 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
             "run_id": run_id,
             "return_id": return_id,
             "status": admission_status,
-            "current_authority_ref": _optional_text(values.get("current_authority_ref")),
-            "live_mutation_baseline": _optional_text(values.get("live_mutation_baseline")),
+            "admission": admission,
+            "current_authority_ref": _optional_text(admission.get("assignment_revision")),
+            "live_mutation_baseline": _optional_text(
+                (admission.get("current_authority") or {}).get("mutation_baseline")
+                if isinstance(admission.get("current_authority"), dict)
+                else ""
+            ),
             "reason": _optional_text(values.get("reason")),
             "worker_reported_proof_trusted": False,
             "worker_reported_baseline_trusted": False,
-            "rule": "Admission receipts are valid only after current authority and live baseline are resolved at this boundary.",
+            "rule": "Admission receipts are valid only after the host primitive resolves current authorities and strict return admission succeeds.",
         }
         artifact_paths.append(receipt_path)
-        state.update({"current_state": admission_status, "last_admission_status": admission_status, "last_return_id": return_id})
+        state.update(
+            {
+                "current_state": admission_status,
+                "last_admission_status": admission_status,
+                "last_admission": admission,
+                "last_return_id": return_id,
+            }
+        )
         writes = {receipt_path: receipt}
     elif transition == "integrate":
         require("run_id")
-        require("current_authority_ref")
-        require("live_mutation_baseline")
-        admitted = state.get("last_admission_status") == "admitted"
+        return_id = _optional_text(values.get("return_id")) or str(state.get("last_return_id") or "unidentified-return")
+        returned = _assignment_return_for_state(state=state, target_root=target_root, run_dir=run_dir, return_id=return_id)
+        raw_current_authorities = state.get("current_authorities")
+        current_authorities = cast(dict[str, Any], raw_current_authorities) if isinstance(raw_current_authorities, dict) else {}
+        admission = _assignment_admit_with_current_authority(current_authorities=current_authorities, returned_work=returned)
+        admitted = state.get("last_admission_status") == "admitted" and bool(admission.get("admitted"))
         if not admitted:
-            failures.append(
-                {
-                    "reason": "return-not-admitted",
-                    "field": "state.last_admission_status",
-                    "recovery": "Run assignment admit with current authority before integration.",
-                }
-            )
+            if not admission.get("admitted"):
+                failures.extend(_assignment_failures_from_admission(admission))
+            if state.get("last_admission_status") != "admitted":
+                failures.append(
+                    {
+                        "reason": "return-not-admitted",
+                        "field": "state.last_admission_status",
+                        "recovery": "Run assignment admit after importing returned work and resolving current authority.",
+                    }
+                )
         receipt_path = artifact("integration/integration.json")
         receipt = {
             "kind": "agentic-workspace/assignment-integration-receipt/v1",
             "run_id": run_id,
             "status": "integrated" if admitted and not failures else "blocked",
-            "current_authority_ref": _optional_text(values.get("current_authority_ref")),
-            "live_mutation_baseline": _optional_text(values.get("live_mutation_baseline")),
+            "admission": admission,
         }
         artifact_paths.append(receipt_path)
         state.update({"current_state": receipt["status"]})
@@ -838,6 +907,275 @@ def _assignment_lifecycle_apply(*, values: dict[str, Any], arguments: dict[str, 
         "message": f"assignment {transition}: {status}",
         "actions": [{"kind": "write", "path": ref} for ref in artifact_refs],
     }
+
+
+def _assignment_current_authorities_from_values(*, values: Mapping[str, Any], failures: list[dict[str, str]]) -> dict[str, Any]:
+    def read_object(field: str) -> dict[str, Any]:
+        value = values.get(field)
+        if value in (None, "") and not field.endswith("_json"):
+            value = values.get(f"{field}_json")
+        parsed = _assignment_json_value(value, field=field) if value not in (None, "") else None
+        if isinstance(parsed, dict):
+            return parsed
+        failures.append(
+            {
+                "reason": "missing-current-authority",
+                "field": field,
+                "recovery": f"Prepare/export from the current Planning assignment so {field} is resolved by AW.",
+            }
+        )
+        return {}
+
+    assignment_gate = read_object("assignment_gate")
+    assignment_policy = read_object("assignment_policy")
+    delegation_decision = read_object("delegation_decision")
+    proof_receipt = read_object("aw_proof_receipt")
+    live_mutation_baseline = _optional_text(values.get("live_mutation_baseline"))
+    if not live_mutation_baseline:
+        failures.append(
+            {
+                "reason": "missing-current-authority",
+                "field": "live_mutation_baseline",
+                "recovery": "Prepare/export from the current Planning assignment so the live mutation baseline is resolved by AW.",
+            }
+        )
+    run_state = _assignment_json_value(values.get("run_state") or values.get("run_state_json"), field="run_state") or {
+        "status": "awaiting-admission",
+        "run_id": _optional_text(values.get("run_id")),
+    }
+    return {
+        "assignment_gate": assignment_gate,
+        "assignment_policy": assignment_policy,
+        "delegation_decision": delegation_decision,
+        "aw_proof_receipt": proof_receipt,
+        "live_mutation_baseline": live_mutation_baseline,
+        "run_state": run_state,
+    }
+
+
+def _assignment_identity(current_authorities: Mapping[str, Any]) -> dict[str, Any]:
+    assignment_gate = _assignment_mapping(current_authorities.get("assignment_gate"))
+    assignment_policy = _assignment_mapping(current_authorities.get("assignment_policy"))
+    delegation_decision = _assignment_mapping(current_authorities.get("delegation_decision"))
+    scope = _assignment_mapping(assignment_gate.get("scope"))
+    next_step = _assignment_mapping(delegation_decision.get("delegation_next_step"))
+    proof_obligation = _assignment_mapping(assignment_gate.get("proof_obligation") or next_step.get("proof_obligation"))
+    manual_transport_policy = _assignment_mapping(assignment_policy.get("manual_transport_policy"))
+    identity: dict[str, Any] = {
+        "target": assignment_gate.get("selected_target"),
+        "target_identity_ref": assignment_gate.get("target_identity_ref") or assignment_gate.get("selected_target"),
+        "target_revision": assignment_gate.get("target_revision"),
+        "task_class": assignment_gate.get("task_class"),
+        "scope_class": assignment_gate.get("scope_class") or scope.get("scope_class"),
+        "plan_ref": assignment_gate.get("plan_ref") or next_step.get("plan_ref"),
+        "plan_revision": assignment_gate.get("plan_revision") or next_step.get("plan_revision"),
+        "slice_id": assignment_gate.get("slice_id") or next_step.get("slice_id"),
+        "slice_revision": assignment_gate.get("slice_revision") or next_step.get("slice_revision"),
+        "required_next_action": assignment_gate.get("required_next_action"),
+        "gate_status": assignment_gate.get("status"),
+        "assignment_policy": assignment_gate.get("assignment_policy"),
+        "assignment_decision_revision": assignment_gate.get("assignment_decision_revision"),
+        "manual_transport_policy": str(manual_transport_policy.get("value") or "allowed"),
+        "delegation_decision": delegation_decision.get("decision"),
+        "handoff_run_id": next_step.get("handoff_run_id"),
+        "role": next_step.get("role") or assignment_gate.get("role"),
+        "allowed_effects": _assignment_list(assignment_gate.get("allowed_effects") or next_step.get("allowed_effects")),
+        "allowed_paths": _assignment_list(
+            assignment_gate.get("allowed_paths") or scope.get("allowed_paths") or next_step.get("allowed_paths")
+        ),
+        "return_schema": next_step.get("return_schema") or "delegated-return/v1",
+        "proof_obligation_id": proof_obligation.get("id"),
+        "proof_obligation_revision": proof_obligation.get("revision"),
+        "stop_conditions": _assignment_list(assignment_gate.get("stop_conditions") or next_step.get("stop_conditions")),
+        "mutation_baseline": assignment_gate.get("mutation_baseline") or next_step.get("mutation_baseline"),
+        "return_admission_owner": "delegated-return.admit",
+    }
+    required_fields = [
+        "target",
+        "target_identity_ref",
+        "target_revision",
+        "task_class",
+        "scope_class",
+        "plan_ref",
+        "plan_revision",
+        "slice_id",
+        "slice_revision",
+        "assignment_decision_revision",
+        "handoff_run_id",
+        "role",
+        "allowed_effects",
+        "allowed_paths",
+        "return_schema",
+        "proof_obligation_id",
+        "proof_obligation_revision",
+        "stop_conditions",
+        "mutation_baseline",
+    ]
+    missing = [field for field in required_fields if not _assignment_identity_field_present(identity.get(field))]
+    identity["complete"] = not missing
+    identity["missing_required_fields"] = missing
+    identity["revision"] = _assignment_digest(identity)
+    return identity
+
+
+def _assignment_admit_with_current_authority(*, current_authorities: Mapping[str, Any], returned_work: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(current_authorities, Mapping) or not current_authorities:
+        return {
+            "admitted": False,
+            "status": "blocked",
+            "failures": [
+                {
+                    "reason": "missing-current-authority",
+                    "field": "state.current_authorities",
+                    "recovery": "Run assignment export from the current Planning assignment before admission.",
+                }
+            ],
+        }
+    failures: list[dict[str, str]] = []
+    for field in ("assignment_gate", "assignment_policy", "delegation_decision", "aw_proof_receipt"):
+        value = current_authorities.get(field)
+        if not isinstance(value, Mapping) or not value:
+            failures.append(
+                {
+                    "reason": "missing-current-authority",
+                    "field": f"current_authorities.{field}",
+                    "recovery": "Resolve the current assignment/run/proof/baseline authorities and retry admission.",
+                }
+            )
+    identity = _assignment_identity(current_authorities)
+    if not identity.get("complete"):
+        failures.append(
+            {
+                "reason": "incomplete-assignment-identity",
+                "field": "assignment_identity",
+                "recovery": "Regenerate the assignment with all required identity fields.",
+            }
+        )
+    mutation_baseline = _optional_text(current_authorities.get("live_mutation_baseline") or current_authorities.get("mutation_baseline"))
+    if not mutation_baseline:
+        failures.append(
+            {
+                "reason": "missing-current-authority",
+                "field": "current_authorities.live_mutation_baseline",
+                "recovery": "Resolve the current assignment/run/proof/baseline authorities and retry admission.",
+            }
+        )
+    if _optional_text(returned_work.get("assignment_revision")) != _optional_text(identity.get("revision")):
+        failures.append(
+            {
+                "reason": "stale-assignment-revision",
+                "field": "assignment_revision",
+                "recovery": "Refresh the handoff and resubmit against the current assignment revision.",
+            }
+        )
+    if _optional_text(returned_work.get("target")) and _optional_text(returned_work.get("target")) != _optional_text(
+        identity.get("target")
+    ):
+        failures.append(
+            {
+                "reason": "target-mismatch",
+                "field": "target",
+                "recovery": "Return work from the selected assignment target only.",
+            }
+        )
+    if mutation_baseline and mutation_baseline != _optional_text(identity.get("mutation_baseline")):
+        failures.append(
+            {
+                "reason": "mutation-baseline-mismatch",
+                "field": "live_mutation_baseline",
+                "recovery": "Rebase or regenerate the returned work against the current baseline.",
+            }
+        )
+    allowed_paths = set(_assignment_list(identity.get("allowed_paths")))
+    changed_paths = _assignment_list(returned_work.get("changed_paths"))
+    if not allowed_paths:
+        failures.append(
+            {
+                "reason": "missing-canonical-scope",
+                "field": "assignment_identity.allowed_paths",
+                "recovery": "Refresh the assignment so AW can compare returned paths.",
+            }
+        )
+    for changed_path in changed_paths:
+        if changed_path not in allowed_paths:
+            failures.append(
+                {
+                    "reason": "scope-escape",
+                    "field": "changed_paths",
+                    "recovery": "Repair returned work to stay inside the assigned scope.",
+                }
+            )
+    admitted = not failures
+    return {
+        "admitted": admitted,
+        "status": "admitted" if admitted else "rejected",
+        "failures": failures,
+        "assignment_revision": identity.get("revision"),
+        "assignment_identity": identity,
+        "current_authority": {"mutation_baseline": mutation_baseline},
+        "rule": "Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.",
+    }
+
+
+def _assignment_mapping(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _assignment_list(value: Any) -> list[str]:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return [str(item) for item in value if str(item)]
+    return []
+
+
+def _assignment_identity_field_present(value: Any) -> bool:
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return bool(value)
+    return bool(_optional_text(value))
+
+
+def _assignment_failures_from_admission(admission: Mapping[str, Any]) -> list[dict[str, str]]:
+    failures = admission.get("failures") if isinstance(admission, Mapping) else []
+    result: list[dict[str, str]] = []
+    if isinstance(failures, Sequence) and not isinstance(failures, (str, bytes)):
+        for failure in failures:
+            if not isinstance(failure, Mapping):
+                continue
+            result.append(
+                {
+                    "reason": _optional_text(failure.get("reason")) or "admission-failed",
+                    "field": _optional_text(failure.get("field")) or "assignment.admit",
+                    "recovery": _optional_text(failure.get("recovery")) or "Repair the returned work and retry assignment admit.",
+                }
+            )
+    if result:
+        return result
+    return [
+        {
+            "reason": "admission-failed",
+            "field": "assignment.admit",
+            "recovery": "Repair the returned work and retry assignment admit.",
+        }
+    ]
+
+
+def _assignment_return_for_state(*, state: Mapping[str, Any], target_root: Path, run_dir: Path, return_id: str) -> dict[str, Any]:
+    returns = state.get("returns") if isinstance(state.get("returns"), Mapping) else {}
+    entry = returns.get(return_id) if isinstance(returns, Mapping) else None
+    if not isinstance(entry, Mapping):
+        return {}
+    artifact_ref = _optional_text(entry.get("artifact_ref"))
+    if not artifact_ref:
+        return {}
+    path = (target_root / artifact_ref).resolve()
+    try:
+        path.relative_to(run_dir)
+    except ValueError:
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 def _optional_text(value: Any) -> str:
