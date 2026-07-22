@@ -18,7 +18,8 @@
     "--apply requires the exact proposal id and expected Planning revision returned by preview.",
     "--apply-issue-relation-reconcile requires the current relation revision for semantic edits.",
     "--apply-issue-relation-migration preserves membership, priority, dependencies, rationale, and maturity before demoting duplicate legacy fields.",
-    "--apply-pending-integrations requires each pending proposal's target-authority revision and applies owner/proposal/receipt writes atomically on an admitted target branch."
+    "--apply-pending-integrations requires each pending proposal's target-authority revision and applies owner/proposal/receipt writes atomically on an admitted target branch.",
+    "--apply-lane-current-slice-reconcile must guard the exact owner surface, relation identity, subject, lane revision, transition, and execplan source, and must not fabricate a missing execplan."
   ],
   "id": "planning.reconcile.report",
   "inputs": [
@@ -51,6 +52,41 @@
     },
     {
       "name": "apply_lane_reconcile",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "apply_lane_current_slice_reconcile",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "owner_surface",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "relation_identity",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "subject",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expected_lane_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "transition",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expected_execplan",
       "required": false,
       "source": "cli-option"
     },
@@ -169,7 +205,8 @@
     "safe-prune tests cover exact roadmap/decomposition cleanup and dry-run behavior",
     "proposal/apply tests cover revision guards, idempotence, and transaction rollback",
     "issue-relation tests cover supported conflict repair and legacy authority migration",
-    "pending integration tests cover one-invocation target apply for disjoint merged proposals"
+    "pending integration tests cover one-invocation target apply for disjoint merged proposals",
+    "workspace CLI tests cover missing-source block and exact source restore through the root planning reconcile front door"
   ],
   "reads": [
     {
@@ -226,6 +263,11 @@
       "required": false,
       "surface": ".agentic-workspace/planning/integration-{proposals,receipts}/ and affected owner records",
       "when": "--apply-pending-integrations applies eligible pending proposals as one target transaction"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/planning/lanes/<lane>.lane.json and .agentic-workspace/planning/state.toml",
+      "when": "--apply-lane-current-slice-reconcile restores an exact existing execplan onto the named lane relation"
     }
   ]
 }

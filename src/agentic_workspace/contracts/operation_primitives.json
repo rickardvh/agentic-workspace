@@ -99,6 +99,20 @@
         "contract_owner": "packages/verification",
         "current_contract_root": "packages/verification/src/repo_verification_bootstrap/contracts/operations",
         "future_contract_root": "packages/verification/src/repo_verification_bootstrap/contracts"
+      },
+      {
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts",
+        "id": "workspace-assignment",
+        "operation_id_prefix": "assignment."
+      },
+      {
+        "contract_owner": "src/agentic_workspace/contracts",
+        "current_contract_root": "src/agentic_workspace/contracts/operations",
+        "future_contract_root": "modules/workspace/contracts",
+        "id": "workspace-correction-event",
+        "operation_id_prefix": "correction-event."
       }
     ]
   },
@@ -1592,6 +1606,26 @@
       "conformance_ref": "evaluation.lifecycle.process plus workspace evaluation tests",
       "migration_path": "Keep as workspace runtime until evaluation definition, observation, and lifecycle policy can be represented by portable primitives without weakening closure authority.",
       "generic_behavior_audit": "Not counted as portable codegen completion; evaluation behavior depends on AW-owned decision-owner and local-evidence policy."
+    },
+    {
+      "conformance_ref": "assignment.lifecycle.process",
+      "generic_behavior_audit": "Not counted as portable codegen completion; generated clients expose the operation as runtime-backed and require explicit opt-in.",
+      "id": "assignment.lifecycle.apply",
+      "migration_path": "Split deterministic packet rendering, artifact IO, and admission-receipt checks into Tier 1 primitives after the lifecycle schema is stable.",
+      "summary": "Apply an idempotent local assignment/run lifecycle transition under .agentic-workspace/local/assignment-runs.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace assignment lifecycle operation owner",
+      "tier_reason": "The durable Planning/run transition contract is workspace-specific and remains runtime-backed while the public operation family stabilizes."
+    },
+    {
+      "conformance_ref": "correction-event.submit.process, correction-event.query.process, correction-event.correct-dispute.process, correction-event.withdraw-supersede.process, correction-event.prune-compact.process",
+      "generic_behavior_audit": "Not counted as portable codegen completion; generated clients expose the operation family as runtime-backed and require explicit opt-in.",
+      "id": "correction.event.apply",
+      "migration_path": "Split deterministic bounded JSON store reads/writes, receipt emission, and low-authority preservation into Tier 1 primitives after the correction-event lifecycle schema stabilizes.",
+      "summary": "Apply a generated correction-event lifecycle operation to bounded local correction-event storage.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace correction-event lifecycle operation owner",
+      "tier_reason": "Correction-event admission owns workspace-specific target identity resolution, authority derivation, low-authority retention, and local-only receipt semantics."
     }
   ],
   "primitive_taxonomy": {

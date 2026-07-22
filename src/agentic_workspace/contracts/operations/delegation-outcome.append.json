@@ -49,6 +49,91 @@
       "required": false
     },
     {
+      "name": "source_type",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "source_ref",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "producer_class",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "route_outcome",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "assignment_route",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "proof_observation",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "review_observation",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "handoff_burden",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "repair_burden",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "retry_burden",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "restart_burden",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "expected_burden",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "observed_burden",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "scope_drift",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "contradiction_state",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "uncertainty_state",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "idempotency_key",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "outcome",
       "source": "cli-option",
       "required": true
@@ -122,7 +207,9 @@
   "guards": [
     "Required outcome fields must be present and enum-valid.",
     "New admissions must include independent scope context.",
+    "Routable authority is derived from producer provenance; untrusted or agent self-observed signals are stored as non-routing uncertainty.",
     "Lifecycle transitions must reference an existing predecessor id.",
+    "Append enforces bounded per-context retention before assignment consumes the ledger.",
     "Do not treat local outcome records as checked-in repo policy."
   ],
   "proof": [

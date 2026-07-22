@@ -637,6 +637,96 @@
       "path": "operations/workspace.memory-create-note.apply.json",
       "command": "memory",
       "migration_status": "runtime-consumed"
+    },
+    {
+      "command": "assignment",
+      "id": "assignment.admit",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.admit.json"
+    },
+    {
+      "command": "assignment",
+      "id": "assignment.cleanup",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.cleanup.json"
+    },
+    {
+      "command": "assignment",
+      "id": "assignment.close",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.close.json"
+    },
+    {
+      "command": "assignment",
+      "id": "assignment.export",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.export.json"
+    },
+    {
+      "command": "assignment",
+      "id": "assignment.import",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.import.json"
+    },
+    {
+      "command": "assignment",
+      "id": "assignment.integrate",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.integrate.json"
+    },
+    {
+      "command": "assignment",
+      "id": "assignment.override",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.override.json"
+    },
+    {
+      "command": "assignment",
+      "id": "assignment.reassign",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.reassign.json"
+    },
+    {
+      "command": "assignment",
+      "id": "assignment.reject",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.reject.json"
+    },
+    {
+      "command": "assignment",
+      "id": "assignment.repair",
+      "migration_status": "runtime-consumed",
+      "path": "operations/assignment.repair.json"
+    },
+    {
+      "command": "correction-event",
+      "id": "correction-event.correct-dispute",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.correct-dispute.json"
+    },
+    {
+      "command": "correction-event",
+      "id": "correction-event.prune-compact",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.prune-compact.json"
+    },
+    {
+      "command": "correction-event",
+      "id": "correction-event.query",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.query.json"
+    },
+    {
+      "command": "correction-event",
+      "id": "correction-event.submit",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.submit.json"
+    },
+    {
+      "command": "correction-event",
+      "id": "correction-event.withdraw-supersede",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.withdraw-supersede.json"
     }
   ]
 }

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ CURRENT_ADMISSION_STATES = {"accepted", "accepted-normalized", "recovered", "com
 ROUTABLE_AUTHORITIES = {"aw-proof", "human-review", "local-outcome-ledger"}
 ROUTABLE_CONFIDENCE = {"high", "medium"}
 INACTIVE_ADMISSION_STATES = {"disputed", "superseded", "stale", "compacted-raw", "rejected"}
+ROUTABLE_RECORD_MAX_AGE_DAYS = 180
 ASSIGNMENT_OUTCOME_MATRIX = [
     "retain-local",
     "read-only-exploration",
@@ -69,7 +71,21 @@ def _record_routable(record: DelegationOutcomeRecord) -> bool:
         return False
     if record.contradiction_state in {"contradicted", "disputed"}:
         return False
+    if _record_is_stale(record):
+        return False
     return True
+
+
+def _record_age_days(record: DelegationOutcomeRecord) -> int | None:
+    try:
+        return (date.today() - date.fromisoformat(record.recorded_at[:10])).days
+    except (TypeError, ValueError):
+        return None
+
+
+def _record_is_stale(record: DelegationOutcomeRecord) -> bool:
+    age_days = _record_age_days(record)
+    return age_days is None or age_days > ROUTABLE_RECORD_MAX_AGE_DAYS
 
 
 def _record_uncertainty_reasons(record: DelegationOutcomeRecord) -> list[str]:
@@ -88,7 +104,69 @@ def _record_uncertainty_reasons(record: DelegationOutcomeRecord) -> list[str]:
         reasons.append(f"uncertainty:{record.uncertainty_state}")
     if record.scope_drift:
         reasons.append("scope-drift")
+    age_days = _record_age_days(record)
+    if age_days is None:
+        reasons.append("invalid-recorded-at")
+    elif age_days > ROUTABLE_RECORD_MAX_AGE_DAYS:
+        reasons.append(f"stale:{age_days}d")
     return reasons
+
+
+def _record_complexity_burden_reasons(record: DelegationOutcomeRecord) -> list[str]:
+    reasons: list[str] = []
+    if record.review_burden == "high":
+        reasons.append("review-burden:high")
+    if record.repair_burden in {"high", "required", "repeated"}:
+        reasons.append(f"repair-burden:{record.repair_burden}")
+    if record.retry_burden in {"required", "repeated", "high"}:
+        reasons.append(f"retry-burden:{record.retry_burden}")
+    if record.restart_burden in {"required", "repeated", "high"}:
+        reasons.append(f"restart-burden:{record.restart_burden}")
+    if record.escalation_required:
+        reasons.append("escalation-required")
+    if record.handoff_burden in {"insufficient", "high", "repeated"}:
+        reasons.append(f"handoff-burden:{record.handoff_burden}")
+    return reasons
+
+
+def _complexity_reduction_signal(records_by_target: dict[str, list[DelegationOutcomeRecord]]) -> dict[str, Any]:
+    repeated_contexts: list[dict[str, Any]] = []
+    for target_name in sorted(records_by_target):
+        records_by_context: dict[str, list[tuple[int, DelegationOutcomeRecord, list[str]]]] = {}
+        for index, record in enumerate(records_by_target[target_name]):
+            if record.admission_state not in CURRENT_ADMISSION_STATES:
+                continue
+            reasons = _record_complexity_burden_reasons(record)
+            if not reasons:
+                continue
+            context_key = _context_key(task_class=record.task_class, scope_class=_record_scope_class(record))
+            records_by_context.setdefault(context_key, []).append((index, record, reasons))
+        for context_key in sorted(records_by_context):
+            burdened = records_by_context[context_key]
+            if len(burdened) < 2:
+                continue
+            repeated_contexts.append(
+                {
+                    "target": target_name,
+                    "context_key": context_key,
+                    "burden_record_count": len(burdened),
+                    "supporting_record_ids": [
+                        _target_record_id(target_name=target_name, record=record, index=index) for index, record, _ in burdened[:5]
+                    ],
+                    "burden_reasons": sorted({reason for _, _, reasons in burdened for reason in reasons}),
+                    "threshold": "two-or-more-current-admitted-burden-records-for-same-context",
+                }
+            )
+    return {
+        "status": "available" if repeated_contexts else "not-observed",
+        "repeated_context_count": len(repeated_contexts),
+        "contexts": repeated_contexts[:10],
+        "omitted_context_count": max(0, len(repeated_contexts) - 10),
+        "rule": (
+            "Product simplification signals require repeated admitted repair, retry, escalation, restart, "
+            "handoff, or high-review burden in the same target/task/scope context; ledger compaction alone is not a complexity signal."
+        ),
+    }
 
 
 def _currently_admitted_records(records: list[tuple[int, DelegationOutcomeRecord]]) -> list[tuple[int, DelegationOutcomeRecord]]:
@@ -360,19 +438,14 @@ def target_evidence_posture(
         "suitability": suitability,
         "uncertainty_accounts": uncertainty_accounts[:20],
         "omitted_uncertainty_account_count": max(0, len(uncertainty_accounts) - 20),
-        "complexity_reduction_signal": {
-            "status": "available" if any(record.operation == "prune-or-compact" for record in all_records) else "not-observed",
-            "compaction_record_count": sum(1 for record in all_records if record.operation == "prune-or-compact"),
-            "inactive_record_count": sum(1 for record in all_records if record.admission_state in INACTIVE_ADMISSION_STATES),
-            "rule": "Compaction is an operational ledger transition only when prune-or-compact records replace predecessors; bounded views alone are not counted as compaction.",
-        },
+        "complexity_reduction_signal": _complexity_reduction_signal(records_by_target),
         "lifecycle": {
             "kind": "agentic-workspace/target-outcome-evidence-lifecycle/v1",
             "public_operations": [
                 {
                     "operation": "submit",
                     "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --scope-class <scope> --operation submit --outcome <success|mixed|failed> --handoff-sufficiency <sufficient|borderline|insufficient> --review-burden <light|normal|high> --format json",
-                    "admission": "resolves target, task class, independent scope class, source ref, producer class, route observations, authority, confidence, idempotency key, and duplicate-safe record id before routing uses it",
+                    "admission": "public local submissions may not self-promote to aw-proof or human-review; high-authority evidence must come from a trusted internal producer receipt",
                 },
                 {
                     "operation": "query",
@@ -453,7 +526,7 @@ def assignment_decision_from_policy(
     for item in suitability:
         target = str(item.get("target") or "")
         context_key = str(item.get("context_key") or "")
-        if requested_context_key and context_key != requested_context_key:
+        if not requested_context_key or context_key != requested_context_key:
             continue
         if target:
             evidence_by_target.setdefault(target, []).append(item)
@@ -463,7 +536,7 @@ def assignment_decision_from_policy(
             continue
         target = str(item.get("target") or "")
         context_key = str(item.get("context_key") or "")
-        if requested_context_key and context_key != requested_context_key:
+        if not requested_context_key or context_key != requested_context_key:
             continue
         if target:
             uncertainty_by_target.setdefault(target, []).append(item)
@@ -624,7 +697,12 @@ def assignment_decision_from_policy(
         for item in candidate_scores
         if item["target"] != selected_target
     ][:5]
-    if not eligible_candidates:
+    if not requested_context_key:
+        decision = "shape-before-assignment"
+        canonical_outcome = "read-only-exploration"
+        selected_target = None
+        next_action = "derive a shaped task context before assignment; run read-only exploration or Planning shaping first"
+    elif not eligible_candidates:
         decision = "no-safe-route"
         canonical_outcome = "no-safe-route"
         selected_target = None
@@ -706,6 +784,11 @@ def assignment_decision_from_policy(
                 "scope_class": requested_scope_class or None,
                 "context_key": requested_context_key or None,
                 "requires_validation": bool(requested_task_class and requested_task_class in {"validation", "review", "proof"}),
+            },
+            "context_authority": {
+                "status": "present" if requested_context_key else "missing",
+                "fail_closed_without_context": True,
+                "rule": "Ordinary assignment may not aggregate target evidence across all task/scope contexts when the shaped task context is absent.",
             },
         },
         "alternatives": alternatives,

@@ -632,6 +632,102 @@
       "operation_id": "verification.report.report",
       "path": "conformance/verification.report.process.json",
       "adapter_kind": "process"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.admit.process",
+      "operation_id": "assignment.admit",
+      "path": "conformance/assignment.admit.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.cleanup.process",
+      "operation_id": "assignment.cleanup",
+      "path": "conformance/assignment.cleanup.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.close.process",
+      "operation_id": "assignment.close",
+      "path": "conformance/assignment.close.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.export.process",
+      "operation_id": "assignment.export",
+      "path": "conformance/assignment.export.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.import.process",
+      "operation_id": "assignment.import",
+      "path": "conformance/assignment.import.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.integrate.process",
+      "operation_id": "assignment.integrate",
+      "path": "conformance/assignment.integrate.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.lifecycle.process",
+      "operation_id": "assignment.export",
+      "path": "conformance/assignment.lifecycle.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.override.process",
+      "operation_id": "assignment.override",
+      "path": "conformance/assignment.override.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.reassign.process",
+      "operation_id": "assignment.reassign",
+      "path": "conformance/assignment.reassign.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.reject.process",
+      "operation_id": "assignment.reject",
+      "path": "conformance/assignment.reject.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "assignment.repair.process",
+      "operation_id": "assignment.repair",
+      "path": "conformance/assignment.repair.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "correction-event.submit.process",
+      "operation_id": "correction-event.submit",
+      "path": "conformance/correction-event.submit.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "correction-event.query.process",
+      "operation_id": "correction-event.query",
+      "path": "conformance/correction-event.query.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "correction-event.correct-dispute.process",
+      "operation_id": "correction-event.correct-dispute",
+      "path": "conformance/correction-event.correct-dispute.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "correction-event.withdraw-supersede.process",
+      "operation_id": "correction-event.withdraw-supersede",
+      "path": "conformance/correction-event.withdraw-supersede.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "correction-event.prune-compact.process",
+      "operation_id": "correction-event.prune-compact",
+      "path": "conformance/correction-event.prune-compact.process.json"
     }
   ]
 }
