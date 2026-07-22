@@ -165,6 +165,11 @@
       "description": "Changed-path ownership, generatedness, authority, related contract, and proof-impact projection.",
       "additionalProperties": true
     },
+    "authority_envelope": {
+      "type": "object",
+      "description": "Mutation authority envelope and point-in-time mutation baseline for the changed-path scope.",
+      "additionalProperties": true
+    },
     "generated_surface_trust": {
       "type": "object",
       "description": "Compact generated-source trust packet naming canonical source, freshness status, refresh command, direct-edit policy, and validation command for generated changed paths.",
@@ -420,6 +425,35 @@
         "delegation_decision": {
           "type": "object",
           "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals.",
+          "additionalProperties": true
+        },
+        "implementation_allowed": {
+          "type": "boolean",
+          "description": "Whether the selected assignment/delegation posture permits local implementation for this scope."
+        },
+        "assignment_policy": {
+          "type": "object",
+          "description": "Structured assignment policy and manual transport posture used for the delegation decision.",
+          "additionalProperties": true
+        },
+        "target_evidence": {
+          "type": "object",
+          "description": "Current target evidence used to evaluate assignment candidates.",
+          "additionalProperties": true
+        },
+        "assignment_decision": {
+          "type": "object",
+          "description": "Current assignment decision derived from policy, candidates, and target evidence.",
+          "additionalProperties": true
+        },
+        "assignment_gate": {
+          "type": "object",
+          "description": "Assignment gate preserving the handoff identity, allowed effects, proof obligation, and mutation baseline.",
+          "additionalProperties": true
+        },
+        "delegated_run_lifecycle": {
+          "type": "object",
+          "description": "Delegated run lifecycle, public operations, transport status, and return admission gate.",
           "additionalProperties": true
         },
         "decomposition_delegation": {

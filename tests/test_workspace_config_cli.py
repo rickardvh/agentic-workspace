@@ -1350,6 +1350,10 @@ def test_config_command_reports_target_identity_and_guidance_storage(tmp_path: P
     assert correction["status"] == "ready"
     assert "explicit-user-correction" in correction["event_schema"]["source_types"]
     assert "rejected-secret-bearing" in correction["event_schema"]["admission_states"]
+    assert "correction-event.submit" in {item["operation_id"] for item in correction["operations"]}
+    assert all(item["public"] and item["generated_operation"] and item["external_contract"] for item in correction["operations"])
+    assert correction["storage"]["retention_cap"] == 20
+    assert correction["storage"]["retention_operations"] == ["correction-event.prune-compact"]
 
 
 def test_config_command_target_identity_ambiguous_alias_fails_closed(tmp_path: Path, capsys) -> None:
@@ -1394,6 +1398,28 @@ def test_config_command_target_identity_ambiguous_alias_fails_closed(tmp_path: P
     assert payload["mixed_agent"]["correction_feedback"]["status"] == "fail-closed"
 
 
+def _correction_event(**overrides: object) -> dict[str, object]:
+    event: dict[str, object] = {
+        "target_identity_ref": "fast",
+        "target_revision": "rev-b",
+        "task_class": "mechanical-follow-through",
+        "scope_class": "narrow-code-change",
+        "invariant_id": "narrow-edits",
+        "behavior_class": "edit-scope",
+        "desired_behavior": "Prefer narrow edits.",
+        "replaced_behavior": "Broad edits.",
+        "authority": "explicit-user-correction",
+        "source": "pr-review",
+        "source_ref": "review-1",
+        "producer_class": "human-reviewer",
+        "producer_id": "reviewer-1",
+        "evidence_hash": "sha256:review-1",
+        "route_decisions": ["target-guidance", "target-suitability"],
+    }
+    event.update(overrides)
+    return event
+
+
 def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision() -> None:
     from agentic_workspace.agent_guidance import admit_correction_events
 
@@ -1408,43 +1434,24 @@ def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision
         }
     ]
     events = [
-        {
-            "target_identity_ref": "fast",
-            "target_revision": "rev-b",
-            "task_class": "mechanical-follow-through",
-            "scope_class": "narrow-code-change",
-            "invariant_id": "narrow-edits",
-            "behavior_class": "edit-scope",
-            "desired_behavior": "Prefer narrow edits.",
-            "replaced_behavior": "Broad edits.",
-            "authority": "explicit-user-correction",
-            "source": "pr-review",
-            "source_ref": "review-1",
-        },
-        {
-            "target_identity_ref": "user-local:fast-worker",
-            "target_revision": "rev-b",
-            "task_class": "mechanical-follow-through",
-            "scope_class": "narrow-code-change",
-            "invariant_id": "narrow-edits",
-            "behavior_class": "edit-scope",
-            "desired_behavior": "Keep changes narrow.",
-            "replaced_behavior": "Large broad edits.",
-            "authority": "explicit-user-correction",
-            "source": "pr-review",
-            "source_ref": "review-2",
-        },
-        {
-            "target_identity_ref": "user-local:fast-worker",
-            "target_revision": "old-rev",
-            "invariant_id": "stale-guidance",
-            "behavior_class": "routing",
-            "desired_behavior": "Use stale behavior.",
-            "replaced_behavior": "Current behavior.",
-            "authority": "explicit-user-correction",
-            "source": "pr-review",
-            "source_ref": "review-3",
-        },
+        _correction_event(),
+        _correction_event(
+            target_identity_ref="user-local:fast-worker",
+            desired_behavior="Keep changes narrow.",
+            replaced_behavior="Large broad edits.",
+            source_ref="review-2",
+            evidence_hash="sha256:review-2",
+        ),
+        _correction_event(
+            target_identity_ref="user-local:fast-worker",
+            target_revision="old-rev",
+            invariant_id="stale-guidance",
+            behavior_class="routing",
+            desired_behavior="Use stale behavior.",
+            replaced_behavior="Current behavior.",
+            source_ref="review-3",
+            evidence_hash="sha256:review-3",
+        ),
     ]
 
     admitted = admit_correction_events(
@@ -1458,6 +1465,10 @@ def test_correction_event_lifecycle_admits_dedupes_and_scopes_by_target_revision
     assert admitted["admitted_events"][0]["profile_name"] == "fast_worker"
     assert admitted["admitted_events"][0]["admission_state"] == "recurrence"
     assert admitted["admitted_events"][0]["recurrence_count"] == 2
+    assert admitted["admitted_events"][0]["contradiction_account"]["status"] == "recurrence-preserved"
+    assert admitted["derived_routes"]["target_guidance"] == [admitted["admitted_events"][0]["event_id"]]
+    assert admitted["retention"]["mode"] == "bounded-local-retention"
+    assert "correction-event.submit" in {item["operation_id"] for item in admitted["public_operations"]}
     assert {item["reason"] for item in admitted["rejected_events"]} == {"rejected-stale-revision"}
 
 
@@ -1474,19 +1485,7 @@ def test_correction_event_lifecycle_rejects_delivery_replay_separately_from_recu
             "revision_policy": "preserve",
         }
     ]
-    event = {
-        "target_identity_ref": "fast",
-        "target_revision": "rev-b",
-        "task_class": "mechanical-follow-through",
-        "scope_class": "narrow-code-change",
-        "invariant_id": "narrow-edits",
-        "behavior_class": "edit-scope",
-        "desired_behavior": "Prefer narrow edits.",
-        "replaced_behavior": "Broad edits.",
-        "authority": "explicit-user-correction",
-        "source": "pr-review",
-        "source_ref": "review-1",
-    }
+    event = _correction_event()
 
     admitted = admit_correction_events(events=[event, dict(event)], subjects=subjects)
 
@@ -1519,47 +1518,51 @@ def test_correction_event_lifecycle_applies_revision_policies_and_rejects_unknow
     admitted = admit_correction_events(
         events=[
             {
-                "target_identity_ref": "user-local:preserve",
+                **_correction_event(
+                    target_identity_ref="user-local:preserve",
+                    source_ref="preserve-1",
+                    evidence_hash="sha256:preserve-1",
+                ),
                 "target_revision": "rev-a",
                 "invariant_id": "preserved-guidance",
                 "behavior_class": "routing",
                 "desired_behavior": "Keep preserved guidance.",
                 "replaced_behavior": "Old guidance.",
-                "authority": "explicit-user-correction",
-                "source": "pr-review",
-                "source_ref": "preserve-1",
             },
             {
-                "target_identity_ref": "user-local:retired",
+                **_correction_event(
+                    target_identity_ref="user-local:retired",
+                    source_ref="retired-1",
+                    evidence_hash="sha256:retired-1",
+                ),
                 "target_revision": "rev-a",
                 "invariant_id": "retired-guidance",
                 "behavior_class": "routing",
                 "desired_behavior": "Route retired guidance.",
                 "replaced_behavior": "Old guidance.",
-                "authority": "explicit-user-correction",
-                "source": "pr-review",
-                "source_ref": "retired-1",
             },
             {
-                "target_identity_ref": "missing",
+                **_correction_event(
+                    target_identity_ref="missing",
+                    source_ref="missing-1",
+                    evidence_hash="sha256:missing-1",
+                ),
                 "invariant_id": "missing-target",
                 "behavior_class": "routing",
                 "desired_behavior": "Unknown target.",
                 "replaced_behavior": "Old guidance.",
-                "authority": "explicit-user-correction",
-                "source": "pr-review",
-                "source_ref": "missing-1",
             },
             {
-                "target_identity_ref": "user-local:preserve",
+                **_correction_event(
+                    target_identity_ref="user-local:preserve",
+                    source_ref="secret-1",
+                    evidence_hash="sha256:secret-1",
+                ),
                 "target_revision": "rev-b",
                 "invariant_id": "secret-guidance",
                 "behavior_class": "routing",
                 "desired_behavior": "Never store sk-secret.",
                 "replaced_behavior": "Old guidance.",
-                "authority": "explicit-user-correction",
-                "source": "pr-review",
-                "source_ref": "secret-1",
             },
         ],
         subjects=subjects,
@@ -2120,6 +2123,10 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
         "exists": True,
         "safe_to_remove": True,
         "raw_transcripts_stored": False,
+        "retention_rule": (
+            "bounded by lifecycle transitions; prune-or-compact records replace raw predecessors with "
+            "provenance-preserving calibration summaries"
+        ),
     }
     assert evidence["record_count"] == 3
     assert evidence["normalized_records"][0]["target"] == "gpt_5_4_mini"
@@ -2131,50 +2138,30 @@ def test_config_command_reports_delegation_outcome_suggestions(tmp_path: Path, c
         "state": "accepted-normalized",
     }
     assert evidence["normalized_records"][0]["routing_relevance"] == "task-and-scope-bound"
-    assert evidence["suitability"] == [
-        {
-            "target": "gpt_5_4_mini",
-            "target_identity_ref": None,
-            "target_revision": None,
-            "revision_policy": "revalidate",
-            "context_key": "bounded-docs::bounded-docs",
-            "task_class": "bounded-docs",
-            "scope_class": "bounded-docs",
-            "profile_status": "configured",
-            "record_count": 1,
-            "average_signal": 1.5,
-            "route_effect": "preferred-for-matching-task-class",
-            "uncertainty": "medium",
-            "supporting_record_ids": ["gpt_5_4_mini:bounded-docs:bounded-docs:2026-04-17:0"],
-            "supported_task_classes": ["bounded-docs"],
-            "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
-            "raw_history_retention": "bounded-local-ledger-with-lifecycle-transitions",
-        },
-        {
-            "target": "gpt_5_4_mini",
-            "target_identity_ref": None,
-            "target_revision": None,
-            "revision_policy": "revalidate",
-            "context_key": "narrow-tests::narrow-tests",
-            "task_class": "narrow-tests",
-            "scope_class": "narrow-tests",
-            "profile_status": "configured",
-            "record_count": 2,
-            "average_signal": 1.38,
-            "route_effect": "preferred-for-matching-task-class",
-            "uncertainty": "low",
-            "supporting_record_ids": [
-                "gpt_5_4_mini:narrow-tests:narrow-tests:2026-04-17:1",
-                "gpt_5_4_mini:narrow-tests:narrow-tests:2026-04-17:2",
-            ],
-            "supported_task_classes": ["narrow-tests"],
-            "irrelevance_rule": "Only records for matching task/scope classes may affect assignment for that class.",
-            "raw_history_retention": "bounded-local-ledger-with-lifecycle-transitions",
-        },
+    bounded, narrow = evidence["suitability"]
+    assert bounded["target"] == "gpt_5_4_mini"
+    assert bounded["target_identity_ref"] is None
+    assert bounded["revision_policy"] == "revalidate"
+    assert bounded["context_key"] == "bounded-docs::bounded-docs"
+    assert bounded["record_count"] == 1
+    assert bounded["average_signal"] == 1.5
+    assert bounded["route_effect"] == "preferred-for-matching-task-class"
+    assert bounded["supporting_record_ids"] == ["gpt_5_4_mini:bounded-docs:bounded-docs:2026-04-17:0"]
+    assert bounded["retention"]["status"] == "bounded-current-calibration"
+    assert narrow["context_key"] == "narrow-tests::narrow-tests"
+    assert narrow["record_count"] == 2
+    assert narrow["average_signal"] == 1.38
+    assert narrow["route_effect"] == "preferred-for-matching-task-class"
+    assert narrow["supporting_record_ids"] == [
+        "gpt_5_4_mini:narrow-tests:narrow-tests:2026-04-17:1",
+        "gpt_5_4_mini:narrow-tests:narrow-tests:2026-04-17:2",
     ]
+    assert narrow["target_identity_ref"] is None
+    assert narrow["revision_policy"] == "revalidate"
+    assert narrow["retention"]["status"] == "bounded-current-calibration"
     assert evidence["lifecycle"]["public_operations"][0]["operation"] == "submit"
     assert evidence["lifecycle"]["routing_rule"] == (
-        "Assignment may consume only accepted evidence matching the requested task/scope context."
+        "Assignment may consume only current, admitted, non-contradicted evidence matching the requested target/task/scope context."
     )
     decision = payload["mixed_agent"]["assignment_decision"]
     assert decision["kind"] == "agentic-workspace/assignment-decision/v1"
@@ -2326,7 +2313,9 @@ def test_target_evidence_lifecycle_correction_and_compaction_remove_predecessor_
 
     posture = target_evidence_posture(target_root=None, profiles=(), records=records)
 
-    assert posture["suitability"] == []
+    assert posture["suitability"][0]["record_count"] == 1
+    assert posture["suitability"][0]["supporting_record_ids"] == ["fast_worker:mechanical-follow-through:narrow-code-change:2026-04-19:2"]
+    assert posture["suitability"][0]["retention"]["status"] == "bounded-current-calibration"
 
 
 def test_target_evidence_excludes_low_authority_records_from_assignment() -> None:
@@ -2530,6 +2519,191 @@ def test_assignment_decision_keep_local_selects_current_target_not_higher_extern
 
     assert decision["decision"] == "keep-local"
     assert decision["selected_target"] == "current_worker"
+
+
+def test_assignment_decision_local_preferred_does_not_select_ineligible_current_target() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "local-preferred"},
+            "current_target": {"value": "current_worker"},
+            "manual_transport_policy": {"value": "allowed"},
+            "binding": {"enforceable": True, "claim_boundary": "assignment policy resolved"},
+        },
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {"task_class": "mechanical-follow-through", "scope_class": "narrow-code-change"},
+            "profile_recommendations": [
+                {
+                    "name": "current_worker",
+                    "recommendation": "recommended",
+                    "score": 99,
+                    "capability_mismatch": True,
+                    "required_action": "escalate-before-execution",
+                    "location": "local",
+                    "execution_methods": ["internal"],
+                    "human_control_modes": ["auto"],
+                },
+                {
+                    "name": "external_worker",
+                    "recommendation": "acceptable",
+                    "score": 3,
+                    "capability_mismatch": False,
+                    "required_action": "none",
+                    "location": "external",
+                    "execution_methods": ["cli"],
+                    "human_control_modes": ["auto"],
+                },
+            ],
+        },
+        target_evidence={"status": "present", "record_count": 0, "suitability": []},
+    )
+
+    assert decision["decision"] == "policy-conflict"
+    assert decision["selected_target"] is None
+    assert decision["selection_basis"]["current_target_eligible"] is False
+    assert decision["next_action"] == "resolve local-preferred current_target eligibility before execution"
+
+
+def test_assignment_decision_surfaces_tie_without_lexical_target_selection() -> None:
+    from agentic_workspace.target_evidence import assignment_decision_from_policy
+
+    decision = assignment_decision_from_policy(
+        assignment_policy={
+            "assignment_policy": {"value": "required-best-fit"},
+            "current_target": {"value": "alpha"},
+            "binding": {"enforceable": True, "claim_boundary": "assignment policy resolved"},
+        },
+        runtime_resolution={
+            "recommendation": "stay-local",
+            "capability_context": {"task_class": "mechanical-follow-through", "scope_class": "narrow-code-change"},
+            "profile_recommendations": [
+                {
+                    "name": "alpha",
+                    "recommendation": "acceptable",
+                    "score": 0,
+                    "capability_mismatch": False,
+                    "required_action": "none",
+                    "location": "local",
+                    "execution_methods": ["internal"],
+                    "human_control_modes": ["auto"],
+                },
+                {
+                    "name": "beta",
+                    "recommendation": "acceptable",
+                    "score": 5,
+                    "capability_mismatch": False,
+                    "required_action": "none",
+                    "location": "local",
+                    "execution_methods": ["internal"],
+                    "human_control_modes": ["auto"],
+                },
+            ],
+        },
+        target_evidence={"status": "present", "record_count": 0, "suitability": []},
+    )
+
+    assert decision["decision"] == "tie"
+    assert decision["selected_target"] is None
+    assert decision["uncertainty"] == "tie"
+
+
+def test_note_delegation_outcome_compaction_rewrites_same_context_raw_history(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    base = [
+        "note-delegation-outcome",
+        "--target",
+        str(target),
+        "--delegation-target",
+        "fast_worker",
+        "--task-class",
+        "mechanical-follow-through",
+        "--scope-class",
+        "narrow-code-change",
+        "--outcome",
+    ]
+
+    assert cli.main([*base, "success", "--handoff-sufficiency", "sufficient", "--review-burden", "light", "--format", "json"]) == 0
+    first = json.loads(capsys.readouterr().out)["recorded"]["record_id"]
+    assert (
+        cli.main(
+            [
+                *base,
+                "mixed",
+                "--operation",
+                "prune-or-compact",
+                "--predecessor-id",
+                first,
+                "--handoff-sufficiency",
+                "borderline",
+                "--review-burden",
+                "normal",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads((target / ".agentic-workspace/delegation-outcomes.json").read_text(encoding="utf-8"))
+    assert payload["retention"]["mode"] == "bounded-current-calibration"
+    assert [record["operation"] for record in payload["records"]] == ["prune-or-compact"]
+    assert payload["records"][0]["predecessor_id"] == first
+    assert payload["records"][0]["admission_state"] == "compacted-summary"
+
+
+def test_note_delegation_outcome_rejects_cross_context_transition(tmp_path: Path, capsys) -> None:
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    assert (
+        cli.main(
+            [
+                "note-delegation-outcome",
+                "--target",
+                str(target),
+                "--delegation-target",
+                "fast_worker",
+                "--task-class",
+                "mechanical-follow-through",
+                "--scope-class",
+                "narrow-code-change",
+                "--outcome",
+                "success",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    first = json.loads(capsys.readouterr().out)["recorded"]["record_id"]
+
+    with pytest.raises(SystemExit):
+        cli.main(
+            [
+                "note-delegation-outcome",
+                "--target",
+                str(target),
+                "--delegation-target",
+                "fast_worker",
+                "--task-class",
+                "mechanical-follow-through",
+                "--scope-class",
+                "broad-design-change",
+                "--operation",
+                "supersede",
+                "--predecessor-id",
+                first,
+                "--outcome",
+                "mixed",
+                "--format",
+                "json",
+            ]
+        )
+    assert "predecessor must match target/task/scope" in capsys.readouterr().err
 
 
 def test_repo_config_cli_invoke_sets_repo_owned_invocation_policy(tmp_path: Path, capsys) -> None:
