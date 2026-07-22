@@ -4192,13 +4192,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--packet-json"
-              ],
-              "help": "Structured assignment packet JSON.",
-              "name": "packet_json"
-            },
-            {
-              "flags": [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
@@ -4217,20 +4210,6 @@ const commandDefinitions = [
               ],
               "help": "Local artifact reference for the transition.",
               "name": "artifact_ref"
-            },
-            {
-              "flags": [
-                "--current-authority-ref"
-              ],
-              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-              "name": "current_authority_ref"
-            },
-            {
-              "flags": [
-                "--live-mutation-baseline"
-              ],
-              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-              "name": "live_mutation_baseline"
             },
             {
               "choices": [
@@ -4272,41 +4251,6 @@ const commandDefinitions = [
               ],
               "help": "Report the transition without writing local artifacts.",
               "name": "dry_run"
-            },
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
             }
           ]
         },
@@ -4382,13 +4326,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--packet-json"
-              ],
-              "help": "Structured assignment packet JSON.",
-              "name": "packet_json"
-            },
-            {
-              "flags": [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
@@ -4408,20 +4345,6 @@ const commandDefinitions = [
               ],
               "help": "Local artifact reference for the transition.",
               "name": "artifact_ref"
-            },
-            {
-              "flags": [
-                "--current-authority-ref"
-              ],
-              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-              "name": "current_authority_ref"
-            },
-            {
-              "flags": [
-                "--live-mutation-baseline"
-              ],
-              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-              "name": "live_mutation_baseline"
             },
             {
               "choices": [
@@ -4463,41 +4386,6 @@ const commandDefinitions = [
               ],
               "help": "Report the transition without writing local artifacts.",
               "name": "dry_run"
-            },
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
             }
           ]
         },
@@ -4573,13 +4461,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--packet-json"
-              ],
-              "help": "Structured assignment packet JSON.",
-              "name": "packet_json"
-            },
-            {
-              "flags": [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
@@ -4598,22 +4479,6 @@ const commandDefinitions = [
               ],
               "help": "Local artifact reference for the transition.",
               "name": "artifact_ref"
-            },
-            {
-              "flags": [
-                "--current-authority-ref"
-              ],
-              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-              "name": "current_authority_ref",
-              "required": false
-            },
-            {
-              "flags": [
-                "--live-mutation-baseline"
-              ],
-              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-              "name": "live_mutation_baseline",
-              "required": false
             },
             {
               "choices": [
@@ -4655,41 +4520,6 @@ const commandDefinitions = [
               ],
               "help": "Report the transition without writing local artifacts.",
               "name": "dry_run"
-            },
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
             }
           ]
         },
@@ -4765,13 +4595,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--packet-json"
-              ],
-              "help": "Structured assignment packet JSON.",
-              "name": "packet_json"
-            },
-            {
-              "flags": [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
@@ -4790,20 +4613,6 @@ const commandDefinitions = [
               ],
               "help": "Local artifact reference for the transition.",
               "name": "artifact_ref"
-            },
-            {
-              "flags": [
-                "--current-authority-ref"
-              ],
-              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-              "name": "current_authority_ref"
-            },
-            {
-              "flags": [
-                "--live-mutation-baseline"
-              ],
-              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-              "name": "live_mutation_baseline"
             },
             {
               "choices": [
@@ -4846,41 +4655,6 @@ const commandDefinitions = [
               ],
               "help": "Report the transition without writing local artifacts.",
               "name": "dry_run"
-            },
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
             }
           ]
         },
@@ -4956,13 +4730,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--packet-json"
-              ],
-              "help": "Structured assignment packet JSON.",
-              "name": "packet_json"
-            },
-            {
-              "flags": [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
@@ -4981,20 +4748,6 @@ const commandDefinitions = [
               ],
               "help": "Local artifact reference for the transition.",
               "name": "artifact_ref"
-            },
-            {
-              "flags": [
-                "--current-authority-ref"
-              ],
-              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-              "name": "current_authority_ref"
-            },
-            {
-              "flags": [
-                "--live-mutation-baseline"
-              ],
-              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-              "name": "live_mutation_baseline"
             },
             {
               "choices": [
@@ -5037,41 +4790,6 @@ const commandDefinitions = [
               ],
               "help": "Report the transition without writing local artifacts.",
               "name": "dry_run"
-            },
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
             }
           ]
         },
@@ -5148,13 +4866,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--packet-json"
-              ],
-              "help": "Structured assignment packet JSON.",
-              "name": "packet_json"
-            },
-            {
-              "flags": [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
@@ -5173,20 +4884,6 @@ const commandDefinitions = [
               ],
               "help": "Local artifact reference for the transition.",
               "name": "artifact_ref"
-            },
-            {
-              "flags": [
-                "--current-authority-ref"
-              ],
-              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-              "name": "current_authority_ref"
-            },
-            {
-              "flags": [
-                "--live-mutation-baseline"
-              ],
-              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-              "name": "live_mutation_baseline"
             },
             {
               "choices": [
@@ -5229,41 +4926,6 @@ const commandDefinitions = [
               ],
               "help": "Report the transition without writing local artifacts.",
               "name": "dry_run"
-            },
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
             }
           ]
         },
@@ -5339,13 +5001,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--packet-json"
-              ],
-              "help": "Structured assignment packet JSON.",
-              "name": "packet_json"
-            },
-            {
-              "flags": [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
@@ -5364,22 +5019,6 @@ const commandDefinitions = [
               ],
               "help": "Local artifact reference for the transition.",
               "name": "artifact_ref"
-            },
-            {
-              "flags": [
-                "--current-authority-ref"
-              ],
-              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-              "name": "current_authority_ref",
-              "required": false
-            },
-            {
-              "flags": [
-                "--live-mutation-baseline"
-              ],
-              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-              "name": "live_mutation_baseline",
-              "required": false
             },
             {
               "choices": [
@@ -5421,41 +5060,6 @@ const commandDefinitions = [
               ],
               "help": "Report the transition without writing local artifacts.",
               "name": "dry_run"
-            },
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
             }
           ]
         },
@@ -5531,13 +5135,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--packet-json"
-              ],
-              "help": "Structured assignment packet JSON.",
-              "name": "packet_json"
-            },
-            {
-              "flags": [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
@@ -5556,20 +5153,6 @@ const commandDefinitions = [
               ],
               "help": "Local artifact reference for the transition.",
               "name": "artifact_ref"
-            },
-            {
-              "flags": [
-                "--current-authority-ref"
-              ],
-              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-              "name": "current_authority_ref"
-            },
-            {
-              "flags": [
-                "--live-mutation-baseline"
-              ],
-              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-              "name": "live_mutation_baseline"
             },
             {
               "choices": [
@@ -5611,41 +5194,6 @@ const commandDefinitions = [
               ],
               "help": "Report the transition without writing local artifacts.",
               "name": "dry_run"
-            },
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
             }
           ]
         },
@@ -5721,13 +5269,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--packet-json"
-              ],
-              "help": "Structured assignment packet JSON.",
-              "name": "packet_json"
-            },
-            {
-              "flags": [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
@@ -5746,20 +5287,6 @@ const commandDefinitions = [
               ],
               "help": "Local artifact reference for the transition.",
               "name": "artifact_ref"
-            },
-            {
-              "flags": [
-                "--current-authority-ref"
-              ],
-              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-              "name": "current_authority_ref"
-            },
-            {
-              "flags": [
-                "--live-mutation-baseline"
-              ],
-              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-              "name": "live_mutation_baseline"
             },
             {
               "choices": [
@@ -5801,41 +5328,6 @@ const commandDefinitions = [
               ],
               "help": "Report the transition without writing local artifacts.",
               "name": "dry_run"
-            },
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
             }
           ]
         },
@@ -5911,13 +5403,6 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--packet-json"
-              ],
-              "help": "Structured assignment packet JSON.",
-              "name": "packet_json"
-            },
-            {
-              "flags": [
                 "--return-json"
               ],
               "help": "Returned worker-result JSON.",
@@ -5936,20 +5421,6 @@ const commandDefinitions = [
               ],
               "help": "Local artifact reference for the transition.",
               "name": "artifact_ref"
-            },
-            {
-              "flags": [
-                "--current-authority-ref"
-              ],
-              "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-              "name": "current_authority_ref"
-            },
-            {
-              "flags": [
-                "--live-mutation-baseline"
-              ],
-              "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-              "name": "live_mutation_baseline"
             },
             {
               "choices": [
@@ -5994,41 +5465,6 @@ const commandDefinitions = [
               ],
               "help": "Report the transition without writing local artifacts.",
               "name": "dry_run"
-            },
-            {
-              "flags": [
-                "--assignment-gate-json"
-              ],
-              "help": "Serialized current assignment gate authority.",
-              "name": "assignment_gate_json"
-            },
-            {
-              "flags": [
-                "--assignment-policy-json"
-              ],
-              "help": "Serialized current assignment policy authority.",
-              "name": "assignment_policy_json"
-            },
-            {
-              "flags": [
-                "--delegation-decision-json"
-              ],
-              "help": "Serialized current delegation decision authority.",
-              "name": "delegation_decision_json"
-            },
-            {
-              "flags": [
-                "--aw-proof-receipt-json"
-              ],
-              "help": "Serialized AW proof receipt authority.",
-              "name": "aw_proof_receipt_json"
-            },
-            {
-              "flags": [
-                "--run-state-json"
-              ],
-              "help": "Serialized current assignment run state authority.",
-              "name": "run_state_json"
             }
           ]
         }
@@ -7211,17 +6647,10 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--subjects-json"
+                "--trusted-authority-receipt-ref"
               ],
-              "help": "Serialized target identity subjects for fixtures.",
-              "name": "subjects_json"
-            },
-            {
-              "flags": [
-                "--trusted-authority-receipt-json"
-              ],
-              "help": "Trusted host/proof authority receipt JSON.",
-              "name": "trusted_authority_receipt_json"
+              "help": "Repo-relative trusted authority receipt ref resolved by AW before high-authority admission. Omit for low-authority self-observation.",
+              "name": "trusted_authority_receipt_ref"
             },
             {
               "flags": [
@@ -7415,17 +6844,10 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--subjects-json"
+                "--trusted-authority-receipt-ref"
               ],
-              "help": "Serialized target identity subjects for fixtures.",
-              "name": "subjects_json"
-            },
-            {
-              "flags": [
-                "--trusted-authority-receipt-json"
-              ],
-              "help": "Trusted host/proof authority receipt JSON.",
-              "name": "trusted_authority_receipt_json"
+              "help": "Repo-relative trusted authority receipt ref resolved by AW before high-authority admission. Omit for low-authority self-observation.",
+              "name": "trusted_authority_receipt_ref"
             },
             {
               "flags": [
@@ -7619,17 +7041,10 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--subjects-json"
+                "--trusted-authority-receipt-ref"
               ],
-              "help": "Serialized target identity subjects for fixtures.",
-              "name": "subjects_json"
-            },
-            {
-              "flags": [
-                "--trusted-authority-receipt-json"
-              ],
-              "help": "Trusted host/proof authority receipt JSON.",
-              "name": "trusted_authority_receipt_json"
+              "help": "Repo-relative trusted authority receipt ref resolved by AW before high-authority admission. Omit for low-authority self-observation.",
+              "name": "trusted_authority_receipt_ref"
             },
             {
               "flags": [
@@ -7823,17 +7238,10 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--subjects-json"
+                "--trusted-authority-receipt-ref"
               ],
-              "help": "Serialized target identity subjects for fixtures.",
-              "name": "subjects_json"
-            },
-            {
-              "flags": [
-                "--trusted-authority-receipt-json"
-              ],
-              "help": "Trusted host/proof authority receipt JSON.",
-              "name": "trusted_authority_receipt_json"
+              "help": "Repo-relative trusted authority receipt ref resolved by AW before high-authority admission. Omit for low-authority self-observation.",
+              "name": "trusted_authority_receipt_ref"
             },
             {
               "flags": [
@@ -8027,17 +7435,10 @@ const commandDefinitions = [
             },
             {
               "flags": [
-                "--subjects-json"
+                "--trusted-authority-receipt-ref"
               ],
-              "help": "Serialized target identity subjects for fixtures.",
-              "name": "subjects_json"
-            },
-            {
-              "flags": [
-                "--trusted-authority-receipt-json"
-              ],
-              "help": "Trusted host/proof authority receipt JSON.",
-              "name": "trusted_authority_receipt_json"
+              "help": "Repo-relative trusted authority receipt ref resolved by AW before high-authority admission. Omit for low-authority self-observation.",
+              "name": "trusted_authority_receipt_ref"
             },
             {
               "flags": [

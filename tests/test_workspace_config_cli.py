@@ -1514,7 +1514,11 @@ def test_correction_event_lifecycle_resolves_authority_and_rejects_self_labeled_
 
     assert admitted["admitted_events"][0]["authority_resolution"]["status"] == "trusted"
     assert admitted["admitted_events"][0]["authority"] == "pr-review"
-    assert {item["reason"] for item in admitted["rejected_events"]} == {"rejected-unauthorised"}
+    assert admitted["low_authority_events"][0]["authority_resolution"]["status"] == "low-authority"
+    low_authority_id = admitted["low_authority_events"][0]["event_id"]
+    assert low_authority_id in admitted["derived_routes"]["low_authority"]
+    assert low_authority_id not in admitted["derived_routes"]["target_guidance"]
+    assert admitted["rejected_events"] == []
 
 
 def test_correction_event_lifecycle_returns_persistent_bounded_store_update() -> None:
@@ -2963,6 +2967,29 @@ def test_internal_delegation_outcome_proof_receipt_can_emit_routable_aw_proof(tm
     target = tmp_path / "repo"
     target.mkdir()
     _init_git_repo(target)
+    receipt_path = target / ".agentic-workspace/proof/receipts/abc123.json"
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    receipt_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/trusted-producer-receipt/v1",
+                "receipt_id": "proof-receipt-abc123",
+                "producer_class": "aw-proof",
+                "authority": "aw-proof",
+                "source_type": "aw-proof-receipt",
+                "source_ref": "proof://receipts/abc123",
+                "status": "current",
+                "revision": "proof-rev-1",
+                "result": "passed",
+                "target_context": {
+                    "delegation_target": "fast_worker",
+                    "task_class": "mechanical-follow-through",
+                    "scope_class": "narrow-code-change",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     payload = _record_aw_proof_delegation_outcome(
         target_root=target,
@@ -2978,6 +3005,7 @@ def test_internal_delegation_outcome_proof_receipt_can_emit_routable_aw_proof(tm
     assert payload["recorded"]["authority"] == "aw-proof"
     assert payload["recorded"]["producer_class"] == "aw-proof"
     assert payload["recorded"]["source_ref"] == "proof://receipts/abc123"
+    assert payload["recorded"]["idempotency_key"] == "proof-receipt-abc123"
 
     from agentic_workspace.config import load_delegation_outcomes
     from agentic_workspace.target_evidence import target_evidence_posture
@@ -3001,7 +3029,7 @@ def test_internal_delegation_outcome_rejects_mismatched_trusted_receipt(tmp_path
     target.mkdir()
     _init_git_repo(target)
 
-    with pytest.raises(WorkspaceUsageError, match="trusted producer receipt must match"):
+    with pytest.raises(WorkspaceUsageError, match="must be resolved"):
         _record_delegation_outcome(
             target_root=target,
             delegation_target="fast_worker",
@@ -3016,7 +3044,104 @@ def test_internal_delegation_outcome_rejects_mismatched_trusted_receipt(tmp_path
             source_type="aw-proof-receipt",
             source_ref="proof://receipts/abc123",
             producer_class="human-review",
-            trusted_producer_receipt="aw-proof-receipt",
+            trusted_producer_receipt="aw-proof-receipt",  # type: ignore[arg-type]
+        )
+
+
+def test_internal_delegation_outcome_rejects_missing_or_stale_proof_receipt(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+
+    with pytest.raises(WorkspaceUsageError, match="could not be loaded"):
+        _record_aw_proof_delegation_outcome(
+            target_root=target,
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="narrow-code-change",
+            outcome="success",
+            proof_receipt_ref="proof://receipts/missing",
+            idempotency_key="missing",
+        )
+
+    receipt_path = target / ".agentic-workspace/proof/receipts/stale.json"
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    receipt_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/trusted-producer-receipt/v1",
+                "receipt_id": "stale",
+                "producer_class": "aw-proof",
+                "authority": "aw-proof",
+                "source_type": "aw-proof-receipt",
+                "source_ref": "proof://receipts/stale",
+                "status": "superseded",
+                "superseded_by": "newer",
+                "result": "passed",
+                "target_context": {
+                    "delegation_target": "fast_worker",
+                    "task_class": "mechanical-follow-through",
+                    "scope_class": "narrow-code-change",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="stale or superseded"):
+        _record_aw_proof_delegation_outcome(
+            target_root=target,
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="narrow-code-change",
+            outcome="success",
+            proof_receipt_ref="proof://receipts/stale",
+            idempotency_key="stale",
+        )
+
+
+def test_internal_delegation_outcome_rejects_cross_context_proof_receipt(tmp_path: Path) -> None:
+    from agentic_workspace.config import WorkspaceUsageError
+    from agentic_workspace.workspace_runtime_primitives import _record_aw_proof_delegation_outcome
+
+    target = tmp_path / "repo"
+    target.mkdir()
+    _init_git_repo(target)
+    receipt_path = target / ".agentic-workspace/proof/receipts/wrong-context.json"
+    receipt_path.parent.mkdir(parents=True, exist_ok=True)
+    receipt_path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/trusted-producer-receipt/v1",
+                "receipt_id": "wrong-context",
+                "producer_class": "aw-proof",
+                "authority": "aw-proof",
+                "source_type": "aw-proof-receipt",
+                "source_ref": "proof://receipts/wrong-context",
+                "status": "current",
+                "result": "passed",
+                "target_context": {
+                    "delegation_target": "fast_worker",
+                    "task_class": "mechanical-follow-through",
+                    "scope_class": "different-scope",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(WorkspaceUsageError, match="context does not match"):
+        _record_aw_proof_delegation_outcome(
+            target_root=target,
+            delegation_target="fast_worker",
+            task_class="mechanical-follow-through",
+            scope_class="narrow-code-change",
+            outcome="success",
+            proof_receipt_ref="proof://receipts/wrong-context",
+            idempotency_key="wrong-context",
         )
 
 
