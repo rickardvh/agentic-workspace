@@ -1,0 +1,44 @@
+{
+  "schema_version": "agentic-workspace/schema/v1",
+  "title": "Correction event operation result",
+  "description": "Result envelope emitted by generated correction-event lifecycle operations.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/correction-event-operation-result/v1",
+      "description": "Stable result envelope discriminator."
+    },
+    "operation_id": {
+      "type": "string",
+      "description": "Correction-event operation identifier that produced the result."
+    },
+    "status": {
+      "type": "string",
+      "description": "Operation outcome status."
+    },
+    "mutation_applied": {
+      "type": "boolean",
+      "description": "Whether local correction-event storage was changed."
+    },
+    "store_ref": {
+      "type": "string",
+      "description": "Repository-relative correction-event store path, when available."
+    },
+    "receipt_ref": {
+      "type": "string",
+      "description": "Repository-relative operation receipt path, when available."
+    },
+    "admission": {
+      "type": "object",
+      "description": "Admission, rejection, low-authority, retention, and routing details."
+    }
+  },
+  "required": [
+    "kind",
+    "operation_id",
+    "status",
+    "mutation_applied"
+  ],
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

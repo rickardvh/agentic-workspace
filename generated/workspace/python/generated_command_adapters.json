@@ -1,5 +1,63 @@
 {
   "adapters_by_command": {
+    "assignment": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "assignment",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommands": [
+          "admit",
+          "cleanup",
+          "close",
+          "export",
+          "import",
+          "integrate",
+          "override",
+          "reassign",
+          "reject",
+          "repair"
+        ]
+      },
+      "conformance_refs": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "assignment.lifecycle.cli",
+      "operation_id": "assignment.export",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "assignment.lifecycle.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
     "autopilot": {
       "command": {
         "command_manifest": "cli_commands.json",
@@ -112,6 +170,54 @@
         ],
         "output": [
           "config_report_result.schema.json"
+        ]
+      },
+      "status": "generated"
+    },
+    "correction-event": {
+      "command": {
+        "command_manifest": "cli_commands.json",
+        "name": "correction-event",
+        "option_group_manifest": "cli_option_groups.json",
+        "program": "agentic-workspace",
+        "subcommands": [
+          "submit",
+          "query",
+          "correct-dispute",
+          "withdraw-supersede",
+          "prune-compact"
+        ]
+      },
+      "conformance_refs": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "effect_hints": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "id": "correction-event.lifecycle.cli",
+      "operation_id": "correction-event.submit",
+      "runtime_binding": {
+        "kind": "operation-primitive-sequence",
+        "primitive_refs": [
+          "workspace.target-root.resolve",
+          "correction.event.apply",
+          "output.emit"
+        ]
+      },
+      "schemas": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
         ]
       },
       "status": "generated"

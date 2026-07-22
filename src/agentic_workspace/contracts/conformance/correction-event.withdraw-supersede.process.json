@@ -1,0 +1,94 @@
+{
+  "adapter": {
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "correction-event",
+      "withdraw-supersede",
+      "--target",
+      ".",
+      "--delivery-id",
+      "delivery-withdraw-1",
+      "--target-identity-ref",
+      "fast",
+      "--target-revision",
+      "rev-1",
+      "--task-class",
+      "mechanical-follow-through",
+      "--scope-class",
+      "narrow-code-change",
+      "--invariant-id",
+      "narrow-edits",
+      "--behavior-class",
+      "edit-scope",
+      "--desired-behavior",
+      "Prefer narrow edits.",
+      "--replaced-behavior",
+      "Broad edits.",
+      "--source-ref",
+      "agent-note-2",
+      "--predecessor-event-id",
+      "correction:prior",
+      "--lifecycle-action",
+      "withdraw",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root",
+    "kind": "process"
+  },
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "filesystem": {
+      "allowed_write_directories": [
+        ".agentic-workspace/local"
+      ],
+      "allowed_write_paths": [],
+      "forbidden_paths": [],
+      "required_paths": [
+        ".agentic-workspace/local/correction-events.json"
+      ]
+    },
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "stdout": {
+      "field_assertions": [
+        {
+          "equals": "agentic-workspace/correction-event-operation-result/v1",
+          "path": [
+            "kind"
+          ]
+        },
+        {
+          "equals": "stored",
+          "path": [
+            "status"
+          ]
+        }
+      ],
+      "format": "json"
+    }
+  },
+  "fixtures": [
+    {
+      "files": {
+        ".agentic-workspace/config.local.toml": "schema_version = 1\n\n[delegation]\ncurrent_target = \"user-local:fast-worker\"\n\n[local_memory]\ntarget_guidance_enabled = true\nuser_guidance_root = \"~/.agentic-workspace/target-guidance\"\ncorrection_events_path = \".agentic-workspace/local/correction-events.json\"\n\n[delegation_targets.fast_worker]\ntarget_id = \"user-local:fast-worker\"\ntarget_revision = \"rev-1\"\naliases = [\"fast\"]\nrevision_policy = \"preserve\"\nstrength = \"strong\"\nexecution_methods = [\"internal\"]\n",
+        ".agentic-workspace/config.toml": "schema_version = 1\n[workspace]\ncli_invoke = \"agentic-workspace\"\n",
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      },
+      "id": "minimal-repo"
+    }
+  ],
+  "id": "correction-event.withdraw-supersede.process",
+  "operation_id": "correction-event.withdraw-supersede",
+  "schema_version": "agentic-workspace/conformance/v1"
+}

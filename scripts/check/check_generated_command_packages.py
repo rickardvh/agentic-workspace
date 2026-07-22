@@ -1365,6 +1365,8 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "planning.prompt.render",
     "prompt.render",
     "delegation.outcome.append",
+    "assignment.lifecycle.apply",
+    "correction.event.apply",
     "workspace.selection.resolve",
 }
 
@@ -3945,6 +3947,16 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
                     )
 
     ir_consumed_operations = {
+        "assignment.admit",
+        "assignment.cleanup",
+        "assignment.close",
+        "assignment.export",
+        "assignment.import",
+        "assignment.integrate",
+        "assignment.override",
+        "assignment.reassign",
+        "assignment.reject",
+        "assignment.repair",
         "config.report",
         "delegation-outcome.append",
         "defaults.report",
@@ -4006,6 +4018,16 @@ def _validate_python_operation_execution_inventory(ir: dict[str, object]) -> lis
             errors.append(f"{operation_id} must keep a representative or complete ir_plan")
 
     generated_operation_packages = {
+        "assignment.admit": "root-workspace",
+        "assignment.cleanup": "root-workspace",
+        "assignment.close": "root-workspace",
+        "assignment.export": "root-workspace",
+        "assignment.import": "root-workspace",
+        "assignment.integrate": "root-workspace",
+        "assignment.override": "root-workspace",
+        "assignment.reassign": "root-workspace",
+        "assignment.reject": "root-workspace",
+        "assignment.repair": "root-workspace",
         "config.report": "root-workspace",
         "delegation-outcome.append": "root-workspace",
         "defaults.report": "root-workspace",

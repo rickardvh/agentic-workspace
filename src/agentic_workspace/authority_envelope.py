@@ -13,6 +13,7 @@ PROTECTED_MUTATION_BOUNDARIES = [
     "proof-admission",
     "closeout",
 ]
+MUTATION_CLAIMS_PATH = ".agentic-workspace/local/mutation-claims.json"
 
 INSTRUCTION_PROVENANCE_CLASSES: dict[str, dict[str, Any]] = {
     "host-platform": {
@@ -67,29 +68,214 @@ SIDE_EFFECT_TAXONOMY: dict[str, dict[str, str]] = {
 }
 
 
-def _git_lines(target_root: Path, *args: str) -> list[str]:
+def _git_observation(target_root: Path, *args: str, text: bool = True) -> dict[str, Any]:
+    command = ["git", *args]
     try:
-        result = subprocess.run(["git", *args], cwd=target_root, check=True, capture_output=True, text=True)
-    except (OSError, subprocess.CalledProcessError):
-        return []
-    return [line for line in result.stdout.splitlines() if line.strip()]
+        result = subprocess.run(command, cwd=target_root, check=True, capture_output=True, text=text)
+    except OSError as exc:
+        return {
+            "ok": False,
+            "command": command,
+            "exit_code": None,
+            "stdout": "" if text else b"",
+            "stderr": str(exc),
+            "error": exc.__class__.__name__,
+        }
+    except subprocess.CalledProcessError as exc:
+        return {
+            "ok": False,
+            "command": command,
+            "exit_code": exc.returncode,
+            "stdout": exc.stdout if exc.stdout is not None else "" if text else b"",
+            "stderr": exc.stderr if exc.stderr is not None else "",
+            "error": exc.__class__.__name__,
+        }
+    return {
+        "ok": True,
+        "command": command,
+        "exit_code": result.returncode,
+        "stdout": result.stdout,
+        "stderr": result.stderr if result.stderr is not None else "",
+        "error": None,
+    }
 
 
-def _git_bytes(target_root: Path, *args: str) -> bytes:
-    try:
-        result = subprocess.run(["git", *args], cwd=target_root, check=True, capture_output=True)
-    except (OSError, subprocess.CalledProcessError):
-        return b""
-    return result.stdout
+def _git_lines(target_root: Path, *args: str) -> dict[str, Any]:
+    result = _git_observation(target_root, *args, text=True)
+    result["lines"] = [line for line in str(result.get("stdout") or "").splitlines() if line.strip()]
+    return result
 
 
-def _git_value(target_root: Path, *args: str) -> str:
-    lines = _git_lines(target_root, *args)
-    return lines[0].strip() if lines else ""
+def _git_bytes(target_root: Path, *args: str) -> dict[str, Any]:
+    result = _git_observation(target_root, *args, text=False)
+    stdout = result.get("stdout")
+    result["stdout_bytes"] = stdout if isinstance(stdout, bytes) else b""
+    return result
+
+
+def _git_value(target_root: Path, *args: str) -> dict[str, Any]:
+    result = _git_lines(target_root, *args)
+    lines = result.get("lines") if isinstance(result.get("lines"), list) else []
+    result["value"] = str(lines[0]).strip() if lines else ""
+    return result
 
 
 def _list_payload(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+def _claim_store_path(target_root: Path) -> Path:
+    return target_root / MUTATION_CLAIMS_PATH
+
+
+def _read_mutation_claims(target_root: Path) -> list[dict[str, Any]]:
+    path = _claim_store_path(target_root)
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return [
+            {
+                "claim_id": "unreadable-claim-store",
+                "owner_id": "unknown",
+                "allowed_paths": ["."],
+                "status": "unreadable",
+            }
+        ]
+    claims = payload.get("claims", []) if isinstance(payload, dict) else []
+    return [claim for claim in claims if isinstance(claim, dict)]
+
+
+def _write_mutation_claims(target_root: Path, claims: list[dict[str, Any]]) -> None:
+    path = _claim_store_path(target_root)
+    if not claims:
+        if path.exists():
+            path.unlink()
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/mutation-claims/v1",
+                "claims": claims,
+                "checked_in_repo_effect": "none",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def _path_overlaps(left: str, right: str) -> bool:
+    left_norm = left.replace("\\", "/").strip("/") or "."
+    right_norm = right.replace("\\", "/").strip("/") or "."
+    return (
+        left_norm == "."
+        or right_norm == "."
+        or left_norm == right_norm
+        or left_norm.startswith(f"{right_norm}/")
+        or right_norm.startswith(f"{left_norm}/")
+    )
+
+
+def _mutation_claim_lifecycle(
+    *,
+    target_root: Path,
+    boundary_id: str,
+    owner_id: str,
+    allowed_paths: list[str],
+    allowed_effects: list[str],
+    baseline_id: str | None,
+    claim_action: str,
+) -> dict[str, Any]:
+    action = claim_action if claim_action in {"inspect", "acquire", "release", "acquire-and-release", "cleanup"} else "inspect"
+    claim_id = hashlib.sha256(
+        json.dumps(
+            {
+                "owner_id": owner_id,
+                "allowed_paths": allowed_paths,
+                "allowed_effects": allowed_effects,
+                "baseline_id": baseline_id,
+            },
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()[:16]
+    claims = _read_mutation_claims(target_root)
+    active_claims = [claim for claim in claims if str(claim.get("status") or "active") == "active"]
+    overlap_claims = [
+        claim
+        for claim in active_claims
+        if str(claim.get("owner_id") or "") != owner_id
+        and any(_path_overlaps(path, claimed) for path in allowed_paths or ["."] for claimed in _list_payload(claim.get("allowed_paths")))
+    ]
+    if overlap_claims:
+        return {
+            "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
+            "status": "rejected-overlap",
+            "claim_action": action,
+            "claim_id": claim_id,
+            "owner_id": owner_id,
+            "overlap_claims": [
+                {
+                    "claim_id": claim.get("claim_id"),
+                    "owner_id": claim.get("owner_id"),
+                    "allowed_paths": claim.get("allowed_paths"),
+                    "baseline_id": claim.get("baseline_id"),
+                }
+                for claim in overlap_claims
+            ],
+            "store_ref": MUTATION_CLAIMS_PATH,
+            "rule": "Overlapping live mutation claims from other owners reject before protected mutation admission.",
+        }
+    if action in {"release", "cleanup"}:
+        remaining = [claim for claim in claims if not (claim.get("claim_id") == claim_id or claim.get("owner_id") == owner_id)]
+        _write_mutation_claims(target_root, remaining)
+        return {
+            "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
+            "status": "released",
+            "claim_action": action,
+            "claim_id": claim_id,
+            "owner_id": owner_id,
+            "store_ref": MUTATION_CLAIMS_PATH,
+            "persistent_residue": bool(remaining),
+        }
+    if action in {"acquire", "acquire-and-release"}:
+        claim = {
+            "claim_id": claim_id,
+            "owner_id": owner_id,
+            "boundary_id": boundary_id,
+            "allowed_paths": allowed_paths,
+            "allowed_effects": allowed_effects,
+            "baseline_id": baseline_id,
+            "status": "active",
+        }
+        merged = [existing for existing in claims if existing.get("claim_id") != claim_id]
+        merged.append(claim)
+        _write_mutation_claims(target_root, merged)
+        if action == "acquire-and-release":
+            _write_mutation_claims(target_root, [existing for existing in merged if existing.get("claim_id") != claim_id])
+        return {
+            "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
+            "status": "acquired-and-released" if action == "acquire-and-release" else "acquired",
+            "claim_action": action,
+            "claim_id": claim_id,
+            "owner_id": owner_id,
+            "store_ref": MUTATION_CLAIMS_PATH,
+            "persistent_residue": action == "acquire",
+        }
+    return {
+        "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
+        "status": "inspected-no-overlap",
+        "claim_action": action,
+        "claim_id": claim_id,
+        "owner_id": owner_id,
+        "store_ref": MUTATION_CLAIMS_PATH,
+        "persistent_residue": False,
+        "rule": "Default protected-boundary inspection rejects existing overlap but does not leave a local claim residue.",
+    }
 
 
 def _status_entry(status: str, path: str, original_path: str | None = None) -> dict[str, Any]:
@@ -109,10 +295,58 @@ def _status_entry(status: str, path: str, original_path: str | None = None) -> d
     }
 
 
-def _status_entries_z(target_root: Path, status_args: list[str]) -> list[dict[str, Any]]:
-    raw = _git_bytes(target_root, *status_args)
+def _path_identity(target_root: Path, path: str) -> dict[str, Any]:
+    normalized = path.replace("\\", "/")
+    head_result = _git_value(target_root, "rev-parse", f"HEAD:{normalized}")
+    worktree_path = target_root / normalized
+    worktree_result = (
+        _git_value(target_root, "hash-object", "--", normalized)
+        if worktree_path.is_file()
+        else {"ok": False, "value": "", "error": "path-not-file", "command": ["git", "hash-object", "--", normalized]}
+    )
+    return {
+        "path": normalized,
+        "head_object": str(head_result.get("value") or "") or None,
+        "worktree_object": str(worktree_result.get("value") or "") or None,
+        "head_observed": bool(head_result.get("ok")),
+        "worktree_observed": bool(worktree_result.get("ok")),
+    }
+
+
+def _attach_entry_identities(target_root: Path, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    enriched: list[dict[str, Any]] = []
+    for entry in entries:
+        entry_paths = entry.get("paths")
+        paths: list[Any]
+        if isinstance(entry_paths, list):
+            paths = entry_paths
+        else:
+            paths = [entry.get("path")]
+        enriched.append(
+            {
+                **entry,
+                "object_identities": [_path_identity(target_root, str(path)) for path in paths if path],
+            }
+        )
+    return enriched
+
+
+def _enforcement_fingerprint(*, head: str, scope: list[str], entries: list[dict[str, Any]], assignment: dict[str, Any]) -> str:
+    payload = {
+        "head": head,
+        "scope": scope,
+        "entry_count": len(entries),
+        "entries": entries,
+        "assignment": assignment,
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+
+
+def _status_entries_z(target_root: Path, status_args: list[str]) -> dict[str, Any]:
+    raw_result = _git_bytes(target_root, *status_args)
+    raw = raw_result.get("stdout_bytes") if isinstance(raw_result.get("stdout_bytes"), bytes) else b""
     if not raw:
-        return []
+        return {**raw_result, "entries": []}
     parts = [item.decode("utf-8", errors="surrogateescape") for item in raw.split(b"\0") if item]
     entries: list[dict[str, Any]] = []
     index = 0
@@ -126,7 +360,7 @@ def _status_entries_z(target_root: Path, status_args: list[str]) -> list[dict[st
             index += 1
         entries.append(_status_entry(status=status, path=path, original_path=original_path))
         index += 1
-    return entries
+    return {**raw_result, "entries": _attach_entry_identities(target_root, entries)}
 
 
 def mutation_baseline_payload(
@@ -137,17 +371,55 @@ def mutation_baseline_payload(
     assignment_revision: str | None = None,
 ) -> dict[str, Any]:
     normalized_paths = [path for path in changed_paths if path]
-    head = _git_value(target_root, "rev-parse", "HEAD")
+    head_observation = _git_value(target_root, "rev-parse", "HEAD")
+    head = str(head_observation.get("value") or "")
     status_args = ["status", "--porcelain=v1", "-z", "--untracked-files=all"]
     if normalized_paths:
         status_args.extend(["--", *normalized_paths])
-    entries = _status_entries_z(target_root, status_args)
+    status_observation = _status_entries_z(target_root, status_args)
+    entries = [entry for entry in status_observation.get("entries", []) if isinstance(entry, dict)]
+    observation_errors = (
+        [
+            {
+                "reason": "git-head-observation-failed",
+                "command": head_observation.get("command"),
+                "exit_code": head_observation.get("exit_code"),
+                "diagnostic": str(head_observation.get("stderr") or head_observation.get("error") or ""),
+            }
+        ]
+        if not head_observation.get("ok") or not head
+        else []
+    )
+    if not status_observation.get("ok"):
+        observation_errors.append(
+            {
+                "reason": "git-status-observation-failed",
+                "command": status_observation.get("command"),
+                "exit_code": status_observation.get("exit_code"),
+                "diagnostic": str(status_observation.get("stderr") or status_observation.get("error") or ""),
+            }
+        )
+    assignment = {
+        "target_identity_ref": assignment_target_identity_ref,
+        "assignment_revision": assignment_revision,
+        "comparison": "stable-target-and-assignment-context",
+    }
+    enforcement_fingerprint = (
+        ""
+        if observation_errors
+        else _enforcement_fingerprint(
+            head=head,
+            scope=normalized_paths,
+            entries=entries,
+            assignment=assignment,
+        )
+    )
     digest_input = {
         "head": head,
         "paths": normalized_paths,
-        "status": entries,
-        "assignment_target_identity_ref": assignment_target_identity_ref,
-        "assignment_revision": assignment_revision,
+        "status_fingerprint": enforcement_fingerprint,
+        "assignment": assignment,
+        "observation_errors": observation_errors,
     }
     digest = hashlib.sha256(json.dumps(digest_input, sort_keys=True).encode("utf-8")).hexdigest()[:16]
     dirty = bool(entries)
@@ -156,13 +428,16 @@ def mutation_baseline_payload(
         "baseline_id",
         "head",
         "scope.allowed_paths",
-        "observed_state.entries",
+        "observed_state.enforcement_fingerprint",
+        "observed_state.entry_count",
         "assignment.target_identity_ref",
         "assignment.assignment_revision",
     ]
     fail_closed_reasons = [
+        "baseline-observation-failed",
         "baseline-head-changed",
         "unexpected-path-overlap",
+        "scoped-state-fingerprint-changed",
         "untracked-managed-state",
         "dirty-scope-not-accounted",
         "renamed-managed-path",
@@ -172,22 +447,35 @@ def mutation_baseline_payload(
     ]
     return {
         "kind": "agentic-workspace/mutation-baseline/v1",
-        "status": "dirty-scope-advisory-baseline" if dirty else "clean-scope",
+        "status": "baseline-observation-failed" if observation_errors else "dirty-scope-advisory-baseline" if dirty else "clean-scope",
         "baseline_id": digest,
         "head": head or None,
+        "observation": {
+            "ok": not observation_errors,
+            "head": {
+                "ok": bool(head_observation.get("ok")) and bool(head),
+                "command": head_observation.get("command"),
+                "diagnostic": str(head_observation.get("stderr") or head_observation.get("error") or ""),
+            },
+            "status": {
+                "ok": bool(status_observation.get("ok")),
+                "command": status_observation.get("command"),
+                "diagnostic": str(status_observation.get("stderr") or status_observation.get("error") or ""),
+            },
+            "errors": observation_errors,
+        },
         "scope": {
             "allowed_paths": normalized_paths,
             "path_count": len(normalized_paths),
             "comparison": "changed-path-scope" if normalized_paths else "whole-worktree-status",
         },
-        "assignment": {
-            "target_identity_ref": assignment_target_identity_ref,
-            "assignment_revision": assignment_revision,
-            "comparison": "stable-target-and-assignment-context",
-        },
+        "assignment": assignment,
         "observed_state": {
             "entry_count": len(entries),
             "entries": entries[:20],
+            "enforcement_fingerprint": enforcement_fingerprint or None,
+            "enforcement_entry_count": len(entries),
+            "enforcement_scope": "full-scoped-status",
             "omitted_entry_count": max(0, len(entries) - 20),
             "untracked_managed_count": len([entry for entry in entries if entry["untracked"] and entry["managed_local_state"]]),
         },
@@ -261,6 +549,20 @@ def compare_mutation_baseline(
                 return True
         return False
 
+    expected_observation = expected.get("observation", {}) if isinstance(expected.get("observation"), dict) else {}
+    current_observation = current.get("observation", {}) if isinstance(current.get("observation"), dict) else {}
+    if expected.get("status") == "baseline-observation-failed" or expected_observation.get("ok") is False:
+        reject(
+            "baseline-observation-failed",
+            "expected.observation",
+            "Refresh the expected baseline only after Git head and scoped status are observable.",
+        )
+    if current.get("status") == "baseline-observation-failed" or current_observation.get("ok") is False:
+        reject(
+            "baseline-observation-failed",
+            "current.observation",
+            "Stop this protected boundary until Git head and scoped status are observable.",
+        )
     if expected.get("head") != current.get("head"):
         reject("baseline-head-changed", "head", "Refresh the mutation baseline after rebasing or branch movement.")
     expected_scope = set(_as_path for _as_path in expected.get("scope", {}).get("allowed_paths", []) if isinstance(_as_path, str))
@@ -275,6 +577,22 @@ def compare_mutation_baseline(
         reject("scope-expanded", "scope.allowed_paths", "Rerun implement with the changed path scope.")
     expected_entries = expected.get("observed_state", {}).get("entries", [])
     current_entries = current.get("observed_state", {}).get("entries", [])
+    expected_state = expected.get("observed_state", {}) if isinstance(expected.get("observed_state"), dict) else {}
+    current_state = current.get("observed_state", {}) if isinstance(current.get("observed_state"), dict) else {}
+    if expected_state.get("entry_count") != current_state.get("entry_count"):
+        reject(
+            "scoped-state-fingerprint-changed",
+            "observed_state.entry_count",
+            "Refresh the mutation baseline after scoped Git state changes.",
+        )
+    expected_fingerprint = expected_state.get("enforcement_fingerprint")
+    current_fingerprint = current_state.get("enforcement_fingerprint")
+    if expected_fingerprint and current_fingerprint and expected_fingerprint != current_fingerprint:
+        reject(
+            "scoped-state-fingerprint-changed",
+            "observed_state.enforcement_fingerprint",
+            "Refresh the mutation baseline after scoped Git state changes, including same-path content changes.",
+        )
     expected_paths = {
         str(path)
         for entry in expected_entries
@@ -398,6 +716,9 @@ def admit_live_mutation_boundary(
     assignment_target_identity_ref: str | None = None,
     assignment_revision: str | None = None,
     allowed_paths: list[str] | None = None,
+    allowed_effects: list[str] | None = None,
+    owner_id: str | None = None,
+    claim_action: str = "inspect",
 ) -> dict[str, Any]:
     """Resolve the current baseline at the protected boundary.
 
@@ -430,6 +751,7 @@ def admit_live_mutation_boundary(
     if scope is None and isinstance(expected, dict):
         expected_scope = expected.get("scope", {}) if isinstance(expected.get("scope"), dict) else {}
         scope = [str(path) for path in expected_scope.get("allowed_paths", []) if isinstance(path, str)]
+    owner = owner_id or "current-agent-session"
     current = mutation_baseline_payload(
         target_root=target_root,
         changed_paths=scope or [],
@@ -443,14 +765,42 @@ def admit_live_mutation_boundary(
         assignment_target_identity_ref=assignment_target_identity_ref,
         allowed_paths=scope,
     )
+    claim_lifecycle = _mutation_claim_lifecycle(
+        target_root=target_root,
+        boundary_id=boundary,
+        owner_id=owner,
+        allowed_paths=scope or ["."],
+        allowed_effects=[str(effect) for effect in allowed_effects or ["repo-write"]],
+        baseline_id=str(current.get("baseline_id") or ""),
+        claim_action=claim_action,
+    )
+    if claim_lifecycle["status"] == "rejected-overlap":
+        admission["status"] = "rejected"
+        admission["admitted"] = False
+        admission.setdefault("failures", []).append(
+            {
+                "reason": "overlapping-mutation-claim",
+                "field": "mutation_claims",
+                "repair": "Wait for, supersede, or explicitly clean up the overlapping owner claim before mutating shared paths.",
+            }
+        )
+        admission["repair"] = "Wait for, supersede, or explicitly clean up the overlapping owner claim before mutating shared paths."
     admission["current_baseline"] = current
+    admission["claim_lifecycle"] = claim_lifecycle
     admission["live_resolution"] = {
         "kind": "agentic-workspace/live-mutation-baseline-resolution/v1",
-        "status": "snapshotted",
+        "status": "baseline-observation-failed" if current.get("status") == "baseline-observation-failed" else "snapshotted",
         "source": "boundary.live-git-snapshot",
         "boundary_id": boundary,
         "trusted_supplied_current_baseline": False,
-        "snapshot_fields": ["head", "scope.allowed_paths", "observed_state.entries", "assignment"],
+        "snapshot_fields": [
+            "head",
+            "scope.allowed_paths",
+            "observed_state.enforcement_fingerprint",
+            "observed_state.entry_count",
+            "assignment",
+            "claim_lifecycle",
+        ],
         "rule": "The protected boundary owns live-state acquisition immediately before admission or mutation.",
     }
     return admission
@@ -482,23 +832,32 @@ def revalidate_mutation_baseline(
 
 def _normalise_instruction_sources(*, task_text: str | None, instruction_sources: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
     sources = [
-        {"class": "host-platform", "source": "runtime-host"},
-        {"class": "repo-policy", "source": "repository-config"},
-        {"class": "trusted-human-task", "source": "task-text", "present": bool(task_text)},
-        {"class": "planning-assignment-handoff", "source": "planning-state"},
-        {"class": "repo-docs-and-artifacts", "source": "repo-material"},
-        {"class": "untrusted-content", "source": "external-content"},
+        {"class": "host-platform", "source": "runtime-host", "trusted_identity": True},
+        {"class": "repo-policy", "source": "repository-config", "trusted_identity": True},
+        {"class": "trusted-human-task", "source": "task-text", "present": bool(task_text), "trusted_identity": True},
+        {"class": "planning-assignment-handoff", "source": "planning-state", "trusted_identity": True},
+        {"class": "repo-docs-and-artifacts", "source": "repo-material", "trusted_identity": True},
+        {"class": "untrusted-content", "source": "external-content", "trusted_identity": False},
     ]
     if instruction_sources:
         sources.extend(instruction_sources)
     resolved: list[dict[str, Any]] = []
     for source in sources:
-        source_class = str(source.get("class") or "untrusted-content").strip()
+        claimed_class = str(source.get("class") or "untrusted-content").strip()
+        trusted_identity = bool(source.get("trusted_identity") or source.get("trusted_host_identity"))
+        source_class = claimed_class
+        authority_resolution_status = "trusted-host-boundary" if trusted_identity else "caller-supplied-data"
+        if not trusted_identity and claimed_class in {"host-platform", "repo-policy", "trusted-human-task"}:
+            source_class = "untrusted-content"
+            authority_resolution_status = "blocked-self-asserted-provenance"
         rule = INSTRUCTION_PROVENANCE_CLASSES.get(source_class, INSTRUCTION_PROVENANCE_CLASSES["untrusted-content"])
         resolved.append(
             {
                 **source,
                 "class": source_class if source_class in INSTRUCTION_PROVENANCE_CLASSES else "untrusted-content",
+                "claimed_class": claimed_class,
+                "trusted_identity": trusted_identity,
+                "authority_resolution_status": authority_resolution_status,
                 "trust": rule["trust"],
                 "rank": rule["rank"],
                 "effect": rule["effect"],
@@ -506,6 +865,30 @@ def _normalise_instruction_sources(*, task_text: str | None, instruction_sources
             }
         )
     return resolved
+
+
+def _trusted_governance_receipt(policy_mutation: dict[str, Any] | None) -> dict[str, Any] | None:
+    receipt = (policy_mutation or {}).get("trusted_governance_receipt")
+    if not isinstance(receipt, dict):
+        return None
+    authority_class = str(receipt.get("authority_class") or "")
+    operation_id = str(receipt.get("operation_id") or "")
+    authoriser = str(receipt.get("authoriser") or receipt.get("authorizer") or "")
+    policy_revision = str(receipt.get("policy_revision") or "")
+    if operation_id != "repository-policy-mutation.authorise":
+        return None
+    if authority_class not in {"host-platform", "repo-policy", "trusted-human-task"}:
+        return None
+    if not authoriser or not policy_revision:
+        return None
+    return {
+        "operation_id": operation_id,
+        "authority_class": authority_class,
+        "authoriser": authoriser,
+        "policy_revision": policy_revision,
+        "scope": receipt.get("scope") or [],
+        "compatibility": receipt.get("compatibility") or "not-recorded",
+    }
 
 
 def _effect_decision(effect_class: str, sources: list[dict[str, Any]]) -> dict[str, Any]:
@@ -564,13 +947,16 @@ def resolve_authority_effect_envelope(
     delegated_intersection = [effect for effect in requested_delegated if effect in set(parent_allowed) and effect in set(allowed_effects)]
     rejected_delegated = [effect for effect in requested_delegated if effect not in set(delegated_intersection)]
     mutation_authority = str((policy_mutation or {}).get("authority_class") or "").strip()
-    mutation_source = next((source for source in sources if source["class"] == mutation_authority), None)
+    governance_receipt = _trusted_governance_receipt(policy_mutation)
+    effective_mutation_authority = str((governance_receipt or {}).get("authority_class") or "")
+    mutation_source = next((source for source in sources if source["class"] == effective_mutation_authority), None)
     policy_requested = bool((policy_mutation or {}).get("requested"))
     policy_authorised = bool(
         policy_requested
+        and governance_receipt
         and mutation_source
         and mutation_source.get("may_authorise_side_effects")
-        and mutation_authority in {"host-platform", "repo-policy", "trusted-human-task"}
+        and effective_mutation_authority in {"host-platform", "repo-policy", "trusted-human-task"}
     )
     return {
         "kind": "agentic-workspace/authority-effect-resolution/v1",
@@ -589,8 +975,11 @@ def resolve_authority_effect_envelope(
             "operation_id": "repository-policy-mutation.authorise",
             "requested": policy_requested,
             "status": "authorised" if policy_authorised else "not-requested" if not policy_requested else "blocked",
-            "authority_class": mutation_authority or None,
+            "requested_authority_class": mutation_authority or None,
+            "authority_class": effective_mutation_authority or None,
             "allowed_authority_classes": ["host-platform", "repo-policy", "trusted-human-task"],
+            "trusted_governance_receipt": governance_receipt,
+            "receipt_required": True,
             "repair": "Use an explicit trusted human task or repo-policy route for repository policy promotion/mutation."
             if policy_requested and not policy_authorised
             else "none",
@@ -605,7 +994,14 @@ def resolve_authority_effect_envelope(
             "rule": "Delegation receives the intersection of host/repo/task authority, assignment scope, target capability, and parent limits.",
         },
         "host_enforcement_limits": {
-            "host_enforceable": ["live mutation baseline admission", "side-effect taxonomy decisions", "delegated authority narrowing"],
+            "host_enforceable": [
+                "live mutation baseline admission",
+                "full scoped mutation fingerprint comparison",
+                "mutation claim overlap admission",
+                "trusted governance receipt binding",
+                "side-effect taxonomy decisions",
+                "delegated authority narrowing",
+            ],
             "advisory": ["unrestricted external processes may still act outside AW unless host sandboxing also enforces them"],
             "honesty": "AW exposes and checks authority at its ordinary front doors; it is not a universal OS sandbox.",
         },

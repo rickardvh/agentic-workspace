@@ -26,7 +26,7 @@ from repo_verification_bootstrap.runtime_primitives import (
 
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor
-from agentic_workspace.authority_envelope import admit_mutation_boundary
+from agentic_workspace.authority_envelope import admit_live_mutation_boundary, admit_mutation_boundary
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
 from agentic_workspace.current_work_context import resolve_current_work_context
 from agentic_workspace.proof_receipt_admission import (
@@ -1459,13 +1459,25 @@ def _closeout_report_payload(
             option_blockers.setdefault(claim, []).append("applicable_intent_status")
     if architecture_closeout.get("required_claim"):
         option_blockers.setdefault("claim-work-complete", []).append("architecture_principles_status")
-    closeout_mutation_admission = admit_mutation_boundary(
-        boundary_id="closeout",
-        expected=_as_dict(closeout_trust.get("expected_mutation_baseline")),
-        current=_as_dict(closeout_trust.get("current_mutation_baseline") or closeout_trust.get("mutation_baseline")),
-        assignment_target_identity_ref=str(closeout_trust.get("assignment_target_identity_ref") or "").strip() or None,
-        allowed_paths=[str(path) for path in _list_payload(closeout_trust.get("allowed_paths"))] or None,
-    )
+    closeout_allowed_paths = [str(path) for path in _list_payload(closeout_trust.get("allowed_paths"))] or None
+    closeout_expected_baseline = _as_dict(closeout_trust.get("expected_mutation_baseline"))
+    if config.target_root is not None:
+        closeout_mutation_admission = admit_live_mutation_boundary(
+            boundary_id="closeout",
+            target_root=config.target_root,
+            expected=closeout_expected_baseline,
+            assignment_target_identity_ref=str(closeout_trust.get("assignment_target_identity_ref") or "").strip() or None,
+            allowed_paths=closeout_allowed_paths,
+            claim_action="acquire-and-release",
+        )
+    else:
+        closeout_mutation_admission = admit_mutation_boundary(
+            boundary_id="closeout",
+            expected=closeout_expected_baseline,
+            current=_as_dict(closeout_trust.get("current_mutation_baseline") or closeout_trust.get("mutation_baseline")),
+            assignment_target_identity_ref=str(closeout_trust.get("assignment_target_identity_ref") or "").strip() or None,
+            allowed_paths=closeout_allowed_paths,
+        )
     if closeout_mutation_admission.get("status") == "rejected":
         option_blockers.setdefault("claim-work-complete", []).append("mutation_baseline_revalidation")
         option_blockers.setdefault("close-parent-lane", []).append("mutation_baseline_revalidation")
