@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:4e8bfc29f61b5f7021bd1fef83a6667a66a40fe31b80de0d85213d9c9a440b89",
+  "profile_fingerprint": "sha256:ba518f81420e376124dcad2461c523afbd4027dc4dde2bd016c88556cb7ac6a8",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -20,8 +20,8 @@
     "assignment.admit": {
       "identity": "assignment.admit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:efbba3ae4033ad4494174d78a950ecda72fee949c9d9a730d64e8272b7325ccf",
-      "compatibility_fingerprint": "sha256:330b2dc8266b54aa75b5a328cd8c9930f78778c784559cba5de06b83466583d3",
+      "fingerprint": "sha256:38d727203f6116bc1117c4f920d73e3a67b467bcbcd3fa00663e2b6602a53641",
+      "compatibility_fingerprint": "sha256:10d2a81de3d085c33c9dec6956da9590df7f513ccb74100a97705015e9798d19",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -39,7 +39,7 @@
         "guards": [
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-          "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+          "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
         ],
         "id": "assignment.admit",
@@ -70,42 +70,12 @@
             "source": "cli-option"
           },
           {
-            "name": "assignment_gate_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "assignment_policy_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "delegation_decision_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "aw_proof_receipt_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "run_state_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
             "name": "target_name",
             "required": false,
             "source": "cli-option"
           },
           {
             "name": "transport",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "packet_json",
             "required": false,
             "source": "cli-option"
           },
@@ -121,16 +91,6 @@
           },
           {
             "name": "artifact_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "current_authority_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "live_mutation_baseline",
             "required": false,
             "source": "cli-option"
           },
@@ -208,7 +168,17 @@
         ],
         "reads": [
           {
-            "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "AW-owned proof receipt referenced by the Planning assignment",
+            "required": false,
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+          },
+          {
+            "description": "local disposable run state and returned artifacts",
             "required": false,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
           }
@@ -234,7 +204,7 @@
         "summary": "Record an AW-owned admission decision after current authority revalidation.",
         "writes": [
           {
-            "description": "transition records local disposable assignment/run state",
+            "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
@@ -393,42 +363,12 @@
               "source": "cli-option"
             },
             {
-              "name": "assignment_gate_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "assignment_policy_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "delegation_decision_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "run_state_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
             },
             {
               "name": "transport",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "packet_json",
               "required": false,
               "source": "cli-option"
             },
@@ -444,16 +384,6 @@
             },
             {
               "name": "artifact_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "current_authority_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "live_mutation_baseline",
               "required": false,
               "source": "cli-option"
             },
@@ -497,7 +427,7 @@
           "guards": [
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-            "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+            "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
           ]
         },
@@ -522,23 +452,11 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_ref": {
+                  "type": "string"
+                },
                 "assignment_revision": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "assignment_gate_json": {
-                  "type": "string"
-                },
-                "assignment_policy_json": {
-                  "type": "string"
-                },
-                "aw_proof_receipt_json": {
-                  "type": "string"
-                },
-                "current_authority_ref": {
-                  "type": "string"
-                },
-                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -554,10 +472,7 @@
                   ],
                   "type": "string"
                 },
-                "live_mutation_baseline": {
-                  "type": "string"
-                },
-                "packet_json": {
+                "planning_assignment_ref": {
                   "type": "string"
                 },
                 "reason": {
@@ -568,9 +483,6 @@
                   "type": "string"
                 },
                 "return_json": {
-                  "type": "string"
-                },
-                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -710,8 +622,8 @@
     "assignment.cleanup": {
       "identity": "assignment.cleanup",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:bd815e5054bb5f32a9f7c36124f303c16df4a8adbed2a77a010a41ccbcceace2",
-      "compatibility_fingerprint": "sha256:cac32ec70d717a1dc8f421bc35d4dc8388d71c63b50566e024448b50ba358f55",
+      "fingerprint": "sha256:46735e318a4d1a062f37bcc95dfbe7bb085b427a74fbfc8fb10dd6298444a39d",
+      "compatibility_fingerprint": "sha256:b4a5fe533f6e147fe711c5abd063929bbbba4cba68bdbcc24cc83f834409570d",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -729,7 +641,7 @@
         "guards": [
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-          "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+          "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
         ],
         "id": "assignment.cleanup",
@@ -760,42 +672,12 @@
             "source": "cli-option"
           },
           {
-            "name": "assignment_gate_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "assignment_policy_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "delegation_decision_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "aw_proof_receipt_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "run_state_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
             "name": "target_name",
             "required": false,
             "source": "cli-option"
           },
           {
             "name": "transport",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "packet_json",
             "required": false,
             "source": "cli-option"
           },
@@ -811,16 +693,6 @@
           },
           {
             "name": "artifact_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "current_authority_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "live_mutation_baseline",
             "required": false,
             "source": "cli-option"
           },
@@ -898,7 +770,17 @@
         ],
         "reads": [
           {
-            "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "AW-owned proof receipt referenced by the Planning assignment",
+            "required": false,
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+          },
+          {
+            "description": "local disposable run state and returned artifacts",
             "required": false,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
           }
@@ -924,7 +806,7 @@
         "summary": "Archive disposable local assignment run artifacts after closeout.",
         "writes": [
           {
-            "description": "transition records local disposable assignment/run state",
+            "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
@@ -1083,42 +965,12 @@
               "source": "cli-option"
             },
             {
-              "name": "assignment_gate_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "assignment_policy_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "delegation_decision_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "run_state_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
             },
             {
               "name": "transport",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "packet_json",
               "required": false,
               "source": "cli-option"
             },
@@ -1134,16 +986,6 @@
             },
             {
               "name": "artifact_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "current_authority_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "live_mutation_baseline",
               "required": false,
               "source": "cli-option"
             },
@@ -1187,7 +1029,7 @@
           "guards": [
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-            "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+            "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
           ]
         },
@@ -1212,23 +1054,11 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_ref": {
+                  "type": "string"
+                },
                 "assignment_revision": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "assignment_gate_json": {
-                  "type": "string"
-                },
-                "assignment_policy_json": {
-                  "type": "string"
-                },
-                "aw_proof_receipt_json": {
-                  "type": "string"
-                },
-                "current_authority_ref": {
-                  "type": "string"
-                },
-                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -1244,10 +1074,7 @@
                   ],
                   "type": "string"
                 },
-                "live_mutation_baseline": {
-                  "type": "string"
-                },
-                "packet_json": {
+                "planning_assignment_ref": {
                   "type": "string"
                 },
                 "reason": {
@@ -1258,9 +1085,6 @@
                   "type": "string"
                 },
                 "return_json": {
-                  "type": "string"
-                },
-                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -1400,8 +1224,8 @@
     "assignment.close": {
       "identity": "assignment.close",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:e33342017489a03c9ded40e48fdaa572c994013bafe805d07679f68a86fb2f56",
-      "compatibility_fingerprint": "sha256:6e9c99c2edafc2875a73554ff9320c37ffd3996c50942197225ce49ec72fafe2",
+      "fingerprint": "sha256:a3e0f3c728cccf211ae9b8273e138a6263a5c3ba7800a2ef2af3fb0a9131054a",
+      "compatibility_fingerprint": "sha256:c38d23506c8e890afe0a68509590dbba88e5fb21475455b19144102b03e9e62d",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -1419,7 +1243,7 @@
         "guards": [
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-          "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+          "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
         ],
         "id": "assignment.close",
@@ -1450,42 +1274,12 @@
             "source": "cli-option"
           },
           {
-            "name": "assignment_gate_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "assignment_policy_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "delegation_decision_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "aw_proof_receipt_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "run_state_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
             "name": "target_name",
             "required": false,
             "source": "cli-option"
           },
           {
             "name": "transport",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "packet_json",
             "required": false,
             "source": "cli-option"
           },
@@ -1501,16 +1295,6 @@
           },
           {
             "name": "artifact_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "current_authority_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "live_mutation_baseline",
             "required": false,
             "source": "cli-option"
           },
@@ -1588,7 +1372,17 @@
         ],
         "reads": [
           {
-            "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "AW-owned proof receipt referenced by the Planning assignment",
+            "required": false,
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+          },
+          {
+            "description": "local disposable run state and returned artifacts",
             "required": false,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
           }
@@ -1614,7 +1408,7 @@
         "summary": "Close an integrated or intentionally rejected assignment run with a local receipt.",
         "writes": [
           {
-            "description": "transition records local disposable assignment/run state",
+            "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
@@ -1773,42 +1567,12 @@
               "source": "cli-option"
             },
             {
-              "name": "assignment_gate_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "assignment_policy_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "delegation_decision_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "run_state_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
             },
             {
               "name": "transport",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "packet_json",
               "required": false,
               "source": "cli-option"
             },
@@ -1824,16 +1588,6 @@
             },
             {
               "name": "artifact_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "current_authority_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "live_mutation_baseline",
               "required": false,
               "source": "cli-option"
             },
@@ -1877,7 +1631,7 @@
           "guards": [
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-            "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+            "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
           ]
         },
@@ -1902,23 +1656,11 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_ref": {
+                  "type": "string"
+                },
                 "assignment_revision": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "assignment_gate_json": {
-                  "type": "string"
-                },
-                "assignment_policy_json": {
-                  "type": "string"
-                },
-                "aw_proof_receipt_json": {
-                  "type": "string"
-                },
-                "current_authority_ref": {
-                  "type": "string"
-                },
-                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -1934,10 +1676,7 @@
                   ],
                   "type": "string"
                 },
-                "live_mutation_baseline": {
-                  "type": "string"
-                },
-                "packet_json": {
+                "planning_assignment_ref": {
                   "type": "string"
                 },
                 "reason": {
@@ -1948,9 +1687,6 @@
                   "type": "string"
                 },
                 "return_json": {
-                  "type": "string"
-                },
-                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -2090,8 +1826,8 @@
     "assignment.export": {
       "identity": "assignment.export",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:38ca34e687946388996fdeba57207f5080adbda219fac123d05f2d548d7cb142",
-      "compatibility_fingerprint": "sha256:8f293b0fd7ec7e68fe37f7e34e25274dc275c864ebbea5d9ac90ea6f34257896",
+      "fingerprint": "sha256:3e7e156bd41a03e8846bb2298c4e329f4ab08e805d76c1aaff9d77c0a7b2b414",
+      "compatibility_fingerprint": "sha256:907fa1a9afad26da83426f78e898630f7b2e681d289d3df40a220e5054fb771b",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -2109,7 +1845,7 @@
         "guards": [
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-          "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+          "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
         ],
         "id": "assignment.export",
@@ -2140,42 +1876,12 @@
             "source": "cli-option"
           },
           {
-            "name": "assignment_gate_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "assignment_policy_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "delegation_decision_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "aw_proof_receipt_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "run_state_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
             "name": "target_name",
             "required": true,
             "source": "cli-option"
           },
           {
             "name": "transport",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "packet_json",
             "required": false,
             "source": "cli-option"
           },
@@ -2191,16 +1897,6 @@
           },
           {
             "name": "artifact_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "current_authority_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "live_mutation_baseline",
             "required": false,
             "source": "cli-option"
           },
@@ -2278,7 +1974,17 @@
         ],
         "reads": [
           {
-            "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "AW-owned proof receipt referenced by the Planning assignment",
+            "required": false,
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+          },
+          {
+            "description": "local disposable run state and returned artifacts",
             "required": false,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
           }
@@ -2304,7 +2010,7 @@
         "summary": "Prepare a durable assignment handoff packet and pasteable prompt from one assignment authority.",
         "writes": [
           {
-            "description": "transition records local disposable assignment/run state",
+            "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
@@ -2463,42 +2169,12 @@
               "source": "cli-option"
             },
             {
-              "name": "assignment_gate_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "assignment_policy_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "delegation_decision_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "run_state_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "target_name",
               "required": true,
               "source": "cli-option"
             },
             {
               "name": "transport",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "packet_json",
               "required": false,
               "source": "cli-option"
             },
@@ -2514,16 +2190,6 @@
             },
             {
               "name": "artifact_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "current_authority_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "live_mutation_baseline",
               "required": false,
               "source": "cli-option"
             },
@@ -2567,7 +2233,7 @@
           "guards": [
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-            "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+            "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
           ]
         },
@@ -2592,23 +2258,11 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_ref": {
+                  "type": "string"
+                },
                 "assignment_revision": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "assignment_gate_json": {
-                  "type": "string"
-                },
-                "assignment_policy_json": {
-                  "type": "string"
-                },
-                "aw_proof_receipt_json": {
-                  "type": "string"
-                },
-                "current_authority_ref": {
-                  "type": "string"
-                },
-                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -2624,10 +2278,7 @@
                   ],
                   "type": "string"
                 },
-                "live_mutation_baseline": {
-                  "type": "string"
-                },
-                "packet_json": {
+                "planning_assignment_ref": {
                   "type": "string"
                 },
                 "reason": {
@@ -2638,9 +2289,6 @@
                   "type": "string"
                 },
                 "return_json": {
-                  "type": "string"
-                },
-                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -2780,8 +2428,8 @@
     "assignment.import": {
       "identity": "assignment.import",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:2fa16468d73fa5105f8033f35fb8640ff08277fa47a60f860bc26ca8070c6da0",
-      "compatibility_fingerprint": "sha256:123271b3f8749e71bb4ea38794ede6e2e1bfa8a46e8847a9f9dbdb88abdce9f6",
+      "fingerprint": "sha256:654c4f46e6b436a39016592e321753a6fe1ae9e30bb0423334a40ce1dfcde82e",
+      "compatibility_fingerprint": "sha256:3b749896a6b6d5096bfda821573681080485cd49b1f2f49f1db979199841a3cb",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -2799,7 +2447,7 @@
         "guards": [
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-          "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+          "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
         ],
         "id": "assignment.import",
@@ -2830,42 +2478,12 @@
             "source": "cli-option"
           },
           {
-            "name": "assignment_gate_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "assignment_policy_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "delegation_decision_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "aw_proof_receipt_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "run_state_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
             "name": "target_name",
             "required": false,
             "source": "cli-option"
           },
           {
             "name": "transport",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "packet_json",
             "required": false,
             "source": "cli-option"
           },
@@ -2881,16 +2499,6 @@
           },
           {
             "name": "artifact_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "current_authority_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "live_mutation_baseline",
             "required": false,
             "source": "cli-option"
           },
@@ -2968,7 +2576,17 @@
         ],
         "reads": [
           {
-            "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "AW-owned proof receipt referenced by the Planning assignment",
+            "required": false,
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+          },
+          {
+            "description": "local disposable run state and returned artifacts",
             "required": false,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
           }
@@ -2994,7 +2612,7 @@
         "summary": "Import returned delegated work into received/awaiting-admission without proof or integration.",
         "writes": [
           {
-            "description": "transition records local disposable assignment/run state",
+            "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
@@ -3153,42 +2771,12 @@
               "source": "cli-option"
             },
             {
-              "name": "assignment_gate_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "assignment_policy_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "delegation_decision_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "run_state_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
             },
             {
               "name": "transport",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "packet_json",
               "required": false,
               "source": "cli-option"
             },
@@ -3204,16 +2792,6 @@
             },
             {
               "name": "artifact_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "current_authority_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "live_mutation_baseline",
               "required": false,
               "source": "cli-option"
             },
@@ -3257,7 +2835,7 @@
           "guards": [
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-            "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+            "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
           ]
         },
@@ -3282,23 +2860,11 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_ref": {
+                  "type": "string"
+                },
                 "assignment_revision": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "assignment_gate_json": {
-                  "type": "string"
-                },
-                "assignment_policy_json": {
-                  "type": "string"
-                },
-                "aw_proof_receipt_json": {
-                  "type": "string"
-                },
-                "current_authority_ref": {
-                  "type": "string"
-                },
-                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -3314,10 +2880,7 @@
                   ],
                   "type": "string"
                 },
-                "live_mutation_baseline": {
-                  "type": "string"
-                },
-                "packet_json": {
+                "planning_assignment_ref": {
                   "type": "string"
                 },
                 "reason": {
@@ -3328,9 +2891,6 @@
                   "type": "string"
                 },
                 "return_json": {
-                  "type": "string"
-                },
-                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -3470,8 +3030,8 @@
     "assignment.integrate": {
       "identity": "assignment.integrate",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:35833d75fb21751973f88d51e9022a596622a1a57e511bd6691f93550c4f7c26",
-      "compatibility_fingerprint": "sha256:935c0d17705a8cf0757271d5652eda0b39af2b907442b3870fe22580384c70b1",
+      "fingerprint": "sha256:16609afda96520f4b96787ea0d30a5c7581bff2fc8cd4571aa054934aebb1670",
+      "compatibility_fingerprint": "sha256:238f67cb3d2c053618418a13b3aed590afd9e78ef63e54e91daaef82fb8ec7e4",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -3489,7 +3049,7 @@
         "guards": [
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-          "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+          "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
         ],
         "id": "assignment.integrate",
@@ -3520,42 +3080,12 @@
             "source": "cli-option"
           },
           {
-            "name": "assignment_gate_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "assignment_policy_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "delegation_decision_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "aw_proof_receipt_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "run_state_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
             "name": "target_name",
             "required": false,
             "source": "cli-option"
           },
           {
             "name": "transport",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "packet_json",
             "required": false,
             "source": "cli-option"
           },
@@ -3571,16 +3101,6 @@
           },
           {
             "name": "artifact_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "current_authority_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "live_mutation_baseline",
             "required": false,
             "source": "cli-option"
           },
@@ -3658,7 +3178,17 @@
         ],
         "reads": [
           {
-            "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "AW-owned proof receipt referenced by the Planning assignment",
+            "required": false,
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+          },
+          {
+            "description": "local disposable run state and returned artifacts",
             "required": false,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
           }
@@ -3684,7 +3214,7 @@
         "summary": "Move an admitted return through the protected integration boundary.",
         "writes": [
           {
-            "description": "transition records local disposable assignment/run state",
+            "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
@@ -3843,42 +3373,12 @@
               "source": "cli-option"
             },
             {
-              "name": "assignment_gate_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "assignment_policy_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "delegation_decision_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "run_state_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
             },
             {
               "name": "transport",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "packet_json",
               "required": false,
               "source": "cli-option"
             },
@@ -3894,16 +3394,6 @@
             },
             {
               "name": "artifact_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "current_authority_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "live_mutation_baseline",
               "required": false,
               "source": "cli-option"
             },
@@ -3947,7 +3437,7 @@
           "guards": [
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-            "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+            "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
           ]
         },
@@ -3972,23 +3462,11 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_ref": {
+                  "type": "string"
+                },
                 "assignment_revision": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "assignment_gate_json": {
-                  "type": "string"
-                },
-                "assignment_policy_json": {
-                  "type": "string"
-                },
-                "aw_proof_receipt_json": {
-                  "type": "string"
-                },
-                "current_authority_ref": {
-                  "type": "string"
-                },
-                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -4004,10 +3482,7 @@
                   ],
                   "type": "string"
                 },
-                "live_mutation_baseline": {
-                  "type": "string"
-                },
-                "packet_json": {
+                "planning_assignment_ref": {
                   "type": "string"
                 },
                 "reason": {
@@ -4018,9 +3493,6 @@
                   "type": "string"
                 },
                 "return_json": {
-                  "type": "string"
-                },
-                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -4160,8 +3632,8 @@
     "assignment.override": {
       "identity": "assignment.override",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:07701b007154ee2dfb87239bc1a1f08183214a4a85d561afbf890d04ae965b46",
-      "compatibility_fingerprint": "sha256:51bdcb07c85c25aeb1bc461957c2a8d58edbaa8538bda0af6a3905f28fec20c3",
+      "fingerprint": "sha256:7fe668c01ef29bd32575cec92cfff501c3deacfc4fcb3ae93084dd7eab55bb2a",
+      "compatibility_fingerprint": "sha256:80a502f421f83765b10616ef4878b94abb9d95bf470e91af34d3c7666cae1f34",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -4179,7 +3651,7 @@
         "guards": [
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-          "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+          "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
         ],
         "id": "assignment.override",
@@ -4210,42 +3682,12 @@
             "source": "cli-option"
           },
           {
-            "name": "assignment_gate_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "assignment_policy_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "delegation_decision_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "aw_proof_receipt_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "run_state_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
             "name": "target_name",
             "required": false,
             "source": "cli-option"
           },
           {
             "name": "transport",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "packet_json",
             "required": false,
             "source": "cli-option"
           },
@@ -4261,16 +3703,6 @@
           },
           {
             "name": "artifact_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "current_authority_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "live_mutation_baseline",
             "required": false,
             "source": "cli-option"
           },
@@ -4348,7 +3780,17 @@
         ],
         "reads": [
           {
-            "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "AW-owned proof receipt referenced by the Planning assignment",
+            "required": false,
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+          },
+          {
+            "description": "local disposable run state and returned artifacts",
             "required": false,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
           }
@@ -4374,7 +3816,7 @@
         "summary": "Record a scoped authorised human override with expiry and proof/claim consequences.",
         "writes": [
           {
-            "description": "transition records local disposable assignment/run state",
+            "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
@@ -4533,42 +3975,12 @@
               "source": "cli-option"
             },
             {
-              "name": "assignment_gate_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "assignment_policy_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "delegation_decision_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "run_state_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
             },
             {
               "name": "transport",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "packet_json",
               "required": false,
               "source": "cli-option"
             },
@@ -4584,16 +3996,6 @@
             },
             {
               "name": "artifact_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "current_authority_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "live_mutation_baseline",
               "required": false,
               "source": "cli-option"
             },
@@ -4637,7 +4039,7 @@
           "guards": [
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-            "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+            "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
           ]
         },
@@ -4662,23 +4064,11 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_ref": {
+                  "type": "string"
+                },
                 "assignment_revision": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "assignment_gate_json": {
-                  "type": "string"
-                },
-                "assignment_policy_json": {
-                  "type": "string"
-                },
-                "aw_proof_receipt_json": {
-                  "type": "string"
-                },
-                "current_authority_ref": {
-                  "type": "string"
-                },
-                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -4694,10 +4084,7 @@
                   ],
                   "type": "string"
                 },
-                "live_mutation_baseline": {
-                  "type": "string"
-                },
-                "packet_json": {
+                "planning_assignment_ref": {
                   "type": "string"
                 },
                 "reason": {
@@ -4708,9 +4095,6 @@
                   "type": "string"
                 },
                 "return_json": {
-                  "type": "string"
-                },
-                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -4850,8 +4234,8 @@
     "assignment.reassign": {
       "identity": "assignment.reassign",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:82695cb5a99d925c88b02da27438fe0b1139950afa595287bbf997c6aae8c4b1",
-      "compatibility_fingerprint": "sha256:93a31e39ef65dd24d37b8b4ab73e1068dde82f934647d352ea4a441b88949ff7",
+      "fingerprint": "sha256:5cb21799a35a99a5ed3e92a87e775b4c2d9889cc060ad3c88f5ce941b85b48b6",
+      "compatibility_fingerprint": "sha256:8c15a0cea3ea6776a3c54a081fd841796d0c2635819111b609077eda1fe16b45",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -4869,7 +4253,7 @@
         "guards": [
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-          "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+          "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
         ],
         "id": "assignment.reassign",
@@ -4900,42 +4284,12 @@
             "source": "cli-option"
           },
           {
-            "name": "assignment_gate_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "assignment_policy_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "delegation_decision_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "aw_proof_receipt_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "run_state_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
             "name": "target_name",
             "required": true,
             "source": "cli-option"
           },
           {
             "name": "transport",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "packet_json",
             "required": false,
             "source": "cli-option"
           },
@@ -4951,16 +4305,6 @@
           },
           {
             "name": "artifact_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "current_authority_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "live_mutation_baseline",
             "required": false,
             "source": "cli-option"
           },
@@ -5038,7 +4382,17 @@
         ],
         "reads": [
           {
-            "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "AW-owned proof receipt referenced by the Planning assignment",
+            "required": false,
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+          },
+          {
+            "description": "local disposable run state and returned artifacts",
             "required": false,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
           }
@@ -5064,7 +4418,7 @@
         "summary": "Supersede one assignment run and bind follow-up ownership to a new target.",
         "writes": [
           {
-            "description": "transition records local disposable assignment/run state",
+            "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
@@ -5223,42 +4577,12 @@
               "source": "cli-option"
             },
             {
-              "name": "assignment_gate_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "assignment_policy_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "delegation_decision_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "run_state_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "target_name",
               "required": true,
               "source": "cli-option"
             },
             {
               "name": "transport",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "packet_json",
               "required": false,
               "source": "cli-option"
             },
@@ -5274,16 +4598,6 @@
             },
             {
               "name": "artifact_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "current_authority_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "live_mutation_baseline",
               "required": false,
               "source": "cli-option"
             },
@@ -5327,7 +4641,7 @@
           "guards": [
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-            "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+            "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
           ]
         },
@@ -5352,23 +4666,11 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_ref": {
+                  "type": "string"
+                },
                 "assignment_revision": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "assignment_gate_json": {
-                  "type": "string"
-                },
-                "assignment_policy_json": {
-                  "type": "string"
-                },
-                "aw_proof_receipt_json": {
-                  "type": "string"
-                },
-                "current_authority_ref": {
-                  "type": "string"
-                },
-                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -5384,10 +4686,7 @@
                   ],
                   "type": "string"
                 },
-                "live_mutation_baseline": {
-                  "type": "string"
-                },
-                "packet_json": {
+                "planning_assignment_ref": {
                   "type": "string"
                 },
                 "reason": {
@@ -5398,9 +4697,6 @@
                   "type": "string"
                 },
                 "return_json": {
-                  "type": "string"
-                },
-                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -5540,8 +4836,8 @@
     "assignment.reject": {
       "identity": "assignment.reject",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:7c7264b966bd720bffee75baf61d5502d281e250e0bb0dacd4a24156af32dbe5",
-      "compatibility_fingerprint": "sha256:fc182ab9013e1b4eeaa3acb7e54f1bfe4c1f2a3ab88a6e032a8a50fd006ce1aa",
+      "fingerprint": "sha256:9f829a841ac993b068c343aaaf9db54c83575b30eaca2254f25d4e5007fd464a",
+      "compatibility_fingerprint": "sha256:6c7d125779cbb3af5f013fc4ad517728b9d103481b7103e91f38049df8e10bad",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -5559,7 +4855,7 @@
         "guards": [
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-          "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+          "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
         ],
         "id": "assignment.reject",
@@ -5590,42 +4886,12 @@
             "source": "cli-option"
           },
           {
-            "name": "assignment_gate_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "assignment_policy_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "delegation_decision_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "aw_proof_receipt_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "run_state_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
             "name": "target_name",
             "required": false,
             "source": "cli-option"
           },
           {
             "name": "transport",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "packet_json",
             "required": false,
             "source": "cli-option"
           },
@@ -5641,16 +4907,6 @@
           },
           {
             "name": "artifact_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "current_authority_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "live_mutation_baseline",
             "required": false,
             "source": "cli-option"
           },
@@ -5728,7 +4984,17 @@
         ],
         "reads": [
           {
-            "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "AW-owned proof receipt referenced by the Planning assignment",
+            "required": false,
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+          },
+          {
+            "description": "local disposable run state and returned artifacts",
             "required": false,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
           }
@@ -5754,7 +5020,7 @@
         "summary": "Reject a returned assignment result with stable recovery evidence.",
         "writes": [
           {
-            "description": "transition records local disposable assignment/run state",
+            "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
@@ -5913,42 +5179,12 @@
               "source": "cli-option"
             },
             {
-              "name": "assignment_gate_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "assignment_policy_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "delegation_decision_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "run_state_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
             },
             {
               "name": "transport",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "packet_json",
               "required": false,
               "source": "cli-option"
             },
@@ -5964,16 +5200,6 @@
             },
             {
               "name": "artifact_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "current_authority_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "live_mutation_baseline",
               "required": false,
               "source": "cli-option"
             },
@@ -6017,7 +5243,7 @@
           "guards": [
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-            "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+            "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
           ]
         },
@@ -6042,23 +5268,11 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_ref": {
+                  "type": "string"
+                },
                 "assignment_revision": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "assignment_gate_json": {
-                  "type": "string"
-                },
-                "assignment_policy_json": {
-                  "type": "string"
-                },
-                "aw_proof_receipt_json": {
-                  "type": "string"
-                },
-                "current_authority_ref": {
-                  "type": "string"
-                },
-                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -6074,10 +5288,7 @@
                   ],
                   "type": "string"
                 },
-                "live_mutation_baseline": {
-                  "type": "string"
-                },
-                "packet_json": {
+                "planning_assignment_ref": {
                   "type": "string"
                 },
                 "reason": {
@@ -6088,9 +5299,6 @@
                   "type": "string"
                 },
                 "return_json": {
-                  "type": "string"
-                },
-                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -6230,8 +5438,8 @@
     "assignment.repair": {
       "identity": "assignment.repair",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:07dd2f9c07b79957764f3c066cd29ac2239f16128c58fde3e7091254d96172a5",
-      "compatibility_fingerprint": "sha256:5bd20d310fb423681ba13daced76f10592bfc1b4e4b7262715f680a3e0e05780",
+      "fingerprint": "sha256:ba84eb7be8a02645e903fed367255acb8c296ae82c588bab8d9a4277b0797090",
+      "compatibility_fingerprint": "sha256:1f8301083fe14ca18d876f1d827690a7d3c8664cf63420dcd4b35a98d7cb1261",
       "contract": {
         "classification": "lifecycle-mutation",
         "command_surface": {
@@ -6249,7 +5457,7 @@
         "guards": [
           "Write only under .agentic-workspace/local/assignment-runs/.",
           "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-          "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+          "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
           "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
         ],
         "id": "assignment.repair",
@@ -6280,42 +5488,12 @@
             "source": "cli-option"
           },
           {
-            "name": "assignment_gate_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "assignment_policy_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "delegation_decision_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "aw_proof_receipt_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "run_state_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
             "name": "target_name",
             "required": false,
             "source": "cli-option"
           },
           {
             "name": "transport",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "packet_json",
             "required": false,
             "source": "cli-option"
           },
@@ -6331,16 +5509,6 @@
           },
           {
             "name": "artifact_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "current_authority_ref",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "live_mutation_baseline",
             "required": false,
             "source": "cli-option"
           },
@@ -6418,7 +5586,17 @@
         ],
         "reads": [
           {
-            "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+            "description": "checked-in Planning assignment authority resolved by assignment id",
+            "required": true,
+            "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+          },
+          {
+            "description": "AW-owned proof receipt referenced by the Planning assignment",
+            "required": false,
+            "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+          },
+          {
+            "description": "local disposable run state and returned artifacts",
             "required": false,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
           }
@@ -6444,7 +5622,7 @@
         "summary": "Request repair for a returned assignment result without admitting mutation.",
         "writes": [
           {
-            "description": "transition records local disposable assignment/run state",
+            "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
             "required": true,
             "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
             "when": "transition records local disposable assignment/run state"
@@ -6603,42 +5781,12 @@
               "source": "cli-option"
             },
             {
-              "name": "assignment_gate_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "assignment_policy_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "delegation_decision_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "run_state_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
               "name": "target_name",
               "required": false,
               "source": "cli-option"
             },
             {
               "name": "transport",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "packet_json",
               "required": false,
               "source": "cli-option"
             },
@@ -6654,16 +5802,6 @@
             },
             {
               "name": "artifact_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "current_authority_ref",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "live_mutation_baseline",
               "required": false,
               "source": "cli-option"
             },
@@ -6707,7 +5845,7 @@
           "guards": [
             "Write only under .agentic-workspace/local/assignment-runs/.",
             "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-            "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+            "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
             "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
           ]
         },
@@ -6732,23 +5870,11 @@
                   "minLength": 1,
                   "type": "string"
                 },
+                "assignment_ref": {
+                  "type": "string"
+                },
                 "assignment_revision": {
                   "minLength": 1,
-                  "type": "string"
-                },
-                "assignment_gate_json": {
-                  "type": "string"
-                },
-                "assignment_policy_json": {
-                  "type": "string"
-                },
-                "aw_proof_receipt_json": {
-                  "type": "string"
-                },
-                "current_authority_ref": {
-                  "type": "string"
-                },
-                "delegation_decision_json": {
                   "type": "string"
                 },
                 "dry_run": {
@@ -6764,10 +5890,7 @@
                   ],
                   "type": "string"
                 },
-                "live_mutation_baseline": {
-                  "type": "string"
-                },
-                "packet_json": {
+                "planning_assignment_ref": {
                   "type": "string"
                 },
                 "reason": {
@@ -6778,9 +5901,6 @@
                   "type": "string"
                 },
                 "return_json": {
-                  "type": "string"
-                },
-                "run_state_json": {
                   "type": "string"
                 },
                 "run_id": {
@@ -7476,8 +6596,8 @@
     "correction-event.correct-dispute": {
       "identity": "correction-event.correct-dispute",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:9f6b3bb19cf9ed926eff3373d3aac9baafa33f4b9971e7f6d0667c87e048da99",
-      "compatibility_fingerprint": "sha256:ff9540d5f34d89786ecc3735f56cfe82a8251568fa3c5fcb786ae5dfaa93018b",
+      "fingerprint": "sha256:75bff391d0149b273069b87342acdd5b1c0c70686771f2537db5b20230baed6b",
+      "compatibility_fingerprint": "sha256:5216c44492b5378c3760c17e038e3c1d8fec5878df6f62b84b677bd91ae502d5",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -7494,7 +6614,7 @@
         },
         "guards": [
           "Generated operation boundary resolves target subjects from workspace config by default.",
-          "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+          "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
           "Agent self-observation is preserved as low-authority non-routing evidence.",
           "Correction storage is local-only and has no checked-in repo meaning."
         ],
@@ -7516,12 +6636,7 @@
             "source": "cli-option"
           },
           {
-            "name": "subjects_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "trusted_authority_receipt_json",
+            "name": "trusted_authority_receipt_ref",
             "required": false,
             "source": "cli-option"
           },
@@ -7832,12 +6947,7 @@
               "source": "cli-option"
             },
             {
-              "name": "subjects_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "trusted_authority_receipt_json",
+              "name": "trusted_authority_receipt_ref",
               "required": false,
               "source": "cli-option"
             },
@@ -7960,7 +7070,7 @@
           },
           "guards": [
             "Generated operation boundary resolves target subjects from workspace config by default.",
-            "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+            "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
             "Agent self-observation is preserved as low-authority non-routing evidence.",
             "Correction storage is local-only and has no checked-in repo meaning."
           ]
@@ -7968,45 +7078,53 @@
         "schemas": {
           "input": {
             "correction_event_input.schema.json": {
-              "schema_version": "agentic-workspace/schema/v1",
-              "type": "object",
               "additionalProperties": true,
               "properties": {
-                "target": {
+                "authority": {
                   "type": "string"
                 },
-                "format": {
-                  "type": "string",
-                  "enum": [
-                    "text",
-                    "json"
-                  ]
-                },
-                "event_json": {
-                  "type": "string"
-                },
-                "subjects_json": {
-                  "type": "string"
-                },
-                "trusted_authority_receipt_json": {
-                  "type": "string"
-                },
-                "idempotency_key": {
+                "behavior_class": {
                   "type": "string"
                 },
                 "delivery_id": {
                   "type": "string"
                 },
-                "target_identity_ref": {
+                "desired_behavior": {
                   "type": "string"
                 },
-                "target_revision": {
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
                   "type": "string"
                 },
-                "source_ref": {
+                "evidence_hash": {
                   "type": "string"
                 },
-                "source": {
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
                   "type": "string"
                 },
                 "producer_class": {
@@ -8015,54 +7133,43 @@
                 "producer_id": {
                   "type": "string"
                 },
-                "authority": {
-                  "type": "string"
-                },
-                "desired_behavior": {
-                  "type": "string"
-                },
                 "replaced_behavior": {
                   "type": "string"
                 },
-                "invariant_id": {
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
                   "type": "string"
                 },
-                "behavior_class": {
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
                   "type": "string"
                 },
                 "task_class": {
                   "type": "string"
                 },
-                "scope_class": {
+                "trusted_authority_receipt_ref": {
                   "type": "string"
-                },
-                "route_decisions": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "evidence_hash": {
-                  "type": "string"
-                },
-                "evidence_ref": {
-                  "type": "string"
-                },
-                "predecessor_event_id": {
-                  "type": "string"
-                },
-                "lifecycle_action": {
-                  "type": "string",
-                  "enum": [
-                    "withdraw",
-                    "supersede"
-                  ]
-                },
-                "dry_run": {
-                  "type": "boolean"
                 }
               },
               "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
               "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
@@ -8143,8 +7250,8 @@
     "correction-event.prune-compact": {
       "identity": "correction-event.prune-compact",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:f5a6bb3a4de5a74359548dbc0e56ee19e4fa86fa4a8330425c7c32410efbdde3",
-      "compatibility_fingerprint": "sha256:cf9db8df97a17d161133a7fe0ac0dae0d70c2acf18adefeac382ea0d23d0fa3b",
+      "fingerprint": "sha256:4e2d762234c3212fbc05d66d4d07c2f1b5a2183cd179baa7c165788120c93059",
+      "compatibility_fingerprint": "sha256:303c56fa4f01484b3e1ce7ad06ec653282e79ca5a2fedde8ab4e54fa9e6bdc0a",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -8161,7 +7268,7 @@
         },
         "guards": [
           "Generated operation boundary resolves target subjects from workspace config by default.",
-          "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+          "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
           "Agent self-observation is preserved as low-authority non-routing evidence.",
           "Correction storage is local-only and has no checked-in repo meaning."
         ],
@@ -8183,12 +7290,7 @@
             "source": "cli-option"
           },
           {
-            "name": "subjects_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "trusted_authority_receipt_json",
+            "name": "trusted_authority_receipt_ref",
             "required": false,
             "source": "cli-option"
           },
@@ -8499,12 +7601,7 @@
               "source": "cli-option"
             },
             {
-              "name": "subjects_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "trusted_authority_receipt_json",
+              "name": "trusted_authority_receipt_ref",
               "required": false,
               "source": "cli-option"
             },
@@ -8627,7 +7724,7 @@
           },
           "guards": [
             "Generated operation boundary resolves target subjects from workspace config by default.",
-            "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+            "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
             "Agent self-observation is preserved as low-authority non-routing evidence.",
             "Correction storage is local-only and has no checked-in repo meaning."
           ]
@@ -8635,45 +7732,53 @@
         "schemas": {
           "input": {
             "correction_event_input.schema.json": {
-              "schema_version": "agentic-workspace/schema/v1",
-              "type": "object",
               "additionalProperties": true,
               "properties": {
-                "target": {
+                "authority": {
                   "type": "string"
                 },
-                "format": {
-                  "type": "string",
-                  "enum": [
-                    "text",
-                    "json"
-                  ]
-                },
-                "event_json": {
-                  "type": "string"
-                },
-                "subjects_json": {
-                  "type": "string"
-                },
-                "trusted_authority_receipt_json": {
-                  "type": "string"
-                },
-                "idempotency_key": {
+                "behavior_class": {
                   "type": "string"
                 },
                 "delivery_id": {
                   "type": "string"
                 },
-                "target_identity_ref": {
+                "desired_behavior": {
                   "type": "string"
                 },
-                "target_revision": {
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
                   "type": "string"
                 },
-                "source_ref": {
+                "evidence_hash": {
                   "type": "string"
                 },
-                "source": {
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
                   "type": "string"
                 },
                 "producer_class": {
@@ -8682,54 +7787,43 @@
                 "producer_id": {
                   "type": "string"
                 },
-                "authority": {
-                  "type": "string"
-                },
-                "desired_behavior": {
-                  "type": "string"
-                },
                 "replaced_behavior": {
                   "type": "string"
                 },
-                "invariant_id": {
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
                   "type": "string"
                 },
-                "behavior_class": {
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
                   "type": "string"
                 },
                 "task_class": {
                   "type": "string"
                 },
-                "scope_class": {
+                "trusted_authority_receipt_ref": {
                   "type": "string"
-                },
-                "route_decisions": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "evidence_hash": {
-                  "type": "string"
-                },
-                "evidence_ref": {
-                  "type": "string"
-                },
-                "predecessor_event_id": {
-                  "type": "string"
-                },
-                "lifecycle_action": {
-                  "type": "string",
-                  "enum": [
-                    "withdraw",
-                    "supersede"
-                  ]
-                },
-                "dry_run": {
-                  "type": "boolean"
                 }
               },
               "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
               "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
@@ -8810,8 +7904,8 @@
     "correction-event.query": {
       "identity": "correction-event.query",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:d12ede540d812c47a93cf6c782c37550cdabd266b41573ec426ca67453259318",
-      "compatibility_fingerprint": "sha256:30eabd0ad86c2e7ed38b860b7e3b27368beebc43679e1b02094b74e164c674c3",
+      "fingerprint": "sha256:f7be441144dd68495cb5619f4735c47ecf06864c5503de5d7999721eda2cd1eb",
+      "compatibility_fingerprint": "sha256:3ad1280b6f154db1063e863c33ada38662e22f8dccfc746b85a2ee1a3584eb75",
       "contract": {
         "classification": "read-only-report",
         "command_surface": {
@@ -8828,7 +7922,7 @@
         },
         "guards": [
           "Generated operation boundary resolves target subjects from workspace config by default.",
-          "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+          "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
           "Agent self-observation is preserved as low-authority non-routing evidence.",
           "Correction storage is local-only and has no checked-in repo meaning."
         ],
@@ -8850,12 +7944,7 @@
             "source": "cli-option"
           },
           {
-            "name": "subjects_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "trusted_authority_receipt_json",
+            "name": "trusted_authority_receipt_ref",
             "required": false,
             "source": "cli-option"
           },
@@ -9166,12 +8255,7 @@
               "source": "cli-option"
             },
             {
-              "name": "subjects_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "trusted_authority_receipt_json",
+              "name": "trusted_authority_receipt_ref",
               "required": false,
               "source": "cli-option"
             },
@@ -9294,7 +8378,7 @@
           },
           "guards": [
             "Generated operation boundary resolves target subjects from workspace config by default.",
-            "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+            "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
             "Agent self-observation is preserved as low-authority non-routing evidence.",
             "Correction storage is local-only and has no checked-in repo meaning."
           ]
@@ -9302,45 +8386,53 @@
         "schemas": {
           "input": {
             "correction_event_input.schema.json": {
-              "schema_version": "agentic-workspace/schema/v1",
-              "type": "object",
               "additionalProperties": true,
               "properties": {
-                "target": {
+                "authority": {
                   "type": "string"
                 },
-                "format": {
-                  "type": "string",
-                  "enum": [
-                    "text",
-                    "json"
-                  ]
-                },
-                "event_json": {
-                  "type": "string"
-                },
-                "subjects_json": {
-                  "type": "string"
-                },
-                "trusted_authority_receipt_json": {
-                  "type": "string"
-                },
-                "idempotency_key": {
+                "behavior_class": {
                   "type": "string"
                 },
                 "delivery_id": {
                   "type": "string"
                 },
-                "target_identity_ref": {
+                "desired_behavior": {
                   "type": "string"
                 },
-                "target_revision": {
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
                   "type": "string"
                 },
-                "source_ref": {
+                "evidence_hash": {
                   "type": "string"
                 },
-                "source": {
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
                   "type": "string"
                 },
                 "producer_class": {
@@ -9349,54 +8441,43 @@
                 "producer_id": {
                   "type": "string"
                 },
-                "authority": {
-                  "type": "string"
-                },
-                "desired_behavior": {
-                  "type": "string"
-                },
                 "replaced_behavior": {
                   "type": "string"
                 },
-                "invariant_id": {
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
                   "type": "string"
                 },
-                "behavior_class": {
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
                   "type": "string"
                 },
                 "task_class": {
                   "type": "string"
                 },
-                "scope_class": {
+                "trusted_authority_receipt_ref": {
                   "type": "string"
-                },
-                "route_decisions": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "evidence_hash": {
-                  "type": "string"
-                },
-                "evidence_ref": {
-                  "type": "string"
-                },
-                "predecessor_event_id": {
-                  "type": "string"
-                },
-                "lifecycle_action": {
-                  "type": "string",
-                  "enum": [
-                    "withdraw",
-                    "supersede"
-                  ]
-                },
-                "dry_run": {
-                  "type": "boolean"
                 }
               },
               "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
               "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
@@ -9477,8 +8558,8 @@
     "correction-event.submit": {
       "identity": "correction-event.submit",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:df8da936bd7f5a87df8f9dd2d87e18f09fcc142fa7139a704c7007089485fd0d",
-      "compatibility_fingerprint": "sha256:3bde4e51b295d25087af6449cd01abc23603f33096dc3d128c8c61dbf2701598",
+      "fingerprint": "sha256:dd41fa14fbe53acb86e3e7e5073cfde7bba6cda82a729d6db6558aabc66b8455",
+      "compatibility_fingerprint": "sha256:b283bc4999a125a9f50d8335dd4ddf81842d3884710f31edfca1f0111bcd2366",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -9495,7 +8576,7 @@
         },
         "guards": [
           "Generated operation boundary resolves target subjects from workspace config by default.",
-          "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+          "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
           "Agent self-observation is preserved as low-authority non-routing evidence.",
           "Correction storage is local-only and has no checked-in repo meaning."
         ],
@@ -9517,12 +8598,7 @@
             "source": "cli-option"
           },
           {
-            "name": "subjects_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "trusted_authority_receipt_json",
+            "name": "trusted_authority_receipt_ref",
             "required": false,
             "source": "cli-option"
           },
@@ -9833,12 +8909,7 @@
               "source": "cli-option"
             },
             {
-              "name": "subjects_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "trusted_authority_receipt_json",
+              "name": "trusted_authority_receipt_ref",
               "required": false,
               "source": "cli-option"
             },
@@ -9961,7 +9032,7 @@
           },
           "guards": [
             "Generated operation boundary resolves target subjects from workspace config by default.",
-            "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+            "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
             "Agent self-observation is preserved as low-authority non-routing evidence.",
             "Correction storage is local-only and has no checked-in repo meaning."
           ]
@@ -9969,45 +9040,53 @@
         "schemas": {
           "input": {
             "correction_event_input.schema.json": {
-              "schema_version": "agentic-workspace/schema/v1",
-              "type": "object",
               "additionalProperties": true,
               "properties": {
-                "target": {
+                "authority": {
                   "type": "string"
                 },
-                "format": {
-                  "type": "string",
-                  "enum": [
-                    "text",
-                    "json"
-                  ]
-                },
-                "event_json": {
-                  "type": "string"
-                },
-                "subjects_json": {
-                  "type": "string"
-                },
-                "trusted_authority_receipt_json": {
-                  "type": "string"
-                },
-                "idempotency_key": {
+                "behavior_class": {
                   "type": "string"
                 },
                 "delivery_id": {
                   "type": "string"
                 },
-                "target_identity_ref": {
+                "desired_behavior": {
                   "type": "string"
                 },
-                "target_revision": {
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
                   "type": "string"
                 },
-                "source_ref": {
+                "evidence_hash": {
                   "type": "string"
                 },
-                "source": {
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
                   "type": "string"
                 },
                 "producer_class": {
@@ -10016,54 +9095,43 @@
                 "producer_id": {
                   "type": "string"
                 },
-                "authority": {
-                  "type": "string"
-                },
-                "desired_behavior": {
-                  "type": "string"
-                },
                 "replaced_behavior": {
                   "type": "string"
                 },
-                "invariant_id": {
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
                   "type": "string"
                 },
-                "behavior_class": {
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
                   "type": "string"
                 },
                 "task_class": {
                   "type": "string"
                 },
-                "scope_class": {
+                "trusted_authority_receipt_ref": {
                   "type": "string"
-                },
-                "route_decisions": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "evidence_hash": {
-                  "type": "string"
-                },
-                "evidence_ref": {
-                  "type": "string"
-                },
-                "predecessor_event_id": {
-                  "type": "string"
-                },
-                "lifecycle_action": {
-                  "type": "string",
-                  "enum": [
-                    "withdraw",
-                    "supersede"
-                  ]
-                },
-                "dry_run": {
-                  "type": "boolean"
                 }
               },
               "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
               "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
@@ -10144,8 +9212,8 @@
     "correction-event.withdraw-supersede": {
       "identity": "correction-event.withdraw-supersede",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:b24f068b5a58c0d815cb9931c8b1da5d18b0f21a5a62f8ff41e7c1d6d40249f6",
-      "compatibility_fingerprint": "sha256:32f41fd4180c91e9ccacb0f2201f43eab829267186d2d276304b7b2bf695ef23",
+      "fingerprint": "sha256:7949ecd43266b673db5bd3715ef6fa69cef0a094e80a9a97e7f6b98216fc6306",
+      "compatibility_fingerprint": "sha256:430fa04c46ef95d6f84ed9661883413d088a438e6417fecef7906b0b40217d69",
       "contract": {
         "classification": "local-record-append",
         "command_surface": {
@@ -10162,7 +9230,7 @@
         },
         "guards": [
           "Generated operation boundary resolves target subjects from workspace config by default.",
-          "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+          "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
           "Agent self-observation is preserved as low-authority non-routing evidence.",
           "Correction storage is local-only and has no checked-in repo meaning."
         ],
@@ -10184,12 +9252,7 @@
             "source": "cli-option"
           },
           {
-            "name": "subjects_json",
-            "required": false,
-            "source": "cli-option"
-          },
-          {
-            "name": "trusted_authority_receipt_json",
+            "name": "trusted_authority_receipt_ref",
             "required": false,
             "source": "cli-option"
           },
@@ -10500,12 +9563,7 @@
               "source": "cli-option"
             },
             {
-              "name": "subjects_json",
-              "required": false,
-              "source": "cli-option"
-            },
-            {
-              "name": "trusted_authority_receipt_json",
+              "name": "trusted_authority_receipt_ref",
               "required": false,
               "source": "cli-option"
             },
@@ -10628,7 +9686,7 @@
           },
           "guards": [
             "Generated operation boundary resolves target subjects from workspace config by default.",
-            "Caller-supplied producer labels cannot upgrade authority without trusted_authority_receipt_json.",
+            "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
             "Agent self-observation is preserved as low-authority non-routing evidence.",
             "Correction storage is local-only and has no checked-in repo meaning."
           ]
@@ -10636,45 +9694,53 @@
         "schemas": {
           "input": {
             "correction_event_input.schema.json": {
-              "schema_version": "agentic-workspace/schema/v1",
-              "type": "object",
               "additionalProperties": true,
               "properties": {
-                "target": {
+                "authority": {
                   "type": "string"
                 },
-                "format": {
-                  "type": "string",
-                  "enum": [
-                    "text",
-                    "json"
-                  ]
-                },
-                "event_json": {
-                  "type": "string"
-                },
-                "subjects_json": {
-                  "type": "string"
-                },
-                "trusted_authority_receipt_json": {
-                  "type": "string"
-                },
-                "idempotency_key": {
+                "behavior_class": {
                   "type": "string"
                 },
                 "delivery_id": {
                   "type": "string"
                 },
-                "target_identity_ref": {
+                "desired_behavior": {
                   "type": "string"
                 },
-                "target_revision": {
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
                   "type": "string"
                 },
-                "source_ref": {
+                "evidence_hash": {
                   "type": "string"
                 },
-                "source": {
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
                   "type": "string"
                 },
                 "producer_class": {
@@ -10683,54 +9749,43 @@
                 "producer_id": {
                   "type": "string"
                 },
-                "authority": {
-                  "type": "string"
-                },
-                "desired_behavior": {
-                  "type": "string"
-                },
                 "replaced_behavior": {
                   "type": "string"
                 },
-                "invariant_id": {
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
                   "type": "string"
                 },
-                "behavior_class": {
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
                   "type": "string"
                 },
                 "task_class": {
                   "type": "string"
                 },
-                "scope_class": {
+                "trusted_authority_receipt_ref": {
                   "type": "string"
-                },
-                "route_decisions": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "evidence_hash": {
-                  "type": "string"
-                },
-                "evidence_ref": {
-                  "type": "string"
-                },
-                "predecessor_event_id": {
-                  "type": "string"
-                },
-                "lifecycle_action": {
-                  "type": "string",
-                  "enum": [
-                    "withdraw",
-                    "supersede"
-                  ]
-                },
-                "dry_run": {
-                  "type": "boolean"
                 }
               },
               "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
               "x-agentic-workspace-doc-role": "contract-reference"
             }
           },
@@ -11543,29 +10598,13 @@
             "minLength": 1,
             "type": "string"
           },
+          "assignment_ref": {
+            "description": "Alias for planning_assignment_ref for hosts that already expose assignment refs.",
+            "type": "string"
+          },
           "assignment_revision": {
             "description": "Current assignment authority revision that the lifecycle operation is scoped to.",
             "minLength": 1,
-            "type": "string"
-          },
-          "assignment_gate_json": {
-            "description": "Serialized current assignment gate resolved by the workspace before export/admission.",
-            "type": "string"
-          },
-          "assignment_policy_json": {
-            "description": "Serialized current assignment policy resolved by the workspace before export/admission.",
-            "type": "string"
-          },
-          "aw_proof_receipt_json": {
-            "description": "Serialized AW-owned proof receipt resolved by the workspace before export/admission.",
-            "type": "string"
-          },
-          "current_authority_ref": {
-            "description": "Live authority reference resolved by the receiving workspace before admission or protected mutation.",
-            "type": "string"
-          },
-          "delegation_decision_json": {
-            "description": "Serialized current delegation decision resolved by the workspace before export/admission.",
             "type": "string"
           },
           "dry_run": {
@@ -11584,12 +10623,8 @@
             ],
             "type": "string"
           },
-          "live_mutation_baseline": {
-            "description": "Current protected mutation baseline observed by the admitting workspace.",
-            "type": "string"
-          },
-          "packet_json": {
-            "description": "Serialized assignment handoff packet for import or repair workflows.",
+          "planning_assignment_ref": {
+            "description": "Optional repo-relative checked-in Planning assignment ref; omitted uses .agentic-workspace/planning/assignments/<assignment-id>.assignment.json.",
             "type": "string"
           },
           "reason": {
@@ -11603,10 +10638,6 @@
           },
           "return_json": {
             "description": "Serialized worker return payload awaiting admission.",
-            "type": "string"
-          },
-          "run_state_json": {
-            "description": "Serialized current run-state authority resolved by the workspace before export/admission.",
             "type": "string"
           },
           "run_id": {
@@ -11811,129 +10842,125 @@
     "correction_event_input.schema.json": {
       "source": "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json",
       "schema": {
-        "schema_version": "agentic-workspace/schema/v1",
-        "title": "Correction event operation input",
-        "description": "Input accepted by generated correction-event lifecycle operations.",
-        "type": "object",
         "additionalProperties": true,
+        "description": "Input accepted by generated correction-event lifecycle operations.",
         "properties": {
-          "target": {
-            "type": "string",
-            "description": "Target repository path."
+          "authority": {
+            "description": "Claimed correction authority; not trusted without a trusted authority receipt.",
+            "type": "string"
+          },
+          "behavior_class": {
+            "description": "Stable behavior class for semantic correction identity.",
+            "type": "string"
+          },
+          "delivery_id": {
+            "description": "Stable delivery identifier for this correction event.",
+            "type": "string"
+          },
+          "desired_behavior": {
+            "description": "Behavior the correction says should replace the previous behavior.",
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "When true, report the intended operation without applying a storage mutation.",
+            "type": "boolean"
+          },
+          "event_json": {
+            "description": "Serialized correction event payload.",
+            "type": "string"
+          },
+          "evidence_hash": {
+            "description": "Hash of evidence supporting the correction.",
+            "type": "string"
+          },
+          "evidence_ref": {
+            "description": "Reference to evidence supporting the correction.",
+            "type": "string"
           },
           "format": {
-            "type": "string",
             "description": "Requested output format.",
             "enum": [
               "text",
               "json"
-            ]
-          },
-          "event_json": {
-            "type": "string",
-            "description": "Serialized correction event payload."
-          },
-          "subjects_json": {
-            "type": "string",
-            "description": "Optional serialized target identity subjects for fixtures; normal operation resolves config subjects."
-          },
-          "trusted_authority_receipt_json": {
-            "type": "string",
-            "description": "Trusted host/proof receipt that may admit human/review/evaluator authority."
+            ],
+            "type": "string"
           },
           "idempotency_key": {
-            "type": "string",
-            "description": "Optional stable key used to identify repeated deliveries."
-          },
-          "delivery_id": {
-            "type": "string",
-            "description": "Stable delivery identifier for this correction event."
-          },
-          "target_identity_ref": {
-            "type": "string",
-            "description": "Target identity, name, or alias to resolve before admission."
-          },
-          "target_revision": {
-            "type": "string",
-            "description": "Submitted target revision associated with the correction."
-          },
-          "source_ref": {
-            "type": "string",
-            "description": "Stable source reference for audit and idempotency."
-          },
-          "source": {
-            "type": "string",
-            "description": "Human-readable correction source label."
-          },
-          "producer_class": {
-            "type": "string",
-            "description": "Producer class used for authority resolution."
-          },
-          "producer_id": {
-            "type": "string",
-            "description": "Producer identity used for audit and authority resolution."
-          },
-          "authority": {
-            "type": "string",
-            "description": "Claimed correction authority; not trusted without a trusted authority receipt."
-          },
-          "desired_behavior": {
-            "type": "string",
-            "description": "Behavior the correction says should replace the previous behavior."
-          },
-          "replaced_behavior": {
-            "type": "string",
-            "description": "Behavior boundary being corrected or superseded."
+            "description": "Optional stable key used to identify repeated deliveries.",
+            "type": "string"
           },
           "invariant_id": {
-            "type": "string",
-            "description": "Stable semantic invariant identifier for deduplication."
-          },
-          "behavior_class": {
-            "type": "string",
-            "description": "Stable behavior class for semantic correction identity."
-          },
-          "task_class": {
-            "type": "string",
-            "description": "Task class where the correction applies."
-          },
-          "scope_class": {
-            "type": "string",
-            "description": "Scope class where the correction applies."
-          },
-          "route_decisions": {
-            "type": "array",
-            "description": "Requested routing decisions for trusted correction events.",
-            "items": {
-              "type": "string"
-            }
-          },
-          "evidence_hash": {
-            "type": "string",
-            "description": "Hash of evidence supporting the correction."
-          },
-          "evidence_ref": {
-            "type": "string",
-            "description": "Reference to evidence supporting the correction."
-          },
-          "predecessor_event_id": {
-            "type": "string",
-            "description": "Prior correction event being disputed, withdrawn, or superseded."
+            "description": "Stable semantic invariant identifier for deduplication.",
+            "type": "string"
           },
           "lifecycle_action": {
-            "type": "string",
             "description": "Lifecycle action for withdraw/supersede operations.",
             "enum": [
               "withdraw",
               "supersede"
-            ]
+            ],
+            "type": "string"
           },
-          "dry_run": {
-            "type": "boolean",
-            "description": "When true, report the intended operation without applying a storage mutation."
+          "predecessor_event_id": {
+            "description": "Prior correction event being disputed, withdrawn, or superseded.",
+            "type": "string"
+          },
+          "producer_class": {
+            "description": "Producer class used for authority resolution.",
+            "type": "string"
+          },
+          "producer_id": {
+            "description": "Producer identity used for audit and authority resolution.",
+            "type": "string"
+          },
+          "replaced_behavior": {
+            "description": "Behavior boundary being corrected or superseded.",
+            "type": "string"
+          },
+          "route_decisions": {
+            "description": "Requested routing decisions for trusted correction events.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "scope_class": {
+            "description": "Scope class where the correction applies.",
+            "type": "string"
+          },
+          "source": {
+            "description": "Human-readable correction source label.",
+            "type": "string"
+          },
+          "source_ref": {
+            "description": "Stable source reference for audit and idempotency.",
+            "type": "string"
+          },
+          "target": {
+            "description": "Target repository path.",
+            "type": "string"
+          },
+          "target_identity_ref": {
+            "description": "Target identity, name, or alias to resolve before admission.",
+            "type": "string"
+          },
+          "target_revision": {
+            "description": "Submitted target revision associated with the correction.",
+            "type": "string"
+          },
+          "task_class": {
+            "description": "Task class where the correction applies.",
+            "type": "string"
+          },
+          "trusted_authority_receipt_ref": {
+            "description": "Repo-relative trusted authority receipt ref resolved by AW before an event can gain human/review/evaluator authority. Omit to preserve the event as low-authority self-observation.",
+            "type": "string"
           }
         },
         "required": [],
+        "schema_version": "agentic-workspace/schema/v1",
+        "title": "Correction event operation input",
+        "type": "object",
         "x-agentic-workspace-doc-role": "contract-reference"
       }
     },

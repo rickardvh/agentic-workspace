@@ -1,12 +1,18 @@
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
 
 import pytest
 from jsonschema import Draft202012Validator
 
-from agentic_workspace.actionability import derive_actionability, invocation_decision_input_revision, operation_invocation
+from agentic_workspace.actionability import (
+    derive_actionability,
+    invocation_decision_input_revision,
+    operation_invocation,
+    proposed_action_input_revision,
+)
 from agentic_workspace.operating_decision import (
     bind_operation_invocation_to_authorities,
     compile_operating_decision,
@@ -137,13 +143,15 @@ def test_live_authority_revision_drift_is_rejected_before_execution() -> None:
         "evaluation": {"freshness_status": "not-required", "required": False},
         "executor": {"binding_fingerprint": "executor-b", "availability_status": "available"},
     }
+    proposed_next_action = {"action": "run-proof", "operation_invocation": invocation}
     actionability = derive_actionability(
         command_name="implement",
         health="attention-needed",
         warnings=[],
         repair_actions=[{"id": "proof-missing"}],
         manual_review_actions=[],
-        proposed_next_action={"action": "run-proof", "operation_invocation": invocation},
+        proposed_next_action=proposed_next_action,
+        current_input_revision=live_decision_input_revision(invocation=invocation, authorities=live_authorities),
     )
 
     decision = compile_operating_decision(
@@ -154,11 +162,12 @@ def test_live_authority_revision_drift_is_rejected_before_execution() -> None:
         }
     )
 
-    assert actionability["progress_check"]["result"] == "progress-making"
-    assert decision["canonical_decision_input_revision"] == live_decision_input_revision(
+    assert actionability["progress_check"]["result"] == "rejected-stale-action"
+    assert actionability["progress_check"]["live_revision_checked"] is True
+    assert actionability["progress_check"]["live_input_revision"] == live_decision_input_revision(
         invocation=invocation, authorities=live_authorities
     )
-    assert decision["canonical_decision_input_revision"] != invocation["expected_input_revision"]
+    assert actionability["progress_check"]["live_input_revision"] != invocation["expected_input_revision"]
     assert decision["status"] == "blocked"
     assert decision["primary_action"] == {}
     assert decision["external_blocker"]["reason_code"] == "stale-revision"
@@ -174,23 +183,50 @@ def test_actionability_rejects_typed_action_against_live_revision_drift() -> Non
         proof_requirements=[{"command": "agentic-workspace proof --target . --format json"}],
     )
 
+    proposed_next_action = {
+        "action": "run-proof",
+        "operation_invocation": invocation,
+    }
     actionability = derive_actionability(
         command_name="implement",
         health="attention-needed",
         warnings=[],
         repair_actions=[{"id": "proof-missing"}],
         manual_review_actions=[],
-        proposed_next_action={
-            "action": "run-proof",
-            "operation_invocation": invocation,
-            "current_input_revision": "sha256:live-authority-changed",
-        },
+        proposed_next_action=proposed_next_action,
+        current_input_revision="sha256:live-authority-changed",
     )
 
     assert actionability["progress_check"]["result"] == "rejected-stale-action"
     assert actionability["progress_check"]["live_revision_checked"] is True
     assert actionability["progress_check"]["live_input_revision"] == "sha256:live-authority-changed"
     assert actionability["next_action"]["action"] == "required-action-unavailable"
+
+
+def test_actionability_rejects_typed_action_when_live_revision_is_missing() -> None:
+    invocation = operation_invocation(
+        operation_id="proof.report",
+        arguments={"target": ".", "format": "json"},
+        owner_context_revision={"owner_id": "owner-a", "assignment_context_key": "ctx-a"},
+        mutation_boundary={"baseline_id": "baseline-a"},
+        proof_requirements=[{"command": "agentic-workspace proof --target . --format json"}],
+    )
+
+    actionability = derive_actionability(
+        command_name="implement",
+        health="attention-needed",
+        warnings=[],
+        repair_actions=[{"id": "proof-missing"}],
+        manual_review_actions=[],
+        proposed_next_action={"action": "run-proof", "operation_invocation": invocation},
+    )
+
+    assert actionability["progress_check"]["result"] == "rejected-stale-action"
+    assert actionability["progress_check"]["live_revision_checked"] is False
+    assert actionability["progress_check"]["live_revision_missing"] is True
+    assert actionability["next_action"]["missing_precondition"] == (
+        "live authority revision resolved immediately before actionability derivation"
+    )
 
 
 def test_missing_expected_revision_is_rejected_before_execution() -> None:
@@ -202,13 +238,15 @@ def test_missing_expected_revision_is_rejected_before_execution() -> None:
         proof_requirements=[{"command": "agentic-workspace proof --target . --format json"}],
     )
     invocation.pop("expected_input_revision")
+    proposed_next_action = {"action": "run-proof", "operation_invocation": invocation}
     actionability = derive_actionability(
         command_name="implement",
         health="attention-needed",
         warnings=[],
         repair_actions=[{"id": "proof-missing"}],
         manual_review_actions=[],
-        proposed_next_action={"action": "run-proof", "operation_invocation": invocation},
+        proposed_next_action=proposed_next_action,
+        current_input_revision=proposed_action_input_revision(proposed_next_action),
     )
 
     decision = compile_operating_decision(inputs={"actionability": actionability})
@@ -233,6 +271,10 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
     assert "autopilot-executor" in coverage["surfaces"]
     assert coverage["registry_authority"] == "versioned-contract"
     assert coverage["registry_source"] == "src/agentic_workspace/contracts/context_authority_registry.json"
+    assert set(coverage["ordinary_consumers"]) == set(registry["ordinary_decision_consumers"])
+    assert coverage["missing_required_sources"] == {}
+    for consumer in coverage["ordinary_consumers"]:
+        assert set(coverage["consumer_requirements"][consumer]).issubset(set(coverage["consumer_to_surfaces"][consumer]))
     gaps = derive_context_gaps(
         declarations=declarations,
         selected_surfaces=[
@@ -296,6 +338,32 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
         "consumer-without-source",
         "inference-fallback",
     ]
+
+
+def test_runtime_actionability_call_sites_resolve_live_revision_before_derivation() -> None:
+    """Static guard for ordinary boundaries that would otherwise reuse stale typed actions."""
+
+    production_sources = [
+        path for path in Path("src/agentic_workspace").rglob("*.py") if path.name != "actionability.py" and "tests" not in path.parts
+    ]
+    call_sites: list[str] = []
+    missing_live_revision: list[str] = []
+    for path in production_sources:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            func = node.func
+            name = func.id if isinstance(func, ast.Name) else func.attr if isinstance(func, ast.Attribute) else ""
+            if name != "derive_actionability":
+                continue
+            location = f"{path.as_posix()}:{node.lineno}"
+            call_sites.append(location)
+            if not any(keyword.arg == "current_input_revision" for keyword in node.keywords):
+                missing_live_revision.append(location)
+
+    assert call_sites
+    assert missing_live_revision == []
 
 
 def test_context_gap_derivation_rejects_caller_shaped_status_without_admitted_source() -> None:

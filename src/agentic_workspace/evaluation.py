@@ -16,6 +16,11 @@ EVALUATION_OBSERVATION_KIND = "agentic-workspace/evaluation-observation/v1"
 EVALUATION_CLOSURE_AUTHORITY_KIND = "agentic-workspace/evaluation-closure-authority/v1"
 WORKSPACE_EVALUATIONS_PATH = Path(".agentic-workspace/evaluations.json")
 WORKSPACE_LOCAL_EVALUATIONS_DIR = Path(".agentic-workspace/local/evaluations")
+ASSIGNMENT_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/planning/assignment-receipts")
+PROOF_AUTHORITY_RECEIPT_DIR = Path(".agentic-workspace/proof/receipts")
+EVALUATION_FINDING_FOLLOWUPS_PATH = Path(".agentic-workspace/planning/evaluation-finding-followups.json")
+EVALUATION_OWNER_RECEIPT_INDEX_KIND = "agentic-workspace/evaluation-owner-receipt-index/v1"
+EVALUATION_FINDING_FOLLOWUPS_KIND = "agentic-workspace/evaluation-finding-followups/v1"
 OBSERVATION_RETENTION_CAP = 100
 OBSERVATION_BYTE_CAP = 256_000
 
@@ -227,9 +232,110 @@ def _string_list(value: Any) -> list[str]:
     return [str(item) for item in value if str(item or "").strip()]
 
 
-def _producer_receipt(payload: dict[str, Any], *, field: str, expected_kind: str, expected_producer: str) -> dict[str, Any]:
+def _owner_receipt_path(*, target_root: Path, store_root: Path, receipt_ref: str) -> Path:
+    text = receipt_ref.strip()
+    if not text:
+        raise WorkspaceUsageError("evaluation owner receipt reference is required.")
+    root = (target_root / store_root).resolve()
+    if "://" in text:
+        receipt_id = text.rsplit("/", 1)[-1].strip().replace(":", "-")
+        if not receipt_id:
+            raise WorkspaceUsageError("evaluation owner receipt reference has no stable id.")
+        return root / f"{receipt_id}.json"
+    candidate = Path(text)
+    if candidate.is_absolute():
+        raise WorkspaceUsageError("evaluation owner receipt reference must be repo-relative.")
+    resolved = (target_root / candidate).resolve()
+    if not resolved.is_relative_to(root):
+        raise WorkspaceUsageError("evaluation owner receipt reference must resolve inside its owning store.")
+    return resolved
+
+
+def _load_indexed_owner_receipt(
+    *,
+    target_root: Path,
+    store_root: Path,
+    receipt_ref: str,
+    expected_kind: str,
+    expected_producer: str,
+) -> dict[str, Any]:
+    path = _owner_receipt_path(target_root=target_root, store_root=store_root, receipt_ref=receipt_ref)
+    receipt = _load_json(path, default={})
+    receipt_id = str(receipt.get("receipt_id") or path.stem).strip()
+    index = _load_json((target_root / store_root / "index.json").resolve(), default={})
+    entries = index.get("receipts") if index.get("kind") == EVALUATION_OWNER_RECEIPT_INDEX_KIND else {}
+    entry = entries.get(receipt_id) if isinstance(entries, dict) else None
+    if not isinstance(entry, dict):
+        raise WorkspaceUsageError("evaluation owner receipt is not registered in its owner store index.")
+    indexed_path = ((target_root / store_root).resolve() / str(entry.get("path") or "")).resolve()
+    if indexed_path != path.resolve():
+        raise WorkspaceUsageError("evaluation owner receipt index path does not match the resolved receipt.")
+    if str(entry.get("status") or receipt.get("status") or "current") not in {"current", "fresh", "accepted"}:
+        raise WorkspaceUsageError("evaluation owner receipt is not current.")
+    if entry.get("superseded_by") or receipt.get("superseded_by") or receipt.get("revoked_at"):
+        raise WorkspaceUsageError("evaluation owner receipt is superseded or revoked.")
+    if receipt.get("kind") != expected_kind:
+        raise WorkspaceUsageError("evaluation owner receipt kind does not match the expected producer.")
+    if receipt.get("producer") != expected_producer:
+        raise WorkspaceUsageError("evaluation owner receipt producer does not match the expected owner.")
+    if str(entry.get("revision") or "") and str(receipt.get("revision") or "") and entry.get("revision") != receipt.get("revision"):
+        raise WorkspaceUsageError("evaluation owner receipt revision does not match the owner store index.")
+    return receipt
+
+
+def _write_indexed_owner_receipt(
+    *,
+    target_root: Path,
+    store_root: Path,
+    receipt_id: str,
+    payload: dict[str, Any],
+) -> str:
+    safe_id = receipt_id.strip().replace(":", "-")
+    if not safe_id:
+        raise WorkspaceUsageError("receipt_id is required.")
+    root = target_root / store_root
+    root.mkdir(parents=True, exist_ok=True)
+    receipt = {**payload, "receipt_id": payload.get("receipt_id") or safe_id, "status": payload.get("status") or "current"}
+    path = root / f"{safe_id}.json"
+    _write_json(path, receipt)
+    index_path = root / "index.json"
+    index = _load_json(index_path, default={"kind": EVALUATION_OWNER_RECEIPT_INDEX_KIND, "receipts": {}})
+    raw_receipts = index.get("receipts")
+    receipts = raw_receipts if isinstance(raw_receipts, dict) else {}
+    receipts[receipt["receipt_id"]] = {
+        "path": path.relative_to(root).as_posix(),
+        "status": receipt.get("status"),
+        "revision": receipt.get("revision"),
+    }
+    _write_json(index_path, {"kind": EVALUATION_OWNER_RECEIPT_INDEX_KIND, "receipts": receipts})
+    return f"aw://{store_root.as_posix()}/{safe_id}"
+
+
+def _producer_receipt(
+    payload: dict[str, Any],
+    *,
+    target_root: Path,
+    store_root: Path,
+    field: str,
+    expected_kind: str,
+    expected_producer: str,
+) -> dict[str, Any]:
     raw_receipt = payload.get("receipt")
     receipt: dict[str, Any] = raw_receipt if isinstance(raw_receipt, dict) else {}
+    receipt_ref = str(receipt.get("receipt_ref") or receipt.get("source_ref") or payload.get("receipt_ref") or "").strip()
+    owner_receipt: dict[str, Any] = {}
+    owner_error = ""
+    if receipt_ref:
+        try:
+            owner_receipt = _load_indexed_owner_receipt(
+                target_root=target_root,
+                store_root=store_root,
+                receipt_ref=receipt_ref,
+                expected_kind=expected_kind,
+                expected_producer=expected_producer,
+            )
+        except WorkspaceUsageError as exc:
+            owner_error = str(exc)
     missing = [
         key
         for key, value in {
@@ -237,6 +343,8 @@ def _producer_receipt(payload: dict[str, Any], *, field: str, expected_kind: str
             f"{field}.receipt.receipt_id": receipt.get("receipt_id"),
             f"{field}.receipt.producer": receipt.get("producer"),
             f"{field}.receipt.revision": receipt.get("revision"),
+            f"{field}.receipt.source_ref": receipt_ref,
+            f"{field}.owner_receipt": owner_receipt,
         }.items()
         if value in (None, "", [], {})
     ]
@@ -245,25 +353,35 @@ def _producer_receipt(payload: dict[str, Any], *, field: str, expected_kind: str
         mismatches.append(f"{field}.receipt.kind")
     if receipt.get("producer") not in (None, expected_producer):
         mismatches.append(f"{field}.receipt.producer")
+    for key in ("kind", "receipt_id", "producer", "revision"):
+        if owner_receipt and receipt.get(key) not in (None, owner_receipt.get(key)):
+            mismatches.append(f"{field}.receipt.{key}")
     return {
         "status": "resolved" if not missing and not mismatches else "rejected",
-        "receipt_id": receipt.get("receipt_id"),
-        "revision": receipt.get("revision"),
-        "producer": receipt.get("producer"),
+        "receipt_id": owner_receipt.get("receipt_id") or receipt.get("receipt_id"),
+        "revision": owner_receipt.get("revision") or receipt.get("revision"),
+        "producer": owner_receipt.get("producer") or receipt.get("producer"),
+        "receipt_ref": receipt_ref or None,
+        "owner_error": owner_error or None,
         "missing_fields": missing,
         "mismatched_fields": mismatches,
+        "owner_receipt": owner_receipt or None,
     }
 
 
-def _authority_producer_resolution(*, assignment: dict[str, Any], proof: dict[str, Any]) -> dict[str, Any]:
+def _authority_producer_resolution(*, target_root: Path, assignment: dict[str, Any], proof: dict[str, Any]) -> dict[str, Any]:
     assignment_receipt = _producer_receipt(
         assignment,
+        target_root=target_root,
+        store_root=ASSIGNMENT_AUTHORITY_RECEIPT_DIR,
         field="assignment",
         expected_kind="agentic-workspace/assignment-authority-receipt/v1",
         expected_producer="assignment.lifecycle",
     )
     proof_receipt = _producer_receipt(
         proof,
+        target_root=target_root,
+        store_root=PROOF_AUTHORITY_RECEIPT_DIR,
         field="proof",
         expected_kind="agentic-workspace/proof-receipt/v1",
         expected_producer="aw-proof",
@@ -594,24 +712,54 @@ def write_observation_authority(
     proof: dict[str, Any],
     changed_paths: list[str],
 ) -> dict[str, Any]:
-    producer_resolution = _authority_producer_resolution(assignment=assignment, proof=proof)
+    producer_resolution = _authority_producer_resolution(target_root=target_root, assignment=assignment, proof=proof)
     if producer_resolution["status"] != "resolved":
         missing = ", ".join([*producer_resolution["missing_fields"], *producer_resolution["mismatched_fields"]])
         raise WorkspaceUsageError(
             "evaluation observation authority rejected (authority-producer-unresolved): "
             f"assignment/proof producer receipts are required ({missing})."
         )
+    assignment_owner_receipt = producer_resolution["assignment_receipt"]["owner_receipt"]
+    proof_owner_receipt = producer_resolution["proof_receipt"]["owner_receipt"]
+    if not isinstance(assignment_owner_receipt, dict) or not isinstance(proof_owner_receipt, dict):
+        raise WorkspaceUsageError("evaluation observation authority rejected (authority-producer-unresolved): owner receipts are required.")
+    resolved_assignment = {
+        "target_identity_ref": assignment_owner_receipt.get("target_identity_ref"),
+        "context_key": assignment_owner_receipt.get("context_key"),
+        "assignment_revision": assignment_owner_receipt.get("revision"),
+        "receipt": {
+            "kind": assignment_owner_receipt.get("kind"),
+            "receipt_id": assignment_owner_receipt.get("receipt_id"),
+            "producer": assignment_owner_receipt.get("producer"),
+            "revision": assignment_owner_receipt.get("revision"),
+            "source_ref": producer_resolution["assignment_receipt"].get("receipt_ref"),
+        },
+    }
+    resolved_proof = {
+        "result": proof_owner_receipt.get("result"),
+        "verified_by": proof_owner_receipt.get("verified_by"),
+        "revision": proof_owner_receipt.get("revision"),
+        "provenance": proof_owner_receipt.get("provenance"),
+        "receipt": {
+            "kind": proof_owner_receipt.get("kind"),
+            "receipt_id": proof_owner_receipt.get("receipt_id"),
+            "producer": proof_owner_receipt.get("producer"),
+            "revision": proof_owner_receipt.get("revision"),
+            "source_ref": producer_resolution["proof_receipt"].get("receipt_ref"),
+            "subject": proof_owner_receipt.get("subject"),
+        },
+    }
     baseline = mutation_baseline_payload(
         target_root=target_root,
         changed_paths=changed_paths,
-        assignment_target_identity_ref=str(assignment.get("target_identity_ref") or "").strip() or None,
-        assignment_revision=str(assignment.get("assignment_revision") or "").strip() or None,
+        assignment_target_identity_ref=str(resolved_assignment.get("target_identity_ref") or "").strip() or None,
+        assignment_revision=str(resolved_assignment.get("assignment_revision") or "").strip() or None,
     )
     payload = {
         "kind": "agentic-workspace/evaluation-observation-authority/v1",
         "evaluation_id": evaluation_id,
-        "assignment": assignment,
-        "proof": proof,
+        "assignment": resolved_assignment,
+        "proof": resolved_proof,
         "producer_resolution": producer_resolution,
         "authority_envelope": {"mutation_baseline": baseline, "changed_paths": changed_paths},
         "recorded_at": _now(),
@@ -648,6 +796,55 @@ def _load_observations(target_root: Path, evaluation_id: str) -> list[dict[str, 
             raise WorkspaceUsageError(f"{path.as_posix()} line {line_number} must be a JSON object.")
         observations.append(payload)
     return observations
+
+
+def _finding_followups_payload(target_root: Path) -> dict[str, Any]:
+    payload = _load_json(
+        target_root / EVALUATION_FINDING_FOLLOWUPS_PATH, default={"kind": EVALUATION_FINDING_FOLLOWUPS_KIND, "receipts": []}
+    )
+    receipts = payload.get("receipts")
+    if payload.get("kind") != EVALUATION_FINDING_FOLLOWUPS_KIND or not isinstance(receipts, list):
+        raise WorkspaceUsageError(f"{EVALUATION_FINDING_FOLLOWUPS_PATH.as_posix()} must contain evaluation finding follow-up receipts.")
+    return payload
+
+
+def record_material_finding_followup(
+    *,
+    target_root: Path,
+    evaluation_id: str,
+    result_identity: str,
+    owner_ref: str,
+    status: str = "continued",
+) -> dict[str, Any]:
+    normalized_owner = _require_non_empty(owner_ref, "owner_ref")
+    normalized_result = _require_non_empty(result_identity, "result_identity")
+    if status not in {"continued", "resolved"}:
+        raise WorkspaceUsageError("finding follow-up status must be continued or resolved.")
+    if not normalized_owner.startswith("#") and not (target_root / normalized_owner).exists():
+        raise WorkspaceUsageError("finding follow-up owner_ref must reference an existing local owner or a GitHub issue ref.")
+    payload = _finding_followups_payload(target_root)
+    receipt_id = hashlib.sha256(
+        json.dumps(
+            {"evaluation_id": evaluation_id, "result_identity": normalized_result, "owner_ref": normalized_owner},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()[:16]
+    receipt = {
+        "kind": "agentic-workspace/evaluation-finding-followup-receipt/v1",
+        "receipt_id": receipt_id,
+        "operation_id": "evaluation.material-finding.route",
+        "evaluation_id": evaluation_id,
+        "result_identity": normalized_result,
+        "owner_ref": normalized_owner,
+        "status": status,
+        "recorded_at": _now(),
+        "idempotency_key": f"evaluation-finding-followup:{receipt_id}",
+    }
+    receipts = [item for item in payload["receipts"] if not (isinstance(item, dict) and item.get("receipt_id") == receipt_id)]
+    receipts.append(receipt)
+    _write_json(target_root / EVALUATION_FINDING_FOLLOWUPS_PATH, {"kind": EVALUATION_FINDING_FOLLOWUPS_KIND, "receipts": receipts})
+    return receipt
 
 
 def _observation_store_revision(observations: list[dict[str, Any]]) -> str:
@@ -974,7 +1171,12 @@ def _current_result_freshness(
     }
 
 
-def _material_finding_followup(definition: dict[str, Any], observations: list[dict[str, Any]]) -> dict[str, Any]:
+def _material_finding_followup(target_root: Path, definition: dict[str, Any], observations: list[dict[str, Any]]) -> dict[str, Any]:
+    try:
+        followup_payload = _finding_followups_payload(target_root)
+        followup_receipts = [item for item in followup_payload["receipts"] if isinstance(item, dict)]
+    except WorkspaceUsageError:
+        followup_receipts = []
     material = [
         item
         for item in observations
@@ -983,12 +1185,22 @@ def _material_finding_followup(definition: dict[str, Any], observations: list[di
     ]
     unresolved = []
     for item in material:
-        context = item.get("context", {}) if isinstance(item.get("context"), dict) else {}
-        followup = context.get("finding_followup", {}) if isinstance(context.get("finding_followup"), dict) else {}
-        if followup.get("status") not in {"resolved", "continued"} or not followup.get("owner_ref"):
+        result_identity = item.get("result_identity", {}).get("id") if isinstance(item.get("result_identity"), dict) else None
+        followup = next(
+            (
+                receipt
+                for receipt in followup_receipts
+                if receipt.get("evaluation_id") == definition.get("id")
+                and receipt.get("result_identity") == result_identity
+                and receipt.get("status") in {"resolved", "continued"}
+                and receipt.get("owner_ref")
+            ),
+            None,
+        )
+        if not followup:
             unresolved.append(
                 {
-                    "result_identity": item.get("result_identity", {}).get("id") if isinstance(item.get("result_identity"), dict) else None,
+                    "result_identity": result_identity,
                     "criterion": item.get("criterion"),
                     "result": item.get("result"),
                     "finding": item.get("finding"),
@@ -1000,6 +1212,7 @@ def _material_finding_followup(definition: dict[str, Any], observations: list[di
         "material_finding_count": len(material),
         "unresolved_count": len(unresolved),
         "unresolved": unresolved,
+        "routing_receipt_count": len(followup_receipts),
         "issue_shaping_authority": "repo-owned bounded issue/Planning owner workflow",
         "required_action": "create-or-reopen-bounded-follow-up" if unresolved else "none",
         "policy": definition.get("action_policy", {}),
@@ -1123,7 +1336,7 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
         satisfied = [item for item in required if item["state"] == "satisfied"]
         contradictions = [item for item in criteria if item["state"] == "contradicted"]
         min_observations = int(definition.get("collection_policy", {}).get("minimum_observations", 1))
-        finding_followup = _material_finding_followup(definition, current_bound_observations)
+        finding_followup = _material_finding_followup(target_root, definition, current_bound_observations)
         conclusion_ready = (
             len(current_bound_observations) >= min_observations
             and (len(satisfied) == len(required) or bool(contradictions) or definition.get("lifecycle") == "enough-signal")

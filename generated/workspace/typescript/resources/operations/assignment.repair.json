@@ -15,7 +15,7 @@
   "guards": [
     "Write only under .agentic-workspace/local/assignment-runs/.",
     "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
-    "Admit and integrate require explicit current_authority_ref and live_mutation_baseline values resolved at the boundary.",
+    "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
     "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
   ],
   "id": "assignment.repair",
@@ -46,42 +46,12 @@
       "source": "cli-option"
     },
     {
-      "name": "assignment_gate_json",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
-      "name": "assignment_policy_json",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
-      "name": "delegation_decision_json",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
-      "name": "aw_proof_receipt_json",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
-      "name": "run_state_json",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
       "name": "target_name",
       "required": false,
       "source": "cli-option"
     },
     {
       "name": "transport",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
-      "name": "packet_json",
       "required": false,
       "source": "cli-option"
     },
@@ -97,16 +67,6 @@
     },
     {
       "name": "artifact_ref",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
-      "name": "current_authority_ref",
-      "required": false,
-      "source": "cli-option"
-    },
-    {
-      "name": "live_mutation_baseline",
       "required": false,
       "source": "cli-option"
     },
@@ -184,7 +144,17 @@
   ],
   "reads": [
     {
-      "description": ".agentic-workspace/local/assignment-runs/<run-id>/state.json",
+      "description": "checked-in Planning assignment authority resolved by assignment id",
+      "required": true,
+      "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+    },
+    {
+      "description": "AW-owned proof receipt referenced by the Planning assignment",
+      "required": false,
+      "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+    },
+    {
+      "description": "local disposable run state and returned artifacts",
       "required": false,
       "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
     }
@@ -210,7 +180,7 @@
   "summary": "Request repair for a returned assignment result without admitting mutation.",
   "writes": [
     {
-      "description": "transition records local disposable assignment/run state",
+      "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
       "required": true,
       "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
       "when": "transition records local disposable assignment/run state"

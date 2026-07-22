@@ -76,6 +76,8 @@ def test_doctor_emits_affordance_shaped_repair_and_manual_review_actions(tmp_pat
     assert actionability["findings"][0]["class"] == "required-repair"
     assert actionability["next_action"]["action"] != "no-immediate-action"
     assert actionability["progress_check"]["result"] == "progress-making"
+    assert actionability["progress_check"]["live_revision_checked"] is True
+    assert actionability["progress_check"]["current_input_revision"] == actionability["progress_check"]["expected_input_revision"]
 
 
 def test_root_startup_pointer_repair_preserves_repo_content_and_clears_doctor_warning(tmp_path: Path, capsys) -> None:
@@ -1024,28 +1026,32 @@ def test_status_and_doctor_advisory_outputs_are_coherent_and_do_not_self_loop(tm
     assert progress["proposed_operation"] == "run-payload-closure-proof"
     assert progress["same_operation"] is False
     assert progress["result"] == "progress-making"
+    assert progress["live_revision_checked"] is True
+    assert progress["current_input_revision"] == progress["expected_input_revision"]
 
 
 def test_actionability_allows_same_operation_only_as_explicit_external_condition_watch() -> None:
-    from agentic_workspace.actionability import derive_actionability, operation_invocation
+    from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
 
+    proposed_next_action = {
+        "action": "watch-remote-state",
+        "command": "agentic-workspace doctor --target . --format json",
+        "operation_invocation": operation_invocation(
+            operation_id="doctor",
+            arguments={"target": ".", "format": "json"},
+            effect_class="read-only-report",
+            command_rendering="agentic-workspace doctor --target . --format json",
+        ),
+        "external_change_condition": "remote workflow completes",
+    }
     packet = derive_actionability(
         command_name="doctor",
         health="attention-needed",
         warnings=["remote state is pending"],
         repair_actions=[{"id": "wait-for-remote"}],
         manual_review_actions=[],
-        proposed_next_action={
-            "action": "watch-remote-state",
-            "command": "agentic-workspace doctor --target . --format json",
-            "operation_invocation": operation_invocation(
-                operation_id="doctor",
-                arguments={"target": ".", "format": "json"},
-                effect_class="read-only-report",
-                command_rendering="agentic-workspace doctor --target . --format json",
-            ),
-            "external_change_condition": "remote workflow completes",
-        },
+        proposed_next_action=proposed_next_action,
+        current_input_revision=proposed_action_input_revision(proposed_next_action),
     )
     assert packet["next_action"]["action"] == "watch-remote-state"
     assert packet["progress_check"]["same_operation"] is True
@@ -1054,26 +1060,28 @@ def test_actionability_allows_same_operation_only_as_explicit_external_condition
 
 
 def test_actionability_allows_same_operation_with_explicit_state_transition() -> None:
-    from agentic_workspace.actionability import derive_actionability, operation_invocation
+    from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
 
+    proposed_next_action = {
+        "action": "apply-repair",
+        "command": "agentic-workspace doctor --repair --format json",
+        "operation_invocation": operation_invocation(
+            operation_id="doctor",
+            arguments={"repair": True, "format": "json"},
+            effect_class="metadata-refresh",
+            expected_transition="repair applied then health rechecked",
+            command_rendering="agentic-workspace doctor --repair --format json",
+        ),
+        "expected_transition": "repair applied then health rechecked",
+    }
     packet = derive_actionability(
         command_name="doctor",
         health="broken",
         warnings=[],
         repair_actions=[{"id": "repair"}],
         manual_review_actions=[],
-        proposed_next_action={
-            "action": "apply-repair",
-            "command": "agentic-workspace doctor --repair --format json",
-            "operation_invocation": operation_invocation(
-                operation_id="doctor",
-                arguments={"repair": True, "format": "json"},
-                effect_class="metadata-refresh",
-                expected_transition="repair applied then health rechecked",
-                command_rendering="agentic-workspace doctor --repair --format json",
-            ),
-            "expected_transition": "repair applied then health rechecked",
-        },
+        proposed_next_action=proposed_next_action,
+        current_input_revision=proposed_action_input_revision(proposed_next_action),
     )
     assert packet["progress_check"]["same_operation"] is True
     assert packet["progress_check"]["same_state"] is False
@@ -1081,24 +1089,26 @@ def test_actionability_allows_same_operation_with_explicit_state_transition() ->
 
 
 def test_actionability_keeps_required_work_visible_when_same_state_action_is_rejected() -> None:
-    from agentic_workspace.actionability import derive_actionability, operation_invocation
+    from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
 
+    proposed_next_action = {
+        "action": "retry",
+        "command": "agentic-workspace doctor --format json",
+        "operation_invocation": operation_invocation(
+            operation_id="doctor",
+            arguments={"format": "json"},
+            effect_class="read-only-report",
+            command_rendering="agentic-workspace doctor --format json",
+        ),
+    }
     packet = derive_actionability(
         command_name="doctor",
         health="broken",
         warnings=[],
         repair_actions=[{"id": "repair"}],
         manual_review_actions=[],
-        proposed_next_action={
-            "action": "retry",
-            "command": "agentic-workspace doctor --format json",
-            "operation_invocation": operation_invocation(
-                operation_id="doctor",
-                arguments={"format": "json"},
-                effect_class="read-only-report",
-                command_rendering="agentic-workspace doctor --format json",
-            ),
-        },
+        proposed_next_action=proposed_next_action,
+        current_input_revision=proposed_action_input_revision(proposed_next_action),
     )
     assert packet["status"] == "action-required"
     assert packet["next_action"]["action"] == "required-action-unavailable"

@@ -153,6 +153,19 @@ def _proposed_invocation(proposed: dict[str, Any]) -> dict[str, Any]:
     return dict(invocation) if isinstance(invocation, dict) else {}
 
 
+def proposed_action_input_revision(proposed_next_action: dict[str, Any] | None) -> str:
+    """Resolve the current revision for a just-derived typed action.
+
+    Callers use this at ordinary boundaries after assembling the current action
+    from live owner/context/proof/mutation inputs. ``derive_actionability`` does
+    not fall back to an invocation's embedded revision because that would let a
+    stale action validate itself.
+    """
+
+    invocation = _proposed_invocation(dict(proposed_next_action or {}))
+    return invocation_decision_input_revision(invocation) if invocation else ""
+
+
 def _invocation_operation(invocation: dict[str, Any]) -> str:
     return str(invocation.get("operation_id") or invocation.get("operation") or "").strip()
 
@@ -239,16 +252,12 @@ def derive_actionability(
     same_state = proposed_input_digest == input_digest if proposed_input_digest else not expected_transition
     expected_input_revision = str(invocation.get("expected_input_revision") or "").strip()
     embedded_input_revision = invocation_decision_input_revision(invocation) if invocation else ""
-    live_input_revision = str(
-        current_input_revision
-        or proposed.get("current_input_revision")
-        or invocation.get("current_input_revision")
-        or _as_dict(invocation.get("live_authority_revision")).get("canonical_decision_input_revision")
-        or ""
-    ).strip()
-    compared_input_revision = live_input_revision or embedded_input_revision
+    live_input_revision = str(current_input_revision or "").strip()
+    compared_input_revision = live_input_revision
+    stale_policy_active = bool(action_required and invocation.get("stale_action_rejection"))
+    live_revision_missing = bool(stale_policy_active and not live_input_revision)
     stale_action_rejected = bool(
-        invocation.get("stale_action_rejection") and (not expected_input_revision or expected_input_revision != compared_input_revision)
+        stale_policy_active and (live_revision_missing or not expected_input_revision or expected_input_revision != compared_input_revision)
     )
     self_loop_rejected = same_operation and same_state and not external_condition
     if not action_required:
@@ -270,6 +279,8 @@ def derive_actionability(
             "missing_precondition": "fresh operating decision with matching owner, context, authority, proof, and mutation baseline revisions",
             "stale_action_rejection": invocation.get("stale_action_rejection"),
         }
+        if live_revision_missing:
+            next_action["missing_precondition"] = "live authority revision resolved immediately before actionability derivation"
     elif self_loop_rejected:
         next_action = {
             "action": "required-action-unavailable",
@@ -294,6 +305,7 @@ def derive_actionability(
             "embedded_input_revision": embedded_input_revision,
             "live_input_revision": live_input_revision,
             "live_revision_checked": bool(live_input_revision),
+            "live_revision_missing": live_revision_missing,
             "proposed_operation": proposed_operation,
             "operation_invocation": invocation,
             "command_identity_authority": "typed-operation-invocation" if invocation else "absent-display-command-only",
