@@ -1,0 +1,126 @@
+{
+  "schema_version": "agentic-workspace/schema/v1",
+  "title": "Correction event operation input",
+  "description": "Input accepted by generated correction-event lifecycle operations.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "target": {
+      "type": "string",
+      "description": "Target repository path."
+    },
+    "format": {
+      "type": "string",
+      "description": "Requested output format.",
+      "enum": [
+        "text",
+        "json"
+      ]
+    },
+    "event_json": {
+      "type": "string",
+      "description": "Serialized correction event payload."
+    },
+    "subjects_json": {
+      "type": "string",
+      "description": "Optional serialized target identity subjects for fixtures; normal operation resolves config subjects."
+    },
+    "trusted_authority_receipt_json": {
+      "type": "string",
+      "description": "Trusted host/proof receipt that may admit human/review/evaluator authority."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Optional stable key used to identify repeated deliveries."
+    },
+    "delivery_id": {
+      "type": "string",
+      "description": "Stable delivery identifier for this correction event."
+    },
+    "target_identity_ref": {
+      "type": "string",
+      "description": "Target identity, name, or alias to resolve before admission."
+    },
+    "target_revision": {
+      "type": "string",
+      "description": "Submitted target revision associated with the correction."
+    },
+    "source_ref": {
+      "type": "string",
+      "description": "Stable source reference for audit and idempotency."
+    },
+    "source": {
+      "type": "string",
+      "description": "Human-readable correction source label."
+    },
+    "producer_class": {
+      "type": "string",
+      "description": "Producer class used for authority resolution."
+    },
+    "producer_id": {
+      "type": "string",
+      "description": "Producer identity used for audit and authority resolution."
+    },
+    "authority": {
+      "type": "string",
+      "description": "Claimed correction authority; not trusted without a trusted authority receipt."
+    },
+    "desired_behavior": {
+      "type": "string",
+      "description": "Behavior the correction says should replace the previous behavior."
+    },
+    "replaced_behavior": {
+      "type": "string",
+      "description": "Behavior boundary being corrected or superseded."
+    },
+    "invariant_id": {
+      "type": "string",
+      "description": "Stable semantic invariant identifier for deduplication."
+    },
+    "behavior_class": {
+      "type": "string",
+      "description": "Stable behavior class for semantic correction identity."
+    },
+    "task_class": {
+      "type": "string",
+      "description": "Task class where the correction applies."
+    },
+    "scope_class": {
+      "type": "string",
+      "description": "Scope class where the correction applies."
+    },
+    "route_decisions": {
+      "type": "array",
+      "description": "Requested routing decisions for trusted correction events.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evidence_hash": {
+      "type": "string",
+      "description": "Hash of evidence supporting the correction."
+    },
+    "evidence_ref": {
+      "type": "string",
+      "description": "Reference to evidence supporting the correction."
+    },
+    "predecessor_event_id": {
+      "type": "string",
+      "description": "Prior correction event being disputed, withdrawn, or superseded."
+    },
+    "lifecycle_action": {
+      "type": "string",
+      "description": "Lifecycle action for withdraw/supersede operations.",
+      "enum": [
+        "withdraw",
+        "supersede"
+      ]
+    },
+    "dry_run": {
+      "type": "boolean",
+      "description": "When true, report the intended operation without applying a storage mutation."
+    }
+  },
+  "required": [],
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

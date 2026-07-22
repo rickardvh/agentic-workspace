@@ -11,6 +11,7 @@ from agentic_workspace.config import (
     WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH,
     DelegationTargetProfile,
     MixedAgentLocalOverride,
+    load_workspace_config,
 )
 
 CORRECTION_EVENT_RETENTION_CAP = 20
@@ -69,6 +70,16 @@ def _resolve_correction_authority(*, event: dict[str, Any], provenance: dict[str
     source = str(event.get("source") or provenance.get("source") or "")
     producer_class = str(event.get("producer_class") or provenance.get("producer_class") or "")
     if claimed_authority not in ADMITTED_CORRECTION_AUTHORITIES:
+        if claimed_authority == "agent-self-observation" or producer_class in {"agent", "agent-self-observation", "model"}:
+            return {
+                "status": "low-authority",
+                "authority": "agent-self-observation",
+                "claimed_authority": claimed_authority,
+                "reason": "agent-origin-self-observation",
+                "trusted": False,
+                "source": source,
+                "producer_class": producer_class,
+            }
         return {
             "status": "rejected",
             "authority": claimed_authority,
@@ -175,6 +186,7 @@ def admit_correction_events(
 
     admitted_by_key: dict[str, dict[str, Any]] = {}
     rejected: list[dict[str, Any]] = []
+    low_authority_events: list[dict[str, Any]] = []
     seen_delivery_ids: set[str] = set()
     recurrence_counts: dict[str, int] = {}
     by_id: dict[str, dict[str, Any]] = {}
@@ -222,13 +234,33 @@ def admit_correction_events(
         if not (event.get("producer_id") or event.get("producer_class") or provenance.get("producer_id")):
             reject("rejected-missing-producer", "Submit producer identity or producer class for authority resolution.")
             continue
+        target_revision = str(subject.get("target_revision") or "")
+        event_revision = str(event.get("target_revision") or "")
         authority_resolution = _resolve_correction_authority(event=event, provenance=provenance)
         if authority_resolution["status"] != "trusted":
+            event["authority_resolution"] = authority_resolution
+            if authority_resolution["status"] == "low-authority":
+                event["target_identity_ref"] = subject["stable_target_id"]
+                event["target_revision"] = target_revision or event_revision or None
+                event["profile_name"] = subject.get("profile_name")
+                event["source_ref"] = str(event.get("source_ref"))
+                event["producer_class"] = str(event.get("producer_class") or provenance.get("producer_class") or "agent")
+                event["producer_id"] = str(event.get("producer_id") or provenance.get("producer_id") or event["producer_class"])
+                event["authority"] = str(authority_resolution["authority"])
+                event["route_decisions"] = ["no-retention"]
+                event["admission_state"] = "low-authority-self-observation"
+                event["routing_state"] = "preserved-non-routing"
+                event["rule"] = (
+                    "Agent self-observation is inspectable low-authority evidence; it is not target guidance or "
+                    "suitability evidence until a trusted correction channel admits it."
+                )
+                low_authority_events.append(event)
+                by_id[event_id] = event
+                continue
             reject(
                 "rejected-unauthorised",
                 "Submit through a trusted correction channel; self-observation remains low-authority evidence.",
             )
-            event["authority_resolution"] = authority_resolution
             continue
         if not (event.get("evidence_hash") or event.get("evidence_ref") or provenance.get("evidence_hash")):
             reject(
@@ -247,8 +279,6 @@ def admit_correction_events(
             reject("rejected-unknown-route-decision", "Use admitted route decisions only.")
             continue
         revision_policy = str(subject.get("revision_policy") or "preserve")
-        target_revision = str(subject.get("target_revision") or "")
-        event_revision = str(event.get("target_revision") or "")
         if event_revision and target_revision and event_revision != target_revision:
             if revision_policy == "retire":
                 reject("rejected-retired-revision", "Retired guidance must not route to new work.")
@@ -335,6 +365,7 @@ def admit_correction_events(
         "kind": "agentic-workspace/correction-event-admission/v1",
         "status": "admitted" if retained_events else "no-admitted-events",
         "admitted_events": retained_events,
+        "low_authority_events": low_authority_events[-CORRECTION_EVENT_RETENTION_CAP:],
         "rejected_events": rejected,
         "retention": {
             "mode": "bounded-local-retention",
@@ -386,9 +417,223 @@ def admit_correction_events(
             ],
             "memory": [event["event_id"] for event in retained_events if "memory" in event.get("route_decisions", [])],
             "no_retention": [event["event_id"] for event in retained_events if "no-retention" in event.get("route_decisions", [])],
+            "low_authority": [event["event_id"] for event in low_authority_events[-CORRECTION_EVENT_RETENTION_CAP:]],
         },
         "routing_rule": "Only admitted correction events for the resolved target_id and matching task/scope context may affect target guidance.",
     }
+
+
+def apply_correction_event_operation(
+    *,
+    target_root: Path,
+    operation_id: str,
+    values: dict[str, Any],
+) -> dict[str, Any]:
+    """Apply a generated correction-event operation to bounded local storage."""
+
+    operation = operation_id.removeprefix("correction-event.")
+    config = load_workspace_config(target_root=target_root)
+    store_path = target_root / config.local_override.correction_events_path
+    store = _read_correction_event_store(store_path)
+    existing_events = [item for item in store.get("events", []) if isinstance(item, dict)]
+    subjects = _operation_subjects(values=values, config=config)
+    task_class = str(values.get("task_class") or "") or None
+    scope_class = str(values.get("scope_class") or "") or None
+    mutation_applied = False
+    if operation == "query":
+        admission = admit_correction_events(events=existing_events, subjects=subjects, task_class=task_class, scope_class=scope_class)
+        status = "queried"
+    elif operation == "prune-compact":
+        admission = admit_correction_events(events=existing_events, subjects=subjects, task_class=task_class, scope_class=scope_class)
+        retained = [dict(event) for event in admission.get("admitted_events", []) if isinstance(event, dict)]
+        retained.extend(dict(event) for event in admission.get("low_authority_events", []) if isinstance(event, dict))
+        compacted_lineage = list(store.get("compacted_lineage", [])) if isinstance(store.get("compacted_lineage"), list) else []
+        compacted_lineage.extend(admission.get("retention", {}).get("compacted_lineage", []))
+        _write_correction_event_store(
+            store_path,
+            {
+                "kind": "agentic-workspace/correction-event-store/v1",
+                "events": retained[-CORRECTION_EVENT_RETENTION_CAP:],
+                "compacted_lineage": compacted_lineage[-CORRECTION_EVENT_RETENTION_CAP:],
+                "retention_cap": CORRECTION_EVENT_RETENTION_CAP,
+                "checked_in_repo_effect": "none",
+            },
+        )
+        mutation_applied = True
+        status = "compacted"
+    else:
+        event = _operation_event(values=values, operation=operation)
+        events = [*existing_events, event]
+        admission = admit_correction_events(events=events, subjects=subjects, task_class=task_class, scope_class=scope_class)
+        accepted_ids = {
+            str(candidate.get("event_id"))
+            for bucket in (admission.get("admitted_events", []), admission.get("low_authority_events", []))
+            for candidate in bucket
+            if isinstance(candidate, dict)
+        }
+        retained_events = [
+            candidate for candidate in events if str(candidate.get("event_id") or _stable_event_id(candidate)) in accepted_ids
+        ][-CORRECTION_EVENT_RETENTION_CAP:]
+        if accepted_ids:
+            _write_correction_event_store(
+                store_path,
+                {
+                    "kind": "agentic-workspace/correction-event-store/v1",
+                    "events": retained_events,
+                    "compacted_lineage": store.get("compacted_lineage", []) if isinstance(store.get("compacted_lineage"), list) else [],
+                    "retention_cap": CORRECTION_EVENT_RETENTION_CAP,
+                    "checked_in_repo_effect": "none",
+                },
+            )
+            mutation_applied = True
+        status = "stored" if accepted_ids else "blocked"
+    receipt = _correction_operation_receipt(
+        operation_id=operation_id,
+        status=status,
+        store_path=store_path,
+        target_root=target_root,
+        admission=admission,
+        mutation_applied=mutation_applied,
+    )
+    receipt_path = _write_correction_receipt(target_root=target_root, receipt=receipt)
+    receipt["receipt_ref"] = _repo_relative(receipt_path, root=target_root)
+    return json.loads(json.dumps(receipt, sort_keys=True, default=str))
+
+
+def _read_correction_event_store(path: Path) -> dict[str, Any]:
+    if not path.exists():
+        return {"kind": "agentic-workspace/correction-event-store/v1", "events": [], "compacted_lineage": []}
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"kind": "agentic-workspace/correction-event-store/v1", "events": [], "compacted_lineage": [], "status": "unreadable"}
+    return loaded if isinstance(loaded, dict) else {"kind": "agentic-workspace/correction-event-store/v1", "events": []}
+
+
+def _write_correction_event_store(path: Path, store: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(store, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def _write_correction_receipt(*, target_root: Path, receipt: dict[str, Any]) -> Path:
+    receipt_id = hashlib.sha256(json.dumps(receipt, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:16]
+    path = target_root / ".agentic-workspace/local/correction-event-receipts" / f"{receipt_id}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(receipt, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8")
+    return path
+
+
+def _operation_subjects(*, values: dict[str, Any], config: Any) -> list[dict[str, Any]]:
+    subjects_json = values.get("subjects_json")
+    if subjects_json:
+        try:
+            loaded = json.loads(str(subjects_json))
+        except json.JSONDecodeError:
+            loaded = []
+        if isinstance(loaded, list):
+            return [dict(item) for item in loaded if isinstance(item, dict)]
+    return [_target_identity_subject(profile) for profile in config.local_override.delegation_targets]
+
+
+def _operation_event(*, values: dict[str, Any], operation: str) -> dict[str, Any]:
+    event_json = values.get("event_json")
+    if event_json:
+        try:
+            loaded = json.loads(str(event_json))
+        except json.JSONDecodeError:
+            loaded = {}
+        event = dict(loaded) if isinstance(loaded, dict) else {}
+    else:
+        event = {}
+    operation_metadata_keys = {
+        "event_json",
+        "subjects_json",
+        "trusted_authority_receipt_json",
+        "target",
+        "target_root",
+        "format",
+        "dry_run",
+        "verbose",
+    }
+    event.update({key: value for key, value in values.items() if value not in (None, "", []) and key not in operation_metadata_keys})
+    event["operation"] = {
+        "submit": "submit",
+        "correct-dispute": "dispute",
+        "withdraw-supersede": str(values.get("lifecycle_action") or "withdraw"),
+    }.get(operation, operation)
+    trusted_receipt = _trusted_authority_receipt(values.get("trusted_authority_receipt_json"))
+    if trusted_receipt:
+        event["authority"] = trusted_receipt["authority"]
+        event["producer_class"] = trusted_receipt["producer_class"]
+        event["producer_id"] = trusted_receipt["producer_id"]
+        event["source"] = trusted_receipt["source"]
+        event.setdefault("source_ref", trusted_receipt["source_ref"])
+        event["authority_resolution_source"] = "trusted-operation-receipt"
+    else:
+        event["authority"] = "agent-self-observation"
+        event["producer_class"] = "agent"
+        event.setdefault("producer_id", "agent-self-observation")
+        event.setdefault("source", "agent-local-observation")
+        event["authority_resolution_source"] = "operation-boundary-low-authority-default"
+    return event
+
+
+def _trusted_authority_receipt(value: Any) -> dict[str, str] | None:
+    if not value:
+        return None
+    try:
+        receipt = json.loads(str(value))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(receipt, dict):
+        return None
+    authority = str(receipt.get("authority") or "")
+    producer_class = str(receipt.get("producer_class") or "")
+    if authority not in ADMITTED_CORRECTION_AUTHORITIES:
+        return None
+    if producer_class not in TRUSTED_CORRECTION_PRODUCERS.get(authority, set()):
+        return None
+    source_ref = str(receipt.get("source_ref") or "")
+    if not source_ref:
+        return None
+    return {
+        "authority": authority,
+        "producer_class": producer_class,
+        "producer_id": str(receipt.get("producer_id") or producer_class),
+        "source": str(receipt.get("source") or authority),
+        "source_ref": source_ref,
+    }
+
+
+def _correction_operation_receipt(
+    *,
+    operation_id: str,
+    status: str,
+    store_path: Path,
+    target_root: Path,
+    admission: dict[str, Any],
+    mutation_applied: bool,
+) -> dict[str, Any]:
+    return {
+        "kind": "agentic-workspace/correction-event-operation-result/v1",
+        "operation_id": operation_id,
+        "status": status,
+        "mutation_applied": mutation_applied,
+        "store_ref": _repo_relative(store_path, root=target_root),
+        "admission": admission,
+        "admitted_event_count": len(admission.get("admitted_events", [])),
+        "low_authority_event_count": len(admission.get("low_authority_events", [])),
+        "rejected_event_count": len(admission.get("rejected_events", [])),
+        "checked_in_repo_effect": "none",
+        "rule": "Generated correction-event operations are the authoritative public boundary; raw local file writes are compatibility-only.",
+    }
+
+
+def _repo_relative(path: Path, *, root: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_root: Path | None) -> dict[str, Any]:

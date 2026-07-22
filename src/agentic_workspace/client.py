@@ -222,6 +222,9 @@ def _validate_failure(entry: Mapping[str, Any], value: Any) -> None:
 def _argv(contract: Mapping[str, Any], values: Mapping[str, Any], target: Path) -> list[str]:
     surface = contract.get("command_surface", {})
     command = str(surface.get("command", "")).split()
+    subcommand = str(surface.get("subcommand", "")).strip()
+    if subcommand and (not command or command[-1] != subcommand):
+        command.append(subcommand)
     program = str(surface.get("program", "agentic-workspace"))
     if program.startswith("agentic-") and program != "agentic-workspace":
         command.insert(0, program.removeprefix("agentic-"))
