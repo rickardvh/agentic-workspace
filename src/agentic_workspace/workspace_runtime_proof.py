@@ -26,7 +26,7 @@ from repo_verification_bootstrap.runtime_primitives import (
 
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor
-from agentic_workspace.authority_envelope import admit_mutation_boundary
+from agentic_workspace.authority_envelope import admit_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import DEFAULT_ASSURANCE_LEVEL, DEFAULT_CLI_INVOKE, WorkspaceConfig, WorkspaceUsageError
 from agentic_workspace.current_work_context import resolve_current_work_context
 from agentic_workspace.proof_receipt_admission import (
@@ -728,6 +728,247 @@ def _proof_template_current_identity(*, selected_command: dict[str, Any]) -> dic
     }
 
 
+_PROOF_TEMPLATE_REQUIRED_IDENTITY_KEYS = (
+    "lane_id",
+    "lane_revision",
+    "owner_ref",
+    "owner_revision",
+    "assignment_target",
+    "assignment_context_key",
+    "assignment_revision",
+    "selector_registry_revision",
+    "template_revision",
+)
+_PROOF_TEMPLATE_NOT_REQUIRED_IDENTITY_KEYS = ("evaluation_result_revision", "mutation_baseline")
+
+
+def _proof_template_short_hash(payload: Any) -> str:
+    material = json.dumps(payload, sort_keys=True, ensure_ascii=True, default=str).encode("utf-8")
+    return hashlib.sha256(material).hexdigest()[:16]
+
+
+def _proof_template_config_revision(*, target_root: Path | None) -> str:
+    if target_root is None:
+        return ""
+    config_path = target_root / ".agentic-workspace" / "config.toml"
+    try:
+        payload = config_path.read_text(encoding="utf-8") if config_path.is_file() else ""
+    except OSError:
+        payload = "unreadable"
+    return _proof_template_short_hash({"path": ".agentic-workspace/config.toml", "content": payload})
+
+
+def _proof_template_authority_resolution_for_lane(
+    *,
+    lane: dict[str, Any],
+    command: str,
+    changed_paths: list[str],
+    target_root: Path | None,
+) -> dict[str, Any]:
+    lane_id = str(lane.get("id") or "").strip()
+    domain_lane = _as_dict(lane.get("domain_lane"))
+    owner = str(lane.get("owner") or domain_lane.get("owner") or lane_id or "proof-selection").strip()
+    normalized_paths = [str(path).strip().replace("\\", "/") for path in changed_paths if str(path).strip()]
+    lane_revision = _proof_template_short_hash({"lane": lane, "command": command})
+    assignment_target = f"changed-paths:{_proof_template_short_hash(normalized_paths)}"
+    assignment_context_key = (
+        f"proof-command:{_proof_template_short_hash({'command': command, 'selectors': _command_selector_parameters(command)})}"
+    )
+    assignment_revision = _proof_template_short_hash(
+        {"assignment_target": assignment_target, "assignment_context_key": assignment_context_key, "paths": normalized_paths}
+    )
+    mutation_baseline = (
+        mutation_baseline_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            assignment_target_identity_ref=assignment_target,
+            assignment_revision=assignment_revision,
+        )
+        if target_root is not None
+        else {}
+    )
+    current_identity = {
+        "lane_id": lane_id,
+        "lane_revision": lane_revision,
+        "owner_ref": owner,
+        "owner_revision": _proof_template_short_hash({"owner": owner, "lane_revision": lane_revision}),
+        "assignment_target": assignment_target,
+        "assignment_context_key": assignment_context_key,
+        "assignment_revision": assignment_revision,
+        "selector_registry_revision": _proof_template_config_revision(target_root=target_root),
+        "template_revision": _proof_template_short_hash({"command": command, "selector_parameters": _command_selector_parameters(command)}),
+        "evaluation_result_revision": "not-required:evaluation",
+        "mutation_baseline": str(mutation_baseline.get("baseline_id") or "not-required:mutation-baseline"),
+    }
+    authority_states: dict[str, dict[str, Any]] = {
+        key: {
+            "status": "not-required" if key == "evaluation_result_revision" else "current",
+            "revision": value,
+            "source": "repo-proof-obligation-resolver",
+            "provenance": "selected proof lane and current repository state",
+        }
+        for key, value in current_identity.items()
+    }
+    authority_states["mutation_baseline"]["payload"] = mutation_baseline
+    return {
+        "kind": "agentic-workspace/proof-template-obligation-resolution/v1",
+        "status": "resolved",
+        "source": "repo-proof-obligation-resolver",
+        "current_identity": current_identity,
+        "authority_states": authority_states,
+        "changed_paths": normalized_paths,
+        "rule": "Template receipts are bound to this resolver output, not caller-authored receipt identity fields.",
+    }
+
+
+def _proof_template_resolved_obligation(
+    *,
+    required_command: str,
+    changed_paths: list[str],
+    selected_command: dict[str, Any],
+) -> dict[str, Any]:
+    resolution = _as_dict(selected_command.get("authority_resolution"))
+    selected_identity = _proof_template_current_identity(selected_command=selected_command)
+    resolved_identity = _as_dict(resolution.get("current_identity"))
+    current_identity = {
+        key: str(resolved_identity.get(key) or selected_identity.get(key) or "").strip()
+        for key in (*_PROOF_TEMPLATE_REQUIRED_IDENTITY_KEYS, *_PROOF_TEMPLATE_NOT_REQUIRED_IDENTITY_KEYS)
+    }
+    authority_states = _as_dict(resolution.get("authority_states"))
+    for key in _PROOF_TEMPLATE_NOT_REQUIRED_IDENTITY_KEYS:
+        if not current_identity[key]:
+            current_identity[key] = f"not-required:{key}"
+            authority_states[key] = {
+                "status": "not-required",
+                "revision": current_identity[key],
+                "source": "repo-proof-obligation-resolver",
+                "provenance": "authority not applicable to this selected proof obligation",
+            }
+    missing_identity = [key for key in _PROOF_TEMPLATE_REQUIRED_IDENTITY_KEYS if not current_identity[key]]
+    missing_authority_state = [
+        key
+        for key in current_identity
+        if not isinstance(authority_states.get(key), dict)
+        or str(_as_dict(authority_states.get(key)).get("revision") or "").strip() != current_identity[key]
+    ]
+    if resolution.get("kind") != "agentic-workspace/proof-template-obligation-resolution/v1":
+        missing_identity.append("authority_resolution")
+    elif resolution.get("status") != "resolved":
+        missing_identity.append("authority_resolution")
+    expected_paths = [str(path).strip().replace("\\", "/") for path in changed_paths if str(path).strip()]
+    expected_selectors = _command_selector_parameters(required_command)
+    expected_id = _proof_template_live_obligation_id(
+        required_command=required_command,
+        changed_paths=changed_paths,
+        selected_command={**selected_command, **current_identity},
+    )
+    return {
+        "kind": "agentic-workspace/proof-template-resolved-obligation/v1",
+        "status": "resolved" if not missing_identity and not missing_authority_state else "incomplete",
+        "live_obligation_id": expected_id,
+        "current_identity": current_identity,
+        "authority_states": authority_states,
+        "missing_identity": _dedupe(missing_identity),
+        "missing_authority_state": _dedupe(missing_authority_state),
+        "expected_paths": expected_paths,
+        "expected_selectors": expected_selectors,
+        "source": str(resolution.get("source") or "caller-projection"),
+        "rule": "Reconciliation compares receipts to a resolved current proof obligation; caller-supplied projections are incomplete.",
+    }
+
+
+def _proof_template_binding_from_resolved_obligation(
+    *,
+    receipt: dict[str, Any],
+    required_command: str,
+    changed_paths: list[str],
+    selected_command: dict[str, Any],
+) -> dict[str, Any]:
+    resolved = _proof_template_resolved_obligation(
+        required_command=required_command,
+        changed_paths=changed_paths,
+        selected_command=selected_command,
+    )
+    current_identity = _as_dict(resolved.get("current_identity"))
+    proof_subject = receipt.get("proof_subject", {}) if isinstance(receipt.get("proof_subject"), dict) else {}
+    return {
+        "kind": "agentic-workspace/proof-template-binding/v1",
+        "status": "current",
+        "live_obligation_id": str(resolved.get("live_obligation_id") or ""),
+        "command": {
+            "template": str(required_command).strip(),
+            "concrete": str(receipt.get("command") or "").strip(),
+            "selector_parameters": resolved.get("expected_selectors", {}),
+        },
+        "owner_identity": {
+            "lane_id": current_identity.get("lane_id", ""),
+            "owner_ref": current_identity.get("owner_ref", ""),
+        },
+        "assignment": {
+            "target_identity_ref": current_identity.get("assignment_target", ""),
+            "context_key": current_identity.get("assignment_context_key", ""),
+        },
+        "authority_revisions": current_identity,
+        "authority_states": resolved.get("authority_states", {}),
+        "artifact_provenance": {"changed_paths": resolved.get("expected_paths", [])},
+        "result_provenance": {
+            "result": str(receipt.get("result") or "").strip(),
+            "recorded_at": str(receipt.get("recorded_at") or "").strip(),
+            "proof_subject_fingerprint": str(proof_subject.get("fingerprint") or "").strip(),
+        },
+        "freshness": {
+            "status": "current",
+            "source": "repo-proof-obligation-resolver",
+            "authority_states": resolved.get("authority_states", {}),
+        },
+    }
+
+
+def _proof_template_binding_for_recorded_receipt(*, target_root: Path, receipt: dict[str, Any]) -> dict[str, Any]:
+    changed_paths = [str(path).strip().replace("\\", "/") for path in _list_payload(receipt.get("changed_paths")) if str(path).strip()]
+    if not changed_paths:
+        return {"status": "not-applicable", "reason": "missing-changed-paths"}
+    selection = _proof_selection_for_changed_paths(
+        changed_paths=changed_paths,
+        target_root=target_root,
+        include_durable_intent=False,
+    )
+    receipt_command = str(receipt.get("command") or "").strip()
+    for selected_command in _list_payload(selection.get("selected_commands")):
+        if not isinstance(selected_command, dict):
+            continue
+        required_command = str(selected_command.get("command") or "").strip()
+        matched, reason = _proof_receipt_command_matches(
+            required_command=required_command,
+            receipt_command=receipt_command,
+            changed_paths=changed_paths,
+        )
+        if not matched or not reason.startswith("instantiated"):
+            continue
+        resolved = _proof_template_resolved_obligation(
+            required_command=required_command,
+            changed_paths=changed_paths,
+            selected_command=selected_command,
+        )
+        if resolved["status"] != "resolved":
+            return {
+                "status": "rejected",
+                "reason": "missing-current-obligation-identity",
+                "resolved_obligation": resolved,
+            }
+        return {
+            "status": "bound",
+            "required_command": required_command,
+            "binding": _proof_template_binding_from_resolved_obligation(
+                receipt=receipt,
+                required_command=required_command,
+                changed_paths=changed_paths,
+                selected_command=selected_command,
+            ),
+        }
+    return {"status": "not-applicable", "reason": "receipt-command-is-not-instantiated-template"}
+
+
 def _proof_template_binding_admission(
     *,
     receipt: dict[str, Any],
@@ -736,24 +977,34 @@ def _proof_template_binding_admission(
     selected_command: dict[str, Any],
 ) -> dict[str, Any]:
     binding = receipt.get("proof_template_binding")
-    expected_id = _proof_template_live_obligation_id(
+    resolved_obligation = _proof_template_resolved_obligation(
         required_command=required_command,
         changed_paths=changed_paths,
         selected_command=selected_command,
     )
-    expected_paths = [str(path).strip().replace("\\", "/") for path in changed_paths if str(path).strip()]
-    expected_selectors = _command_selector_parameters(required_command)
-    current_identity = _proof_template_current_identity(selected_command=selected_command)
-    missing_identity = [key for key, value in current_identity.items() if not value]
+    expected_id = str(resolved_obligation.get("live_obligation_id") or "")
+    expected_paths = _list_payload(resolved_obligation.get("expected_paths"))
+    expected_selectors = resolved_obligation.get("expected_selectors", {})
+    current_identity = _as_dict(resolved_obligation.get("current_identity"))
+    missing_identity = _list_payload(resolved_obligation.get("missing_identity"))
+    missing_authority_state = _list_payload(resolved_obligation.get("missing_authority_state"))
     repair_route = "Rerun the selected proof template and record a receipt with the current proof_template_binding."
     base = {
         "kind": "agentic-workspace/proof-template-binding-admission/v1",
         "expected_live_obligation_id": expected_id,
         "current_identity": current_identity,
+        "resolved_obligation": resolved_obligation,
         "repair_route": repair_route,
     }
     if missing_identity:
         return {**base, "status": "rejected", "reason": "missing-current-obligation-identity", "missing_identity": missing_identity}
+    if missing_authority_state:
+        return {
+            **base,
+            "status": "rejected",
+            "reason": "missing-current-obligation-authority-state",
+            "missing_authority_state": missing_authority_state,
+        }
     if not isinstance(binding, dict):
         return {**base, "status": "rejected", "reason": "missing-live-obligation-binding"}
     if binding.get("kind") != "agentic-workspace/proof-template-binding/v1":
@@ -5262,6 +5513,12 @@ def _proof_selection_for_changed_paths(
                     "lane": str(lane.get("id", "")),
                     "required": True,
                     **_lane_execution_metadata(lane),
+                    "authority_resolution": _proof_template_authority_resolution_for_lane(
+                        lane=lane,
+                        command=command_text,
+                        changed_paths=changed_paths,
+                        target_root=target_root,
+                    ),
                 }
             )
     unavailable_commands = [

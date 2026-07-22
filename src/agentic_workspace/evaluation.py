@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from agentic_workspace.authority_envelope import admit_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import WorkspaceUsageError
 
 EVALUATIONS_KIND = "agentic-workspace/evaluations/v1"
@@ -167,9 +169,12 @@ def _evaluation_admission_contract() -> dict[str, Any]:
         "required_context": [
             "assignment.target_identity_ref",
             "assignment.context_key",
+            "assignment.assignment_revision",
             "authority_envelope.mutation_baseline.baseline_id",
             "authority_envelope.mutation_baseline.head",
+            "authority_envelope.mutation_baseline.scope.allowed_paths",
             "proof.provenance",
+            "proof.verified_by=aw",
         ],
         "reject_when": [
             "assignment-target-mismatch",
@@ -177,44 +182,155 @@ def _evaluation_admission_contract() -> dict[str, Any]:
             "scope-expanded",
             "stale-worktree",
             "failed-proof",
+            "missing-bound-context",
             "superseded-result",
         ],
-        "consumers": ["status", "doctor", "operating-decision", "proof-selection"],
+        "consumers": ["status", "doctor", "operating-decision", "proof-selection", "closure"],
         "repair_route": "rerun or supersede the evaluation result after refreshing assignment, authority, baseline, and proof context",
     }
 
 
-def _observation_admission(context: dict[str, Any]) -> dict[str, Any]:
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item or "").strip()]
+
+
+def _result_identity_payload(
+    *,
+    evaluation_id: str,
+    definition_revision: int,
+    criterion: str,
+    result: str,
+    recorded_at: str,
+    admission: dict[str, Any],
+    proof: dict[str, Any],
+) -> dict[str, Any]:
+    identity_source = {
+        "evaluation_id": evaluation_id,
+        "definition_revision": definition_revision,
+        "criterion": criterion,
+        "result": result,
+        "recorded_at": recorded_at,
+        "baseline_id": admission.get("baseline_id"),
+        "baseline_head": admission.get("baseline_head"),
+        "target_identity_ref": admission.get("target_identity_ref"),
+        "assignment_revision": admission.get("assignment_revision"),
+        "proof_revision": proof.get("revision"),
+        "proof_provenance": proof.get("provenance"),
+    }
+    digest = hashlib.sha256(json.dumps(identity_source, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()
+    return {
+        "kind": "agentic-workspace/evaluation-result-identity/v1",
+        "id": f"sha256:{digest[:24]}",
+        "status": "current",
+        **identity_source,
+    }
+
+
+def _observation_admission(
+    *,
+    target_root: Path,
+    context: dict[str, Any],
+    evaluation_id: str,
+    definition_revision: int,
+    criterion: str,
+    result: str,
+    recorded_at: str,
+    previous_current_results: list[dict[str, Any]],
+) -> dict[str, Any]:
     authority = context.get("authority_envelope", {}) if isinstance(context.get("authority_envelope"), dict) else {}
     baseline = authority.get("mutation_baseline", {}) if isinstance(authority.get("mutation_baseline"), dict) else {}
     proof = context.get("proof", {}) if isinstance(context.get("proof"), dict) else {}
     assignment = context.get("assignment", {}) if isinstance(context.get("assignment"), dict) else {}
-    stale_reason = str(baseline.get("revalidation_status") or "").strip()
-    if stale_reason in {"stale", "mismatch", "rejected", "failed"}:
+    missing_context = [
+        field
+        for field, value in {
+            "assignment.target_identity_ref": assignment.get("target_identity_ref"),
+            "assignment.context_key": assignment.get("context_key"),
+            "assignment.assignment_revision": assignment.get("assignment_revision"),
+            "authority_envelope.mutation_baseline": baseline if baseline else None,
+            "proof.result": proof.get("result"),
+            "proof.verified_by": proof.get("verified_by"),
+            "proof.provenance": proof.get("provenance"),
+        }.items()
+        if value in (None, "", [], {})
+    ]
+    if missing_context:
         return {
             "status": "rejected",
-            "reason": "stale-worktree",
-            "repair_route": "refresh mutation baseline and rerun or supersede this evaluation observation",
+            "reason": "missing-bound-context",
+            "missing_fields": missing_context,
+            "repair_route": "observe with current assignment identity, live mutation baseline scope, and AW proof receipt",
         }
-    if str(proof.get("result") or "").strip() == "failed":
+    if str(proof.get("result") or "").strip() != "passed" or str(proof.get("verified_by") or "").strip() != "aw":
         return {
             "status": "rejected",
             "reason": "failed-proof",
-            "repair_route": "rerun proof before admitting this evaluation observation",
+            "repair_route": "rerun AW proof before admitting this evaluation observation",
         }
-    required_present = bool(
-        assignment.get("target_identity_ref")
-        and assignment.get("context_key")
-        and baseline.get("baseline_id")
-        and baseline.get("head")
-        and proof.get("provenance")
+    expected_scope = baseline.get("scope", {}) if isinstance(baseline.get("scope"), dict) else {}
+    changed_paths = (
+        _string_list(authority.get("changed_paths"))
+        or _string_list(context.get("changed_paths"))
+        or _string_list(expected_scope.get("allowed_paths"))
     )
+    current_baseline = mutation_baseline_payload(
+        target_root=target_root,
+        changed_paths=changed_paths,
+        assignment_target_identity_ref=str(assignment.get("target_identity_ref") or "").strip() or None,
+        assignment_revision=str(assignment.get("assignment_revision") or "").strip() or None,
+    )
+    mutation_admission = admit_mutation_boundary(
+        boundary_id="evaluation-observation-admission",
+        expected=baseline,
+        current=current_baseline,
+        assignment_target_identity_ref=str(assignment.get("target_identity_ref") or "").strip() or None,
+        allowed_paths=changed_paths or None,
+    )
+    if mutation_admission.get("status") == "rejected":
+        first_failure = next((item for item in mutation_admission.get("failures", []) if isinstance(item, dict)), {})
+        return {
+            "status": "rejected",
+            "reason": str(first_failure.get("reason") or "mutation-baseline-revalidation-failed"),
+            "mutation_baseline_revalidation": mutation_admission,
+            "repair_route": str(first_failure.get("repair") or "refresh mutation baseline and rerun this evaluation observation"),
+        }
+    result_identity = _result_identity_payload(
+        evaluation_id=evaluation_id,
+        definition_revision=definition_revision,
+        criterion=criterion,
+        result=result,
+        recorded_at=recorded_at,
+        admission={
+            "baseline_id": baseline.get("baseline_id"),
+            "baseline_head": baseline.get("head"),
+            "target_identity_ref": assignment.get("target_identity_ref"),
+            "assignment_revision": assignment.get("assignment_revision"),
+        },
+        proof=proof,
+    )
+    supersedes = [
+        item["result_identity"]["id"]
+        for item in previous_current_results
+        if isinstance(item.get("result_identity"), dict) and item["result_identity"].get("id")
+    ]
     return {
-        "status": "admitted" if required_present else "legacy-unbound",
-        "reason": "fresh-bound-context" if required_present else "missing-bound-context",
-        "bound_context": required_present,
+        "status": "admitted",
+        "reason": "fresh-bound-context",
+        "bound_context": True,
         "baseline_id": baseline.get("baseline_id"),
+        "baseline_head": baseline.get("head"),
+        "assignment_revision": assignment.get("assignment_revision"),
         "target_identity_ref": assignment.get("target_identity_ref"),
+        "mutation_baseline_revalidation": mutation_admission,
+        "proof": {"result": proof.get("result"), "verified_by": proof.get("verified_by"), "revision": proof.get("revision")},
+        "result_identity": result_identity,
+        "supersedes": supersedes,
+        "supersession": {
+            "status": "supersedes-current-result" if supersedes else "first-current-result",
+            "predecessor_count": len(supersedes),
+        },
     }
 
 
@@ -341,9 +457,10 @@ def append_observation(
         raise WorkspaceUsageError(f"confidence must be one of: {', '.join(sorted(VALID_CONFIDENCE))}.")
     if burden not in VALID_BURDEN:
         raise WorkspaceUsageError(f"burden must be one of: {', '.join(sorted(VALID_BURDEN))}.")
+    recorded_at = _now()
     observation = {
         "kind": EVALUATION_OBSERVATION_KIND,
-        "recorded_at": _now(),
+        "recorded_at": recorded_at,
         "evaluation_id": evaluation_id,
         "definition_revision": definition["revision"],
         "criterion": criterion,
@@ -355,10 +472,31 @@ def append_observation(
         "finding": finding,
         "recommended_action": recommended_action,
     }
-    admission = _observation_admission(observation["context"])
+    previous_observations = _load_observations(target_root, evaluation_id)
+    previous_current_results = [
+        item
+        for item in previous_observations
+        if isinstance(item.get("admission"), dict)
+        and item["admission"].get("status") == "admitted"
+        and int(item.get("definition_revision", 0) or 0) == int(definition["revision"])
+        and item.get("criterion") == criterion
+        and isinstance(item.get("result_identity"), dict)
+    ]
+    admission = _observation_admission(
+        target_root=target_root,
+        context=observation["context"],
+        evaluation_id=evaluation_id,
+        definition_revision=int(definition["revision"]),
+        criterion=criterion,
+        result=result,
+        recorded_at=recorded_at,
+        previous_current_results=previous_current_results,
+    )
     if admission["status"] == "rejected":
         raise WorkspaceUsageError(f"evaluation observation rejected ({admission['reason']}): {admission['repair_route']}.")
     observation["admission"] = admission
+    observation["result_identity"] = admission["result_identity"]
+    observation["supersedes"] = admission["supersedes"]
     path = _observation_path(target_root, evaluation_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8", newline="\n") as handle:
@@ -370,6 +508,8 @@ def append_observation(
         "evaluation_id": evaluation_id,
         "criterion": criterion,
         "result": result,
+        "result_identity": observation["result_identity"],
+        "supersedes": observation["supersedes"],
     }
 
 
@@ -425,24 +565,36 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
     for definition in selected:
         observations = _load_observations(target_root, str(definition["id"]))
         admitted_observations = [
-            item
-            for item in observations
-            if isinstance(item.get("admission"), dict) and item["admission"].get("status") in {"admitted", "legacy-unbound"}
+            item for item in observations if isinstance(item.get("admission"), dict) and item["admission"].get("status") == "admitted"
         ]
+        legacy_unbound_observations = [
+            item for item in observations if isinstance(item.get("admission"), dict) and item["admission"].get("status") == "legacy-unbound"
+        ]
+        superseded_ids = {
+            str(result_id)
+            for item in admitted_observations
+            for result_id in _string_list(item.get("supersedes") or item.get("admission", {}).get("supersedes"))
+        }
         bound_observations = [
-            item for item in admitted_observations if isinstance(item.get("admission"), dict) and item["admission"].get("bound_context")
+            item
+            for item in admitted_observations
+            if isinstance(item.get("admission"), dict)
+            and item["admission"].get("bound_context")
+            and isinstance(item.get("result_identity"), dict)
         ]
         current_revision = int(definition["revision"])
         current_bound_observations = [
-            item for item in bound_observations if int(item.get("definition_revision", 0) or 0) == current_revision
+            item
+            for item in bound_observations
+            if int(item.get("definition_revision", 0) or 0) == current_revision
+            and str(item.get("result_identity", {}).get("id") or "") not in superseded_ids
         ]
-        historical_observations = [item for item in admitted_observations if item not in current_bound_observations]
-        legacy_unbound_count = len(
-            [
-                item
-                for item in admitted_observations
-                if isinstance(item.get("admission"), dict) and item["admission"].get("status") == "legacy-unbound"
-            ]
+        historical_observations = [
+            item for item in [*admitted_observations, *legacy_unbound_observations] if item not in current_bound_observations
+        ]
+        legacy_unbound_count = len(legacy_unbound_observations)
+        superseded_count = len(
+            [item for item in bound_observations if str(item.get("result_identity", {}).get("id") or "") in superseded_ids]
         )
         stale_revision_count = len(bound_observations) - len(current_bound_observations)
         criteria = _criterion_status(definition, current_bound_observations)
@@ -459,7 +611,7 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
             else "stale-bound"
             if bound_observations
             else "legacy-unbound"
-            if admitted_observations
+            if legacy_unbound_observations
             else "missing"
         )
         not_ready_reason = "requires-bound-current-observation" if historical_observations else "needs-more-observations-or-owner-review"
@@ -473,7 +625,14 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
             "recorded_at": current_result.get("recorded_at"),
             "baseline_id": current_admission.get("baseline_id"),
             "target_identity_ref": current_admission.get("target_identity_ref"),
+            "assignment_revision": current_admission.get("assignment_revision"),
+            "superseded": str(current_result.get("result_identity", {}).get("id") or "") in superseded_ids if current_result else False,
         }
+        current_identity = current_result.get("result_identity", {}) if isinstance(current_result.get("result_identity"), dict) else {}
+        if current_identity:
+            current_result_identity.update(
+                {key: current_identity[key] for key in ("id", "result", "proof_revision") if key in current_identity}
+            )
         summaries.append(
             {
                 "evaluation_id": definition["id"],
@@ -487,6 +646,7 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
                     "historical_observation_count": len(historical_observations),
                     "legacy_unbound_count": legacy_unbound_count,
                     "stale_revision_count": stale_revision_count,
+                    "superseded_result_count": superseded_count,
                     "minimum_observations": min_observations,
                 },
                 "criterion_status": criteria,
@@ -497,7 +657,15 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
                     "bound_observation_count": len(current_bound_observations),
                     "historical_observation_count": len(historical_observations),
                     "ignored_statuses": ["legacy-unbound", "stale-definition-revision", "rejected"],
+                    "superseded_result_ids": sorted(superseded_ids),
                     "current_result_identity": current_result_identity,
+                    "local_retention": {
+                        "status": "bounded-summary",
+                        "max_current_results_per_criterion": 1,
+                        "historical_record_count": len(historical_observations),
+                        "cleanup_operation": "evaluation.cleanup-local-history",
+                        "cleanup_proof": "dry-run reports removable superseded or legacy local JSONL records before apply",
+                    },
                     "admission_contract": definition.get("admission_contract", _evaluation_admission_contract()),
                     "consumer_rule": (
                         "status, doctor, operating-decision, proof-selection, and closure consumers use only current "

@@ -13,6 +13,17 @@ from agentic_workspace.config import (
     MixedAgentLocalOverride,
 )
 
+CORRECTION_EVENT_RETENTION_CAP = 20
+CORRECTION_EVENT_OPERATIONS = (
+    "correction-event.submit",
+    "correction-event.query",
+    "correction-event.correct-dispute",
+    "correction-event.withdraw-supersede",
+    "correction-event.prune-compact",
+)
+ADMITTED_CORRECTION_AUTHORITIES = {"explicit-user-correction", "pr-review", "orchestrator-review", "evaluator-finding"}
+ADMITTED_ROUTE_DECISIONS = {"target-guidance", "target-suitability", "memory", "config", "issue", "no-retention"}
+
 
 def _stable_event_id(event: dict[str, Any]) -> str:
     identity = {
@@ -136,10 +147,18 @@ def admit_correction_events(
         raw_subject = resolution.get("subject")
         subject = raw_subject if isinstance(raw_subject, dict) else None
         desired = str(event.get("desired_behavior") or "")
+        replaced = str(event.get("replaced_behavior") or "")
         semantic_identity = _semantic_correction_identity(event=event, subject=subject, target_ref=target_ref)
         normalized_key = _semantic_key(semantic_identity)
         event["normalized_correction_key"] = normalized_key
         event["semantic_identity"] = semantic_identity
+        provenance = event.get("provenance")
+        if not isinstance(provenance, dict):
+            provenance = {}
+        route_decisions = event.get("route_decisions")
+        if not isinstance(route_decisions, list):
+            route_decisions = []
+        route_decisions = [str(item) for item in route_decisions if str(item).strip()]
 
         def reject(reason: str, recovery: str) -> None:
             rejected.append({"event_id": event_id, "index": index, "reason": reason, "recovery": recovery})
@@ -150,11 +169,36 @@ def admit_correction_events(
         if "sk-" in desired or "BEGIN PRIVATE KEY" in desired or "password=" in desired.lower():
             reject("rejected-secret-bearing", "Remove secrets and submit only behavioral guidance.")
             continue
+        if not replaced:
+            reject("rejected-missing-replaced-behavior", "Submit replaced_behavior so corrections carry the changed behavior boundary.")
+            continue
         if not semantic_identity["invariant_id"] or not semantic_identity["behavior_class"]:
             reject("rejected-missing-semantic-identity", "Submit invariant_id and behavior_class so wording is not the identity.")
             continue
-        if event.get("authority") not in {"explicit-user-correction", "pr-review", "orchestrator-review", "evaluator-finding"}:
+        if event.get("authority") not in ADMITTED_CORRECTION_AUTHORITIES:
             reject("rejected-unauthorised", "Use an admitted correction authority.")
+            continue
+        if not event.get("source_ref"):
+            reject("rejected-missing-source-ref", "Submit a stable source_ref for the correction evidence.")
+            continue
+        if not (event.get("producer_id") or event.get("producer_class") or provenance.get("producer_id")):
+            reject("rejected-missing-producer", "Submit producer identity or producer class for authority resolution.")
+            continue
+        if not (event.get("evidence_hash") or event.get("evidence_ref") or provenance.get("evidence_hash")):
+            reject(
+                "rejected-missing-evidence-hash",
+                "Submit evidence_hash or evidence_ref so the event is auditable without raw transcript storage.",
+            )
+            continue
+        if not route_decisions:
+            reject(
+                "rejected-missing-route-decision",
+                "Submit explicit route_decisions for guidance, suitability, memory, config, issue, or no-retention.",
+            )
+            continue
+        unknown_routes = sorted(set(route_decisions) - ADMITTED_ROUTE_DECISIONS)
+        if unknown_routes:
+            reject("rejected-unknown-route-decision", "Use admitted route decisions only.")
             continue
         revision_policy = str(subject.get("revision_policy") or "preserve")
         target_revision = str(subject.get("target_revision") or "")
@@ -211,20 +255,63 @@ def admit_correction_events(
         event["target_identity_ref"] = subject["stable_target_id"]
         event["target_revision"] = target_revision or event_revision or None
         event["profile_name"] = subject.get("profile_name")
+        event["source_ref"] = str(event.get("source_ref"))
+        event["producer_class"] = str(event.get("producer_class") or provenance.get("producer_class") or event.get("authority"))
+        event["producer_id"] = str(event.get("producer_id") or provenance.get("producer_id") or event["producer_class"])
+        event["evidence_hash"] = str(event.get("evidence_hash") or provenance.get("evidence_hash") or "")
+        event["evidence_ref"] = str(event.get("evidence_ref") or provenance.get("evidence_ref") or "")
+        event["route_decisions"] = route_decisions
         recurrence_counts[normalized_key] = recurrence_counts.get(normalized_key, 0) + 1
         event["recurrence_count"] = recurrence_counts[normalized_key]
         base_admission_state = (
             "accepted-preserved-revision" if event.get("admission_state") == "accepted-preserved-revision" else "accepted-candidate"
         )
         event["admission_state"] = "recurrence" if recurrence_counts[normalized_key] > 1 and operation == "submit" else base_admission_state
+        if operation == "submit" and recurrence_counts[normalized_key] > 1:
+            prior = admitted_by_key.get(normalized_key)
+            if prior is not None:
+                event["contradiction_account"] = {
+                    "status": "recurrence-preserved",
+                    "prior_event_id": prior.get("event_id"),
+                    "prior_source_ref": prior.get("source_ref"),
+                    "recurrence_count": recurrence_counts[normalized_key],
+                    "rule": "Recurrence preserves compact provenance rather than replacing the prior semantic correction silently.",
+                }
         admitted_by_key[normalized_key] = event
         by_id[event_id] = event
     admitted = sorted(admitted_by_key.values(), key=lambda item: str(item.get("event_id")))
+    retained_events = admitted[-CORRECTION_EVENT_RETENTION_CAP:]
+    compacted_count = max(0, len(admitted) - len(retained_events))
     return {
         "kind": "agentic-workspace/correction-event-admission/v1",
-        "status": "admitted" if admitted else "no-admitted-events",
-        "admitted_events": admitted,
+        "status": "admitted" if retained_events else "no-admitted-events",
+        "admitted_events": retained_events,
         "rejected_events": rejected,
+        "retention": {
+            "mode": "bounded-local-retention",
+            "cap": CORRECTION_EVENT_RETENTION_CAP,
+            "compacted_count": compacted_count,
+            "lineage_inspectable": True,
+            "delete_behavior": "local-only correction events may be deleted without changing checked-in repository meaning",
+        },
+        "public_operations": [
+            {
+                "operation_id": operation_id,
+                "public": True,
+                "generated_operation": True,
+                "external_contract": True,
+                "raw_file_write_compatibility": "compatibility-only-freshness-checked",
+            }
+            for operation_id in CORRECTION_EVENT_OPERATIONS
+        ],
+        "derived_routes": {
+            "target_guidance": [event["event_id"] for event in retained_events if "target-guidance" in event.get("route_decisions", [])],
+            "target_suitability": [
+                event["event_id"] for event in retained_events if "target-suitability" in event.get("route_decisions", [])
+            ],
+            "memory": [event["event_id"] for event in retained_events if "memory" in event.get("route_decisions", [])],
+            "no_retention": [event["event_id"] for event in retained_events if "no-retention" in event.get("route_decisions", [])],
+        },
         "routing_rule": "Only admitted correction events for the resolved target_id and matching task/scope context may affect target guidance.",
     }
 
@@ -363,31 +450,55 @@ def correction_feedback_contract(*, identity_posture: dict[str, Any]) -> dict[st
         "operations": [
             {
                 "operation": "submit",
+                "operation_id": "correction-event.submit",
+                "public": True,
+                "generated_operation": True,
+                "external_contract": True,
                 "callable": "agentic_workspace.agent_guidance.admit_correction_events",
                 "admission": "resolves profile names and aliases to one stable target_id before event storage or routing",
             },
             {
                 "operation": "query",
+                "operation_id": "correction-event.query",
+                "public": True,
+                "generated_operation": True,
+                "external_contract": True,
                 "callable": "agentic_workspace.agent_guidance.admit_correction_events",
                 "admission": "returns only admitted events matching resolved target_id plus task/scope context",
             },
             {
                 "operation": "dispute",
+                "operation_id": "correction-event.correct-dispute",
+                "public": True,
+                "generated_operation": True,
+                "external_contract": True,
                 "callable": "agentic_workspace.agent_guidance.admit_correction_events",
                 "admission": "requires an admitted predecessor_event_id and removes that predecessor from current routing",
             },
             {
                 "operation": "supersede",
+                "operation_id": "correction-event.withdraw-supersede",
+                "public": True,
+                "generated_operation": True,
+                "external_contract": True,
                 "callable": "agentic_workspace.agent_guidance.admit_correction_events",
                 "admission": "requires an admitted predecessor_event_id, keeps provenance, and routes only the superseding event",
             },
             {
                 "operation": "withdraw",
+                "operation_id": "correction-event.withdraw-supersede",
+                "public": True,
+                "generated_operation": True,
+                "external_contract": True,
                 "callable": "agentic_workspace.agent_guidance.admit_correction_events",
                 "admission": "requires an admitted predecessor_event_id and excludes withdrawn guidance from routing",
             },
             {
                 "operation": "migrate-or-retire",
+                "operation_id": "correction-event.prune-compact",
+                "public": True,
+                "generated_operation": True,
+                "external_contract": True,
                 "callable": "agentic_workspace.agent_guidance.admit_correction_events",
                 "admission": "applies the target revision policy before reuse: preserve, revalidate, migrate with predecessor, or retire",
             },
@@ -397,6 +508,9 @@ def correction_feedback_contract(*, identity_posture: dict[str, Any]) -> dict[st
             "checked_in": False,
             "raw_transcripts_stored": False,
             "controlled_by": WORKSPACE_LOCAL_CONFIG_PATH.as_posix(),
+            "retention_cap": CORRECTION_EVENT_RETENTION_CAP,
+            "retention_operations": ["correction-event.prune-compact"],
+            "delete_behavior": "local-only correction events may be deleted without changing checked-in repository meaning",
         },
         "rule": "Correction feedback is a structured local event stream, not a transcript archive and not direct workflow policy.",
     }
