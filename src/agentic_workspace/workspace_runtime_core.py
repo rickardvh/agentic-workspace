@@ -45507,6 +45507,37 @@ def _record_proof_receipt_payload(
         history_path = target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH
         with history_path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(receipt, sort_keys=True, ensure_ascii=True) + "\n")
+        producer_receipt_id = hashlib.sha256(
+            json.dumps(
+                {
+                    "command": command,
+                    "result": result,
+                    "changed_paths": receipt["changed_paths"],
+                    "proof_subject": receipt.get("proof_subject", {}),
+                    "recorded_at": receipt["recorded_at"],
+                },
+                sort_keys=True,
+                ensure_ascii=True,
+            ).encode("utf-8")
+        ).hexdigest()[:16]
+        producer_receipt_ref = f"proof://receipts/{producer_receipt_id}"
+        _write_trusted_producer_receipt(
+            target_root=target_root,
+            producer_class="aw-proof",
+            receipt_id=producer_receipt_id,
+            source_ref=producer_receipt_ref,
+            receipt={
+                **receipt,
+                "receipt_id": producer_receipt_id,
+                "producer_class": "aw-proof",
+                "authority": "aw-proof",
+                "source_type": "aw-proof-receipt",
+                "result": "passed" if admission.get("proof_sufficient") else "failed",
+                "confidence": "high",
+            },
+        )
+    else:
+        producer_receipt_ref = ""
     review_stack_transition = record_review_stack_transition(
         target_root=target_root,
         phase="review-proof",
@@ -45539,6 +45570,7 @@ def _record_proof_receipt_payload(
         "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
         "history_path": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
         "receipt": receipt,
+        "trusted_producer_receipt_ref": producer_receipt_ref,
         "proof_reuse_cache": proof_reuse_cache,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
     }
@@ -50821,7 +50853,7 @@ def _record_delegation_outcome(
     contradiction_state: str = "none",
     uncertainty_state: str = "",
     idempotency_key: str = "",
-    trusted_producer_receipt: str = "",
+    trusted_producer_receipt: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path, payload, records = config_lib.load_delegation_outcomes(target_root=target_root)
     normalized_target = delegation_target.strip()
@@ -50835,7 +50867,7 @@ def _record_delegation_outcome(
     normalized_source_ref = source_ref.strip() or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix()
     normalized_producer_class = producer_class.strip()
     normalized_idempotency_key = idempotency_key.strip()
-    normalized_trusted_producer_receipt = trusted_producer_receipt.strip()
+    normalized_trusted_producer_receipt = _as_dict(trusted_producer_receipt)
     if not normalized_scope:
         raise WorkspaceUsageError("note-delegation-outcome requires --scope-class to keep evidence scoped independently from task class.")
     if not normalized_source_ref:
@@ -50860,32 +50892,24 @@ def _record_delegation_outcome(
     }.get(normalized_producer_class)
     if trusted_authority_for_producer is None:
         raise WorkspaceUsageError("note-delegation-outcome producer class is not authorized for evidence admission.")
+    if trusted_producer_receipt is not None and not normalized_trusted_producer_receipt:
+        raise WorkspaceUsageError("note-delegation-outcome trusted producer receipt must be resolved by its owning store before writing.")
     if normalized_trusted_producer_receipt:
-        trusted_receipt_authority = {
-            "aw-proof-receipt": "aw-proof",
-            "verified-human-review": "human-review",
-            "retry-outcome": "local-outcome-ledger",
-            "handoff-outcome": "local-outcome-ledger",
-            "closeout-outcome": "local-outcome-ledger",
-        }.get(normalized_trusted_producer_receipt)
-        if trusted_receipt_authority is None:
-            raise WorkspaceUsageError("note-delegation-outcome trusted producer receipt is not authorized for evidence admission.")
-        if normalized_authority != trusted_receipt_authority or normalized_producer_class != trusted_receipt_authority:
-            raise WorkspaceUsageError(
-                "note-delegation-outcome trusted producer receipt must match the authority and producer class it admits."
-            )
-        if normalized_source_ref == WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix():
-            raise WorkspaceUsageError("note-delegation-outcome trusted producer receipt requires a stable non-ledger source reference.")
-        expected_source_types = {
-            "aw-proof-receipt": {"aw-proof-receipt", "proof-receipt"},
-            "verified-human-review": {"human-review", "github-review", "review-thread"},
-            "retry-outcome": {"retry-outcome", "execution-retry"},
-            "handoff-outcome": {"handoff-outcome", "delegation-handoff"},
-            "closeout-outcome": {"closeout-outcome", "closeout-report"},
-        }[normalized_trusted_producer_receipt]
-        if normalized_source_type not in expected_source_types:
-            allowed_sources = ", ".join(sorted(expected_source_types))
-            raise WorkspaceUsageError(f"note-delegation-outcome trusted producer receipt requires source type one of: {allowed_sources}.")
+        normalized_authority = str(normalized_trusted_producer_receipt.get("authority") or "").strip()
+        normalized_confidence = str(normalized_trusted_producer_receipt.get("confidence") or "high").strip()
+        normalized_source_type = str(normalized_trusted_producer_receipt.get("source_type") or "").strip()
+        normalized_source_ref = str(normalized_trusted_producer_receipt.get("source_ref") or "").strip()
+        normalized_producer_class = str(normalized_trusted_producer_receipt.get("producer_class") or "").strip()
+        normalized_idempotency_key = (
+            normalized_idempotency_key
+            or str(
+                normalized_trusted_producer_receipt.get("idempotency_key") or normalized_trusted_producer_receipt.get("receipt_id") or ""
+            ).strip()
+        )
+        proof_observation = proof_observation or str(normalized_trusted_producer_receipt.get("proof_observation") or "")
+        review_observation = review_observation or str(normalized_trusted_producer_receipt.get("review_observation") or "")
+        if not normalized_source_ref:
+            raise WorkspaceUsageError("note-delegation-outcome trusted producer receipt requires a stable source reference.")
     elif normalized_authority in {"aw-proof", "human-review"} or normalized_producer_class in {"aw-proof", "human-review"}:
         normalized_authority = "model-self-report"
         normalized_producer_class = "agent-self-observation"
@@ -51088,6 +51112,243 @@ def _record_delegation_outcome(
     }
 
 
+_TRUSTED_PRODUCER_RECEIPT_INDEX_KIND = "agentic-workspace/trusted-producer-receipt-index/v1"
+
+
+_TRUSTED_PRODUCER_RECEIPT_STORES = {
+    "aw-proof": (
+        Path(".agentic-workspace") / "proof" / "receipts",
+        {"aw-proof-receipt", "proof-receipt"},
+        {"passed", "failed"},
+        {"agentic-workspace/trusted-producer-receipt/v1", "agentic-workspace/proof-receipt/v1"},
+    ),
+    "human-review": (
+        Path(".agentic-workspace") / "reviews" / "receipts",
+        {"human-review", "github-review", "review-thread"},
+        {"approved", "changes-requested", "commented", "failed"},
+        {"agentic-workspace/trusted-producer-receipt/v1", "agentic-workspace/human-review-receipt/v1"},
+    ),
+    "retry-outcome": (
+        Path(".agentic-workspace") / "local" / "retry-receipts",
+        {"retry-outcome", "execution-retry"},
+        {"passed", "failed"},
+        {"agentic-workspace/trusted-producer-receipt/v1", "agentic-workspace/retry-outcome-receipt/v1"},
+    ),
+    "handoff-outcome": (
+        Path(".agentic-workspace") / "local" / "handoff-receipts",
+        {"handoff-outcome", "delegation-handoff"},
+        {"accepted", "failed"},
+        {"agentic-workspace/trusted-producer-receipt/v1", "agentic-workspace/handoff-outcome-receipt/v1"},
+    ),
+    "closeout-outcome": (
+        Path(".agentic-workspace") / "local" / "closeout-receipts",
+        {"closeout-outcome", "closeout-report"},
+        {"accepted", "rejected"},
+        {"agentic-workspace/trusted-producer-receipt/v1", "agentic-workspace/closeout-outcome-receipt/v1"},
+    ),
+}
+
+
+def _trusted_producer_store_root(*, target_root: Path, producer_class: str) -> Path:
+    store = _TRUSTED_PRODUCER_RECEIPT_STORES.get(producer_class)
+    if store is None:
+        raise WorkspaceUsageError("trusted producer receipt producer is not authorized.")
+    return (target_root / store[0]).resolve()
+
+
+def _trusted_producer_receipt_index_path(*, target_root: Path, producer_class: str) -> Path:
+    return _trusted_producer_store_root(target_root=target_root, producer_class=producer_class) / "index.json"
+
+
+def _trusted_producer_receipt_path(*, target_root: Path, producer_class: str, receipt_ref: str) -> Path:
+    receipt_text = receipt_ref.strip()
+    if not receipt_text:
+        raise WorkspaceUsageError("trusted producer receipt reference is required.")
+    store = _TRUSTED_PRODUCER_RECEIPT_STORES.get(producer_class)
+    if store is None:
+        raise WorkspaceUsageError("trusted producer receipt producer is not authorized.")
+    store_root = _trusted_producer_store_root(target_root=target_root, producer_class=producer_class)
+    if "://" in receipt_text:
+        receipt_id = receipt_text.rsplit("/", 1)[-1].strip()
+        safe_receipt_id = re.sub(r"[^A-Za-z0-9_.-]+", "-", receipt_id).strip("-")
+        if not safe_receipt_id:
+            raise WorkspaceUsageError("trusted producer receipt reference does not contain a stable receipt id.")
+        return store_root / f"{safe_receipt_id}.json"
+    candidate = Path(receipt_text)
+    if candidate.is_absolute():
+        raise WorkspaceUsageError("trusted producer receipt reference must be a repo-relative store path or producer URI.")
+    if not candidate.is_absolute():
+        candidate = target_root / candidate
+    resolved_candidate = candidate.resolve()
+    if not resolved_candidate.is_relative_to(store_root):
+        raise WorkspaceUsageError("trusted producer receipt reference must resolve inside the owning producer receipt store.")
+    if resolved_candidate.suffix != ".json":
+        raise WorkspaceUsageError("trusted producer receipt reference must resolve to a JSON receipt.")
+    return resolved_candidate
+
+
+def _trusted_producer_receipt_index_entry(
+    *,
+    target_root: Path,
+    producer_class: str,
+    receipt_id: str,
+    receipt_path: Path,
+    receipt: dict[str, Any],
+) -> dict[str, Any]:
+    index_path = _trusted_producer_receipt_index_path(target_root=target_root, producer_class=producer_class)
+    try:
+        index_payload = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise WorkspaceUsageError("trusted producer receipt could not be resolved from its owning store index.") from exc
+    if not isinstance(index_payload, dict) or index_payload.get("kind") != _TRUSTED_PRODUCER_RECEIPT_INDEX_KIND:
+        raise WorkspaceUsageError("trusted producer receipt store index has an invalid kind.")
+    entries = _as_dict(index_payload.get("receipts"))
+    entry = _as_dict(entries.get(receipt_id))
+    if not entry:
+        raise WorkspaceUsageError("trusted producer receipt is not registered in its owning store index.")
+    store_root = _trusted_producer_store_root(target_root=target_root, producer_class=producer_class)
+    indexed_path_text = str(entry.get("path") or "").strip()
+    indexed_path = (store_root / indexed_path_text).resolve() if indexed_path_text else receipt_path.resolve()
+    if indexed_path != receipt_path.resolve() or not indexed_path.is_relative_to(store_root):
+        raise WorkspaceUsageError("trusted producer receipt store index path does not match the resolved receipt.")
+    indexed_revision = str(entry.get("revision") or "").strip()
+    receipt_revision = str(receipt.get("revision") or "").strip()
+    if indexed_revision and receipt_revision and indexed_revision != receipt_revision:
+        raise WorkspaceUsageError("trusted producer receipt revision does not match the owning store index.")
+    if str(entry.get("status") or "current").strip() not in {"current", "fresh", "accepted"} or entry.get("superseded_by"):
+        raise WorkspaceUsageError("trusted producer receipt is stale or superseded in its owning store index.")
+    return entry
+
+
+def _write_trusted_producer_receipt(
+    *,
+    target_root: Path,
+    producer_class: str,
+    receipt_id: str,
+    receipt: dict[str, Any],
+    source_ref: str,
+) -> str:
+    safe_receipt_id = re.sub(r"[^A-Za-z0-9_.-]+", "-", receipt_id.strip()).strip("-")
+    if not safe_receipt_id:
+        raise WorkspaceUsageError("trusted producer receipt id is required.")
+    store_root = _trusted_producer_store_root(target_root=target_root, producer_class=producer_class)
+    store_root.mkdir(parents=True, exist_ok=True)
+    receipt_path = store_root / f"{safe_receipt_id}.json"
+    revision = str(
+        receipt.get("revision") or receipt.get("recorded_at") or datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    ).strip()
+    payload = {
+        **receipt,
+        "kind": str(receipt.get("kind") or "agentic-workspace/trusted-producer-receipt/v1"),
+        "receipt_id": str(receipt.get("receipt_id") or safe_receipt_id).strip(),
+        "producer_class": producer_class,
+        "source_ref": source_ref,
+        "status": str(receipt.get("status") or "current").strip(),
+        "revision": revision,
+    }
+    receipt_path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    index_path = _trusted_producer_receipt_index_path(target_root=target_root, producer_class=producer_class)
+    try:
+        index_payload = json.loads(index_path.read_text(encoding="utf-8")) if index_path.is_file() else {}
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise WorkspaceUsageError("trusted producer receipt store index is not valid JSON.") from exc
+    receipts = _as_dict(index_payload.get("receipts"))
+    receipts[payload["receipt_id"]] = {
+        "path": receipt_path.relative_to(store_root).as_posix(),
+        "revision": revision,
+        "status": payload["status"],
+        "source_ref": source_ref,
+        "producer_class": producer_class,
+    }
+    index_path.write_text(
+        json.dumps({"kind": _TRUSTED_PRODUCER_RECEIPT_INDEX_KIND, "receipts": receipts}, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return source_ref
+
+
+def _load_trusted_producer_receipt(
+    *,
+    target_root: Path,
+    producer_class: str,
+    receipt_ref: str,
+    delegation_target: str,
+    task_class: str,
+    scope_class: str,
+    outcome: str,
+) -> dict[str, Any]:
+    receipt_path = _trusted_producer_receipt_path(target_root=target_root, producer_class=producer_class, receipt_ref=receipt_ref)
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise WorkspaceUsageError("trusted producer receipt could not be loaded from its owning store.") from exc
+    if not isinstance(receipt, dict):
+        raise WorkspaceUsageError("trusted producer receipt must be a JSON object.")
+    store = _TRUSTED_PRODUCER_RECEIPT_STORES.get(producer_class)
+    if store is None:
+        raise WorkspaceUsageError("trusted producer receipt producer is not authorized.")
+    expected_source_types, expected_results, expected_kinds = store[1], store[2], store[3]
+    kind = str(receipt.get("kind") or "").strip()
+    if kind not in expected_kinds:
+        raise WorkspaceUsageError("trusted producer receipt kind is not accepted for this producer.")
+    authority = str(receipt.get("authority") or "").strip()
+    receipt_producer = str(receipt.get("producer_class") or receipt.get("producer") or "").strip()
+    source_type = str(receipt.get("source_type") or "").strip()
+    source_ref = str(receipt.get("source_ref") or receipt_ref).strip()
+    status = str(receipt.get("status") or receipt.get("freshness_status") or "current").strip()
+    result = str(receipt.get("result") or "").strip()
+    context = _as_dict(receipt.get("target_context") or receipt.get("context"))
+    if receipt_producer != producer_class:
+        raise WorkspaceUsageError("trusted producer receipt producer does not match the requested producer boundary.")
+    expected_authority = (
+        "aw-proof" if producer_class == "aw-proof" else "human-review" if producer_class == "human-review" else "local-outcome-ledger"
+    )
+    if authority != expected_authority:
+        raise WorkspaceUsageError("trusted producer receipt authority does not match the producer boundary.")
+    if source_type not in expected_source_types:
+        raise WorkspaceUsageError("trusted producer receipt source type is not accepted for this producer.")
+    if status not in {"current", "fresh", "accepted"} or receipt.get("superseded_by"):
+        raise WorkspaceUsageError("trusted producer receipt is stale or superseded.")
+    if result not in expected_results:
+        raise WorkspaceUsageError("trusted producer receipt result is not accepted for this producer.")
+    if result in {"passed", "approved", "accepted"} and outcome != "success":
+        raise WorkspaceUsageError("trusted producer receipt result does not match the recorded outcome.")
+    if result in {"failed", "changes-requested", "rejected"} and outcome == "success":
+        raise WorkspaceUsageError("trusted producer receipt result does not match the recorded outcome.")
+    expected_context = {
+        "delegation_target": delegation_target.strip(),
+        "task_class": task_class.strip(),
+        "scope_class": scope_class.strip(),
+    }
+    observed_context = {key: str(context.get(key) or "").strip() for key in expected_context}
+    if observed_context != expected_context:
+        raise WorkspaceUsageError("trusted producer receipt context does not match target/task/scope.")
+    receipt_id = str(receipt.get("receipt_id") or receipt.get("id") or receipt_ref).strip()
+    _trusted_producer_receipt_index_entry(
+        target_root=target_root,
+        producer_class=producer_class,
+        receipt_id=receipt_id,
+        receipt_path=receipt_path,
+        receipt=receipt,
+    )
+    return {
+        "receipt_id": receipt_id,
+        "authority": authority,
+        "confidence": str(receipt.get("confidence") or "high").strip(),
+        "source_type": source_type,
+        "source_ref": source_ref,
+        "producer_class": producer_class,
+        "idempotency_key": str(receipt.get("idempotency_key") or receipt_id).strip(),
+        "proof_observation": "passed"
+        if producer_class == "aw-proof" and outcome == "success"
+        else "failed"
+        if producer_class == "aw-proof"
+        else "",
+        "review_observation": "verified" if producer_class == "human-review" else "",
+        "receipt_revision": str(receipt.get("revision") or "").strip(),
+    }
+
+
 def _record_aw_proof_delegation_outcome(
     *,
     target_root: Path,
@@ -51101,6 +51362,15 @@ def _record_aw_proof_delegation_outcome(
     review_burden: str = "normal",
     escalation_required: bool = False,
 ) -> dict[str, Any]:
+    receipt = _load_trusted_producer_receipt(
+        target_root=target_root,
+        producer_class="aw-proof",
+        receipt_ref=proof_receipt_ref,
+        delegation_target=delegation_target,
+        task_class=task_class,
+        scope_class=scope_class,
+        outcome=outcome,
+    )
     return _record_delegation_outcome(
         target_root=target_root,
         delegation_target=delegation_target,
@@ -51110,14 +51380,10 @@ def _record_aw_proof_delegation_outcome(
         handoff_sufficiency=handoff_sufficiency,
         review_burden=review_burden,
         escalation_required=escalation_required,
-        authority="aw-proof",
-        confidence="high",
-        source_type="aw-proof-receipt",
-        source_ref=proof_receipt_ref,
-        producer_class="aw-proof",
-        proof_observation="passed" if outcome == "success" else "failed",
+        authority="model-self-report",
+        confidence="low",
         idempotency_key=idempotency_key,
-        trusted_producer_receipt="aw-proof-receipt",
+        trusted_producer_receipt=receipt,
     )
 
 
@@ -51134,6 +51400,15 @@ def _record_human_review_delegation_outcome(
     review_burden: str = "normal",
     escalation_required: bool = False,
 ) -> dict[str, Any]:
+    receipt = _load_trusted_producer_receipt(
+        target_root=target_root,
+        producer_class="human-review",
+        receipt_ref=review_ref,
+        delegation_target=delegation_target,
+        task_class=task_class,
+        scope_class=scope_class,
+        outcome=outcome,
+    )
     return _record_delegation_outcome(
         target_root=target_root,
         delegation_target=delegation_target,
@@ -51143,14 +51418,10 @@ def _record_human_review_delegation_outcome(
         handoff_sufficiency=handoff_sufficiency,
         review_burden=review_burden,
         escalation_required=escalation_required,
-        authority="human-review",
-        confidence="high",
-        source_type="human-review",
-        source_ref=review_ref,
-        producer_class="human-review",
-        review_observation="verified",
+        authority="model-self-report",
+        confidence="low",
         idempotency_key=idempotency_key,
-        trusted_producer_receipt="verified-human-review",
+        trusted_producer_receipt=receipt,
     )
 
 
