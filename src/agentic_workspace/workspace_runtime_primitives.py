@@ -40938,6 +40938,68 @@ def _write_proof_reuse_cache_from_receipt(
     }
 
 
+PROOF_ASSIGNMENT_CONTEXT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "assignment-context.json"
+
+
+def _proof_receipt_assignment_context(*, target_root: Path) -> dict[str, Any]:
+    context_path = target_root / PROOF_ASSIGNMENT_CONTEXT_RELATIVE_PATH
+    if not context_path.is_file():
+        return {
+            "status": "non-calibrating",
+            "reason": "missing-current-assignment-context",
+            "source_ref": PROOF_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "rule": "Proof receipts calibrate target evidence only when a current assignment/run authority supplies target/task/scope.",
+        }
+    try:
+        payload = json.loads(context_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {
+            "status": "non-calibrating",
+            "reason": "unreadable-current-assignment-context",
+            "source_ref": PROOF_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "rule": "Malformed assignment context cannot feed calibration.",
+        }
+    if not isinstance(payload, dict):
+        return {
+            "status": "non-calibrating",
+            "reason": "invalid-current-assignment-context",
+            "source_ref": PROOF_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "rule": "Assignment context must be a JSON object owned by the current assignment/run boundary.",
+        }
+    status = str(payload.get("status") or payload.get("freshness_status") or "current").strip()
+    if status not in {"current", "fresh", "accepted"} or payload.get("superseded_by"):
+        return {
+            "status": "non-calibrating",
+            "reason": "stale-current-assignment-context",
+            "source_ref": PROOF_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "revision": str(payload.get("revision") or "").strip(),
+            "rule": "Stale assignment context cannot feed calibration.",
+        }
+    context = _as_dict(payload.get("target_context")) or payload
+    target_context = {
+        "delegation_target": str(context.get("delegation_target") or "").strip(),
+        "task_class": str(context.get("task_class") or "").strip(),
+        "scope_class": str(context.get("scope_class") or "").strip(),
+    }
+    missing = [key for key, value in target_context.items() if not value]
+    if missing:
+        return {
+            "status": "non-calibrating",
+            "reason": "incomplete-current-assignment-context",
+            "missing": missing,
+            "source_ref": PROOF_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "revision": str(payload.get("revision") or "").strip(),
+            "rule": "Assignment context must provide delegation_target, task_class, and scope_class before proof can calibrate evidence.",
+        }
+    return {
+        "status": "current",
+        "target_context": target_context,
+        "source_ref": PROOF_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+        "revision": str(payload.get("revision") or payload.get("recorded_at") or "").strip(),
+        "rule": "Target context is resolved from current assignment/run authority, not proof receipt caller input.",
+    }
+
+
 def _record_proof_receipt_payload(
     *,
     target_root: Path,
@@ -40989,6 +41051,18 @@ def _record_proof_receipt_payload(
         )
     if failure_summary is not None:
         receipt["failure_summary"] = failure_summary
+    assignment_context = _proof_receipt_assignment_context(target_root=target_root)
+    target_context = _as_dict(assignment_context.get("target_context"))
+    if target_context:
+        receipt["target_context"] = target_context
+        receipt["target_context_authority"] = {
+            "source_ref": assignment_context["source_ref"],
+            "revision": assignment_context.get("revision", ""),
+            "status": assignment_context["status"],
+            "rule": assignment_context["rule"],
+        }
+    else:
+        receipt["calibration"] = assignment_context
     proof_reuse_cache = _write_proof_reuse_cache_from_receipt(
         target_root=target_root,
         command=command,
@@ -41010,7 +41084,7 @@ def _record_proof_receipt_payload(
                     "result": result,
                     "changed_paths": receipt["changed_paths"],
                     "proof_subject": receipt.get("proof_subject", {}),
-                    "recorded_at": receipt["recorded_at"],
+                    "target_context": target_context,
                 },
                 sort_keys=True,
                 ensure_ascii=True,
@@ -41032,8 +41106,41 @@ def _record_proof_receipt_payload(
                 "confidence": "high",
             },
         )
+        if target_context:
+            proof_outcome = "success" if admission.get("proof_sufficient") else "failed"
+            try:
+                calibration_admission = {
+                    "status": "recorded",
+                    "record": _record_aw_proof_delegation_outcome(
+                        target_root=target_root,
+                        delegation_target=target_context["delegation_target"],
+                        task_class=target_context["task_class"],
+                        scope_class=target_context["scope_class"],
+                        outcome=proof_outcome,
+                        proof_receipt_ref=producer_receipt_ref,
+                        idempotency_key=producer_receipt_id,
+                        review_burden="light" if proof_outcome == "success" else "high",
+                        handoff_sufficiency="sufficient" if proof_outcome == "success" else "insufficient",
+                        escalation_required=proof_outcome != "success",
+                    )["recorded"],
+                    "target_context": target_context,
+                    "source_ref": producer_receipt_ref,
+                    "rule": "Ordinary proof receipts feed delegation evidence only after producer-store resolution and target-context matching.",
+                }
+            except WorkspaceUsageError as exc:
+                if "duplicate evidence" not in str(exc):
+                    raise
+                calibration_admission = {
+                    "status": "already-recorded",
+                    "target_context": target_context,
+                    "source_ref": producer_receipt_ref,
+                    "rule": "Duplicate proof calibration is idempotent for the same target/task/scope/provenance key.",
+                }
+        else:
+            calibration_admission = assignment_context
     else:
         producer_receipt_ref = ""
+        calibration_admission = {"status": "dry-run", "rule": "Dry runs do not write producer receipts or calibration evidence."}
     review_stack_transition = record_review_stack_transition(
         target_root=target_root,
         phase="review-proof",
@@ -41067,6 +41174,7 @@ def _record_proof_receipt_payload(
         "history_path": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
         "receipt": receipt,
         "trusted_producer_receipt_ref": producer_receipt_ref,
+        "calibration_admission": calibration_admission,
         "proof_reuse_cache": proof_reuse_cache,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
     }
