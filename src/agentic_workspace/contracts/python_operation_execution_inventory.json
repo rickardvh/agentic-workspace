@@ -277,6 +277,28 @@
       ]
     },
     {
+      "operation_id": "evaluation.prune",
+      "program": "agentic-workspace",
+      "command": "evaluation",
+      "generated_transport": "generated/workspace/python/cli.py",
+      "operation_contract": "operations/evaluation.prune.json",
+      "primitive_executor": "command_generation/argparse_function_call",
+      "hand_owned_runtime_code": [
+        "evaluation.observation.prune",
+        "output emission mechanics"
+      ],
+      "status": "generated-runtime-handler",
+      "conformance_ref": "evaluation.lifecycle.process",
+      "runtime_boundary_class": "generated-runtime-handler",
+      "runtime_boundary_reason": "Command-generation owns argparse parser and dispatch metadata for the evaluation command; AW runtime owns evaluation lifecycle policy, local state compaction, and compatibility output.",
+      "what_would_make_portable_later": "Represent evaluation lifecycle operations as schema-backed generated operation steps once decision-owner, local-evidence, and closure-authority policy are stable portable primitives.",
+      "generic_behavior_audit": "Generated command surfaces own parser, help, and runtime handler dispatch; AW-owned evaluation functions own package-specific lifecycle semantics. Observation prune applies AW-specific current-result resolution, local JSONL compaction, retention caps, lock policy, and archive cleanup reporting.",
+      "completion_blockers": [],
+      "primitive_refs": [
+        "runtime_module_handler:evaluation.prune"
+      ]
+    },
+    {
       "operation_id": "evaluation.register",
       "program": "agentic-workspace",
       "command": "evaluation",

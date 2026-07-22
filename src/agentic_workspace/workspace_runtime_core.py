@@ -35,7 +35,7 @@ from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
 from agentic_workspace.actionability import derive_actionability
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
-from agentic_workspace.authority_envelope import admit_mutation_boundary
+from agentic_workspace.authority_envelope import admit_live_mutation_boundary
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
@@ -38753,28 +38753,84 @@ def _assignment_identity_payload(
     return identity
 
 
+def _resolve_delegated_return_authorities(
+    *,
+    assignment_gate: dict[str, Any],
+    assignment_policy: dict[str, Any],
+    delegation_decision: dict[str, Any],
+    current_authorities: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    live = _as_dict(current_authorities)
+    resolved_assignment_gate = _as_dict(live.get("assignment_gate")) or assignment_gate
+    resolved_assignment_policy = _as_dict(live.get("assignment_policy")) or assignment_policy
+    resolved_delegation_decision = _as_dict(live.get("delegation_decision")) or delegation_decision
+    proof_receipt = _as_dict(live.get("aw_proof_receipt") or live.get("proof_receipt")) or _as_dict(
+        resolved_assignment_gate.get("aw_proof_receipt") or resolved_assignment_gate.get("proof_receipt")
+    )
+    mutation_baseline = (
+        live.get("live_mutation_baseline")
+        or live.get("mutation_baseline")
+        or resolved_assignment_gate.get("live_mutation_baseline")
+        or resolved_assignment_gate.get("mutation_baseline")
+    )
+    return {
+        "kind": "agentic-workspace/delegated-return-authority-resolution/v1",
+        "status": "live-resolved" if live else "caller-compatible-fallback",
+        "assignment_gate": resolved_assignment_gate,
+        "assignment_policy": resolved_assignment_policy,
+        "delegation_decision": resolved_delegation_decision,
+        "proof_receipt": proof_receipt,
+        "mutation_baseline": mutation_baseline,
+        "run_state": _as_dict(live.get("run_state")),
+        "competing_assignment": _as_dict(live.get("competing_assignment")),
+        "sources": {
+            "assignment_gate": "current_authorities.assignment_gate" if live.get("assignment_gate") else "caller.assignment_gate",
+            "proof_receipt": "current_authorities.proof_receipt"
+            if live.get("aw_proof_receipt") or live.get("proof_receipt")
+            else "resolved_assignment_gate.aw_proof_receipt",
+            "mutation_baseline": "current_authorities.live_mutation_baseline"
+            if live.get("live_mutation_baseline") or live.get("mutation_baseline")
+            else "resolved_assignment_gate.live_mutation_baseline",
+        },
+        "rule": "Admission and integration compare returned work to authorities resolved immediately before admission; worker-returned proof or baseline fields are never current authority.",
+    }
+
+
 def _admit_delegated_return(
     *,
     assignment_gate: dict[str, Any],
     assignment_policy: dict[str, Any],
     delegation_decision: dict[str, Any],
     returned_work: dict[str, Any],
+    current_authorities: dict[str, Any] | None = None,
+    target_root: Path | None = None,
 ) -> dict[str, Any]:
-    identity = _assignment_identity_payload(
+    authority_resolution = _resolve_delegated_return_authorities(
         assignment_gate=assignment_gate,
         assignment_policy=assignment_policy,
         delegation_decision=delegation_decision,
+        current_authorities=current_authorities,
     )
-    next_step = _as_dict(delegation_decision.get("delegation_next_step"))
+    resolved_assignment_gate = _as_dict(authority_resolution.get("assignment_gate"))
+    resolved_assignment_policy = _as_dict(authority_resolution.get("assignment_policy"))
+    resolved_delegation_decision = _as_dict(authority_resolution.get("delegation_decision"))
+    identity = _assignment_identity_payload(
+        assignment_gate=resolved_assignment_gate,
+        assignment_policy=resolved_assignment_policy,
+        delegation_decision=resolved_delegation_decision,
+    )
+    next_step = _as_dict(resolved_delegation_decision.get("delegation_next_step"))
     manual_transport = _manual_transport_admission_payload(
-        assignment_policy=assignment_policy,
+        assignment_policy=resolved_assignment_policy,
         target_execution_methods=[str(method) for method in next_step.get("execution_methods", [])]
         if isinstance(next_step.get("execution_methods"), list)
         else [],
         handoff_required=True,
     )
-    current_proof = _as_dict(assignment_gate.get("aw_proof_receipt") or assignment_gate.get("proof_receipt"))
-    current_baseline = assignment_gate.get("live_mutation_baseline")
+    current_proof = _as_dict(authority_resolution.get("proof_receipt"))
+    caller_supplied_baseline = authority_resolution.get("mutation_baseline")
+    run_state = _as_dict(authority_resolution.get("run_state"))
+    competing_assignment = _as_dict(authority_resolution.get("competing_assignment"))
     failures: list[dict[str, str]] = []
 
     def reject(reason: str, field: str, recovery: str) -> None:
@@ -38790,6 +38846,10 @@ def _admit_delegated_return(
         )
     if returned_work.get("target") != identity["target"]:
         reject("target-mismatch", "target", "Return work from the selected assignment target only.")
+    if competing_assignment and competing_assignment.get("assignment_decision_revision") != identity.get("assignment_decision_revision"):
+        reject("competing-assignment-detected", "current_authorities.competing_assignment", "Reassign or supersede the returned run.")
+    if str(run_state.get("status") or "") in {"duplicate", "malformed", "superseded", "closed"}:
+        reject("return-run-not-awaiting-admission", "current_authorities.run_state", "Import a fresh return or route repair/reassignment.")
     if current_proof.get("result") != "passed" or current_proof.get("verified_by") != "aw":
         reject(
             "aw-proof-missing-or-not-passed",
@@ -38806,13 +38866,13 @@ def _admit_delegated_return(
             reject("changed-path-outside-scope", "changed_paths", "Refresh or widen the handoff before admitting returned changes.")
     elif changed_paths and not allowed_paths:
         reject("missing-canonical-scope", "assignment_identity.allowed_paths", "Refresh the assignment so AW can compare returned paths.")
-    mutation_revalidation: dict[str, Any] = {"status": "not-provided", "admitted": False}
     expected_baseline = identity.get("mutation_baseline")
-    mutation_admission = admit_mutation_boundary(
+    mutation_admission = admit_live_mutation_boundary(
         boundary_id="returned-worker-admission",
+        target_root=target_root,
         expected=expected_baseline if isinstance(expected_baseline, dict) else None,
-        current=current_baseline if isinstance(current_baseline, dict) else None,
         assignment_target_identity_ref=str(identity.get("target_identity_ref") or "").strip() or None,
+        assignment_revision=str(identity.get("assignment_decision_revision") or "").strip() or None,
         allowed_paths=[str(path) for path in allowed_paths] if isinstance(allowed_paths, list) else None,
     )
     mutation_revalidation = _as_dict(mutation_admission.get("revalidation")) or mutation_admission
@@ -38833,13 +38893,18 @@ def _admit_delegated_return(
         "assignment_identity": identity,
         "manual_transport": manual_transport,
         "mutation_revalidation": mutation_revalidation,
+        "authority_resolution": authority_resolution,
+        "mutation_boundary_admission": mutation_admission,
         "current_authority": {
             "proof_receipt": current_proof or None,
-            "mutation_baseline": current_baseline,
-            "proof_source": "assignment_gate.aw_proof_receipt",
-            "baseline_source": "assignment_gate.live_mutation_baseline",
+            "mutation_baseline": mutation_admission.get("current_baseline"),
+            "caller_supplied_live_mutation_baseline": caller_supplied_baseline,
+            "proof_source": _as_dict(authority_resolution.get("sources")).get("proof_receipt"),
+            "baseline_source": _as_dict(mutation_admission.get("live_resolution")).get("source"),
+            "caller_baseline_source": _as_dict(authority_resolution.get("sources")).get("mutation_baseline"),
             "worker_reported_proof_trusted": False,
             "worker_reported_baseline_trusted": False,
+            "caller_reported_baseline_trusted": False,
         },
         "failures": failures,
         "safe_recovery": "none" if admitted else failures[0]["recovery"],

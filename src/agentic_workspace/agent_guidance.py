@@ -23,6 +23,12 @@ CORRECTION_EVENT_OPERATIONS = (
 )
 ADMITTED_CORRECTION_AUTHORITIES = {"explicit-user-correction", "pr-review", "orchestrator-review", "evaluator-finding"}
 ADMITTED_ROUTE_DECISIONS = {"target-guidance", "target-suitability", "memory", "config", "issue", "no-retention"}
+TRUSTED_CORRECTION_PRODUCERS = {
+    "explicit-user-correction": {"human", "human-reviewer", "user"},
+    "pr-review": {"human-reviewer", "review-bot", "maintainer"},
+    "orchestrator-review": {"orchestrator", "maintainer"},
+    "evaluator-finding": {"evaluator", "verification"},
+}
 
 
 def _stable_event_id(event: dict[str, Any]) -> str:
@@ -56,6 +62,41 @@ def _semantic_correction_identity(*, event: dict[str, Any], subject: dict[str, A
 def _semantic_key(identity: dict[str, Any]) -> str:
     raw = json.dumps(identity, sort_keys=True, separators=(",", ":"), default=str)
     return "semantic:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _resolve_correction_authority(*, event: dict[str, Any], provenance: dict[str, Any]) -> dict[str, Any]:
+    claimed_authority = str(event.get("authority") or "")
+    source = str(event.get("source") or provenance.get("source") or "")
+    producer_class = str(event.get("producer_class") or provenance.get("producer_class") or "")
+    if claimed_authority not in ADMITTED_CORRECTION_AUTHORITIES:
+        return {
+            "status": "rejected",
+            "authority": claimed_authority,
+            "reason": "unadmitted-authority",
+            "trusted": False,
+            "source": source,
+            "producer_class": producer_class,
+        }
+    trusted_producers = TRUSTED_CORRECTION_PRODUCERS.get(claimed_authority, set())
+    if producer_class not in trusted_producers:
+        low_authority = "agent-self-observation" if producer_class in {"agent", "agent-self-observation", "model"} else claimed_authority
+        return {
+            "status": "low-authority",
+            "authority": low_authority,
+            "claimed_authority": claimed_authority,
+            "reason": "producer-class-not-trusted-for-claimed-authority",
+            "trusted": False,
+            "source": source,
+            "producer_class": producer_class,
+        }
+    return {
+        "status": "trusted",
+        "authority": claimed_authority,
+        "reason": "trusted-channel-producer",
+        "trusted": True,
+        "source": source,
+        "producer_class": producer_class,
+    }
 
 
 def _target_identity_subject(profile: DelegationTargetProfile) -> dict[str, Any]:
@@ -175,14 +216,19 @@ def admit_correction_events(
         if not semantic_identity["invariant_id"] or not semantic_identity["behavior_class"]:
             reject("rejected-missing-semantic-identity", "Submit invariant_id and behavior_class so wording is not the identity.")
             continue
-        if event.get("authority") not in ADMITTED_CORRECTION_AUTHORITIES:
-            reject("rejected-unauthorised", "Use an admitted correction authority.")
-            continue
         if not event.get("source_ref"):
             reject("rejected-missing-source-ref", "Submit a stable source_ref for the correction evidence.")
             continue
         if not (event.get("producer_id") or event.get("producer_class") or provenance.get("producer_id")):
             reject("rejected-missing-producer", "Submit producer identity or producer class for authority resolution.")
+            continue
+        authority_resolution = _resolve_correction_authority(event=event, provenance=provenance)
+        if authority_resolution["status"] != "trusted":
+            reject(
+                "rejected-unauthorised",
+                "Submit through a trusted correction channel; self-observation remains low-authority evidence.",
+            )
+            event["authority_resolution"] = authority_resolution
             continue
         if not (event.get("evidence_hash") or event.get("evidence_ref") or provenance.get("evidence_hash")):
             reject(
@@ -258,6 +304,8 @@ def admit_correction_events(
         event["source_ref"] = str(event.get("source_ref"))
         event["producer_class"] = str(event.get("producer_class") or provenance.get("producer_class") or event.get("authority"))
         event["producer_id"] = str(event.get("producer_id") or provenance.get("producer_id") or event["producer_class"])
+        event["authority_resolution"] = authority_resolution
+        event["authority"] = str(authority_resolution["authority"])
         event["evidence_hash"] = str(event.get("evidence_hash") or provenance.get("evidence_hash") or "")
         event["evidence_ref"] = str(event.get("evidence_ref") or provenance.get("evidence_ref") or "")
         event["route_decisions"] = route_decisions
@@ -281,6 +329,7 @@ def admit_correction_events(
         by_id[event_id] = event
     admitted = sorted(admitted_by_key.values(), key=lambda item: str(item.get("event_id")))
     retained_events = admitted[-CORRECTION_EVENT_RETENTION_CAP:]
+    compacted_events = admitted[: max(0, len(admitted) - len(retained_events))]
     compacted_count = max(0, len(admitted) - len(retained_events))
     return {
         "kind": "agentic-workspace/correction-event-admission/v1",
@@ -291,8 +340,28 @@ def admit_correction_events(
             "mode": "bounded-local-retention",
             "cap": CORRECTION_EVENT_RETENTION_CAP,
             "compacted_count": compacted_count,
+            "persisted_store_action": "rewrite-retained-plus-compact-lineage" if compacted_count else "no-rewrite-needed",
+            "compacted_lineage": [
+                {
+                    "event_id": event.get("event_id"),
+                    "normalized_correction_key": event.get("normalized_correction_key"),
+                    "semantic_identity": event.get("semantic_identity"),
+                    "source_ref": event.get("source_ref"),
+                    "authority": event.get("authority"),
+                }
+                for event in compacted_events
+            ],
             "lineage_inspectable": True,
             "delete_behavior": "local-only correction events may be deleted without changing checked-in repository meaning",
+        },
+        "store_update": {
+            "kind": "agentic-workspace/correction-event-store-update/v1",
+            "status": "bounded-rewrite-required" if compacted_count else "within-cap",
+            "retained_event_ids": [event["event_id"] for event in retained_events],
+            "compacted_event_ids": [event["event_id"] for event in compacted_events],
+            "checked_in_repo_effect": "none",
+            "idempotency_key": "correction-store:"
+            + hashlib.sha256(json.dumps([event["event_id"] for event in retained_events], sort_keys=True).encode("utf-8")).hexdigest()[:16],
         },
         "public_operations": [
             {
@@ -301,6 +370,12 @@ def admit_correction_events(
                 "generated_operation": True,
                 "external_contract": True,
                 "raw_file_write_compatibility": "compatibility-only-freshness-checked",
+                "receipt": {
+                    "kind": "agentic-workspace/correction-operation-receipt/v1",
+                    "operation_id": operation_id,
+                    "idempotency_source": "delivery_id/source_ref/semantic_identity",
+                    "store_update_required": operation_id in {"correction-event.submit", "correction-event.prune-compact"},
+                },
             }
             for operation_id in CORRECTION_EVENT_OPERATIONS
         ],
@@ -350,6 +425,38 @@ def target_identity_posture(*, local_override: MixedAgentLocalOverride, target_r
         "subjects": subjects,
         "storage": {
             "status": storage_status,
+            "layers": [
+                {
+                    "id": "user-local-target-guidance",
+                    "owner": "user-local",
+                    "enabled": enabled,
+                    "path": user_root,
+                    "checked_in": False,
+                    "portable_by_user_backup_only": True,
+                },
+                {
+                    "id": "repo-local-overlay",
+                    "owner": "repo-local",
+                    "path": overlay_path.as_posix(),
+                    "exists": overlay_exists,
+                    "checked_in": False,
+                    "precedence": "overrides user-local guidance only for this repository",
+                },
+                {
+                    "id": "correction-events",
+                    "owner": "repo-local",
+                    "path": correction_path.as_posix(),
+                    "exists": correction_exists,
+                    "checked_in": False,
+                    "retention": "bounded-by-correction-event-store-update",
+                },
+            ],
+            "conflict_resolution": {
+                "suppression": "repo overlay may suppress user-local guidance for one stable target id without deleting user-local data",
+                "rename_or_generation_change": "resolve by stable_target_id first; aliases/display names are migration hints only",
+                "ambiguous_identity": "fail-closed until the caller supplies one stable target_id",
+                "removal": "deleting repo-local overlay or correction events has no checked-in repository meaning",
+            },
             "user_local_target_guidance": {
                 "enabled": enabled,
                 "root": user_root,

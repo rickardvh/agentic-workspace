@@ -517,6 +517,11 @@
             "function": "_run_evaluation_adapter"
           },
           {
+            "operation_id": "evaluation.prune",
+            "import_module": "agentic_workspace.evaluation",
+            "function": "_run_evaluation_adapter"
+          },
+          {
             "operation_id": "evaluation.register",
             "import_module": "agentic_workspace.evaluation",
             "function": "_run_evaluation_adapter"
@@ -4691,6 +4696,58 @@
                       "--reason"
                     ],
                     "default": ""
+                  },
+                  {
+                    "name": "expected_revision",
+                    "flags": [
+                      "--expected-revision"
+                    ],
+                    "type": "integer",
+                    "default": 0
+                  }
+                ]
+              },
+              {
+                "name": "prune",
+                "help": "Prune or compact local evaluation observation history.",
+                "operation_ref": {
+                  "id": "evaluation.prune",
+                  "path": "operations/evaluation.prune.json"
+                },
+                "options": [
+                  {
+                    "name": "target",
+                    "flags": [
+                      "--target"
+                    ],
+                    "help": "Repository path."
+                  },
+                  {
+                    "name": "format",
+                    "flags": [
+                      "--format"
+                    ],
+                    "choices": [
+                      "text",
+                      "json"
+                    ],
+                    "default": "text",
+                    "help": "Output format."
+                  },
+                  {
+                    "name": "evaluation_id",
+                    "flags": [
+                      "--evaluation-id"
+                    ],
+                    "required": true
+                  },
+                  {
+                    "name": "dry_run",
+                    "flags": [
+                      "--dry-run"
+                    ],
+                    "action": "store_true",
+                    "default": false
                   }
                 ]
               }

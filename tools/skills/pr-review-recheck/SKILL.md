@@ -26,7 +26,12 @@ Use this repo-owned skill when reviewing an Agentic Workspace PR, checking a fix
    - what intent it serves;
    - what remains unresolved;
    - whether the PR may honestly close each linked issue.
-7. Decide the action:
+7. For PRs that use longitudinal evaluation as part of issue closure, check the split explicitly:
+   - deterministic implementation behavior still needs present-tense proof and cannot be deferred into an evaluation;
+   - the evaluation must have owner, criteria, evidence sources, report sinks, collection policy, conclusion policy, and a fresh/current admitted result unless the PR only claims definition setup;
+   - known defects, failed or stale proof, vague future-evidence text, superseded results, or missing current authority block closure;
+   - direct deterministic work should remain directly closable when proof and intent are satisfied; do not add evaluation ceremony where no future-evidence uncertainty exists.
+8. Decide the action:
    - approve / ready when intent, proof, CI, labels, and closure all line up;
    - comment with a blocker when the ordinary path would be wrong after merge;
    - comment with non-blocking suggestions only when they should not delay merge;
@@ -46,6 +51,7 @@ When rechecking after a fix, do not repeat the whole original review by default.
 Treat these as blockers unless the human explicitly accepts the risk:
 
 - linked issue would close without final satisfaction being true;
+- longitudinal evaluation is used to substitute for unfinished implementation, missing present proof, known defects, vague future evidence, stale/superseded results, or absent current evaluation authority;
 - proof is missing, stale, too narrow, or contradicted by the diff;
 - checked-in Planning, Memory, payload, or generated state is stale after the claimed closeout;
 - package-affecting changes lack exactly one semver label;
@@ -61,7 +67,7 @@ Report in this shape:
 - `intent_served`: which issue or product intent is served
 - `proof`: CI, validation, focused checks, or missing proof
 - `unresolved`: blockers or remaining non-blocking risks
-- `closure_honest`: yes / no / partial, with issue refs
+- `closure_honest`: yes / no / partial, with issue refs and any evaluation-boundary reason
 - `next_action`: comment, approve, wait, request fix, label, or merge
 
 ## Rules

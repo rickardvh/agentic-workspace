@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentic-workspace.local/schemas/planning-issue-relation.schema.json",
+  "title": "Planning issue relation",
+  "description": "Durable strategic relation between an external work item and a Planning lane.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "external_ref",
+    "lane_id",
+    "priority",
+    "depends_on",
+    "rationale",
+    "maturity",
+    "shaping_revision",
+    "relation_revision",
+    "created_at",
+    "updated_at",
+    "authority"
+  ],
+  "properties": {
+    "kind": {
+      "const": "planning-issue-relation/v1",
+      "description": "Schema discriminator for durable issue-to-lane shaping records."
+    },
+    "external_ref": {
+      "type": "string",
+      "minLength": 1,
+      "description": "External issue or tracker reference owned by this relation."
+    },
+    "lane_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Planning lane that owns strategic membership for the external work item."
+    },
+    "priority": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Lane-local priority value for ordering shaped issue work."
+    },
+    "depends_on": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true,
+      "description": "External references that should precede this work item."
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Human or agent rationale for the selected lane and ordering."
+    },
+    "maturity": {
+      "enum": [
+        "observed",
+        "shaped",
+        "ready-to-promote",
+        "blocked",
+        "deferred"
+      ],
+      "description": "Current strategic shaping maturity for the issue relation."
+    },
+    "shaping_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonic semantic edit count for this relation record."
+    },
+    "relation_revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Content revision token used for field-scoped optimistic edits."
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Creation timestamp recorded by the relation writer."
+    },
+    "updated_at": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Last semantic update timestamp recorded by the relation writer."
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "membership",
+        "priority",
+        "dependencies",
+        "rationale",
+        "maturity",
+        "execution_lifecycle"
+      ],
+      "properties": {
+        "membership": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Authority statement for lane membership."
+        },
+        "priority": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Authority statement for priority/order."
+        },
+        "dependencies": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Authority statement for dependency shaping."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Authority statement for shaping rationale."
+        },
+        "maturity": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Authority statement for shaping maturity."
+        },
+        "execution_lifecycle": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Boundary statement excluding activation, proof, and execution lifecycle truth."
+        }
+      },
+      "description": "Explicit authority boundary for fields this relation owns and does not own."
+    }
+  },
+  "x-agentic-workspace-doc-role": "schema-reference"
+}
