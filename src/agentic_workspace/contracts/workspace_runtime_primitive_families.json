@@ -522,6 +522,7 @@
           "_read_only_response_posture_payload",
           "_replacement_or_removal_intent",
           "_record_decision_point_confirmation",
+          "_record_trusted_assignment_outcome_from_ordinary_boundary",
           "_requirement_grounding_payload",
           "_reuse_pressure_payload",
           "_routine_work_context_payload",
