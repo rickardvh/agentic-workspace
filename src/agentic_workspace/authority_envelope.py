@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import re
 import subprocess
+import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +18,12 @@ PROTECTED_MUTATION_BOUNDARIES = [
     "closeout",
 ]
 MUTATION_CLAIMS_PATH = ".agentic-workspace/local/mutation-claims.json"
+MUTATION_CLAIMS_LOCK_PATH = ".agentic-workspace/local/mutation-claims.lock"
+MUTATION_CLAIM_LEASE_SECONDS = 15 * 60
+MUTATION_CLAIM_LOCK_STALE_SECONDS = 2 * 60
+INSTRUCTION_PROVENANCE_RECEIPT_ROOT = Path(".agentic-workspace") / "authority" / "receipts"
+GOVERNANCE_RECEIPT_ROOT = Path(".agentic-workspace") / "governance" / "receipts"
+HOST_RECEIPT_INDEX_KIND = "agentic-workspace/host-receipt-index/v1"
 
 INSTRUCTION_PROVENANCE_CLASSES: dict[str, dict[str, Any]] = {
     "host-platform": {
@@ -124,8 +134,139 @@ def _list_payload(value: Any) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+def _dict_payload(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _host_receipt_path(*, target_root: Path, store_root: Path, receipt_ref: str) -> Path:
+    receipt_text = receipt_ref.strip()
+    if not receipt_text:
+        raise ValueError("receipt ref is required")
+    root = (target_root / store_root).resolve()
+    if "://" in receipt_text:
+        receipt_id = re.sub(r"[^A-Za-z0-9_.-]+", "-", receipt_text.rsplit("/", 1)[-1]).strip("-")
+        if not receipt_id:
+            raise ValueError("receipt ref has no stable id")
+        return root / f"{receipt_id}.json"
+    candidate = Path(receipt_text)
+    if candidate.is_absolute():
+        raise ValueError("receipt ref must be repo-relative")
+    resolved = (target_root / candidate).resolve()
+    if not resolved.is_relative_to(root):
+        raise ValueError("receipt ref must resolve inside the owning receipt store")
+    if resolved.suffix != ".json":
+        raise ValueError("receipt ref must point to a JSON receipt")
+    return resolved
+
+
+def _load_indexed_host_receipt(*, target_root: Path, store_root: Path, receipt_ref: str) -> dict[str, Any]:
+    path = _host_receipt_path(target_root=target_root, store_root=store_root, receipt_ref=receipt_ref)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("receipt must be a JSON object")
+    receipt_id = str(payload.get("receipt_id") or payload.get("id") or path.stem).strip()
+    index_path = (target_root / store_root / "index.json").resolve()
+    index_payload = json.loads(index_path.read_text(encoding="utf-8"))
+    if not isinstance(index_payload, dict) or index_payload.get("kind") != HOST_RECEIPT_INDEX_KIND:
+        raise ValueError("receipt store index has an invalid kind")
+    entry = _dict_payload(_dict_payload(index_payload.get("receipts")).get(receipt_id))
+    if not entry:
+        raise ValueError("receipt is not registered in its owning index")
+    indexed_path = ((target_root / store_root).resolve() / str(entry.get("path") or "")).resolve()
+    if indexed_path != path.resolve():
+        raise ValueError("receipt index path does not match receipt")
+    if str(entry.get("status") or payload.get("status") or "current").strip() not in {"current", "fresh", "accepted"}:
+        raise ValueError("receipt is not current")
+    if entry.get("superseded_by") or payload.get("superseded_by") or payload.get("revoked_at"):
+        raise ValueError("receipt is superseded or revoked")
+    indexed_revision = str(entry.get("revision") or "").strip()
+    receipt_revision = str(payload.get("revision") or "").strip()
+    if indexed_revision and receipt_revision and indexed_revision != receipt_revision:
+        raise ValueError("receipt revision does not match index")
+    return payload
+
+
+def _write_indexed_host_receipt(*, target_root: Path, store_root: Path, receipt_id: str, receipt: dict[str, Any]) -> str:
+    safe_id = re.sub(r"[^A-Za-z0-9_.-]+", "-", receipt_id.strip()).strip("-")
+    if not safe_id:
+        raise ValueError("receipt id is required")
+    root = target_root / store_root
+    root.mkdir(parents=True, exist_ok=True)
+    revision = str(receipt.get("revision") or time.time()).strip()
+    payload = {
+        **receipt,
+        "receipt_id": str(receipt.get("receipt_id") or safe_id).strip(),
+        "status": str(receipt.get("status") or "current").strip(),
+        "revision": revision,
+    }
+    path = root / f"{safe_id}.json"
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    index_path = root / "index.json"
+    index_payload = json.loads(index_path.read_text(encoding="utf-8")) if index_path.is_file() else {}
+    receipts = _dict_payload(index_payload.get("receipts"))
+    receipts[payload["receipt_id"]] = {
+        "path": f"{safe_id}.json",
+        "status": payload["status"],
+        "revision": revision,
+    }
+    index_path.write_text(
+        json.dumps({"kind": HOST_RECEIPT_INDEX_KIND, "receipts": receipts}, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return f"aw://{store_root.as_posix()}/{safe_id}"
+
+
 def _claim_store_path(target_root: Path) -> Path:
     return target_root / MUTATION_CLAIMS_PATH
+
+
+def _claim_lock_path(target_root: Path) -> Path:
+    return target_root / MUTATION_CLAIMS_LOCK_PATH
+
+
+@contextmanager
+def _mutation_claim_store_lock(target_root: Path, *, owner_id: str):
+    path = _claim_lock_path(target_root)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    acquired = False
+    deadline = time.time() + 1.0
+    while not acquired:
+        try:
+            fd = os.open(str(path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            try:
+                stale = time.time() - path.stat().st_mtime > MUTATION_CLAIM_LOCK_STALE_SECONDS
+            except OSError:
+                stale = False
+            if stale:
+                try:
+                    path.unlink()
+                    continue
+                except OSError:
+                    pass
+            if time.time() >= deadline:
+                raise TimeoutError("mutation claim store lock is held by another process")
+            time.sleep(0.02)
+            continue
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(
+                json.dumps(
+                    {
+                        "kind": "agentic-workspace/mutation-claim-lock/v1",
+                        "owner_id": owner_id,
+                        "acquired_at": time.time(),
+                    },
+                    sort_keys=True,
+                )
+            )
+        acquired = True
+    try:
+        yield
+    finally:
+        if acquired:
+            try:
+                path.unlink()
+            except OSError:
+                pass
 
 
 def _read_mutation_claims(target_root: Path) -> list[dict[str, Any]]:
@@ -181,6 +322,27 @@ def _path_overlaps(left: str, right: str) -> bool:
     )
 
 
+def _claim_is_live(claim: dict[str, Any], now: float) -> bool:
+    if str(claim.get("status") or "active") != "active":
+        return False
+    acquired_at = claim.get("acquired_at_epoch")
+    if acquired_at is None:
+        return True
+    try:
+        acquired_epoch = float(acquired_at)
+    except (TypeError, ValueError):
+        return True
+    lease_seconds = claim.get("lease_seconds")
+    if lease_seconds is None:
+        lease = MUTATION_CLAIM_LEASE_SECONDS
+    else:
+        try:
+            lease = float(lease_seconds)
+        except (TypeError, ValueError):
+            lease = MUTATION_CLAIM_LEASE_SECONDS
+    return now - acquired_epoch <= lease
+
+
 def _mutation_claim_lifecycle(
     *,
     target_root: Path,
@@ -203,68 +365,112 @@ def _mutation_claim_lifecycle(
             sort_keys=True,
         ).encode("utf-8")
     ).hexdigest()[:16]
-    claims = _read_mutation_claims(target_root)
-    active_claims = [claim for claim in claims if str(claim.get("status") or "active") == "active"]
-    overlap_claims = [
-        claim
-        for claim in active_claims
-        if str(claim.get("owner_id") or "") != owner_id
-        and any(_path_overlaps(path, claimed) for path in allowed_paths or ["."] for claimed in _list_payload(claim.get("allowed_paths")))
-    ]
-    if overlap_claims:
+    if action == "acquire-and-release":
         return {
             "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
-            "status": "rejected-overlap",
+            "status": "rejected-unsupported-pre-release",
             "claim_action": action,
             "claim_id": claim_id,
             "owner_id": owner_id,
-            "overlap_claims": [
-                {
-                    "claim_id": claim.get("claim_id"),
-                    "owner_id": claim.get("owner_id"),
-                    "allowed_paths": claim.get("allowed_paths"),
-                    "baseline_id": claim.get("baseline_id"),
+            "store_ref": MUTATION_CLAIMS_PATH,
+            "lock_ref": MUTATION_CLAIMS_LOCK_PATH,
+            "persistent_residue": False,
+            "rule": "Protected mutation claims must remain held across the protected operation and be released in a separate finally/closeout step.",
+        }
+    try:
+        with _mutation_claim_store_lock(target_root, owner_id=owner_id):
+            now = time.time()
+            claims = _read_mutation_claims(target_root)
+            live_claims = [claim for claim in claims if _claim_is_live(claim, now)]
+            stale_claims = [claim for claim in claims if not _claim_is_live(claim, now)]
+            overlap_claims = [
+                claim
+                for claim in live_claims
+                if str(claim.get("owner_id") or "") != owner_id
+                and any(
+                    _path_overlaps(path, claimed)
+                    for path in allowed_paths or ["."]
+                    for claimed in _list_payload(claim.get("allowed_paths"))
+                )
+            ]
+            if overlap_claims:
+                return {
+                    "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
+                    "status": "rejected-overlap",
+                    "claim_action": action,
+                    "claim_id": claim_id,
+                    "owner_id": owner_id,
+                    "overlap_claims": [
+                        {
+                            "claim_id": claim.get("claim_id"),
+                            "owner_id": claim.get("owner_id"),
+                            "allowed_paths": claim.get("allowed_paths"),
+                            "baseline_id": claim.get("baseline_id"),
+                            "lease_seconds": claim.get("lease_seconds"),
+                            "acquired_at_epoch": claim.get("acquired_at_epoch"),
+                        }
+                        for claim in overlap_claims
+                    ],
+                    "store_ref": MUTATION_CLAIMS_PATH,
+                    "lock_ref": MUTATION_CLAIMS_LOCK_PATH,
+                    "stale_recovered_count": len(stale_claims),
+                    "rule": "Overlapping live mutation claims from other owners reject before protected mutation admission.",
                 }
-                for claim in overlap_claims
-            ],
-            "store_ref": MUTATION_CLAIMS_PATH,
-            "rule": "Overlapping live mutation claims from other owners reject before protected mutation admission.",
-        }
-    if action in {"release", "cleanup"}:
-        remaining = [claim for claim in claims if not (claim.get("claim_id") == claim_id or claim.get("owner_id") == owner_id)]
-        _write_mutation_claims(target_root, remaining)
+            if action in {"release", "cleanup"}:
+                remaining = [claim for claim in live_claims if not (claim.get("claim_id") == claim_id or claim.get("owner_id") == owner_id)]
+                _write_mutation_claims(target_root, remaining)
+                return {
+                    "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
+                    "status": "released",
+                    "claim_action": action,
+                    "claim_id": claim_id,
+                    "owner_id": owner_id,
+                    "store_ref": MUTATION_CLAIMS_PATH,
+                    "lock_ref": MUTATION_CLAIMS_LOCK_PATH,
+                    "persistent_residue": bool(remaining),
+                    "stale_recovered_count": len(stale_claims),
+                }
+            if action == "acquire":
+                claim = {
+                    "claim_id": claim_id,
+                    "owner_id": owner_id,
+                    "boundary_id": boundary_id,
+                    "allowed_paths": allowed_paths,
+                    "allowed_effects": allowed_effects,
+                    "baseline_id": baseline_id,
+                    "status": "active",
+                    "acquired_at_epoch": now,
+                    "updated_at_epoch": now,
+                    "lease_seconds": MUTATION_CLAIM_LEASE_SECONDS,
+                }
+                merged = [existing for existing in live_claims if existing.get("claim_id") != claim_id]
+                merged.append(claim)
+                _write_mutation_claims(target_root, merged)
+                return {
+                    "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
+                    "status": "acquired",
+                    "claim_action": action,
+                    "claim_id": claim_id,
+                    "owner_id": owner_id,
+                    "store_ref": MUTATION_CLAIMS_PATH,
+                    "lock_ref": MUTATION_CLAIMS_LOCK_PATH,
+                    "persistent_residue": True,
+                    "stale_recovered_count": len(stale_claims),
+                    "lease_seconds": MUTATION_CLAIM_LEASE_SECONDS,
+                }
+            if stale_claims:
+                _write_mutation_claims(target_root, live_claims)
+    except TimeoutError:
         return {
             "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
-            "status": "released",
+            "status": "rejected-lock-unavailable",
             "claim_action": action,
             "claim_id": claim_id,
             "owner_id": owner_id,
             "store_ref": MUTATION_CLAIMS_PATH,
-            "persistent_residue": bool(remaining),
-        }
-    if action in {"acquire", "acquire-and-release"}:
-        claim = {
-            "claim_id": claim_id,
-            "owner_id": owner_id,
-            "boundary_id": boundary_id,
-            "allowed_paths": allowed_paths,
-            "allowed_effects": allowed_effects,
-            "baseline_id": baseline_id,
-            "status": "active",
-        }
-        merged = [existing for existing in claims if existing.get("claim_id") != claim_id]
-        merged.append(claim)
-        _write_mutation_claims(target_root, merged)
-        if action == "acquire-and-release":
-            _write_mutation_claims(target_root, [existing for existing in merged if existing.get("claim_id") != claim_id])
-        return {
-            "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
-            "status": "acquired-and-released" if action == "acquire-and-release" else "acquired",
-            "claim_action": action,
-            "claim_id": claim_id,
-            "owner_id": owner_id,
-            "store_ref": MUTATION_CLAIMS_PATH,
-            "persistent_residue": action == "acquire",
+            "lock_ref": MUTATION_CLAIMS_LOCK_PATH,
+            "persistent_residue": False,
+            "rule": "Mutation claim read/check/write must occur under the local claim-store lock.",
         }
     return {
         "kind": "agentic-workspace/mutation-claim-lifecycle/v1",
@@ -273,6 +479,7 @@ def _mutation_claim_lifecycle(
         "claim_id": claim_id,
         "owner_id": owner_id,
         "store_ref": MUTATION_CLAIMS_PATH,
+        "lock_ref": MUTATION_CLAIMS_LOCK_PATH,
         "persistent_residue": False,
         "rule": "Default protected-boundary inspection rejects existing overlap but does not leave a local claim residue.",
     }
@@ -774,17 +981,25 @@ def admit_live_mutation_boundary(
         baseline_id=str(current.get("baseline_id") or ""),
         claim_action=claim_action,
     )
-    if claim_lifecycle["status"] == "rejected-overlap":
+    if str(claim_lifecycle["status"]).startswith("rejected"):
         admission["status"] = "rejected"
         admission["admitted"] = False
         admission.setdefault("failures", []).append(
             {
-                "reason": "overlapping-mutation-claim",
+                "reason": "overlapping-mutation-claim"
+                if claim_lifecycle["status"] == "rejected-overlap"
+                else str(claim_lifecycle["status"]),
                 "field": "mutation_claims",
-                "repair": "Wait for, supersede, or explicitly clean up the overlapping owner claim before mutating shared paths.",
+                "repair": "Wait for, supersede, or explicitly clean up the overlapping owner claim before mutating shared paths."
+                if claim_lifecycle["status"] == "rejected-overlap"
+                else "Acquire the mutation claim under the store lock and release it only after the protected operation finishes.",
             }
         )
-        admission["repair"] = "Wait for, supersede, or explicitly clean up the overlapping owner claim before mutating shared paths."
+        admission["repair"] = (
+            "Wait for, supersede, or explicitly clean up the overlapping owner claim before mutating shared paths."
+            if claim_lifecycle["status"] == "rejected-overlap"
+            else "Acquire the mutation claim under the store lock and release it only after the protected operation finishes."
+        )
     admission["current_baseline"] = current
     admission["claim_lifecycle"] = claim_lifecycle
     admission["live_resolution"] = {
@@ -830,24 +1045,48 @@ def revalidate_mutation_baseline(
     )
 
 
-def _normalise_instruction_sources(*, task_text: str | None, instruction_sources: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+def _normalise_instruction_sources(
+    *, target_root: Path, task_text: str | None, instruction_sources: list[dict[str, Any]] | None
+) -> list[dict[str, Any]]:
     sources = [
-        {"class": "host-platform", "source": "runtime-host", "trusted_identity": True},
-        {"class": "repo-policy", "source": "repository-config", "trusted_identity": True},
-        {"class": "trusted-human-task", "source": "task-text", "present": bool(task_text), "trusted_identity": True},
-        {"class": "planning-assignment-handoff", "source": "planning-state", "trusted_identity": True},
-        {"class": "repo-docs-and-artifacts", "source": "repo-material", "trusted_identity": True},
-        {"class": "untrusted-content", "source": "external-content", "trusted_identity": False},
+        {"class": "host-platform", "source": "runtime-host", "trusted_identity": True, "_host_resolved": True},
+        {"class": "repo-policy", "source": "repository-config", "trusted_identity": True, "_host_resolved": True},
+        {
+            "class": "trusted-human-task",
+            "source": "task-text",
+            "present": bool(task_text),
+            "trusted_identity": True,
+            "_host_resolved": True,
+        },
+        {"class": "planning-assignment-handoff", "source": "planning-state", "trusted_identity": True, "_host_resolved": True},
+        {"class": "repo-docs-and-artifacts", "source": "repo-material", "trusted_identity": True, "_host_resolved": True},
+        {"class": "untrusted-content", "source": "external-content", "trusted_identity": False, "_host_resolved": True},
     ]
     if instruction_sources:
         sources.extend(instruction_sources)
     resolved: list[dict[str, Any]] = []
     for source in sources:
         claimed_class = str(source.get("class") or "untrusted-content").strip()
-        trusted_identity = bool(source.get("trusted_identity") or source.get("trusted_host_identity"))
+        receipt: dict[str, Any] = {}
+        receipt_ref = str(source.get("trusted_provenance_ref") or source.get("host_provenance_ref") or "").strip()
+        if receipt_ref:
+            try:
+                receipt = _load_indexed_host_receipt(
+                    target_root=target_root,
+                    store_root=INSTRUCTION_PROVENANCE_RECEIPT_ROOT,
+                    receipt_ref=receipt_ref,
+                )
+            except (OSError, ValueError, json.JSONDecodeError, UnicodeDecodeError):
+                receipt = {}
+        receipt_class = str(receipt.get("class") or receipt.get("authority_class") or "").strip()
+        host_resolved = bool(source.get("_host_resolved")) or bool(receipt)
+        trusted_identity = bool(host_resolved and (source.get("trusted_identity") or receipt))
         source_class = claimed_class
         authority_resolution_status = "trusted-host-boundary" if trusted_identity else "caller-supplied-data"
-        if not trusted_identity and claimed_class in {"host-platform", "repo-policy", "trusted-human-task"}:
+        if receipt_class in INSTRUCTION_PROVENANCE_CLASSES:
+            source_class = receipt_class
+            authority_resolution_status = "host-receipt-resolved"
+        elif not trusted_identity and claimed_class in {"host-platform", "repo-policy", "trusted-human-task"}:
             source_class = "untrusted-content"
             authority_resolution_status = "blocked-self-asserted-provenance"
         rule = INSTRUCTION_PROVENANCE_CLASSES.get(source_class, INSTRUCTION_PROVENANCE_CLASSES["untrusted-content"])
@@ -857,6 +1096,8 @@ def _normalise_instruction_sources(*, task_text: str | None, instruction_sources
                 "class": source_class if source_class in INSTRUCTION_PROVENANCE_CLASSES else "untrusted-content",
                 "claimed_class": claimed_class,
                 "trusted_identity": trusted_identity,
+                "trusted_provenance_ref": receipt_ref or None,
+                "trusted_provenance_receipt_id": receipt.get("receipt_id"),
                 "authority_resolution_status": authority_resolution_status,
                 "trust": rule["trust"],
                 "rank": rule["rank"],
@@ -867,9 +1108,15 @@ def _normalise_instruction_sources(*, task_text: str | None, instruction_sources
     return resolved
 
 
-def _trusted_governance_receipt(policy_mutation: dict[str, Any] | None) -> dict[str, Any] | None:
-    receipt = (policy_mutation or {}).get("trusted_governance_receipt")
-    if not isinstance(receipt, dict):
+def _trusted_governance_receipt(*, target_root: Path, policy_mutation: dict[str, Any] | None) -> dict[str, Any] | None:
+    receipt_ref = str((policy_mutation or {}).get("trusted_governance_receipt_ref") or "").strip()
+    if not receipt_ref:
+        return None
+    try:
+        receipt = _load_indexed_host_receipt(target_root=target_root, store_root=GOVERNANCE_RECEIPT_ROOT, receipt_ref=receipt_ref)
+    except (OSError, ValueError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+    if str(receipt.get("kind") or "") != "agentic-workspace/governance-receipt/v1":
         return None
     authority_class = str(receipt.get("authority_class") or "")
     operation_id = str(receipt.get("operation_id") or "")
@@ -886,6 +1133,8 @@ def _trusted_governance_receipt(policy_mutation: dict[str, Any] | None) -> dict[
         "authority_class": authority_class,
         "authoriser": authoriser,
         "policy_revision": policy_revision,
+        "receipt_ref": receipt_ref,
+        "receipt_id": receipt.get("receipt_id"),
         "scope": receipt.get("scope") or [],
         "compatibility": receipt.get("compatibility") or "not-recorded",
     }
@@ -935,7 +1184,7 @@ def resolve_authority_effect_envelope(
     delegated_authority: dict[str, Any] | None = None,
     policy_mutation: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    sources = _normalise_instruction_sources(task_text=task_text, instruction_sources=instruction_sources)
+    sources = _normalise_instruction_sources(target_root=target_root, task_text=task_text, instruction_sources=instruction_sources)
     effect_classes = list(SIDE_EFFECT_TAXONOMY)
     for effect in requested_effects or []:
         if effect not in effect_classes:
@@ -947,16 +1196,21 @@ def resolve_authority_effect_envelope(
     delegated_intersection = [effect for effect in requested_delegated if effect in set(parent_allowed) and effect in set(allowed_effects)]
     rejected_delegated = [effect for effect in requested_delegated if effect not in set(delegated_intersection)]
     mutation_authority = str((policy_mutation or {}).get("authority_class") or "").strip()
-    governance_receipt = _trusted_governance_receipt(policy_mutation)
+    governance_receipt = _trusted_governance_receipt(target_root=target_root, policy_mutation=policy_mutation)
     effective_mutation_authority = str((governance_receipt or {}).get("authority_class") or "")
     mutation_source = next((source for source in sources if source["class"] == effective_mutation_authority), None)
     policy_requested = bool((policy_mutation or {}).get("requested"))
+    governance_scope = [str(path) for path in _list_payload((governance_receipt or {}).get("scope")) if str(path).strip()]
+    governance_scope_ok = not governance_scope or all(
+        any(_path_overlaps(changed_path, scope_path) for scope_path in governance_scope) for changed_path in changed_paths
+    )
     policy_authorised = bool(
         policy_requested
         and governance_receipt
         and mutation_source
         and mutation_source.get("may_authorise_side_effects")
         and effective_mutation_authority in {"host-platform", "repo-policy", "trusted-human-task"}
+        and governance_scope_ok
     )
     return {
         "kind": "agentic-workspace/authority-effect-resolution/v1",
@@ -980,6 +1234,7 @@ def resolve_authority_effect_envelope(
             "allowed_authority_classes": ["host-platform", "repo-policy", "trusted-human-task"],
             "trusted_governance_receipt": governance_receipt,
             "receipt_required": True,
+            "scope_authorised": governance_scope_ok,
             "repair": "Use an explicit trusted human task or repo-policy route for repository policy promotion/mutation."
             if policy_requested and not policy_authorised
             else "none",
