@@ -85,6 +85,7 @@ Cheap implementer context for a bounded changed-path scope.
 | `path_boundaries` | array of ref `#/$defs/path_boundary` | yes |  | Path-specific ownership and locality constraints for the changed paths. |  |  |
 | `authority_markers` | array of ref `#/$defs/authority_marker` | yes |  | Authority markers relevant to the implementation scope. |  |  |
 | `change_impact` | object | yes |  | Changed-path ownership, generatedness, authority, related contract, and proof-impact projection. |  |  |
+| `authority_envelope` | object | no |  | Mutation authority envelope and point-in-time mutation baseline for the changed-path scope. |  |  |
 | `generated_surface_trust` | object | yes |  | Compact generated-source trust packet naming canonical source, freshness status, refresh command, direct-edit policy, and validation command for generated changed paths. |  |  |
 | `task_contract` | object | yes |  | Compact assembled task contract view covering intent, acceptance, autonomy/escalation, proof expectations, and stop conditions. |  |  |
 | `task_intent` | object | yes |  | Task-intent carry-forward packet used to derive acceptance, proof guidance, objective-drift checks, and closeout prompts. |  |  |
@@ -237,6 +238,12 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.token_tradeoff` | string | yes |  | When token saving is acceptable or should be deferred. |  |  |
 | `execution_posture.ready_handoff` | anyOf | yes |  | Prompt or handoff packet to use when local mode allows manual or suggested delegation. |  |  |
 | `execution_posture.delegation_decision` | object | yes |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals. |  |  |
+| `execution_posture.implementation_allowed` | boolean | no |  | Whether the selected assignment/delegation posture permits local implementation for this scope. |  |  |
+| `execution_posture.assignment_policy` | object | no |  | Structured assignment policy and manual transport posture used for the delegation decision. |  |  |
+| `execution_posture.target_evidence` | object | no |  | Current target evidence used to evaluate assignment candidates. |  |  |
+| `execution_posture.assignment_decision` | object | no |  | Current assignment decision derived from policy, candidates, and target evidence. |  |  |
+| `execution_posture.assignment_gate` | object | no |  | Assignment gate preserving the handoff identity, allowed effects, proof obligation, and mutation baseline. |  |  |
+| `execution_posture.delegated_run_lifecycle` | object | no |  | Delegated run lifecycle, public operations, transport status, and return admission gate. |  |  |
 | `execution_posture.decomposition_delegation` | object | no |  | Delegation candidates discovered from active planning decompositions, when active decomposed work is visible. |  |  |
 | `execution_posture.inference_limits` | array of string | yes |  | Limits that prevent the posture recommendation from becoming hidden execution authority. |  |  |
 | `durable_intent` | object | yes |  | Compact durable system or subsystem intent pressure that may affect scope, proof, delegation, or closeout. |  |  |
