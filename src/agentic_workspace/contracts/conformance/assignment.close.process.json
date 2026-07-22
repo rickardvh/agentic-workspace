@@ -1,0 +1,69 @@
+{
+  "adapter": {
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "assignment",
+      "close",
+      "--target",
+      ".",
+      "--run-id",
+      "run-1",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root",
+    "kind": "process"
+  },
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "filesystem": {
+      "allowed_write_directories": [
+        ".agentic-workspace/local/assignment-runs/run-1"
+      ],
+      "allowed_write_paths": [],
+      "forbidden_paths": [],
+      "required_paths": []
+    },
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "stdout": {
+      "field_assertions": [
+        {
+          "equals": "agentic-workspace/assignment-lifecycle-result/v1",
+          "path": [
+            "kind"
+          ]
+        },
+        {
+          "equals": "close",
+          "path": [
+            "status"
+          ]
+        }
+      ],
+      "format": "json"
+    }
+  },
+  "fixtures": [
+    {
+      "files": {
+        ".agentic-workspace/config.toml": "[workspace]\ncli_invoke = \"agentic-workspace\"\n",
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      },
+      "id": "minimal-repo"
+    }
+  ],
+  "id": "assignment.close.process",
+  "operation_id": "assignment.close",
+  "schema_version": "agentic-workspace/conformance/v1"
+}

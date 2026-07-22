@@ -1,0 +1,81 @@
+{
+  "$id": "agentic-workspace/assignment_lifecycle_result.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "description": "Result emitted by public assignment lifecycle operations, including transition status, mutation effect, local artifacts, and recovery guidance.",
+  "properties": {
+    "artifact_refs": {
+      "description": "Local artifact references written or inspected during the lifecycle transition.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "kind": {
+      "description": "Versioned result envelope discriminator for assignment lifecycle operations.",
+      "const": "agentic-workspace/assignment-lifecycle-result/v1"
+    },
+    "mutation_applied": {
+      "description": "Whether the operation applied a local lifecycle state mutation.",
+      "type": "boolean"
+    },
+    "operation_id": {
+      "description": "Public operation id that produced this lifecycle result.",
+      "type": "string"
+    },
+    "outcome": {
+      "description": "High-level result category for automation and closeout proof.",
+      "enum": [
+        "applied",
+        "noop",
+        "blocked",
+        "failed"
+      ],
+      "type": "string"
+    },
+    "reason_code": {
+      "description": "Machine-readable reason for blocked, failed, or no-op outcomes when available.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "recovery_command": {
+      "description": "Suggested command or action to recover from a blocked lifecycle transition.",
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "run_id": {
+      "description": "Assignment run identifier associated with the transition.",
+      "type": "string"
+    },
+    "state": {
+      "description": "Current local lifecycle state after applying or evaluating the transition.",
+      "type": "object"
+    },
+    "status": {
+      "description": "Specific lifecycle status, such as handoff-prepared, awaiting-admission, admitted, integrated, or blocked.",
+      "type": "string"
+    },
+    "transition": {
+      "description": "Lifecycle transition name executed by the operation.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "operation_id",
+    "transition",
+    "status",
+    "outcome",
+    "mutation_applied",
+    "run_id",
+    "artifact_refs",
+    "state"
+  ],
+  "title": "Assignment lifecycle operation result",
+  "type": "object",
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

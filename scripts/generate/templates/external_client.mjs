@@ -151,6 +151,8 @@ export function invokeOperation(operationId, values, { target, invocation, allow
   const missing = [...declared].filter(([name, item]) => item.required && !(name in values)).map(([name]) => name);
   if (unknown.length || missing.length) throw new AWClientError('malformed', 'operation input does not match contract', { unknown, missing });
   const argv = String(contract.command_surface?.command ?? '').split(/\s+/).filter(Boolean);
+  const subcommand = String(contract.command_surface?.subcommand ?? '').trim();
+  if (subcommand && argv.at(-1) !== subcommand) argv.push(subcommand);
   for (const [name, value] of Object.entries(values)) {
     if (name === 'target') continue; const flag = `--${name.replaceAll('_', '-')}`;
     if (typeof value === 'boolean') { if (value) argv.push(flag); }
