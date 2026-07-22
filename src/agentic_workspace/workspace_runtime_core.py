@@ -38661,7 +38661,9 @@ def _manual_transport_admission_payload(
         state = "disabled"
         export_allowed = False
         required = False
-        status = "blocked-transport-disabled" if handoff_required else "disabled"
+        status = (
+            "automatic-route-available" if automatic_method_available else "blocked-transport-disabled" if handoff_required else "disabled"
+        )
     elif policy == "required-when-no-automatic-method":
         export_allowed = True
         required = not automatic_method_available
@@ -38716,9 +38718,35 @@ def _assignment_identity_payload(
         "allowed_paths": allowed_paths if isinstance(allowed_paths, list) else [],
         "return_schema": next_step.get("return_schema") or "delegated-return/v1",
         "proof_obligation_id": proof_obligation.get("id") or next_step.get("proof_obligation_id"),
+        "proof_obligation_revision": proof_obligation.get("revision") or next_step.get("proof_obligation_revision"),
         "stop_conditions": stop_conditions if isinstance(stop_conditions, list) else [],
         "mutation_baseline": assignment_gate.get("mutation_baseline") or next_step.get("mutation_baseline"),
+        "return_admission_owner": "delegated-return.admit",
     }
+    required_fields = [
+        "target",
+        "target_identity_ref",
+        "target_revision",
+        "task_class",
+        "scope_class",
+        "plan_ref",
+        "plan_revision",
+        "slice_id",
+        "slice_revision",
+        "assignment_decision_revision",
+        "handoff_run_id",
+        "role",
+        "allowed_effects",
+        "allowed_paths",
+        "return_schema",
+        "proof_obligation_id",
+        "proof_obligation_revision",
+        "stop_conditions",
+        "mutation_baseline",
+    ]
+    missing_required = [field for field in required_fields if identity.get(field) in (None, "", [])]
+    identity["complete"] = not missing_required
+    identity["missing_required_fields"] = missing_required
     revision_source = json.dumps(identity, sort_keys=True, separators=(",", ":"), default=str)
     identity["revision"] = "sha256:" + hashlib.sha256(revision_source.encode("utf-8")).hexdigest()
     return identity
@@ -38744,23 +38772,28 @@ def _admit_delegated_return(
         else [],
         handoff_required=True,
     )
+    current_proof = _as_dict(assignment_gate.get("aw_proof_receipt") or assignment_gate.get("proof_receipt"))
+    current_baseline = assignment_gate.get("live_mutation_baseline") or assignment_gate.get("mutation_baseline")
     failures: list[dict[str, str]] = []
 
     def reject(reason: str, field: str, recovery: str) -> None:
         failures.append({"reason": reason, "field": field, "recovery": recovery})
 
-    if not manual_transport["export_allowed"]:
+    if not manual_transport["export_allowed"] and not manual_transport["automatic_method_available"]:
         reject("manual-transport-disabled", "manual_transport.policy", "Enable an allowed transport or use an automatic method.")
+    if not identity.get("complete"):
+        reject("incomplete-assignment-identity", "assignment_identity", "Regenerate the assignment with all required identity fields.")
     if returned_work.get("assignment_revision") != identity["revision"]:
         reject(
             "stale-assignment-revision", "assignment_revision", "Refresh the handoff and resubmit against the current assignment revision."
         )
     if returned_work.get("target") != identity["target"]:
         reject("target-mismatch", "target", "Return work from the selected assignment target only.")
-    proof = returned_work.get("aw_proof") or returned_work.get("proof")
-    if not isinstance(proof, dict) or proof.get("result") != "passed" or proof.get("verified_by") != "aw":
+    if current_proof.get("result") != "passed" or current_proof.get("verified_by") != "aw":
         reject(
-            "aw-proof-missing-or-not-passed", "aw_proof.result", "Run AW-owned proof and return a verified passed result before admission."
+            "aw-proof-missing-or-not-passed",
+            "assignment_gate.aw_proof_receipt",
+            "Run AW-owned proof and record the current receipt before admission.",
         )
     if returned_work.get("stop_conditions_hit"):
         reject("stop-condition-hit", "stop_conditions_hit", "Route the stop condition before integration.")
@@ -38772,8 +38805,10 @@ def _admit_delegated_return(
             reject("changed-path-outside-scope", "changed_paths", "Refresh or widen the handoff before admitting returned changes.")
     elif changed_paths and not allowed_paths:
         reject("missing-canonical-scope", "assignment_identity.allowed_paths", "Refresh the assignment so AW can compare returned paths.")
-    if identity.get("mutation_baseline") and returned_work.get("mutation_baseline") != identity.get("mutation_baseline"):
-        reject("mutation-baseline-mismatch", "mutation_baseline", "Rebase or regenerate the returned work against the current baseline.")
+    if identity.get("mutation_baseline") and current_baseline != identity.get("mutation_baseline"):
+        reject(
+            "mutation-baseline-mismatch", "live_mutation_baseline", "Rebase or regenerate the returned work against the current baseline."
+        )
 
     admitted = not failures
     return {
@@ -38783,6 +38818,14 @@ def _admit_delegated_return(
         "admitted": admitted,
         "assignment_identity": identity,
         "manual_transport": manual_transport,
+        "current_authority": {
+            "proof_receipt": current_proof or None,
+            "mutation_baseline": current_baseline,
+            "proof_source": "assignment_gate.aw_proof_receipt",
+            "baseline_source": "assignment_gate.live_mutation_baseline",
+            "worker_reported_proof_trusted": False,
+            "worker_reported_baseline_trusted": False,
+        },
         "failures": failures,
         "safe_recovery": "none" if admitted else failures[0]["recovery"],
         "rule": "Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.",
@@ -39594,17 +39637,19 @@ def _delegated_run_lifecycle_payload(
     admission_operation = {
         "operation_id": "delegated-return.admit",
         "callable": "agentic_workspace.workspace_runtime_core._admit_delegated_return",
+        "public": True,
+        "generated_operation": True,
         "assignment_identity": assignment_identity,
         "input_contract": {
-            "required": ["assignment_revision", "target", "aw_proof"],
+            "required": ["assignment_revision", "target", "return_artifact_ref"],
             "optional": [
                 "changed_paths",
-                "mutation_baseline",
                 "stop_conditions_hit",
             ],
         },
         "rejects": [
             "stale-assignment-revision",
+            "incomplete-assignment-identity",
             "target-mismatch",
             "manual-transport-disabled",
             "missing-canonical-scope",
@@ -39623,6 +39668,8 @@ def _delegated_run_lifecycle_payload(
             "target": assignment_gate.get("selected_target"),
             "required_next_action": assignment_gate.get("required_next_action"),
             "implementation_allowed": assignment_gate.get("implementation_allowed"),
+            "identity_complete": assignment_identity["complete"],
+            "missing_identity_fields": assignment_identity["missing_required_fields"],
         },
         "manual_transport": {
             "policy": manual_transport["policy"],
@@ -39640,8 +39687,10 @@ def _delegated_run_lifecycle_payload(
             {"id": "assignment-selected", "status": assignment_gate.get("status")},
             {
                 "id": "handoff-prepared",
-                "status": "blocked-transport-disabled"
-                if handoff_required and not manual_export_allowed
+                "status": "automatic-route-available"
+                if handoff_required and (not manual_export_allowed) and manual_transport["automatic_method_available"]
+                else "blocked-transport-disabled"
+                if handoff_required and (not manual_export_allowed)
                 else "required"
                 if handoff_required
                 else "not-required",
@@ -39668,21 +39717,68 @@ def _delegated_run_lifecycle_payload(
         "admission_gate": {
             "status": "closed-until-reviewed",
             "operation": admission_operation,
+            "public_operations": [
+                {
+                    "operation_id": "delegated-run.export",
+                    "state_transition": "assignment-selected -> handoff-prepared",
+                    "artifact_state": "local/exported",
+                    "idempotency": "assignment_identity.revision + transport route",
+                },
+                {
+                    "operation_id": "delegated-return.import",
+                    "state_transition": "worker-returned -> received/awaiting-admission",
+                    "artifact_state": "local/received/awaiting-admission",
+                    "idempotency": "handoff_run_id + return artifact digest",
+                },
+                {
+                    "operation_id": "delegated-return.admit",
+                    "state_transition": "received/awaiting-admission -> admitted|rejected|repair-requested",
+                    "artifact_state": "local/admission-review",
+                    "idempotency": "assignment_identity.revision + current authority revisions",
+                },
+                {
+                    "operation_id": "delegated-return.integrate",
+                    "state_transition": "admitted -> integrated",
+                    "artifact_state": "repo mutation boundary",
+                    "idempotency": "admission receipt + live mutation baseline",
+                },
+                {
+                    "operation_id": "delegated-run.close",
+                    "state_transition": "integrated -> closed",
+                    "artifact_state": "closeout/proof receipt",
+                    "idempotency": "integration receipt + closeout proof",
+                },
+            ],
             "identity_fields": [
                 "assignment.target",
+                "assignment.target_identity_ref",
+                "assignment.target_revision",
+                "assignment.task_class",
+                "assignment.scope_class",
+                "assignment.plan_ref",
+                "assignment.plan_revision",
+                "assignment.slice_id",
+                "assignment.slice_revision",
                 "assignment.required_next_action",
                 "manual_transport.policy",
-                "assignment.plan_revision",
-                "assignment.slice_revision",
-                "assignment.target_identity_ref",
                 "assignment.allowed_effects",
                 "assignment.allowed_paths",
+                "assignment.role",
+                "assignment.handoff_run_id",
+                "assignment.return_schema",
                 "assignment.proof_obligation_id",
+                "assignment.proof_obligation_revision",
+                "assignment.stop_conditions",
                 "assignment.mutation_baseline",
                 "assignment.revision",
             ],
-            "required_evidence": ["returned summary", "changed paths or no-change statement", "AW-owned proof result"],
-            "rule": "Returned work is rejected until delegated-return.admit re-reads assignment identity, scope, proof, stop-condition, transport, and baseline evidence immediately before integration.",
+            "required_evidence": [
+                "received/awaiting-admission return artifact",
+                "changed paths or no-change statement",
+                "current AW-owned proof receipt",
+                "live mutation baseline",
+            ],
+            "rule": "Returned work is rejected until delegated-return.admit re-reads assignment identity, scope, proof, stop-condition, transport, and baseline evidence from current AW authorities immediately before integration.",
         },
         "return_contract": [
             "what changed",
