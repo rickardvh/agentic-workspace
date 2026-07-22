@@ -18,6 +18,7 @@
     "burden",
     "finding",
     "recommended_action",
+    "idempotency_key",
     "admission",
     "result_identity",
     "supersedes"
@@ -35,6 +36,11 @@
     "burden": {"enum": ["low", "medium", "high"], "description": "Collection or review burden for this observation."},
     "finding": {"type": "string", "description": "Compact finding text derived from the observation."},
     "recommended_action": {"type": "string", "description": "Bounded next action recommended by the observer, when any."},
+    "idempotency_key": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable duplicate-detection key for retry-safe observation append."
+    },
     "result_identity": {
       "type": "object",
       "required": ["kind", "id", "status", "evaluation_id", "definition_revision", "criterion"],

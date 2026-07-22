@@ -1,0 +1,98 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "evaluation.prune",
+  "command_surface": {
+    "command": "evaluation",
+    "format_option": "format",
+    "subcommand": "prune"
+  },
+  "summary": "Prune or compact bounded local evaluation observation history with a lineage receipt.",
+  "classification": "lifecycle-mutation",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "evaluation_id",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "dry_run",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "json",
+    "schema_ref": "schemas/evaluation_summary.schema.json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": true,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/evaluations.json",
+      "required": true
+    },
+    {
+      "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.jsonl",
+      "required": true
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.jsonl",
+      "required": true,
+      "when": "dry_run is false and compactable observations exist"
+    },
+    {
+      "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.compaction.json",
+      "required": true,
+      "when": "dry_run is false and compactable observations exist"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "compact",
+      "uses": "evaluation.observation.prune",
+      "description": "Take the local lock, retain current/recent records, write compaction lineage, and remove raw compacted local residue."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit prune receipt."
+    }
+  ],
+  "guards": [
+    "Current definition-revision results are retained.",
+    "Compacted records remain represented in a lineage receipt.",
+    "Dry-run reports what would be compacted without changing local observation state."
+  ],
+  "proof": [
+    "evaluation unit tests",
+    "operation contract validates against operation.schema.json"
+  ],
+  "migration_status": "runtime-consumed"
+}

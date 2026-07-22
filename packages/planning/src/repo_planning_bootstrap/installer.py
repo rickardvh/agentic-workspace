@@ -5988,11 +5988,25 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
         if not reason_code:
             continue
         recovery_slice = current_slice or (str(active_slices[0].get("id", "")).strip() if active_slices else f"{lane_id}-slice")
-        recovery_title = f"{str(record.get('title') or _title_from_slug(lane_id)).strip()} Slice"
-        repair_route = (
-            f"{_workspace_cli_invoke(target_root)} planning new-plan --id {recovery_slice} "
-            f"--title {json.dumps(recovery_title)} --activate --lane {lane_id} --target . --format json"
-        )
+        repair_route = f"{_workspace_cli_invoke(target_root)} planning report --target . --format json"
+        repair_options = [
+            {
+                "action": "restore-referenced-owner",
+                "description": "Restore the missing execplan or lane owner named by the current relation.",
+            },
+            {
+                "action": "relink-existing-owner",
+                "description": "Relink lane.current_slice to an existing admitted execplan for the same intended slice.",
+            },
+            {
+                "action": "supersede-stale-relation",
+                "description": "Record an explicit supersede/archive/cancel transition that preserves residual intent and proof ownership.",
+            },
+            {
+                "action": "request-human-selection",
+                "description": "Ask for a concrete owner choice when the intended relation is ambiguous.",
+            },
+        ]
         warnings.append(
             {
                 "warning_class": "lane_current_slice_non_executable",
@@ -6001,8 +6015,8 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
                     f"Lane '{lane_id}' has non-executable current/live slice relation ({reason_code}) for slice '{recovery_slice}'."
                 ),
                 "suggested_fix": (
-                    f"Run agentic-planning lane-activate {lane_id} --current-slice {recovery_slice} --target . --format json "
-                    "after creating or restoring the referenced execplan."
+                    f"Reconcile lane '{lane_id}' current slice '{recovery_slice}' by restoring the referenced owner, "
+                    "relinking to an admitted owner, explicitly superseding the stale relation, or requesting human selection."
                 ),
                 "repair_affordance": {
                     "kind": "planning-live-reference-integrity/v1",
@@ -6012,6 +6026,7 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
                     "execplan_ref": execplan_ref,
                     "reason_code": reason_code,
                     "repair_route": repair_route,
+                    "repair_options": repair_options,
                     "repair_contract": _planning_live_reference_repair_contract(
                         target_root=target_root,
                         owner_surface=path or (PLANNING_MANAGED_ROOT / "lanes").as_posix(),
@@ -6019,6 +6034,7 @@ def _lane_live_reference_warnings(*, target_root: Path, records: list[Any]) -> l
                         subject_id=lane_id,
                         reason_code=reason_code,
                         repair_command=repair_route,
+                        repair_options=repair_options,
                     ),
                 },
             }
@@ -6034,10 +6050,11 @@ def _planning_live_reference_repair_contract(
     subject_id: str,
     reason_code: str,
     repair_command: str = "",
+    repair_options: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Shared fail-closed contract for malformed or stale live Planning references."""
     cli = _workspace_cli_invoke(target_root)
-    repair_command = repair_command or f"{cli} planning reconcile --target . --format json"
+    repair_command = repair_command or f"{cli} planning report --target . --format json"
     return {
         "kind": "agentic-planning/live-reference-repair-contract/v1",
         "status": "fail-closed",
@@ -6047,6 +6064,7 @@ def _planning_live_reference_repair_contract(
             "subject_id": subject_id,
             "repair_command": repair_command,
             "reconcile_command": repair_command,
+            "repair_options": list(repair_options or []),
         },
         "relation": relation,
         "reason_code": reason_code,
@@ -6060,7 +6078,21 @@ def _planning_live_reference_repair_contract(
             "Consumers must reject this detected live relation until the named Planning repair command updates the "
             "same owner relation or returns a concrete blocked reason; consumers must not silently select an alternate owner."
         ),
-        "consumers": ["summary", "status", "doctor", "report"],
+        "consumers": [
+            "startup",
+            "selection",
+            "promotion",
+            "implement",
+            "handoff",
+            "proof",
+            "integration",
+            "closeout",
+            "archive",
+            "summary",
+            "status",
+            "doctor",
+            "report",
+        ],
         "reject_on": [reason_code],
         "preserve": ["unrelated-owners", "historical-archive-evidence", "external-provider-observations"],
         "residue_policy": "leave-no-checked-in-residue-after-successful-reconcile",
@@ -14552,17 +14584,35 @@ def activate_lane_record(
                 execplan_ref = inferred
     if not execplan_ref or not (target_root / execplan_ref).exists():
         recovery_slice = selected_slice or f"{slug}-slice"
-        recovery_title = f"{str(record.get('title') or _title_from_slug(slug)).strip()} Slice"
         result.add(
             "manual review",
             record_path,
-            f"lane activation requires current slice '{recovery_slice}' with an existing execplan",
+            (
+                f"lane activation requires current slice '{recovery_slice}' with an existing execplan; "
+                "restore, relink, supersede, cancel, or request human selection instead of fabricating a new plan"
+            ),
         )
         result.reason_code = "lane-execplan-required"
-        result.recovery_command = (
-            f"{_workspace_cli_invoke(target_root)} planning new-plan --id {recovery_slice} "
-            f"--title {json.dumps(recovery_title)} --activate --lane {slug} --target . --format json"
+        result.recovery_command = f"{_workspace_cli_invoke(target_root)} planning report --target . --format json"
+        return result
+    other_active_slices = [
+        str(slice_record.get("id", "")).strip()
+        for slice_record in record.get("slice_sequence", [])
+        if isinstance(slice_record, dict)
+        and str(slice_record.get("status", "")).strip() == "active"
+        and str(slice_record.get("id", "")).strip() != selected_slice
+    ]
+    if other_active_slices:
+        result.add(
+            "manual review",
+            record_path,
+            (
+                f"lane activation found other active slice(s) {', '.join(other_active_slices)}; "
+                "explicit closeout, supersede, cancel, or reassign transition is required before selecting another current slice"
+            ),
         )
+        result.reason_code = "multiple-active-slices"
+        result.recovery_command = f"{_workspace_cli_invoke(target_root)} planning report --target . --format json"
         return result
     record["status"] = "active"
     if selected_slice:
@@ -14573,8 +14623,6 @@ def activate_lane_record(
                 slice_record["status"] = "active"
                 slice_record["execplan_ref"] = execplan_ref
                 selected_slice_found = True
-            elif isinstance(slice_record, dict) and str(slice_record.get("status", "")).strip() == "active":
-                slice_record["status"] = "completed"
         if not selected_slice_found:
             slices = list(record.get("slice_sequence", []))
             slices.append(

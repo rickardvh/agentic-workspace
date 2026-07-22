@@ -14,6 +14,15 @@ CURRENT_ADMISSION_STATES = {"accepted", "accepted-normalized", "recovered", "com
 ROUTABLE_AUTHORITIES = {"aw-proof", "human-review", "local-outcome-ledger"}
 ROUTABLE_CONFIDENCE = {"high", "medium"}
 INACTIVE_ADMISSION_STATES = {"disputed", "superseded", "stale", "compacted-raw", "rejected"}
+ASSIGNMENT_OUTCOME_MATRIX = [
+    "retain-local",
+    "read-only-exploration",
+    "delegated-implementation",
+    "delegated-validation",
+    "planning-review-escalation",
+    "manual-strong-agent-handoff",
+    "no-safe-route",
+]
 
 
 def _profile_identity_keys(profile: DelegationTargetProfile) -> set[str]:
@@ -61,6 +70,25 @@ def _record_routable(record: DelegationOutcomeRecord) -> bool:
     if record.contradiction_state in {"contradicted", "disputed"}:
         return False
     return True
+
+
+def _record_uncertainty_reasons(record: DelegationOutcomeRecord) -> list[str]:
+    reasons: list[str] = []
+    if record.admission_state in INACTIVE_ADMISSION_STATES:
+        reasons.append(f"inactive:{record.admission_state}")
+    elif record.admission_state not in CURRENT_ADMISSION_STATES:
+        reasons.append(f"not-current:{record.admission_state}")
+    if record.authority not in ROUTABLE_AUTHORITIES:
+        reasons.append(f"low-authority:{record.authority}")
+    if record.confidence not in ROUTABLE_CONFIDENCE:
+        reasons.append(f"low-confidence:{record.confidence}")
+    if record.contradiction_state in {"contradicted", "disputed"}:
+        reasons.append(f"contradiction:{record.contradiction_state}")
+    if record.uncertainty_state not in {"none", ""}:
+        reasons.append(f"uncertainty:{record.uncertainty_state}")
+    if record.scope_drift:
+        reasons.append("scope-drift")
+    return reasons
 
 
 def _currently_admitted_records(records: list[tuple[int, DelegationOutcomeRecord]]) -> list[tuple[int, DelegationOutcomeRecord]]:
@@ -120,6 +148,7 @@ def target_evidence_posture(
 ) -> dict[str, Any]:
     profile_list = list(profiles)
     profile_by_name = {profile.name: profile for profile in profile_list}
+    all_records = list(records)
     profile_by_identity: dict[str, DelegationTargetProfile | None] = {}
     ambiguous_identities: set[str] = set()
     for profile in profile_list:
@@ -131,7 +160,7 @@ def target_evidence_posture(
                 profile_by_identity[identity] = profile
     records_by_target: dict[str, list[DelegationOutcomeRecord]] = {}
     canonical_profile_by_target: dict[str, DelegationTargetProfile | None] = {}
-    for record in records:
+    for record in all_records:
         profile = profile_by_identity.get(record.delegation_target)
         canonical_target = (
             record.delegation_target
@@ -206,6 +235,27 @@ def target_evidence_posture(
                     "routing_relevance": "task-and-scope-bound",
                     "signal": _delegation_signal_score(record),
                     **context,
+                }
+            )
+
+    uncertainty_accounts: list[dict[str, Any]] = []
+    for target_name in sorted(records_by_target):
+        target_records = records_by_target.get(target_name, [])
+        for index, record in enumerate(target_records):
+            reasons = _record_uncertainty_reasons(record)
+            if not reasons:
+                continue
+            scope_class = _record_scope_class(record)
+            uncertainty_accounts.append(
+                {
+                    "target": target_name,
+                    "context_key": _context_key(task_class=record.task_class, scope_class=scope_class),
+                    "record_id": _target_record_id(target_name=target_name, record=record, index=index),
+                    "outcome": record.outcome,
+                    "signal": _delegation_signal_score(record),
+                    "uncertainty_reasons": reasons,
+                    "routable": False,
+                    "routing_effect": "visible-uncertainty-only",
                 }
             )
 
@@ -308,6 +358,14 @@ def target_evidence_posture(
         "normalized_records": normalized[:20],
         "omitted_record_count": max(0, len(normalized) - 20),
         "suitability": suitability,
+        "uncertainty_accounts": uncertainty_accounts[:20],
+        "omitted_uncertainty_account_count": max(0, len(uncertainty_accounts) - 20),
+        "complexity_reduction_signal": {
+            "status": "available" if any(record.operation == "prune-or-compact" for record in all_records) else "not-observed",
+            "compaction_record_count": sum(1 for record in all_records if record.operation == "prune-or-compact"),
+            "inactive_record_count": sum(1 for record in all_records if record.admission_state in INACTIVE_ADMISSION_STATES),
+            "rule": "Compaction is an operational ledger transition only when prune-or-compact records replace predecessors; bounded views alone are not counted as compaction.",
+        },
         "lifecycle": {
             "kind": "agentic-workspace/target-outcome-evidence-lifecycle/v1",
             "public_operations": [
@@ -369,6 +427,7 @@ def target_evidence_posture(
             "target profile estimates",
             "model self-assessment",
         ],
+        "assignment_outcome_matrix": ASSIGNMENT_OUTCOME_MATRIX,
     }
 
 
@@ -398,6 +457,16 @@ def assignment_decision_from_policy(
             continue
         if target:
             evidence_by_target.setdefault(target, []).append(item)
+    uncertainty_by_target: dict[str, list[dict[str, Any]]] = {}
+    for item in target_evidence.get("uncertainty_accounts", []):
+        if not isinstance(item, dict):
+            continue
+        target = str(item.get("target") or "")
+        context_key = str(item.get("context_key") or "")
+        if requested_context_key and context_key != requested_context_key:
+            continue
+        if target:
+            uncertainty_by_target.setdefault(target, []).append(item)
 
     candidate_scores: list[dict[str, Any]] = []
     hard_reject_actions = {"escalate-before-execution"}
@@ -441,12 +510,45 @@ def assignment_decision_from_policy(
         if "required-proof-missing" in proof_requirements:
             hard_rejection_reasons.append("required-proof-missing")
         eligible = not hard_rejection_reasons
-        score = int(profile.get("score") or 0) + recommendation_score.get(str(profile.get("recommendation") or ""), 0)
+        declared_fit_score = int(profile.get("score") or 0)
+        recommendation_component = recommendation_score.get(str(profile.get("recommendation") or ""), 0)
+        contextual_evidence_component = 0
         matching_evidence = evidence_by_target.get(target_identity_ref, []) or evidence_by_target.get(target, [])
         for evidence in matching_evidence:
-            score += evidence_score.get(str(evidence.get("route_effect") or ""), 0)
-        if current_target_matches_profile:
-            score += 5
+            contextual_evidence_component += evidence_score.get(str(evidence.get("route_effect") or ""), 0)
+        current_target_component = 5 if current_target_matches_profile else 0
+        burden_component = 0
+        for evidence in matching_evidence:
+            if evidence.get("route_effect") == "strong-review-required":
+                burden_component -= 10
+            if evidence.get("uncertainty") == "low":
+                burden_component += 2
+        matching_uncertainty = uncertainty_by_target.get(target_identity_ref, []) or uncertainty_by_target.get(target, [])
+        uncertainty_component = -5 * len(matching_uncertainty)
+        probe_value_component = 5 if not matching_evidence and eligible else 0
+        score = (
+            declared_fit_score
+            + recommendation_component
+            + contextual_evidence_component
+            + current_target_component
+            + burden_component
+            + uncertainty_component
+            + probe_value_component
+        )
+        task_is_validation = requested_task_class in {"validation", "review", "proof"} or requested_scope_class in {
+            "validation",
+            "review",
+            "proof",
+        }
+        continuation = (
+            "manual-handoff"
+            if required_action == "manual-handoff-required"
+            else "delegated-validation"
+            if eligible and task_is_validation
+            else "delegated-implementation"
+            if eligible
+            else "not-executable"
+        )
         candidate_scores.append(
             {
                 "target": target,
@@ -455,14 +557,31 @@ def assignment_decision_from_policy(
                 "revision_policy": revision_policy or None,
                 "eligible": eligible,
                 "hard_rejection_reasons": hard_rejection_reasons,
+                "eligibility": {
+                    "capability": "rejected" if "capability-mismatch" in hard_rejection_reasons else "eligible",
+                    "execution_transport": "rejected"
+                    if any(reason in hard_rejection_reasons for reason in ["missing-execution-method", "external-transport-unavailable"])
+                    else "eligible",
+                    "manual_transport": "rejected" if "manual-transport-disabled" in hard_rejection_reasons else "eligible",
+                    "proof": "rejected" if "required-proof-missing" in hard_rejection_reasons else "eligible",
+                    "human_control": "rejected" if "human-control-forbids-delegation" in hard_rejection_reasons else "eligible",
+                    "reason": hard_rejection_reasons,
+                },
                 "score": score,
+                "ranking_components": {
+                    "declared_fit": declared_fit_score,
+                    "runtime_recommendation": recommendation_component,
+                    "contextual_evidence": contextual_evidence_component,
+                    "current_target_retention": current_target_component,
+                    "expected_burden": burden_component,
+                    "uncertainty": uncertainty_component,
+                    "probe_value": probe_value_component,
+                    "total": score,
+                },
                 "runtime_recommendation": profile.get("recommendation"),
                 "required_action": required_action or "none",
-                "continuation": "manual-handoff"
-                if required_action == "manual-handoff-required"
-                else "execute"
-                if eligible
-                else "not-executable",
+                "continuation": continuation,
+                "permitted_continuation": continuation,
                 "evidence_contexts": [
                     {
                         "context_key": evidence.get("context_key"),
@@ -473,6 +592,15 @@ def assignment_decision_from_policy(
                         "supporting_record_ids": evidence.get("supporting_record_ids", []),
                     }
                     for evidence in matching_evidence
+                ],
+                "uncertainty_contexts": [
+                    {
+                        "context_key": evidence.get("context_key"),
+                        "record_id": evidence.get("record_id"),
+                        "uncertainty_reasons": evidence.get("uncertainty_reasons", []),
+                        "routing_effect": evidence.get("routing_effect"),
+                    }
+                    for evidence in matching_uncertainty[:5]
                 ],
             }
         )
@@ -498,46 +626,59 @@ def assignment_decision_from_policy(
     ][:5]
     if not eligible_candidates:
         decision = "no-safe-route"
+        canonical_outcome = "no-safe-route"
         selected_target = None
         next_action = "shape the task, adjust transport/proof authority, or ask for a manual handoff before execution"
     elif policy_value == "local-preferred":
         if not current_target:
             decision = "keep-local"
+            canonical_outcome = "retain-local"
             selected_target = None
             next_action = "continue locally without claiming a configured delegation target"
         elif current_is_eligible:
             decision = "keep-local"
+            canonical_outcome = "retain-local"
             selected_target = current_target or None
             next_action = "execute with the eligible current target"
         else:
             decision = "policy-conflict"
+            canonical_outcome = "planning-review-escalation"
             selected_target = None
             next_action = "resolve local-preferred current_target eligibility before execution"
     elif len(tied_candidates) > 1:
         decision = "tie"
+        canonical_outcome = "planning-review-escalation"
         selected_target = None
         next_action = "choose between tied eligible targets or add disambiguating evidence"
     elif policy_value == "best-fit-advisory":
         decision = "advise-best-fit"
+        canonical_outcome = "read-only-exploration"
         next_action = (
             f"consider {selected_target} as advisory best fit" if selected_target else "retain current execution until a fit exists"
         )
     elif not enforceable:
         decision = "blocked"
+        canonical_outcome = "planning-review-escalation"
         selected_target = None
         next_action = "repair assignment policy binding before execution"
     elif recommendation in {"external-delegation", "manual-handoff", "stronger-reasoning"}:
         selected = eligible_candidates[0]
         decision = "manual-handoff" if selected.get("continuation") == "manual-handoff" else "assign-or-escalate"
+        canonical_outcome = (
+            "manual-strong-agent-handoff" if selected.get("continuation") == "manual-handoff" else selected.get("continuation")
+        )
         next_action = "prepare manual handoff packet" if decision == "manual-handoff" else f"assign or escalate to {selected_target}"
     else:
         selected = eligible_candidates[0] if eligible_candidates else {}
         selected_target_refs = {str(selected.get("target") or ""), str(selected.get("target_identity_ref") or "")}
         decision = "assign-current-target" if current_target in selected_target_refs else "assign-best-fit"
+        canonical_outcome = selected.get("continuation") or "delegated-implementation"
         next_action = f"execute with {selected_target}" if selected_target else "hold execution until assignment is resolved"
     return {
         "kind": "agentic-workspace/assignment-decision/v1",
         "decision": decision,
+        "canonical_outcome": canonical_outcome,
+        "outcome_matrix": ASSIGNMENT_OUTCOME_MATRIX,
         "assignment_policy": policy_value,
         "selected_target": selected_target,
         "current_target": current_target or None,
@@ -550,6 +691,22 @@ def assignment_decision_from_policy(
             "tie_breaker": "ties are surfaced as a non-executable tie outcome; no lexical tie-break selects an executor",
             "current_target_eligible": current_is_eligible,
             "manual_transport_policy": manual_transport_policy,
+            "component_order": [
+                "task_requirements",
+                "hard_eligibility",
+                "declared_fit",
+                "contextual_evidence",
+                "expected_burden",
+                "uncertainty",
+                "probe_value",
+                "policy",
+            ],
+            "task_requirements": {
+                "task_class": requested_task_class or None,
+                "scope_class": requested_scope_class or None,
+                "context_key": requested_context_key or None,
+                "requires_validation": bool(requested_task_class and requested_task_class in {"validation", "review", "proof"}),
+            },
         },
         "alternatives": alternatives,
         "uncertainty": "tie" if len(tied_candidates) > 1 else "sparse-evidence" if not suitability else "ranked",
