@@ -104,6 +104,63 @@ def _record_uncertainty_reasons(record: DelegationOutcomeRecord) -> list[str]:
     return reasons
 
 
+def _record_complexity_burden_reasons(record: DelegationOutcomeRecord) -> list[str]:
+    reasons: list[str] = []
+    if record.review_burden == "high":
+        reasons.append("review-burden:high")
+    if record.repair_burden in {"high", "required", "repeated"}:
+        reasons.append(f"repair-burden:{record.repair_burden}")
+    if record.retry_burden in {"required", "repeated", "high"}:
+        reasons.append(f"retry-burden:{record.retry_burden}")
+    if record.restart_burden in {"required", "repeated", "high"}:
+        reasons.append(f"restart-burden:{record.restart_burden}")
+    if record.escalation_required:
+        reasons.append("escalation-required")
+    if record.handoff_burden in {"insufficient", "high", "repeated"}:
+        reasons.append(f"handoff-burden:{record.handoff_burden}")
+    return reasons
+
+
+def _complexity_reduction_signal(records_by_target: dict[str, list[DelegationOutcomeRecord]]) -> dict[str, Any]:
+    repeated_contexts: list[dict[str, Any]] = []
+    for target_name in sorted(records_by_target):
+        records_by_context: dict[str, list[tuple[int, DelegationOutcomeRecord, list[str]]]] = {}
+        for index, record in enumerate(records_by_target[target_name]):
+            if record.admission_state not in CURRENT_ADMISSION_STATES:
+                continue
+            reasons = _record_complexity_burden_reasons(record)
+            if not reasons:
+                continue
+            context_key = _context_key(task_class=record.task_class, scope_class=_record_scope_class(record))
+            records_by_context.setdefault(context_key, []).append((index, record, reasons))
+        for context_key in sorted(records_by_context):
+            burdened = records_by_context[context_key]
+            if len(burdened) < 2:
+                continue
+            repeated_contexts.append(
+                {
+                    "target": target_name,
+                    "context_key": context_key,
+                    "burden_record_count": len(burdened),
+                    "supporting_record_ids": [
+                        _target_record_id(target_name=target_name, record=record, index=index) for index, record, _ in burdened[:5]
+                    ],
+                    "burden_reasons": sorted({reason for _, _, reasons in burdened for reason in reasons}),
+                    "threshold": "two-or-more-current-admitted-burden-records-for-same-context",
+                }
+            )
+    return {
+        "status": "available" if repeated_contexts else "not-observed",
+        "repeated_context_count": len(repeated_contexts),
+        "contexts": repeated_contexts[:10],
+        "omitted_context_count": max(0, len(repeated_contexts) - 10),
+        "rule": (
+            "Product simplification signals require repeated admitted repair, retry, escalation, restart, "
+            "handoff, or high-review burden in the same target/task/scope context; ledger compaction alone is not a complexity signal."
+        ),
+    }
+
+
 def _currently_admitted_records(records: list[tuple[int, DelegationOutcomeRecord]]) -> list[tuple[int, DelegationOutcomeRecord]]:
     """Return records assignment may consume after lifecycle transitions are applied."""
 
@@ -334,19 +391,14 @@ def target_evidence_posture(
         "suitability": suitability,
         "uncertainty_accounts": uncertainty_accounts[:20],
         "omitted_uncertainty_account_count": max(0, len(uncertainty_accounts) - 20),
-        "complexity_reduction_signal": {
-            "status": "available" if any(record.operation == "prune-or-compact" for record in all_records) else "not-observed",
-            "compaction_record_count": sum(1 for record in all_records if record.operation == "prune-or-compact"),
-            "inactive_record_count": sum(1 for record in all_records if record.admission_state in INACTIVE_ADMISSION_STATES),
-            "rule": "Compaction is an operational ledger transition only when prune-or-compact records replace predecessors; bounded views alone are not counted as compaction.",
-        },
+        "complexity_reduction_signal": _complexity_reduction_signal(records_by_target),
         "lifecycle": {
             "kind": "agentic-workspace/target-outcome-evidence-lifecycle/v1",
             "public_operations": [
                 {
                     "operation": "submit",
                     "command": "agentic-workspace note-delegation-outcome --target . --delegation-target <target> --task-class <class> --scope-class <scope> --operation submit --outcome <success|mixed|failed> --handoff-sufficiency <sufficient|borderline|insufficient> --review-burden <light|normal|high> --format json",
-                    "admission": "resolves target, task class, independent scope class, source ref, producer class, route observations, authority, confidence, idempotency key, and duplicate-safe record id before routing uses it",
+                    "admission": "public local submissions may not self-promote to aw-proof or human-review; high-authority evidence must come from a trusted internal producer receipt",
                 },
                 {
                     "operation": "query",
