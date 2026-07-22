@@ -11,29 +11,28 @@ Input accepted by generated correction-event lifecycle operations.
 | Field | Type | Required | Default | Description | Examples | Annotations |
 | --- | --- | --- | --- | --- | --- | --- |
 | (root) | object | yes |  | Input accepted by generated correction-event lifecycle operations. |  | x-agentic-workspace-doc-role: "contract-reference" |
-| `target` | string | no |  | Target repository path. |  |  |
-| `format` | enum `"text"`, `"json"` | no |  | Requested output format. |  |  |
-| `event_json` | string | no |  | Serialized correction event payload. |  |  |
-| `subjects_json` | string | no |  | Optional serialized target identity subjects for fixtures; normal operation resolves config subjects. |  |  |
-| `trusted_authority_receipt_json` | string | no |  | Trusted host/proof receipt that may admit human/review/evaluator authority. |  |  |
-| `idempotency_key` | string | no |  | Optional stable key used to identify repeated deliveries. |  |  |
-| `delivery_id` | string | no |  | Stable delivery identifier for this correction event. |  |  |
-| `target_identity_ref` | string | no |  | Target identity, name, or alias to resolve before admission. |  |  |
-| `target_revision` | string | no |  | Submitted target revision associated with the correction. |  |  |
-| `source_ref` | string | no |  | Stable source reference for audit and idempotency. |  |  |
-| `source` | string | no |  | Human-readable correction source label. |  |  |
-| `producer_class` | string | no |  | Producer class used for authority resolution. |  |  |
-| `producer_id` | string | no |  | Producer identity used for audit and authority resolution. |  |  |
 | `authority` | string | no |  | Claimed correction authority; not trusted without a trusted authority receipt. |  |  |
-| `desired_behavior` | string | no |  | Behavior the correction says should replace the previous behavior. |  |  |
-| `replaced_behavior` | string | no |  | Behavior boundary being corrected or superseded. |  |  |
-| `invariant_id` | string | no |  | Stable semantic invariant identifier for deduplication. |  |  |
 | `behavior_class` | string | no |  | Stable behavior class for semantic correction identity. |  |  |
-| `task_class` | string | no |  | Task class where the correction applies. |  |  |
-| `scope_class` | string | no |  | Scope class where the correction applies. |  |  |
-| `route_decisions` | array of string | no |  | Requested routing decisions for trusted correction events. |  |  |
+| `delivery_id` | string | no |  | Stable delivery identifier for this correction event. |  |  |
+| `desired_behavior` | string | no |  | Behavior the correction says should replace the previous behavior. |  |  |
+| `dry_run` | boolean | no |  | When true, report the intended operation without applying a storage mutation. |  |  |
+| `event_json` | string | no |  | Serialized correction event payload. |  |  |
 | `evidence_hash` | string | no |  | Hash of evidence supporting the correction. |  |  |
 | `evidence_ref` | string | no |  | Reference to evidence supporting the correction. |  |  |
-| `predecessor_event_id` | string | no |  | Prior correction event being disputed, withdrawn, or superseded. |  |  |
+| `format` | enum `"text"`, `"json"` | no |  | Requested output format. |  |  |
+| `idempotency_key` | string | no |  | Optional stable key used to identify repeated deliveries. |  |  |
+| `invariant_id` | string | no |  | Stable semantic invariant identifier for deduplication. |  |  |
 | `lifecycle_action` | enum `"withdraw"`, `"supersede"` | no |  | Lifecycle action for withdraw/supersede operations. |  |  |
-| `dry_run` | boolean | no |  | When true, report the intended operation without applying a storage mutation. |  |  |
+| `predecessor_event_id` | string | no |  | Prior correction event being disputed, withdrawn, or superseded. |  |  |
+| `producer_class` | string | no |  | Producer class used for authority resolution. |  |  |
+| `producer_id` | string | no |  | Producer identity used for audit and authority resolution. |  |  |
+| `replaced_behavior` | string | no |  | Behavior boundary being corrected or superseded. |  |  |
+| `route_decisions` | array of string | no |  | Requested routing decisions for trusted correction events. |  |  |
+| `scope_class` | string | no |  | Scope class where the correction applies. |  |  |
+| `source` | string | no |  | Human-readable correction source label. |  |  |
+| `source_ref` | string | no |  | Stable source reference for audit and idempotency. |  |  |
+| `target` | string | no |  | Target repository path. |  |  |
+| `target_identity_ref` | string | no |  | Target identity, name, or alias to resolve before admission. |  |  |
+| `target_revision` | string | no |  | Submitted target revision associated with the correction. |  |  |
+| `task_class` | string | no |  | Task class where the correction applies. |  |  |
+| `trusted_authority_receipt_ref` | string | no |  | Repo-relative trusted authority receipt ref resolved by AW before an event can gain human/review/evaluator authority. Omit to preserve the event as low-authority self-observation. |  |  |

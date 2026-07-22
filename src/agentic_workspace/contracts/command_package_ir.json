@@ -5400,13 +5400,6 @@
                   },
                   {
                     "flags": [
-                      "--packet-json"
-                    ],
-                    "help": "Structured assignment packet JSON.",
-                    "name": "packet_json"
-                  },
-                  {
-                    "flags": [
                       "--return-json"
                     ],
                     "help": "Returned worker-result JSON.",
@@ -5425,20 +5418,6 @@
                     ],
                     "help": "Local artifact reference for the transition.",
                     "name": "artifact_ref"
-                  },
-                  {
-                    "flags": [
-                      "--current-authority-ref"
-                    ],
-                    "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-                    "name": "current_authority_ref"
-                  },
-                  {
-                    "flags": [
-                      "--live-mutation-baseline"
-                    ],
-                    "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-                    "name": "live_mutation_baseline"
                   },
                   {
                     "choices": [
@@ -5480,41 +5459,6 @@
                     ],
                     "help": "Report the transition without writing local artifacts.",
                     "name": "dry_run"
-                  },
-                  {
-                    "name": "assignment_gate_json",
-                    "flags": [
-                      "--assignment-gate-json"
-                    ],
-                    "help": "Serialized current assignment gate authority."
-                  },
-                  {
-                    "name": "assignment_policy_json",
-                    "flags": [
-                      "--assignment-policy-json"
-                    ],
-                    "help": "Serialized current assignment policy authority."
-                  },
-                  {
-                    "name": "delegation_decision_json",
-                    "flags": [
-                      "--delegation-decision-json"
-                    ],
-                    "help": "Serialized current delegation decision authority."
-                  },
-                  {
-                    "name": "aw_proof_receipt_json",
-                    "flags": [
-                      "--aw-proof-receipt-json"
-                    ],
-                    "help": "Serialized AW proof receipt authority."
-                  },
-                  {
-                    "name": "run_state_json",
-                    "flags": [
-                      "--run-state-json"
-                    ],
-                    "help": "Serialized current assignment run state authority."
                   }
                 ]
               },
@@ -5590,13 +5534,6 @@
                   },
                   {
                     "flags": [
-                      "--packet-json"
-                    ],
-                    "help": "Structured assignment packet JSON.",
-                    "name": "packet_json"
-                  },
-                  {
-                    "flags": [
                       "--return-json"
                     ],
                     "help": "Returned worker-result JSON.",
@@ -5616,20 +5553,6 @@
                     ],
                     "help": "Local artifact reference for the transition.",
                     "name": "artifact_ref"
-                  },
-                  {
-                    "flags": [
-                      "--current-authority-ref"
-                    ],
-                    "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-                    "name": "current_authority_ref"
-                  },
-                  {
-                    "flags": [
-                      "--live-mutation-baseline"
-                    ],
-                    "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-                    "name": "live_mutation_baseline"
                   },
                   {
                     "choices": [
@@ -5671,41 +5594,6 @@
                     ],
                     "help": "Report the transition without writing local artifacts.",
                     "name": "dry_run"
-                  },
-                  {
-                    "name": "assignment_gate_json",
-                    "flags": [
-                      "--assignment-gate-json"
-                    ],
-                    "help": "Serialized current assignment gate authority."
-                  },
-                  {
-                    "name": "assignment_policy_json",
-                    "flags": [
-                      "--assignment-policy-json"
-                    ],
-                    "help": "Serialized current assignment policy authority."
-                  },
-                  {
-                    "name": "delegation_decision_json",
-                    "flags": [
-                      "--delegation-decision-json"
-                    ],
-                    "help": "Serialized current delegation decision authority."
-                  },
-                  {
-                    "name": "aw_proof_receipt_json",
-                    "flags": [
-                      "--aw-proof-receipt-json"
-                    ],
-                    "help": "Serialized AW proof receipt authority."
-                  },
-                  {
-                    "name": "run_state_json",
-                    "flags": [
-                      "--run-state-json"
-                    ],
-                    "help": "Serialized current assignment run state authority."
                   }
                 ]
               },
@@ -5781,13 +5669,6 @@
                   },
                   {
                     "flags": [
-                      "--packet-json"
-                    ],
-                    "help": "Structured assignment packet JSON.",
-                    "name": "packet_json"
-                  },
-                  {
-                    "flags": [
                       "--return-json"
                     ],
                     "help": "Returned worker-result JSON.",
@@ -5806,22 +5687,6 @@
                     ],
                     "help": "Local artifact reference for the transition.",
                     "name": "artifact_ref"
-                  },
-                  {
-                    "flags": [
-                      "--current-authority-ref"
-                    ],
-                    "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-                    "name": "current_authority_ref",
-                    "required": false
-                  },
-                  {
-                    "flags": [
-                      "--live-mutation-baseline"
-                    ],
-                    "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-                    "name": "live_mutation_baseline",
-                    "required": false
                   },
                   {
                     "choices": [
@@ -5863,41 +5728,6 @@
                     ],
                     "help": "Report the transition without writing local artifacts.",
                     "name": "dry_run"
-                  },
-                  {
-                    "name": "assignment_gate_json",
-                    "flags": [
-                      "--assignment-gate-json"
-                    ],
-                    "help": "Serialized current assignment gate authority."
-                  },
-                  {
-                    "name": "assignment_policy_json",
-                    "flags": [
-                      "--assignment-policy-json"
-                    ],
-                    "help": "Serialized current assignment policy authority."
-                  },
-                  {
-                    "name": "delegation_decision_json",
-                    "flags": [
-                      "--delegation-decision-json"
-                    ],
-                    "help": "Serialized current delegation decision authority."
-                  },
-                  {
-                    "name": "aw_proof_receipt_json",
-                    "flags": [
-                      "--aw-proof-receipt-json"
-                    ],
-                    "help": "Serialized AW proof receipt authority."
-                  },
-                  {
-                    "name": "run_state_json",
-                    "flags": [
-                      "--run-state-json"
-                    ],
-                    "help": "Serialized current assignment run state authority."
                   }
                 ]
               },
@@ -5973,13 +5803,6 @@
                   },
                   {
                     "flags": [
-                      "--packet-json"
-                    ],
-                    "help": "Structured assignment packet JSON.",
-                    "name": "packet_json"
-                  },
-                  {
-                    "flags": [
                       "--return-json"
                     ],
                     "help": "Returned worker-result JSON.",
@@ -5998,20 +5821,6 @@
                     ],
                     "help": "Local artifact reference for the transition.",
                     "name": "artifact_ref"
-                  },
-                  {
-                    "flags": [
-                      "--current-authority-ref"
-                    ],
-                    "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-                    "name": "current_authority_ref"
-                  },
-                  {
-                    "flags": [
-                      "--live-mutation-baseline"
-                    ],
-                    "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-                    "name": "live_mutation_baseline"
                   },
                   {
                     "choices": [
@@ -6054,41 +5863,6 @@
                     ],
                     "help": "Report the transition without writing local artifacts.",
                     "name": "dry_run"
-                  },
-                  {
-                    "name": "assignment_gate_json",
-                    "flags": [
-                      "--assignment-gate-json"
-                    ],
-                    "help": "Serialized current assignment gate authority."
-                  },
-                  {
-                    "name": "assignment_policy_json",
-                    "flags": [
-                      "--assignment-policy-json"
-                    ],
-                    "help": "Serialized current assignment policy authority."
-                  },
-                  {
-                    "name": "delegation_decision_json",
-                    "flags": [
-                      "--delegation-decision-json"
-                    ],
-                    "help": "Serialized current delegation decision authority."
-                  },
-                  {
-                    "name": "aw_proof_receipt_json",
-                    "flags": [
-                      "--aw-proof-receipt-json"
-                    ],
-                    "help": "Serialized AW proof receipt authority."
-                  },
-                  {
-                    "name": "run_state_json",
-                    "flags": [
-                      "--run-state-json"
-                    ],
-                    "help": "Serialized current assignment run state authority."
                   }
                 ]
               },
@@ -6164,13 +5938,6 @@
                   },
                   {
                     "flags": [
-                      "--packet-json"
-                    ],
-                    "help": "Structured assignment packet JSON.",
-                    "name": "packet_json"
-                  },
-                  {
-                    "flags": [
                       "--return-json"
                     ],
                     "help": "Returned worker-result JSON.",
@@ -6189,20 +5956,6 @@
                     ],
                     "help": "Local artifact reference for the transition.",
                     "name": "artifact_ref"
-                  },
-                  {
-                    "flags": [
-                      "--current-authority-ref"
-                    ],
-                    "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-                    "name": "current_authority_ref"
-                  },
-                  {
-                    "flags": [
-                      "--live-mutation-baseline"
-                    ],
-                    "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-                    "name": "live_mutation_baseline"
                   },
                   {
                     "choices": [
@@ -6245,41 +5998,6 @@
                     ],
                     "help": "Report the transition without writing local artifacts.",
                     "name": "dry_run"
-                  },
-                  {
-                    "name": "assignment_gate_json",
-                    "flags": [
-                      "--assignment-gate-json"
-                    ],
-                    "help": "Serialized current assignment gate authority."
-                  },
-                  {
-                    "name": "assignment_policy_json",
-                    "flags": [
-                      "--assignment-policy-json"
-                    ],
-                    "help": "Serialized current assignment policy authority."
-                  },
-                  {
-                    "name": "delegation_decision_json",
-                    "flags": [
-                      "--delegation-decision-json"
-                    ],
-                    "help": "Serialized current delegation decision authority."
-                  },
-                  {
-                    "name": "aw_proof_receipt_json",
-                    "flags": [
-                      "--aw-proof-receipt-json"
-                    ],
-                    "help": "Serialized AW proof receipt authority."
-                  },
-                  {
-                    "name": "run_state_json",
-                    "flags": [
-                      "--run-state-json"
-                    ],
-                    "help": "Serialized current assignment run state authority."
                   }
                 ]
               },
@@ -6356,13 +6074,6 @@
                   },
                   {
                     "flags": [
-                      "--packet-json"
-                    ],
-                    "help": "Structured assignment packet JSON.",
-                    "name": "packet_json"
-                  },
-                  {
-                    "flags": [
                       "--return-json"
                     ],
                     "help": "Returned worker-result JSON.",
@@ -6381,20 +6092,6 @@
                     ],
                     "help": "Local artifact reference for the transition.",
                     "name": "artifact_ref"
-                  },
-                  {
-                    "flags": [
-                      "--current-authority-ref"
-                    ],
-                    "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-                    "name": "current_authority_ref"
-                  },
-                  {
-                    "flags": [
-                      "--live-mutation-baseline"
-                    ],
-                    "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-                    "name": "live_mutation_baseline"
                   },
                   {
                     "choices": [
@@ -6437,41 +6134,6 @@
                     ],
                     "help": "Report the transition without writing local artifacts.",
                     "name": "dry_run"
-                  },
-                  {
-                    "name": "assignment_gate_json",
-                    "flags": [
-                      "--assignment-gate-json"
-                    ],
-                    "help": "Serialized current assignment gate authority."
-                  },
-                  {
-                    "name": "assignment_policy_json",
-                    "flags": [
-                      "--assignment-policy-json"
-                    ],
-                    "help": "Serialized current assignment policy authority."
-                  },
-                  {
-                    "name": "delegation_decision_json",
-                    "flags": [
-                      "--delegation-decision-json"
-                    ],
-                    "help": "Serialized current delegation decision authority."
-                  },
-                  {
-                    "name": "aw_proof_receipt_json",
-                    "flags": [
-                      "--aw-proof-receipt-json"
-                    ],
-                    "help": "Serialized AW proof receipt authority."
-                  },
-                  {
-                    "name": "run_state_json",
-                    "flags": [
-                      "--run-state-json"
-                    ],
-                    "help": "Serialized current assignment run state authority."
                   }
                 ]
               },
@@ -6547,13 +6209,6 @@
                   },
                   {
                     "flags": [
-                      "--packet-json"
-                    ],
-                    "help": "Structured assignment packet JSON.",
-                    "name": "packet_json"
-                  },
-                  {
-                    "flags": [
                       "--return-json"
                     ],
                     "help": "Returned worker-result JSON.",
@@ -6572,22 +6227,6 @@
                     ],
                     "help": "Local artifact reference for the transition.",
                     "name": "artifact_ref"
-                  },
-                  {
-                    "flags": [
-                      "--current-authority-ref"
-                    ],
-                    "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-                    "name": "current_authority_ref",
-                    "required": false
-                  },
-                  {
-                    "flags": [
-                      "--live-mutation-baseline"
-                    ],
-                    "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-                    "name": "live_mutation_baseline",
-                    "required": false
                   },
                   {
                     "choices": [
@@ -6629,41 +6268,6 @@
                     ],
                     "help": "Report the transition without writing local artifacts.",
                     "name": "dry_run"
-                  },
-                  {
-                    "name": "assignment_gate_json",
-                    "flags": [
-                      "--assignment-gate-json"
-                    ],
-                    "help": "Serialized current assignment gate authority."
-                  },
-                  {
-                    "name": "assignment_policy_json",
-                    "flags": [
-                      "--assignment-policy-json"
-                    ],
-                    "help": "Serialized current assignment policy authority."
-                  },
-                  {
-                    "name": "delegation_decision_json",
-                    "flags": [
-                      "--delegation-decision-json"
-                    ],
-                    "help": "Serialized current delegation decision authority."
-                  },
-                  {
-                    "name": "aw_proof_receipt_json",
-                    "flags": [
-                      "--aw-proof-receipt-json"
-                    ],
-                    "help": "Serialized AW proof receipt authority."
-                  },
-                  {
-                    "name": "run_state_json",
-                    "flags": [
-                      "--run-state-json"
-                    ],
-                    "help": "Serialized current assignment run state authority."
                   }
                 ]
               },
@@ -6739,13 +6343,6 @@
                   },
                   {
                     "flags": [
-                      "--packet-json"
-                    ],
-                    "help": "Structured assignment packet JSON.",
-                    "name": "packet_json"
-                  },
-                  {
-                    "flags": [
                       "--return-json"
                     ],
                     "help": "Returned worker-result JSON.",
@@ -6764,20 +6361,6 @@
                     ],
                     "help": "Local artifact reference for the transition.",
                     "name": "artifact_ref"
-                  },
-                  {
-                    "flags": [
-                      "--current-authority-ref"
-                    ],
-                    "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-                    "name": "current_authority_ref"
-                  },
-                  {
-                    "flags": [
-                      "--live-mutation-baseline"
-                    ],
-                    "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-                    "name": "live_mutation_baseline"
                   },
                   {
                     "choices": [
@@ -6819,41 +6402,6 @@
                     ],
                     "help": "Report the transition without writing local artifacts.",
                     "name": "dry_run"
-                  },
-                  {
-                    "name": "assignment_gate_json",
-                    "flags": [
-                      "--assignment-gate-json"
-                    ],
-                    "help": "Serialized current assignment gate authority."
-                  },
-                  {
-                    "name": "assignment_policy_json",
-                    "flags": [
-                      "--assignment-policy-json"
-                    ],
-                    "help": "Serialized current assignment policy authority."
-                  },
-                  {
-                    "name": "delegation_decision_json",
-                    "flags": [
-                      "--delegation-decision-json"
-                    ],
-                    "help": "Serialized current delegation decision authority."
-                  },
-                  {
-                    "name": "aw_proof_receipt_json",
-                    "flags": [
-                      "--aw-proof-receipt-json"
-                    ],
-                    "help": "Serialized AW proof receipt authority."
-                  },
-                  {
-                    "name": "run_state_json",
-                    "flags": [
-                      "--run-state-json"
-                    ],
-                    "help": "Serialized current assignment run state authority."
                   }
                 ]
               },
@@ -6929,13 +6477,6 @@
                   },
                   {
                     "flags": [
-                      "--packet-json"
-                    ],
-                    "help": "Structured assignment packet JSON.",
-                    "name": "packet_json"
-                  },
-                  {
-                    "flags": [
                       "--return-json"
                     ],
                     "help": "Returned worker-result JSON.",
@@ -6954,20 +6495,6 @@
                     ],
                     "help": "Local artifact reference for the transition.",
                     "name": "artifact_ref"
-                  },
-                  {
-                    "flags": [
-                      "--current-authority-ref"
-                    ],
-                    "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-                    "name": "current_authority_ref"
-                  },
-                  {
-                    "flags": [
-                      "--live-mutation-baseline"
-                    ],
-                    "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-                    "name": "live_mutation_baseline"
                   },
                   {
                     "choices": [
@@ -7009,41 +6536,6 @@
                     ],
                     "help": "Report the transition without writing local artifacts.",
                     "name": "dry_run"
-                  },
-                  {
-                    "name": "assignment_gate_json",
-                    "flags": [
-                      "--assignment-gate-json"
-                    ],
-                    "help": "Serialized current assignment gate authority."
-                  },
-                  {
-                    "name": "assignment_policy_json",
-                    "flags": [
-                      "--assignment-policy-json"
-                    ],
-                    "help": "Serialized current assignment policy authority."
-                  },
-                  {
-                    "name": "delegation_decision_json",
-                    "flags": [
-                      "--delegation-decision-json"
-                    ],
-                    "help": "Serialized current delegation decision authority."
-                  },
-                  {
-                    "name": "aw_proof_receipt_json",
-                    "flags": [
-                      "--aw-proof-receipt-json"
-                    ],
-                    "help": "Serialized AW proof receipt authority."
-                  },
-                  {
-                    "name": "run_state_json",
-                    "flags": [
-                      "--run-state-json"
-                    ],
-                    "help": "Serialized current assignment run state authority."
                   }
                 ]
               },
@@ -7119,13 +6611,6 @@
                   },
                   {
                     "flags": [
-                      "--packet-json"
-                    ],
-                    "help": "Structured assignment packet JSON.",
-                    "name": "packet_json"
-                  },
-                  {
-                    "flags": [
                       "--return-json"
                     ],
                     "help": "Returned worker-result JSON.",
@@ -7144,20 +6629,6 @@
                     ],
                     "help": "Local artifact reference for the transition.",
                     "name": "artifact_ref"
-                  },
-                  {
-                    "flags": [
-                      "--current-authority-ref"
-                    ],
-                    "help": "Current Planning/proof/run authority reference resolved immediately before admission or integration.",
-                    "name": "current_authority_ref"
-                  },
-                  {
-                    "flags": [
-                      "--live-mutation-baseline"
-                    ],
-                    "help": "Live worktree mutation baseline resolved immediately before admission or integration.",
-                    "name": "live_mutation_baseline"
                   },
                   {
                     "choices": [
@@ -7202,41 +6673,6 @@
                     ],
                     "help": "Report the transition without writing local artifacts.",
                     "name": "dry_run"
-                  },
-                  {
-                    "name": "assignment_gate_json",
-                    "flags": [
-                      "--assignment-gate-json"
-                    ],
-                    "help": "Serialized current assignment gate authority."
-                  },
-                  {
-                    "name": "assignment_policy_json",
-                    "flags": [
-                      "--assignment-policy-json"
-                    ],
-                    "help": "Serialized current assignment policy authority."
-                  },
-                  {
-                    "name": "delegation_decision_json",
-                    "flags": [
-                      "--delegation-decision-json"
-                    ],
-                    "help": "Serialized current delegation decision authority."
-                  },
-                  {
-                    "name": "aw_proof_receipt_json",
-                    "flags": [
-                      "--aw-proof-receipt-json"
-                    ],
-                    "help": "Serialized AW proof receipt authority."
-                  },
-                  {
-                    "name": "run_state_json",
-                    "flags": [
-                      "--run-state-json"
-                    ],
-                    "help": "Serialized current assignment run state authority."
                   }
                 ]
               }
@@ -9052,7 +8488,6 @@
         },
         {
           "adapter_id": "correction-event.lifecycle.cli",
-          "status": "generated",
           "command": {
             "manifest_ref": "cli_commands.json",
             "name": "correction-event"
@@ -9072,1032 +8507,997 @@
             "writes_repo_state": false
           },
           "interface": {
-            "name": "correction-event",
             "help": "Submit, query, and compact local correction events through generated operations.",
+            "name": "correction-event",
+            "options": [],
             "subcommand_dest": "correction_event_command",
             "subcommands": [
               {
-                "name": "submit",
                 "help": "Submit a correction event through the public local operation boundary.",
+                "name": "submit",
                 "operation_ref": {
                   "id": "correction-event.submit",
                   "path": "operations/correction-event.submit.json"
                 },
                 "options": [
                   {
-                    "name": "format",
-                    "flags": [
-                      "--format"
-                    ],
                     "choices": [
                       "text",
                       "json"
                     ],
                     "default": "text",
-                    "help": "Output format."
+                    "flags": [
+                      "--format"
+                    ],
+                    "help": "Output format.",
+                    "name": "format"
                   },
                   {
-                    "name": "target",
                     "flags": [
                       "--target"
                     ],
-                    "help": "Target repository path. Defaults to current directory."
+                    "help": "Target repository path. Defaults to current directory.",
+                    "name": "target"
                   },
                   {
-                    "name": "event_json",
                     "flags": [
                       "--event-json"
                     ],
-                    "help": "Serialized correction event JSON."
+                    "help": "Serialized correction event JSON.",
+                    "name": "event_json"
                   },
                   {
-                    "name": "subjects_json",
                     "flags": [
-                      "--subjects-json"
+                      "--trusted-authority-receipt-ref"
                     ],
-                    "help": "Serialized target identity subjects for fixtures."
+                    "help": "Repo-relative trusted authority receipt ref resolved by AW before high-authority admission. Omit for low-authority self-observation.",
+                    "name": "trusted_authority_receipt_ref"
                   },
                   {
-                    "name": "trusted_authority_receipt_json",
-                    "flags": [
-                      "--trusted-authority-receipt-json"
-                    ],
-                    "help": "Trusted host/proof authority receipt JSON."
-                  },
-                  {
-                    "name": "idempotency_key",
                     "flags": [
                       "--idempotency-key"
                     ],
-                    "help": "Stable delivery idempotency key."
+                    "help": "Stable delivery idempotency key.",
+                    "name": "idempotency_key"
                   },
                   {
-                    "name": "delivery_id",
                     "flags": [
                       "--delivery-id"
                     ],
-                    "help": "Stable delivery id."
+                    "help": "Stable delivery id.",
+                    "name": "delivery_id"
                   },
                   {
-                    "name": "target_identity_ref",
                     "flags": [
                       "--target-identity-ref"
                     ],
-                    "help": "Target id/name/alias to resolve."
+                    "help": "Target id/name/alias to resolve.",
+                    "name": "target_identity_ref"
                   },
                   {
-                    "name": "target_revision",
                     "flags": [
                       "--target-revision"
                     ],
-                    "help": "Submitted target revision."
+                    "help": "Submitted target revision.",
+                    "name": "target_revision"
                   },
                   {
-                    "name": "source_ref",
                     "flags": [
                       "--source-ref"
                     ],
-                    "help": "Stable source reference."
+                    "help": "Stable source reference.",
+                    "name": "source_ref"
                   },
                   {
-                    "name": "source",
                     "flags": [
                       "--source"
                     ],
-                    "help": "Submitted source label."
+                    "help": "Submitted source label.",
+                    "name": "source"
                   },
                   {
-                    "name": "producer_class",
                     "flags": [
                       "--producer-class"
                     ],
-                    "help": "Submitted producer class; cannot upgrade authority without a trusted receipt."
+                    "help": "Submitted producer class; cannot upgrade authority without a trusted receipt.",
+                    "name": "producer_class"
                   },
                   {
-                    "name": "producer_id",
                     "flags": [
                       "--producer-id"
                     ],
-                    "help": "Producer id."
+                    "help": "Producer id.",
+                    "name": "producer_id"
                   },
                   {
-                    "name": "authority",
                     "flags": [
                       "--authority"
                     ],
-                    "help": "Claimed authority; ignored for upgrade without trusted receipt."
+                    "help": "Claimed authority; ignored for upgrade without trusted receipt.",
+                    "name": "authority"
                   },
                   {
-                    "name": "desired_behavior",
                     "flags": [
                       "--desired-behavior"
                     ],
-                    "help": "Desired behavior."
+                    "help": "Desired behavior.",
+                    "name": "desired_behavior"
                   },
                   {
-                    "name": "replaced_behavior",
                     "flags": [
                       "--replaced-behavior"
                     ],
-                    "help": "Replaced behavior."
+                    "help": "Replaced behavior.",
+                    "name": "replaced_behavior"
                   },
                   {
-                    "name": "invariant_id",
                     "flags": [
                       "--invariant-id"
                     ],
-                    "help": "Structured invariant id."
+                    "help": "Structured invariant id.",
+                    "name": "invariant_id"
                   },
                   {
-                    "name": "behavior_class",
                     "flags": [
                       "--behavior-class"
                     ],
-                    "help": "Structured behavior class."
+                    "help": "Structured behavior class.",
+                    "name": "behavior_class"
                   },
                   {
-                    "name": "task_class",
                     "flags": [
                       "--task-class"
                     ],
-                    "help": "Task class applicability."
+                    "help": "Task class applicability.",
+                    "name": "task_class"
                   },
                   {
-                    "name": "scope_class",
                     "flags": [
                       "--scope-class"
                     ],
-                    "help": "Scope class applicability."
+                    "help": "Scope class applicability.",
+                    "name": "scope_class"
                   },
                   {
-                    "name": "route_decisions",
+                    "action": "append",
+                    "default": [],
                     "flags": [
                       "--route-decision"
                     ],
-                    "action": "append",
-                    "default": [],
-                    "help": "Route decision. Repeat for multiple routes."
+                    "help": "Route decision. Repeat for multiple routes.",
+                    "name": "route_decisions"
                   },
                   {
-                    "name": "evidence_hash",
                     "flags": [
                       "--evidence-hash"
                     ],
-                    "help": "Evidence hash."
+                    "help": "Evidence hash.",
+                    "name": "evidence_hash"
                   },
                   {
-                    "name": "evidence_ref",
                     "flags": [
                       "--evidence-ref"
                     ],
-                    "help": "Evidence reference."
+                    "help": "Evidence reference.",
+                    "name": "evidence_ref"
                   },
                   {
-                    "name": "predecessor_event_id",
                     "flags": [
                       "--predecessor-event-id"
                     ],
-                    "help": "Predecessor event id for lifecycle transitions."
+                    "help": "Predecessor event id for lifecycle transitions.",
+                    "name": "predecessor_event_id"
                   },
                   {
-                    "name": "lifecycle_action",
-                    "flags": [
-                      "--lifecycle-action"
-                    ],
                     "choices": [
                       "withdraw",
                       "supersede"
                     ],
-                    "help": "Withdraw/supersede action."
+                    "flags": [
+                      "--lifecycle-action"
+                    ],
+                    "help": "Withdraw/supersede action.",
+                    "name": "lifecycle_action"
                   },
                   {
-                    "name": "dry_run",
+                    "action": "store_true",
                     "flags": [
                       "--dry-run"
                     ],
-                    "action": "store_true",
-                    "help": "Report without mutation."
+                    "help": "Report without mutation.",
+                    "name": "dry_run"
                   }
                 ]
               },
               {
-                "name": "query",
                 "help": "Query admitted and low-authority correction events from bounded local storage.",
+                "name": "query",
                 "operation_ref": {
                   "id": "correction-event.query",
                   "path": "operations/correction-event.query.json"
                 },
                 "options": [
                   {
-                    "name": "format",
-                    "flags": [
-                      "--format"
-                    ],
                     "choices": [
                       "text",
                       "json"
                     ],
                     "default": "text",
-                    "help": "Output format."
+                    "flags": [
+                      "--format"
+                    ],
+                    "help": "Output format.",
+                    "name": "format"
                   },
                   {
-                    "name": "target",
                     "flags": [
                       "--target"
                     ],
-                    "help": "Target repository path. Defaults to current directory."
+                    "help": "Target repository path. Defaults to current directory.",
+                    "name": "target"
                   },
                   {
-                    "name": "event_json",
                     "flags": [
                       "--event-json"
                     ],
-                    "help": "Serialized correction event JSON."
+                    "help": "Serialized correction event JSON.",
+                    "name": "event_json"
                   },
                   {
-                    "name": "subjects_json",
                     "flags": [
-                      "--subjects-json"
+                      "--trusted-authority-receipt-ref"
                     ],
-                    "help": "Serialized target identity subjects for fixtures."
+                    "help": "Repo-relative trusted authority receipt ref resolved by AW before high-authority admission. Omit for low-authority self-observation.",
+                    "name": "trusted_authority_receipt_ref"
                   },
                   {
-                    "name": "trusted_authority_receipt_json",
-                    "flags": [
-                      "--trusted-authority-receipt-json"
-                    ],
-                    "help": "Trusted host/proof authority receipt JSON."
-                  },
-                  {
-                    "name": "idempotency_key",
                     "flags": [
                       "--idempotency-key"
                     ],
-                    "help": "Stable delivery idempotency key."
+                    "help": "Stable delivery idempotency key.",
+                    "name": "idempotency_key"
                   },
                   {
-                    "name": "delivery_id",
                     "flags": [
                       "--delivery-id"
                     ],
-                    "help": "Stable delivery id."
+                    "help": "Stable delivery id.",
+                    "name": "delivery_id"
                   },
                   {
-                    "name": "target_identity_ref",
                     "flags": [
                       "--target-identity-ref"
                     ],
-                    "help": "Target id/name/alias to resolve."
+                    "help": "Target id/name/alias to resolve.",
+                    "name": "target_identity_ref"
                   },
                   {
-                    "name": "target_revision",
                     "flags": [
                       "--target-revision"
                     ],
-                    "help": "Submitted target revision."
+                    "help": "Submitted target revision.",
+                    "name": "target_revision"
                   },
                   {
-                    "name": "source_ref",
                     "flags": [
                       "--source-ref"
                     ],
-                    "help": "Stable source reference."
+                    "help": "Stable source reference.",
+                    "name": "source_ref"
                   },
                   {
-                    "name": "source",
                     "flags": [
                       "--source"
                     ],
-                    "help": "Submitted source label."
+                    "help": "Submitted source label.",
+                    "name": "source"
                   },
                   {
-                    "name": "producer_class",
                     "flags": [
                       "--producer-class"
                     ],
-                    "help": "Submitted producer class; cannot upgrade authority without a trusted receipt."
+                    "help": "Submitted producer class; cannot upgrade authority without a trusted receipt.",
+                    "name": "producer_class"
                   },
                   {
-                    "name": "producer_id",
                     "flags": [
                       "--producer-id"
                     ],
-                    "help": "Producer id."
+                    "help": "Producer id.",
+                    "name": "producer_id"
                   },
                   {
-                    "name": "authority",
                     "flags": [
                       "--authority"
                     ],
-                    "help": "Claimed authority; ignored for upgrade without trusted receipt."
+                    "help": "Claimed authority; ignored for upgrade without trusted receipt.",
+                    "name": "authority"
                   },
                   {
-                    "name": "desired_behavior",
                     "flags": [
                       "--desired-behavior"
                     ],
-                    "help": "Desired behavior."
+                    "help": "Desired behavior.",
+                    "name": "desired_behavior"
                   },
                   {
-                    "name": "replaced_behavior",
                     "flags": [
                       "--replaced-behavior"
                     ],
-                    "help": "Replaced behavior."
+                    "help": "Replaced behavior.",
+                    "name": "replaced_behavior"
                   },
                   {
-                    "name": "invariant_id",
                     "flags": [
                       "--invariant-id"
                     ],
-                    "help": "Structured invariant id."
+                    "help": "Structured invariant id.",
+                    "name": "invariant_id"
                   },
                   {
-                    "name": "behavior_class",
                     "flags": [
                       "--behavior-class"
                     ],
-                    "help": "Structured behavior class."
+                    "help": "Structured behavior class.",
+                    "name": "behavior_class"
                   },
                   {
-                    "name": "task_class",
                     "flags": [
                       "--task-class"
                     ],
-                    "help": "Task class applicability."
+                    "help": "Task class applicability.",
+                    "name": "task_class"
                   },
                   {
-                    "name": "scope_class",
                     "flags": [
                       "--scope-class"
                     ],
-                    "help": "Scope class applicability."
+                    "help": "Scope class applicability.",
+                    "name": "scope_class"
                   },
                   {
-                    "name": "route_decisions",
+                    "action": "append",
+                    "default": [],
                     "flags": [
                       "--route-decision"
                     ],
-                    "action": "append",
-                    "default": [],
-                    "help": "Route decision. Repeat for multiple routes."
+                    "help": "Route decision. Repeat for multiple routes.",
+                    "name": "route_decisions"
                   },
                   {
-                    "name": "evidence_hash",
                     "flags": [
                       "--evidence-hash"
                     ],
-                    "help": "Evidence hash."
+                    "help": "Evidence hash.",
+                    "name": "evidence_hash"
                   },
                   {
-                    "name": "evidence_ref",
                     "flags": [
                       "--evidence-ref"
                     ],
-                    "help": "Evidence reference."
+                    "help": "Evidence reference.",
+                    "name": "evidence_ref"
                   },
                   {
-                    "name": "predecessor_event_id",
                     "flags": [
                       "--predecessor-event-id"
                     ],
-                    "help": "Predecessor event id for lifecycle transitions."
+                    "help": "Predecessor event id for lifecycle transitions.",
+                    "name": "predecessor_event_id"
                   },
                   {
-                    "name": "lifecycle_action",
-                    "flags": [
-                      "--lifecycle-action"
-                    ],
                     "choices": [
                       "withdraw",
                       "supersede"
                     ],
-                    "help": "Withdraw/supersede action."
+                    "flags": [
+                      "--lifecycle-action"
+                    ],
+                    "help": "Withdraw/supersede action.",
+                    "name": "lifecycle_action"
                   },
                   {
-                    "name": "dry_run",
+                    "action": "store_true",
                     "flags": [
                       "--dry-run"
                     ],
-                    "action": "store_true",
-                    "help": "Report without mutation."
+                    "help": "Report without mutation.",
+                    "name": "dry_run"
                   }
                 ]
               },
               {
-                "name": "correct-dispute",
                 "help": "Record a dispute/correction transition for a prior correction event.",
+                "name": "correct-dispute",
                 "operation_ref": {
                   "id": "correction-event.correct-dispute",
                   "path": "operations/correction-event.correct-dispute.json"
                 },
                 "options": [
                   {
-                    "name": "format",
-                    "flags": [
-                      "--format"
-                    ],
                     "choices": [
                       "text",
                       "json"
                     ],
                     "default": "text",
-                    "help": "Output format."
+                    "flags": [
+                      "--format"
+                    ],
+                    "help": "Output format.",
+                    "name": "format"
                   },
                   {
-                    "name": "target",
                     "flags": [
                       "--target"
                     ],
-                    "help": "Target repository path. Defaults to current directory."
+                    "help": "Target repository path. Defaults to current directory.",
+                    "name": "target"
                   },
                   {
-                    "name": "event_json",
                     "flags": [
                       "--event-json"
                     ],
-                    "help": "Serialized correction event JSON."
+                    "help": "Serialized correction event JSON.",
+                    "name": "event_json"
                   },
                   {
-                    "name": "subjects_json",
                     "flags": [
-                      "--subjects-json"
+                      "--trusted-authority-receipt-ref"
                     ],
-                    "help": "Serialized target identity subjects for fixtures."
+                    "help": "Repo-relative trusted authority receipt ref resolved by AW before high-authority admission. Omit for low-authority self-observation.",
+                    "name": "trusted_authority_receipt_ref"
                   },
                   {
-                    "name": "trusted_authority_receipt_json",
-                    "flags": [
-                      "--trusted-authority-receipt-json"
-                    ],
-                    "help": "Trusted host/proof authority receipt JSON."
-                  },
-                  {
-                    "name": "idempotency_key",
                     "flags": [
                       "--idempotency-key"
                     ],
-                    "help": "Stable delivery idempotency key."
+                    "help": "Stable delivery idempotency key.",
+                    "name": "idempotency_key"
                   },
                   {
-                    "name": "delivery_id",
                     "flags": [
                       "--delivery-id"
                     ],
-                    "help": "Stable delivery id."
+                    "help": "Stable delivery id.",
+                    "name": "delivery_id"
                   },
                   {
-                    "name": "target_identity_ref",
                     "flags": [
                       "--target-identity-ref"
                     ],
-                    "help": "Target id/name/alias to resolve."
+                    "help": "Target id/name/alias to resolve.",
+                    "name": "target_identity_ref"
                   },
                   {
-                    "name": "target_revision",
                     "flags": [
                       "--target-revision"
                     ],
-                    "help": "Submitted target revision."
+                    "help": "Submitted target revision.",
+                    "name": "target_revision"
                   },
                   {
-                    "name": "source_ref",
                     "flags": [
                       "--source-ref"
                     ],
-                    "help": "Stable source reference."
+                    "help": "Stable source reference.",
+                    "name": "source_ref"
                   },
                   {
-                    "name": "source",
                     "flags": [
                       "--source"
                     ],
-                    "help": "Submitted source label."
+                    "help": "Submitted source label.",
+                    "name": "source"
                   },
                   {
-                    "name": "producer_class",
                     "flags": [
                       "--producer-class"
                     ],
-                    "help": "Submitted producer class; cannot upgrade authority without a trusted receipt."
+                    "help": "Submitted producer class; cannot upgrade authority without a trusted receipt.",
+                    "name": "producer_class"
                   },
                   {
-                    "name": "producer_id",
                     "flags": [
                       "--producer-id"
                     ],
-                    "help": "Producer id."
+                    "help": "Producer id.",
+                    "name": "producer_id"
                   },
                   {
-                    "name": "authority",
                     "flags": [
                       "--authority"
                     ],
-                    "help": "Claimed authority; ignored for upgrade without trusted receipt."
+                    "help": "Claimed authority; ignored for upgrade without trusted receipt.",
+                    "name": "authority"
                   },
                   {
-                    "name": "desired_behavior",
                     "flags": [
                       "--desired-behavior"
                     ],
-                    "help": "Desired behavior."
+                    "help": "Desired behavior.",
+                    "name": "desired_behavior"
                   },
                   {
-                    "name": "replaced_behavior",
                     "flags": [
                       "--replaced-behavior"
                     ],
-                    "help": "Replaced behavior."
+                    "help": "Replaced behavior.",
+                    "name": "replaced_behavior"
                   },
                   {
-                    "name": "invariant_id",
                     "flags": [
                       "--invariant-id"
                     ],
-                    "help": "Structured invariant id."
+                    "help": "Structured invariant id.",
+                    "name": "invariant_id"
                   },
                   {
-                    "name": "behavior_class",
                     "flags": [
                       "--behavior-class"
                     ],
-                    "help": "Structured behavior class."
+                    "help": "Structured behavior class.",
+                    "name": "behavior_class"
                   },
                   {
-                    "name": "task_class",
                     "flags": [
                       "--task-class"
                     ],
-                    "help": "Task class applicability."
+                    "help": "Task class applicability.",
+                    "name": "task_class"
                   },
                   {
-                    "name": "scope_class",
                     "flags": [
                       "--scope-class"
                     ],
-                    "help": "Scope class applicability."
+                    "help": "Scope class applicability.",
+                    "name": "scope_class"
                   },
                   {
-                    "name": "route_decisions",
+                    "action": "append",
+                    "default": [],
                     "flags": [
                       "--route-decision"
                     ],
-                    "action": "append",
-                    "default": [],
-                    "help": "Route decision. Repeat for multiple routes."
+                    "help": "Route decision. Repeat for multiple routes.",
+                    "name": "route_decisions"
                   },
                   {
-                    "name": "evidence_hash",
                     "flags": [
                       "--evidence-hash"
                     ],
-                    "help": "Evidence hash."
+                    "help": "Evidence hash.",
+                    "name": "evidence_hash"
                   },
                   {
-                    "name": "evidence_ref",
                     "flags": [
                       "--evidence-ref"
                     ],
-                    "help": "Evidence reference."
+                    "help": "Evidence reference.",
+                    "name": "evidence_ref"
                   },
                   {
-                    "name": "predecessor_event_id",
                     "flags": [
                       "--predecessor-event-id"
                     ],
-                    "help": "Predecessor event id for lifecycle transitions."
+                    "help": "Predecessor event id for lifecycle transitions.",
+                    "name": "predecessor_event_id"
                   },
                   {
-                    "name": "lifecycle_action",
-                    "flags": [
-                      "--lifecycle-action"
-                    ],
                     "choices": [
                       "withdraw",
                       "supersede"
                     ],
-                    "help": "Withdraw/supersede action."
+                    "flags": [
+                      "--lifecycle-action"
+                    ],
+                    "help": "Withdraw/supersede action.",
+                    "name": "lifecycle_action"
                   },
                   {
-                    "name": "dry_run",
+                    "action": "store_true",
                     "flags": [
                       "--dry-run"
                     ],
-                    "action": "store_true",
-                    "help": "Report without mutation."
+                    "help": "Report without mutation.",
+                    "name": "dry_run"
                   }
                 ]
               },
               {
-                "name": "withdraw-supersede",
                 "help": "Withdraw or supersede a prior correction event.",
+                "name": "withdraw-supersede",
                 "operation_ref": {
                   "id": "correction-event.withdraw-supersede",
                   "path": "operations/correction-event.withdraw-supersede.json"
                 },
                 "options": [
                   {
-                    "name": "format",
-                    "flags": [
-                      "--format"
-                    ],
                     "choices": [
                       "text",
                       "json"
                     ],
                     "default": "text",
-                    "help": "Output format."
+                    "flags": [
+                      "--format"
+                    ],
+                    "help": "Output format.",
+                    "name": "format"
                   },
                   {
-                    "name": "target",
                     "flags": [
                       "--target"
                     ],
-                    "help": "Target repository path. Defaults to current directory."
+                    "help": "Target repository path. Defaults to current directory.",
+                    "name": "target"
                   },
                   {
-                    "name": "event_json",
                     "flags": [
                       "--event-json"
                     ],
-                    "help": "Serialized correction event JSON."
+                    "help": "Serialized correction event JSON.",
+                    "name": "event_json"
                   },
                   {
-                    "name": "subjects_json",
                     "flags": [
-                      "--subjects-json"
+                      "--trusted-authority-receipt-ref"
                     ],
-                    "help": "Serialized target identity subjects for fixtures."
+                    "help": "Repo-relative trusted authority receipt ref resolved by AW before high-authority admission. Omit for low-authority self-observation.",
+                    "name": "trusted_authority_receipt_ref"
                   },
                   {
-                    "name": "trusted_authority_receipt_json",
-                    "flags": [
-                      "--trusted-authority-receipt-json"
-                    ],
-                    "help": "Trusted host/proof authority receipt JSON."
-                  },
-                  {
-                    "name": "idempotency_key",
                     "flags": [
                       "--idempotency-key"
                     ],
-                    "help": "Stable delivery idempotency key."
+                    "help": "Stable delivery idempotency key.",
+                    "name": "idempotency_key"
                   },
                   {
-                    "name": "delivery_id",
                     "flags": [
                       "--delivery-id"
                     ],
-                    "help": "Stable delivery id."
+                    "help": "Stable delivery id.",
+                    "name": "delivery_id"
                   },
                   {
-                    "name": "target_identity_ref",
                     "flags": [
                       "--target-identity-ref"
                     ],
-                    "help": "Target id/name/alias to resolve."
+                    "help": "Target id/name/alias to resolve.",
+                    "name": "target_identity_ref"
                   },
                   {
-                    "name": "target_revision",
                     "flags": [
                       "--target-revision"
                     ],
-                    "help": "Submitted target revision."
+                    "help": "Submitted target revision.",
+                    "name": "target_revision"
                   },
                   {
-                    "name": "source_ref",
                     "flags": [
                       "--source-ref"
                     ],
-                    "help": "Stable source reference."
+                    "help": "Stable source reference.",
+                    "name": "source_ref"
                   },
                   {
-                    "name": "source",
                     "flags": [
                       "--source"
                     ],
-                    "help": "Submitted source label."
+                    "help": "Submitted source label.",
+                    "name": "source"
                   },
                   {
-                    "name": "producer_class",
                     "flags": [
                       "--producer-class"
                     ],
-                    "help": "Submitted producer class; cannot upgrade authority without a trusted receipt."
+                    "help": "Submitted producer class; cannot upgrade authority without a trusted receipt.",
+                    "name": "producer_class"
                   },
                   {
-                    "name": "producer_id",
                     "flags": [
                       "--producer-id"
                     ],
-                    "help": "Producer id."
+                    "help": "Producer id.",
+                    "name": "producer_id"
                   },
                   {
-                    "name": "authority",
                     "flags": [
                       "--authority"
                     ],
-                    "help": "Claimed authority; ignored for upgrade without trusted receipt."
+                    "help": "Claimed authority; ignored for upgrade without trusted receipt.",
+                    "name": "authority"
                   },
                   {
-                    "name": "desired_behavior",
                     "flags": [
                       "--desired-behavior"
                     ],
-                    "help": "Desired behavior."
+                    "help": "Desired behavior.",
+                    "name": "desired_behavior"
                   },
                   {
-                    "name": "replaced_behavior",
                     "flags": [
                       "--replaced-behavior"
                     ],
-                    "help": "Replaced behavior."
+                    "help": "Replaced behavior.",
+                    "name": "replaced_behavior"
                   },
                   {
-                    "name": "invariant_id",
                     "flags": [
                       "--invariant-id"
                     ],
-                    "help": "Structured invariant id."
+                    "help": "Structured invariant id.",
+                    "name": "invariant_id"
                   },
                   {
-                    "name": "behavior_class",
                     "flags": [
                       "--behavior-class"
                     ],
-                    "help": "Structured behavior class."
+                    "help": "Structured behavior class.",
+                    "name": "behavior_class"
                   },
                   {
-                    "name": "task_class",
                     "flags": [
                       "--task-class"
                     ],
-                    "help": "Task class applicability."
+                    "help": "Task class applicability.",
+                    "name": "task_class"
                   },
                   {
-                    "name": "scope_class",
                     "flags": [
                       "--scope-class"
                     ],
-                    "help": "Scope class applicability."
+                    "help": "Scope class applicability.",
+                    "name": "scope_class"
                   },
                   {
-                    "name": "route_decisions",
+                    "action": "append",
+                    "default": [],
                     "flags": [
                       "--route-decision"
                     ],
-                    "action": "append",
-                    "default": [],
-                    "help": "Route decision. Repeat for multiple routes."
+                    "help": "Route decision. Repeat for multiple routes.",
+                    "name": "route_decisions"
                   },
                   {
-                    "name": "evidence_hash",
                     "flags": [
                       "--evidence-hash"
                     ],
-                    "help": "Evidence hash."
+                    "help": "Evidence hash.",
+                    "name": "evidence_hash"
                   },
                   {
-                    "name": "evidence_ref",
                     "flags": [
                       "--evidence-ref"
                     ],
-                    "help": "Evidence reference."
+                    "help": "Evidence reference.",
+                    "name": "evidence_ref"
                   },
                   {
-                    "name": "predecessor_event_id",
                     "flags": [
                       "--predecessor-event-id"
                     ],
-                    "help": "Predecessor event id for lifecycle transitions."
+                    "help": "Predecessor event id for lifecycle transitions.",
+                    "name": "predecessor_event_id"
                   },
                   {
-                    "name": "lifecycle_action",
-                    "flags": [
-                      "--lifecycle-action"
-                    ],
                     "choices": [
                       "withdraw",
                       "supersede"
                     ],
-                    "help": "Withdraw/supersede action."
+                    "flags": [
+                      "--lifecycle-action"
+                    ],
+                    "help": "Withdraw/supersede action.",
+                    "name": "lifecycle_action"
                   },
                   {
-                    "name": "dry_run",
+                    "action": "store_true",
                     "flags": [
                       "--dry-run"
                     ],
-                    "action": "store_true",
-                    "help": "Report without mutation."
+                    "help": "Report without mutation.",
+                    "name": "dry_run"
                   }
                 ]
               },
               {
-                "name": "prune-compact",
                 "help": "Compact bounded local correction-event storage while preserving lineage.",
+                "name": "prune-compact",
                 "operation_ref": {
                   "id": "correction-event.prune-compact",
                   "path": "operations/correction-event.prune-compact.json"
                 },
                 "options": [
                   {
-                    "name": "format",
-                    "flags": [
-                      "--format"
-                    ],
                     "choices": [
                       "text",
                       "json"
                     ],
                     "default": "text",
-                    "help": "Output format."
+                    "flags": [
+                      "--format"
+                    ],
+                    "help": "Output format.",
+                    "name": "format"
                   },
                   {
-                    "name": "target",
                     "flags": [
                       "--target"
                     ],
-                    "help": "Target repository path. Defaults to current directory."
+                    "help": "Target repository path. Defaults to current directory.",
+                    "name": "target"
                   },
                   {
-                    "name": "event_json",
                     "flags": [
                       "--event-json"
                     ],
-                    "help": "Serialized correction event JSON."
+                    "help": "Serialized correction event JSON.",
+                    "name": "event_json"
                   },
                   {
-                    "name": "subjects_json",
                     "flags": [
-                      "--subjects-json"
+                      "--trusted-authority-receipt-ref"
                     ],
-                    "help": "Serialized target identity subjects for fixtures."
+                    "help": "Repo-relative trusted authority receipt ref resolved by AW before high-authority admission. Omit for low-authority self-observation.",
+                    "name": "trusted_authority_receipt_ref"
                   },
                   {
-                    "name": "trusted_authority_receipt_json",
-                    "flags": [
-                      "--trusted-authority-receipt-json"
-                    ],
-                    "help": "Trusted host/proof authority receipt JSON."
-                  },
-                  {
-                    "name": "idempotency_key",
                     "flags": [
                       "--idempotency-key"
                     ],
-                    "help": "Stable delivery idempotency key."
+                    "help": "Stable delivery idempotency key.",
+                    "name": "idempotency_key"
                   },
                   {
-                    "name": "delivery_id",
                     "flags": [
                       "--delivery-id"
                     ],
-                    "help": "Stable delivery id."
+                    "help": "Stable delivery id.",
+                    "name": "delivery_id"
                   },
                   {
-                    "name": "target_identity_ref",
                     "flags": [
                       "--target-identity-ref"
                     ],
-                    "help": "Target id/name/alias to resolve."
+                    "help": "Target id/name/alias to resolve.",
+                    "name": "target_identity_ref"
                   },
                   {
-                    "name": "target_revision",
                     "flags": [
                       "--target-revision"
                     ],
-                    "help": "Submitted target revision."
+                    "help": "Submitted target revision.",
+                    "name": "target_revision"
                   },
                   {
-                    "name": "source_ref",
                     "flags": [
                       "--source-ref"
                     ],
-                    "help": "Stable source reference."
+                    "help": "Stable source reference.",
+                    "name": "source_ref"
                   },
                   {
-                    "name": "source",
                     "flags": [
                       "--source"
                     ],
-                    "help": "Submitted source label."
+                    "help": "Submitted source label.",
+                    "name": "source"
                   },
                   {
-                    "name": "producer_class",
                     "flags": [
                       "--producer-class"
                     ],
-                    "help": "Submitted producer class; cannot upgrade authority without a trusted receipt."
+                    "help": "Submitted producer class; cannot upgrade authority without a trusted receipt.",
+                    "name": "producer_class"
                   },
                   {
-                    "name": "producer_id",
                     "flags": [
                       "--producer-id"
                     ],
-                    "help": "Producer id."
+                    "help": "Producer id.",
+                    "name": "producer_id"
                   },
                   {
-                    "name": "authority",
                     "flags": [
                       "--authority"
                     ],
-                    "help": "Claimed authority; ignored for upgrade without trusted receipt."
+                    "help": "Claimed authority; ignored for upgrade without trusted receipt.",
+                    "name": "authority"
                   },
                   {
-                    "name": "desired_behavior",
                     "flags": [
                       "--desired-behavior"
                     ],
-                    "help": "Desired behavior."
+                    "help": "Desired behavior.",
+                    "name": "desired_behavior"
                   },
                   {
-                    "name": "replaced_behavior",
                     "flags": [
                       "--replaced-behavior"
                     ],
-                    "help": "Replaced behavior."
+                    "help": "Replaced behavior.",
+                    "name": "replaced_behavior"
                   },
                   {
-                    "name": "invariant_id",
                     "flags": [
                       "--invariant-id"
                     ],
-                    "help": "Structured invariant id."
+                    "help": "Structured invariant id.",
+                    "name": "invariant_id"
                   },
                   {
-                    "name": "behavior_class",
                     "flags": [
                       "--behavior-class"
                     ],
-                    "help": "Structured behavior class."
+                    "help": "Structured behavior class.",
+                    "name": "behavior_class"
                   },
                   {
-                    "name": "task_class",
                     "flags": [
                       "--task-class"
                     ],
-                    "help": "Task class applicability."
+                    "help": "Task class applicability.",
+                    "name": "task_class"
                   },
                   {
-                    "name": "scope_class",
                     "flags": [
                       "--scope-class"
                     ],
-                    "help": "Scope class applicability."
+                    "help": "Scope class applicability.",
+                    "name": "scope_class"
                   },
                   {
-                    "name": "route_decisions",
+                    "action": "append",
+                    "default": [],
                     "flags": [
                       "--route-decision"
                     ],
-                    "action": "append",
-                    "default": [],
-                    "help": "Route decision. Repeat for multiple routes."
+                    "help": "Route decision. Repeat for multiple routes.",
+                    "name": "route_decisions"
                   },
                   {
-                    "name": "evidence_hash",
                     "flags": [
                       "--evidence-hash"
                     ],
-                    "help": "Evidence hash."
+                    "help": "Evidence hash.",
+                    "name": "evidence_hash"
                   },
                   {
-                    "name": "evidence_ref",
                     "flags": [
                       "--evidence-ref"
                     ],
-                    "help": "Evidence reference."
+                    "help": "Evidence reference.",
+                    "name": "evidence_ref"
                   },
                   {
-                    "name": "predecessor_event_id",
                     "flags": [
                       "--predecessor-event-id"
                     ],
-                    "help": "Predecessor event id for lifecycle transitions."
+                    "help": "Predecessor event id for lifecycle transitions.",
+                    "name": "predecessor_event_id"
                   },
                   {
-                    "name": "lifecycle_action",
-                    "flags": [
-                      "--lifecycle-action"
-                    ],
                     "choices": [
                       "withdraw",
                       "supersede"
                     ],
-                    "help": "Withdraw/supersede action."
+                    "flags": [
+                      "--lifecycle-action"
+                    ],
+                    "help": "Withdraw/supersede action.",
+                    "name": "lifecycle_action"
                   },
                   {
-                    "name": "dry_run",
+                    "action": "store_true",
                     "flags": [
                       "--dry-run"
                     ],
-                    "action": "store_true",
-                    "help": "Report without mutation."
+                    "help": "Report without mutation.",
+                    "name": "dry_run"
                   }
                 ]
               }
-            ],
-            "options": []
+            ]
           },
           "operation_ref": {
             "id": "correction-event.submit",
@@ -10141,7 +9541,8 @@
             "output": [
               "correction_event_result.schema.json"
             ]
-          }
+          },
+          "status": "generated"
         }
       ],
       "id": "root-workspace",
@@ -10472,31 +9873,6 @@
               "name": "run_id"
             },
             {
-              "name": "assignment_gate_json",
-              "arg": "assignment_gate_json",
-              "default": null
-            },
-            {
-              "name": "assignment_policy_json",
-              "arg": "assignment_policy_json",
-              "default": null
-            },
-            {
-              "name": "delegation_decision_json",
-              "arg": "delegation_decision_json",
-              "default": null
-            },
-            {
-              "name": "aw_proof_receipt_json",
-              "arg": "aw_proof_receipt_json",
-              "default": null
-            },
-            {
-              "name": "run_state_json",
-              "arg": "run_state_json",
-              "default": null
-            },
-            {
               "arg": "target_name",
               "default": null,
               "name": "target_name"
@@ -10505,11 +9881,6 @@
               "arg": "transport",
               "default": "manual",
               "name": "transport"
-            },
-            {
-              "arg": "packet_json",
-              "default": null,
-              "name": "packet_json"
             },
             {
               "arg": "return_json",
@@ -10525,16 +9896,6 @@
               "arg": "artifact_ref",
               "default": null,
               "name": "artifact_ref"
-            },
-            {
-              "arg": "current_authority_ref",
-              "default": null,
-              "name": "current_authority_ref"
-            },
-            {
-              "arg": "live_mutation_baseline",
-              "default": null,
-              "name": "live_mutation_baseline"
             },
             {
               "arg": "admission_status",
@@ -10562,89 +9923,84 @@
               "name": "dry_run"
             },
             {
-              "name": "event_json",
               "arg": "event_json",
-              "default": null
+              "default": null,
+              "name": "event_json"
             },
             {
-              "name": "subjects_json",
-              "arg": "subjects_json",
-              "default": null
+              "arg": "trusted_authority_receipt_ref",
+              "default": null,
+              "name": "trusted_authority_receipt_ref"
             },
             {
-              "name": "trusted_authority_receipt_json",
-              "arg": "trusted_authority_receipt_json",
-              "default": null
-            },
-            {
-              "name": "delivery_id",
               "arg": "delivery_id",
-              "default": null
+              "default": null,
+              "name": "delivery_id"
             },
             {
-              "name": "target_identity_ref",
               "arg": "target_identity_ref",
-              "default": null
+              "default": null,
+              "name": "target_identity_ref"
             },
             {
-              "name": "target_revision",
               "arg": "target_revision",
-              "default": null
+              "default": null,
+              "name": "target_revision"
             },
             {
-              "name": "source",
               "arg": "source",
-              "default": null
+              "default": null,
+              "name": "source"
             },
             {
-              "name": "producer_id",
               "arg": "producer_id",
-              "default": null
+              "default": null,
+              "name": "producer_id"
             },
             {
-              "name": "desired_behavior",
               "arg": "desired_behavior",
-              "default": null
+              "default": null,
+              "name": "desired_behavior"
             },
             {
-              "name": "replaced_behavior",
               "arg": "replaced_behavior",
-              "default": null
+              "default": null,
+              "name": "replaced_behavior"
             },
             {
-              "name": "invariant_id",
               "arg": "invariant_id",
-              "default": null
+              "default": null,
+              "name": "invariant_id"
             },
             {
-              "name": "behavior_class",
               "arg": "behavior_class",
-              "default": null
+              "default": null,
+              "name": "behavior_class"
             },
             {
-              "name": "route_decisions",
               "arg": "route_decisions",
-              "default": []
+              "default": [],
+              "name": "route_decisions"
             },
             {
-              "name": "evidence_hash",
               "arg": "evidence_hash",
-              "default": null
+              "default": null,
+              "name": "evidence_hash"
             },
             {
-              "name": "evidence_ref",
               "arg": "evidence_ref",
-              "default": null
+              "default": null,
+              "name": "evidence_ref"
             },
             {
-              "name": "predecessor_event_id",
               "arg": "predecessor_event_id",
-              "default": null
+              "default": null,
+              "name": "predecessor_event_id"
             },
             {
-              "name": "lifecycle_action",
               "arg": "lifecycle_action",
-              "default": null
+              "default": null,
+              "name": "lifecycle_action"
             }
           ],
           "module_file": "primitives.operation_executor",
