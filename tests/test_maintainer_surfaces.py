@@ -427,6 +427,28 @@ def test_self_improvement_skill_requires_durable_residue_routing_before_closeout
     assert "Memory note template's closeout-derived residue fields" in skill_text
 
 
+def test_issue_shaping_skill_preserves_evaluation_closure_boundary() -> None:
+    skill_text = (WORKSPACE_ROOT / "tools" / "skills" / "github-issue-shaping" / "SKILL.md").read_text(
+        encoding="utf-8",
+    )
+
+    assert "present-tense implementation proof remains required" in skill_text
+    assert "owner, criteria, evidence sources, report sinks, collection policy, and conclusion policy" in skill_text
+    assert "`evaluation_boundary`" in skill_text
+    assert "Do not use longitudinal evaluation language to relabel unfinished implementation" in skill_text
+
+
+def test_pr_review_skill_blocks_evaluation_as_closure_evasion() -> None:
+    skill_text = (WORKSPACE_ROOT / "tools" / "skills" / "pr-review-recheck" / "SKILL.md").read_text(
+        encoding="utf-8",
+    )
+
+    assert "deterministic implementation behavior still needs present-tense proof" in skill_text
+    assert "fresh/current admitted result" in skill_text
+    assert "longitudinal evaluation is used to substitute for unfinished implementation" in skill_text
+    assert "direct deterministic work should remain directly closable" in skill_text
+
+
 def test_dogfooding_routing_runbook_covers_routed_dismissed_and_no_signal_cases() -> None:
     text = (WORKSPACE_ROOT / ".agentic-workspace" / "memory" / "repo" / "runbooks" / "dogfooding-feedback-routing.md").read_text(
         encoding="utf-8"

@@ -1,12 +1,12 @@
 {
   "schema_version": "agentic-workspace/operation/v1",
-  "id": "evaluation.transition",
+  "id": "evaluation.prune",
   "command_surface": {
     "command": "evaluation",
     "format_option": "format",
-    "subcommand": "transition"
+    "subcommand": "prune"
   },
-  "summary": "Apply a validated evaluation lifecycle transition.",
+  "summary": "Prune or compact bounded local evaluation observation history with a lineage receipt.",
   "classification": "lifecycle-mutation",
   "inputs": [
     {
@@ -20,17 +20,7 @@
       "required": true
     },
     {
-      "name": "lifecycle",
-      "source": "cli-option",
-      "required": true
-    },
-    {
-      "name": "reason",
-      "source": "cli-option",
-      "required": false
-    },
-    {
-      "name": "expected_revision",
+      "name": "dry_run",
       "source": "cli-option",
       "required": false
     },
@@ -42,13 +32,13 @@
   ],
   "output": {
     "kind": "json",
-    "schema_ref": "schemas/evaluation_definition.schema.json"
+    "schema_ref": "schemas/evaluation_summary.schema.json"
   },
   "effects": {
     "read_only": false,
     "destructive": false,
-    "idempotent": false,
-    "writes_repo_state": true,
+    "idempotent": true,
+    "writes_repo_state": false,
     "requires_preflight_gate": false
   },
   "locality": {
@@ -60,13 +50,22 @@
     {
       "surface": ".agentic-workspace/evaluations.json",
       "required": true
+    },
+    {
+      "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.jsonl",
+      "required": true
     }
   ],
   "writes": [
     {
-      "surface": ".agentic-workspace/evaluations.json",
+      "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.jsonl",
       "required": true,
-      "when": "lifecycle transition accepted"
+      "when": "dry_run is false and compactable observations exist"
+    },
+    {
+      "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.compaction.json",
+      "required": true,
+      "when": "dry_run is false and compactable observations exist"
     }
   ],
   "steps": [
@@ -76,19 +75,20 @@
       "description": "Resolve the target root."
     },
     {
-      "id": "transition",
-      "uses": "evaluation.lifecycle.transition",
-      "description": "Validate and apply lifecycle transition."
+      "id": "compact",
+      "uses": "evaluation.observation.prune",
+      "description": "Take the local lock, retain current/recent records, write compaction lineage, and remove raw compacted local residue."
     },
     {
       "id": "emit_output",
       "uses": "output.emit",
-      "description": "Emit transition result."
+      "description": "Emit prune receipt."
     }
   ],
   "guards": [
-    "Invalid lifecycle transitions fail closed.",
-    "Expected revision, when provided, must match the current evaluation definition revision."
+    "Current definition-revision results are retained.",
+    "Compacted records remain represented in a lineage receipt.",
+    "Dry-run reports what would be compacted without changing local observation state."
   ],
   "proof": [
     "evaluation unit tests",

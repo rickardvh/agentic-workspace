@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from agentic_workspace.authority_envelope import admit_mutation_boundary, mutation_baseline_payload
+from agentic_workspace.authority_envelope import admit_live_mutation_boundary, mutation_baseline_payload
 from agentic_workspace.config import WorkspaceUsageError
 
 EVALUATIONS_KIND = "agentic-workspace/evaluations/v1"
@@ -15,6 +16,8 @@ EVALUATION_OBSERVATION_KIND = "agentic-workspace/evaluation-observation/v1"
 EVALUATION_CLOSURE_AUTHORITY_KIND = "agentic-workspace/evaluation-closure-authority/v1"
 WORKSPACE_EVALUATIONS_PATH = Path(".agentic-workspace/evaluations.json")
 WORKSPACE_LOCAL_EVALUATIONS_DIR = Path(".agentic-workspace/local/evaluations")
+OBSERVATION_RETENTION_CAP = 100
+OBSERVATION_BYTE_CAP = 256_000
 
 EVALUATION_LIFECYCLES = (
     "collecting",
@@ -63,6 +66,34 @@ def _load_json(path: Path, *, default: dict[str, Any]) -> dict[str, Any]:
 def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = path.with_suffix(path.suffix + ".tmp")
+    tmp_path.write_text(text, encoding="utf-8", newline="\n")
+    tmp_path.replace(path)
+
+
+class _LocalFileLock:
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self._fd: int | None = None
+
+    def __enter__(self) -> "_LocalFileLock":
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            self._fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(self._fd, str(os.getpid()).encode("utf-8"))
+        except FileExistsError as exc:
+            raise WorkspaceUsageError(f"evaluation observation store is locked: {self.path.as_posix()}.") from exc
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        if self._fd is not None:
+            os.close(self._fd)
+            self._fd = None
+        self.path.unlink(missing_ok=True)
 
 
 def _definitions_payload(target_root: Path) -> dict[str, Any]:
@@ -232,6 +263,7 @@ def _observation_admission(
     *,
     target_root: Path,
     context: dict[str, Any],
+    authority: dict[str, Any],
     evaluation_id: str,
     definition_revision: int,
     criterion: str,
@@ -239,10 +271,36 @@ def _observation_admission(
     recorded_at: str,
     previous_current_results: list[dict[str, Any]],
 ) -> dict[str, Any]:
-    authority = context.get("authority_envelope", {}) if isinstance(context.get("authority_envelope"), dict) else {}
-    baseline = authority.get("mutation_baseline", {}) if isinstance(authority.get("mutation_baseline"), dict) else {}
-    proof = context.get("proof", {}) if isinstance(context.get("proof"), dict) else {}
-    assignment = context.get("assignment", {}) if isinstance(context.get("assignment"), dict) else {}
+    envelope = authority.get("authority_envelope", {}) if isinstance(authority.get("authority_envelope"), dict) else {}
+    baseline = envelope.get("mutation_baseline", {}) if isinstance(envelope.get("mutation_baseline"), dict) else {}
+    proof = authority.get("proof", {}) if isinstance(authority.get("proof"), dict) else {}
+    assignment = authority.get("assignment", {}) if isinstance(authority.get("assignment"), dict) else {}
+    submitted_proof = context.get("proof", {}) if isinstance(context.get("proof"), dict) else {}
+    submitted_assignment = context.get("assignment", {}) if isinstance(context.get("assignment"), dict) else {}
+    submitted_authority = context.get("authority_envelope", {}) if isinstance(context.get("authority_envelope"), dict) else {}
+    submitted_baseline = (
+        submitted_authority.get("mutation_baseline", {}) if isinstance(submitted_authority.get("mutation_baseline"), dict) else {}
+    )
+    submitted_missing_context = [
+        field
+        for field, value in {
+            "submitted.assignment.target_identity_ref": submitted_assignment.get("target_identity_ref"),
+            "submitted.assignment.context_key": submitted_assignment.get("context_key"),
+            "submitted.assignment.assignment_revision": submitted_assignment.get("assignment_revision"),
+            "submitted.authority_envelope.mutation_baseline": submitted_baseline if submitted_baseline else None,
+            "submitted.proof.result": submitted_proof.get("result"),
+            "submitted.proof.verified_by": submitted_proof.get("verified_by"),
+            "submitted.proof.provenance": submitted_proof.get("provenance"),
+        }.items()
+        if value in (None, "", [], {})
+    ]
+    if submitted_missing_context:
+        return {
+            "status": "rejected",
+            "reason": "missing-bound-context",
+            "missing_fields": submitted_missing_context,
+            "repair_route": "observe with submitted context copied from the current AW authority receipt",
+        }
     missing_context = [
         field
         for field, value in {
@@ -263,6 +321,28 @@ def _observation_admission(
             "missing_fields": missing_context,
             "repair_route": "observe with current assignment identity, live mutation baseline scope, and AW proof receipt",
         }
+    mismatches = [
+        field
+        for field, submitted, resolved in [
+            ("assignment.target_identity_ref", submitted_assignment.get("target_identity_ref"), assignment.get("target_identity_ref")),
+            ("assignment.context_key", submitted_assignment.get("context_key"), assignment.get("context_key")),
+            ("assignment.assignment_revision", submitted_assignment.get("assignment_revision"), assignment.get("assignment_revision")),
+            ("proof.revision", submitted_proof.get("revision"), proof.get("revision")),
+            (
+                "authority_envelope.mutation_baseline.baseline_id",
+                submitted_baseline.get("baseline_id"),
+                baseline.get("baseline_id"),
+            ),
+        ]
+        if submitted not in (None, "", [], {}) and submitted != resolved
+    ]
+    if mismatches:
+        return {
+            "status": "rejected",
+            "reason": "caller-context-stale-or-forged",
+            "mismatched_fields": mismatches,
+            "repair_route": "refresh the observation context from the current AW authority receipt before observing",
+        }
     if str(proof.get("result") or "").strip() != "passed" or str(proof.get("verified_by") or "").strip() != "aw":
         return {
             "status": "rejected",
@@ -271,21 +351,16 @@ def _observation_admission(
         }
     expected_scope = baseline.get("scope", {}) if isinstance(baseline.get("scope"), dict) else {}
     changed_paths = (
-        _string_list(authority.get("changed_paths"))
+        _string_list(envelope.get("changed_paths"))
         or _string_list(context.get("changed_paths"))
         or _string_list(expected_scope.get("allowed_paths"))
     )
-    current_baseline = mutation_baseline_payload(
+    mutation_admission = admit_live_mutation_boundary(
+        boundary_id="evaluation-observation-admission",
         target_root=target_root,
-        changed_paths=changed_paths,
+        expected=baseline,
         assignment_target_identity_ref=str(assignment.get("target_identity_ref") or "").strip() or None,
         assignment_revision=str(assignment.get("assignment_revision") or "").strip() or None,
-    )
-    mutation_admission = admit_mutation_boundary(
-        boundary_id="evaluation-observation-admission",
-        expected=baseline,
-        current=current_baseline,
-        assignment_target_identity_ref=str(assignment.get("target_identity_ref") or "").strip() or None,
         allowed_paths=changed_paths or None,
     )
     if mutation_admission.get("status") == "rejected":
@@ -325,6 +400,11 @@ def _observation_admission(
         "target_identity_ref": assignment.get("target_identity_ref"),
         "mutation_baseline_revalidation": mutation_admission,
         "proof": {"result": proof.get("result"), "verified_by": proof.get("verified_by"), "revision": proof.get("revision")},
+        "authority_resolution": {
+            "status": "resolved-from-local-authority-store",
+            "source": WORKSPACE_LOCAL_EVALUATIONS_DIR.joinpath(f"{evaluation_id}.authority.json").as_posix(),
+            "caller_context_trusted": False,
+        },
         "result_identity": result_identity,
         "supersedes": supersedes,
         "supersession": {
@@ -411,6 +491,47 @@ def _observation_path(target_root: Path, evaluation_id: str) -> Path:
     return target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.jsonl"
 
 
+def _observation_authority_path(target_root: Path, evaluation_id: str) -> Path:
+    return target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.authority.json"
+
+
+def write_observation_authority(
+    *,
+    target_root: Path,
+    evaluation_id: str,
+    assignment: dict[str, Any],
+    proof: dict[str, Any],
+    changed_paths: list[str],
+) -> dict[str, Any]:
+    baseline = mutation_baseline_payload(
+        target_root=target_root,
+        changed_paths=changed_paths,
+        assignment_target_identity_ref=str(assignment.get("target_identity_ref") or "").strip() or None,
+        assignment_revision=str(assignment.get("assignment_revision") or "").strip() or None,
+    )
+    payload = {
+        "kind": "agentic-workspace/evaluation-observation-authority/v1",
+        "evaluation_id": evaluation_id,
+        "assignment": assignment,
+        "proof": proof,
+        "authority_envelope": {"mutation_baseline": baseline, "changed_paths": changed_paths},
+        "recorded_at": _now(),
+        "owner": "aw-evaluation-authority-store",
+    }
+    _write_json(_observation_authority_path(target_root, evaluation_id), payload)
+    return payload
+
+
+def _load_observation_authority(target_root: Path, evaluation_id: str) -> dict[str, Any]:
+    path = _observation_authority_path(target_root, evaluation_id)
+    payload = _load_json(path, default={})
+    if not payload:
+        raise WorkspaceUsageError(
+            f"evaluation observation authority is missing for {evaluation_id!r}; run or record AW-owned assignment/proof authority first."
+        )
+    return payload
+
+
 def _load_observations(target_root: Path, evaluation_id: str) -> list[dict[str, Any]]:
     path = _observation_path(target_root, evaluation_id)
     if not path.exists():
@@ -427,6 +548,27 @@ def _load_observations(target_root: Path, evaluation_id: str) -> list[dict[str, 
             raise WorkspaceUsageError(f"{path.as_posix()} line {line_number} must be a JSON object.")
         observations.append(payload)
     return observations
+
+
+def _observation_store_revision(observations: list[dict[str, Any]]) -> str:
+    return hashlib.sha256(json.dumps(observations, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()[:16]
+
+
+def _observation_idempotency_key(observation: dict[str, Any], authority: dict[str, Any]) -> str:
+    source = {
+        key: observation.get(key)
+        for key in ("evaluation_id", "definition_revision", "criterion", "result", "evidence_refs", "finding", "recommended_action")
+    }
+    source["authority_baseline_id"] = (
+        authority.get("authority_envelope", {}).get("mutation_baseline", {}).get("baseline_id")
+        if isinstance(authority.get("authority_envelope"), dict)
+        else None
+    )
+    source["proof_revision"] = authority.get("proof", {}).get("revision") if isinstance(authority.get("proof"), dict) else None
+    return (
+        "evaluation-observe:"
+        + hashlib.sha256(json.dumps(source, sort_keys=True, separators=(",", ":"), default=str).encode("utf-8")).hexdigest()[:24]
+    )
 
 
 def append_observation(
@@ -472,35 +614,55 @@ def append_observation(
         "finding": finding,
         "recommended_action": recommended_action,
     }
-    previous_observations = _load_observations(target_root, evaluation_id)
-    previous_current_results = [
-        item
-        for item in previous_observations
-        if isinstance(item.get("admission"), dict)
-        and item["admission"].get("status") == "admitted"
-        and int(item.get("definition_revision", 0) or 0) == int(definition["revision"])
-        and item.get("criterion") == criterion
-        and isinstance(item.get("result_identity"), dict)
-    ]
-    admission = _observation_admission(
-        target_root=target_root,
-        context=observation["context"],
-        evaluation_id=evaluation_id,
-        definition_revision=int(definition["revision"]),
-        criterion=criterion,
-        result=result,
-        recorded_at=recorded_at,
-        previous_current_results=previous_current_results,
-    )
-    if admission["status"] == "rejected":
-        raise WorkspaceUsageError(f"evaluation observation rejected ({admission['reason']}): {admission['repair_route']}.")
-    observation["admission"] = admission
-    observation["result_identity"] = admission["result_identity"]
-    observation["supersedes"] = admission["supersedes"]
+    authority = _load_observation_authority(target_root, evaluation_id)
+    observation["idempotency_key"] = _observation_idempotency_key(observation, authority)
     path = _observation_path(target_root, evaluation_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(observation, sort_keys=True) + "\n")
+    lock_path = path.with_suffix(path.suffix + ".lock")
+    with _LocalFileLock(lock_path):
+        previous_observations = _load_observations(target_root, evaluation_id)
+        previous_revision = _observation_store_revision(previous_observations)
+        duplicate = next((item for item in previous_observations if item.get("idempotency_key") == observation["idempotency_key"]), None)
+        if isinstance(duplicate, dict):
+            return {
+                "kind": EVALUATION_OBSERVATION_KIND,
+                "path": WORKSPACE_LOCAL_EVALUATIONS_DIR.joinpath(f"{evaluation_id}.jsonl").as_posix(),
+                "outcome": "duplicate",
+                "evaluation_id": evaluation_id,
+                "criterion": criterion,
+                "result": duplicate.get("result"),
+                "result_identity": duplicate.get("result_identity"),
+                "supersedes": duplicate.get("supersedes", []),
+                "idempotency_key": observation["idempotency_key"],
+                "store_revision": previous_revision,
+            }
+        previous_current_results = [
+            item
+            for item in previous_observations
+            if isinstance(item.get("admission"), dict)
+            and item["admission"].get("status") == "admitted"
+            and int(item.get("definition_revision", 0) or 0) == int(definition["revision"])
+            and item.get("criterion") == criterion
+            and isinstance(item.get("result_identity"), dict)
+        ]
+        admission = _observation_admission(
+            target_root=target_root,
+            context=observation["context"],
+            authority=authority,
+            evaluation_id=evaluation_id,
+            definition_revision=int(definition["revision"]),
+            criterion=criterion,
+            result=result,
+            recorded_at=recorded_at,
+            previous_current_results=previous_current_results,
+        )
+        if admission["status"] == "rejected":
+            raise WorkspaceUsageError(f"evaluation observation rejected ({admission['reason']}): {admission['repair_route']}.")
+        observation["admission"] = admission
+        observation["result_identity"] = admission["result_identity"]
+        observation["supersedes"] = admission["supersedes"]
+        next_observations = [*previous_observations, observation]
+        _atomic_write_text(path, "".join(json.dumps(item, sort_keys=True) + "\n" for item in next_observations))
+        store_revision = _observation_store_revision(next_observations)
     return {
         "kind": EVALUATION_OBSERVATION_KIND,
         "path": WORKSPACE_LOCAL_EVALUATIONS_DIR.joinpath(f"{evaluation_id}.jsonl").as_posix(),
@@ -510,6 +672,14 @@ def append_observation(
         "result": result,
         "result_identity": observation["result_identity"],
         "supersedes": observation["supersedes"],
+        "idempotency_key": observation["idempotency_key"],
+        "store_revision": store_revision,
+        "storage": {
+            "mode": "locked-atomic-rewrite",
+            "lock": WORKSPACE_LOCAL_EVALUATIONS_DIR.joinpath(f"{evaluation_id}.jsonl.lock").as_posix(),
+            "retention_cap": OBSERVATION_RETENTION_CAP,
+            "byte_cap": OBSERVATION_BYTE_CAP,
+        },
     }
 
 
@@ -554,6 +724,53 @@ def _criterion_status(definition: dict[str, Any], observations: list[dict[str, A
     return status
 
 
+def current_evaluation_results(definition: dict[str, Any], observations: list[dict[str, Any]]) -> dict[str, Any]:
+    admitted_observations = [
+        item for item in observations if isinstance(item.get("admission"), dict) and item["admission"].get("status") == "admitted"
+    ]
+    legacy_unbound_observations = [
+        item for item in observations if isinstance(item.get("admission"), dict) and item["admission"].get("status") == "legacy-unbound"
+    ]
+    superseded_ids = {
+        str(result_id)
+        for item in admitted_observations
+        for result_id in _string_list(item.get("supersedes") or item.get("admission", {}).get("supersedes"))
+    }
+    bound_observations = [
+        item
+        for item in admitted_observations
+        if isinstance(item.get("admission"), dict)
+        and item["admission"].get("bound_context")
+        and isinstance(item.get("result_identity"), dict)
+    ]
+    current_revision = int(definition["revision"])
+    current_bound_observations = [
+        item
+        for item in bound_observations
+        if int(item.get("definition_revision", 0) or 0) == current_revision
+        and str(item.get("result_identity", {}).get("id") or "") not in superseded_ids
+    ]
+    historical_observations = [
+        item for item in [*admitted_observations, *legacy_unbound_observations] if item not in current_bound_observations
+    ]
+    return {
+        "kind": "agentic-workspace/evaluation-current-result-resolution/v1",
+        "status": "present" if current_bound_observations else "missing",
+        "current_revision": current_revision,
+        "current_observations": current_bound_observations,
+        "historical_observations": historical_observations,
+        "admitted_observations": admitted_observations,
+        "legacy_unbound_observations": legacy_unbound_observations,
+        "bound_observations": bound_observations,
+        "superseded_ids": sorted(superseded_ids),
+        "recovery": "append-observation-with-current-authority" if not current_bound_observations else "none",
+        "consumer_rule": (
+            "status, doctor, operating-decision, proof-selection, closure, and Planning consume this current-result resolver; "
+            "superseded, stale, inconclusive, and rejected observations are historical evidence only."
+        ),
+    }
+
+
 def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -> dict[str, Any]:
     definitions = _definitions_payload(target_root)
     selected = [
@@ -564,34 +781,14 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
     summaries: list[dict[str, Any]] = []
     for definition in selected:
         observations = _load_observations(target_root, str(definition["id"]))
-        admitted_observations = [
-            item for item in observations if isinstance(item.get("admission"), dict) and item["admission"].get("status") == "admitted"
-        ]
-        legacy_unbound_observations = [
-            item for item in observations if isinstance(item.get("admission"), dict) and item["admission"].get("status") == "legacy-unbound"
-        ]
-        superseded_ids = {
-            str(result_id)
-            for item in admitted_observations
-            for result_id in _string_list(item.get("supersedes") or item.get("admission", {}).get("supersedes"))
-        }
-        bound_observations = [
-            item
-            for item in admitted_observations
-            if isinstance(item.get("admission"), dict)
-            and item["admission"].get("bound_context")
-            and isinstance(item.get("result_identity"), dict)
-        ]
-        current_revision = int(definition["revision"])
-        current_bound_observations = [
-            item
-            for item in bound_observations
-            if int(item.get("definition_revision", 0) or 0) == current_revision
-            and str(item.get("result_identity", {}).get("id") or "") not in superseded_ids
-        ]
-        historical_observations = [
-            item for item in [*admitted_observations, *legacy_unbound_observations] if item not in current_bound_observations
-        ]
+        current_results = current_evaluation_results(definition, observations)
+        admitted_observations = current_results["admitted_observations"]
+        legacy_unbound_observations = current_results["legacy_unbound_observations"]
+        bound_observations = current_results["bound_observations"]
+        current_revision = current_results["current_revision"]
+        current_bound_observations = current_results["current_observations"]
+        historical_observations = current_results["historical_observations"]
+        superseded_ids = set(current_results["superseded_ids"])
         legacy_unbound_count = len(legacy_unbound_observations)
         superseded_count = len(
             [item for item in bound_observations if str(item.get("result_identity", {}).get("id") or "") in superseded_ids]
@@ -659,11 +856,23 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
                     "ignored_statuses": ["legacy-unbound", "stale-definition-revision", "rejected"],
                     "superseded_result_ids": sorted(superseded_ids),
                     "current_result_identity": current_result_identity,
+                    "current_result_resolution": {
+                        "status": current_results["status"],
+                        "recovery": current_results["recovery"],
+                        "consumer_rule": current_results["consumer_rule"],
+                    },
                     "local_retention": {
-                        "status": "bounded-summary",
+                        "status": "within-cap"
+                        if len(observations) <= OBSERVATION_RETENTION_CAP
+                        and len(json.dumps(observations, sort_keys=True).encode("utf-8")) <= OBSERVATION_BYTE_CAP
+                        else "prune-or-compact-required",
                         "max_current_results_per_criterion": 1,
+                        "record_cap": OBSERVATION_RETENTION_CAP,
+                        "byte_cap": OBSERVATION_BYTE_CAP,
+                        "current_record_count": len(observations),
+                        "current_byte_count": len(json.dumps(observations, sort_keys=True).encode("utf-8")),
                         "historical_record_count": len(historical_observations),
-                        "cleanup_operation": "evaluation.cleanup-local-history",
+                        "cleanup_operation": "evaluation.prune",
                         "cleanup_proof": "dry-run reports removable superseded or legacy local JSONL records before apply",
                     },
                     "admission_contract": definition.get("admission_contract", _evaluation_admission_contract()),
@@ -688,11 +897,62 @@ def evaluation_summary(*, target_root: Path, evaluation_id: str | None = None) -
     return {"kind": EVALUATION_SUMMARY_KIND, "path": WORKSPACE_EVALUATIONS_PATH.as_posix(), "summaries": summaries}
 
 
-def transition_evaluation(*, target_root: Path, evaluation_id: str, lifecycle: str, reason: str = "") -> dict[str, Any]:
+def prune_observations(*, target_root: Path, evaluation_id: str, dry_run: bool = False) -> dict[str, Any]:
     definitions = _definitions_payload(target_root)
     definition = _definition_by_id(definitions, evaluation_id)
     if definition is None:
         raise WorkspaceUsageError(f"evaluation {evaluation_id!r} is not registered.")
+    path = _observation_path(target_root, evaluation_id)
+    lock_path = path.with_suffix(path.suffix + ".lock")
+    with _LocalFileLock(lock_path):
+        observations = _load_observations(target_root, evaluation_id)
+        current_results = current_evaluation_results(definition, observations)
+        keep_ids = {str(item.get("idempotency_key") or "") for item in current_results["current_observations"]}
+        retained = [item for item in observations if str(item.get("idempotency_key") or "") in keep_ids]
+        if len(retained) > OBSERVATION_RETENTION_CAP:
+            retained = retained[-OBSERVATION_RETENTION_CAP:]
+        compacted = [item for item in observations if item not in retained]
+        receipt = {
+            "kind": "agentic-workspace/evaluation-prune-receipt/v1",
+            "operation_id": "evaluation.prune",
+            "evaluation_id": evaluation_id,
+            "dry_run": dry_run,
+            "status": "would-compact" if dry_run and compacted else "compacted" if compacted else "within-cap",
+            "original_count": len(observations),
+            "retained_count": len(retained),
+            "compacted_count": len(compacted),
+            "store_revision_before": _observation_store_revision(observations),
+            "store_revision_after": _observation_store_revision(retained),
+            "lineage_summary": [
+                {
+                    "result_identity": item.get("result_identity", {}).get("id") if isinstance(item.get("result_identity"), dict) else None,
+                    "criterion": item.get("criterion"),
+                    "result": item.get("result"),
+                }
+                for item in compacted
+            ],
+            "archive_cleanup": {
+                "raw_local_residue_removed": bool(compacted and not dry_run),
+                "path": WORKSPACE_LOCAL_EVALUATIONS_DIR.joinpath(f"{evaluation_id}.jsonl").as_posix(),
+            },
+        }
+        if compacted and not dry_run:
+            _atomic_write_text(path, "".join(json.dumps(item, sort_keys=True) + "\n" for item in retained))
+            _write_json(target_root / WORKSPACE_LOCAL_EVALUATIONS_DIR / f"{evaluation_id}.compaction.json", receipt)
+        return receipt
+
+
+def transition_evaluation(
+    *, target_root: Path, evaluation_id: str, lifecycle: str, reason: str = "", expected_revision: int | None = None
+) -> dict[str, Any]:
+    definitions = _definitions_payload(target_root)
+    definition = _definition_by_id(definitions, evaluation_id)
+    if definition is None:
+        raise WorkspaceUsageError(f"evaluation {evaluation_id!r} is not registered.")
+    if expected_revision is not None and int(definition.get("revision", 0) or 0) != expected_revision:
+        raise WorkspaceUsageError(
+            f"stale evaluation revision for {evaluation_id!r}: expected {expected_revision}, current {definition.get('revision')}."
+        )
     current = str(definition.get("lifecycle"))
     if lifecycle not in VALID_TRANSITIONS.get(current, set()):
         raise WorkspaceUsageError(f"invalid evaluation lifecycle transition: {current} -> {lifecycle}.")
@@ -707,6 +967,8 @@ def transition_evaluation(*, target_root: Path, evaluation_id: str, lifecycle: s
         "evaluation_id": evaluation_id,
         "from": current,
         "to": lifecycle,
+        "revision": definition["revision"],
+        "revision_guard": "matched" if expected_revision is not None else "not-provided",
     }
 
 
@@ -746,6 +1008,13 @@ def _evaluation_adapter_payload(args: Any, *, target_root: Path) -> dict[str, An
             evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
             lifecycle=_require_non_empty(getattr(args, "lifecycle", ""), "lifecycle"),
             reason=str(getattr(args, "reason", "") or ""),
+            expected_revision=int(getattr(args, "expected_revision", 0) or 0) or None,
+        )
+    if command in {"prune", "compact"}:
+        return prune_observations(
+            target_root=target_root,
+            evaluation_id=_require_non_empty(getattr(args, "evaluation_id", ""), "evaluation_id"),
+            dry_run=bool(getattr(args, "dry_run", False)),
         )
     raise WorkspaceUsageError(f"unsupported evaluation command: {command}")
 

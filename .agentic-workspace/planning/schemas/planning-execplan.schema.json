@@ -5,12 +5,7 @@
   "type": "object",
   "required": ["kind", "title"],
   "anyOf": [
-    {
-      "required": [
-        "id", "owner_level", "lifecycle", "phase", "revision", "intent", "parent", "scope",
-        "relationships", "next_action", "proof", "continuation"
-      ]
-    },
+    { "required": ["id", "owner_level", "lifecycle", "phase", "revision", "intent", "parent", "scope", "relationships", "next_action", "proof", "continuation"] },
     { "required": ["execplan_profile", "canonical_core", "goal", "non_goals", "active_milestone", "validation_commands", "completion_criteria"] },
     { "required": ["goal", "non_goals", "active_milestone", "validation_commands", "completion_criteria"] }
   ],

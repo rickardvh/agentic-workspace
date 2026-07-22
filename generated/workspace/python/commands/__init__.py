@@ -18,6 +18,7 @@ from . import defaults_report as _command_defaults_report
 from . import delegation_outcome_append as _command_delegation_outcome_append
 from . import doctor_report as _command_doctor_report
 from . import evaluation_observe as _command_evaluation_observe
+from . import evaluation_prune as _command_evaluation_prune
 from . import evaluation_register as _command_evaluation_register
 from . import evaluation_status as _command_evaluation_status
 from . import evaluation_transition as _command_evaluation_transition
@@ -61,6 +62,7 @@ GENERATED_COMMAND_HANDLERS = {
     'delegation-outcome.append': _command_delegation_outcome_append.run,
     'doctor.report': _command_doctor_report.run,
     'evaluation.observe': _command_evaluation_observe.run,
+    'evaluation.prune': _command_evaluation_prune.run,
     'evaluation.register': _command_evaluation_register.run,
     'evaluation.status': _command_evaluation_status.run,
     'evaluation.transition': _command_evaluation_transition.run,

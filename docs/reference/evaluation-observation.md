@@ -23,6 +23,7 @@ One local-first append record for an owner-bound evaluation.
 | `burden` | enum `"low"`, `"medium"`, `"high"` | yes |  | Collection or review burden for this observation. |  |  |
 | `finding` | string | yes |  | Compact finding text derived from the observation. |  |  |
 | `recommended_action` | string | yes |  | Bounded next action recommended by the observer, when any. |  |  |
+| `idempotency_key` | string | yes |  | Stable duplicate-detection key for retry-safe observation append. |  |  |
 | `result_identity` | object | yes |  | Stable identity for the admitted decision-bearing evaluation result. |  |  |
 | `supersedes` | array of string | yes |  | Result identities superseded by this admitted observation. |  |  |
 | `admission` | object | yes |  | Admission decision binding the observation to current assignment, authority, baseline, and proof context. |  |  |
