@@ -42757,6 +42757,73 @@ def _write_proof_reuse_cache_from_receipt(
     }
 
 
+TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "assignment-context.json"
+PROOF_ASSIGNMENT_CONTEXT_RELATIVE_PATH = TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH
+
+
+def _trusted_producer_assignment_context(*, target_root: Path) -> dict[str, Any]:
+    context_path = target_root / TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH
+    if not context_path.is_file():
+        return {
+            "status": "non-calibrating",
+            "reason": "missing-current-assignment-context",
+            "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "rule": "Trusted producer receipts calibrate target evidence only when a current assignment/run authority supplies target/task/scope.",
+        }
+    try:
+        payload = json.loads(context_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {
+            "status": "non-calibrating",
+            "reason": "unreadable-current-assignment-context",
+            "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "rule": "Malformed assignment context cannot feed calibration.",
+        }
+    if not isinstance(payload, dict):
+        return {
+            "status": "non-calibrating",
+            "reason": "invalid-current-assignment-context",
+            "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "rule": "Assignment context must be a JSON object owned by the current assignment/run boundary.",
+        }
+    status = str(payload.get("status") or payload.get("freshness_status") or "current").strip()
+    if status not in {"current", "fresh", "accepted"} or payload.get("superseded_by"):
+        return {
+            "status": "non-calibrating",
+            "reason": "stale-current-assignment-context",
+            "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "revision": str(payload.get("revision") or "").strip(),
+            "rule": "Stale assignment context cannot feed calibration.",
+        }
+    context = _as_dict(payload.get("target_context")) or payload
+    target_context = {
+        "delegation_target": str(context.get("delegation_target") or "").strip(),
+        "task_class": str(context.get("task_class") or "").strip(),
+        "scope_class": str(context.get("scope_class") or "").strip(),
+    }
+    missing = [key for key, value in target_context.items() if not value]
+    if missing:
+        return {
+            "status": "non-calibrating",
+            "reason": "incomplete-current-assignment-context",
+            "missing": missing,
+            "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "revision": str(payload.get("revision") or "").strip(),
+            "rule": "Assignment context must provide delegation_target, task_class, and scope_class before trusted producer evidence can calibrate evidence.",
+        }
+    return {
+        "status": "current",
+        "target_context": target_context,
+        "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+        "revision": str(payload.get("revision") or payload.get("recorded_at") or "").strip(),
+        "rule": "Target context is resolved from current assignment/run authority, not proof receipt caller input.",
+    }
+
+
+def _proof_receipt_assignment_context(*, target_root: Path) -> dict[str, Any]:
+    return _trusted_producer_assignment_context(target_root=target_root)
+
+
 def _record_proof_receipt_payload(
     *,
     target_root: Path,
@@ -42818,6 +42885,18 @@ def _record_proof_receipt_payload(
         )
     if failure_summary is not None:
         receipt["failure_summary"] = failure_summary
+    assignment_context = _proof_receipt_assignment_context(target_root=target_root)
+    target_context = _as_dict(assignment_context.get("target_context"))
+    if target_context:
+        receipt["target_context"] = target_context
+        receipt["target_context_authority"] = {
+            "source_ref": assignment_context["source_ref"],
+            "revision": assignment_context.get("revision", ""),
+            "status": assignment_context["status"],
+            "rule": assignment_context["rule"],
+        }
+    else:
+        receipt["calibration"] = assignment_context
     proof_reuse_cache = _write_proof_reuse_cache_from_receipt(
         target_root=target_root,
         command=command,
@@ -42839,7 +42918,7 @@ def _record_proof_receipt_payload(
                     "result": result,
                     "changed_paths": receipt["changed_paths"],
                     "proof_subject": receipt.get("proof_subject", {}),
-                    "recorded_at": receipt["recorded_at"],
+                    "target_context": target_context,
                 },
                 sort_keys=True,
                 ensure_ascii=True,
@@ -42861,8 +42940,41 @@ def _record_proof_receipt_payload(
                 "confidence": "high",
             },
         )
+        if target_context:
+            proof_outcome = "success" if admission.get("proof_sufficient") else "failed"
+            try:
+                calibration_admission = {
+                    "status": "recorded",
+                    "record": _record_aw_proof_delegation_outcome(
+                        target_root=target_root,
+                        delegation_target=target_context["delegation_target"],
+                        task_class=target_context["task_class"],
+                        scope_class=target_context["scope_class"],
+                        outcome=proof_outcome,
+                        proof_receipt_ref=producer_receipt_ref,
+                        idempotency_key=producer_receipt_id,
+                        review_burden="light" if proof_outcome == "success" else "high",
+                        handoff_sufficiency="sufficient" if proof_outcome == "success" else "insufficient",
+                        escalation_required=proof_outcome != "success",
+                    )["recorded"],
+                    "target_context": target_context,
+                    "source_ref": producer_receipt_ref,
+                    "rule": "Ordinary proof receipts feed delegation evidence only after producer-store resolution and target-context matching.",
+                }
+            except WorkspaceUsageError as exc:
+                if "duplicate evidence" not in str(exc):
+                    raise
+                calibration_admission = {
+                    "status": "already-recorded",
+                    "target_context": target_context,
+                    "source_ref": producer_receipt_ref,
+                    "rule": "Duplicate proof calibration is idempotent for the same target/task/scope/provenance key.",
+                }
+        else:
+            calibration_admission = assignment_context
     else:
         producer_receipt_ref = ""
+        calibration_admission = {"status": "dry-run", "rule": "Dry runs do not write producer receipts or calibration evidence."}
     review_stack_transition = record_review_stack_transition(
         target_root=target_root,
         phase="review-proof",
@@ -42896,6 +43008,7 @@ def _record_proof_receipt_payload(
         "history_path": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
         "receipt": receipt,
         "trusted_producer_receipt_ref": producer_receipt_ref,
+        "calibration_admission": calibration_admission,
         "proof_reuse_cache": proof_reuse_cache,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
     }
@@ -43714,6 +43827,34 @@ def _run_planning_closeout_adapter(args: argparse.Namespace) -> int:
                 )
                 if transition.get("status") != "skipped":
                     closeout_payload["review_stack_transition"] = transition
+                    closeout_payload["calibration_admissions"] = [
+                        _record_trusted_assignment_outcome_from_ordinary_boundary(
+                            target_root=target_root,
+                            producer_class="closeout-outcome",
+                            outcome="success",
+                            source_payload={"kind": "review-stack-transition", **transition},
+                            idempotency_key=(
+                                f"closeout-outcome:review-stack:{transition.get('pr_number', '')}:"
+                                f"{transition.get('path', '')}:review-closed"
+                            ),
+                            handoff_sufficiency="sufficient",
+                            review_burden="light",
+                            escalation_required=False,
+                        ),
+                        _record_trusted_assignment_outcome_from_ordinary_boundary(
+                            target_root=target_root,
+                            producer_class="handoff-outcome",
+                            outcome="success",
+                            source_payload={"kind": "review-stack-transition", **transition},
+                            idempotency_key=(
+                                f"handoff-outcome:review-stack:{transition.get('pr_number', '')}:"
+                                f"{transition.get('path', '')}:closeout-handoff-accepted"
+                            ),
+                            handoff_sufficiency="sufficient",
+                            review_burden="light",
+                            escalation_required=False,
+                        ),
+                    ]
                     output = json.dumps(closeout_payload, indent=2) + "\n"
             if (
                 isinstance(closeout_payload, dict)
@@ -48932,6 +49073,151 @@ def _record_human_review_delegation_outcome(
         idempotency_key=idempotency_key,
         trusted_producer_receipt=receipt,
     )
+
+
+_TRUSTED_PRODUCER_RECEIPT_KIND_BY_CLASS = {
+    "human-review": "agentic-workspace/human-review-receipt/v1",
+    "retry-outcome": "agentic-workspace/retry-outcome-receipt/v1",
+    "handoff-outcome": "agentic-workspace/handoff-outcome-receipt/v1",
+    "closeout-outcome": "agentic-workspace/closeout-outcome-receipt/v1",
+}
+
+_TRUSTED_PRODUCER_SOURCE_TYPE_BY_CLASS = {
+    "human-review": "human-review",
+    "retry-outcome": "retry-outcome",
+    "handoff-outcome": "handoff-outcome",
+    "closeout-outcome": "closeout-outcome",
+}
+
+
+def _trusted_producer_authority(*, producer_class: str) -> str:
+    return "human-review" if producer_class == "human-review" else "local-outcome-ledger"
+
+
+def _trusted_producer_result(*, producer_class: str, outcome: str) -> str:
+    normalized = outcome.strip() or "success"
+    if producer_class == "human-review":
+        return "approved" if normalized == "success" else "changes-requested"
+    if producer_class == "retry-outcome":
+        return "passed" if normalized == "success" else "failed"
+    if producer_class == "handoff-outcome":
+        return "accepted" if normalized == "success" else "failed"
+    if producer_class == "closeout-outcome":
+        return "accepted" if normalized == "success" else "rejected"
+    raise WorkspaceUsageError("trusted producer receipt producer is not authorized for ordinary assignment calibration.")
+
+
+def _record_trusted_assignment_outcome_from_ordinary_boundary(
+    *,
+    target_root: Path,
+    producer_class: str,
+    outcome: str,
+    source_payload: dict[str, Any],
+    idempotency_key: str,
+    handoff_sufficiency: str = "sufficient",
+    review_burden: str = "normal",
+    escalation_required: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    assignment_context = _trusted_producer_assignment_context(target_root=target_root)
+    target_context = _as_dict(assignment_context.get("target_context"))
+    if not target_context:
+        return assignment_context
+    if producer_class not in _TRUSTED_PRODUCER_RECEIPT_KIND_BY_CLASS:
+        raise WorkspaceUsageError("trusted producer receipt producer is not authorized for ordinary assignment calibration.")
+    stable_key = (
+        idempotency_key.strip()
+        or hashlib.sha256(
+            json.dumps(
+                {
+                    "producer_class": producer_class,
+                    "outcome": outcome,
+                    "source_payload": source_payload,
+                    "target_context": target_context,
+                },
+                sort_keys=True,
+                ensure_ascii=True,
+            ).encode("utf-8")
+        ).hexdigest()[:16]
+    )
+    receipt_id = re.sub(r"[^A-Za-z0-9_.-]+", "-", stable_key).strip("-")[:80] or hashlib.sha256(stable_key.encode("utf-8")).hexdigest()[:16]
+    source_ref = f"{producer_class}://receipts/{receipt_id}"
+    if dry_run:
+        return {
+            "status": "dry-run",
+            "producer_class": producer_class,
+            "source_ref": source_ref,
+            "target_context": target_context,
+            "rule": "Dry runs do not write producer receipts or calibration evidence.",
+        }
+    result = _trusted_producer_result(producer_class=producer_class, outcome=outcome)
+    _write_trusted_producer_receipt(
+        target_root=target_root,
+        producer_class=producer_class,
+        receipt_id=receipt_id,
+        source_ref=source_ref,
+        receipt={
+            "kind": _TRUSTED_PRODUCER_RECEIPT_KIND_BY_CLASS[producer_class],
+            "producer_class": producer_class,
+            "authority": _trusted_producer_authority(producer_class=producer_class),
+            "source_type": _TRUSTED_PRODUCER_SOURCE_TYPE_BY_CLASS[producer_class],
+            "status": "current",
+            "recorded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "result": result,
+            "confidence": "high",
+            "target_context": target_context,
+            "target_context_authority": {
+                "source_ref": assignment_context["source_ref"],
+                "revision": assignment_context.get("revision", ""),
+                "status": assignment_context["status"],
+                "rule": assignment_context["rule"],
+            },
+            "source_payload": source_payload,
+            "idempotency_key": stable_key,
+        },
+    )
+    try:
+        receipt = _load_trusted_producer_receipt(
+            target_root=target_root,
+            producer_class=producer_class,
+            receipt_ref=source_ref,
+            delegation_target=target_context["delegation_target"],
+            task_class=target_context["task_class"],
+            scope_class=target_context["scope_class"],
+            outcome=outcome,
+        )
+        record = _record_delegation_outcome(
+            target_root=target_root,
+            delegation_target=target_context["delegation_target"],
+            task_class=target_context["task_class"],
+            scope_class=target_context["scope_class"],
+            outcome=outcome,
+            handoff_sufficiency=handoff_sufficiency,
+            review_burden=review_burden,
+            escalation_required=escalation_required,
+            authority="model-self-report",
+            confidence="low",
+            idempotency_key=stable_key,
+            trusted_producer_receipt=receipt,
+        )
+    except WorkspaceUsageError as exc:
+        if "duplicate evidence" not in str(exc):
+            raise
+        return {
+            "status": "already-recorded",
+            "producer_class": producer_class,
+            "source_ref": source_ref,
+            "target_context": target_context,
+            "rule": "Duplicate ordinary producer calibration is idempotent for the same target/task/scope/provenance key.",
+        }
+    return {
+        "status": "recorded",
+        "producer_class": producer_class,
+        "source_ref": source_ref,
+        "target_context": target_context,
+        "record": record["recorded"],
+        "rule": "Ordinary owner boundary wrote and resolved an indexed trusted producer receipt before admitting evidence.",
+    }
 
 
 _RUNTIME_RESOLUTION_CATEGORIES = ("stay-local", "stronger-reasoning", "external-delegation", "manual-handoff")

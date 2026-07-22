@@ -9804,6 +9804,23 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     test_path.parent.mkdir(parents=True, exist_ok=True)
     test_path.write_text("def test_app():\n    assert True\n", encoding="utf-8")
     proof_reuse_path = tmp_path / ".agentic-workspace" / "local" / "cache" / "proof-reuse.json"
+    assignment_context = tmp_path / ".agentic-workspace" / "local" / "assignment-context.json"
+    assignment_context.parent.mkdir(parents=True, exist_ok=True)
+    assignment_context.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/assignment-context/v1",
+                "status": "current",
+                "revision": "assign-review-stack-1",
+                "target_context": {
+                    "delegation_target": "fast_worker",
+                    "task_class": "mechanical-follow-through",
+                    "scope_class": "narrow-code-change",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
     assert (
         cli.main(
@@ -9926,6 +9943,31 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     correction = json.loads(capsys.readouterr().out)
     assert correction["review_stack_transition"]["status"] == "written"
     assert correction["review_stack_transition"]["phase_after"] == "review-proof"
+    assert [item["producer_class"] for item in correction["calibration_admissions"]] == ["human-review", "retry-outcome"]
+    assert [item["status"] for item in correction["calibration_admissions"]] == ["recorded", "recorded"]
+    human_review_ref = correction["calibration_admissions"][0]["source_ref"]
+    retry_ref = correction["calibration_admissions"][1]["source_ref"]
+    human_review_receipt_id = human_review_ref.rsplit("/", 1)[-1]
+    retry_receipt_id = retry_ref.rsplit("/", 1)[-1]
+    human_review_receipt = json.loads(
+        (tmp_path / ".agentic-workspace" / "reviews" / "receipts" / f"{human_review_receipt_id}.json").read_text(encoding="utf-8")
+    )
+    retry_receipt = json.loads(
+        (tmp_path / ".agentic-workspace" / "local" / "retry-receipts" / f"{retry_receipt_id}.json").read_text(encoding="utf-8")
+    )
+    assert (
+        human_review_receipt["target_context"]
+        == retry_receipt["target_context"]
+        == {
+            "delegation_target": "fast_worker",
+            "task_class": "mechanical-follow-through",
+            "scope_class": "narrow-code-change",
+        }
+    )
+    assert human_review_receipt["authority"] == "human-review"
+    assert human_review_receipt["result"] == "changes-requested"
+    assert retry_receipt["authority"] == "local-outcome-ledger"
+    assert retry_receipt["result"] == "passed"
 
     assert (
         cli.main(
@@ -10034,6 +10076,39 @@ def test_start_pr_comment_attention_reads_stack_cache_with_concrete_refresh_comm
     assert closeout["review_stack_transition"]["phase"] == "review-closeout-ready"
     assert closeout["review_stack_transition"]["phase_after"] == "review-closed"
     assert closeout["review_stack_transition"]["command_exit_code"] == 0
+    assert [item["producer_class"] for item in closeout["calibration_admissions"]] == ["closeout-outcome", "handoff-outcome"]
+    assert [item["status"] for item in closeout["calibration_admissions"]] == ["recorded", "recorded"]
+    closeout_ref = closeout["calibration_admissions"][0]["source_ref"]
+    handoff_ref = closeout["calibration_admissions"][1]["source_ref"]
+    closeout_receipt_id = closeout_ref.rsplit("/", 1)[-1]
+    handoff_receipt_id = handoff_ref.rsplit("/", 1)[-1]
+    closeout_receipt = json.loads(
+        (tmp_path / ".agentic-workspace" / "local" / "closeout-receipts" / f"{closeout_receipt_id}.json").read_text(encoding="utf-8")
+    )
+    handoff_receipt = json.loads(
+        (tmp_path / ".agentic-workspace" / "local" / "handoff-receipts" / f"{handoff_receipt_id}.json").read_text(encoding="utf-8")
+    )
+    assert (
+        closeout_receipt["target_context"]
+        == handoff_receipt["target_context"]
+        == {
+            "delegation_target": "fast_worker",
+            "task_class": "mechanical-follow-through",
+            "scope_class": "narrow-code-change",
+        }
+    )
+    assert closeout_receipt["result"] == "accepted"
+    assert handoff_receipt["result"] == "accepted"
+
+    from agentic_workspace.config import load_delegation_outcomes
+
+    _, _, records = load_delegation_outcomes(target_root=tmp_path)
+    assert [record.producer_class for record in records if record.producer_class != "aw-proof"] == [
+        "human-review",
+        "retry-outcome",
+        "closeout-outcome",
+        "handoff-outcome",
+    ]
 
     actionable_stack = copy.deepcopy(fresh_stack)
     actionable_stack["stack_members"][1]["delta"]["category_counts"]["actionable_code_doc_body_change"] = 1
