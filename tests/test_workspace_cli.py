@@ -3871,11 +3871,53 @@ def test_planning_front_door_lane_activation_recovery_does_not_fabricate_plan(tm
     payload = json.loads(capsys.readouterr().out)
     state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
 
-    assert payload["health"] in {"attention-needed", "healthy"}
-    assert "execplan" not in state["roadmap"]["lanes"][0]
+    blocked_reconcile = payload["lane_current_slice_reconciliation"]
+    assert blocked_reconcile["status"] == "blocked"
+    assert blocked_reconcile["reason_code"] == "missing-restore-source"
+    assert blocked_reconcile["relation_identity"] == "lane:lane-alpha:current_slice:lane-alpha-slice"
+    assert blocked_reconcile["owner_surface"] == ".agentic-workspace/planning/lanes/lane-alpha.lane.json"
+    assert blocked_reconcile["subject_id"] == "lane-alpha-slice"
+    assert blocked_reconcile["transition"] == "restore"
+    assert state["roadmap"]["lanes"][0].get("execplan", "") == ""
     lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/lane-alpha.lane.json").read_text(encoding="utf-8"))
-    assert lane["status"] == "ready"
-    assert "current_slice" not in lane or not lane["current_slice"]
+    assert lane["status"] != "active"
+    assert not any("execplan_ref" in item for item in lane.get("slice_sequence", []) if isinstance(item, dict))
+
+    assert (
+        cli.main(
+            [
+                "planning",
+                "new-plan",
+                "--id",
+                "lane-alpha-slice",
+                "--title",
+                "Lane Alpha Slice",
+                "--target",
+                str(tmp_path),
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert cli.main(recovery_args[planning_index:]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    restored_reconcile = payload["lane_current_slice_reconciliation"]
+    state = tomllib.loads((tmp_path / ".agentic-workspace/planning/state.toml").read_text(encoding="utf-8"))
+
+    assert restored_reconcile["status"] == "applied"
+    assert restored_reconcile["transition"] == "restore"
+    assert restored_reconcile["expected_lane_revision"]
+    assert any(
+        "attached execplan 'lane-alpha-slice' to active lane 'lane-alpha'" in action["detail"] for action in restored_reconcile["actions"]
+    )
+    assert state["roadmap"]["lanes"][0]["execplan"] == ".agentic-workspace/planning/execplans/lane-alpha-slice.plan.json"
+    lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/lane-alpha.lane.json").read_text(encoding="utf-8"))
+    assert lane["status"] == "active"
+    assert lane["current_slice"] == "lane-alpha-slice"
+    assert lane["slice_sequence"][0]["execplan_ref"] == state["roadmap"]["lanes"][0]["execplan"]
 
     assert cli.main(["summary", "--target", str(tmp_path), "--format", "json"]) == 0
     summary = json.loads(capsys.readouterr().out)
@@ -3889,7 +3931,9 @@ def test_planning_front_door_lane_activation_recovery_does_not_fabricate_plan(tm
 
     assert cli.main(["start", "--target", str(tmp_path), "--task", "fresh lane startup", "--format", "json"]) == 0
     startup = json.loads(capsys.readouterr().out)
-    assert startup["action_signals"]["hard_blockers"]
+    startup_text = json.dumps(startup)
+    assert "execplan_unregistered" not in startup_text
+    assert "planning_lane_schema_invalid" not in startup_text
 
 
 def test_summary_and_config_support_exact_field_selectors(tmp_path: Path, capsys) -> None:

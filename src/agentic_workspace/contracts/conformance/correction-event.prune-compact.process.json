@@ -1,0 +1,69 @@
+{
+  "adapter": {
+    "command_template": [
+      "{agentic_workspace_cli}",
+      "correction-event",
+      "prune-compact",
+      "--target",
+      ".",
+      "--format",
+      "json"
+    ],
+    "cwd": "fixture_root",
+    "kind": "process"
+  },
+  "expectations": {
+    "exit": {
+      "code": 0
+    },
+    "filesystem": {
+      "allowed_write_directories": [
+        ".agentic-workspace/local"
+      ],
+      "allowed_write_paths": [],
+      "forbidden_paths": [],
+      "required_paths": [
+        ".agentic-workspace/local/correction-events.json"
+      ]
+    },
+    "idempotency": {
+      "run_twice": false
+    },
+    "safety": {
+      "no_writes_outside_repo_root": true
+    },
+    "stderr": {
+      "allow_non_empty": false
+    },
+    "stdout": {
+      "field_assertions": [
+        {
+          "equals": "agentic-workspace/correction-event-operation-result/v1",
+          "path": [
+            "kind"
+          ]
+        },
+        {
+          "equals": "compacted",
+          "path": [
+            "status"
+          ]
+        }
+      ],
+      "format": "json"
+    }
+  },
+  "fixtures": [
+    {
+      "files": {
+        ".agentic-workspace/config.toml": "schema_version = 1\n[workspace]\ncli_invoke = \"agentic-workspace\"\n",
+        ".git/.keep": "",
+        "README.md": "# Fixture\n"
+      },
+      "id": "minimal-repo"
+    }
+  ],
+  "id": "correction-event.prune-compact.process",
+  "operation_id": "correction-event.prune-compact",
+  "schema_version": "agentic-workspace/conformance/v1"
+}
