@@ -2362,7 +2362,11 @@ def _autopilot_authoritative_context_fixture(*, target_root: Path, proof: dict[s
     from agentic_workspace.authority_envelope import mutation_baseline_payload
 
     _ensure_autopilot_fixture_git_head(target_root)
-    baseline = mutation_baseline_payload(target_root=target_root, changed_paths=[])
+    baseline = mutation_baseline_payload(
+        target_root=target_root,
+        changed_paths=[],
+        assignment_target_identity_ref="target-local",
+    )
     context = {
         "selected_plan_id": "owner-a",
         "id": "work-owner-a",
