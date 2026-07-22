@@ -107,6 +107,36 @@
       "path": "operations/config.report.json"
     },
     {
+      "command": "correction-event",
+      "id": "correction-event.correct-dispute",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.correct-dispute.json"
+    },
+    {
+      "command": "correction-event",
+      "id": "correction-event.prune-compact",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.prune-compact.json"
+    },
+    {
+      "command": "correction-event",
+      "id": "correction-event.query",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.query.json"
+    },
+    {
+      "command": "correction-event",
+      "id": "correction-event.submit",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.submit.json"
+    },
+    {
+      "command": "correction-event",
+      "id": "correction-event.withdraw-supersede",
+      "migration_status": "runtime-consumed",
+      "path": "operations/correction-event.withdraw-supersede.json"
+    },
+    {
       "command": "defaults",
       "id": "defaults.report",
       "migration_status": "runtime-consumed",

@@ -671,6 +671,36 @@
       "id": "work-thread.select.process",
       "operation_id": "work-thread.select",
       "path": "conformance/work-thread.select.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "correction-event.submit.process",
+      "operation_id": "correction-event.submit",
+      "path": "conformance/correction-event.submit.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "correction-event.query.process",
+      "operation_id": "correction-event.query",
+      "path": "conformance/correction-event.query.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "correction-event.correct-dispute.process",
+      "operation_id": "correction-event.correct-dispute",
+      "path": "conformance/correction-event.correct-dispute.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "correction-event.withdraw-supersede.process",
+      "operation_id": "correction-event.withdraw-supersede",
+      "path": "conformance/correction-event.withdraw-supersede.process.json"
+    },
+    {
+      "adapter_kind": "process",
+      "id": "correction-event.prune-compact.process",
+      "operation_id": "correction-event.prune-compact",
+      "path": "conformance/correction-event.prune-compact.process.json"
     }
   ],
   "schema": "schemas/conformance.schema.json",

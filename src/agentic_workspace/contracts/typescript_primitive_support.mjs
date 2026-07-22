@@ -1626,6 +1626,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   }
   if (primitive === 'workspace.selection.resolve') return { selected_modules: values.modules ?? values.module ?? [], target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'assignment.lifecycle.apply') return assignmentLifecycleApply(values, operationId);
+  if (primitive === 'correction.event.apply') return correctionEventApply(values, operationId);
   if (primitive === 'toml.table.counts') return tomlTableCounts(values, args);
   throw new RuntimeError(`unsupported native TypeScript primitive: ${primitive}`);
 }
@@ -1871,6 +1872,63 @@ function assignmentLifecycleApply(values, operationId) {
     refs.push(relative(targetRoot, statePath).replaceAll('\\\\', '/'));
   }
   return { kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : state.current_state, outcome: failures.length ? 'blocked' : Boolean(values.dry_run) ? 'noop' : 'applied', mutation_applied: !failures.length && !Boolean(values.dry_run), target_root: targetRoot, run_id: runId, artifact_refs: refs, state, failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment ${transition}: ${failures.length ? 'blocked' : state.current_state}`, actions: refs.map((path) => ({ kind: 'write', path })) };
+}
+
+function correctionEventApply(values, operationId) {
+  const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  const operation = String(operationId).replace(/^correction-event\./, '');
+  const storePath = resolveInside(targetRoot, '.agentic-workspace/local/correction-events.json');
+  const receiptDir = resolveInside(targetRoot, '.agentic-workspace/local/correction-event-receipts');
+  const store = existsSync(storePath) ? readJson(storePath) : { kind: 'agentic-workspace/correction-event-store/v1', events: [], compacted_lineage: [] };
+  const existing = Array.isArray(store.events) ? store.events.filter((item) => isObject(item)) : [];
+  let subjects = [];
+  if (values.subjects_json) {
+    try {
+      const parsed = JSON.parse(String(values.subjects_json));
+      subjects = Array.isArray(parsed) ? parsed.filter((item) => isObject(item)) : [];
+    } catch {
+      subjects = [];
+    }
+  }
+  const event = values.event_json ? assignmentParseJson(values.event_json, 'event_json') : {};
+  for (const key of ['delivery_id', 'target_identity_ref', 'target_revision', 'source_ref', 'desired_behavior', 'replaced_behavior', 'invariant_id', 'behavior_class', 'task_class', 'scope_class', 'evidence_hash', 'evidence_ref', 'predecessor_event_id']) {
+    if (values[key] !== undefined && values[key] !== null && values[key] !== '') event[key] = values[key];
+  }
+  event.operation = operation === 'correct-dispute' ? 'dispute' : operation === 'withdraw-supersede' ? String(values.lifecycle_action ?? 'withdraw') : operation;
+  if (values.trusted_authority_receipt_json) {
+    try {
+      const receipt = JSON.parse(String(values.trusted_authority_receipt_json));
+      event.authority = receipt.authority;
+      event.producer_class = receipt.producer_class;
+      event.producer_id = receipt.producer_id ?? receipt.producer_class;
+      event.source = receipt.source ?? receipt.authority;
+      event.source_ref = event.source_ref ?? receipt.source_ref;
+    } catch {
+      event.authority = 'agent-self-observation';
+      event.producer_class = 'agent';
+    }
+  } else {
+    event.authority = 'agent-self-observation';
+    event.producer_class = 'agent';
+    event.producer_id = event.producer_id ?? 'agent-self-observation';
+    event.source = event.source ?? 'agent-local-observation';
+  }
+  const admitted = subjects.length && (operation === 'query' || operation === 'prune-compact') ? existing : [...existing, event];
+  const status = subjects.length ? operation === 'query' ? 'queried' : operation === 'prune-compact' ? 'compacted' : 'stored' : 'blocked';
+  const mutation = subjects.length && operation !== 'query' && !Boolean(values.dry_run);
+  if (mutation) {
+    mkdirSync(dirname(storePath), { recursive: true });
+    writeFileSync(storePath, `${JSON.stringify({ kind: 'agentic-workspace/correction-event-store/v1', events: admitted.slice(-20), compacted_lineage: [], retention_cap: 20, checked_in_repo_effect: 'none' }, null, 2)}\n`, 'utf8');
+  }
+  const result = { kind: 'agentic-workspace/correction-event-operation-result/v1', operation_id: operationId, status, mutation_applied: mutation, store_ref: relative(targetRoot, storePath).replaceAll('\\\\', '/'), admission: { kind: 'agentic-workspace/correction-event-admission/v1', status: admitted.length ? 'admitted' : 'no-admitted-events', admitted_events: [], low_authority_events: admitted, rejected_events: subjects.length ? [] : [{ reason: 'missing-target-subjects', recovery: 'Provide subjects_json or use the Python host operation with workspace config resolution.' }] }, checked_in_repo_effect: 'none', rule: 'Generated correction-event operations are the authoritative public boundary; raw local file writes are compatibility-only.' };
+  const receiptId = createHash('sha256').update(JSON.stringify(result)).digest('hex').slice(0, 16);
+  const receiptPath = resolveInside(receiptDir, `${receiptId}.json`);
+  if (!Boolean(values.dry_run)) {
+    mkdirSync(dirname(receiptPath), { recursive: true });
+    writeFileSync(receiptPath, `${JSON.stringify(result, null, 2)}\n`, 'utf8');
+  }
+  result.receipt_ref = relative(targetRoot, receiptPath).replaceAll('\\\\', '/');
+  return result;
 }
 
 function reportMemory(values) {

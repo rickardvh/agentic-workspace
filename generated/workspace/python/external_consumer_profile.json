@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:8376fb49b781d9616d8f119a2dbe032232c165ffcefdf8676d6d862cd0d124c5",
+    "fingerprint": "sha256:94a76d7a6b33ff0e183b6931aa3785554a69cbf638bd04ae9a60aa47a651f2c3",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -1843,6 +1843,641 @@
             "proof": [
               "config.report.process",
               "config.selected-text.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "correction-event.correct-dispute",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.correct-dispute.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:60067dbe1e0d28c87011c83536eceb3d3d21e491210f8da6177be1eaf001723f"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/correction-event.correct-dispute.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/correction-event.correct-dispute.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "correction-event.prune-compact",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.prune-compact.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:0d45af48882901667ca57ec310c838830b3a02f0a1d9578af3888bcab9002f2f"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/correction-event.prune-compact.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/correction-event.prune-compact.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "correction-event.query",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.query.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:cac6b367cefaacec45173fa88159ec0048c780d3d98bb5f85ccce7139884f46b"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/correction-event.query.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/correction-event.query.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "correction-event.submit",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.submit.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:12d00033ffa5d81442e2172af644da321d988ce2508a3885c5364955f41c80fa"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/correction-event.submit.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/correction-event.submit.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "correction-event.withdraw-supersede",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/correction-event.withdraw-supersede.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:60e5c906ac4e6cbf1e64f15db7647994e0007529cf597d4edddd3dad3f76ae0c"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/correction-event.withdraw-supersede.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/correction-event.withdraw-supersede.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "correction-event.submit.process",
+        "correction-event.query.process",
+        "correction-event.correct-dispute.process",
+        "correction-event.withdraw-supersede.process",
+        "correction-event.prune-compact.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
             ],
             "migration_dependency": "#2044"
           }
