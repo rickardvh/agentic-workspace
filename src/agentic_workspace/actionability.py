@@ -80,7 +80,8 @@ def operation_invocation(
     normalized_proof_requirements = list(proof_requirements or [])
     normalized_evaluation_revision = dict(evaluation_revision or {})
     normalized_executor_revision = dict(executor_revision or {})
-    canonical_input_revision = input_revision or decision_input_revision(
+    caller_supplied_input_revision = str(input_revision or "").strip()
+    canonical_input_revision = decision_input_revision(
         operation_id=operation_id,
         arguments=normalized_arguments,
         effect_class=effect_class,
@@ -129,9 +130,13 @@ def operation_invocation(
                 "owner_context_revision",
                 "mutation_boundary",
                 "proof_requirements",
+                "evaluation_revision",
+                "executor_revision",
             ],
             "repair": "Refresh the operating decision before executing this typed action.",
-            "revision_source": "canonical-decision-input",
+            "revision_source": "live-authority-resolver",
+            "caller_supplied_input_revision": caller_supplied_input_revision,
+            "caller_revision_authority": "ignored",
         },
         "renderings": {"cli": command_rendering} if command_rendering else {},
         "rule": "Operation identity and progress checks use this typed invocation; rendered commands are display or manual recovery text.",
@@ -287,7 +292,7 @@ def derive_actionability(
             else "rejected-same-state-loop"
             if self_loop_rejected
             else "progress-making"
-            if next_command
+            if next_command or invocation
             else "terminal",
         },
         "rule": "Status, required action, claim limits, and next action derive from one finding classification; ordinary same-state loops are not next actions.",

@@ -1021,8 +1021,9 @@ def test_status_and_doctor_advisory_outputs_are_coherent_and_do_not_self_loop(tm
     assert doctor_payload["action_required"] is False
     assert doctor_payload["next_action"]["action"] == "no-immediate-action"
     progress = doctor_payload["actionability"]["progress_check"]
-    assert progress["same_operation"] is True
-    assert progress["result"] == "rejected-same-state-loop"
+    assert progress["proposed_operation"] == "run-payload-closure-proof"
+    assert progress["same_operation"] is False
+    assert progress["result"] == "progress-making"
 
 
 def test_actionability_allows_same_operation_only_as_explicit_external_condition_watch() -> None:

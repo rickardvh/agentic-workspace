@@ -8,11 +8,13 @@ from jsonschema import Draft202012Validator
 
 from agentic_workspace.actionability import derive_actionability, invocation_decision_input_revision, operation_invocation
 from agentic_workspace.operating_decision import (
+    bind_operation_invocation_to_authorities,
     compile_operating_decision,
     context_authority_coverage,
     context_authority_declarations,
     derive_context_gaps,
     derive_operating_blockers_from_authorities,
+    live_decision_input_revision,
 )
 
 SCHEMA_ROOT = Path("src/agentic_workspace/contracts/schemas")
@@ -56,6 +58,7 @@ def test_operating_decision_emits_one_typed_primary_action() -> None:
     assert decision["primary_action"]["operation_invocation"]["owner_context_revision"]["target_identity_ref"] == "target-a"
     assert decision["primary_action"]["operation_invocation"]["proof_requirements"][0]["owner"] == "verification"
     assert decision["canonical_decision_input_revision"] == invocation_decision_input_revision(invocation)
+    assert decision["context_authority_coverage"]["status"] == "measured"
     assert "status" in decision["context_authority_coverage"]["ordinary_consumers"]
     assert decision["primary_action"]["operation_invocation"]["stale_action_rejection"]["status"] == "reject-on-input-revision-mismatch"
     assert decision["external_blocker"] == {}
@@ -95,7 +98,7 @@ def test_operating_decision_blocker_precedence_is_deterministic() -> None:
     assert decision["external_blocker"]["reason_code"] == "conflicting-input"
 
 
-def test_stale_typed_action_is_rejected_before_execution() -> None:
+def test_caller_supplied_invocation_revision_is_ignored() -> None:
     invocation = operation_invocation(
         operation_id="proof.report",
         arguments={"target": ".", "format": "json"},
@@ -107,6 +110,32 @@ def test_stale_typed_action_is_rejected_before_execution() -> None:
         mutation_boundary={"effect": "read-only-report"},
         proof_requirements=[{"command": "agentic-workspace proof --target . --format json"}],
     )
+
+    assert invocation["expected_input_revision"] == invocation_decision_input_revision(invocation)
+    assert invocation["expected_input_revision"] != "old-input-digest"
+    assert invocation["stale_action_rejection"]["caller_supplied_input_revision"] == "old-input-digest"
+    assert invocation["stale_action_rejection"]["caller_revision_authority"] == "ignored"
+
+
+def test_live_authority_revision_drift_is_rejected_before_execution() -> None:
+    invocation = operation_invocation(
+        operation_id="proof.report",
+        arguments={"target": ".", "format": "json"},
+        effect_class="read-only-report",
+        authority_class="verification-owned",
+        expected_transition="proof status refreshed",
+        owner_context_revision={"owner_id": "owner-a", "assignment_context_key": "ctx-a"},
+        mutation_boundary={"effect": "read-only-report"},
+        proof_requirements=[{"command": "agentic-workspace proof --target . --format json"}],
+    )
+    live_authorities = {
+        "planning_owner": {"owner_id": "owner-a", "owner_revision": "rev-owner-b"},
+        "assignment": {"assignment_revision": "assign-b", "target_identity_ref": "target-a"},
+        "mutation_baseline": {"baseline_id": "baseline-b", "revalidation_status": "fresh"},
+        "proof": {"proof_subject_fingerprint": "proof-b", "receipt_status": "fresh"},
+        "evaluation": {"freshness_status": "not-required", "required": False},
+        "executor": {"binding_fingerprint": "executor-b", "availability_status": "available"},
+    }
     actionability = derive_actionability(
         command_name="implement",
         health="attention-needed",
@@ -120,11 +149,15 @@ def test_stale_typed_action_is_rejected_before_execution() -> None:
         inputs={
             "revisions": {"current_work": "rev-a", "proof": "rev-proof"},
             "actionability": actionability,
+            "authorities": live_authorities,
         }
     )
 
-    assert actionability["progress_check"]["result"] == "rejected-stale-action"
-    assert actionability["next_action"]["action"] == "required-action-unavailable"
+    assert actionability["progress_check"]["result"] == "progress-making"
+    assert decision["canonical_decision_input_revision"] == live_decision_input_revision(
+        invocation=invocation, authorities=live_authorities
+    )
+    assert decision["canonical_decision_input_revision"] != invocation["expected_input_revision"]
     assert decision["status"] == "blocked"
     assert decision["primary_action"] == {}
     assert decision["external_blocker"]["reason_code"] == "stale-revision"
@@ -169,10 +202,17 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
     gaps = derive_context_gaps(
         declarations=declarations,
         selected_surfaces=[
-            {"surface": "memory", "required": True, "status": "missing", "affected_decisions": ["reuse"]},
-            {"surface": "system-intent", "required": True, "status": "present", "minimum_useful": False},
-            {"surface": "skills", "required": True, "status": "present"},
-            {"surface": "proof", "required": False, "status": "present", "inference_fallback": True},
+            {
+                "surface": "memory",
+                "admitted_state": {"requirement_status": "required", "population_status": "missing"},
+                "affected_decisions": ["reuse"],
+            },
+            {
+                "surface": "system-intent",
+                "admitted_state": {"requirement_status": "required", "population_status": "below-minimum"},
+            },
+            {"surface": "skills", "admitted_state": {"requirement_status": "required", "population_status": "present"}},
+            {"surface": "proof", "admitted_state": {"freshness_status": "inference-fallback"}},
         ],
     )
 
@@ -190,7 +230,7 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
 def test_blocking_context_gap_prevents_primary_action() -> None:
     gaps = derive_context_gaps(
         declarations=context_authority_declarations(),
-        selected_surfaces=[{"surface": "proof", "required": True, "status": "missing"}],
+        selected_surfaces=[{"surface": "proof", "admitted_state": {"requirement_status": "required", "population_status": "missing"}}],
     )
     decision = compile_operating_decision(
         inputs={
@@ -217,8 +257,11 @@ def test_blocking_context_gap_prevents_primary_action() -> None:
         ),
         (
             "disabled-manual-required-transport",
-            {"manual_transport": {"status": "disabled"}},
-            {"reason_code": "denied-effect", "owner": "manual transport", "repair": "prepare handoff"},
+            {
+                "assignment": {"status": "handoff-required", "handoff_admission_status": "admitted"},
+                "manual_transport": {"status": "disabled"},
+            },
+            {},
         ),
         (
             "stale-worktree-baseline",
@@ -227,13 +270,18 @@ def test_blocking_context_gap_prevents_primary_action() -> None:
         ),
         (
             "missing-evaluation",
-            {"evaluation": {"freshness_status": "missing"}},
+            {"evaluation": {"freshness_status": "missing", "required": True}},
             {"reason_code": "context-coverage-gap", "owner": "evaluation", "repair": "register evaluation"},
+        ),
+        (
+            "not-required-evaluation",
+            {"evaluation": {"freshness_status": "not-required", "required": False}},
+            {},
         ),
         (
             "superseded-evaluation",
             {"evaluation": {"freshness_status": "superseded"}},
-            {"reason_code": "stale-proof", "owner": "evaluation", "repair": "rerun evaluation"},
+            {"reason_code": "stale-revision", "owner": "evaluation", "repair": "rerun evaluation"},
         ),
         (
             "stale-planning-owner",
@@ -275,9 +323,51 @@ def test_operating_decision_context_gap_recovery_matrix_blocks_invalid_actions(
         }
     )
 
-    assert derive_operating_blockers_from_authorities(authorities=authorities) == [blocker]
-    assert decision["status"] == "blocked"
-    assert decision["primary_action"] == {}
-    assert decision["external_blocker"]["reason_code"] == blocker["reason_code"]
-    assert decision["external_blocker"]["owner"] == blocker["owner"]
-    assert decision["external_blocker"]["repair"] == blocker["repair"]
+    expected_blockers = [] if not blocker else [blocker]
+    assert derive_operating_blockers_from_authorities(authorities=authorities) == expected_blockers
+    if blocker:
+        assert decision["status"] == "blocked"
+        assert decision["primary_action"] == {}
+        assert decision["external_blocker"]["reason_code"] == blocker["reason_code"]
+        assert decision["external_blocker"]["owner"] == blocker["owner"]
+        assert decision["external_blocker"]["repair"] == blocker["repair"]
+    else:
+        assert decision["status"] == "blocked"
+        assert decision["external_blocker"]["reason_code"] == "stale-revision"
+
+
+def test_admitted_handoff_and_not_required_evaluation_can_reach_actionable_terminal_recovery() -> None:
+    authorities = {
+        "planning_owner": {"owner_id": "owner-a", "owner_revision": "rev-owner-a"},
+        "assignment": {
+            "status": "handoff-required",
+            "handoff_admission_status": "admitted",
+            "assignment_revision": "assign-a",
+            "target_identity_ref": "target-a",
+        },
+        "manual_transport": {"status": "disabled", "handoff_admission_status": "admitted"},
+        "mutation_baseline": {"baseline_id": "baseline-a", "revalidation_status": "fresh"},
+        "proof": {"proof_subject_fingerprint": "proof-a", "receipt_status": "fresh"},
+        "evaluation": {"freshness_status": "not-required", "required": False},
+        "executor": {"binding_fingerprint": "executor-a", "availability_status": "available"},
+    }
+    invocation = operation_invocation(
+        operation_id="handoff.prepare",
+        arguments={"target": ".", "format": "json"},
+        effect_class="manual-handoff",
+        authority_class="assignment-gate",
+        expected_transition="handoff prepared",
+    )
+    bound_invocation = bind_operation_invocation_to_authorities(invocation=invocation, authorities=authorities)
+
+    decision = compile_operating_decision(
+        inputs={
+            "actionability": {"next_action": {"action": "prepare-handoff", "operation_invocation": bound_invocation}},
+            "authorities": authorities,
+        }
+    )
+
+    assert derive_operating_blockers_from_authorities(authorities=authorities) == []
+    assert decision["status"] == "actionable"
+    assert decision["primary_action"]["operation_invocation"]["operation_id"] == "handoff.prepare"
+    assert decision["canonical_decision_input_revision"] == bound_invocation["expected_input_revision"]

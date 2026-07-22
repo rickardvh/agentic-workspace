@@ -8698,8 +8698,18 @@ def _run_lifecycle_command(
         closure_primary = _as_dict(payload["payload_closure_plan"].get("primary_next_action"))
         if closure_primary and not isinstance(closure_primary.get("operation_invocation"), dict):
             rendering = str(closure_primary.get("command") or closure_primary.get("run") or "")
+            closure_action = str(closure_primary.get("action") or "")
+            raw_operation_id = (
+                command_name
+                if closure_action in {"", "no-immediate-action"}
+                else str(closure_primary.get("operation_id") or closure_primary.get("id") or closure_action or command_name)
+            )
+            operation_id = (
+                "".join(char.lower() if char.isalnum() or char in {"_", ".", "-"} else "-" for char in raw_operation_id).strip("-.")
+                or command_name
+            )
             closure_primary["operation_invocation"] = operation_invocation(
-                operation_id=command_name,
+                operation_id=operation_id,
                 arguments={"target": "./repo", "format": "json"},
                 effect_class="read-only-report",
                 authority_class="operation-contract",
