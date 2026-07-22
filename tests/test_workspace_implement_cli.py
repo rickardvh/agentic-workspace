@@ -382,6 +382,72 @@ def test_live_mutation_boundary_rejects_overlapping_claim_and_cleans_up_owner_cl
     assert not (tmp_path / ".agentic-workspace/local/mutation-claims.json").exists()
 
 
+def test_live_mutation_boundary_rejects_acquire_and_release_before_protected_operation(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "feature.py", "baseline\n")
+    subprocess.run(["git", "add", "src/feature.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    expected = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/feature.py"])
+
+    admission = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=expected,
+        allowed_paths=["src/feature.py"],
+        owner_id="worker-a",
+        claim_action="acquire-and-release",
+    )
+
+    assert admission["status"] == "rejected"
+    assert admission["claim_lifecycle"]["status"] == "rejected-unsupported-pre-release"
+    assert "rejected-unsupported-pre-release" in {failure["reason"] for failure in admission["failures"]}
+
+
+def test_live_mutation_boundary_recovers_stale_claim_under_lock(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "feature.py", "baseline\n")
+    subprocess.run(["git", "add", "src/feature.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    expected = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/feature.py"])
+    claim_store = tmp_path / ".agentic-workspace" / "local" / "mutation-claims.json"
+    claim_store.parent.mkdir(parents=True, exist_ok=True)
+    claim_store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/mutation-claims/v1",
+                "claims": [
+                    {
+                        "claim_id": "stale",
+                        "owner_id": "worker-old",
+                        "allowed_paths": ["src"],
+                        "status": "active",
+                        "acquired_at_epoch": 1,
+                        "lease_seconds": 1,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    admission = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=expected,
+        allowed_paths=["src/feature.py"],
+        owner_id="worker-new",
+        claim_action="acquire",
+    )
+
+    assert admission["status"] == "admitted"
+    assert admission["claim_lifecycle"]["status"] == "acquired"
+    assert admission["claim_lifecycle"]["stale_recovered_count"] == 1
+
+
 def test_authority_effect_resolver_rejects_untrusted_widening_and_policy_mutation(tmp_path: Path) -> None:
     _init_git_repo(tmp_path)
     resolution = resolve_authority_effect_envelope(
@@ -420,6 +486,8 @@ def test_authority_effect_resolver_downgrades_self_asserted_trusted_instruction_
             {
                 "class": "repo-policy",
                 "source": "artifact-controlled-input",
+                "trusted_identity": True,
+                "trusted_host_identity": True,
                 "requested_effects": ["write-outside-scope"],
                 "authorises_effects": ["write-outside-scope"],
             }
@@ -435,7 +503,49 @@ def test_authority_effect_resolver_downgrades_self_asserted_trusted_instruction_
     assert decision["decision"] == "deny"
 
 
+def test_authority_effect_resolver_accepts_indexed_instruction_provenance_receipt(tmp_path: Path) -> None:
+    from agentic_workspace.authority_envelope import _write_indexed_host_receipt
+
+    _init_git_repo(tmp_path)
+    ref = _write_indexed_host_receipt(
+        target_root=tmp_path,
+        store_root=Path(".agentic-workspace") / "authority" / "receipts",
+        receipt_id="repo-policy-source",
+        receipt={
+            "kind": "agentic-workspace/instruction-provenance-receipt/v1",
+            "class": "repo-policy",
+            "source": "maintainer-policy-channel",
+            "status": "current",
+            "revision": "policy-source-rev-1",
+        },
+    )
+
+    resolution = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Fix the requested file only.",
+        instruction_sources=[
+            {
+                "class": "repo-policy",
+                "source": "artifact-controlled-input",
+                "trusted_provenance_ref": ref,
+                "authorises_effects": ["write-outside-scope"],
+            }
+        ],
+        requested_effects=["write-outside-scope"],
+    )
+
+    artifact_source = next(item for item in resolution["instruction_provenance"] if item["source"] == "artifact-controlled-input")
+    decision = next(item for item in resolution["side_effect_decisions"] if item["class"] == "write-outside-scope")
+    assert artifact_source["class"] == "repo-policy"
+    assert artifact_source["authority_resolution_status"] == "host-receipt-resolved"
+    assert artifact_source["trusted_provenance_receipt_id"] == "repo-policy-source"
+    assert decision["decision"] == "allow"
+
+
 def test_authority_effect_resolver_requires_trusted_governance_receipt_for_policy_mutation(tmp_path: Path) -> None:
+    from agentic_workspace.authority_envelope import _write_indexed_host_receipt
+
     _init_git_repo(tmp_path)
     blocked = resolve_authority_effect_envelope(
         target_root=tmp_path,
@@ -444,7 +554,7 @@ def test_authority_effect_resolver_requires_trusted_governance_receipt_for_polic
         requested_effects=["repository-policy-mutation"],
         policy_mutation={"requested": True, "authority_class": "repo-policy"},
     )
-    authorised = resolve_authority_effect_envelope(
+    forged_inline = resolve_authority_effect_envelope(
         target_root=tmp_path,
         changed_paths=["src/feature.py"],
         task_text="Promote this policy.",
@@ -461,11 +571,40 @@ def test_authority_effect_resolver_requires_trusted_governance_receipt_for_polic
             },
         },
     )
+    receipt_ref = _write_indexed_host_receipt(
+        target_root=tmp_path,
+        store_root=Path(".agentic-workspace") / "governance" / "receipts",
+        receipt_id="policy-rev-1-authorised",
+        receipt={
+            "kind": "agentic-workspace/governance-receipt/v1",
+            "operation_id": "repository-policy-mutation.authorise",
+            "authority_class": "repo-policy",
+            "authoriser": "maintainer",
+            "policy_revision": "policy-rev-1",
+            "scope": ["src/feature.py"],
+            "status": "current",
+            "revision": "governance-rev-1",
+        },
+    )
+    authorised = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Promote this policy.",
+        requested_effects=["repository-policy-mutation"],
+        policy_mutation={
+            "requested": True,
+            "authority_class": "repo-policy",
+            "trusted_governance_receipt_ref": receipt_ref,
+        },
+    )
 
     assert blocked["repository_policy_mutation"]["status"] == "blocked"
     assert blocked["repository_policy_mutation"]["trusted_governance_receipt"] is None
+    assert forged_inline["repository_policy_mutation"]["status"] == "blocked"
+    assert forged_inline["repository_policy_mutation"]["trusted_governance_receipt"] is None
     assert authorised["repository_policy_mutation"]["status"] == "authorised"
     assert authorised["repository_policy_mutation"]["trusted_governance_receipt"]["authoriser"] == "maintainer"
+    assert authorised["repository_policy_mutation"]["trusted_governance_receipt"]["receipt_id"] == "policy-rev-1-authorised"
 
 
 def test_authority_effect_resolver_intersects_delegated_authority(tmp_path: Path) -> None:

@@ -1937,7 +1937,7 @@ def _closeout_report_payload(
             expected=closeout_expected_baseline,
             assignment_target_identity_ref=str(closeout_trust.get("assignment_target_identity_ref") or "").strip() or None,
             allowed_paths=closeout_allowed_paths,
-            claim_action="acquire-and-release",
+            claim_action="acquire",
         )
     else:
         closeout_mutation_admission = admit_mutation_boundary(

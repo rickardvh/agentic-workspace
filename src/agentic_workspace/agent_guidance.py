@@ -462,7 +462,7 @@ def apply_correction_event_operation(
         mutation_applied = True
         status = "compacted"
     else:
-        event = _operation_event(values=values, operation=operation)
+        event = _operation_event(values=values, operation=operation, target_root=target_root)
         events = [*existing_events, event]
         admission = admit_correction_events(events=events, subjects=subjects, task_class=task_class, scope_class=scope_class)
         accepted_ids = {
@@ -524,7 +524,7 @@ def _write_correction_receipt(*, target_root: Path, receipt: dict[str, Any]) -> 
 
 
 def _operation_subjects(*, values: dict[str, Any], config: Any) -> list[dict[str, Any]]:
-    subjects_json = values.get("subjects_json")
+    subjects_json = values.get("subjects_json") if values.get("_fixture_allow_subjects_json") else None
     if subjects_json:
         try:
             loaded = json.loads(str(subjects_json))
@@ -535,7 +535,7 @@ def _operation_subjects(*, values: dict[str, Any], config: Any) -> list[dict[str
     return [_target_identity_subject(profile) for profile in config.local_override.delegation_targets]
 
 
-def _operation_event(*, values: dict[str, Any], operation: str) -> dict[str, Any]:
+def _operation_event(*, values: dict[str, Any], operation: str, target_root: Path) -> dict[str, Any]:
     event_json = values.get("event_json")
     if event_json:
         try:
@@ -549,6 +549,7 @@ def _operation_event(*, values: dict[str, Any], operation: str) -> dict[str, Any
         "event_json",
         "subjects_json",
         "trusted_authority_receipt_json",
+        "trusted_authority_receipt_ref",
         "target",
         "target_root",
         "format",
@@ -561,7 +562,7 @@ def _operation_event(*, values: dict[str, Any], operation: str) -> dict[str, Any
         "correct-dispute": "dispute",
         "withdraw-supersede": str(values.get("lifecycle_action") or "withdraw"),
     }.get(operation, operation)
-    trusted_receipt = _trusted_authority_receipt(values.get("trusted_authority_receipt_json"))
+    trusted_receipt = _trusted_authority_receipt(target_root=target_root, value=values.get("trusted_authority_receipt_ref"))
     if trusted_receipt:
         event["authority"] = trusted_receipt["authority"]
         event["producer_class"] = trusted_receipt["producer_class"]
@@ -578,12 +579,14 @@ def _operation_event(*, values: dict[str, Any], operation: str) -> dict[str, Any
     return event
 
 
-def _trusted_authority_receipt(value: Any) -> dict[str, str] | None:
+def _trusted_authority_receipt(*, target_root: Path, value: Any) -> dict[str, str] | None:
     if not value:
         return None
     try:
-        receipt = json.loads(str(value))
-    except json.JSONDecodeError:
+        receipt_path = (target_root / str(value)).resolve()
+        receipt_path.relative_to(target_root.resolve())
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, json.JSONDecodeError):
         return None
     if not isinstance(receipt, dict):
         return None
@@ -595,6 +598,8 @@ def _trusted_authority_receipt(value: Any) -> dict[str, str] | None:
         return None
     source_ref = str(receipt.get("source_ref") or "")
     if not source_ref:
+        return None
+    if str(receipt.get("status") or "current") in {"stale", "superseded", "revoked", "closed"}:
         return None
     return {
         "authority": authority,
