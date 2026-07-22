@@ -1558,6 +1558,18 @@
       "generic_behavior_audit": "Not counted as portable codegen completion; evaluation behavior depends on AW-owned decision-owner and local-evidence policy."
     },
     {
+      "id": "evaluation.observation.prune",
+      "summary": "Compact bounded local-first evaluation observation history and emit a lineage receipt.",
+      "kind": "workspace-runtime",
+      "portability": "domain-runtime",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace package runtime boundary",
+      "tier_reason": "Evaluation retention semantics enforce AW-specific current-result identity, local-only compaction, and issue-closure authority boundaries.",
+      "conformance_ref": "evaluation.lifecycle.process plus workspace evaluation tests",
+      "migration_path": "Keep as workspace runtime until evaluation definition, observation retention, and closure-authority policy can be represented by portable primitives without weakening historical evidence handling.",
+      "generic_behavior_audit": "Not counted as portable codegen completion; evaluation compaction depends on AW-owned current-result and local-evidence retention policy."
+    },
+    {
       "id": "evaluation.status.derive",
       "summary": "Derive compact evaluation status from definitions and local observation streams.",
       "kind": "workspace-runtime",

@@ -9,7 +9,7 @@ import { writeSync } from 'node:fs';
 import { runGeneratedOperation } from './runtime.mjs';
 
 const supportedCommands = new Set(["autopilot", "checkpoint", "config", "defaults", "doctor", "evaluation", "external-intent", "final-response", "implement", "init", "install", "memory", "modules", "note-delegation-outcome", "ownership", "planning", "preflight", "prompt", "proof", "reconcile", "report", "session-log", "setup", "skills", "start", "status", "summary", "system-intent", "uninstall", "upgrade", "work-thread"]);
-const nativeOperationIds = new Set(["autopilot.run", "checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.observe", "evaluation.register", "evaluation.status", "evaluation.transition", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
+const nativeOperationIds = new Set(["autopilot.run", "checkpoint.write", "config.report", "defaults.report", "delegation-outcome.append", "doctor.report", "evaluation.observe", "evaluation.prune", "evaluation.register", "evaluation.status", "evaluation.transition", "external-intent.refresh-github", "final-response.admit", "implement.context", "init.lifecycle", "install.lifecycle", "memory.front-door", "modules.report", "ownership.report", "planning.front-door", "preflight.report", "prompt.init", "prompt.uninstall", "prompt.upgrade", "proof.report", "reconcile.report", "report.combined", "session-log.manage", "setup.guidance", "skills.report", "start.context", "status.report", "summary.report", "system-intent.sync", "uninstall.lifecycle", "upgrade.lifecycle", "work-thread.carry-inspect", "work-thread.carry-prune", "work-thread.carry-select", "work-thread.prune", "work-thread.select"]);
 const commandDefinitions = [
   {
     "interface": {
@@ -2977,6 +2977,58 @@ const commandDefinitions = [
                 "--reason"
               ],
               "name": "reason"
+            },
+            {
+              "default": 0,
+              "flags": [
+                "--expected-revision"
+              ],
+              "name": "expected_revision",
+              "type": "integer"
+            }
+          ]
+        },
+        {
+          "help": "Prune or compact local evaluation observation history.",
+          "name": "prune",
+          "operation_ref": {
+            "id": "evaluation.prune",
+            "path": "operations/evaluation.prune.json"
+          },
+          "options": [
+            {
+              "flags": [
+                "--target"
+              ],
+              "help": "Repository path.",
+              "name": "target"
+            },
+            {
+              "choices": [
+                "text",
+                "json"
+              ],
+              "default": "text",
+              "flags": [
+                "--format"
+              ],
+              "help": "Output format.",
+              "name": "format"
+            },
+            {
+              "flags": [
+                "--evaluation-id"
+              ],
+              "name": "evaluation_id",
+              "required": true
+            },
+            {
+              "action": "store_true",
+              "default": false,
+              "flags": [
+                "--dry-run"
+              ],
+              "name": "dry_run"
             }
           ]
         }

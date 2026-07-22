@@ -30,6 +30,11 @@
       "required": false
     },
     {
+      "name": "expected_revision",
+      "source": "cli-option",
+      "required": false
+    },
+    {
       "name": "format",
       "source": "cli-option",
       "required": false
@@ -82,7 +87,8 @@
     }
   ],
   "guards": [
-    "Invalid lifecycle transitions fail closed."
+    "Invalid lifecycle transitions fail closed.",
+    "Expected revision, when provided, must match the current evaluation definition revision."
   ],
   "proof": [
     "evaluation unit tests",

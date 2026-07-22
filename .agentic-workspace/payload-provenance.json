@@ -4,7 +4,7 @@
     "runtime_required": false,
     "source": "released-wheel",
     "source_identity": ".venv/Lib/site-packages/command_generation/__init__.py",
-    "version": "1.3.1"
+    "version": "2.0.0"
   },
   "installed_at": "2026-06-16T14:13:26+00:00",
   "installed_by": {
@@ -13,8 +13,8 @@
     "python_executable": ".venv/Scripts/python.exe",
     "source": "local-source",
     "source_class": "source-checkout",
-    "source_identity": "path:pr-2249",
-    "version": "0.33.9"
+    "source_identity": "path:pr-2353",
+    "version": "0.34.2"
   },
   "kind": "agentic-workspace/payload-provenance/v1",
   "payload_capabilities": [
@@ -40,8 +40,8 @@
   "release_identity": {
     "package": "agentic-workspace",
     "release_model": "coordinated-workspace",
-    "tag": "v0.33.9",
-    "version": "0.33.9"
+    "tag": "v0.34.2",
+    "version": "0.34.2"
   },
   "rule": "Repo payload provenance records the coordinated AW release identity and executable/source identity that installed or last synced the AW payload."
 }

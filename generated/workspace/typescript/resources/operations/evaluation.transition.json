@@ -13,7 +13,8 @@
     "writes_repo_state": true
   },
   "guards": [
-    "Invalid lifecycle transitions fail closed."
+    "Invalid lifecycle transitions fail closed.",
+    "Expected revision, when provided, must match the current evaluation definition revision."
   ],
   "id": "evaluation.transition",
   "inputs": [
@@ -34,6 +35,11 @@
     },
     {
       "name": "reason",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expected_revision",
       "required": false,
       "source": "cli-option"
     },
