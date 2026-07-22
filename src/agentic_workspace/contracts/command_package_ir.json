@@ -413,6 +413,91 @@
               "name": "confidence",
               "arg": "confidence",
               "default": "medium"
+            },
+            {
+              "name": "source_type",
+              "arg": "source_type",
+              "default": null
+            },
+            {
+              "name": "source_ref",
+              "arg": "source_ref",
+              "default": null
+            },
+            {
+              "name": "producer_class",
+              "arg": "producer_class",
+              "default": null
+            },
+            {
+              "name": "route_outcome",
+              "arg": "route_outcome",
+              "default": null
+            },
+            {
+              "name": "assignment_route",
+              "arg": "assignment_route",
+              "default": null
+            },
+            {
+              "name": "proof_observation",
+              "arg": "proof_observation",
+              "default": null
+            },
+            {
+              "name": "review_observation",
+              "arg": "review_observation",
+              "default": null
+            },
+            {
+              "name": "handoff_burden",
+              "arg": "handoff_burden",
+              "default": null
+            },
+            {
+              "name": "repair_burden",
+              "arg": "repair_burden",
+              "default": null
+            },
+            {
+              "name": "retry_burden",
+              "arg": "retry_burden",
+              "default": null
+            },
+            {
+              "name": "restart_burden",
+              "arg": "restart_burden",
+              "default": null
+            },
+            {
+              "name": "expected_burden",
+              "arg": "expected_burden",
+              "default": null
+            },
+            {
+              "name": "observed_burden",
+              "arg": "observed_burden",
+              "default": null
+            },
+            {
+              "name": "scope_drift",
+              "arg": "scope_drift",
+              "default": "none"
+            },
+            {
+              "name": "contradiction_state",
+              "arg": "contradiction_state",
+              "default": "none"
+            },
+            {
+              "name": "uncertainty_state",
+              "arg": "uncertainty_state",
+              "default": null
+            },
+            {
+              "name": "idempotency_key",
+              "arg": "idempotency_key",
+              "default": null
             }
           ],
           "handlers": [
@@ -6260,6 +6345,125 @@
                   "medium",
                   "high"
                 ]
+              },
+              {
+                "name": "source_type",
+                "flags": [
+                  "--source-type"
+                ],
+                "help": "Provenance source type for the evidence."
+              },
+              {
+                "name": "source_ref",
+                "flags": [
+                  "--source-ref"
+                ],
+                "help": "Exact source reference for duplicate/idempotency and audit."
+              },
+              {
+                "name": "producer_class",
+                "flags": [
+                  "--producer-class"
+                ],
+                "help": "Producer class resolved by the operation boundary."
+              },
+              {
+                "name": "route_outcome",
+                "flags": [
+                  "--route-outcome"
+                ],
+                "help": "Structured route outcome observation."
+              },
+              {
+                "name": "assignment_route",
+                "flags": [
+                  "--assignment-route"
+                ],
+                "help": "Assignment route observed for this outcome."
+              },
+              {
+                "name": "proof_observation",
+                "flags": [
+                  "--proof-observation"
+                ],
+                "help": "Proof observation associated with the outcome."
+              },
+              {
+                "name": "review_observation",
+                "flags": [
+                  "--review-observation"
+                ],
+                "help": "Review observation associated with the outcome."
+              },
+              {
+                "name": "handoff_burden",
+                "flags": [
+                  "--handoff-burden"
+                ],
+                "help": "Handoff burden observation."
+              },
+              {
+                "name": "repair_burden",
+                "flags": [
+                  "--repair-burden"
+                ],
+                "help": "Repair burden observation."
+              },
+              {
+                "name": "retry_burden",
+                "flags": [
+                  "--retry-burden"
+                ],
+                "help": "Retry burden observation."
+              },
+              {
+                "name": "restart_burden",
+                "flags": [
+                  "--restart-burden"
+                ],
+                "help": "Restart burden observation."
+              },
+              {
+                "name": "expected_burden",
+                "flags": [
+                  "--expected-burden"
+                ],
+                "help": "Expected burden before execution."
+              },
+              {
+                "name": "observed_burden",
+                "flags": [
+                  "--observed-burden"
+                ],
+                "help": "Observed burden after execution."
+              },
+              {
+                "name": "scope_drift",
+                "flags": [
+                  "--scope-drift"
+                ],
+                "help": "Scope drift state."
+              },
+              {
+                "name": "contradiction_state",
+                "flags": [
+                  "--contradiction-state"
+                ],
+                "help": "Contradiction or dispute state."
+              },
+              {
+                "name": "uncertainty_state",
+                "flags": [
+                  "--uncertainty-state"
+                ],
+                "help": "Uncertainty state preserved for non-routing evidence."
+              },
+              {
+                "name": "idempotency_key",
+                "flags": [
+                  "--idempotency-key"
+                ],
+                "help": "Stable idempotency key supplied by the producer."
               },
               {
                 "name": "outcome",

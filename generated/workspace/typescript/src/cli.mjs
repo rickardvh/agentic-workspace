@@ -3938,6 +3938,125 @@ const commandDefinitions = [
           "name": "confidence"
         },
         {
+          "flags": [
+            "--source-type"
+          ],
+          "help": "Provenance source type for the evidence.",
+          "name": "source_type"
+        },
+        {
+          "flags": [
+            "--source-ref"
+          ],
+          "help": "Exact source reference for duplicate/idempotency and audit.",
+          "name": "source_ref"
+        },
+        {
+          "flags": [
+            "--producer-class"
+          ],
+          "help": "Producer class resolved by the operation boundary.",
+          "name": "producer_class"
+        },
+        {
+          "flags": [
+            "--route-outcome"
+          ],
+          "help": "Structured route outcome observation.",
+          "name": "route_outcome"
+        },
+        {
+          "flags": [
+            "--assignment-route"
+          ],
+          "help": "Assignment route observed for this outcome.",
+          "name": "assignment_route"
+        },
+        {
+          "flags": [
+            "--proof-observation"
+          ],
+          "help": "Proof observation associated with the outcome.",
+          "name": "proof_observation"
+        },
+        {
+          "flags": [
+            "--review-observation"
+          ],
+          "help": "Review observation associated with the outcome.",
+          "name": "review_observation"
+        },
+        {
+          "flags": [
+            "--handoff-burden"
+          ],
+          "help": "Handoff burden observation.",
+          "name": "handoff_burden"
+        },
+        {
+          "flags": [
+            "--repair-burden"
+          ],
+          "help": "Repair burden observation.",
+          "name": "repair_burden"
+        },
+        {
+          "flags": [
+            "--retry-burden"
+          ],
+          "help": "Retry burden observation.",
+          "name": "retry_burden"
+        },
+        {
+          "flags": [
+            "--restart-burden"
+          ],
+          "help": "Restart burden observation.",
+          "name": "restart_burden"
+        },
+        {
+          "flags": [
+            "--expected-burden"
+          ],
+          "help": "Expected burden before execution.",
+          "name": "expected_burden"
+        },
+        {
+          "flags": [
+            "--observed-burden"
+          ],
+          "help": "Observed burden after execution.",
+          "name": "observed_burden"
+        },
+        {
+          "flags": [
+            "--scope-drift"
+          ],
+          "help": "Scope drift state.",
+          "name": "scope_drift"
+        },
+        {
+          "flags": [
+            "--contradiction-state"
+          ],
+          "help": "Contradiction or dispute state.",
+          "name": "contradiction_state"
+        },
+        {
+          "flags": [
+            "--uncertainty-state"
+          ],
+          "help": "Uncertainty state preserved for non-routing evidence.",
+          "name": "uncertainty_state"
+        },
+        {
+          "flags": [
+            "--idempotency-key"
+          ],
+          "help": "Stable idempotency key supplied by the producer.",
+          "name": "idempotency_key"
+        },
+        {
           "choices": [
             "success",
             "mixed",

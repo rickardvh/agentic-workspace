@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,7 @@ CURRENT_ADMISSION_STATES = {"accepted", "accepted-normalized", "recovered", "com
 ROUTABLE_AUTHORITIES = {"aw-proof", "human-review", "local-outcome-ledger"}
 ROUTABLE_CONFIDENCE = {"high", "medium"}
 INACTIVE_ADMISSION_STATES = {"disputed", "superseded", "stale", "compacted-raw", "rejected"}
+ROUTABLE_RECORD_MAX_AGE_DAYS = 180
 ASSIGNMENT_OUTCOME_MATRIX = [
     "retain-local",
     "read-only-exploration",
@@ -61,7 +63,21 @@ def _record_routable(record: DelegationOutcomeRecord) -> bool:
         return False
     if record.contradiction_state in {"contradicted", "disputed"}:
         return False
+    if _record_is_stale(record):
+        return False
     return True
+
+
+def _record_age_days(record: DelegationOutcomeRecord) -> int | None:
+    try:
+        return (date.today() - date.fromisoformat(record.recorded_at[:10])).days
+    except (TypeError, ValueError):
+        return None
+
+
+def _record_is_stale(record: DelegationOutcomeRecord) -> bool:
+    age_days = _record_age_days(record)
+    return age_days is None or age_days > ROUTABLE_RECORD_MAX_AGE_DAYS
 
 
 def _record_uncertainty_reasons(record: DelegationOutcomeRecord) -> list[str]:
@@ -80,6 +96,11 @@ def _record_uncertainty_reasons(record: DelegationOutcomeRecord) -> list[str]:
         reasons.append(f"uncertainty:{record.uncertainty_state}")
     if record.scope_drift:
         reasons.append("scope-drift")
+    age_days = _record_age_days(record)
+    if age_days is None:
+        reasons.append("invalid-recorded-at")
+    elif age_days > ROUTABLE_RECORD_MAX_AGE_DAYS:
+        reasons.append(f"stale:{age_days}d")
     return reasons
 
 
@@ -406,7 +427,7 @@ def assignment_decision_from_policy(
     for item in suitability:
         target = str(item.get("target") or "")
         context_key = str(item.get("context_key") or "")
-        if requested_context_key and context_key != requested_context_key:
+        if not requested_context_key or context_key != requested_context_key:
             continue
         if target:
             evidence_by_target.setdefault(target, []).append(item)
@@ -416,7 +437,7 @@ def assignment_decision_from_policy(
             continue
         target = str(item.get("target") or "")
         context_key = str(item.get("context_key") or "")
-        if requested_context_key and context_key != requested_context_key:
+        if not requested_context_key or context_key != requested_context_key:
             continue
         if target:
             uncertainty_by_target.setdefault(target, []).append(item)
@@ -566,7 +587,12 @@ def assignment_decision_from_policy(
         for item in candidate_scores
         if item["target"] != selected_target
     ][:5]
-    if not eligible_candidates:
+    if not requested_context_key:
+        decision = "shape-before-assignment"
+        canonical_outcome = "read-only-exploration"
+        selected_target = None
+        next_action = "derive a shaped task context before assignment; run read-only exploration or Planning shaping first"
+    elif not eligible_candidates:
         decision = "no-safe-route"
         canonical_outcome = "no-safe-route"
         selected_target = None
@@ -647,6 +673,11 @@ def assignment_decision_from_policy(
                 "scope_class": requested_scope_class or None,
                 "context_key": requested_context_key or None,
                 "requires_validation": bool(requested_task_class and requested_task_class in {"validation", "review", "proof"}),
+            },
+            "context_authority": {
+                "status": "present" if requested_context_key else "missing",
+                "fail_closed_without_context": True,
+                "rule": "Ordinary assignment may not aggregate target evidence across all task/scope contexts when the shaped task context is absent.",
             },
         },
         "alternatives": alternatives,
