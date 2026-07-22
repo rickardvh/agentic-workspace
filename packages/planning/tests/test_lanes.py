@@ -543,7 +543,9 @@ def test_lane_activate_without_execplan_is_a_noop(tmp_path: Path) -> None:
     assert [action.kind for action in result.actions] == ["manual review"]
     assert result.reason_code == "lane-execplan-required"
     assert "new-plan" not in result.recovery_command
-    assert "planning report" in result.recovery_command
+    assert "planning reconcile" in result.recovery_command
+    assert "--apply-lane-current-slice-reconcile" in result.recovery_command
+    assert "--expected-execplan .agentic-workspace/planning/execplans/activation-lane-slice.plan.json" in result.recovery_command
     lane = json.loads((tmp_path / ".agentic-workspace/planning/lanes/activation-lane.lane.json").read_text(encoding="utf-8"))
     assert lane["status"] == "ready"
     assert planning_summary(target=tmp_path, profile="compact")["planning_surface_health"]["warnings"] == []

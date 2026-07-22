@@ -35,6 +35,18 @@
       "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
     },
     {
+      "pattern": "src/agentic_workspace/contracts/context_authority_registry.json",
+      "format": "json",
+      "owner": "workspace-contracts",
+      "status": "schema-backed",
+      "schema_or_validator": "src/agentic_workspace/contracts/schemas/context_authority_registry.schema.json",
+      "editable_by_agents": true,
+      "generated": false,
+      "notes": "Versioned operating-decision authority registry consumed by runtime instead of a Python-local parallel table.",
+      "storage_class": "source-of-truth",
+      "checked_in_justification": "Canonical checked-in structured input used by package behavior, validation, packaging, or repo policy."
+    },
+    {
       "pattern": "src/agentic_workspace/contracts/schemas/primitives/*.schema.json",
       "format": "json",
       "owner": "workspace-contracts",

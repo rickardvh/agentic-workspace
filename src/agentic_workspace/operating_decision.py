@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
 from typing import Any
 
 from agentic_workspace.actionability import invocation_decision_input_revision
@@ -19,174 +20,7 @@ BLOCKER_PRECEDENCE = [
     "missing-capability",
 ]
 
-ORDINARY_DECISION_CONSUMERS = [
-    "autopilot",
-    "closeout",
-    "implement",
-    "next",
-    "proof",
-    "start",
-    "status",
-    "summary",
-]
-
-ORDINARY_DECISION_CONSUMER_REQUIREMENTS = {
-    "autopilot": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "autopilot-executor"],
-    "closeout": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "terminal-outcome"],
-    "implement": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "skills", "target-guidance"],
-    "next": ["planning", "assignment", "skills", "target-guidance"],
-    "proof": ["planning", "proof", "mutation-baseline", "evaluation"],
-    "start": ["system-intent", "planning", "memory", "skills", "target-guidance"],
-    "status": ["planning", "assignment", "proof", "evaluation", "terminal-outcome"],
-    "summary": ["planning", "memory", "terminal-outcome"],
-}
-
-CONTEXT_AUTHORITY_REGISTRY = [
-    {
-        "surface": "system-intent",
-        "owner": "workspace-system-intent",
-        "authority_class": "canonical",
-        "consumers": ["start", "startup", "implement", "proof", "report", "status", "closeout"],
-        "activation": "durable shaping input, not active task state",
-        "editable_by": "system-intent sync and explicit repo edits",
-        "stale_when": "mirror revision differs from source declaration",
-        "proof_route": "system-intent sync and contract tooling checks",
-        "disposition": "retain as durable shaping authority",
-        "revision_fields": ["system_intent_revision", "mirror_revision"],
-    },
-    {
-        "surface": "planning",
-        "owner": "planning package",
-        "authority_class": "canonical",
-        "consumers": ["start", "summary", "next", "implement", "proof", "autopilot", "status", "closeout"],
-        "activation": "active TODO item, selected owner, or current lane slice",
-        "editable_by": "planning operations",
-        "stale_when": "planning revision or selected owner revision changes",
-        "proof_route": "planning package tests and lane health checks",
-        "disposition": "retain as current-work authority",
-        "revision_fields": ["owner_ref", "owner_revision", "slice_revision"],
-    },
-    {
-        "surface": "memory",
-        "owner": "memory package",
-        "authority_class": "historical/evidence",
-        "consumers": ["start", "summary", "implement", "proof", "report"],
-        "activation": "route-selected by task/path/stage",
-        "editable_by": "memory operations",
-        "stale_when": "manifest route no longer selects or finding is superseded",
-        "proof_route": "memory doctor and freshness checks",
-        "disposition": "retain as routed evidence, not current-task authority",
-        "revision_fields": ["memory_route_revision", "finding_revision"],
-    },
-    {
-        "surface": "assignment",
-        "owner": "workspace assignment gate",
-        "authority_class": "hard-gate",
-        "consumers": ["implement", "next", "autopilot", "closeout", "status"],
-        "activation": "selected target, context, allowed effects, and transport policy",
-        "editable_by": "target evidence and assignment policy operations",
-        "stale_when": "target identity, assignment revision, or transport policy changes",
-        "proof_route": "implementation assignment-gate and delegated-return tests",
-        "disposition": "retain as execution authority",
-        "revision_fields": ["target_identity_ref", "assignment_revision", "manual_transport_policy"],
-    },
-    {
-        "surface": "evaluation",
-        "owner": "evaluation runtime",
-        "authority_class": "canonical",
-        "consumers": ["status", "proof", "implement", "autopilot", "operating-decision", "closeout"],
-        "activation": "fresh bound result for the current definition revision",
-        "editable_by": "evaluation operations",
-        "stale_when": "definition revision or bound result identity changes",
-        "proof_route": "evaluation lifecycle tests",
-        "disposition": "retain as longitudinal authority when registered",
-        "revision_fields": ["evaluation_id", "definition_revision", "current_result_identity"],
-    },
-    {
-        "surface": "proof",
-        "owner": "verification and proof runtime",
-        "authority_class": "canonical",
-        "consumers": ["proof", "implement", "status", "autopilot", "closeout", "operating-decision"],
-        "activation": "selected proof subject for current changed paths",
-        "editable_by": "proof receipt admission and verification operations",
-        "stale_when": "proof subject, selected command, or changed-path fingerprint changes",
-        "proof_route": "proof report and receipt reconciliation tests",
-        "disposition": "retain as claim authority",
-        "revision_fields": ["proof_obligation_id", "proof_subject_fingerprint", "receipt_revision"],
-    },
-    {
-        "surface": "mutation-baseline",
-        "owner": "authority envelope",
-        "authority_class": "hard-gate",
-        "consumers": ["implement", "autopilot", "proof", "closeout"],
-        "activation": "current head/scope/target baseline before mutation or admission",
-        "editable_by": "authority envelope resolution",
-        "stale_when": "head, scope, target, or managed state changes",
-        "proof_route": "mutation baseline admission tests",
-        "disposition": "retain as mutation authority",
-        "revision_fields": ["baseline_id", "head", "scope", "assignment"],
-    },
-    {
-        "surface": "autopilot-executor",
-        "owner": "autopilot runtime",
-        "authority_class": "hard-gate",
-        "consumers": ["autopilot", "final-response", "operating-decision"],
-        "activation": "valid executor binding for current owner/target/assignment/proof state",
-        "editable_by": "autopilot binding resolver",
-        "stale_when": "executor binding fingerprint changes",
-        "proof_route": "autopilot executor-binding tests",
-        "disposition": "retain as executor authority",
-        "revision_fields": ["binding_fingerprint", "availability", "validity"],
-    },
-    {
-        "surface": "skills",
-        "owner": "workspace skill registry",
-        "authority_class": "canonical",
-        "consumers": ["start", "next", "implement"],
-        "activation": "task-routed skill viability and dependency checks",
-        "editable_by": "skill registry and installed skill metadata",
-        "stale_when": "skill registry, dependency status, or routed task shape changes",
-        "proof_route": "skill registry and workspace startup tests",
-        "disposition": "retain as routed operating guidance",
-        "revision_fields": ["skill_id", "registry_revision", "dependency_status"],
-    },
-    {
-        "surface": "target-guidance",
-        "owner": "target guidance runtime",
-        "authority_class": "canonical",
-        "consumers": ["start", "next", "implement"],
-        "activation": "target identity, guidance overlay, and execution posture selection",
-        "editable_by": "target evidence and guidance identity operations",
-        "stale_when": "target identity, guidance overlay, or execution posture changes",
-        "proof_route": "target guidance identity and assignment tests",
-        "disposition": "retain as target-specific operating context",
-        "revision_fields": ["target_identity_ref", "guidance_revision", "execution_posture_revision"],
-    },
-    {
-        "surface": "terminal-outcome",
-        "owner": "final-response admission runtime",
-        "authority_class": "canonical",
-        "consumers": ["summary", "status", "closeout"],
-        "activation": "terminal outcome contract, custody, and final-response admission state",
-        "editable_by": "final-response admission and continuation operations",
-        "stale_when": "terminal outcome, custody, or continuation state changes",
-        "proof_route": "final-response and autopilot continuation tests",
-        "disposition": "retain as final-claim and continuation authority",
-        "revision_fields": ["terminal_state", "custody_owner", "continuation_revision"],
-    },
-    {
-        "surface": "generated-references",
-        "owner": "command-generation and contract tooling",
-        "authority_class": "generated",
-        "consumers": ["cli", "python-adapter", "typescript-adapter", "contract-checks"],
-        "activation": "generated freshness and operation registry selection",
-        "editable_by": "generators only",
-        "stale_when": "source contract revision differs from generated projection",
-        "proof_route": "generated command package checks",
-        "disposition": "regenerate rather than hand edit",
-        "revision_fields": ["command_package_fingerprint", "adapter_fingerprint"],
-    },
-]
+_CONTEXT_AUTHORITY_REGISTRY_RESOURCE = "context_authority_registry.json"
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -199,6 +33,24 @@ def _as_list(value: Any) -> list[Any]:
 
 def _digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def _load_context_authority_registry_contract() -> dict[str, Any]:
+    payload = (Path(__file__).resolve().parent / "contracts" / _CONTEXT_AUTHORITY_REGISTRY_RESOURCE).read_text(encoding="utf-8")
+    data = json.loads(payload)
+    return data if isinstance(data, dict) else {}
+
+
+_CONTEXT_AUTHORITY_REGISTRY_CONTRACT = _load_context_authority_registry_contract()
+ORDINARY_DECISION_CONSUMERS = [str(item) for item in _as_list(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("ordinary_decision_consumers"))]
+ORDINARY_DECISION_CONSUMER_REQUIREMENTS = {
+    str(consumer): [str(surface) for surface in _as_list(surfaces)]
+    for consumer, surfaces in _as_dict(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("consumer_requirements")).items()
+}
+CONTEXT_AUTHORITY_REGISTRY = [
+    dict(item) for item in _as_list(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT.get("surfaces")) if isinstance(item, dict)
+]
+CONTEXT_AUTHORITY_REGISTRY_REVISION = "sha256:" + _digest(_CONTEXT_AUTHORITY_REGISTRY_CONTRACT)
 
 
 def context_authority_declarations() -> list[dict[str, Any]]:
@@ -296,6 +148,9 @@ def context_authority_coverage(
     return {
         "kind": "agentic-workspace/context-authority-coverage/v1",
         "status": status,
+        "registry_source": f"src/agentic_workspace/contracts/{_CONTEXT_AUTHORITY_REGISTRY_RESOURCE}",
+        "registry_revision": CONTEXT_AUTHORITY_REGISTRY_REVISION,
+        "registry_authority": "versioned-contract",
         "surface_count": len(surfaces),
         "consumer_count": len(expected_consumers),
         "surfaces": surfaces,
@@ -308,7 +163,7 @@ def context_authority_coverage(
         "duplicate_surfaces": sorted(set(duplicate_surfaces)),
         "duplicate_canonical_owners": duplicate_canonical_owners,
         "duplicate_consumer_authorities": duplicate_consumer_authorities,
-        "rule": "Operating decisions measure declared authority coverage against ordinary consumers and fail closed on missing owners, duplicate surfaces, or uncovered consumers.",
+        "rule": "Operating decisions measure the versioned context-authority registry against ordinary consumers and fail closed on missing owners, duplicate surfaces, missing required sources, or uncovered consumers.",
     }
 
 
@@ -337,20 +192,104 @@ def _surface_gap_class(surface: dict[str, Any]) -> str:
     return ""
 
 
+def context_surface_admission(
+    *,
+    surface: str,
+    source_kind: str,
+    source_id: str,
+    source_revision: str,
+    authority_owner: str,
+    requirement_status: str = "optional",
+    population_status: str = "present",
+    routing_status: str = "reachable",
+    coverage_status: str = "covered",
+    freshness_status: str = "current",
+    finding_status: str = "",
+    severity: str = "",
+    evidence_refs: list[str] | None = None,
+    next_route: str = "",
+    affected_decisions: list[str] | None = None,
+) -> dict[str, Any]:
+    """Normalize one specialist-owned context input before gap classification."""
+
+    admitted = bool(surface and source_kind and source_id and source_revision and authority_owner)
+    return {
+        "kind": "agentic-workspace/context-surface-admission/v1",
+        "admission_status": "admitted" if admitted else "rejected",
+        "surface": surface,
+        "source": {"kind": source_kind, "id": source_id, "revision": source_revision},
+        "authority_owner": authority_owner,
+        "requirement_status": requirement_status,
+        "population_status": population_status,
+        "routing_status": routing_status,
+        "coverage_status": coverage_status,
+        "freshness_status": freshness_status,
+        "finding_status": finding_status,
+        "severity": severity,
+        "evidence_refs": list(evidence_refs or []),
+        "next_route": next_route,
+        "affected_decisions": list(affected_decisions or []),
+        "rule": "Context gaps classify admitted specialist resolver records; callers may not provide blocking status without source identity, authority owner, and source revision.",
+    }
+
+
+def _admitted_context_surface(surface: dict[str, Any]) -> dict[str, Any]:
+    admitted = _as_dict(surface.get("admitted_state")) or surface
+    if admitted.get("kind") != "agentic-workspace/context-surface-admission/v1":
+        return {
+            "kind": "agentic-workspace/context-surface-admission/v1",
+            "admission_status": "rejected",
+            "surface": str(surface.get("surface") or admitted.get("surface") or ""),
+            "source_status": "unversioned",
+            "coverage_status": "gap",
+            "severity": "blocking",
+            "authority_owner": "context-authority-coverage",
+            "next_route": "resolve this surface through a canonical context-surface adapter before deriving gaps",
+            "evidence_refs": ["unversioned-context-surface-input"],
+        }
+    source = _as_dict(admitted.get("source"))
+    missing = [
+        field
+        for field, value in {
+            "surface": admitted.get("surface"),
+            "source.kind": source.get("kind"),
+            "source.id": source.get("id"),
+            "source.revision": source.get("revision"),
+            "authority_owner": admitted.get("authority_owner"),
+        }.items()
+        if not str(value or "").strip()
+    ]
+    if admitted.get("admission_status") != "admitted" or missing:
+        return {
+            **admitted,
+            "admission_status": "rejected",
+            "source_status": "unversioned",
+            "coverage_status": "gap",
+            "severity": "blocking",
+            "next_route": str(admitted.get("next_route") or "resolve missing context source identity and retry"),
+            "evidence_refs": [*_as_list(admitted.get("evidence_refs")), *missing],
+        }
+    return admitted
+
+
 def derive_context_gaps(*, declarations: list[dict[str, Any]], selected_surfaces: list[dict[str, Any]]) -> list[dict[str, Any]]:
     declared = {str(item.get("surface") or ""): item for item in declarations if isinstance(item, dict)}
     gaps: list[dict[str, Any]] = []
     for surface in selected_surfaces:
         if not isinstance(surface, dict):
             continue
-        surface_id = str(surface.get("surface") or "").strip()
-        admitted_state = _as_dict(surface.get("admitted_state")) or surface
+        admitted_state = _admitted_context_surface(surface)
+        surface_id = str(admitted_state.get("surface") or surface.get("surface") or "").strip()
         if surface_id not in declared:
             admitted_state = {**admitted_state, "source_status": "undeclared"}
         gap_class = _surface_gap_class(admitted_state)
         if not gap_class:
             continue
-        owner = str(_as_dict(declared.get(surface_id)).get("owner") or surface.get("owner") or "workspace-maintainer")
+        owner = str(
+            admitted_state.get("authority_owner")
+            if admitted_state.get("admission_status") == "rejected"
+            else _as_dict(declared.get(surface_id)).get("owner") or surface.get("owner") or "workspace-maintainer"
+        )
         severity = str(
             admitted_state.get("severity")
             or surface.get("severity")
@@ -363,13 +302,17 @@ def derive_context_gaps(*, declarations: list[dict[str, Any]], selected_surfaces
                 "gap_class": gap_class,
                 "surface": surface_id,
                 "affected_capability": str(surface.get("affected_capability") or "ordinary-operating-decision"),
-                "affected_decisions": _as_list(surface.get("affected_decisions")) or ["routing", "claim-boundary"],
-                "evidence_refs": _as_list(surface.get("evidence_refs")),
+                "affected_decisions": _as_list(admitted_state.get("affected_decisions"))
+                or _as_list(surface.get("affected_decisions"))
+                or ["routing", "claim-boundary"],
+                "evidence_refs": _as_list(admitted_state.get("evidence_refs")) or _as_list(surface.get("evidence_refs")),
                 "confidence": str(surface.get("confidence") or "high"),
                 "severity": severity,
                 "current_task_effect": str(surface.get("current_task_effect") or "weakens current AW decision input"),
                 "owner": owner,
-                "next_route": str(surface.get("next_route") or f"repair or declare lifecycle for {surface_id}"),
+                "next_route": str(
+                    admitted_state.get("next_route") or surface.get("next_route") or f"repair or declare lifecycle for {surface_id}"
+                ),
             }
         )
     return gaps

@@ -12,6 +12,7 @@ from agentic_workspace.operating_decision import (
     compile_operating_decision,
     context_authority_coverage,
     context_authority_declarations,
+    context_surface_admission,
     derive_context_gaps,
     derive_operating_blockers_from_authorities,
     live_decision_input_revision,
@@ -221,26 +222,68 @@ def test_missing_expected_revision_is_rejected_before_execution() -> None:
 def test_context_authority_declarations_and_gap_classes_validate() -> None:
     declarations = context_authority_declarations()
     coverage = context_authority_coverage()
+    registry_schema = _schema("context_authority_registry.schema.json")
+    registry = json.loads(Path("src/agentic_workspace/contracts/context_authority_registry.json").read_text(encoding="utf-8"))
+    Draft202012Validator(registry_schema).validate(registry)
     declaration_schema = _schema("context_authority_declaration.schema.json")
     for declaration in declarations:
         Draft202012Validator(declaration_schema).validate(declaration)
 
     assert "implement" in coverage["ordinary_consumers"]
     assert "autopilot-executor" in coverage["surfaces"]
+    assert coverage["registry_authority"] == "versioned-contract"
+    assert coverage["registry_source"] == "src/agentic_workspace/contracts/context_authority_registry.json"
     gaps = derive_context_gaps(
         declarations=declarations,
         selected_surfaces=[
             {
                 "surface": "memory",
-                "admitted_state": {"requirement_status": "required", "population_status": "missing"},
+                "admitted_state": context_surface_admission(
+                    surface="memory",
+                    source_kind="memory-route",
+                    source_id="memory/repo/index.md",
+                    source_revision="rev-memory",
+                    authority_owner="memory package",
+                    requirement_status="required",
+                    population_status="missing",
+                ),
                 "affected_decisions": ["reuse"],
             },
             {
                 "surface": "system-intent",
-                "admitted_state": {"requirement_status": "required", "population_status": "below-minimum"},
+                "admitted_state": context_surface_admission(
+                    surface="system-intent",
+                    source_kind="system-intent",
+                    source_id="intent.toml",
+                    source_revision="rev-intent",
+                    authority_owner="workspace-system-intent",
+                    requirement_status="required",
+                    population_status="below-minimum",
+                ),
             },
-            {"surface": "undiscovered-surface", "admitted_state": {"requirement_status": "required", "population_status": "present"}},
-            {"surface": "proof", "admitted_state": {"freshness_status": "inference-fallback"}},
+            {
+                "surface": "undiscovered-surface",
+                "admitted_state": context_surface_admission(
+                    surface="undiscovered-surface",
+                    source_kind="test-fixture",
+                    source_id="fixture",
+                    source_revision="rev-undiscovered",
+                    authority_owner="fixture",
+                    requirement_status="required",
+                    population_status="present",
+                ),
+            },
+            {
+                "surface": "proof",
+                "admitted_state": context_surface_admission(
+                    surface="proof",
+                    source_kind="proof-resolver",
+                    source_id="proof.report",
+                    source_revision="rev-proof",
+                    authority_owner="verification and proof runtime",
+                    freshness_status="inference-fallback",
+                ),
+            },
         ],
     )
 
@@ -253,6 +296,28 @@ def test_context_authority_declarations_and_gap_classes_validate() -> None:
         "consumer-without-source",
         "inference-fallback",
     ]
+
+
+def test_context_gap_derivation_rejects_caller_shaped_status_without_admitted_source() -> None:
+    gaps = derive_context_gaps(
+        declarations=context_authority_declarations(),
+        selected_surfaces=[
+            {
+                "surface": "proof",
+                "admitted_state": {
+                    "requirement_status": "required",
+                    "population_status": "missing",
+                    "severity": "advisory",
+                    "next_route": "caller-supplied route should not be trusted",
+                },
+            }
+        ],
+    )
+
+    assert [gap["gap_class"] for gap in gaps] == ["coverage-gap"]
+    assert gaps[0]["severity"] == "blocking"
+    assert gaps[0]["owner"] == "context-authority-coverage"
+    assert "canonical context-surface adapter" in gaps[0]["next_route"]
 
 
 def test_context_authority_coverage_fails_when_required_consumer_source_is_missing() -> None:
@@ -269,7 +334,20 @@ def test_context_authority_coverage_fails_when_required_consumer_source_is_missi
 def test_blocking_context_gap_prevents_primary_action() -> None:
     gaps = derive_context_gaps(
         declarations=context_authority_declarations(),
-        selected_surfaces=[{"surface": "proof", "admitted_state": {"requirement_status": "required", "population_status": "missing"}}],
+        selected_surfaces=[
+            {
+                "surface": "proof",
+                "admitted_state": context_surface_admission(
+                    surface="proof",
+                    source_kind="proof-resolver",
+                    source_id="proof.report",
+                    source_revision="rev-proof",
+                    authority_owner="verification and proof runtime",
+                    requirement_status="required",
+                    population_status="missing",
+                ),
+            }
+        ],
     )
     decision = compile_operating_decision(
         inputs={

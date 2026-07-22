@@ -1,0 +1,162 @@
+{
+  "kind": "agentic-workspace/context-authority-registry/v1",
+  "schema_version": 1,
+  "rule": "Operating decisions derive authority coverage from this versioned contract surface; runtime code loads this registry and must not maintain a parallel Python-only owner table.",
+  "ordinary_decision_consumers": ["autopilot", "closeout", "implement", "next", "proof", "start", "status", "summary"],
+  "consumer_requirements": {
+    "autopilot": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "autopilot-executor"],
+    "closeout": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "terminal-outcome"],
+    "implement": ["planning", "assignment", "mutation-baseline", "proof", "evaluation", "skills", "target-guidance"],
+    "next": ["planning", "assignment", "skills", "target-guidance"],
+    "proof": ["planning", "proof", "mutation-baseline", "evaluation"],
+    "start": ["system-intent", "planning", "memory", "skills", "target-guidance"],
+    "status": ["planning", "assignment", "proof", "evaluation", "terminal-outcome"],
+    "summary": ["planning", "memory", "terminal-outcome"]
+  },
+  "surfaces": [
+    {
+      "surface": "system-intent",
+      "owner": "workspace-system-intent",
+      "authority_class": "canonical",
+      "consumers": ["start", "startup", "implement", "proof", "report", "status", "closeout"],
+      "activation": "durable shaping input, not active task state",
+      "editable_by": "system-intent sync and explicit repo edits",
+      "stale_when": "mirror revision differs from source declaration",
+      "proof_route": "system-intent sync and contract tooling checks",
+      "disposition": "retain as durable shaping authority",
+      "revision_fields": ["system_intent_revision", "mirror_revision"]
+    },
+    {
+      "surface": "planning",
+      "owner": "planning package",
+      "authority_class": "canonical",
+      "consumers": ["start", "summary", "next", "implement", "proof", "autopilot", "status", "closeout"],
+      "activation": "active TODO item, selected owner, or current lane slice",
+      "editable_by": "planning operations",
+      "stale_when": "planning revision or selected owner revision changes",
+      "proof_route": "planning package tests and lane health checks",
+      "disposition": "retain as current-work authority",
+      "revision_fields": ["owner_ref", "owner_revision", "slice_revision"]
+    },
+    {
+      "surface": "memory",
+      "owner": "memory package",
+      "authority_class": "historical/evidence",
+      "consumers": ["start", "summary", "implement", "proof", "report"],
+      "activation": "route-selected by task/path/stage",
+      "editable_by": "memory operations",
+      "stale_when": "manifest route no longer selects or finding is superseded",
+      "proof_route": "memory doctor and freshness checks",
+      "disposition": "retain as routed evidence, not current-task authority",
+      "revision_fields": ["memory_route_revision", "finding_revision"]
+    },
+    {
+      "surface": "assignment",
+      "owner": "workspace assignment gate",
+      "authority_class": "hard-gate",
+      "consumers": ["implement", "next", "autopilot", "closeout", "status"],
+      "activation": "selected target, context, allowed effects, and transport policy",
+      "editable_by": "target evidence and assignment policy operations",
+      "stale_when": "target identity, assignment revision, or transport policy changes",
+      "proof_route": "implementation assignment-gate and delegated-return tests",
+      "disposition": "retain as execution authority",
+      "revision_fields": ["target_identity_ref", "assignment_revision", "manual_transport_policy"]
+    },
+    {
+      "surface": "evaluation",
+      "owner": "evaluation runtime",
+      "authority_class": "canonical",
+      "consumers": ["status", "proof", "implement", "autopilot", "operating-decision", "closeout"],
+      "activation": "fresh bound result for the current definition revision",
+      "editable_by": "evaluation operations",
+      "stale_when": "definition revision or bound result identity changes",
+      "proof_route": "evaluation lifecycle tests",
+      "disposition": "retain as longitudinal authority when registered",
+      "revision_fields": ["evaluation_id", "definition_revision", "current_result_identity"]
+    },
+    {
+      "surface": "proof",
+      "owner": "verification and proof runtime",
+      "authority_class": "canonical",
+      "consumers": ["proof", "implement", "status", "autopilot", "closeout", "operating-decision"],
+      "activation": "selected proof subject for current changed paths",
+      "editable_by": "proof receipt admission and verification operations",
+      "stale_when": "proof subject, selected command, or changed-path fingerprint changes",
+      "proof_route": "proof report and receipt reconciliation tests",
+      "disposition": "retain as claim authority",
+      "revision_fields": ["proof_obligation_id", "proof_subject_fingerprint", "receipt_revision"]
+    },
+    {
+      "surface": "mutation-baseline",
+      "owner": "authority envelope",
+      "authority_class": "hard-gate",
+      "consumers": ["implement", "autopilot", "proof", "closeout"],
+      "activation": "current head/scope/target baseline before mutation or admission",
+      "editable_by": "authority envelope resolution",
+      "stale_when": "head, scope, target, or managed state changes",
+      "proof_route": "mutation baseline admission tests",
+      "disposition": "retain as mutation authority",
+      "revision_fields": ["baseline_id", "head", "scope", "assignment"]
+    },
+    {
+      "surface": "autopilot-executor",
+      "owner": "autopilot runtime",
+      "authority_class": "hard-gate",
+      "consumers": ["autopilot", "final-response", "operating-decision"],
+      "activation": "valid executor binding for current owner/target/assignment/proof state",
+      "editable_by": "autopilot binding resolver",
+      "stale_when": "executor binding fingerprint changes",
+      "proof_route": "autopilot executor-binding tests",
+      "disposition": "retain as executor authority",
+      "revision_fields": ["binding_fingerprint", "availability", "validity"]
+    },
+    {
+      "surface": "skills",
+      "owner": "workspace skill registry",
+      "authority_class": "canonical",
+      "consumers": ["start", "next", "implement"],
+      "activation": "task-routed skill viability and dependency checks",
+      "editable_by": "skill registry and installed skill metadata",
+      "stale_when": "skill registry, dependency status, or routed task shape changes",
+      "proof_route": "skill registry and workspace startup tests",
+      "disposition": "retain as routed operating guidance",
+      "revision_fields": ["skill_id", "registry_revision", "dependency_status"]
+    },
+    {
+      "surface": "target-guidance",
+      "owner": "target guidance runtime",
+      "authority_class": "canonical",
+      "consumers": ["start", "next", "implement"],
+      "activation": "target identity, guidance overlay, and execution posture selection",
+      "editable_by": "target evidence and guidance identity operations",
+      "stale_when": "target identity, guidance overlay, or execution posture changes",
+      "proof_route": "target guidance identity and assignment tests",
+      "disposition": "retain as target-specific operating context",
+      "revision_fields": ["target_identity_ref", "guidance_revision", "execution_posture_revision"]
+    },
+    {
+      "surface": "terminal-outcome",
+      "owner": "final-response admission runtime",
+      "authority_class": "canonical",
+      "consumers": ["summary", "status", "closeout"],
+      "activation": "terminal outcome contract, custody, and final-response admission state",
+      "editable_by": "final-response admission and continuation operations",
+      "stale_when": "terminal outcome, custody, or continuation state changes",
+      "proof_route": "final-response and autopilot continuation tests",
+      "disposition": "retain as final-claim and continuation authority",
+      "revision_fields": ["terminal_state", "custody_owner", "continuation_revision"]
+    },
+    {
+      "surface": "generated-references",
+      "owner": "command-generation and contract tooling",
+      "authority_class": "generated",
+      "consumers": ["cli", "python-adapter", "typescript-adapter", "contract-checks"],
+      "activation": "generated freshness and operation registry selection",
+      "editable_by": "generators only",
+      "stale_when": "source contract revision differs from generated projection",
+      "proof_route": "generated command package checks",
+      "disposition": "regenerate rather than hand edit",
+      "revision_fields": ["command_package_fingerprint", "adapter_fingerprint"]
+    }
+  ]
+}
