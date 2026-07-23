@@ -1,0 +1,3 @@
+schema_version = "agentic-workspace/release-change/v1"
+bump = "patch"
+summary = "Localize Agentic Workspace setup and report guidance commands to the selected target and update no-CLI startup fallback guidance."
