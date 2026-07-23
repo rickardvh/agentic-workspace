@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Keep Planning closeout dry-run lifecycle command fields executable-only while preserving rerun guidance separately."

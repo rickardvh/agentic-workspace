@@ -1,3 +1,0 @@
-schema_version = "agentic-workspace/release-change/v1"
-bump = "patch"
-summary = "Bound selected Agentic Workspace selector latency while preserving implement next-action parity and deferring ordinary start advisory work."
