@@ -148,6 +148,7 @@ from agentic_workspace.workspace_runtime_projection import _workflow_participati
 from agentic_workspace.workspace_runtime_proof import (
     _proof_selection_for_changed_paths,
 )
+from agentic_workspace.workspace_selector_validation import _selector_inventory_selected_payload
 
 
 def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
@@ -663,36 +664,33 @@ def _start_payload(
         payload = _start_tiny_payload_fast(
             target_root=target_root, changed_paths=changed_paths, task_text=task_text, config=config, startup_template=startup_template
         )
-        payload["work_threads"] = _local_work_threads_projection(target_root=target_root, cli_invoke=config.cli_invoke, task_text=task_text)
         normalized_paths = _normalize_changed_paths(changed_paths)
-        improvement_pressure = _session_improvement_pressure_payload(
-            target_root=target_root,
-            config=config,
-            task_text=task_text,
-            cli_invoke=config.cli_invoke,
-        )
-        task_posture_packet = _task_posture_packet_payload(
-            config=config,
-            surface="start",
-            task_text=task_text,
-            changed_paths=normalized_paths,
-            workflow_obligations=payload.get("workflow_obligations", {}),
-            skill_routing=payload.get("skill_routing", {}),
-            planning_safety_gate=payload.get("planning_safety_gate", {}),
-            proof=payload.get("proof", {}),
-            improvement_pressure=improvement_pressure,
-            compact=True,
-        )
-        if (
-            _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="start")
-            or task_posture_packet.get("improvement_obligations")
-            or task_posture_packet.get("dogfooding_obligations")
-        ):
-            task_posture_relevant = True
-        else:
-            task_posture_relevant = False
-        if task_posture_relevant and _task_posture_packet_changes_routing(task_posture_packet):
-            payload["task_posture_packet"] = task_posture_packet
+        work_threads_dir = target_root / ".agentic-workspace" / "local" / "work-threads"
+        if work_threads_dir.is_dir():
+            payload["work_threads"] = _local_work_threads_projection(
+                target_root=target_root, cli_invoke=config.cli_invoke, task_text=task_text
+            )
+        if _task_posture_packet_relevant(task_text=task_text, changed_paths=normalized_paths, surface="start"):
+            improvement_pressure = _session_improvement_pressure_payload(
+                target_root=target_root,
+                config=config,
+                task_text=task_text,
+                cli_invoke=config.cli_invoke,
+            )
+            task_posture_packet = _task_posture_packet_payload(
+                config=config,
+                surface="start",
+                task_text=task_text,
+                changed_paths=normalized_paths,
+                workflow_obligations=payload.get("workflow_obligations", {}),
+                skill_routing=payload.get("skill_routing", {}),
+                planning_safety_gate=payload.get("planning_safety_gate", {}),
+                proof=payload.get("proof", {}),
+                improvement_pressure=improvement_pressure,
+                compact=True,
+            )
+            if _task_posture_packet_changes_routing(task_posture_packet):
+                payload["task_posture_packet"] = task_posture_packet
         if profile is None:
             return _selector_first_start_payload(payload, cli_invoke=config.cli_invoke, target_root=target_root)
         return payload
@@ -2569,6 +2567,9 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     start_profile = "full" if getattr(args, "verbose", False) else getattr(args, "profile", None)
     task_text = getattr(args, "task", None)
     selected_fields = getattr(args, "select", None)
+    if inventory_payload := _selector_inventory_selected_payload(select=selected_fields, source_command="start"):
+        _emit_payload(payload=inventory_payload, format_name=args.format)
+        return 0
     payload = _start_payload(
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),

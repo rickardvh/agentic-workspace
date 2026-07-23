@@ -193,6 +193,54 @@ def test_start_selector_inventory_route_is_executable(tmp_path: Path, capsys) ->
     assert "context_router.rule" in inventory["selectors"]
 
 
+def test_start_selector_inventory_does_not_build_start_payload(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_start_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("selector inventory must not build the startup payload")
+
+    monkeypatch.setattr(cli, "_selector_first_start_payload", fail_start_payload)
+    monkeypatch.setattr(cli, "_start_payload", fail_start_payload)
+
+    assert cli.main(["start", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["values"]["selector_inventory"]["source_command"] == "start"
+
+
+def test_default_start_defers_action_neutral_advisory_builders_without_changing_action_boundary(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    _init_git_repo(tmp_path)
+    args = [
+        "start",
+        "--target",
+        str(tmp_path),
+        "--task",
+        "Fix selector latency for ordinary startup",
+        "--format",
+        "json",
+    ]
+
+    assert cli.main(args) == 0
+    baseline = json.loads(capsys.readouterr().out)
+
+    def unexpected_advisory_builder(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("default start must defer action-neutral advisory builders")
+
+    monkeypatch.setattr(workspace_runtime_startup, "_local_work_threads_projection", unexpected_advisory_builder)
+    monkeypatch.setattr(workspace_runtime_startup, "_session_improvement_pressure_payload", unexpected_advisory_builder)
+
+    assert cli.main(args) == 0
+    payload = json.loads(capsys.readouterr().out)
+
+    assert payload["next_safe_action"] == baseline["next_safe_action"]
+    assert payload["action_signals"]["hard_blockers"] == baseline["action_signals"]["hard_blockers"]
+    assert "work_threads" not in payload["context"]
+    assert "task_posture_packet" not in payload["context"]
+
+
 def test_implement_unknown_selector_fails_before_payload_construction(tmp_path: Path, monkeypatch, capsys) -> None:
     _init_git_repo(tmp_path)
 
@@ -590,6 +638,208 @@ def test_implement_selector_inventory_route_is_executable(tmp_path: Path, capsys
     assert inventory["source_command"] == "implement"
     assert inventory["available_count"] > 8
     assert "context.workflow_sufficiency" in inventory["selectors"]
+
+
+def test_implement_selector_inventory_does_not_build_implement_payload(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_implement_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("selector inventory must not build the implement payload")
+
+    monkeypatch.setattr(cli, "_implement_payload", fail_implement_payload)
+
+    assert cli.main(["implement", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert payload["values"]["selector_inventory"]["source_command"] == "implement"
+
+
+def test_implement_select_next_does_not_build_full_implement_payload(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_implement_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("implement --select next must not build the full implement payload")
+
+    def fail_runtime_diagnostics(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("implement --select next must not build runtime proof diagnostics")
+
+    monkeypatch.setattr(cli, "_implement_payload", fail_implement_payload)
+    monkeypatch.setattr(workspace_runtime_proof, "runtime_source_edit_review_for_changed_paths", fail_runtime_diagnostics)
+    monkeypatch.setattr(workspace_runtime_proof, "runtime_symbol_working_set_for_changed_paths", fail_runtime_diagnostics)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--task",
+                "fix selected next latency",
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "next",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    next_payload = payload["values"]["next"]
+    assert next_payload["status"] == "changed-path-context"
+    assert next_payload["action"]
+    assert "commands" in next_payload
+
+
+def _assert_implement_select_next_matches_tiny_payload(
+    tmp_path: Path, capsys, *, changed_paths: list[str] | None = None, extra_args: list[str] | None = None
+) -> None:
+    changed_paths = changed_paths or []
+    extra_args = extra_args or []
+    base_args = ["implement", "--target", str(tmp_path), "--task", "fix selector next parity"]
+    for path in changed_paths:
+        base_args.extend(["--changed", path])
+
+    assert cli.main([*base_args, *extra_args, "--format", "json"]) == 0
+    ordinary = json.loads(capsys.readouterr().out)
+    assert cli.main([*base_args, *extra_args, "--select", "next", "--format", "json"]) == 0
+    selected = json.loads(capsys.readouterr().out)["values"]["next"]
+
+    ordinary_next = ordinary["next"]
+    assert selected["action"] == ordinary_next["action"]
+    assert selected["status"] == ordinary_next["status"]
+    assert selected["command"] == ordinary_next["command"]
+    assert selected["commands"] == ordinary_next["commands"]
+
+
+def test_implement_select_next_matches_tiny_payload_for_normal_changed_paths(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src/sample_app/text.py", "VALUE = 1\n")
+
+    _assert_implement_select_next_matches_tiny_payload(tmp_path, capsys, changed_paths=["src/sample_app/text.py"])
+
+
+def test_implement_select_next_matches_tiny_payload_for_unknown_scope(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    _assert_implement_select_next_matches_tiny_payload(tmp_path, capsys)
+
+
+def test_implement_select_next_matches_tiny_payload_for_path_attention(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src/sample_app/text.py", "VALUE = 1\n")
+
+    def attention_boundary(path: str, *, agent_instructions_file: str) -> dict[str, Any]:
+        return {
+            "path": path,
+            "authority": "requires-attention",
+            "requires_attention": True,
+            "warning": f"Inspect {agent_instructions_file} before editing.",
+        }
+
+    monkeypatch.setattr(cli, "_boundary_warning_for_path", attention_boundary)
+
+    _assert_implement_select_next_matches_tiny_payload(tmp_path, capsys, changed_paths=["src/sample_app/text.py"])
+
+
+def test_implement_select_next_matches_tiny_payload_for_planning_insufficient(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src/sample_app/text.py", "VALUE = 1\n")
+    original_gate = workspace_runtime_planning._planning_safety_gate_payload
+
+    def insufficient_gate(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        gate = copy.deepcopy(original_gate(*args, **kwargs))
+        gate["workflow_sufficient"] = False
+        gate["decision"] = "planning-required"
+        gate["gate_result"] = "planning-required"
+        gate["required_next_action"] = "Create or promote an active execplan before continuing implementation."
+        return gate
+
+    monkeypatch.setattr(cli, "_planning_safety_gate_payload", insufficient_gate)
+
+    _assert_implement_select_next_matches_tiny_payload(tmp_path, capsys, changed_paths=["src/sample_app/text.py"])
+
+
+def test_implement_select_next_matches_tiny_payload_for_proof_route_claim_blocking(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src/sample_app/text.py", "VALUE = 1\n")
+    original_proof = workspace_runtime_proof._proof_selection_for_changed_paths
+
+    def claim_blocking_proof(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        proof = copy.deepcopy(original_proof(*args, **kwargs))
+        proof["proof_route_strategy_preservation"] = {
+            "decision_id": "proof-route-test",
+            "claim_effect": "claim-blocked",
+            "selected_requirement": "focused-proof-required",
+        }
+        return proof
+
+    monkeypatch.setattr(cli, "_proof_selection_for_changed_paths", claim_blocking_proof)
+
+    _assert_implement_select_next_matches_tiny_payload(tmp_path, capsys, changed_paths=["src/sample_app/text.py"])
+
+
+def test_implement_select_next_matches_tiny_payload_for_stale_startup_fingerprint(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write(tmp_path / "src/sample_app/text.py", "VALUE = 1\n")
+    original_principles = workspace_runtime_core._architecture_principles_payload
+
+    def matched_principles(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        packet = copy.deepcopy(original_principles(*args, **kwargs))
+        packet["matched_count"] = 1
+        packet["matched_principles"] = [{"id": "selector-next-parity", "summary": "Exercise stale startup route checks."}]
+        return packet
+
+    def route_identity(*, root: Path, task: str) -> dict[str, Any]:
+        return {"fingerprint": "actual-fingerprint", "observed": {"head": "new"}}
+
+    def fingerprint_check(*, expected_fingerprint: str, root: Path, task: str) -> dict[str, Any]:
+        return {
+            "status": "mismatch",
+            "expected": expected_fingerprint,
+            "actual": {"fingerprint": "actual-fingerprint", "observed": {"head": "new"}},
+        }
+
+    monkeypatch.setattr(workspace_runtime_implement, "_architecture_principles_payload", matched_principles)
+    monkeypatch.setattr(workspace_runtime_implement, "startup_route_identity", route_identity)
+    monkeypatch.setattr(workspace_runtime_implement, "startup_route_fingerprint_check", fingerprint_check)
+
+    _assert_implement_select_next_matches_tiny_payload(
+        tmp_path,
+        capsys,
+        changed_paths=["src/sample_app/text.py"],
+        extra_args=["--startup-route-fingerprint", "stale-fingerprint"],
+    )
+
+
+def test_implement_accepts_context_plan_delegation_packet_selector(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/sample_app/text.py",
+                "--select",
+                "requirement_grounding,context.delegation_decision,context.plan_delegation_packet",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    assert "context.plan_delegation_packet" in payload["values"]
+    assert "unknown_selectors" not in payload
 
 
 def test_report_unknown_selector_fails_before_runtime_context(monkeypatch, capsys) -> None:
@@ -10703,6 +10953,24 @@ def test_proof_supports_exact_field_selectors_for_sufficiency(tmp_path: Path, ca
     assert payload["values"]["proof_route_strategy_decision"]["outcome"] == "broad-escalation-required"
     assert payload["values"]["proof_route_strategy_decision"]["claim_effect"] == "claim-blocked"
     assert "missing" not in payload
+
+
+def test_proof_selector_inventory_is_bounded_and_names_receipt_selectors(tmp_path: Path, monkeypatch, capsys) -> None:
+    _init_git_repo(tmp_path)
+
+    def fail_proof_payload(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise AssertionError("proof selector inventory must not build the full proof payload")
+
+    monkeypatch.setattr(cli, "_proof_payload", fail_proof_payload)
+
+    assert cli.main(["proof", "--target", str(tmp_path), "--select", "selector_inventory", "--format", "json"]) == 0
+
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["kind"] == "agentic-workspace/selected-output/v1"
+    inventory = payload["values"]["selector_inventory"]
+    assert inventory["source_command"] == "proof"
+    assert "proof_receipt_reconciliation" in inventory["selectors"]
+    assert "proof_receipt_bridge" in inventory["selectors"]
 
 
 def test_proof_route_strategy_identity_is_preserved_by_start_and_implement(tmp_path: Path, capsys) -> None:
