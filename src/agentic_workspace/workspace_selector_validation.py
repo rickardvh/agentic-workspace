@@ -50,6 +50,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "proof_narrowness",
         "proof_route_strategy_decision",
         "proof_route_strategy_preservation",
+        "proof_route_strategy_consumer_gate",
         "context_router.rule",
     ),
     "implement": (
@@ -59,6 +60,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "proof.proof_route_maintenance",
         "proof.proof_route_strategy_preservation",
         "proof.proof_route_strategy_claim_gate",
+        "proof_route_strategy_consumer_gate",
         "proof.runtime_source_edit_review",
         "proof_route_strategy_preservation",
         "context",
@@ -119,6 +121,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "proof_route_escalation_gate",
         "proof_route_strategy_preservation",
         "proof_route_strategy_claim_gate",
+        "proof_route_strategy_consumer_gate",
         "proof_receipt_reconciliation",
         "proof_receipt_bridge",
         "proof_closeout_summary",

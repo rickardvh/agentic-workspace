@@ -521,13 +521,44 @@ def _command_template_payload(*, command: Any, placeholders: dict[str, Any]) -> 
 
 
 def _proof_receipt_summary(receipt: dict[str, Any]) -> dict[str, Any]:
+    raw_execution = _as_dict(receipt.get("execution"))
+    failure_summary = _as_dict(receipt.get("failure_summary"))
+    result = str(receipt.get("result") or "").strip()
+    command = str(receipt.get("command") or "").strip()
+    execution = {
+        "command_identity": hashlib.sha256(command.encode("utf-8")).hexdigest()[:16] if command else "",
+        "result": str(raw_execution.get("result") or result).strip(),
+        "exit_state": str(
+            raw_execution.get("exit_state") or ("zero" if result == "passed" else "non-zero" if result == "failed" else result)
+        ).strip(),
+        "timeout": bool(raw_execution.get("timeout"))
+        or "timeout" in result.lower()
+        or "timed-out" in result.lower()
+        or "timeout" in json.dumps(failure_summary, sort_keys=True, default=str).lower(),
+        "duration_seconds": raw_execution.get("duration_seconds", raw_execution.get("duration_ms", "")),
+        "environment": raw_execution.get("environment", receipt.get("environment", {})),
+        "claim_sufficiency": "sufficient" if result == "passed" else "insufficient",
+    }
     summary = {
-        "command": str(receipt.get("command") or "").strip(),
-        "result": str(receipt.get("result") or "").strip(),
+        "command": command,
+        "result": result,
         "changed_paths": [str(path).strip() for path in _list_payload(receipt.get("changed_paths")) if str(path).strip()],
         "recorded_at": receipt.get("recorded_at", ""),
         "plan_id": receipt.get("plan_id", ""),
+        "execution": execution,
     }
+    if failure_summary:
+        summary["failure_summary"] = {
+            "status": str(failure_summary.get("status") or ""),
+            "failed_command": str(failure_summary.get("failed_command") or ""),
+            "result": str(failure_summary.get("result") or ""),
+            "failure_line_count": int(failure_summary.get("failure_line_count") or 0),
+            "cluster_count": int(failure_summary.get("cluster_count") or 0),
+            "focused_rerun_commands": [
+                str(command).strip() for command in _list_payload(failure_summary.get("focused_rerun_commands")) if str(command).strip()
+            ],
+            "log_source": _as_dict(failure_summary.get("log_source")),
+        }
     proof_commands = [str(command).strip() for command in _list_payload(receipt.get("proof_commands")) if str(command).strip()]
     if proof_commands:
         summary["proof_commands"] = proof_commands
@@ -2909,9 +2940,13 @@ def _proof_route_maintenance_payload(
     selected_commands: list[dict[str, Any]],
     learned_route_hints: dict[str, Any],
     manual_proof_obligations: list[dict[str, Any]],
+    changed_paths: list[str],
+    target_root: Path | None,
+    cli_invoke: str,
     focused_route_coverage_audit: dict[str, Any] | None = None,
     route_refinement_required: dict[str, Any] | None = None,
     unavailable_commands: list[dict[str, Any]] | None = None,
+    proof_execution_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     stale_hints = [hint for hint in _list_payload(learned_route_hints.get("stale")) if isinstance(hint, dict)]
     invalid_hints = [hint for hint in _list_payload(learned_route_hints.get("invalid")) if isinstance(hint, dict)]
@@ -3032,9 +3067,13 @@ def _proof_route_maintenance_payload(
         stale_hints=stale_hints,
         invalid_hints=invalid_hints,
         manual_missing=manual_missing,
+        changed_paths=changed_paths,
+        target_root=target_root,
+        cli_invoke=cli_invoke,
         focused_route_coverage_audit=focused_route_coverage_audit or {},
         route_refinement_required=route_refinement_required or {},
         unavailable_commands=unavailable_commands or [],
+        proof_execution_evidence=proof_execution_evidence or {},
     )
     suggestions.extend(route_health["repair_packets"])
     material = bool(stale_hints or invalid_hints or manual_missing)
@@ -3066,15 +3105,279 @@ def _proof_route_maintenance_payload(
     }
 
 
+def _proof_route_command_is_broad(command: str, *, proof_kind: str = "") -> bool:
+    command = str(command or "").strip()
+    return (
+        command.startswith("make test-workspace")
+        or command == "uv run pytest tests/test_workspace_cli.py -q"
+        or str(proof_kind or "").strip() == "full-test"
+    )
+
+
+def _proof_route_authority_revision(
+    *,
+    target_root: Path | None,
+    canonical_edit_surface: str,
+    selected_commands: list[dict[str, Any]],
+    changed_paths: list[str],
+) -> str:
+    surface_names = [
+        ".agentic-workspace/config.toml",
+        ".agentic-workspace/OWNERSHIP.toml",
+        ".agentic-workspace/verification/manifest.toml",
+        ".agentic-workspace/proof-route-hints.json",
+    ]
+    surface_digests: dict[str, str] = {}
+    if target_root is not None:
+        for surface_name in surface_names:
+            path = target_root / surface_name
+            try:
+                content = path.read_text(encoding="utf-8") if path.is_file() else ""
+            except OSError:
+                content = "unreadable"
+            surface_digests[surface_name] = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
+    basis = {
+        "canonical_edit_surface": canonical_edit_surface,
+        "changed_paths": [str(path).strip().replace("\\", "/") for path in changed_paths if str(path).strip()],
+        "selected_commands": [
+            {
+                "command": str(command.get("command") or ""),
+                "lane": str(command.get("lane") or ""),
+                "authority": str(command.get("route_authority") or command.get("selected_from") or ""),
+            }
+            for command in selected_commands
+            if isinstance(command, dict)
+        ],
+        "surface_digests": surface_digests,
+    }
+    return hashlib.sha256(json.dumps(basis, sort_keys=True, default=str).encode("utf-8")).hexdigest()[:16]
+
+
+def _proof_route_revision_guard(
+    *,
+    finding_id: str,
+    canonical_edit_surface: str,
+    validation_commands: list[str],
+    route_authority_revision: str,
+    changed_paths: list[str],
+    cli_invoke: str,
+) -> dict[str, Any]:
+    changed_part = " ".join(_shell_quote(path) for path in changed_paths) or "<paths>"
+    preview_command = _command_with_cli_invoke(
+        command=(
+            "agentic-workspace proof --target ."
+            f" --changed {changed_part}"
+            " --select proof_route_maintenance,route_refinement_required,proof_route_strategy_preservation"
+            " --format json"
+        ),
+        cli_invoke=cli_invoke,
+    )
+    first_validation = validation_commands[0] if validation_commands else str(preview_command)
+    receipt_command = _command_with_cli_invoke(
+        command=(
+            "agentic-workspace proof --target ."
+            f" --changed {changed_part}"
+            " --record-receipt"
+            f" --receipt-command {_shell_quote(first_validation)}"
+            " --receipt-result passed --format json"
+        ),
+        cli_invoke=cli_invoke,
+    )
+    return {
+        "kind": "agentic-workspace/proof-route-repair-operation/v1",
+        "status": "guarded-preview-ready",
+        "finding_id": finding_id,
+        "canonical_edit_surface": canonical_edit_surface,
+        "expected_authority_revision": route_authority_revision,
+        "preview_command": str(preview_command),
+        "apply_contract": {
+            "authority_revision_field": "expected_authority_revision",
+            "allowed_surfaces": [
+                ".agentic-workspace/config.toml",
+                ".agentic-workspace/OWNERSHIP.toml",
+                ".agentic-workspace/verification/manifest.toml",
+                ".agentic-workspace/proof-route-hints.json",
+            ],
+            "field_scope": canonical_edit_surface,
+            "idempotency_key": f"proof-route-health:{finding_id}:{route_authority_revision}",
+            "rollback_on_failure": "restore the authority revision that matched expected_authority_revision before retrying",
+        },
+        "validation_commands": validation_commands,
+        "receipt_command": str(receipt_command),
+        "retirement_operation": {
+            "kind": "agentic-workspace/proof-route-finding-retirement/v1",
+            "allowed_dispositions": ["fixed", "superseded", "dismissed", "non-applicable"],
+            "requires": ["focused positive proof", "negative broad-route proof where applicable", "verified authority revision"],
+            "records": ["verified_authority_revision", "retirement_receipt"],
+        },
+        "rule": (
+            "Preview the route-health packet, apply only the field-scoped route-authority delta against the expected revision, "
+            "run focused validation, record the receipt, then retire or explicitly dispose the same finding identity."
+        ),
+    }
+
+
+def _proof_route_improvement_pressure_record(
+    *,
+    finding_id: str,
+    finding_class: str,
+    evidence: list[str],
+    owner: str,
+    canonical_edit_surface: str,
+    disposition_state: str = "active",
+) -> dict[str, Any]:
+    record_id = f"pressure-proof-route-{finding_id}"
+    record: dict[str, Any] = {
+        "kind": "workspace-improvement-pressure-record/v1",
+        "id": record_id,
+        "state": disposition_state,
+        "signal_kind": "proof_route_health",
+        "pressure_kind": finding_class,
+        "what_keeps_going_wrong": "; ".join(evidence),
+        "evidence": {
+            "source": "proof_route_maintenance.route_health",
+            "observed_during": "proof-route-selection",
+            "evidence_ref": f"proof_route_maintenance.route_health.findings[{finding_id}]",
+        },
+        "cost_or_frequency": {
+            "cost": "proof route is missing, stale, too broad, non-executable, or insufficient for the claim",
+            "recurrence": "first_seen",
+            "confidence": "high",
+        },
+        "owner_surface": canonical_edit_surface,
+        "resulting_owner": owner,
+        "retire_when": "fixed, superseded, dismissed, non-applicable, mitigated, accepted-risk, or obsolete disposition is recorded",
+        "posture_obligation_ref": f"{record_id}-owner-route",
+        "provenance": [
+            {"source": "proof_route_maintenance.route_health", "finding_id": finding_id},
+            {"source": "#2310 consequence/disposition lifecycle"},
+        ],
+    }
+    if disposition_state == "active":
+        record["posture_obligation"] = {
+            "id": f"{record_id}-owner-route",
+            "source": "improvement-pressure",
+            "effect": "route or dismiss owner before treating the proof-route signal as closed",
+            "routes_to": ["proof_boundaries", "handoff_boundaries", "closeout_boundaries", "posture_adherence"],
+            "forbidden_actions": [
+                "claim proof-route maintenance resolved without fixed, superseded, dismissed, or non-applicable disposition"
+            ],
+            "proof_boundary": "show the guarded route repair, verified authority revision, or explicit disposition for this pressure",
+            "closeout_boundary": "active proof-route improvement pressure has an owner, repair receipt, mitigation, or accepted-risk disposition",
+            "next_allowed_action": "run guarded proof-route repair or record an explicit disposition",
+            "adherence": "unresolved",
+            "provenance": record["provenance"],
+        }
+    return record
+
+
+def _proof_route_execution_observations(
+    *,
+    proof_execution_evidence: dict[str, Any],
+    selected_commands: list[dict[str, Any]],
+) -> dict[str, Any]:
+    selected_by_command = {str(command.get("command") or "").strip(): command for command in selected_commands if isinstance(command, dict)}
+    expected_commands = [
+        str(command).strip() for command in _list_payload(proof_execution_evidence.get("expected_commands")) if str(command).strip()
+    ]
+    reconciliation = _as_dict(proof_execution_evidence.get("receipt_reconciliation"))
+    observations: list[dict[str, Any]] = []
+
+    def add_observation(*, receipt: dict[str, Any], evidence_state: str, diagnostic: str, active_for_current_route: bool) -> None:
+        command = str(receipt.get("command") or "").strip()
+        if not command:
+            return
+        execution = _as_dict(receipt.get("execution"))
+        result = str(receipt.get("result") or execution.get("result") or "").strip()
+        selected = selected_by_command.get(command, {})
+        failure_summary = _as_dict(receipt.get("failure_summary"))
+        timeout = bool(execution.get("timeout"))
+        duration = str(execution.get("duration_seconds") or "").strip()
+        try:
+            duration_seconds = float(duration) if duration else 0.0
+        except (TypeError, ValueError):
+            duration_seconds = 0.0
+        observations.append(
+            {
+                "kind": "agentic-workspace/proof-route-execution-observation/v1",
+                "command": command,
+                "command_identity": str(execution.get("command_identity") or hashlib.sha256(command.encode("utf-8")).hexdigest()[:16]),
+                "route": str(selected.get("lane") or "previous-selected-proof-route"),
+                "route_authority": str(selected.get("route_authority") or selected.get("selected_from") or "proof-receipt-reconciliation"),
+                "proof_kind": str(selected.get("proof_kind") or ""),
+                "result": result,
+                "exit_state": str(execution.get("exit_state") or evidence_state),
+                "timeout": timeout,
+                "duration_seconds": duration_seconds,
+                "duration_budget_seconds": 30,
+                "environment": execution.get("environment", {}),
+                "claim_sufficiency": str(execution.get("claim_sufficiency") or ("sufficient" if result == "passed" else "insufficient")),
+                "evidence_state": evidence_state,
+                "diagnostic": diagnostic,
+                "active_for_current_route": active_for_current_route,
+                "recorded_at": str(receipt.get("recorded_at") or ""),
+                "receipt_ref": str(reconciliation.get("receipt_path") or PROOF_RECEIPT_RELATIVE_PATH.as_posix()),
+                "failure_summary": failure_summary,
+                "broad_command": _proof_route_command_is_broad(command, proof_kind=str(selected.get("proof_kind") or "")),
+            }
+        )
+
+    for item in _list_payload(reconciliation.get("commands")):
+        if not isinstance(item, dict):
+            continue
+        state = str(item.get("evidence_state") or "").strip()
+        receipt = _as_dict(item.get("receipt"))
+        if state not in {"recorded-failed", "recorded-skipped", "recorded-waived", "template-binding-rejected"} and str(
+            receipt.get("result") or ""
+        ) not in {"failed", "skipped", "waived"}:
+            continue
+        add_observation(
+            receipt={**receipt, "command": str(item.get("command") or receipt.get("command") or "")},
+            evidence_state=state,
+            diagnostic=str(item.get("diagnostic") or ""),
+            active_for_current_route=True,
+        )
+
+    latest_receipt = _as_dict(reconciliation.get("receipt"))
+    latest_command = str(latest_receipt.get("command") or "").strip()
+    latest_result = str(latest_receipt.get("result") or "").strip()
+    if latest_command and latest_result in {"failed", "skipped", "waived"} and latest_command not in expected_commands:
+        add_observation(
+            receipt=latest_receipt,
+            evidence_state=f"previous-recorded-{latest_result}",
+            diagnostic="previous route execution evidence is no longer selected by the current route decision",
+            active_for_current_route=False,
+        )
+
+    active = [item for item in observations if item.get("active_for_current_route")]
+    retired = [item for item in observations if not item.get("active_for_current_route")]
+    return {
+        "kind": "agentic-workspace/proof-route-execution-observations/v1",
+        "status": "attention" if active else "retired-evidence" if retired else "quiet",
+        "observations": observations,
+        "active": active,
+        "retired": retired,
+        "rule": (
+            "Route-health consumes actual proof receipts when available. Failed, skipped, waived, timed-out, slow, or "
+            "claim-insufficient receipts create active route-health pressure while the route remains selected; the same "
+            "evidence becomes retirement support once a later route decision no longer selects that failing obligation."
+        ),
+    }
+
+
 def _proof_route_health_payload(
     *,
     selected_commands: list[dict[str, Any]],
     stale_hints: list[dict[str, Any]],
     invalid_hints: list[dict[str, Any]],
     manual_missing: list[dict[str, Any]],
+    changed_paths: list[str],
+    target_root: Path | None,
+    cli_invoke: str,
     focused_route_coverage_audit: dict[str, Any],
     route_refinement_required: dict[str, Any],
     unavailable_commands: list[dict[str, Any]],
+    proof_execution_evidence: dict[str, Any],
 ) -> dict[str, Any]:
     taxonomy = {
         "missing_coverage": "No focused route covers one or more changed paths.",
@@ -3083,8 +3386,13 @@ def _proof_route_health_payload(
         "non_executable_command": "A selected or declared route command cannot run in the current target.",
         "insufficient_evidence": "The selected route requires manual evidence or cannot prove the claim boundary.",
         "execution_environment_mismatch": "The route needs a capability that is unavailable in this environment.",
+        "route_execution_failure": "Actual route execution evidence failed, timed out, or did not satisfy the claim.",
     }
     findings: list[dict[str, Any]] = []
+    execution_observations = _proof_route_execution_observations(
+        proof_execution_evidence=proof_execution_evidence,
+        selected_commands=selected_commands,
+    )
 
     def add_finding(
         *,
@@ -3097,6 +3405,7 @@ def _proof_route_health_payload(
         proposed_delta: str,
         validation_commands: list[str],
         claim_effect: str = "repair-required-before-route-claim",
+        execution_evidence: dict[str, Any] | None = None,
     ) -> None:
         basis = json.dumps(
             {
@@ -3108,26 +3417,62 @@ def _proof_route_health_payload(
             sort_keys=True,
         )
         finding_id = hashlib.sha256(basis.encode("utf-8")).hexdigest()[:12]
-        findings.append(
-            {
-                "kind": "agentic-workspace/proof-route-health-finding/v1",
-                "id": finding_id,
-                "finding_class": finding_class,
-                "affected_route": affected_route,
-                "evidence": evidence,
-                "consequence": consequence,
-                "owner": owner,
-                "canonical_edit_surface": canonical_edit_surface,
-                "proposed_delta": proposed_delta,
-                "validation_commands": validation_commands,
-                "claim_effect": claim_effect,
-                "lifecycle": {
-                    "status": "open",
-                    "quiet_when": ["fixed", "superseded", "dismissed", "non-applicable"],
-                    "dedupe_key": f"{finding_class}:{affected_route}:{finding_id}",
-                },
-            }
+        route_authority_revision = _proof_route_authority_revision(
+            target_root=target_root,
+            canonical_edit_surface=canonical_edit_surface,
+            selected_commands=selected_commands,
+            changed_paths=changed_paths,
         )
+        consequence_record = _proof_route_improvement_pressure_record(
+            finding_id=finding_id,
+            finding_class=finding_class,
+            evidence=evidence,
+            owner=owner,
+            canonical_edit_surface=canonical_edit_surface,
+        )
+        repair_operation = _proof_route_revision_guard(
+            finding_id=finding_id,
+            canonical_edit_surface=canonical_edit_surface,
+            validation_commands=validation_commands,
+            route_authority_revision=route_authority_revision,
+            changed_paths=changed_paths,
+            cli_invoke=cli_invoke,
+        )
+        finding_payload = {
+            "kind": "agentic-workspace/proof-route-health-finding/v1",
+            "id": finding_id,
+            "finding_class": finding_class,
+            "affected_route": affected_route,
+            "evidence": evidence,
+            "consequence": consequence,
+            "owner": owner,
+            "canonical_edit_surface": canonical_edit_surface,
+            "route_authority_revision": route_authority_revision,
+            "proposed_delta": proposed_delta,
+            "validation_commands": validation_commands,
+            "claim_effect": claim_effect,
+            "consequence_record": consequence_record,
+            "disposition": {
+                "kind": "agentic-workspace/proof-route-health-disposition/v1",
+                "status": "active",
+                "owner": owner,
+                "source_lifecycle": "#2310 improvement/consequence lifecycle",
+                "allowed": ["fixed", "superseded", "dismissed", "non-applicable", "mitigated", "accepted-risk", "obsolete"],
+                "durable_owner_ref": consequence_record["id"],
+                "quiet_requires": ["non-active disposition", "verified authority revision", "receipt or explicit waiver evidence"],
+            },
+            "repair_operation": repair_operation,
+            "lifecycle": {
+                "status": "open",
+                "quiet_when": ["fixed", "superseded", "dismissed", "non-applicable", "mitigated", "accepted-risk", "obsolete"],
+                "dedupe_key": f"{finding_class}:{affected_route}:{finding_id}",
+                "durable_owner_ref": consequence_record["id"],
+                "retirement_operation": repair_operation["retirement_operation"],
+            },
+        }
+        if execution_evidence is not None:
+            finding_payload["execution_evidence"] = execution_evidence
+        findings.append(finding_payload)
 
     uncovered_paths = [str(path) for path in _list_payload(route_refinement_required.get("uncovered_paths")) if str(path).strip()]
     if uncovered_paths:
@@ -3170,15 +3515,59 @@ def _proof_route_health_payload(
             ],
         )
 
+    for observation in _list_payload(execution_observations.get("active")):
+        if not isinstance(observation, dict):
+            continue
+        result = str(observation.get("result") or "").strip()
+        claim_sufficiency = str(observation.get("claim_sufficiency") or "").strip()
+        try:
+            duration_seconds = float(observation.get("duration_seconds") or 0)
+        except (TypeError, ValueError):
+            duration_seconds = 0.0
+        try:
+            duration_budget_seconds = float(observation.get("duration_budget_seconds") or 30)
+        except (TypeError, ValueError):
+            duration_budget_seconds = 30.0
+        slow = duration_seconds > duration_budget_seconds
+        if (
+            result not in {"failed", "skipped", "waived"}
+            and not observation.get("timeout")
+            and not slow
+            and claim_sufficiency != "insufficient"
+        ):
+            continue
+        command_text = str(observation.get("command") or "").strip()
+        finding_evidence = [
+            f"command: {command_text}",
+            f"result: {result or observation.get('evidence_state')}",
+            f"exit_state: {observation.get('exit_state')}",
+            f"timeout: {bool(observation.get('timeout'))}",
+            f"duration_seconds: {observation.get('duration_seconds')}",
+            f"claim_sufficiency: {claim_sufficiency}",
+            f"receipt: {observation.get('receipt_ref')}",
+        ]
+        add_finding(
+            finding_class="route_execution_failure",
+            affected_route=str(observation.get("route") or "selected-proof-route"),
+            evidence=finding_evidence,
+            consequence="owned-improvement-pressure",
+            owner="repo proof-route authority",
+            canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes] or .agentic-workspace/OWNERSHIP.toml [[subsystems]]",
+            proposed_delta=(
+                "Replace the failing, timed-out, or claim-insufficient route with the smallest executable focused proof; "
+                "if broad proof is still needed, require structured broad-escalation evidence."
+            ),
+            validation_commands=[
+                "uv run --active python scripts/run_agentic_workspace.py proof --target . --changed <paths> --select proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate --format json"
+            ],
+            execution_evidence=observation,
+        )
+
     broad_commands = [
         str(command.get("command", ""))
         for command in selected_commands
         if isinstance(command, dict)
-        and (
-            str(command.get("command", "")).startswith("make test-workspace")
-            or str(command.get("command", "")) == "uv run pytest tests/test_workspace_cli.py -q"
-            or str(command.get("proof_kind", "")) == "full-test"
-        )
+        and _proof_route_command_is_broad(str(command.get("command", "")), proof_kind=str(command.get("proof_kind", "")))
     ]
     affected_generic_lanes = [
         str(lane_id) for lane_id in _list_payload(route_refinement_required.get("affected_generic_lanes")) if str(lane_id).strip()
@@ -3259,11 +3648,37 @@ def _proof_route_health_payload(
             "affected_route": finding["affected_route"],
             "owner": finding["owner"],
             "canonical_edit_surface": finding["canonical_edit_surface"],
+            "route_authority_revision": finding["route_authority_revision"],
             "proposed_delta": finding["proposed_delta"],
             "validation_commands": finding["validation_commands"],
             "claim_effect": finding["claim_effect"],
+            "consequence_record": finding["consequence_record"],
+            "disposition": finding["disposition"],
+            "repair_operation": finding["repair_operation"],
         }
         for finding in findings
+    ]
+    retired_findings = [
+        {
+            "kind": "agentic-workspace/proof-route-retired-finding/v1",
+            "status": "fixed",
+            "previous_command": str(observation.get("command") or ""),
+            "previous_result": str(observation.get("result") or ""),
+            "previous_route": str(observation.get("route") or "previous-selected-proof-route"),
+            "retirement_evidence": [
+                "previous failing receipt command is no longer selected by current proof route",
+                "current route-health active finding set is empty" if not findings else "current route still has active findings",
+            ],
+            "verified_authority_revision": _proof_route_authority_revision(
+                target_root=target_root,
+                canonical_edit_surface=".agentic-workspace/config.toml [assurance.domain_proof_lanes] or .agentic-workspace/OWNERSHIP.toml [[subsystems]]",
+                selected_commands=selected_commands,
+                changed_paths=changed_paths,
+            ),
+            "receipt_ref": str(observation.get("receipt_ref") or PROOF_RECEIPT_RELATIVE_PATH.as_posix()),
+        }
+        for observation in _list_payload(execution_observations.get("retired"))
+        if isinstance(observation, dict)
     ]
     return {
         "kind": "agentic-workspace/proof-route-health/v1",
@@ -3271,7 +3686,20 @@ def _proof_route_health_payload(
         "taxonomy": taxonomy,
         "finding_count": len(findings),
         "findings": findings,
+        "execution_observations": execution_observations,
+        "retired_findings": retired_findings,
+        "retired_finding_count": len(retired_findings),
         "repair_packets": repair_packets,
+        "duplicate_dispositions": [
+            {
+                "kind": "agentic-workspace/proof-route-duplicate-disposition/v1",
+                "issue": "#2367",
+                "status": "disposed-as-duplicate-of-#2384",
+                "owner": "#2384",
+                "evidence": "GitHub issue comment 5058804538 closes #2367 as the narrower duplicate of #2384.",
+                "rule": "The repaired route must not leave #2367 as a parallel rediscovery owner.",
+            }
+        ],
         "lifecycle_rule": (
             "Route-health findings are stable, owned, and quiet only after fixed, superseded, dismissed, or marked non-applicable; "
             "they use existing config, Verification, and route-hint authority instead of a parallel matrix."
@@ -4086,6 +4514,8 @@ def _proof_route_strategy_preservation_payload(
             for packet in _list_payload(route_health.get("repair_packets"))
             if isinstance(packet, dict) and str(packet.get("finding_id", "")).strip()
         ],
+        "retired_finding_count": int(route_health.get("retired_finding_count") or 0),
+        "execution_observation_status": str(_as_dict(route_health.get("execution_observations")).get("status") or ""),
     }
     route_health_id = hashlib.sha256(json.dumps(route_health_basis, sort_keys=True, default=str).encode()).hexdigest()[:16]
     basis = {
@@ -4112,6 +4542,26 @@ def _proof_route_strategy_preservation_payload(
         "claim_effect": claim_effect,
         "next_action": "route-refinement-required" if claim_effect == "claim-blocked" else "run-selected-proof",
     }
+    consumer_enforcement = {
+        consumer: {
+            **dict(consumer_state),
+            "consumer": consumer,
+            "enforcement": "re-resolve-current-route-health-and-compare",
+            "compare_fields": [
+                "proof_route_strategy_preservation.decision_id",
+                "proof_route_strategy_preservation.route_health_id",
+                "proof_route_strategy_preservation.claim_effect",
+                "proof_route_strategy_preservation.selected_requirement",
+            ],
+            "missing_or_mismatch_effect": "claim-blocked",
+            "repair_selector": "proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate",
+            "rule": (
+                "This consumer must compare the live proof-route strategy/health identity to the preserved identity before "
+                "action, handoff, or closeout; missing or stale route health preserves the blocker."
+            ),
+        }
+        for consumer in ("start", "implement", "proof", "handoff", "closeout")
+    }
     return {
         "kind": "agentic-workspace/proof-route-strategy-preservation/v1",
         "status": "claim-blocking" if claim_effect == "claim-blocked" else "selected",
@@ -4125,6 +4575,8 @@ def _proof_route_strategy_preservation_payload(
             "finding_ids": route_health_basis["finding_ids"],
             "repair_packet_count": len(route_health_basis["repair_packet_ids"]),
             "repair_packet_ids": route_health_basis["repair_packet_ids"],
+            "retired_finding_count": route_health_basis["retired_finding_count"],
+            "execution_observation_status": route_health_basis["execution_observation_status"],
             "surface": "proof_route_maintenance.route_health",
         },
         "proof_route_strategy_decision": {
@@ -4134,12 +4586,16 @@ def _proof_route_strategy_preservation_payload(
         },
         "manual_verification_status": str((manual_verification or {}).get("status", "")),
         "required_commands": required_commands,
-        "consumers": {
-            "start": dict(consumer_state),
-            "implement": dict(consumer_state),
-            "proof": dict(consumer_state),
-            "handoff": dict(consumer_state),
-            "closeout": dict(consumer_state),
+        "consumers": consumer_enforcement,
+        "consumer_gate": {
+            "kind": "agentic-workspace/proof-route-strategy-consumer-gate/v1",
+            "status": "blocked" if claim_effect == "claim-blocked" or route_health.get("status") == "attention" else "current",
+            "route_health_id": route_health_id,
+            "decision_id": decision_id,
+            "required_consumers": list(consumer_enforcement),
+            "mismatch_effect": "claim-blocked",
+            "source": "live proof-route strategy preservation",
+            "rule": "start, implement, proof, handoff, and closeout consume a live route-health identity, not a copied advisory projection.",
         },
         "rule": (
             "Ordinary consumers must preserve this decision identity, selected requirement, next action, and claim effect; "
@@ -4160,6 +4616,7 @@ def _proof_route_strategy_claim_gate_payload(*, proof_route_strategy_preservatio
         "decision_id": str(proof_route_strategy_preservation.get("decision_id", "")),
         "route_health_id": str(proof_route_strategy_preservation.get("route_health_id", "")),
         "proof_route_health": dict(_as_dict(proof_route_strategy_preservation.get("proof_route_health"))),
+        "consumer_gate": dict(_as_dict(proof_route_strategy_preservation.get("consumer_gate"))),
         "claim_effect": claim_effect,
         "selected_requirement": str(proof_route_strategy_preservation.get("selected_requirement", "")),
         "handoff": {
@@ -5971,9 +6428,13 @@ def _proof_selection_for_changed_paths(
         selected_commands=selected_commands,
         learned_route_hints=learned_route_hints,
         manual_proof_obligations=manual_proof_obligations,
+        changed_paths=changed_paths,
+        target_root=target_root,
+        cli_invoke=cli_invoke,
         focused_route_coverage_audit=focused_route_coverage_audit,
         route_refinement_required=route_refinement_required,
         unavailable_commands=unavailable_commands,
+        proof_execution_evidence=proof_execution_evidence,
     )
     proof_route_strategy_preservation = _proof_route_strategy_preservation_payload(
         proof_route_strategy_decision=proof_route_strategy_decision,
@@ -6324,6 +6785,7 @@ def _proof_selection_for_changed_paths(
         "proof_route_strategy_decision": proof_route_strategy_decision,
         "proof_route_strategy_preservation": proof_route_strategy_preservation,
         "proof_route_strategy_claim_gate": proof_route_strategy_claim_gate,
+        "proof_route_strategy_consumer_gate": proof_route_strategy_preservation["consumer_gate"],
         "domain_proof_route_inventory_audit": domain_route_inventory_audit,
         "proof_route_precedence": proof_route_precedence,
         "proof_intents": proof_intents,

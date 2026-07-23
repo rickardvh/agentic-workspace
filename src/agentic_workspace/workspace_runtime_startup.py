@@ -1351,6 +1351,7 @@ def _start_payload(
         strategy_preservation = _as_dict(proof_payload.get("proof_route_strategy_preservation"))
         if strategy_preservation:
             payload["proof_route_strategy_preservation"] = strategy_preservation
+            payload["proof_route_strategy_consumer_gate"] = _as_dict(strategy_preservation.get("consumer_gate"))
         if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
             payload["immediate_next_allowed_action"] = {
                 "action": str(
@@ -1379,6 +1380,7 @@ def _start_payload(
         strategy_preservation = _as_dict(proof_payload.get("proof_route_strategy_preservation"))
         if strategy_preservation:
             payload["proof_route_strategy_preservation"] = strategy_preservation
+            payload["proof_route_strategy_consumer_gate"] = _as_dict(strategy_preservation.get("consumer_gate"))
         proof_command = str(
             _command_with_cli_invoke(
                 command=f"agentic-workspace proof --changed {' '.join(normalized_paths)} --format json",

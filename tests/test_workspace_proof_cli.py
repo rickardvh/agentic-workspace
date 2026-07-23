@@ -552,16 +552,71 @@ def test_proof_route_maintenance_selector_reports_route_health_repair_packet(tmp
     repair_packets = values["proof_route_maintenance"]["route_health"]["repair_packets"]
     assert any(packet["canonical_edit_surface"].startswith(".agentic-workspace/config.toml") for packet in repair_packets)
     assert all(packet["finding_id"] for packet in repair_packets)
+    assert all(packet["consequence_record"]["kind"] == "workspace-improvement-pressure-record/v1" for packet in repair_packets)
+    assert all(packet["disposition"]["status"] == "active" for packet in repair_packets)
+    assert all(packet["repair_operation"]["expected_authority_revision"] for packet in repair_packets)
+    assert all(packet["repair_operation"]["preview_command"] for packet in repair_packets)
+    assert route_health["duplicate_dispositions"][0]["issue"] == "#2367"
 
 
-def test_proof_route_health_is_quiet_after_focused_root_route_repair(tmp_path: Path, capsys) -> None:
+def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_route_repair(tmp_path: Path, capsys) -> None:
     _write_repo_local_proof_target(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "config.py", "# fixture\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--record-receipt",
+                "--receipt-command",
+                "make test-workspace",
+                "--receipt-result",
+                "failed",
+                "--receipt-log",
+                "make test-workspace timed out after 240s",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--select",
+                "proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    before_values = json.loads(capsys.readouterr().out)["values"]
+    before_health = before_values["proof_route_maintenance"]["route_health"]
+    before_findings = {finding["finding_class"]: finding for finding in before_health["findings"]}
+    assert "route_execution_failure" in before_findings
+    execution_finding = before_findings["route_execution_failure"]
+    assert execution_finding["consequence_record"]["kind"] == "workspace-improvement-pressure-record/v1"
+    assert execution_finding["disposition"]["durable_owner_ref"] == execution_finding["consequence_record"]["id"]
+    assert execution_finding["repair_operation"]["apply_contract"]["idempotency_key"].startswith("proof-route-health:")
+    assert before_values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "blocked"
+
     _replace_workspace_subsystem_proof(
         tmp_path,
         "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q",
     )
     _append_root_workspace_guidance_lane(tmp_path)
-    _write(tmp_path / "src" / "agentic_workspace" / "config.py", "# fixture\n")
     _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "# fixture\n")
     _write(tmp_path / "tests" / "test_workspace_defaults_cli.py", "# fixture\n")
     _write(tmp_path / "tests" / "test_maintainer_surfaces.py", "# fixture\n")
@@ -576,7 +631,7 @@ def test_proof_route_health_is_quiet_after_focused_root_route_repair(tmp_path: P
                 "--changed",
                 "src/agentic_workspace/config.py",
                 "--select",
-                "proof_route_strategy_decision,route_refinement_required,proof_route_maintenance,proof_route_strategy_preservation",
+                "proof_route_strategy_decision,route_refinement_required,proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate",
                 "--format",
                 "json",
             ]
@@ -590,12 +645,18 @@ def test_proof_route_health_is_quiet_after_focused_root_route_repair(tmp_path: P
     route_health = values["proof_route_maintenance"]["route_health"]
     assert route_health["status"] == "quiet"
     assert route_health["findings"] == []
+    assert route_health["retired_finding_count"] == 1
+    assert route_health["retired_findings"][0]["previous_command"] == "make test-workspace"
+    assert route_health["retired_findings"][0]["verified_authority_revision"]
+    assert values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "current"
     assert values["proof_route_strategy_preservation"]["proof_route_health"] == {
         "status": "quiet",
         "finding_count": 0,
         "finding_ids": [],
         "repair_packet_count": 0,
         "repair_packet_ids": [],
+        "retired_finding_count": 1,
+        "execution_observation_status": "retired-evidence",
         "surface": "proof_route_maintenance.route_health",
     }
 

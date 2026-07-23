@@ -239,6 +239,8 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             payload["test_strategy_check"] = full_payload["test_strategy_check"]
         if _selector_requests(getattr(args, "select", None), "proof_route_strategy_preservation"):
             payload["proof_route_strategy_preservation"] = full_payload.get("proof_route_strategy_preservation", {})
+        if _selector_requests(getattr(args, "select", None), "proof_route_strategy_consumer_gate"):
+            payload["proof_route_strategy_consumer_gate"] = full_payload.get("proof_route_strategy_consumer_gate", {})
         if reuse_pressure_selected:
             payload["reuse_pressure"] = _reuse_pressure_payload(
                 target_root=target_root,
@@ -426,6 +428,7 @@ def _implement_next_action_resolution(
     return {
         "next_allowed_action": next_action,
         "proof_route_strategy_preservation": strategy_preservation,
+        "proof_route_strategy_consumer_gate": _as_dict(strategy_preservation.get("consumer_gate")),
         "proof_commands": proof_commands,
         "startup_route_rebind": startup_route_rebind,
         "stale_startup_route": stale_startup_route,
@@ -1096,12 +1099,15 @@ def _implement_payload(
     strategy_preservation = _as_dict(next_resolution.get("proof_route_strategy_preservation"))
     if strategy_preservation:
         payload["proof_route_strategy_preservation"] = strategy_preservation
+        payload["proof_route_strategy_consumer_gate"] = _as_dict(next_resolution.get("proof_route_strategy_consumer_gate"))
     if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
         payload["handoff_requirements"]["must_preserve"] = [
             *list(_list_payload(payload["handoff_requirements"].get("must_preserve"))),
             "proof_route_strategy_preservation.decision_id",
+            "proof_route_strategy_preservation.route_health_id",
             "proof_route_strategy_preservation.claim_effect",
             "proof_route_strategy_preservation.selected_requirement",
+            "proof_route_strategy_consumer_gate.route_health_id",
         ]
     stale_startup_route = bool(next_resolution.get("stale_startup_route"))
     if stale_startup_route:
