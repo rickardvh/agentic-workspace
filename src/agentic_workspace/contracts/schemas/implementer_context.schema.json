@@ -2065,5 +2065,2020 @@
   ],
   "title": "Implementer Context Payload",
   "type": "object",
+  "properties": {
+    "kind": {
+      "const": "implementer-context/v1",
+      "description": "Discriminator for the implementer context payload shape."
+    },
+    "target": {
+      "type": "string",
+      "description": "Resolved target repository for the implementation context."
+    },
+    "communication_contract": {
+      "type": "object",
+      "description": "Compact communication and reasoning-economy contract for decision-first, state-backed implementer output.",
+      "additionalProperties": true
+    },
+    "current_decision": {
+      "type": "object",
+      "description": "Compact state-delta decision packet for the implementation workflow, derived from the implement decision packet rather than prompt prose.",
+      "additionalProperties": true
+    },
+    "message_economy": {
+      "type": "object",
+      "description": "State-backed message economy packet that tells agents when to speak, stay compact, or expand during implementation.",
+      "additionalProperties": true
+    },
+    "evidence_bundle": {
+      "type": "object",
+      "description": "Minimal selector-backed evidence bundle for the implementation current decision, including missing proof evidence when stronger claims are blocked.",
+      "additionalProperties": true
+    },
+    "action_signals": {
+      "type": "object",
+      "description": "Compact action-first summary ordered as blockers, allowed next action, proof, changed signals, selector-backed advisory detail, and agent-owned judgment.",
+      "additionalProperties": true
+    },
+    "task_posture_packet": {
+      "$ref": "#/$defs/task_posture_packet",
+      "description": "Optional dynamic instruction packet emitted when changed paths, task facts, config posture, workflow obligations, or module contributions affect implementation routing."
+    },
+    "memory_decision_packet": {
+      "$ref": "#/$defs/memory_decision_packet",
+      "description": "Command-backed Memory pull/capture decision packet that keeps semantic judgment with the agent."
+    },
+    "operating_loop": {
+      "$ref": "#/$defs/operating_loop",
+      "description": "Normalized operating-loop closeout decision projection derived from structured Memory, Planning, and Verification facts."
+    },
+    "memory_consult": {
+      "type": "object",
+      "description": "Memory consultation packet used to surface route-matched durable knowledge without bulk-reading Memory.",
+      "additionalProperties": true
+    },
+    "architecture_principles": {
+      "type": "object",
+      "description": "Structured architecture-principle routing packet derived from the normalized system-intent record and changed paths.",
+      "additionalProperties": true
+    },
+    "planning_revision": {
+      "type": "object",
+      "description": "Optimistic Planning state revision observed by this implementer read surface.",
+      "additionalProperties": true
+    },
+    "active_plan_reliance": {
+      "type": "object",
+      "description": "Permission signal separating command-written integrity, planning freshness, and active-plan reliance.",
+      "additionalProperties": true
+    },
+    "adaptive_routing": {
+      "type": "object",
+      "description": "Machine-readable need classification, read budget, and escalation detail commands for this implementer packet."
+    },
+    "changed_paths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "One entry in the changed paths list."
+      },
+      "description": "Changed paths used to select proof, ownership, and inspect scope."
+    },
+    "inspect_files": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "One entry in the inspect files list."
+      },
+      "minItems": 1,
+      "description": "Files the implementer should inspect before editing."
+    },
+    "files_to_avoid": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "One entry in the files to avoid list."
+      },
+      "minItems": 1,
+      "description": "Files that should stay untouched for this bounded task."
+    },
+    "package_boundary": {
+      "$ref": "#/$defs/package_boundary",
+      "description": "Package/root boundary warnings that affect implementation scope."
+    },
+    "path_boundaries": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/path_boundary",
+        "description": "One entry in the path boundaries list."
+      },
+      "description": "Path-specific ownership and locality constraints for the changed paths."
+    },
+    "authority_markers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/authority_marker",
+        "description": "One entry in the authority markers list."
+      },
+      "description": "Authority markers relevant to the implementation scope."
+    },
+    "change_impact": {
+      "type": "object",
+      "description": "Changed-path ownership, generatedness, authority, related contract, and proof-impact projection.",
+      "additionalProperties": true
+    },
+    "authority_envelope": {
+      "type": "object",
+      "description": "Mutation authority envelope and point-in-time mutation baseline for the changed-path scope.",
+      "additionalProperties": true
+    },
+    "generated_surface_trust": {
+      "type": "object",
+      "description": "Compact generated-source trust packet naming canonical source, freshness status, refresh command, direct-edit policy, and validation command for generated changed paths.",
+      "additionalProperties": true
+    },
+    "task_contract": {
+      "type": "object",
+      "description": "Compact assembled task contract view covering intent, acceptance, autonomy/escalation, proof expectations, and stop conditions.",
+      "additionalProperties": true
+    },
+    "task_intent": {
+      "type": "object",
+      "description": "Task-intent carry-forward packet used to derive acceptance, proof guidance, objective-drift checks, and closeout prompts.",
+      "additionalProperties": true
+    },
+    "acceptance": {
+      "$ref": "#/$defs/task_acceptance",
+      "description": "Definition-of-done expectations inferred from task intent."
+    },
+    "proof": {
+      "$ref": "#/$defs/proof_selection",
+      "description": "Selected proof lane and validation commands for the changed paths."
+    },
+    "proof_route_strategy_preservation": {
+      "type": "object",
+      "description": "Stable proof-route strategy identity and consumer-preservation packet shared by start, implement, proof, handoff, and closeout surfaces.",
+      "additionalProperties": true
+    },
+    "required_validation_commands": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "One entry in the required validation commands list."
+      },
+      "description": "Commands that must pass before claiming implementation complete."
+    },
+    "acceptance_reconciliation": {
+      "$ref": "#/$defs/acceptance_reconciliation",
+      "description": "Compact checklist requiring requested outcomes to be reconciled against delivered behavior and proof before closeout."
+    },
+    "intent_acknowledgement": {
+      "type": "object",
+      "description": "Guidance for stating inferred intent, first slice, non-goals, and correction point before non-direct implementation.",
+      "additionalProperties": true
+    },
+    "intent_evidence": {
+      "type": "object",
+      "description": "Compact provenance and assumption evidence for the task intent being implemented, including source chain, correction point, and clarification/proceed posture.",
+      "additionalProperties": true
+    },
+    "active_intent_contract": {
+      "type": "object",
+      "description": "Active controlling-intent contract preserving chat, planning, external, and mixed intent sources before completion claims.",
+      "additionalProperties": true
+    },
+    "intent_satisfaction_matrix": {
+      "type": "object",
+      "description": "Compact satisfaction matrix shape that maps active intent items to evidence, gaps, and the honest completion claim level.",
+      "additionalProperties": true
+    },
+    "parent_intent_status": {
+      "$ref": "#/$defs/parent_intent_status",
+      "description": "Compact parent/original-intent status preserving larger intent across bounded implementation slices."
+    },
+    "applicable_intent_status": {
+      "$ref": "#/$defs/applicable_intent_status",
+      "description": "Compact applicable-intent evidence and conflict packet for broad closeout safety."
+    },
+    "reuse_pressure": {
+      "type": "object",
+      "description": "Changed-path reuse and abstraction-pressure facts that help the agent decide whether to reuse, accept duplication, or route extraction follow-up.",
+      "additionalProperties": true
+    },
+    "optimization_posture": {
+      "type": "object",
+      "description": "Compact configured optimisation posture summary for changed implementation paths, with detailed per-path reasoning kept behind change_impact.",
+      "additionalProperties": true
+    },
+    "assurance_requirements": {
+      "type": "object",
+      "description": "Repo-declared assurance requirements matched to the task or changed paths, with evidence status and claim-boundary facts; task-marker matches cite explicit config while semantic acceptance remains agent/human owned.",
+      "additionalProperties": true
+    },
+    "verification": {
+      "type": "object",
+      "description": "Matched repo-native verification protocols and bounded evidence status for the task or changed paths; task-marker matches are configured protocol evidence, not AW-owned intent classification.",
+      "additionalProperties": true
+    },
+    "requirement_grounding": {
+      "type": "object",
+      "description": "Requirement refs, applicability, interpretation, design effects, verification refs, known gaps, and closeout claim boundaries for the changed paths.",
+      "additionalProperties": true
+    },
+    "plan_delegation_packet": {
+      "type": "object",
+      "description": "Delegation-ready plan packet or guided tightening projection for active-plan work.",
+      "additionalProperties": true
+    },
+    "test_strategy_check": {
+      "type": "object",
+      "description": "Advisory evidence/test sustainability projection, including recorded disposition state when declared changed evidence paths are present.",
+      "additionalProperties": true
+    },
+    "routine_work_context": {
+      "type": "object",
+      "description": "Assembled routine router projection grouping existing owner surfaces into authority, active work, evidence/proof, durable knowledge, and promotion/residue; configured or learned Memory matches remain owner-surface evidence, not AW-owned semantic classification.",
+      "additionalProperties": true
+    },
+    "objective_drift": {
+      "$ref": "#/$defs/objective_drift",
+      "description": "Heuristic warning when changed files do not mention explicit requested outcomes."
+    },
+    "orientation": {
+      "type": "object",
+      "required": [
+        "status",
+        "minimum_before_editing",
+        "preflight_command",
+        "summary_command",
+        "trust_note"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Whether the implementer context is based on changed paths or an unknown scope."
+        },
+        "minimum_before_editing": {
+          "type": "string",
+          "description": "Minimum orientation step an agent should complete before implementation."
+        },
+        "preflight_command": {
+          "type": "string",
+          "description": "Command for one-call startup, config, and active-state orientation."
+        },
+        "summary_command": {
+          "type": "string",
+          "description": "Command for active planning and handoff-state orientation."
+        },
+        "trust_note": {
+          "type": "string",
+          "description": "Review-trust consequence when workspace orientation is skipped for planned or high-risk work."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Minimum workspace orientation guidance for the implementer."
+    },
+    "inference_limits": {
+      "type": "object",
+      "required": [
+        "rule",
+        "can_infer",
+        "cannot_infer",
+        "when_uncertain"
+      ],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "description": "Boundary for what implement --changed can derive from available workspace state."
+        },
+        "can_infer": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One class of guidance the command can infer."
+          },
+          "minItems": 1,
+          "description": "Information classes derived from paths, config, active planning, or package metadata."
+        },
+        "cannot_infer": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One class of guidance the command cannot infer."
+          },
+          "minItems": 1,
+          "description": "Information classes that still require human or agent judgment."
+        },
+        "when_uncertain": {
+          "type": "string",
+          "description": "Routing instruction when changed-path context is insufficient."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Limits of changed-path implementer-context inference."
+    },
+    "execution_posture": {
+      "type": "object",
+      "required": [
+        "kind",
+        "capability_posture",
+        "runtime_resolution",
+        "delegation_control",
+        "selected_target",
+        "capability_handoff_packets",
+        "recommended_action",
+        "quality_tradeoff",
+        "token_tradeoff",
+        "ready_handoff",
+        "delegation_decision",
+        "inference_limits"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/execution-posture/v1",
+          "description": "Discriminator for the execution posture payload."
+        },
+        "capability_posture": {
+          "$ref": "#/$defs/capability_posture",
+          "description": "Task capability posture inferred from changed paths and optional task text."
+        },
+        "runtime_resolution": {
+          "$ref": "#/$defs/runtime_resolution",
+          "description": "Compact stay-local, stronger-reasoning, external-delegation, or manual-handoff recommendation."
+        },
+        "delegation_control": {
+          "$ref": "#/$defs/delegation_control",
+          "description": "Local human-control mode and whether automatic delegation is permitted."
+        },
+        "selected_target": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Suggested local delegation target when one matches the inferred posture."
+        },
+        "capability_handoff_packets": {
+          "$ref": "#/$defs/capability_handoff_packets",
+          "description": "Capability-aware handoff packet templates for escalation, down-routing, human clarification, review fallback, and no-safe-route cases."
+        },
+        "recommended_action": {
+          "type": "string",
+          "description": "Recommended execution category for the implementer."
+        },
+        "quality_tradeoff": {
+          "type": "string",
+          "description": "Why the recommendation preserves or improves implementation quality."
+        },
+        "token_tradeoff": {
+          "type": "string",
+          "description": "When token saving is acceptable or should be deferred."
+        },
+        "ready_handoff": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/capability_handoff_packet"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Prompt or handoff packet to use when local mode allows manual or suggested delegation."
+        },
+        "delegation_decision": {
+          "type": "object",
+          "description": "Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals.",
+          "additionalProperties": true
+        },
+        "implementation_allowed": {
+          "type": "boolean",
+          "description": "Whether the selected assignment/delegation posture permits local implementation for this scope."
+        },
+        "assignment_policy": {
+          "type": "object",
+          "description": "Structured assignment policy and manual transport posture used for the delegation decision.",
+          "additionalProperties": true
+        },
+        "target_evidence": {
+          "type": "object",
+          "description": "Current target evidence used to evaluate assignment candidates.",
+          "additionalProperties": true
+        },
+        "assignment_decision": {
+          "type": "object",
+          "description": "Current assignment decision derived from policy, candidates, and target evidence.",
+          "additionalProperties": true
+        },
+        "assignment_gate": {
+          "type": "object",
+          "description": "Assignment gate preserving the handoff identity, allowed effects, proof obligation, and mutation baseline.",
+          "additionalProperties": true
+        },
+        "delegated_run_lifecycle": {
+          "type": "object",
+          "description": "Delegated run lifecycle, public operations, transport status, and return admission gate.",
+          "additionalProperties": true
+        },
+        "decomposition_delegation": {
+          "type": "object",
+          "description": "Delegation candidates discovered from active planning decompositions, when active decomposed work is visible.",
+          "additionalProperties": true
+        },
+        "inference_limits": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One limit of the inferred execution posture."
+          },
+          "minItems": 1,
+          "description": "Limits that prevent the posture recommendation from becoming hidden execution authority."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Actionable local execution posture for orchestration before implementation."
+    },
+    "durable_intent": {
+      "type": "object",
+      "description": "Compact durable system or subsystem intent pressure that may affect scope, proof, delegation, or closeout.",
+      "additionalProperties": true
+    },
+    "parent_intent_status": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/parent-intent-status/v1",
+          "description": "Discriminator for the parent/original-intent status packet."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether the recorded parent/original intent is satisfied, open, or only guidance."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Parent/original-intent status preserving larger intent across bounded slices."
+    },
+    "applicable_intent_status": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/applicable-intent-status/v1",
+          "description": "Discriminator for the applicable-intent status packet."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether applicable-intent evidence is present, guidance-only, or requires attention."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Applicable-intent evidence, conflicts, missing authority, and manual-verification obligations."
+    },
+    "durable_intent_promotion": {
+      "$ref": "#/$defs/task_intent_promotion_guidance",
+      "description": "Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent."
+    },
+    "delegation_decision": {
+      "type": "object",
+      "description": "Top-level copy of the compact delegation decision for next-action consumers.",
+      "additionalProperties": true
+    },
+    "workflow_sufficiency": {
+      "type": "object",
+      "description": "Small decision record that says whether the current implementer packet is enough for the next implementation step or which exact detail field should be requested.",
+      "additionalProperties": true
+    },
+    "planning_safety_gate": {
+      "type": "object",
+      "description": "Planning ownership guard for broad, high-assurance, decomposed, or scope-widened implementation work.",
+      "additionalProperties": true
+    },
+    "continuation_state": {
+      "type": "object",
+      "description": "Compact continuation-state contract for preserving only unfinished or handoff-relevant work, not historical residue.",
+      "additionalProperties": true
+    },
+    "authority_hierarchy": {
+      "type": "object",
+      "description": "Authority and promotion-path guidance for deciding which repo surfaces are current instruction, durable memory, future work, or historical audit.",
+      "additionalProperties": true
+    },
+    "compliance_economics": {
+      "type": "object",
+      "description": "Boundary statement for what Agentic Workspace can enforce directly and where it instead makes noncompliance visible or costly.",
+      "additionalProperties": true
+    },
+    "acceptance_reconciliation": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "rule",
+        "requested_outcomes",
+        "acceptance_items",
+        "acceptance_item_count",
+        "acceptance_closeout_rule",
+        "checklist",
+        "compact_closeout_prompt",
+        "task_text_available",
+        "task_carry_forward_hint"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/acceptance-reconciliation/v1",
+          "description": "Discriminator for the acceptance reconciliation guidance."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether acceptance reconciliation is required before closeout for the current context."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Why validation alone is not enough for closeout."
+        },
+        "requested_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One explicit symbol or outcome extracted from the task text."
+          },
+          "description": "Concrete task outcomes available for acceptance mapping."
+        },
+        "acceptance_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "One inferred acceptance item to reconcile before closeout."
+          },
+          "description": "Definition-of-done items inferred from task intent."
+        },
+        "acceptance_item_count": {
+          "type": "integer",
+          "description": "Number of acceptance items to reconcile before closeout."
+        },
+        "acceptance_closeout_rule": {
+          "type": "string",
+          "description": "Acceptance-specific closeout rule for claiming done."
+        },
+        "checklist": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One required acceptance reconciliation check."
+          },
+          "minItems": 1,
+          "description": "Checklist for mapping requested outcomes to delivered behavior and proof."
+        },
+        "compact_closeout_prompt": {
+          "type": "string",
+          "description": "Short prompt agents can use before final answer or lane closeout."
+        },
+        "task_text_available": {
+          "type": "boolean",
+          "description": "Whether the CLI invocation included task text to reconcile."
+        },
+        "task_carry_forward_hint": {
+          "type": "string",
+          "description": "Short reminder to preserve task text across start and implement calls."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Closeout guard against passing self-authored tests while missing requested behavior."
+    },
+    "objective_drift": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "requested_outcomes",
+        "missing_from_changed_surface",
+        "action_effect"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/objective-drift/v1",
+          "description": "Discriminator for the lightweight objective-drift heuristic."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether requested task terms appear missing from changed surfaces."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why no drift comparison could be made, when applicable."
+        },
+        "requested_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One requested symbol or concrete outcome extracted from the task text."
+          },
+          "description": "Task-specific terms checked against changed files."
+        },
+        "acceptance_item_count": {
+          "type": "integer",
+          "description": "Number of inferred acceptance items that should be reconciled before closeout."
+        },
+        "acceptance_closeout_rule": {
+          "type": "string",
+          "description": "Acceptance-specific closeout rule carried into objective-drift guidance."
+        },
+        "missing_from_changed_surface": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Requested outcome not found in the changed file contents."
+          },
+          "description": "Requested terms that were not observed in changed files."
+        },
+        "removed_or_retired_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Requested outcome the agent explicitly reconciled as removed or retired."
+          },
+          "description": "Reserved for explicit reconciliation evidence; AW does not infer removal or retirement from prompt keyword markers."
+        },
+        "action_effect": {
+          "type": "object",
+          "required": [
+            "force",
+            "allowed_now",
+            "blocked_until_reconciled",
+            "claim_boundary",
+            "resolution_selector"
+          ],
+          "properties": {
+            "force": {
+              "type": "string",
+              "enum": [
+                "advisory",
+                "required_before_claim"
+              ],
+              "description": "Whether this objective-drift signal is advisory or required before a completion claim."
+            },
+            "allowed_now": {
+              "type": "string",
+              "description": "Action that remains allowed while the objective-drift signal is unresolved."
+            },
+            "blocked_until_reconciled": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "One claim or action blocked until the missing outcome is reconciled."
+              },
+              "description": "Claims or actions that the drift signal limits."
+            },
+            "claim_boundary": {
+              "type": "string",
+              "description": "Completion claim boundary created by the objective-drift signal."
+            },
+            "resolution_selector": {
+              "type": "string",
+              "description": "Selector or compact field that resolves or explains the signal."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Action-changing semantics for the objective-drift caution signal."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Closeout rule agents should apply when drift is suspected."
+        },
+        "recommended_next_action": {
+          "type": "string",
+          "description": "Small next step for resolving or dismissing the drift signal."
+        },
+        "heuristic": {
+          "type": "string",
+          "description": "Brief explanation of the comparison method."
+        },
+        "agent_owned_decisions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Objective-drift judgment the agent owns."
+          },
+          "description": "Semantic acceptance decisions AW must not infer from prompt keyword markers."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Heuristic warning when changed files do not mention explicit requested outcomes."
+    },
+    "handoff_requirements": {
+      "type": "object",
+      "required": [
+        "before_handoff",
+        "stop_when"
+      ],
+      "properties": {
+        "before_handoff": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One entry in the before handoff list."
+          },
+          "minItems": 1,
+          "description": "Ordered before handoff entries used by this contract."
+        },
+        "stop_when": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One entry in the stop when list."
+          },
+          "minItems": 1,
+          "description": "Ordered stop when entries used by this contract."
+        },
+        "must_preserve": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One field path or identity that must survive handoff and closeout."
+          },
+          "description": "Decision identities and claim-boundary fields that downstream consumers must preserve."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Information that must be preserved before pausing or handing off work."
+    },
+    "next_allowed_action": {
+      "type": "string",
+      "description": "Smallest safe implementation action after reading this context."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "memory_decision_packet": {
+      "type": "object",
+      "description": "Command-backed Memory pull/capture decision packet surfaced during implementation.",
+      "required": [
+        "kind",
+        "stage",
+        "force",
+        "pull",
+        "capture",
+        "authority_boundary"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/memory-decision-packet/v1",
+          "description": "Discriminator for the Memory decision packet."
+        },
+        "stage": {
+          "type": "string",
+          "description": "Workflow stage that produced the packet."
+        },
+        "force": {
+          "type": "string",
+          "description": "Whether Memory pull/capture is not applicable, recommended, or required before a claim."
+        },
+        "why_visible": {
+          "type": "string",
+          "description": "Short reason this packet is visible to the agent."
+        },
+        "pull": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Memory pull status, route command, route candidates, and read budget."
+        },
+        "capture": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Durable-learning capture status, candidate owner surfaces, and capture commands."
+        },
+        "authority_boundary": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Boundary separating what AW observes and recommends from agent and human decisions."
+        },
+        "limits": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "One guardrail or limitation for interpreting the packet."
+          },
+          "description": "Guardrails preventing keyword-triggered policy, hidden writes, or bulk-read diligence claims."
+        }
+      },
+      "additionalProperties": true
+    },
+    "operating_loop": {
+      "type": "object",
+      "required": [
+        "kind",
+        "closeout_state",
+        "safe_claim",
+        "residue_owner",
+        "required_before_full_closure",
+        "memory",
+        "planning",
+        "verification",
+        "reasons"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/operating-loop-decision/v1",
+          "description": "Discriminator for the normalized operating-loop decision packet."
+        },
+        "closeout_state": {
+          "description": "Structural closeout state derived from Memory, Planning, and Verification facts.",
+          "enum": [
+            "no_closeout_needed",
+            "ready_for_full_closure",
+            "partial_claim_only",
+            "blocked_missing_proof",
+            "blocked_active_planning",
+            "residue_routing_required"
+          ]
+        },
+        "safe_claim": {
+          "description": "Maximum structurally safe completion claim class for this output.",
+          "enum": [
+            "none",
+            "full",
+            "partial",
+            "blocked"
+          ]
+        },
+        "residue_owner": {
+          "description": "Primary owner surface for unresolved residue or blockers.",
+          "enum": [
+            "memory",
+            "planning",
+            "verification",
+            "docs",
+            "issue",
+            "config",
+            "none"
+          ]
+        },
+        "required_before_full_closure": {
+          "type": "array",
+          "items": {
+            "description": "One required action code before a full closure claim.",
+            "enum": [
+              "run_or_refresh_proof",
+              "continue_or_close_plan",
+              "route_memory_residue",
+              "route_external_residue"
+            ]
+          },
+          "description": "Structured action codes required before full closure is structurally safe."
+        },
+        "memory": {
+          "type": "object",
+          "description": "Memory pull and capture state projected from the Memory decision packet.",
+          "required": [
+            "state",
+            "reason_code",
+            "route_ref",
+            "capture"
+          ],
+          "properties": {
+            "state": {
+              "description": "Whether relevant Memory was pulled, structurally dismissed, or not applicable.",
+              "enum": [
+                "pulled",
+                "dismissed",
+                "not_applicable"
+              ]
+            },
+            "reason_code": {
+              "description": "Structured reason for the Memory pull state.",
+              "enum": [
+                "matched_route",
+                "no_relevant_route",
+                "not_requested",
+                "unavailable",
+                "explicitly_dismissed"
+              ]
+            },
+            "route_ref": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Selector or route reference for pulled Memory, when available."
+            },
+            "capture": {
+              "description": "Whether reusable learning capture is absent, recommended, or required.",
+              "enum": [
+                "none",
+                "recommended",
+                "required"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "planning": {
+          "type": "object",
+          "description": "Planning state relevant to full closure safety.",
+          "required": [
+            "state",
+            "plan_ref",
+            "blocks_full_closure"
+          ],
+          "properties": {
+            "state": {
+              "description": "Active, continuation, closeout-required, or absent Planning state.",
+              "enum": [
+                "none",
+                "active",
+                "continuation",
+                "closeout_required",
+                "unrelated_active_plan"
+              ]
+            },
+            "plan_ref": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Planning record or execplan reference, when available."
+            },
+            "blocks_full_closure": {
+              "type": "boolean",
+              "description": "Whether the Planning state structurally blocks an unqualified full closure claim."
+            }
+          },
+          "additionalProperties": false
+        },
+        "verification": {
+          "type": "object",
+          "description": "Verification or proof state relevant to the current claim boundary.",
+          "required": [
+            "state",
+            "proof_ref",
+            "blocks_full_closure"
+          ],
+          "properties": {
+            "state": {
+              "description": "Selected proof status used to decide structural closure safety.",
+              "enum": [
+                "proof_not_required",
+                "proof_required",
+                "proof_selected",
+                "proof_missing",
+                "proof_stale",
+                "proof_skipped",
+                "proof_failed",
+                "proof_passed"
+              ]
+            },
+            "proof_ref": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Proof command, receipt, or source reference, when available."
+            },
+            "blocks_full_closure": {
+              "type": "boolean",
+              "description": "Whether the proof state structurally blocks an unqualified full closure claim."
+            }
+          },
+          "additionalProperties": false
+        },
+        "reasons": {
+          "type": "array",
+          "description": "Short structured reason codes explaining blockers or residue.",
+          "items": {
+            "type": "object",
+            "required": [
+              "code",
+              "owner",
+              "ref"
+            ],
+            "properties": {
+              "code": {
+                "description": "Structured blocker or residue reason code.",
+                "enum": [
+                  "proof_missing",
+                  "proof_stale",
+                  "proof_failed",
+                  "active_plan",
+                  "plan_closeout_required",
+                  "memory_capture_required",
+                  "external_residue"
+                ]
+              },
+              "owner": {
+                "description": "Owner surface responsible for resolving the reason.",
+                "enum": [
+                  "memory",
+                  "planning",
+                  "verification",
+                  "docs",
+                  "issue",
+                  "config"
+                ]
+              },
+              "ref": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Optional reference to the proof, plan, route, or owner surface."
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "task_posture_packet": {
+      "type": "object",
+      "required": [
+        "kind",
+        "operating_posture",
+        "workflow_obligations",
+        "improvement_obligations",
+        "skill_routes",
+        "allowed_actions",
+        "forbidden_actions",
+        "proof_boundaries",
+        "closeout_boundaries",
+        "read_budget",
+        "authority_boundaries",
+        "knowledge_gates",
+        "gate_summary",
+        "blocked_actions",
+        "next_allowed_action",
+        "output_shape_requirements",
+        "review_rubrics",
+        "module_contributions",
+        "provenance",
+        "dynamic_instruction_projection",
+        "posture_adherence"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/task-posture-packet/v1",
+          "description": "Discriminator for dynamic task posture."
+        },
+        "operating_posture": {
+          "type": "object",
+          "description": "Resolved optimization, artifact, initiative, assurance, and delegation posture for this task.",
+          "additionalProperties": true
+        },
+        "workflow_obligations": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Matched workflow obligations with stage, force, scope, and provenance."
+        },
+        "improvement_obligations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Active improvement-pressure obligations that affect proof, closeout, allowed actions, or posture adherence."
+        },
+        "skill_routes": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Task-selected skills, prompts, or routing fragments."
+        },
+        "allowed_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Actions allowed under the resolved posture."
+        },
+        "forbidden_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Actions forbidden under the resolved posture."
+        },
+        "proof_boundaries": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Proof boundaries selected for the current task."
+        },
+        "closeout_boundaries": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Closeout and claim boundaries selected for the current task."
+        },
+        "read_budget": {
+          "type": "object",
+          "description": "Read-budget profile and selector/deep-read limits for this task.",
+          "additionalProperties": true
+        },
+        "authority_boundaries": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Authority boundaries with source and owner provenance."
+        },
+        "knowledge_gates": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Compact pre-work knowledge gates selected when routed knowledge can change task interpretation, work shape, proof, allowed action, or completion claims."
+        },
+        "gate_summary": {
+          "type": "object",
+          "description": "Count and force summary for selected knowledge gates.",
+          "additionalProperties": true
+        },
+        "blocked_actions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Concrete actions blocked by selected knowledge gates."
+        },
+        "next_allowed_action": {
+          "type": "string",
+          "description": "Smallest safe next action after applying knowledge gates."
+        },
+        "output_shape_requirements": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Output-shape constraints selected for this task."
+        },
+        "review_rubrics": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Review rubrics selected for this task."
+        },
+        "module_contributions": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Matched module posture contributions with trigger and projection provenance."
+        },
+        "provenance": {
+          "type": "array",
+          "items": { "type": "object", "additionalProperties": true },
+          "description": "Config, obligation, module, or command sources used to assemble this packet."
+        },
+        "dynamic_instruction_projection": {
+          "type": "object",
+          "description": "Compact dynamic AGENTS.md-style projection assembled for this task instead of static prose expansion.",
+          "additionalProperties": true
+        },
+        "posture_adherence": {
+          "type": "object",
+          "description": "Closeout/report visibility for whether the selected posture was followed or requires explanation.",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false,
+      "description": "Task-specific posture and dynamic instruction packet selected from config, task facts, workflow obligations, and module declarations."
+    },
+    "proof_selection": {
+      "type": "object",
+      "required": [
+        "kind",
+        "changed_paths",
+        "selected_lanes",
+        "required_commands",
+        "optional_commands",
+        "validation_plan",
+        "broaden_when",
+        "escalate_when"
+      ],
+      "properties": {
+        "kind": {
+          "const": "proof-selection/v1",
+          "description": "Discriminator for changed-path proof selection."
+        },
+        "changed_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Changed path used for proof selection."
+          },
+          "description": "Paths used to select validation lanes."
+        },
+        "selected_lanes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "required_commands"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Proof lane identifier."
+              },
+              "when": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Condition that activates this proof lane."
+                },
+                "description": "Path or task conditions that activate this lane."
+              },
+              "required_commands": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Required validation command for this lane."
+                },
+                "description": "Commands required by this lane."
+              },
+              "recovery_signal": {
+                "type": "string",
+                "description": "What to inspect or route when this proof lane is insufficient."
+              }
+            },
+            "additionalProperties": true,
+            "description": "Selected proof lane."
+          },
+          "description": "Proof lanes selected by changed paths."
+        },
+        "required_commands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Required command selected from proof lanes."
+          },
+          "description": "Flattened required validation commands."
+        },
+        "optional_commands": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Optional command that can strengthen proof."
+          },
+          "description": "Optional validation or orientation commands."
+        },
+        "generated_cli_freshness": {
+          "type": "object",
+          "description": "Generated CLI freshness signal for changed paths that affect generated command packages.",
+          "properties": {
+            "kind": {
+              "const": "agentic-workspace/generated-cli-freshness/v1",
+              "description": "Discriminator for generated CLI freshness guidance."
+            },
+            "status": {
+              "type": "string",
+              "description": "Whether the freshness check is required or advisory for the current changed paths."
+            },
+            "freshness_check_command": {
+              "type": "string",
+              "description": "Check command that detects stale generated CLI outputs without regenerating them."
+            },
+            "refresh_command": {
+              "type": "string",
+              "description": "Command to refresh generated CLI outputs when the freshness check reports staleness."
+            },
+            "validation_command": {
+              "type": "string",
+              "description": "Selected validation command that proves generated command package freshness."
+            },
+            "obligation": {
+              "type": "string",
+              "description": "Whether the named check is required or advisory."
+            }
+          },
+          "additionalProperties": true
+        },
+        "proof_obligations": {
+          "type": "object",
+          "description": "Structured proof contract separating required proof gates, recommended confidence checks, and agent-selected extra validation.",
+          "properties": {
+            "kind": {
+              "const": "agentic-workspace/proof-obligations/v1",
+              "description": "Discriminator for the proof-obligations packet."
+            },
+            "required_proof": {
+              "type": "object",
+              "description": "Required proof gate for completion claims.",
+              "additionalProperties": true
+            },
+            "recommended_confidence_checks": {
+              "type": "object",
+              "description": "Optional checks that may raise confidence but do not replace required proof.",
+              "additionalProperties": true
+            },
+            "agent_selected_extra_validation": {
+              "type": "object",
+              "description": "Validation the agent chooses when task risk or failures warrant more evidence.",
+              "additionalProperties": true
+            },
+            "completion_claim_rule": {
+              "type": "string",
+              "description": "Rule that blocks completion claims until required proof is satisfied."
+            },
+            "compatibility": {
+              "type": "object",
+              "description": "Compatibility notes for existing proof command list consumers.",
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "validation_plan": {
+          "$ref": "#/$defs/validation_plan",
+          "description": "Executable validation plan derived from selected lanes."
+        },
+        "broaden_when": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Condition that requires broader proof."
+          },
+          "description": "Signals that narrow proof is no longer enough."
+        },
+        "escalate_when": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Condition that requires escalation or stronger review."
+          },
+          "description": "Signals that the implementer should not guess."
+        },
+        "acceptance_guidance": {
+          "type": "object",
+          "description": "Guidance that proof should demonstrate acceptance satisfaction, not only command success.",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true,
+      "description": "Changed-path proof selection and validation plan."
+    },
+    "task_acceptance": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "source",
+        "confidence",
+        "requested_outcomes",
+        "items",
+        "closeout_required",
+        "closeout_rule",
+        "proof_rule",
+        "unresolved_questions"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/task-acceptance/v1",
+          "description": "Discriminator for the task-intent acceptance payload."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether acceptance was inferred from task text or is unavailable."
+        },
+        "source": {
+          "type": "string",
+          "description": "Source used to infer the acceptance checklist."
+        },
+        "confidence": {
+          "type": "string",
+          "description": "Confidence in the inferred definition of done."
+        },
+        "requested_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Low-level requested outcome signals extracted from task text."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "expectation",
+              "proof_hint",
+              "status",
+              "source"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Stable local acceptance item identifier."
+              },
+              "expectation": {
+                "type": "string",
+                "description": "Definition-of-done expectation to satisfy or explicitly route."
+              },
+              "proof_hint": {
+                "type": "string",
+                "description": "Compact hint for selecting proof that demonstrates this expectation."
+              },
+              "status": {
+                "type": "string",
+                "description": "Current reconciliation state for this acceptance item."
+              },
+              "source": {
+                "type": "string",
+                "description": "Source signal that produced this acceptance item."
+              }
+            },
+            "additionalProperties": false,
+            "description": "One inferred acceptance expectation."
+          },
+          "description": "Compact definition-of-done checklist inferred from task intent."
+        },
+        "closeout_required": {
+          "type": "boolean",
+          "description": "Whether closeout must reconcile acceptance before claiming done."
+        },
+        "closeout_rule": {
+          "type": "string",
+          "description": "Rule for reconciling acceptance before final answer or lane closeout."
+        },
+        "proof_rule": {
+          "type": "string",
+          "description": "Rule for selecting proof that demonstrates acceptance satisfaction."
+        },
+        "unresolved_questions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Questions that block honest acceptance reconciliation."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Task-intent-derived definition of done."
+    },
+    "task_intent_promotion_guidance": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "route_options"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/task-intent-promotion-guidance/v1",
+          "description": "Discriminator for durable task-intent promotion guidance."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether the task intent contains durable promotion signals."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Reason promotion guidance is not applicable, when absent."
+        },
+        "matched_markers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Reserved for structural or configured evidence; AW does not infer durable intent from prompt keyword markers."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Promotion rule to apply before closeout."
+        },
+        "route_options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "description": "Candidate durable surfaces for non-finishable task intent."
+        },
+        "acceptance_item_count": {
+          "type": "integer",
+          "description": "Number of acceptance items considered for durable promotion."
+        },
+        "closeout_question": {
+          "type": "string",
+          "description": "Question agents should answer before discarding task intent after closeout."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Guidance for promoting durable task intent to memory, docs, subsystem intent, or system intent."
+    },
+    "validation_plan": {
+      "type": "object",
+      "required": [
+        "kind",
+        "status",
+        "primary_next_action",
+        "required",
+        "optional",
+        "next_proof"
+      ],
+      "properties": {
+        "kind": {
+          "const": "validation-plan/v1",
+          "description": "Discriminator for validation plan details."
+        },
+        "status": {
+          "type": "string",
+          "description": "Whether validation is ready to inspect or run."
+        },
+        "primary_next_action": {
+          "type": "object",
+          "description": "First validation action to take."
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "Required validation step."
+          },
+          "description": "Ordered required validation steps."
+        },
+        "optional": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "description": "Optional validation step."
+          },
+          "description": "Ordered optional validation steps."
+        },
+        "next_proof": {
+          "type": "string",
+          "description": "How to proceed after the current validation step."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Validation steps selected from proof lanes."
+    },
+    "capability_posture": {
+      "type": "object",
+      "required": [
+        "status",
+        "posture",
+        "scope_evidence",
+        "proof_factors",
+        "risk_flags",
+        "inspection_evidence_required",
+        "guidance_authority",
+        "self_assessment_authority"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Whether capability posture was inferred, configured, or unavailable."
+        },
+        "posture": {
+          "type": "object",
+          "description": "Human-readable posture details used for review."
+        },
+        "scope_evidence": {
+          "type": "object",
+          "description": "Observed scope evidence; the agent owns semantic task classification."
+        },
+        "proof_factors": {
+          "type": "object",
+          "description": "Structural proof factors; the agent owns proof proportionality judgment."
+        },
+        "risk_flags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Risk flag that affects capability routing."
+          },
+          "description": "Risk signals inferred from paths or task text."
+        },
+        "inspection_evidence_required": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Evidence an implementer should inspect before execution."
+          },
+          "description": "Context required before trusting the posture."
+        },
+        "guidance_authority": {
+          "type": "string",
+          "description": "Authority used to provide structural guidance."
+        },
+        "self_assessment_authority": {
+          "type": "string",
+          "description": "Authority level of a model's own confidence or self-assessment."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Task capability guidance for changed-path implementation."
+    },
+    "runtime_resolution": {
+      "type": "object",
+      "required": [
+        "recommendation",
+        "confidence",
+        "reasons",
+        "profile_recommendations",
+        "guidance",
+        "posture_source",
+        "resolution_categories",
+        "self_assessment"
+      ],
+      "properties": {
+        "recommendation": {
+          "type": "string",
+          "description": "Recommended execution route."
+        },
+        "confidence": {
+          "type": "string",
+          "description": "Confidence in the route recommendation."
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Reason for the route recommendation."
+          },
+          "description": "Why this route was selected."
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": [
+              "object",
+              "string"
+            ],
+            "description": "Alternative execution route."
+          },
+          "description": "Other viable routes when present."
+        },
+        "profile_recommendations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "recommendation",
+              "score",
+              "reasons",
+              "required_action"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Configured target name."
+              },
+              "recommendation": {
+                "type": "string",
+                "description": "Fit recommendation for this target."
+              },
+              "score": {
+                "type": "number",
+                "description": "Relative fit score for this target."
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "description": "Reason for this target recommendation."
+                },
+                "description": "Why the target fits or does not fit."
+              },
+              "required_action": {
+                "type": "string",
+                "description": "Action required before or during execution with this target."
+              }
+            },
+            "additionalProperties": true,
+            "description": "Configured target fit recommendation."
+          },
+          "description": "Fit analysis for configured delegation targets."
+        },
+        "guidance": {
+          "type": "string",
+          "description": "Compact route guidance for the current executor."
+        },
+        "posture_source": {
+          "type": "string",
+          "description": "Source of the posture used for route selection."
+        },
+        "resolution_categories": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Available route category."
+          },
+          "description": "Route categories this resolver can emit."
+        },
+        "self_assessment": {
+          "type": "object",
+          "required": [
+            "authority",
+            "rule",
+            "may_influence",
+            "cannot_override"
+          ],
+          "properties": {
+            "authority": {
+              "type": "string",
+              "description": "Authority level for model self-assessment."
+            },
+            "rule": {
+              "type": "string",
+              "description": "Rule describing how self-assessment may be used."
+            },
+            "may_influence": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Decision self-assessment may influence."
+              },
+              "description": "Allowed uses of self-assessment."
+            },
+            "cannot_override": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "description": "Higher-authority signal self-assessment cannot override."
+              },
+              "description": "Signals self-assessment cannot override."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Authority boundary for model self-assessment."
+        }
+      },
+      "additionalProperties": true,
+      "description": "Capability-aware route resolution for the current task."
+    },
+    "delegation_control": {
+      "type": "object",
+      "required": [
+        "configured_mode",
+        "effective_mode",
+        "supported_modes",
+        "source",
+        "execution_permitted",
+        "safe_to_auto_run_commands",
+        "human_control"
+      ],
+      "properties": {
+        "configured_mode": {
+          "type": "string",
+          "description": "Delegation mode from local configuration or defaults."
+        },
+        "effective_mode": {
+          "type": "string",
+          "description": "Delegation mode after runtime constraints are applied."
+        },
+        "supported_modes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Supported delegation mode."
+          },
+          "description": "Modes this package understands."
+        },
+        "source": {
+          "type": "string",
+          "description": "Where the effective delegation mode came from."
+        },
+        "execution_permitted": {
+          "type": "boolean",
+          "description": "Whether the package may execute delegation automatically."
+        },
+        "safe_to_auto_run_commands": {
+          "type": "boolean",
+          "description": "Whether auto mode may run command-based delegation."
+        },
+        "disabled_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Reason delegation execution is disabled, when known."
+        },
+        "human_control": {
+          "type": "object",
+          "required": [
+            "rule",
+            "next_action"
+          ],
+          "properties": {
+            "rule": {
+              "type": "string",
+              "description": "Human-control rule for local delegation."
+            },
+            "next_action": {
+              "type": "string",
+              "description": "Allowed next action under the current mode."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Human-control boundary for delegation."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Local delegation control and human-autonomy boundary."
+    },
+    "capability_handoff_packets": {
+      "type": "object",
+      "required": [
+        "rule",
+        "common_required_fields",
+        "packet_types"
+      ],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "description": "Rule for when to use capability handoff packets."
+        },
+        "common_required_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Field every handoff packet should include."
+          },
+          "description": "Common fields for prepared delegation packets."
+        },
+        "packet_types": {
+          "type": "object",
+          "description": "Named handoff packet templates."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Reusable packet templates for capability-aware handoff."
+    },
+    "capability_handoff_packet": {
+      "type": "object",
+      "required": [
+        "kind",
+        "packet_type",
+        "mode",
+        "scope_signal",
+        "route_reason",
+        "inspected_context",
+        "proof_expectations",
+        "authority_boundary",
+        "allowed_write_scope",
+        "stop_conditions",
+        "prompt"
+      ],
+      "properties": {
+        "kind": {
+          "const": "agentic-workspace/capability-handoff-packet/v1",
+          "description": "Discriminator for prepared capability handoff packets."
+        },
+        "packet_type": {
+          "type": "string",
+          "description": "Handoff packet category."
+        },
+        "mode": {
+          "type": "string",
+          "description": "Delegation mode that produced the packet."
+        },
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Recommended receiver target when one is selected."
+        },
+        "template": {
+          "type": "object",
+          "description": "Template that shaped the packet."
+        },
+        "scope_signal": {
+          "type": "string",
+          "description": "Observed scope signal used as route evidence; not an AW-owned semantic task classification."
+        },
+        "route_reason": {
+          "type": "string",
+          "description": "Why this route fits the task."
+        },
+        "inspected_context": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Context already inspected before handoff."
+          },
+          "description": "Context the receiver may rely on."
+        },
+        "proof_expectations": {
+          "type": "string",
+          "description": "Proof burden or commands expected from the receiver."
+        },
+        "authority_boundary": {
+          "type": "object",
+          "description": "Boundary explaining that the packet carries route evidence while the agent owns semantic task classification."
+        },
+        "allowed_write_scope": {
+          "type": "string",
+          "description": "Write boundaries for the receiver."
+        },
+        "stop_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "description": "Condition that requires stopping instead of guessing."
+          },
+          "description": "Receiver stop conditions."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Ready prompt for the receiver."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Prepared packet for escalation, down-routing, or human clarification."
+    },
+    "authority_marker": {
+      "type": "object",
+      "required": [
+        "path",
+        "authority",
+        "canonical_source",
+        "safe_to_edit",
+        "refresh_command"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path segments or repository path used by this contract."
+        },
+        "authority": {
+          "type": "string",
+          "description": "Authority level or owner for this surface."
+        },
+        "canonical_source": {
+          "type": "string",
+          "description": "Source of truth for this generated, derived, or adapter surface."
+        },
+        "safe_to_edit": {
+          "type": "boolean",
+          "description": "Whether agents may edit this surface under the declared authority rules."
+        },
+        "refresh_command": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Command used to refresh this generated or managed surface."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Authority marker details used by this contract."
+    },
+    "package_boundary": {
+      "type": "object",
+      "required": [
+        "status",
+        "cwd",
+        "warning"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "description": "Current lifecycle, readiness, or health state."
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Working directory context used when running the command."
+        },
+        "warning": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Warning contract value used by this contract."
+        },
+        "package_root": {
+          "type": "string",
+          "description": "Package root text value used by this contract."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Package boundary details used by this contract."
+    },
+    "path_boundary": {
+      "type": "object",
+      "required": [
+        "path",
+        "authority",
+        "warning",
+        "requires_attention"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path segments or repository path used by this contract."
+        },
+        "authority": {
+          "type": "string",
+          "description": "Authority level or owner for this surface."
+        },
+        "warning": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Warning contract value used by this contract."
+        },
+        "requires_attention": {
+          "type": "boolean",
+          "description": "Requires attention true/false policy flag used by this contract."
+        }
+      },
+      "additionalProperties": false,
+      "description": "Path boundary details used by this contract."
+    }
+  },
   "x-agentic-workspace-doc-role": "contract-reference"
 }

@@ -35,6 +35,7 @@ from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
 from agentic_workspace.actionability import derive_actionability
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
+from agentic_workspace.authority_envelope import admit_live_mutation_boundary
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
@@ -38808,6 +38809,7 @@ def _admit_delegated_return(
     delegation_decision: dict[str, Any],
     returned_work: dict[str, Any],
     current_authorities: dict[str, Any] | None = None,
+    target_root: Path | None = None,
 ) -> dict[str, Any]:
     authority_resolution = _resolve_delegated_return_authorities(
         assignment_gate=assignment_gate,
@@ -38832,7 +38834,7 @@ def _admit_delegated_return(
         handoff_required=True,
     )
     current_proof = _as_dict(authority_resolution.get("proof_receipt"))
-    current_baseline = authority_resolution.get("mutation_baseline")
+    caller_supplied_baseline = authority_resolution.get("mutation_baseline")
     run_state = _as_dict(authority_resolution.get("run_state"))
     competing_assignment = _as_dict(authority_resolution.get("competing_assignment"))
     failures: list[dict[str, str]] = []
@@ -38876,10 +38878,23 @@ def _admit_delegated_return(
             reject("changed-path-outside-scope", "changed_paths", "Refresh or widen the handoff before admitting returned changes.")
     elif changed_paths and not allowed_paths:
         reject("missing-canonical-scope", "assignment_identity.allowed_paths", "Refresh the assignment so AW can compare returned paths.")
-    if identity.get("mutation_baseline") and current_baseline != identity.get("mutation_baseline"):
-        reject(
-            "mutation-baseline-mismatch", "live_mutation_baseline", "Rebase or regenerate the returned work against the current baseline."
-        )
+    expected_baseline = identity.get("mutation_baseline")
+    mutation_admission = admit_live_mutation_boundary(
+        boundary_id="returned-worker-admission",
+        target_root=target_root,
+        expected=expected_baseline if isinstance(expected_baseline, dict) else None,
+        assignment_target_identity_ref=str(identity.get("target_identity_ref") or "").strip() or None,
+        assignment_revision=str(identity.get("assignment_decision_revision") or "").strip() or None,
+        allowed_paths=[str(path) for path in allowed_paths] if isinstance(allowed_paths, list) else None,
+    )
+    mutation_revalidation = _as_dict(mutation_admission.get("revalidation")) or mutation_admission
+    for failure in mutation_admission.get("failures", []):
+        if isinstance(failure, dict):
+            reject(
+                str(failure.get("reason") or "mutation-baseline-revalidation-failed"),
+                str(failure.get("field") or "mutation_baseline"),
+                str(failure.get("repair") or "Rebase or regenerate the returned work against the current baseline."),
+            )
 
     admitted = not failures
     return {
@@ -38889,14 +38904,19 @@ def _admit_delegated_return(
         "admitted": admitted,
         "assignment_identity": identity,
         "manual_transport": manual_transport,
+        "mutation_revalidation": mutation_revalidation,
         "authority_resolution": authority_resolution,
+        "mutation_boundary_admission": mutation_admission,
         "current_authority": {
             "proof_receipt": current_proof or None,
-            "mutation_baseline": current_baseline,
+            "mutation_baseline": mutation_admission.get("current_baseline"),
+            "caller_supplied_live_mutation_baseline": caller_supplied_baseline,
             "proof_source": _as_dict(authority_resolution.get("sources")).get("proof_receipt"),
-            "baseline_source": _as_dict(authority_resolution.get("sources")).get("mutation_baseline"),
+            "baseline_source": _as_dict(mutation_admission.get("live_resolution")).get("source"),
+            "caller_baseline_source": _as_dict(authority_resolution.get("sources")).get("mutation_baseline"),
             "worker_reported_proof_trusted": False,
             "worker_reported_baseline_trusted": False,
+            "caller_reported_baseline_trusted": False,
         },
         "failures": failures,
         "safe_recovery": "none" if admitted else failures[0]["recovery"],

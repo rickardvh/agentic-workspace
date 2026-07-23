@@ -5,6 +5,14 @@ import shlex
 
 from tests.workspace_cli_support import *
 
+from agentic_workspace.authority_envelope import (
+    admit_live_mutation_boundary,
+    admit_mutation_boundary,
+    mutation_baseline_payload,
+    resolve_authority_effect_envelope,
+    revalidate_mutation_baseline,
+)
+
 
 def _write_empty_planning_state(target_root: Path) -> None:
     _write(
@@ -44,6 +52,578 @@ def test_implement_context_adapter_routes_through_implement_owner_facade() -> No
     assert "from ..primitives.workspace_implement_runtime import _run_implement_context_adapter" in implement_command
     assert "from agentic_workspace.workspace_runtime_implement import _run_implement_context_adapter" in implement_facade
     assert workspace_runtime_primitives._run_implement_context_adapter is workspace_runtime_implement._run_implement_context_adapter
+
+
+def test_implement_verbose_reports_authority_envelope_and_mutation_baseline(tmp_path: Path, capsys) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "print('baseline')\n")
+    subprocess.run(["git", "add", "src/app.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "print('changed')\n")
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/app.py",
+                "--task",
+                "Update the app helper",
+                "--verbose",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    payload = json.loads(capsys.readouterr().out)
+    envelope = payload["authority_envelope"]
+    assert envelope["kind"] == "agentic-workspace/authority-envelope/v1"
+    assert envelope["status"] == "resolved"
+    assert any(
+        item["class"] == "untrusted-content" and item["effect"].startswith("cannot authorise")
+        for item in envelope["instruction_provenance"]
+    )
+    destructive = next(item for item in envelope["side_effect_decisions"] if item["class"] == "destructive-filesystem-or-git")
+    assert destructive["decision"] == "deny"
+    assert destructive["reason_code"] == "unowned-state-protected"
+    assert destructive["authorised_by"] == []
+    baseline = envelope["mutation_baseline"]
+    assert baseline["status"] == "dirty-scope-advisory-baseline"
+    assert baseline["scope"]["allowed_paths"] == ["src/app.py"]
+    assert baseline["observed_state"]["entries"][0]["path"] == "src/app.py"
+    assert baseline["ownership"]["claim"] == "advisory-observed-baseline"
+    assert baseline["host_enforcement"] == "fail-closed-at-aw-boundaries"
+    assert baseline["stale_revalidation"]["status"] == "required"
+    assert baseline["stale_revalidation"]["admission"] == "fail-closed"
+    assert baseline["stale_revalidation"]["comparison_fields"] == [
+        "baseline_id",
+        "head",
+        "scope.allowed_paths",
+        "observed_state.enforcement_fingerprint",
+        "observed_state.entry_count",
+        "assignment.target_identity_ref",
+        "assignment.assignment_revision",
+    ]
+    assert baseline["observed_state"]["enforcement_fingerprint"]
+    assert "unexpected-path-overlap" in baseline["stale_revalidation"]["stop_reasons"]
+    assert "baseline-observation-failed" in baseline["stale_revalidation"]["stop_reasons"]
+    assert "scoped-state-fingerprint-changed" in baseline["stale_revalidation"]["stop_reasons"]
+    assert "assignment-target-mismatch" in baseline["stale_revalidation"]["stop_reasons"]
+    assert "scope-expanded" in baseline["stale_revalidation"]["stop_reasons"]
+    boundary = baseline["boundary_enforcement"]
+    assert boundary["status"] == "fail-closed-contract"
+    assert boundary["baseline_id"] == baseline["baseline_id"]
+    assert {item["id"] for item in boundary["boundaries"]} == {
+        "returned-worker-admission",
+        "integration",
+        "destructive-mutation",
+        "proof-admission",
+        "closeout",
+    }
+    admission = next(item for item in boundary["boundaries"] if item["id"] == "returned-worker-admission")
+    assert "baseline-head-changed" in admission["reject_on"]
+    assert "assignment-target-mismatch" in admission["reject_on"]
+    assert "assignment-revision-mismatch" in admission["reject_on"]
+    assert envelope["enforcement"]["host_enforceable"] == [
+        "live mutation baseline admission",
+        "full scoped mutation fingerprint comparison",
+        "mutation claim overlap admission",
+        "trusted governance receipt binding",
+        "side-effect taxonomy decisions",
+        "delegated authority narrowing",
+    ]
+
+
+def test_mutation_baseline_fails_closed_when_git_unreadable(tmp_path: Path) -> None:
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/app.py"])
+
+    assert baseline["status"] == "baseline-observation-failed"
+    assert baseline["observation"]["ok"] is False
+    admission = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=baseline,
+        allowed_paths=["src/app.py"],
+    )
+    assert admission["status"] == "rejected"
+    assert "baseline-observation-failed" in {failure["reason"] for failure in admission["failures"]}
+
+
+def test_mutation_baseline_parses_z_status_renames_and_unusual_paths(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "old name.txt", "baseline\n")
+    subprocess.run(["git", "add", "src/old name.txt"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "mv", "src/old name.txt", "src/new name.txt"], cwd=tmp_path, check=True, capture_output=True, text=True)
+
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src"])
+
+    entry = baseline["observed_state"]["entries"][0]
+    assert entry["rename_or_copy"] is True
+    assert entry["path"] == "src/new name.txt"
+    assert entry["original_path"] == "src/old name.txt"
+    assert entry["paths"] == ["src/new name.txt", "src/old name.txt"]
+
+
+def test_mutation_baseline_revalidation_admits_clean_noop_and_rejects_stale_head(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "baseline\n")
+    subprocess.run(["git", "add", "src/app.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/app.py"])
+
+    clean = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
+    assert clean["admitted"] is True
+    assert clean["clean_noop"] is True
+
+    _write(tmp_path / "src" / "next.py", "next\n")
+    subprocess.run(["git", "add", "src/next.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "move head"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    stale = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
+
+    assert stale["admitted"] is False
+    assert {"baseline-head-changed", "scoped-state-fingerprint-changed"}.issubset({failure["reason"] for failure in stale["failures"]})
+
+
+def test_mutation_baseline_revalidation_rejects_same_path_content_drift(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "baseline\n")
+    subprocess.run(["git", "add", "src/app.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "first dirty state\n")
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/app.py"])
+    _write(tmp_path / "src" / "app.py", "second dirty state\n")
+
+    revalidation = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
+
+    assert revalidation["admitted"] is False
+    assert "scoped-state-fingerprint-changed" in {failure["reason"] for failure in revalidation["failures"]}
+
+
+def test_mutation_baseline_revalidation_rejects_post_cap_content_drift(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    for index in range(25):
+        _write(tmp_path / "src" / f"file_{index:02d}.py", "baseline\n")
+    subprocess.run(["git", "add", "src"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    for index in range(25):
+        _write(tmp_path / "src" / f"file_{index:02d}.py", f"dirty {index}\n")
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src"])
+    _write(tmp_path / "src" / "file_24.py", "post cap drift\n")
+
+    revalidation = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
+
+    assert baseline["observed_state"]["omitted_entry_count"] == 5
+    assert revalidation["admitted"] is False
+    assert "scoped-state-fingerprint-changed" in {failure["reason"] for failure in revalidation["failures"]}
+
+
+def test_mutation_baseline_revalidation_rejects_untracked_managed_state(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "app.py", "baseline\n")
+    subprocess.run(["git", "add", "src/app.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    baseline = mutation_baseline_payload(target_root=tmp_path, changed_paths=["."])
+
+    _write(tmp_path / ".agentic-workspace" / "local" / "state.json", "{}\n")
+    revalidation = revalidate_mutation_baseline(target_root=tmp_path, expected=baseline)
+
+    assert revalidation["admitted"] is False
+    assert "untracked-managed-state" in {failure["reason"] for failure in revalidation["failures"]}
+
+
+def test_mutation_boundary_admission_rejects_integration_destructive_and_closeout_boundaries() -> None:
+    expected = {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "expected",
+        "head": "HEAD_A",
+        "scope": {"allowed_paths": ["src"]},
+        "assignment": {"target_identity_ref": "target/planner", "assignment_revision": "assignment-rev-1"},
+        "observed_state": {"entries": []},
+    }
+    current = {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "current",
+        "head": "HEAD_B",
+        "scope": {"allowed_paths": ["src"]},
+        "assignment": {"target_identity_ref": "target/planner", "assignment_revision": "assignment-rev-1"},
+        "observed_state": {"entries": []},
+    }
+
+    for boundary_id in ("integration", "destructive-mutation", "proof-admission", "closeout"):
+        admission = admit_mutation_boundary(boundary_id=boundary_id, expected=expected, current=current)
+        assert admission["status"] == "rejected"
+        assert admission["admitted"] is False
+        assert admission["boundary_id"] == boundary_id
+        assert admission["failures"][0]["reason"] == "baseline-head-changed"
+
+
+def test_mutation_boundary_admission_rejects_missing_baseline_pair() -> None:
+    admission = admit_mutation_boundary(boundary_id="returned-worker-admission", expected=None, current={})
+
+    assert admission["status"] == "rejected"
+    assert admission["admitted"] is False
+    assert admission["failures"][0]["reason"] == "mutation-baseline-missing"
+    assert admission["failures"][0]["field"] == "expected_mutation_baseline,current_mutation_baseline"
+    assert "proof-admission" in admission["required_for"]
+
+
+def test_mutation_boundary_admission_rejects_assignment_revision_mismatch() -> None:
+    expected = {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "expected",
+        "head": "HEAD_A",
+        "scope": {"allowed_paths": ["src"]},
+        "assignment": {"target_identity_ref": "target/planner", "assignment_revision": "assignment-rev-1"},
+        "observed_state": {"entries": []},
+    }
+    current = {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "expected",
+        "head": "HEAD_A",
+        "scope": {"allowed_paths": ["src"]},
+        "assignment": {"target_identity_ref": "target/planner", "assignment_revision": "assignment-rev-2"},
+        "observed_state": {"entries": []},
+    }
+
+    admission = admit_mutation_boundary(boundary_id="integration", expected=expected, current=current)
+
+    assert admission["status"] == "rejected"
+    assert admission["failures"][0]["reason"] == "assignment-revision-mismatch"
+    assert admission["failures"][0]["field"] == "assignment.assignment_revision"
+
+
+def test_live_mutation_boundary_snapshots_current_git_instead_of_trusting_supplied_baseline(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "feature.py", "baseline\n")
+    subprocess.run(["git", "add", "src/feature.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    expected = mutation_baseline_payload(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        assignment_target_identity_ref="target/planner",
+        assignment_revision="assignment-rev-1",
+    )
+    _write(tmp_path / "src" / "other.py", "head moved\n")
+    subprocess.run(["git", "add", "src/other.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "move head"], cwd=tmp_path, check=True, capture_output=True, text=True)
+
+    admission = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=expected,
+        assignment_target_identity_ref="target/planner",
+        assignment_revision="assignment-rev-1",
+        allowed_paths=["src/feature.py"],
+    )
+
+    assert admission["status"] == "rejected"
+    assert admission["live_resolution"]["source"] == "boundary.live-git-snapshot"
+    assert admission["live_resolution"]["trusted_supplied_current_baseline"] is False
+    assert "baseline-head-changed" in {failure["reason"] for failure in admission["failures"]}
+
+
+def test_live_mutation_boundary_rejects_overlapping_claim_and_cleans_up_owner_claim(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "feature.py", "baseline\n")
+    subprocess.run(["git", "add", "src/feature.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    expected = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/feature.py"])
+
+    first = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=expected,
+        allowed_paths=["src/feature.py"],
+        owner_id="worker-a",
+        claim_action="acquire",
+    )
+    second = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=expected,
+        allowed_paths=["src"],
+        owner_id="worker-b",
+        claim_action="inspect",
+    )
+    cleanup = admit_live_mutation_boundary(
+        boundary_id="closeout",
+        target_root=tmp_path,
+        expected=expected,
+        allowed_paths=["src/feature.py"],
+        owner_id="worker-a",
+        claim_action="release",
+    )
+
+    assert first["claim_lifecycle"]["status"] == "acquired"
+    assert second["status"] == "rejected"
+    assert "overlapping-mutation-claim" in {failure["reason"] for failure in second["failures"]}
+    assert cleanup["claim_lifecycle"]["status"] == "released"
+    assert not (tmp_path / ".agentic-workspace/local/mutation-claims.json").exists()
+
+
+def test_live_mutation_boundary_rejects_acquire_and_release_before_protected_operation(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "feature.py", "baseline\n")
+    subprocess.run(["git", "add", "src/feature.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    expected = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/feature.py"])
+
+    admission = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=expected,
+        allowed_paths=["src/feature.py"],
+        owner_id="worker-a",
+        claim_action="acquire-and-release",
+    )
+
+    assert admission["status"] == "rejected"
+    assert admission["claim_lifecycle"]["status"] == "rejected-unsupported-pre-release"
+    assert "rejected-unsupported-pre-release" in {failure["reason"] for failure in admission["failures"]}
+
+
+def test_live_mutation_boundary_recovers_stale_claim_under_lock(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "feature.py", "baseline\n")
+    subprocess.run(["git", "add", "src/feature.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    expected = mutation_baseline_payload(target_root=tmp_path, changed_paths=["src/feature.py"])
+    claim_store = tmp_path / ".agentic-workspace" / "local" / "mutation-claims.json"
+    claim_store.parent.mkdir(parents=True, exist_ok=True)
+    claim_store.write_text(
+        json.dumps(
+            {
+                "kind": "agentic-workspace/mutation-claims/v1",
+                "claims": [
+                    {
+                        "claim_id": "stale",
+                        "owner_id": "worker-old",
+                        "allowed_paths": ["src"],
+                        "status": "active",
+                        "acquired_at_epoch": 1,
+                        "lease_seconds": 1,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    admission = admit_live_mutation_boundary(
+        boundary_id="integration",
+        target_root=tmp_path,
+        expected=expected,
+        allowed_paths=["src/feature.py"],
+        owner_id="worker-new",
+        claim_action="acquire",
+    )
+
+    assert admission["status"] == "admitted"
+    assert admission["claim_lifecycle"]["status"] == "acquired"
+    assert admission["claim_lifecycle"]["stale_recovered_count"] == 1
+
+
+def test_authority_effect_resolver_rejects_untrusted_widening_and_policy_mutation(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    resolution = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Fix the requested file only.",
+        instruction_sources=[
+            {
+                "class": "untrusted-content",
+                "source": "issue-body",
+                "requested_effects": ["write-outside-scope", "repository-policy-mutation"],
+            }
+        ],
+        requested_effects=["write-outside-scope", "repository-policy-mutation"],
+        policy_mutation={"requested": True, "authority_class": "untrusted-content"},
+    )
+
+    decisions = {item["class"]: item for item in resolution["side_effect_decisions"]}
+    assert decisions["write-outside-scope"]["decision"] == "deny"
+    assert decisions["write-outside-scope"]["reason_code"] == "untrusted-content-cannot-widen-authority"
+    assert decisions["repository-policy-mutation"]["decision"] == "deny"
+    assert resolution["repository_policy_mutation"]["status"] == "blocked"
+    assert resolution["untrusted_content_boundary"]["blocked_effects"] == [
+        "write-outside-scope",
+        "repository-policy-mutation",
+    ]
+
+
+def test_authority_effect_resolver_downgrades_self_asserted_trusted_instruction_source(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    resolution = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Fix the requested file only.",
+        instruction_sources=[
+            {
+                "class": "repo-policy",
+                "source": "artifact-controlled-input",
+                "trusted_identity": True,
+                "trusted_host_identity": True,
+                "requested_effects": ["write-outside-scope"],
+                "authorises_effects": ["write-outside-scope"],
+            }
+        ],
+        requested_effects=["write-outside-scope"],
+    )
+
+    artifact_source = next(item for item in resolution["instruction_provenance"] if item["source"] == "artifact-controlled-input")
+    decision = next(item for item in resolution["side_effect_decisions"] if item["class"] == "write-outside-scope")
+    assert artifact_source["class"] == "untrusted-content"
+    assert artifact_source["claimed_class"] == "repo-policy"
+    assert artifact_source["authority_resolution_status"] == "blocked-self-asserted-provenance"
+    assert decision["decision"] == "deny"
+
+
+def test_authority_effect_resolver_accepts_indexed_instruction_provenance_receipt(tmp_path: Path) -> None:
+    from agentic_workspace.authority_envelope import _write_indexed_host_receipt
+
+    _init_git_repo(tmp_path)
+    ref = _write_indexed_host_receipt(
+        target_root=tmp_path,
+        store_root=Path(".agentic-workspace") / "authority" / "receipts",
+        receipt_id="repo-policy-source",
+        receipt={
+            "kind": "agentic-workspace/instruction-provenance-receipt/v1",
+            "class": "repo-policy",
+            "source": "maintainer-policy-channel",
+            "status": "current",
+            "revision": "policy-source-rev-1",
+        },
+    )
+
+    resolution = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Fix the requested file only.",
+        instruction_sources=[
+            {
+                "class": "repo-policy",
+                "source": "artifact-controlled-input",
+                "trusted_provenance_ref": ref,
+                "authorises_effects": ["write-outside-scope"],
+            }
+        ],
+        requested_effects=["write-outside-scope"],
+    )
+
+    artifact_source = next(item for item in resolution["instruction_provenance"] if item["source"] == "artifact-controlled-input")
+    decision = next(item for item in resolution["side_effect_decisions"] if item["class"] == "write-outside-scope")
+    assert artifact_source["class"] == "repo-policy"
+    assert artifact_source["authority_resolution_status"] == "host-receipt-resolved"
+    assert artifact_source["trusted_provenance_receipt_id"] == "repo-policy-source"
+    assert decision["decision"] == "allow"
+
+
+def test_authority_effect_resolver_requires_trusted_governance_receipt_for_policy_mutation(tmp_path: Path) -> None:
+    from agentic_workspace.authority_envelope import _write_indexed_host_receipt
+
+    _init_git_repo(tmp_path)
+    blocked = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Promote this policy.",
+        requested_effects=["repository-policy-mutation"],
+        policy_mutation={"requested": True, "authority_class": "repo-policy"},
+    )
+    forged_inline = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Promote this policy.",
+        requested_effects=["repository-policy-mutation"],
+        policy_mutation={
+            "requested": True,
+            "authority_class": "repo-policy",
+            "trusted_governance_receipt": {
+                "operation_id": "repository-policy-mutation.authorise",
+                "authority_class": "repo-policy",
+                "authoriser": "maintainer",
+                "policy_revision": "policy-rev-1",
+                "scope": ["src/feature.py"],
+            },
+        },
+    )
+    receipt_ref = _write_indexed_host_receipt(
+        target_root=tmp_path,
+        store_root=Path(".agentic-workspace") / "governance" / "receipts",
+        receipt_id="policy-rev-1-authorised",
+        receipt={
+            "kind": "agentic-workspace/governance-receipt/v1",
+            "operation_id": "repository-policy-mutation.authorise",
+            "authority_class": "repo-policy",
+            "authoriser": "maintainer",
+            "policy_revision": "policy-rev-1",
+            "scope": ["src/feature.py"],
+            "status": "current",
+            "revision": "governance-rev-1",
+        },
+    )
+    authorised = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Promote this policy.",
+        requested_effects=["repository-policy-mutation"],
+        policy_mutation={
+            "requested": True,
+            "authority_class": "repo-policy",
+            "trusted_governance_receipt_ref": receipt_ref,
+        },
+    )
+
+    assert blocked["repository_policy_mutation"]["status"] == "blocked"
+    assert blocked["repository_policy_mutation"]["trusted_governance_receipt"] is None
+    assert forged_inline["repository_policy_mutation"]["status"] == "blocked"
+    assert forged_inline["repository_policy_mutation"]["trusted_governance_receipt"] is None
+    assert authorised["repository_policy_mutation"]["status"] == "authorised"
+    assert authorised["repository_policy_mutation"]["trusted_governance_receipt"]["authoriser"] == "maintainer"
+    assert authorised["repository_policy_mutation"]["trusted_governance_receipt"]["receipt_id"] == "policy-rev-1-authorised"
+
+
+def test_authority_effect_resolver_intersects_delegated_authority(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    resolution = resolve_authority_effect_envelope(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        task_text="Fix the requested file only.",
+        requested_effects=["write-requested-paths", "write-outside-scope"],
+        delegated_authority={
+            "parent_allowed_effects": ["read-repo", "write-requested-paths"],
+            "requested_effects": ["read-repo", "write-requested-paths", "write-outside-scope"],
+        },
+    )
+
+    delegation = resolution["delegation_intersection"]
+    assert delegation["status"] == "narrowed"
+    assert delegation["effective_allowed_effects"] == ["read-repo", "write-requested-paths"]
+    assert delegation["rejected_effects"] == ["write-outside-scope"]
 
 
 def test_implement_tiny_surfaces_local_high_risk_overlay(tmp_path: Path, capsys) -> None:
@@ -7966,7 +8546,18 @@ def test_implement_required_best_fit_manual_transport_policy_states(
     assert "stale-assignment-revision" in admission_gate["operation"]["rejects"]
 
 
-def _complete_assignment_gate() -> dict[str, object]:
+def _complete_assignment_gate(mutation_baseline: dict[str, object] | None = None) -> dict[str, object]:
+    baseline = mutation_baseline or {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "baseline-1",
+        "head": "HEAD_A",
+        "scope": {"allowed_paths": ["src/feature.py"]},
+        "assignment": {
+            "target_identity_ref": "target:planner@2026-07-21",
+            "assignment_revision": "assignment-rev-1",
+        },
+        "observed_state": {"entries": []},
+    }
     return {
         "status": "handoff-required",
         "assignment_policy": "required-best-fit",
@@ -7986,8 +8577,8 @@ def _complete_assignment_gate() -> dict[str, object]:
         "allowed_paths": ["src/feature.py"],
         "proof_obligation": {"id": "proof:feature", "revision": "proof-rev-1"},
         "stop_conditions": ["scope-expanded"],
-        "mutation_baseline": "baseline-1",
-        "live_mutation_baseline": "baseline-1",
+        "mutation_baseline": baseline,
+        "live_mutation_baseline": baseline,
         "aw_proof_receipt": {"result": "passed", "verified_by": "aw", "revision": "proof-rev-1"},
     }
 
@@ -8001,6 +8592,21 @@ def _complete_delegation_decision(execution_methods: list[str] | None = None) ->
             "return_schema": "delegated-return/v1",
         },
     }
+
+
+def _repo_with_assignment_baseline(tmp_path: Path) -> dict[str, object]:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Test User"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    _write(tmp_path / "src" / "feature.py", "baseline\n")
+    subprocess.run(["git", "add", "src/feature.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "baseline"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    return mutation_baseline_payload(
+        target_root=tmp_path,
+        changed_paths=["src/feature.py"],
+        assignment_target_identity_ref="target:planner@2026-07-21",
+        assignment_revision="assignment-rev-1",
+    )
 
 
 def _current_delegated_authorities(
@@ -8056,8 +8662,8 @@ def test_delegated_return_admission_rejects_caller_supplied_authority_without_li
     assert "current_authorities.assignment_gate" in result["authority_resolution"]["missing_required_authorities"]
 
 
-def test_delegated_return_admission_rejects_stale_and_admits_current_assignment() -> None:
-    assignment_gate = _complete_assignment_gate()
+def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(tmp_path: Path) -> None:
+    assignment_gate = _complete_assignment_gate(_repo_with_assignment_baseline(tmp_path))
     assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
     delegation_decision = _complete_delegation_decision()
     identity = workspace_runtime_core._assignment_identity_payload(
@@ -8070,6 +8676,7 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
         assignment_gate=assignment_gate,
         assignment_policy=assignment_policy,
         delegation_decision=delegation_decision,
+        target_root=tmp_path,
         returned_work={"assignment_revision": "sha256:stale", "target": "planner", "aw_proof": {"result": "passed", "verified_by": "aw"}},
         current_authorities=_current_delegated_authorities(assignment_gate, assignment_policy, delegation_decision),
     )
@@ -8080,6 +8687,7 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
         assignment_gate=assignment_gate,
         assignment_policy=assignment_policy,
         delegation_decision=delegation_decision,
+        target_root=tmp_path,
         returned_work={
             "assignment_revision": identity["revision"],
             "target": "planner",
@@ -8090,6 +8698,45 @@ def test_delegated_return_admission_rejects_stale_and_admits_current_assignment(
     )
     assert admitted["admitted"] is True
     assert admitted["status"] == "admitted"
+
+
+def test_delegated_return_admission_rejects_live_mutation_baseline_drift(tmp_path: Path) -> None:
+    expected_baseline = _repo_with_assignment_baseline(tmp_path)
+    assignment_gate = _complete_assignment_gate(expected_baseline)
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = _complete_delegation_decision()
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+    _write(tmp_path / "src" / "other.py", "head moved\n")
+    subprocess.run(["git", "add", "src/other.py"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "commit", "-m", "move head"], cwd=tmp_path, check=True, capture_output=True, text=True)
+
+    result = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        current_authorities={
+            "assignment_gate": assignment_gate,
+            "aw_proof_receipt": {"result": "passed", "verified_by": "aw", "revision": "proof-rev-live"},
+            "live_mutation_baseline": expected_baseline,
+            "run_state": {"status": "awaiting-admission", "run_id": "run-1"},
+        },
+        target_root=tmp_path,
+        returned_work={
+            "assignment_revision": identity["revision"],
+            "target": "planner",
+            "changed_paths": ["src/feature.py"],
+        },
+    )
+
+    assert result["admitted"] is False
+    assert result["mutation_revalidation"]["status"] == "rejected"
+    assert "baseline-head-changed" in {failure["reason"] for failure in result["failures"]}
+    assert result["current_authority"]["baseline_source"] == "boundary.live-git-snapshot"
+    assert result["current_authority"]["caller_reported_baseline_trusted"] is False
 
 
 def test_delegated_return_admission_reresolves_live_authorities_before_admission() -> None:
@@ -8131,8 +8778,35 @@ def test_delegated_return_admission_reresolves_live_authorities_before_admission
     assert result["authority_resolution"]["status"] == "live-resolved"
     assert result["authority_resolution"]["sources"]["assignment_gate"] == "current_authorities.assignment_gate"
     assert result["current_authority"]["proof_source"] == "current_authorities.proof_receipt"
-    assert result["current_authority"]["baseline_source"] == "current_authorities.live_mutation_baseline"
+    assert result["current_authority"]["baseline_source"] == "boundary.live-snapshot-unavailable"
+    assert result["current_authority"]["caller_baseline_source"] == "current_authorities.live_mutation_baseline"
     assert result["failures"][0]["reason"] == "stale-assignment-revision"
+
+
+def test_delegated_return_admission_rejects_missing_live_boundary_snapshot() -> None:
+    assignment_gate = _complete_assignment_gate()
+    assignment_policy = {"manual_transport_policy": {"value": "allowed"}}
+    delegation_decision = _complete_delegation_decision()
+    identity = workspace_runtime_core._assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+
+    result = workspace_runtime_core._admit_delegated_return(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        returned_work={
+            "assignment_revision": identity["revision"],
+            "target": "planner",
+            "changed_paths": ["src/feature.py"],
+        },
+    )
+
+    assert result["admitted"] is False
+    assert result["mutation_revalidation"]["status"] == "rejected"
+    assert "mutation-baseline-missing" in {failure["reason"] for failure in result["failures"]}
 
 
 def test_delegated_return_admission_rejects_duplicate_or_closed_live_run_state() -> None:
@@ -8277,8 +8951,8 @@ def test_delegated_return_admission_rejects_incomplete_identity_before_revision_
     assert result["failures"][0]["reason"] == "incomplete-assignment-identity"
 
 
-def test_delegated_return_admission_disabled_manual_allows_current_automatic_route() -> None:
-    assignment_gate = _complete_assignment_gate()
+def test_delegated_return_admission_disabled_manual_allows_current_automatic_route(tmp_path: Path) -> None:
+    assignment_gate = _complete_assignment_gate(_repo_with_assignment_baseline(tmp_path))
     assignment_policy = {"manual_transport_policy": {"value": "disabled"}}
     delegation_decision = _complete_delegation_decision(["cli"])
     identity = workspace_runtime_core._assignment_identity_payload(
@@ -8291,6 +8965,7 @@ def test_delegated_return_admission_disabled_manual_allows_current_automatic_rou
         assignment_gate=assignment_gate,
         assignment_policy=assignment_policy,
         delegation_decision=delegation_decision,
+        target_root=tmp_path,
         returned_work={
             "assignment_revision": identity["revision"],
             "target": "planner",

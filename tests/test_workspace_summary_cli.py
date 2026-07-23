@@ -186,7 +186,13 @@ candidates = []
     assert loop["safe_claim"] in {"full", "partial", "blocked", "none"}
 
 
-def _closeout_report_with_installed_state(tmp_path: Path, *, changed_surfaces: str, requested_outcome: str) -> dict[str, object]:
+def _closeout_report_with_installed_state(
+    tmp_path: Path,
+    *,
+    changed_surfaces: str,
+    requested_outcome: str,
+    closeout_trust: dict[str, object] | None = None,
+) -> dict[str, object]:
     config = workspace_runtime_core._load_workspace_config(target_root=tmp_path)
     installed_state = {
         "status": "payload-upgrade-required",
@@ -212,7 +218,7 @@ def _closeout_report_with_installed_state(tmp_path: Path, *, changed_surfaces: s
         target_root=tmp_path,
         config=config,
         source_payload={
-            "closeout_trust": {},
+            "closeout_trust": closeout_trust or {},
             "installed_state_compatibility": installed_state,
             "architecture_principles": {},
         },
@@ -274,6 +280,57 @@ def test_closeout_report_composes_closeout_ready_phase_answer(tmp_path: Path) ->
     assert "dogfooding" in remaining_by_id
     assert "dogfooding_signal_status" in ready["drilldowns"]
     assert "Unknown, stale, or omitted evidence" in ready["conservative_unknown_rule"]
+
+
+def test_closeout_report_rejects_stale_mutation_baseline(tmp_path: Path) -> None:
+    expected = {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "expected",
+        "head": "HEAD_A",
+        "scope": {"allowed_paths": ["src"]},
+        "assignment": {"target_identity_ref": "target/planner", "assignment_revision": "assignment-rev-1"},
+        "observed_state": {"entries": []},
+    }
+    current = {
+        "kind": "agentic-workspace/mutation-baseline/v1",
+        "baseline_id": "current",
+        "head": "HEAD_B",
+        "scope": {"allowed_paths": ["src"]},
+        "assignment": {"target_identity_ref": "target/planner", "assignment_revision": "assignment-rev-1"},
+        "observed_state": {"entries": []},
+    }
+    report = _closeout_report_with_installed_state(
+        tmp_path,
+        changed_surfaces="src/agentic_workspace/workspace_runtime_core.py",
+        requested_outcome="Close after mutation baseline revalidation.",
+        closeout_trust={
+            "expected_mutation_baseline": expected,
+            "current_mutation_baseline": current,
+            "allowed_paths": ["src"],
+        },
+    )
+
+    revalidation = report["validation"]["mutation_baseline_revalidation"]
+    assert revalidation["status"] == "rejected"
+    assert revalidation["boundary_id"] == "closeout"
+    remaining = {item["id"]: item for item in report["closeout_ready"]["remaining_actions"]}
+    assert "mutation_baseline_revalidation" in report["completion_gate"]["claim_authorization"]["blocked_claim_classes"]
+    assert "claim_authorization" in remaining
+
+
+def test_closeout_report_rejects_missing_mutation_baseline(tmp_path: Path) -> None:
+    report = _closeout_report_with_installed_state(
+        tmp_path,
+        changed_surfaces="src/agentic_workspace/workspace_runtime_core.py",
+        requested_outcome="Close after mutation baseline revalidation.",
+        closeout_trust={"allowed_paths": ["src"]},
+    )
+
+    revalidation = report["validation"]["mutation_baseline_revalidation"]
+    assert revalidation["status"] == "rejected"
+    assert revalidation["boundary_id"] == "closeout"
+    assert revalidation["failures"][0]["reason"] == "mutation-baseline-missing"
+    assert "mutation_baseline_revalidation" in report["completion_gate"]["claim_authorization"]["blocked_claim_classes"]
 
 
 def test_closeout_ready_phase_answer_surfaces_unsafe_closure_actions() -> None:
