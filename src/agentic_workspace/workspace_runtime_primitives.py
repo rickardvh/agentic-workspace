@@ -209,6 +209,7 @@ from agentic_workspace.workspace_runtime_startup import (
 from agentic_workspace.workspace_selector_validation import (
     _field_by_path,
     _select_payload_fields,
+    _selector_inventory_selected_payload,
     _selector_prevalidation_error,
     _selector_tokens,
 )
@@ -43101,6 +43102,9 @@ def _emit_proof(
         return
     if prevalidation_error := _selector_prevalidation_error(select=select, source_command="proof"):
         _emit_payload(payload=prevalidation_error, format_name=format_name)
+        return
+    if inventory_payload := _selector_inventory_selected_payload(select=select, source_command="proof"):
+        _emit_payload(payload=inventory_payload, format_name=format_name)
         return
     if record_receipt:
         payload = _record_proof_receipt_payload(
