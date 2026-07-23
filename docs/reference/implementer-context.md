@@ -83,9 +83,9 @@ Cheap implementer context for a bounded changed-path scope.
 | `package_boundary.warning` | string \| null | yes |  | Warning contract value used by this contract. |  |  |
 | `package_boundary.package_root` | string | no |  | Package root text value used by this contract. |  |  |
 | `path_boundaries` | array of ref `#/$defs/path_boundary` | yes |  | Path-specific ownership and locality constraints for the changed paths. |  |  |
+| `authority_envelope` | object | no |  | Mutation authority envelope and point-in-time mutation baseline for the changed-path scope. |  |  |
 | `authority_markers` | array of ref `#/$defs/authority_marker` | yes |  | Authority markers relevant to the implementation scope. |  |  |
 | `change_impact` | object | yes |  | Changed-path ownership, generatedness, authority, related contract, and proof-impact projection. |  |  |
-| `authority_envelope` | object | no |  | Mutation authority envelope and point-in-time mutation baseline for the changed-path scope. |  |  |
 | `generated_surface_trust` | object | yes |  | Compact generated-source trust packet naming canonical source, freshness status, refresh command, direct-edit policy, and validation command for generated changed paths. |  |  |
 | `task_contract` | object | yes |  | Compact assembled task contract view covering intent, acceptance, autonomy/escalation, proof expectations, and stop conditions. |  |  |
 | `task_intent` | object | yes |  | Task-intent carry-forward packet used to derive acceptance, proof guidance, objective-drift checks, and closeout prompts. |  |  |
@@ -238,14 +238,20 @@ Cheap implementer context for a bounded changed-path scope.
 | `execution_posture.token_tradeoff` | string | yes |  | When token saving is acceptable or should be deferred. |  |  |
 | `execution_posture.ready_handoff` | anyOf | yes |  | Prompt or handoff packet to use when local mode allows manual or suggested delegation. |  |  |
 | `execution_posture.delegation_decision` | object | yes |  | Compact local delegation, escalation, clarification, or stay-local decision derived from local posture and changed-path signals. |  |  |
-| `execution_posture.implementation_allowed` | boolean | no |  | Whether the selected assignment/delegation posture permits local implementation for this scope. |  |  |
-| `execution_posture.assignment_policy` | object | no |  | Structured assignment policy and manual transport posture used for the delegation decision. |  |  |
-| `execution_posture.target_evidence` | object | no |  | Current target evidence used to evaluate assignment candidates. |  |  |
-| `execution_posture.assignment_decision` | object | no |  | Current assignment decision derived from policy, candidates, and target evidence. |  |  |
-| `execution_posture.assignment_gate` | object | no |  | Assignment gate preserving the handoff identity, allowed effects, proof obligation, and mutation baseline. |  |  |
-| `execution_posture.delegated_run_lifecycle` | object | no |  | Delegated run lifecycle, public operations, transport status, and return admission gate. |  |  |
+| `execution_posture.implementation_allowed` | boolean | no |  | Whether the current implement posture may proceed under assignment and safety gates. |  |  |
+| `execution_posture.assignment_policy` | object | no |  | Configured best-fit assignment policy for the current target and task scope. |  |  |
+| `execution_posture.target_evidence` | object | no |  | Provenance-aware target suitability evidence for the current changed-path scope. |  |  |
+| `execution_posture.assignment_decision` | object | no |  | Derived assignment or escalation decision based on target evidence and policy. |  |  |
+| `execution_posture.assignment_gate` | object | no |  | Implementation gate that blocks unresolved or mismatched required-best-fit assignments. |  |  |
+| `execution_posture.delegated_run_lifecycle` | object | no |  | Delegated-run lifecycle projection for assignment handoff, execution, return, and admission. |  |  |
 | `execution_posture.decomposition_delegation` | object | no |  | Delegation candidates discovered from active planning decompositions, when active decomposed work is visible. |  |  |
 | `execution_posture.inference_limits` | array of string | yes |  | Limits that prevent the posture recommendation from becoming hidden execution authority. |  |  |
+| `target_evidence` | object | no |  | Provenance-aware target suitability evidence for the current changed-path scope. |  |  |
+| `assignment_policy` | object | no |  | Configured best-fit assignment policy for the current target and task scope. |  |  |
+| `assignment_decision` | object | no |  | Derived assignment or escalation decision based on target evidence and policy. |  |  |
+| `assignment_gate` | object | no |  | Implementation gate that blocks unresolved or mismatched required-best-fit assignments. |  |  |
+| `delegated_run_lifecycle` | object | no |  | Delegated-run lifecycle projection for assignment handoff, execution, return, and admission. |  |  |
+| `implementation_allowed` | boolean | no |  | Whether the current implement posture may proceed under assignment and safety gates. |  |  |
 | `durable_intent` | object | yes |  | Compact durable system or subsystem intent pressure that may affect scope, proof, delegation, or closeout. |  |  |
 | `durable_intent_promotion` | ref `#/$defs/task_intent_promotion_guidance` | yes |  | Guidance for promoting non-finishable task intent into durable memory, docs, subsystem intent, or system intent. |  |  |
 | `durable_intent_promotion.kind` | const `"agentic-workspace/task-intent-promotion-guidance/v1"` | yes |  | Discriminator for durable task-intent promotion guidance. |  |  |

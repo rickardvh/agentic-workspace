@@ -1,0 +1,135 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "evaluation.observe",
+  "command_surface": {
+    "command": "evaluation",
+    "format_option": "format",
+    "subcommand": "observe"
+  },
+  "summary": "Append one local-first evaluation observation after resolving current assignment, proof, and mutation authority.",
+  "classification": "local-record-append",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "evaluation_id",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "criterion",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "result",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "evidence_refs",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "confidence",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "burden",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "context",
+      "source": "cli-option",
+      "required": true
+    },
+    {
+      "name": "finding",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "recommended_action",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "json",
+    "schema_ref": "schemas/evaluation_observation.schema.json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": true,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/evaluations.json",
+      "required": true
+    },
+    {
+      "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.authority.json",
+      "required": true
+    },
+    {
+      "surface": "git HEAD and scoped status",
+      "required": true
+    }
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/local/evaluations/<evaluation-id>.jsonl",
+      "required": true,
+      "when": "locked atomic append or idempotent duplicate return"
+    }
+  ],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "append",
+      "uses": "evaluation.observation.append",
+      "description": "Resolve authority, take the local lock, detect duplicates, and atomically append or return the prior record."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit append result."
+    }
+  ],
+  "guards": [
+    "Observation criterion must exist in the registered definition.",
+    "Terminal evaluations reject additional observations.",
+    "Observation context is comparison evidence only; assignment, mutation baseline, and AW proof authority resolve from the local authority receipt and live Git.",
+    "Concurrent/retried observations use a local lock, store revision, and idempotency key.",
+    "Each admitted observation/result carries a stable identity and supersedes previous current results for the same criterion.",
+    "External evidence is referenced, not copied, unless separately promoted."
+  ],
+  "proof": [
+    "evaluation unit tests",
+    "operation contract validates against operation.schema.json"
+  ],
+  "migration_status": "runtime-consumed"
+}

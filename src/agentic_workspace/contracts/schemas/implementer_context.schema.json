@@ -2173,6 +2173,11 @@
       },
       "description": "Path-specific ownership and locality constraints for the changed paths."
     },
+    "authority_envelope": {
+      "type": "object",
+      "description": "Instruction-provenance, side-effect, and mutation-baseline envelope for the requested changed-path scope.",
+      "additionalProperties": true
+    },
     "authority_markers": {
       "type": "array",
       "items": {
@@ -2482,6 +2487,35 @@
           "description": "Delegation candidates discovered from active planning decompositions, when active decomposed work is visible.",
           "additionalProperties": true
         },
+        "target_evidence": {
+          "type": "object",
+          "description": "Provenance-aware target suitability evidence for the current changed-path scope.",
+          "additionalProperties": true
+        },
+        "assignment_policy": {
+          "type": "object",
+          "description": "Configured best-fit assignment policy for the current target and task scope.",
+          "additionalProperties": true
+        },
+        "assignment_decision": {
+          "type": "object",
+          "description": "Derived assignment or escalation decision based on target evidence and policy.",
+          "additionalProperties": true
+        },
+        "assignment_gate": {
+          "type": "object",
+          "description": "Implementation gate that blocks unresolved or mismatched required-best-fit assignments.",
+          "additionalProperties": true
+        },
+        "delegated_run_lifecycle": {
+          "type": "object",
+          "description": "Delegated-run lifecycle projection for assignment handoff, execution, return, and admission.",
+          "additionalProperties": true
+        },
+        "implementation_allowed": {
+          "type": "boolean",
+          "description": "Whether the current implement posture may proceed under assignment and safety gates."
+        },
         "inference_limits": {
           "type": "array",
           "items": {
@@ -2494,6 +2528,35 @@
       },
       "additionalProperties": false,
       "description": "Actionable local execution posture for orchestration before implementation."
+    },
+    "target_evidence": {
+      "type": "object",
+      "description": "Provenance-aware target suitability evidence for the current changed-path scope.",
+      "additionalProperties": true
+    },
+    "assignment_policy": {
+      "type": "object",
+      "description": "Configured best-fit assignment policy for the current target and task scope.",
+      "additionalProperties": true
+    },
+    "assignment_decision": {
+      "type": "object",
+      "description": "Derived assignment or escalation decision based on target evidence and policy.",
+      "additionalProperties": true
+    },
+    "assignment_gate": {
+      "type": "object",
+      "description": "Implementation gate that blocks unresolved or mismatched required-best-fit assignments.",
+      "additionalProperties": true
+    },
+    "delegated_run_lifecycle": {
+      "type": "object",
+      "description": "Delegated-run lifecycle projection for assignment handoff, execution, return, and admission.",
+      "additionalProperties": true
+    },
+    "implementation_allowed": {
+      "type": "boolean",
+      "description": "Whether the current implement posture may proceed under assignment and safety gates."
     },
     "durable_intent": {
       "type": "object",

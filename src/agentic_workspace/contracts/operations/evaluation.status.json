@@ -1,0 +1,80 @@
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "evaluation.status",
+  "command_surface": {
+    "command": "evaluation",
+    "format_option": "format",
+    "subcommand": "status"
+  },
+  "summary": "Derive compact evaluation status from definitions and local observation streams.",
+  "classification": "read-only-report",
+  "inputs": [
+    {
+      "name": "target",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "evaluation_id",
+      "source": "cli-option",
+      "required": false
+    },
+    {
+      "name": "format",
+      "source": "cli-option",
+      "required": false
+    }
+  ],
+  "output": {
+    "kind": "json",
+    "schema_ref": "schemas/evaluation_summary.schema.json"
+  },
+  "effects": {
+    "read_only": true,
+    "destructive": false,
+    "idempotent": true,
+    "writes_repo_state": false,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": true,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {
+      "surface": ".agentic-workspace/evaluations.json",
+      "required": true
+    },
+    {
+      "surface": ".agentic-workspace/local/evaluations/*.jsonl",
+      "required": false
+    }
+  ],
+  "writes": [],
+  "steps": [
+    {
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve",
+      "description": "Resolve the target root."
+    },
+    {
+      "id": "status",
+      "uses": "evaluation.status.derive",
+      "description": "Derive compact status."
+    },
+    {
+      "id": "emit_output",
+      "uses": "output.emit",
+      "description": "Emit status result."
+    }
+  ],
+  "guards": [
+    "Status is derived and must not be edited as authority."
+  ],
+  "proof": [
+    "evaluation unit tests",
+    "operation contract validates against operation.schema.json"
+  ],
+  "migration_status": "runtime-consumed"
+}

@@ -32,6 +32,11 @@ from . import correction_event_withdraw_supersede as _command_correction_event_w
 from . import defaults_report as _command_defaults_report
 from . import delegation_outcome_append as _command_delegation_outcome_append
 from . import doctor_report as _command_doctor_report
+from . import evaluation_observe as _command_evaluation_observe
+from . import evaluation_prune as _command_evaluation_prune
+from . import evaluation_register as _command_evaluation_register
+from . import evaluation_status as _command_evaluation_status
+from . import evaluation_transition as _command_evaluation_transition
 from . import external_intent_refresh_github as _command_external_intent_refresh_github
 from . import final_response_admit as _command_final_response_admit
 from . import implement_context as _command_implement_context
@@ -86,6 +91,11 @@ GENERATED_COMMAND_HANDLERS = {
     'defaults.report': _command_defaults_report.run,
     'delegation-outcome.append': _command_delegation_outcome_append.run,
     'doctor.report': _command_doctor_report.run,
+    'evaluation.observe': _command_evaluation_observe.run,
+    'evaluation.prune': _command_evaluation_prune.run,
+    'evaluation.register': _command_evaluation_register.run,
+    'evaluation.status': _command_evaluation_status.run,
+    'evaluation.transition': _command_evaluation_transition.run,
     'external-intent.refresh-github': _command_external_intent_refresh_github.run,
     'final-response.admit': _command_final_response_admit.run,
     'implement.context': _command_implement_context.run,

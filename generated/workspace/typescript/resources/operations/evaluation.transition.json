@@ -1,0 +1,126 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "evaluation",
+    "format_option": "format",
+    "subcommand": "transition"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": false,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": true
+  },
+  "guards": [
+    "Invalid lifecycle transitions fail closed.",
+    "Expected revision, when provided, must match the current evaluation definition revision."
+  ],
+  "id": "evaluation.transition",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "evaluation_id",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "lifecycle",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "reason",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expected_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "arguments": {
+          "operation_id": "evaluation.transition"
+        },
+        "description": "Execute the operation through the generated TypeScript domain operation table.",
+        "id": "execute_typescript_domain_operation",
+        "on_error": "fail",
+        "outputs": [
+          "result"
+        ],
+        "uses": "typescript.domain.execute"
+      },
+      {
+        "arguments": {},
+        "description": "Emit the TypeScript-native operation result.",
+        "id": "emit_output",
+        "on_error": "emit_usage_error",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ],
+    "summary": "Generated TypeScript native runtime binding for a command whose source operation has not yet been decomposed into portable IR."
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "json",
+    "schema_ref": "schemas/evaluation_definition.schema.json"
+  },
+  "proof": [
+    "evaluation unit tests",
+    "operation contract validates against operation.schema.json"
+  ],
+  "reads": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/evaluations.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Validate and apply lifecycle transition.",
+      "id": "transition",
+      "uses": "evaluation.lifecycle.transition"
+    },
+    {
+      "description": "Emit transition result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Apply a validated evaluation lifecycle transition.",
+  "writes": [
+    {
+      "required": true,
+      "surface": ".agentic-workspace/evaluations.json",
+      "when": "lifecycle transition accepted"
+    }
+  ]
+}

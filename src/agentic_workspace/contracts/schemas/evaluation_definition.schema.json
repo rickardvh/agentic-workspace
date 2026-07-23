@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/evaluation-definition.schema.json",
+  "title": "Agentic Workspace Evaluation Definitions",
+  "description": "Canonical compact definitions for owner-bound longitudinal evaluations.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "required": ["kind", "evaluations"],
+  "properties": {
+    "kind": {"const": "agentic-workspace/evaluations/v1", "description": "Discriminator identifying the evaluation definition store."},
+    "evaluations": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/evaluation"},
+      "description": "Registered compact evaluation definitions."
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "owner": {
+      "type": "object",
+      "required": ["id", "class"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "class": {
+          "enum": ["human", "maintainer", "module-owner", "workflow-owner", "external-owner"],
+          "description": "Logs, transcripts, event streams, and metric streams may be evidence sources or sinks but not decision owners."
+        }
+      },
+      "additionalProperties": true
+    },
+    "endpoint": {
+      "type": "object",
+      "required": ["id", "class"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "class": {"type": "string", "minLength": 1}
+      },
+      "additionalProperties": true
+    },
+    "criterion": {
+      "type": "object",
+      "required": ["id", "type", "question", "success_condition"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "type": {"enum": ["boolean", "ordinal", "numeric", "qualitative", "coverage"]},
+        "question": {"type": "string", "minLength": 1},
+        "success_condition": {"type": "string", "minLength": 1},
+        "required": {"type": "boolean", "default": true}
+      },
+      "additionalProperties": false
+    },
+    "selectors": {
+      "type": "object",
+      "properties": {
+        "workflow_class": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "issue_refs": {"type": "array", "items": {"type": "string", "pattern": "^#[0-9]+$"}},
+        "operation_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "skill_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "model_or_target": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "subsystems": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "phases": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      },
+      "additionalProperties": false
+    },
+    "evaluation": {
+      "type": "object",
+      "required": [
+        "id",
+        "revision",
+        "lifecycle",
+        "question",
+        "subject",
+        "criteria",
+        "selectors",
+        "collection_policy",
+        "decision_owner",
+        "evidence_sources",
+        "report_sinks",
+        "conclusion_policy",
+        "action_policy"
+      ],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "revision": {"type": "integer", "minimum": 1},
+        "lifecycle": {
+          "enum": ["collecting", "enough-signal", "satisfied", "contradicted", "inconclusive", "paused", "superseded", "archived"]
+        },
+        "question": {"type": "string", "minLength": 1},
+        "subject": {"type": "object", "minProperties": 1, "additionalProperties": true},
+        "criteria": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/criterion"}},
+        "selectors": {"$ref": "#/$defs/selectors"},
+        "collection_policy": {"type": "object", "minProperties": 1, "additionalProperties": true},
+        "decision_owner": {"$ref": "#/$defs/owner"},
+        "evidence_sources": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/endpoint"}},
+        "report_sinks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/endpoint"}},
+        "conclusion_policy": {"type": "object", "minProperties": 1, "additionalProperties": true},
+        "action_policy": {"type": "object", "minProperties": 1, "additionalProperties": true},
+        "admission_contract": {"type": "object", "minProperties": 1, "additionalProperties": true},
+        "created_at": {"type": "string", "minLength": 1},
+        "updated_at": {"type": "string", "minLength": 1},
+        "last_transition": {"type": "object", "additionalProperties": true}
+      },
+      "additionalProperties": false
+    }
+  }
+}

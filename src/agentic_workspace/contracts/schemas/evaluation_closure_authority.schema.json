@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/evaluation-closure-authority.schema.json",
+  "title": "Agentic Workspace Evaluation Closure Authority",
+  "description": "Issue closeout split between present-tense implementation proof and longitudinal evaluation.",
+  "x-agentic-workspace-doc-role": "contract-reference",
+  "type": "object",
+  "required": [
+    "kind",
+    "implementation_proof",
+    "longitudinal_evaluation",
+    "issue_closure_authorized",
+    "blocked_reasons",
+    "rule"
+  ],
+  "properties": {
+    "kind": {"const": "agentic-workspace/evaluation-closure-authority/v1", "description": "Discriminator identifying closeout authorization under the evaluation split."},
+    "implementation_proof": {"enum": ["complete", "blocked"], "description": "Present-tense implementation proof status."},
+    "longitudinal_evaluation": {"enum": ["not-required", "valid", "invalid"], "description": "Whether remaining future uncertainty is backed by a valid evaluation."},
+    "evaluation_admission": {"enum": ["not-required", "definition-only", "fresh-bound-ready", "invalid"], "description": "How the longitudinal evaluation was admitted for closure authorization."},
+    "issue_closure_authorized": {"type": "boolean", "description": "Whether issue closure may be claimed under the split proof/evaluation rule."},
+    "blocked_reasons": {
+      "type": "array",
+      "items": {
+        "enum": ["implementation-incomplete", "present-tense-proof-incomplete", "longitudinal-evaluation-invalid"]
+      },
+      "description": "Reasons closure remains blocked."
+    },
+    "rule": {"type": "string", "minLength": 1, "description": "Human-readable authorization rule."}
+  },
+  "additionalProperties": false
+}
