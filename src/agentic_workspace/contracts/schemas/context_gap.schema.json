@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/context-gap.schema.json",
+  "title": "Agentic Workspace Context Gap",
+  "description": "Task-relevant coverage or population gap derived from declared AW input consumers and existing findings.",
+  "type": "object",
+  "required": [
+    "kind",
+    "id",
+    "gap_class",
+    "surface",
+    "affected_capability",
+    "affected_decisions",
+    "evidence_refs",
+    "confidence",
+    "severity",
+    "current_task_effect",
+    "owner",
+    "next_route"
+  ],
+  "properties": {
+    "kind": {"const": "agentic-workspace/context-gap/v1", "description": "Schema discriminator for context coverage and population gaps."},
+    "id": {"type": "string", "minLength": 1, "description": "Stable gap identity derived from gap class and surface."},
+    "gap_class": {
+      "type": "string",
+      "enum": [
+        "configured-but-missing",
+        "configured-but-unpopulated",
+        "declared-but-unroutable",
+        "consumer-without-source",
+        "coverage-gap",
+        "inference-fallback",
+        "unresolved-populated-finding"
+      ],
+      "description": "Coverage or population gap class."
+    },
+    "surface": {"type": "string", "description": "AW-consumed surface or surface class affected by the gap."},
+    "affected_capability": {"type": "string", "minLength": 1, "description": "AW capability weakened by the gap."},
+    "affected_decisions": {"type": "array", "items": {"type": "string"}, "description": "Specific routing, ownership, proof, continuation, or claim decisions affected."},
+    "evidence_refs": {"type": "array", "items": {"type": "string"}, "description": "Existing findings, declarations, or files that prove the gap."},
+    "confidence": {"type": "string", "enum": ["low", "medium", "high"], "description": "Confidence in the derived gap."},
+    "severity": {"type": "string", "enum": ["advisory", "blocking"], "description": "Whether the gap blocks the current decision or remains advisory."},
+    "current_task_effect": {"type": "string", "minLength": 1, "description": "How this gap changes the current task decision or claim boundary."},
+    "owner": {"type": "string", "minLength": 1, "description": "Surface or role that owns resolving the gap."},
+    "next_route": {"type": "string", "minLength": 1, "description": "Smallest bounded route to resolve or disposition the gap."}
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/context-authority-declaration.schema.json",
+  "title": "Agentic Workspace Context Authority Declaration",
+  "description": "Authority and lifecycle declaration for one AW-consumed context surface class.",
+  "type": "object",
+  "required": ["surface", "owner", "authority_class", "consumer", "activation", "editable_by", "stale_when", "proof_route", "disposition"],
+  "properties": {
+    "surface": {"type": "string", "minLength": 1, "description": "AW-consumed surface or surface class being declared."},
+    "owner": {"type": "string", "minLength": 1, "description": "Canonical owner for this operational input concern."},
+    "authority_class": {
+      "type": "string",
+      "enum": ["canonical", "derived", "advisory", "historical/evidence", "local-only", "temporary", "generated", "hard-gate"],
+      "description": "Authority class that determines whether consumers may route, validate, or only cite this input."
+    },
+    "consumer": {"type": "string", "minLength": 1, "description": "AW consumer or capability that reads this surface."},
+    "activation": {"type": "string", "minLength": 1, "description": "Task, path, or state condition that makes this surface applicable."},
+    "editable_by": {"type": "string", "minLength": 1, "description": "Operation, generator, or owner allowed to mutate this surface."},
+    "stale_when": {"type": "string", "minLength": 1, "description": "Freshness condition that invalidates the surface for routing or claims."},
+    "proof_route": {"type": "string", "minLength": 1, "description": "Validation route that proves this surface is current and usable."},
+    "disposition": {"type": "string", "minLength": 1, "description": "Retention, removal, archival, compression, or regeneration policy."}
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

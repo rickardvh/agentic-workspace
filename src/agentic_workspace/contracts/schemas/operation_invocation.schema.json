@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/operation-invocation.schema.json",
+  "title": "Agentic Workspace Operation Invocation",
+  "description": "Typed invocation for a routed AW action. This object owns machine action identity; rendered commands are display or manual transport forms.",
+  "type": "object",
+  "required": [
+    "kind",
+    "operation_id",
+    "contract_version",
+    "arguments",
+    "required_authority",
+    "idempotency_key",
+    "rule"
+  ],
+  "properties": {
+    "kind": {
+      "const": "agentic-workspace/operation-invocation/v1",
+      "description": "Schema discriminator for typed operation invocations."
+    },
+    "operation_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_.-]*$",
+      "description": "Stable operation identity from the operation contract registry."
+    },
+    "contract_version": {
+      "const": "agentic-workspace/operation/v1",
+      "description": "Version of the operation contract this invocation targets."
+    },
+    "arguments": {
+      "type": "object",
+      "description": "Typed operation arguments independent of shell rendering."
+    },
+    "effect_class": {
+      "type": "string",
+      "description": "Effect classification admitted for this invocation."
+    },
+    "authority_class": {
+      "type": "string",
+      "description": "Authority or enforcement class for the invocation."
+    },
+    "required_authority": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Authority source required before executing or trusting this invocation."
+    },
+    "preconditions": {
+      "type": "object",
+      "description": "Structured preconditions that must still hold before execution."
+    },
+    "owner_context_revision": {
+      "type": "object",
+      "description": "Owner, target, assignment, and context revision identity admitted into the action."
+    },
+    "mutation_boundary": {
+      "type": "object",
+      "description": "Exact mutation, handoff, or read-only boundary admitted for the action."
+    },
+    "proof_requirements": {
+      "type": "array",
+      "items": {},
+      "description": "Proof requirements that must be satisfied after successful execution."
+    },
+    "expected_input_revision": {
+      "type": "string",
+      "description": "Optional revision or freshness precondition for the input state."
+    },
+    "expected_transition": {
+      "type": "string",
+      "description": "Expected state transition that distinguishes progress from a same-state loop."
+    },
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$",
+      "description": "Stable retry identity derived from operation, arguments, revision, and transition."
+    },
+    "claim_effect": {
+      "type": "string",
+      "description": "Claim or proof effect authorized when the invocation succeeds."
+    },
+    "stale_action_rejection": {
+      "type": "object",
+      "description": "Fail-closed stale-action policy for consumers executing this invocation."
+    },
+    "renderings": {
+      "type": "object",
+      "description": "Display or manual transport renderings derived from the typed invocation.",
+      "properties": {
+        "cli": {
+          "type": "string",
+          "description": "CLI rendering for humans or manual execution."
+        },
+        "manual": {
+          "type": "string",
+          "description": "Manual recovery or adapter rendering when CLI is not the transport."
+        }
+      },
+      "additionalProperties": false
+    },
+    "rule": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Invariant explaining how consumers must treat this invocation."
+    }
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

@@ -33,7 +33,7 @@ from typing import Any, cast, overload
 from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
-from agentic_workspace.actionability import derive_actionability
+from agentic_workspace.actionability import derive_actionability, proposed_action_input_revision
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary
 from agentic_workspace.config import (
@@ -9912,14 +9912,16 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             "commands": commands,
             "detail_command": detail_command,
         }
+    proposed_action = _as_dict(payload.get("next_action"))
     actionability = derive_actionability(
         command_name=command_name,
         health=str(payload.get("health") or "unknown"),
         warnings=_list_payload(payload.get("warnings")),
         repair_actions=_list_payload(payload.get("repair_actions")),
         manual_review_actions=_list_payload(payload.get("manual_review_actions")),
-        proposed_next_action=_as_dict(payload.get("next_action")),
+        proposed_next_action=proposed_action,
         claim_limits=_list_payload(payload.get("needs_review")),
+        current_input_revision=proposed_action_input_revision(proposed_action),
     )
     payload["actionability"] = actionability
     payload["action_required"] = actionability["action_required"]

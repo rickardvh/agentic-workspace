@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-workspace/operating-decision.schema.json",
+  "title": "Agentic Workspace Operating Decision",
+  "description": "Derived internal decision composed from admitted AW authority surfaces. It emits exactly one primary action or one typed blocker.",
+  "type": "object",
+  "required": ["kind", "decision_id", "status", "input_revisions", "primary_action", "external_blocker", "replacement_map", "rule"],
+  "properties": {
+    "kind": {"const": "agentic-workspace/operating-decision/v1", "description": "Schema discriminator for the composed operating decision."},
+    "decision_id": {"type": "string", "pattern": "^operating-decision:[0-9a-f]{16}$", "description": "Stable identity derived from input revisions, action, blocker, and terminal state."},
+    "status": {"type": "string", "enum": ["actionable", "blocked", "terminal"], "description": "Whether the composed decision exposes an action, a blocker, or no immediate action."},
+    "input_revisions": {"type": "object", "description": "Revision or freshness identifiers supplied by specialist authority inputs."},
+    "canonical_decision_input_revision": {"type": "string", "description": "Canonical revision of the typed action's current owner, context, authority, proof, mutation, evaluation, and executor inputs."},
+    "context_authority_coverage": {"type": "object", "description": "Registry-derived coverage of context authority sources and ordinary consumers considered by the decision compiler."},
+    "current_work": {"type": "object", "description": "Current-work identity admitted into the composed decision."},
+    "selected_owner": {"type": "object", "description": "Selected owner identity admitted into the composed decision."},
+    "terminal_state": {"type": "string", "description": "Terminal outcome state used for continuation or finalization claims."},
+    "primary_action": {"type": "object", "description": "Exactly one typed primary action when status is actionable; empty otherwise."},
+    "external_blocker": {"type": "object", "description": "Exactly one typed blocker when status is blocked; empty otherwise."},
+    "blocked_claim_classes": {"type": "array", "items": {"type": "string"}, "description": "Claim classes this decision does not authorize."},
+    "provenance": {"type": "object", "description": "Specialist authority inputs and owners preserved for traceability."},
+    "replacement_map": {
+      "type": "object",
+      "description": "Compatibility map from older overlapping fields to their derived or demoted source.",
+      "additionalProperties": {"type": "string", "description": "Replacement, demotion, or derivation rule for one legacy field."}
+    },
+    "rule": {"type": "string", "minLength": 1, "description": "Invariant explaining authority composition and non-inference boundaries."}
+  },
+  "additionalProperties": false,
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

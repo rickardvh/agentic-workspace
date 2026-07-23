@@ -35,7 +35,7 @@ from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace import workspace_runtime_core as _workspace_runtime_core
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
-from agentic_workspace.actionability import derive_actionability
+from agentic_workspace.actionability import derive_actionability, operation_invocation, proposed_action_input_revision
 from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
 from agentic_workspace.authority_envelope import admit_live_mutation_boundary, revalidate_mutation_baseline
 from agentic_workspace.config import (
@@ -8697,6 +8697,47 @@ def _run_lifecycle_command(
             cli_invoke=config.cli_invoke,
         )
         closure_primary = _as_dict(payload["payload_closure_plan"].get("primary_next_action"))
+        if closure_primary and not isinstance(closure_primary.get("operation_invocation"), dict):
+            rendering = str(closure_primary.get("command") or closure_primary.get("run") or "")
+            closure_action = str(closure_primary.get("action") or "")
+            raw_operation_id = (
+                command_name
+                if closure_action in {"", "no-immediate-action"}
+                else str(closure_primary.get("operation_id") or closure_primary.get("id") or closure_action or command_name)
+            )
+            operation_id = (
+                "".join(char.lower() if char.isalnum() or char in {"_", ".", "-"} else "-" for char in raw_operation_id).strip("-.")
+                or command_name
+            )
+            closure_primary["operation_invocation"] = operation_invocation(
+                operation_id=operation_id,
+                arguments={"target": "./repo", "format": "json"},
+                effect_class="read-only-report",
+                authority_class="operation-contract",
+                expected_transition=str(closure_primary.get("expected_transition") or closure_primary.get("state_transition") or ""),
+                preconditions={
+                    "target": "./repo",
+                    "action": str(closure_primary.get("action") or ""),
+                    "required_before_claim": True,
+                },
+                owner_context_revision={
+                    "command": command_name,
+                    "target": "./repo",
+                    "closure_action": str(closure_primary.get("action") or ""),
+                },
+                mutation_boundary={
+                    "effect_class": "read-only-report",
+                    "writes_repo_state": False,
+                    "transport": "local-cli",
+                },
+                proof_requirements=[
+                    {
+                        "command": rendering or f"agentic-workspace {command_name} --target ./repo --format json",
+                        "claim": "payload closure state refreshed",
+                    }
+                ],
+                command_rendering=rendering,
+            )
         actionability = derive_actionability(
             command_name=command_name,
             health=str(payload.get("health") or "unknown"),
@@ -8705,6 +8746,7 @@ def _run_lifecycle_command(
             manual_review_actions=manual_review_actions,
             proposed_next_action=closure_primary,
             claim_limits=_list_payload(payload.get("needs_review")),
+            current_input_revision=proposed_action_input_revision(closure_primary),
         )
         payload["actionability"] = actionability
         payload["action_required"] = actionability["action_required"]
@@ -8978,15 +9020,28 @@ def _compact_status_payload(payload: dict[str, Any], *, cli_invoke: str) -> dict
             "run": commands[0],
             "commands": commands,
             "detail_command": detail_command,
+            "operation_invocation": operation_invocation(
+                operation_id="doctor" if command_name == "status" else command_name,
+                arguments={"target": "./repo", "format": "json"},
+                effect_class="read-only-report",
+                authority_class="operation-contract",
+                preconditions={"target": "./repo", "action": action, "required_before_claim": bool(closure_attention)},
+                owner_context_revision={"command": command_name, "target": "./repo", "action": action},
+                mutation_boundary={"effect_class": "read-only-report", "writes_repo_state": False, "transport": "local-cli"},
+                proof_requirements=[{"command": commands[0], "claim": "lifecycle state inspected"}],
+                command_rendering=commands[0],
+            ),
         }
+    proposed_action = _as_dict(payload.get("next_action"))
     actionability = _as_dict(payload.get("actionability")) or derive_actionability(
         command_name=command_name,
         health=str(payload.get("health") or "unknown"),
         warnings=_list_payload(payload.get("warnings")),
         repair_actions=_list_payload(payload.get("repair_actions")),
         manual_review_actions=_list_payload(payload.get("manual_review_actions")),
-        proposed_next_action=_as_dict(payload.get("next_action")),
+        proposed_next_action=proposed_action,
         claim_limits=_list_payload(payload.get("needs_review")),
+        current_input_revision=proposed_action_input_revision(proposed_action),
     )
     payload["actionability"] = actionability
     payload["action_required"] = actionability["action_required"]

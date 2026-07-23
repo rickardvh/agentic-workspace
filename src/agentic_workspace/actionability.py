@@ -4,13 +4,170 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
 from typing import Any
 
 
-def _operation(command: str) -> str:
-    match = re.search(r"(?:agentic-workspace|run_agentic_workspace\.py)\s+([a-z][a-z0-9-]*)", command)
-    return match.group(1) if match else ""
+def _as_dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def decision_input_revision(
+    *,
+    operation_id: str = "",
+    arguments: dict[str, Any] | None = None,
+    effect_class: str = "",
+    authority_class: str = "",
+    preconditions: dict[str, Any] | None = None,
+    owner_context_revision: dict[str, Any] | None = None,
+    mutation_boundary: dict[str, Any] | None = None,
+    proof_requirements: list[Any] | None = None,
+    evaluation_revision: dict[str, Any] | None = None,
+    executor_revision: dict[str, Any] | None = None,
+) -> str:
+    """Canonical revision for a typed operating action's current decision inputs."""
+
+    canonical = {
+        "operation_id": operation_id,
+        "arguments": dict(arguments or {}),
+        "effect_class": effect_class,
+        "authority_class": authority_class or "operation-contract",
+        "preconditions": dict(preconditions or {}),
+        "owner_context_revision": dict(owner_context_revision or {}),
+        "mutation_boundary": dict(mutation_boundary or {}),
+        "proof_requirements": list(proof_requirements or []),
+        "evaluation_revision": dict(evaluation_revision or {}),
+        "executor_revision": dict(executor_revision or {}),
+    }
+    return "sha256:" + hashlib.sha256(json.dumps(canonical, sort_keys=True, default=str).encode()).hexdigest()
+
+
+def invocation_decision_input_revision(invocation: dict[str, Any]) -> str:
+    return decision_input_revision(
+        operation_id=str(invocation.get("operation_id") or invocation.get("operation") or ""),
+        arguments=invocation.get("arguments") if isinstance(invocation.get("arguments"), dict) else {},
+        effect_class=str(invocation.get("effect_class") or ""),
+        authority_class=str(invocation.get("authority_class") or ""),
+        preconditions=invocation.get("preconditions") if isinstance(invocation.get("preconditions"), dict) else {},
+        owner_context_revision=invocation.get("owner_context_revision")
+        if isinstance(invocation.get("owner_context_revision"), dict)
+        else {},
+        mutation_boundary=invocation.get("mutation_boundary") if isinstance(invocation.get("mutation_boundary"), dict) else {},
+        proof_requirements=invocation.get("proof_requirements") if isinstance(invocation.get("proof_requirements"), list) else [],
+        evaluation_revision=invocation.get("evaluation_revision") if isinstance(invocation.get("evaluation_revision"), dict) else {},
+        executor_revision=invocation.get("executor_revision") if isinstance(invocation.get("executor_revision"), dict) else {},
+    )
+
+
+def operation_invocation(
+    *,
+    operation_id: str,
+    arguments: dict[str, Any] | None = None,
+    effect_class: str = "",
+    authority_class: str = "",
+    expected_transition: str = "",
+    input_revision: str = "",
+    claim_effect: str = "",
+    command_rendering: str = "",
+    preconditions: dict[str, Any] | None = None,
+    owner_context_revision: dict[str, Any] | None = None,
+    mutation_boundary: dict[str, Any] | None = None,
+    proof_requirements: list[Any] | None = None,
+    evaluation_revision: dict[str, Any] | None = None,
+    executor_revision: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build a typed operation invocation that owns action identity."""
+
+    normalized_arguments = dict(arguments or {})
+    normalized_preconditions = dict(preconditions or {})
+    normalized_owner_context = dict(owner_context_revision or {})
+    normalized_mutation_boundary = dict(mutation_boundary or {})
+    normalized_proof_requirements = list(proof_requirements or [])
+    normalized_evaluation_revision = dict(evaluation_revision or {})
+    normalized_executor_revision = dict(executor_revision or {})
+    caller_supplied_input_revision = str(input_revision or "").strip()
+    canonical_input_revision = decision_input_revision(
+        operation_id=operation_id,
+        arguments=normalized_arguments,
+        effect_class=effect_class,
+        authority_class=authority_class,
+        preconditions=normalized_preconditions,
+        owner_context_revision=normalized_owner_context,
+        mutation_boundary=normalized_mutation_boundary,
+        proof_requirements=normalized_proof_requirements,
+        evaluation_revision=normalized_evaluation_revision,
+        executor_revision=normalized_executor_revision,
+    )
+    idempotency_input = {
+        "operation_id": operation_id,
+        "arguments": normalized_arguments,
+        "input_revision": canonical_input_revision,
+        "expected_transition": expected_transition,
+        "owner_context_revision": normalized_owner_context,
+        "mutation_boundary": normalized_mutation_boundary,
+        "proof_requirements": normalized_proof_requirements,
+        "evaluation_revision": normalized_evaluation_revision,
+        "executor_revision": normalized_executor_revision,
+    }
+    idempotency_key = hashlib.sha256(json.dumps(idempotency_input, sort_keys=True).encode()).hexdigest()[:16]
+    invocation = {
+        "kind": "agentic-workspace/operation-invocation/v1",
+        "operation_id": operation_id,
+        "contract_version": "agentic-workspace/operation/v1",
+        "arguments": normalized_arguments,
+        "effect_class": effect_class,
+        "authority_class": authority_class or "operation-contract",
+        "required_authority": "operation-contract",
+        "preconditions": normalized_preconditions,
+        "owner_context_revision": normalized_owner_context,
+        "mutation_boundary": normalized_mutation_boundary,
+        "proof_requirements": normalized_proof_requirements,
+        "evaluation_revision": normalized_evaluation_revision,
+        "executor_revision": normalized_executor_revision,
+        "expected_input_revision": canonical_input_revision,
+        "expected_transition": expected_transition,
+        "idempotency_key": idempotency_key,
+        "claim_effect": claim_effect,
+        "stale_action_rejection": {
+            "status": "reject-on-input-revision-mismatch",
+            "comparison_fields": [
+                "expected_input_revision",
+                "owner_context_revision",
+                "mutation_boundary",
+                "proof_requirements",
+                "evaluation_revision",
+                "executor_revision",
+            ],
+            "repair": "Refresh the operating decision before executing this typed action.",
+            "revision_source": "live-authority-resolver",
+            "caller_supplied_input_revision": caller_supplied_input_revision,
+            "caller_revision_authority": "ignored",
+        },
+        "renderings": {"cli": command_rendering} if command_rendering else {},
+        "rule": "Operation identity and progress checks use this typed invocation; rendered commands are display or manual recovery text.",
+    }
+    return {key: value for key, value in invocation.items() if value not in ("", {}, [], None)}
+
+
+def _proposed_invocation(proposed: dict[str, Any]) -> dict[str, Any]:
+    invocation = proposed.get("operation_invocation") or proposed.get("typed_invocation")
+    return dict(invocation) if isinstance(invocation, dict) else {}
+
+
+def proposed_action_input_revision(proposed_next_action: dict[str, Any] | None) -> str:
+    """Resolve the current revision for a just-derived typed action.
+
+    Callers use this at ordinary boundaries after assembling the current action
+    from live owner/context/proof/mutation inputs. ``derive_actionability`` does
+    not fall back to an invocation's embedded revision because that would let a
+    stale action validate itself.
+    """
+
+    invocation = _proposed_invocation(dict(proposed_next_action or {}))
+    return invocation_decision_input_revision(invocation) if invocation else ""
+
+
+def _invocation_operation(invocation: dict[str, Any]) -> str:
+    return str(invocation.get("operation_id") or invocation.get("operation") or "").strip()
 
 
 def derive_actionability(
@@ -22,6 +179,7 @@ def derive_actionability(
     manual_review_actions: list[Any],
     proposed_next_action: dict[str, Any] | None,
     claim_limits: list[str] | None = None,
+    current_input_revision: str = "",
 ) -> dict[str, Any]:
     """Derive one coherent action decision and reject ordinary same-operation loops."""
 
@@ -74,9 +232,13 @@ def derive_actionability(
     action_required = bool(repair_actions or required_reviews)
     proposed = dict(proposed_next_action or {})
     next_command = str(proposed.get("command") or proposed.get("run") or "").strip()
-    same_operation = bool(next_command and _operation(next_command) == command_name)
+    invocation = _proposed_invocation(proposed)
+    proposed_operation = _invocation_operation(invocation)
+    same_operation = bool(proposed_operation and proposed_operation == command_name)
     external_condition = str(proposed.get("external_change_condition") or "").strip()
-    expected_transition = str(proposed.get("expected_transition") or proposed.get("state_transition") or "").strip()
+    expected_transition = str(
+        invocation.get("expected_transition") or proposed.get("expected_transition") or proposed.get("state_transition") or ""
+    ).strip()
     digest_input = {
         "operation": command_name,
         "health": health,
@@ -88,6 +250,15 @@ def derive_actionability(
     input_digest = hashlib.sha256(json.dumps(digest_input, sort_keys=True).encode()).hexdigest()[:16]
     proposed_input_digest = str(proposed.get("input_digest") or "").strip()
     same_state = proposed_input_digest == input_digest if proposed_input_digest else not expected_transition
+    expected_input_revision = str(invocation.get("expected_input_revision") or "").strip()
+    embedded_input_revision = invocation_decision_input_revision(invocation) if invocation else ""
+    live_input_revision = str(current_input_revision or "").strip()
+    compared_input_revision = live_input_revision
+    stale_policy_active = bool(action_required and invocation.get("stale_action_rejection"))
+    live_revision_missing = bool(stale_policy_active and not live_input_revision)
+    stale_action_rejected = bool(
+        stale_policy_active and (live_revision_missing or not expected_input_revision or expected_input_revision != compared_input_revision)
+    )
     self_loop_rejected = same_operation and same_state and not external_condition
     if not action_required:
         next_action = {
@@ -99,6 +270,17 @@ def derive_actionability(
             ),
             "commands": [],
         }
+    elif stale_action_rejected:
+        next_action = {
+            "action": "required-action-unavailable",
+            "summary": "Required work remains, but the typed action was derived from stale input state.",
+            "commands": [],
+            "owner": str(proposed.get("owner") or "workspace-or-repo-maintainer"),
+            "missing_precondition": "fresh operating decision with matching owner, context, authority, proof, and mutation baseline revisions",
+            "stale_action_rejection": invocation.get("stale_action_rejection"),
+        }
+        if live_revision_missing:
+            next_action["missing_precondition"] = "live authority revision resolved immediately before actionability derivation"
     elif self_loop_rejected:
         next_action = {
             "action": "required-action-unavailable",
@@ -119,12 +301,27 @@ def derive_actionability(
         "next_action": next_action,
         "progress_check": {
             "input_digest": input_digest,
-            "proposed_operation": _operation(next_command),
+            "current_input_revision": compared_input_revision,
+            "embedded_input_revision": embedded_input_revision,
+            "live_input_revision": live_input_revision,
+            "live_revision_checked": bool(live_input_revision),
+            "live_revision_missing": live_revision_missing,
+            "proposed_operation": proposed_operation,
+            "operation_invocation": invocation,
+            "command_identity_authority": "typed-operation-invocation" if invocation else "absent-display-command-only",
             "same_operation": same_operation,
             "same_state": same_state,
             "expected_transition": expected_transition,
+            "expected_input_revision": expected_input_revision,
+            "stale_action_rejected": stale_action_rejected,
             "external_change_condition": external_condition,
-            "result": "rejected-same-state-loop" if self_loop_rejected else "progress-making" if next_command else "terminal",
+            "result": "rejected-stale-action"
+            if stale_action_rejected
+            else "rejected-same-state-loop"
+            if self_loop_rejected
+            else "progress-making"
+            if next_command or invocation
+            else "terminal",
         },
         "rule": "Status, required action, claim limits, and next action derive from one finding classification; ordinary same-state loops are not next actions.",
     }
