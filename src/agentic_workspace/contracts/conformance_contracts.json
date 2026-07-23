@@ -64,6 +64,24 @@
       "adapter_kind": "process"
     },
     {
+      "id": "evaluation.observe.process",
+      "operation_id": "evaluation.observe",
+      "path": "conformance/evaluation.observe.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "evaluation.status.process",
+      "operation_id": "evaluation.status",
+      "path": "conformance/evaluation.status.process.json",
+      "adapter_kind": "process"
+    },
+    {
+      "id": "evaluation.transition.process",
+      "operation_id": "evaluation.transition",
+      "path": "conformance/evaluation.transition.process.json",
+      "adapter_kind": "process"
+    },
+    {
       "id": "config.report.process",
       "operation_id": "config.report",
       "path": "conformance/config.report.process.json",

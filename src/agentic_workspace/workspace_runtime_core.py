@@ -45769,6 +45769,16 @@ def _record_proof_receipt_payload(
         changed_paths=receipt["changed_paths"],
         command=command,
     )
+    from agentic_workspace.workspace_runtime_proof import _proof_template_binding_for_recorded_receipt
+
+    template_binding = _proof_template_binding_for_recorded_receipt(target_root=target_root, receipt=receipt)
+    if template_binding.get("status") == "rejected":
+        raise WorkspaceUsageError(
+            f"Proof receipt template binding rejected ({template_binding['reason']}): "
+            "rerun proof selection and record the concrete command from the current selected obligation."
+        )
+    if template_binding.get("status") == "bound" and isinstance(template_binding.get("binding"), dict):
+        receipt["proof_template_binding"] = template_binding["binding"]
     admission = proof_receipt_admission(receipt)
     if not admission["admitted"]:
         raise WorkspaceUsageError(f"Proof receipt rejected ({admission['reason']}): {admission['safe_recovery']}")
@@ -47312,6 +47322,21 @@ def _lane_execution_metadata(lane: dict[str, Any]) -> dict[str, Any]:
         "proof_responsibility": lane.get("proof_responsibility", "local-closeout"),
         "execution_mode": lane.get("execution_mode", "parallel-ok"),
     }
+    for key in (
+        "lane_revision",
+        "owner_ref",
+        "owner_revision",
+        "assignment_target",
+        "assignment_context_key",
+        "assignment_revision",
+        "selector_registry_revision",
+        "template_revision",
+        "evaluation_result_revision",
+        "mutation_baseline",
+    ):
+        value = str(lane.get(key) or "").strip()
+        if value:
+            metadata[key] = value
     ci_relationship = str(lane.get("ci_relationship", "")).strip()
     if ci_relationship:
         metadata["ci_relationship"] = ci_relationship

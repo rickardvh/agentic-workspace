@@ -1838,7 +1838,7 @@
       },
       {
         "binding_kind": "runtime-facade-call",
-        "conformance_ref": "assignment.lifecycle.process, config.report.process, correction-event.submit.process, correction-event.query.process, correction-event.correct-dispute.process, correction-event.withdraw-supersede.process, correction-event.prune-compact.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
+        "conformance_ref": "assignment.lifecycle.process, config.report.process, correction-event.submit.process, correction-event.query.process, correction-event.correct-dispute.process, correction-event.withdraw-supersede.process, correction-event.prune-compact.process, evaluation.lifecycle.process, prompt.init.process, prompt.uninstall.process, prompt.upgrade.process, system-intent.sync.process",
         "direct_edit_reasons_allowed": [
           "existing-primitive-bugfix",
           "new-primitive-implementation"
@@ -1867,6 +1867,10 @@
           "correction-event.query",
           "correction-event.submit",
           "correction-event.withdraw-supersede",
+          "evaluation.observe",
+          "evaluation.register",
+          "evaluation.status",
+          "evaluation.transition",
           "prompt.init",
           "prompt.uninstall",
           "prompt.upgrade",

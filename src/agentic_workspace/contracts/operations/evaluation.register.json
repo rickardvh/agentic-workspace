@@ -110,5 +110,26 @@
     "evaluation unit tests",
     "operation contract validates against operation.schema.json"
   ],
-  "migration_status": "runtime-consumed"
+  "migration_status": "runtime-consumed",
+  "ir_plan": {
+    "status": "representative",
+    "summary": "Generated command packages execute the evaluation registration operation through runtime-owned evaluation primitives.",
+    "steps": [
+      {
+        "id": "resolve_root",
+        "uses": "workspace.target-root.resolve",
+        "description": "Resolve the target root."
+      },
+      {
+        "id": "register",
+        "uses": "evaluation.definition.register",
+        "description": "Validate and upsert the evaluation definition."
+      },
+      {
+        "id": "emit_output",
+        "uses": "output.emit",
+        "description": "Emit registration result."
+      }
+    ]
+  }
 }

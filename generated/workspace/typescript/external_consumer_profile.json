@@ -3,7 +3,7 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:e83f571df1cc17aa2fe94977970a9478215b3c37512d247373f30e8378141e56",
+    "fingerprint": "sha256:ba518f81420e376124dcad2461c523afbd4027dc4dde2bd016c88556cb7ac6a8",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
@@ -2813,13 +2813,13 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/evaluation.observe.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:4cca6370cbbb43cbab3dbe278e9f06dd183135cef02c9381817ede62fd56c8cb"
+        "fingerprint": "sha256:5d66f3b6d87de59d3f99bd26c3013b99c19e2ab019e97af2c8678f4a73f47712"
       },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
           "path": "operations/evaluation.observe.json",
-          "exists": false
+          "exists": true
         },
         "typescript": {
           "package": "@agentic-workspace/workspace-cli",
@@ -3027,13 +3027,13 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/evaluation.register.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:4c221f999cec65867ff30ec8eb17c9427938b123e2074536a83ee5071de01061"
+        "fingerprint": "sha256:8c979e62cddf33c695e729704a1508f95f54224dbdaec528bd9b10276b4daa06"
       },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
           "path": "operations/evaluation.register.json",
-          "exists": false
+          "exists": true
         },
         "typescript": {
           "package": "@agentic-workspace/workspace-cli",
@@ -3134,13 +3134,13 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/evaluation.status.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:75ac3b8302bfa4430ce44fb5fa0297c5d56261895a9b85d695b09ef9a07ea36c"
+        "fingerprint": "sha256:472b6309fd84d1dde8d19ce1fb3564c34ce9122d4c05dce250a2d77c7dfff0ae"
       },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
           "path": "operations/evaluation.status.json",
-          "exists": false
+          "exists": true
         },
         "typescript": {
           "package": "@agentic-workspace/workspace-cli",
@@ -3241,13 +3241,13 @@
       "operation_contract": "src/agentic_workspace/contracts/operations/evaluation.transition.json",
       "operation_compatibility": {
         "schema_version": "agentic-workspace/operation/v1",
-        "fingerprint": "sha256:65c00d7439544ecc31bc8204a63e5a8144c5f1439b4754c95ee9dedd6cfbe3d5"
+        "fingerprint": "sha256:43abf9b3d93d36ce51cafb61697b0ea1bd783ae6c5b646d5fdaa3b657d60f3f8"
       },
       "operation_resources": {
         "python": {
           "package": "agentic-workspace",
           "path": "operations/evaluation.transition.json",
-          "exists": false
+          "exists": true
         },
         "typescript": {
           "package": "@agentic-workspace/workspace-cli",

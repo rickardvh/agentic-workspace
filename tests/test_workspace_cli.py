@@ -2932,7 +2932,7 @@ def test_planning_front_door_forwards_lane_lifecycle_positionals(monkeypatch, tm
     assert json.loads(capsys.readouterr().out)["argv"] == ["lane-archive", "lane-alpha", "--format", "json"]
 
 
-def test_planning_front_door_new_plan_binds_explicit_active_lane(tmp_path: Path, capsys, monkeypatch) -> None:
+def test_planning_front_door_lane_activation_recovery_does_not_fabricate_plan(tmp_path: Path, capsys, monkeypatch) -> None:
     _init_git_repo(tmp_path)
     assert cli.main(["init", "--target", str(tmp_path), "--modules", "planning", "--format", "json"]) == 0
     capsys.readouterr()
@@ -2957,6 +2957,7 @@ def test_planning_front_door_new_plan_binds_explicit_active_lane(tmp_path: Path,
     assert cli.main(["planning", "lane-activate", "lane-alpha", "--target", str(tmp_path), "--format", "json"]) == 0
     activation = json.loads(capsys.readouterr().out)
     assert activation["reason_code"] == "lane-execplan-required"
+    assert "new-plan" not in activation["recovery_command"]
     recovery_args = shlex.split(activation["recovery_command"])
     planning_index = recovery_args.index("planning")
     monkeypatch.chdir(tmp_path)

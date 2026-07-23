@@ -453,7 +453,8 @@ def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys
         == 0
     )
 
-    answer = json.loads(capsys.readouterr().out)["answer"]
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload.get("answer", payload)
     lane = next(lane for lane in answer["selected_lanes"] if lane["id"] == "domain:proof_runtime")
 
     assert lane["execution_mode"] == "serial-recommended"
@@ -487,7 +488,8 @@ def test_proof_changed_selector_domain_route_covers_multi_path_scope(tmp_path: P
         == 0
     )
 
-    answer = json.loads(capsys.readouterr().out)["answer"]
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload.get("answer", payload)
     lanes = [lane for lane in answer["selected_lanes"] if lane["id"] == "domain:proof_runtime"]
 
     assert len(lanes) == 1
@@ -3290,6 +3292,490 @@ def test_reconciliation_selects_newest_admitted_history_when_latest_file_is_reje
     assert reconciliation["rejected_latest_receipt"]["status"] == "rejected-untrusted"
     assert reconciliation["rejected_latest_receipt"]["admission_reason"] == "unresolved-command-template"
     assert reconciliation["receipt_history"]["record_count"] == 2
+
+
+def _proof_template_current_identity_fixture(
+    *,
+    lane_id: str = "proof-template-lane",
+    owner_ref: str = ".agentic-workspace/planning/execplans/proof-template.plan.json",
+) -> dict[str, str]:
+    return {
+        "lane_id": lane_id,
+        "lane_revision": "lane-rev-1",
+        "owner_ref": owner_ref,
+        "owner_revision": "owner-rev-1",
+        "assignment_target": "user-local:codex-current",
+        "assignment_context_key": "workspace/proof-template",
+        "assignment_revision": "assignment-rev-1",
+        "selector_registry_revision": "selector-registry-rev-1",
+        "template_revision": "template-rev-1",
+        "evaluation_result_revision": "eval-1",
+        "mutation_baseline": "baseline-1",
+    }
+
+
+def _proof_template_authority_resolution_fixture(identity: dict[str, str]) -> dict[str, object]:
+    authority_states = {
+        key: {
+            "status": "current",
+            "revision": value,
+            "source": "repo-proof-obligation-resolver",
+            "provenance": "test fixture authoritative selected proof obligation",
+        }
+        for key, value in identity.items()
+    }
+    return {
+        "kind": "agentic-workspace/proof-template-obligation-resolution/v1",
+        "status": "resolved",
+        "source": "repo-proof-obligation-resolver",
+        "current_identity": identity,
+        "authority_states": authority_states,
+        "changed_paths": ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"],
+    }
+
+
+def _proof_template_selected_command_fixture(*, command: str, lane_id: str = "proof-template-lane") -> dict[str, object]:
+    identity = _proof_template_current_identity_fixture(lane_id=lane_id)
+    lane = identity.pop("lane_id")
+    selected_identity = {"lane_id": lane, **identity}
+    return {
+        "command": command,
+        "lane": lane,
+        **identity,
+        "authority_resolution": _proof_template_authority_resolution_fixture(selected_identity),
+    }
+
+
+def _proof_template_binding_fixture(
+    *,
+    template_command: str,
+    concrete_command: str,
+    changed_paths: list[str],
+    selected_command: dict[str, object],
+    receipt: dict[str, object],
+) -> dict[str, object]:
+    from agentic_workspace.workspace_runtime_proof import _proof_template_live_obligation_id
+
+    authority_revisions = _proof_template_current_identity_fixture(
+        lane_id=str(selected_command["lane"]),
+        owner_ref=str(selected_command["owner_ref"]),
+    )
+    return {
+        "kind": "agentic-workspace/proof-template-binding/v1",
+        "status": "current",
+        "live_obligation_id": _proof_template_live_obligation_id(
+            required_command=template_command,
+            changed_paths=changed_paths,
+            selected_command=selected_command,
+        ),
+        "command": {
+            "template": template_command,
+            "concrete": concrete_command,
+            "selector_parameters": {
+                "selectors": _command_selector_parameters_for_fixture(template_command),
+            },
+        },
+        "owner_identity": {
+            "lane_id": selected_command["lane"],
+            "owner_ref": selected_command["owner_ref"],
+        },
+        "assignment": {
+            "target_identity_ref": selected_command["assignment_target"],
+            "context_key": selected_command["assignment_context_key"],
+        },
+        "authority_revisions": authority_revisions,
+        "authority_states": _proof_template_authority_resolution_fixture(authority_revisions)["authority_states"],
+        "artifact_provenance": {"changed_paths": changed_paths},
+        "result_provenance": {
+            "result": "passed",
+            "recorded_at": "2026-07-11T08:00:00+00:00",
+            "proof_subject_fingerprint": receipt["proof_subject"]["fingerprint"],  # type: ignore[index]
+        },
+        "freshness": {"status": "current", "baseline_revision": "baseline-1", "evaluation_result": "eval-1"},
+    }
+
+
+def _command_selector_parameters_for_fixture(command: str) -> list[str]:
+    if "--select " not in command:
+        return []
+    selected = command.split("--select ", 1)[1].split(" ", 1)[0]
+    return sorted(part.strip() for part in selected.split(",") if part.strip())
+
+
+def test_reconciliation_accepts_instantiated_paths_template_receipt(tmp_path: Path) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
+    receipt_dir.mkdir(parents=True)
+    changed_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+    for path in changed_paths:
+        _write(tmp_path / path, f"fixture for {path}\n")
+    template_command = (
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> "
+        "--select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json"
+    )
+    concrete_command = (
+        "uv run python scripts/run_agentic_workspace.py implement "
+        "--changed src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py "
+        "--select requirement_grounding,context.delegation_decision,context.plan_delegation_packet --format json"
+    )
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": concrete_command,
+        "result": "passed",
+        "recorded_at": "2026-07-11T08:00:00+00:00",
+        "changed_paths": changed_paths,
+    }
+    receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=changed_paths, command=concrete_command)
+    selected_command = _proof_template_selected_command_fixture(
+        command=template_command,
+        lane_id="requirement-grounding-delegation",
+    )
+    receipt["proof_template_binding"] = _proof_template_binding_fixture(
+        template_command=template_command,
+        concrete_command=concrete_command,
+        changed_paths=changed_paths,
+        selected_command=selected_command,
+        receipt=receipt,
+    )
+    (receipt_dir / "last.json").write_text(json.dumps(receipt), encoding="utf-8")
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=changed_paths,
+        required_commands=[template_command],
+        selected_commands=[selected_command],
+    )
+
+    assert reconciliation["status"] == "accepted"
+    assert reconciliation["commands"][0]["evidence_state"] == "accepted"
+    assert reconciliation["commands"][0]["receipt_match"] == "instantiated-template"
+    assert reconciliation["commands"][0]["receipt"]["command"] == concrete_command
+    assert reconciliation["commands"][0]["live_obligation_binding"]["status"] == "accepted"
+    assert reconciliation["commands"][0]["live_obligation_binding"]["assignment"] == {
+        "target_identity_ref": "user-local:codex-current",
+        "context_key": "workspace/proof-template",
+    }
+
+
+@pytest.mark.parametrize(
+    ("mutate", "reason"),
+    [
+        (lambda binding: None, "missing-live-obligation-binding"),
+        (lambda binding: binding["owner_identity"].update({"lane_id": "other-lane"}), "cross-lane-receipt"),
+        (lambda binding: binding.update({"status": "superseded"}), "superseded-template-binding"),
+        (
+            lambda binding: binding["freshness"].update({"status": "evaluation-result-replaced"}),
+            "stale-evaluation-result-replaced-template-binding",
+        ),
+        (lambda binding: binding["result_provenance"].pop("proof_subject_fingerprint"), "proof-subject-provenance-mismatch"),
+    ],
+)
+def test_reconciliation_rejects_stale_or_cross_context_instantiated_template_receipt(tmp_path: Path, mutate, reason: str) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
+    receipt_dir.mkdir(parents=True)
+    changed_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+    for path in changed_paths:
+        _write(tmp_path / path, f"fixture for {path}\n")
+    template_command = (
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding --format json"
+    )
+    concrete_command = (
+        "uv run python scripts/run_agentic_workspace.py implement "
+        "--changed src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py "
+        "--select requirement_grounding --format json"
+    )
+    selected_command = _proof_template_selected_command_fixture(command=template_command)
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": concrete_command,
+        "result": "passed",
+        "recorded_at": "2026-07-11T08:00:00+00:00",
+        "changed_paths": changed_paths,
+    }
+    receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=changed_paths, command=concrete_command)
+    binding = _proof_template_binding_fixture(
+        template_command=template_command,
+        concrete_command=concrete_command,
+        changed_paths=changed_paths,
+        selected_command=selected_command,
+        receipt=receipt,
+    )
+    if reason != "missing-live-obligation-binding":
+        mutate(binding)
+        receipt["proof_template_binding"] = binding
+    (receipt_dir / "last.json").write_text(json.dumps(receipt), encoding="utf-8")
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=changed_paths,
+        required_commands=[template_command],
+        selected_commands=[selected_command],
+    )
+
+    assert reconciliation["status"] == "attention"
+    state = reconciliation["commands"][0]
+    assert state["evidence_state"] == "template-binding-rejected"
+    assert state["diagnostic"] == reason
+    assert state["receipt_match"] == "instantiated-template"
+
+
+@pytest.mark.parametrize(
+    ("current_field", "stale_value", "reason"),
+    [
+        ("owner_revision", "owner-rev-2", "stale-owner_revision-template-binding"),
+        ("assignment_revision", "assignment-rev-2", "stale-assignment_revision-template-binding"),
+        ("evaluation_result_revision", "eval-2", "stale-evaluation_result_revision-template-binding"),
+        ("mutation_baseline", "baseline-2", "stale-mutation_baseline-template-binding"),
+        ("selector_registry_revision", "selector-registry-rev-2", "stale-selector_registry_revision-template-binding"),
+        ("template_revision", "template-rev-2", "stale-template_revision-template-binding"),
+    ],
+)
+def test_reconciliation_rejects_current_authority_drift_when_receipt_still_claims_current(
+    tmp_path: Path, current_field: str, stale_value: str, reason: str
+) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
+    receipt_dir.mkdir(parents=True)
+    changed_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+    for path in changed_paths:
+        _write(tmp_path / path, f"fixture for {path}\n")
+    template_command = (
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding --format json"
+    )
+    concrete_command = (
+        "uv run python scripts/run_agentic_workspace.py implement "
+        "--changed src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py "
+        "--select requirement_grounding --format json"
+    )
+    receipt_selected_command = _proof_template_selected_command_fixture(command=template_command)
+    current_selected_command = json.loads(json.dumps(receipt_selected_command))
+    current_selected_command[current_field] = stale_value
+    current_selected_command["authority_resolution"]["current_identity"][current_field] = stale_value
+    current_selected_command["authority_resolution"]["authority_states"][current_field]["revision"] = stale_value
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": concrete_command,
+        "result": "passed",
+        "recorded_at": "2026-07-11T08:00:00+00:00",
+        "changed_paths": changed_paths,
+    }
+    receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=changed_paths, command=concrete_command)
+    receipt["proof_template_binding"] = _proof_template_binding_fixture(
+        template_command=template_command,
+        concrete_command=concrete_command,
+        changed_paths=changed_paths,
+        selected_command=receipt_selected_command,
+        receipt=receipt,
+    )
+    (receipt_dir / "last.json").write_text(json.dumps(receipt), encoding="utf-8")
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=changed_paths,
+        required_commands=[template_command],
+        selected_commands=[current_selected_command],
+    )
+
+    assert reconciliation["status"] == "attention"
+    state = reconciliation["commands"][0]
+    assert state["evidence_state"] == "template-binding-rejected"
+    assert state["diagnostic"] == reason
+    assert state["live_obligation_binding"]["binding"]["freshness"]["status"] == "current"
+
+
+def test_reconciliation_rejects_template_receipt_when_current_obligation_identity_is_incomplete(tmp_path: Path) -> None:
+    from agentic_workspace.proof_subject import build_proof_subject
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    receipt_dir = tmp_path / ".agentic-workspace/local/proof-receipts"
+    receipt_dir.mkdir(parents=True)
+    changed_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+    for path in changed_paths:
+        _write(tmp_path / path, f"fixture for {path}\n")
+    template_command = (
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding --format json"
+    )
+    concrete_command = (
+        "uv run python scripts/run_agentic_workspace.py implement "
+        "--changed src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py "
+        "--select requirement_grounding --format json"
+    )
+    complete_selected_command = _proof_template_selected_command_fixture(command=template_command)
+    incomplete_selected_command = json.loads(json.dumps(complete_selected_command))
+    incomplete_selected_command.pop("owner_revision")
+    incomplete_selected_command["authority_resolution"]["current_identity"].pop("owner_revision")
+    incomplete_selected_command["authority_resolution"]["authority_states"].pop("owner_revision")
+    receipt = {
+        "kind": "agentic-workspace/proof-receipt/v1",
+        "command": concrete_command,
+        "result": "passed",
+        "recorded_at": "2026-07-11T08:00:00+00:00",
+        "changed_paths": changed_paths,
+    }
+    receipt["proof_subject"] = build_proof_subject(target_root=tmp_path, changed_paths=changed_paths, command=concrete_command)
+    receipt["proof_template_binding"] = _proof_template_binding_fixture(
+        template_command=template_command,
+        concrete_command=concrete_command,
+        changed_paths=changed_paths,
+        selected_command=complete_selected_command,
+        receipt=receipt,
+    )
+    (receipt_dir / "last.json").write_text(json.dumps(receipt), encoding="utf-8")
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=changed_paths,
+        required_commands=[template_command],
+        selected_commands=[incomplete_selected_command],
+    )
+
+    assert reconciliation["status"] == "attention"
+    state = reconciliation["commands"][0]
+    assert state["evidence_state"] == "template-binding-rejected"
+    assert state["diagnostic"] == "missing-current-obligation-identity"
+    assert state["live_obligation_binding"]["missing_identity"] == ["owner_revision"]
+
+
+def test_proof_record_receipt_builds_template_binding_from_current_obligation(tmp_path: Path, capsys) -> None:
+    _init_git_repo(tmp_path)
+    _write_empty_proof_planning_state(tmp_path)
+    changed_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+    for path in changed_paths:
+        _write(tmp_path / path, f"fixture for {path}\n")
+    _write(tmp_path / "scripts" / "run_agentic_workspace.py", "print('fixture aw')\n")
+    template_command = (
+        "uv run python scripts/run_agentic_workspace.py implement --changed <paths> --select requirement_grounding --format json"
+    )
+    concrete_command = (
+        "uv run python scripts/run_agentic_workspace.py implement "
+        "--changed src/agentic_workspace/workspace_runtime_proof.py tests/test_workspace_proof_cli.py "
+        "--select requirement_grounding --format json"
+    )
+    _write(
+        tmp_path / ".agentic-workspace" / "config.toml",
+        f"""
+schema_version = 1
+
+[workspace]
+cli_invoke = "{REPO_LOCAL_CLI_INVOKE}"
+
+[assurance.domain_proof_lanes.proof_template_receipts]
+purpose = "Proof template receipt replay."
+applies_to_paths = ["src/agentic_workspace/workspace_runtime_proof.py", "tests/test_workspace_proof_cli.py"]
+commands = ["{template_command}"]
+owner = "workspace-proof-runtime"
+""",
+    )
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed_paths[0],
+                "--changed",
+                changed_paths[1],
+                "--record-receipt",
+                "--receipt-command",
+                concrete_command,
+                "--receipt-result",
+                "passed",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    receipt = json.loads(capsys.readouterr().out)["receipt"]
+    binding = receipt["proof_template_binding"]
+    assert binding["command"]["template"] == template_command
+    assert binding["command"]["concrete"] == concrete_command
+    assert binding["authority_states"]["evaluation_result_revision"]["status"] == "not-required"
+    assert binding["authority_revisions"]["evaluation_result_revision"] == "not-required:evaluation"
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed_paths[0],
+                "--changed",
+                changed_paths[1],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    payload = json.loads(capsys.readouterr().out)
+    answer = payload.get("answer", payload)
+    assert answer["proof_closeout_summary"]["receipt_bridge"]["status"] == "complete"
+    assert answer["proof_closeout_summary"]["status"] == "sufficient-recorded"
+
+    config_path = tmp_path / ".agentic-workspace" / "config.toml"
+    config_path.write_text(config_path.read_text(encoding="utf-8") + '\nnotes = "registry changed after receipt"\n', encoding="utf-8")
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed_paths[0],
+                "--changed",
+                changed_paths[1],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    stale_payload = json.loads(capsys.readouterr().out)
+    stale_answer = stale_payload.get("answer", stale_payload)
+    assert stale_answer["proof_closeout_summary"]["status"] != "sufficient-recorded"
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed_paths[0],
+                "--changed",
+                changed_paths[1],
+                "--select",
+                "selected_commands,required_commands",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    selected = json.loads(capsys.readouterr().out)["values"]
+    from agentic_workspace.workspace_runtime_proof import _proof_receipt_reconciliation_payload
+
+    reconciliation = _proof_receipt_reconciliation_payload(
+        target_root=tmp_path,
+        changed_paths=changed_paths,
+        required_commands=selected["required_commands"],
+        selected_commands=selected["selected_commands"],
+    )
+    stale_state = reconciliation["commands"][0]
+    assert stale_state["evidence_state"] == "template-binding-rejected"
+    assert stale_state["diagnostic"] == "stale-lane_revision-template-binding"
+    assert stale_state["minimum_rerun_command"] == template_command
 
 
 @pytest.mark.parametrize(

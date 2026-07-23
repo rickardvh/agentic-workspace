@@ -6589,7 +6589,7 @@ def _planning_live_reference_repair_contract(
 ) -> dict[str, Any]:
     """Shared fail-closed contract for malformed or stale live Planning references."""
     cli = _workspace_cli_invoke(target_root)
-    repair_command = repair_command or f"{cli} planning reconcile --target . --format json"
+    repair_command = repair_command or f"{cli} planning report --target . --format json"
     return {
         "kind": "agentic-planning/live-reference-repair-contract/v1",
         "status": "fail-closed",
