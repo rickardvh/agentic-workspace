@@ -148,6 +148,7 @@ from agentic_workspace.workspace_runtime_projection import _workflow_participati
 from agentic_workspace.workspace_runtime_proof import (
     _proof_selection_for_changed_paths,
 )
+from agentic_workspace.workspace_selector_validation import _selector_inventory_selected_payload
 
 
 def _startup_route_binding(*, route_decision: dict[str, Any], target_root: Path, task_text: str | None, cli_invoke: str) -> dict[str, Any]:
@@ -2569,6 +2570,9 @@ def _run_start_context_adapter(args: argparse.Namespace) -> int:
     start_profile = "full" if getattr(args, "verbose", False) else getattr(args, "profile", None)
     task_text = getattr(args, "task", None)
     selected_fields = getattr(args, "select", None)
+    if inventory_payload := _selector_inventory_selected_payload(select=selected_fields, source_command="start"):
+        _emit_payload(payload=inventory_payload, format_name=args.format)
+        return 0
     payload = _start_payload(
         target_root=target_root,
         changed_paths=list(getattr(args, "changed", []) or []),

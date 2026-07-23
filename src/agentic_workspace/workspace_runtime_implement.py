@@ -145,6 +145,11 @@ from agentic_workspace.workspace_runtime_proof import (
     _tiny_proof_obligations_payload,
     _verification_report_payload,
 )
+from agentic_workspace.workspace_selector_validation import (
+    _selected_payload_for_values,
+    _selector_inventory_selected_payload,
+    _selector_tokens,
+)
 
 
 def _run_implement_context_adapter(args: argparse.Namespace) -> int:
@@ -164,6 +169,19 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
         return 0
     profile = _diagnostic_profile(args, default="tiny")
     selected_fields = getattr(args, "select", None)
+    if inventory_payload := _selector_inventory_selected_payload(select=selected_fields, source_command="implement"):
+        _emit_payload(payload=inventory_payload, format_name=args.format)
+        return 0
+    changed_paths = list(getattr(args, "changed", []) or [])
+    if profile == "tiny" and _selector_tokens(selected_fields) == ["next"]:
+        payload = _implement_next_selected_payload(
+            target_root=target_root,
+            changed_paths=changed_paths,
+            task_text=task_text,
+            config=config,
+        )
+        _emit_payload(payload=payload, format_name=args.format)
+        return 0
     change_impact_selected = _selector_requests_change_impact(selected_fields)
     generated_surface_trust_selected = _selector_requests_generated_surface_trust(selected_fields)
     task_contract_selected = _selector_requests_task_contract(selected_fields)
@@ -175,7 +193,6 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
     requirement_grounding_selected = _selector_requests_requirement_grounding(selected_fields)
     plan_delegation_packet_selected = _selector_requests_plan_delegation_packet(selected_fields)
     test_strategy_check_selected = _selector_requests_test_strategy_check(selected_fields)
-    changed_paths = list(getattr(args, "changed", []) or [])
     full_payload = _implement_payload(
         target_root=target_root,
         changed_paths=changed_paths,
@@ -273,6 +290,79 @@ def _run_implement_context_adapter(args: argparse.Namespace) -> int:
             ]
     _emit_payload(payload=payload, format_name=args.format)
     return 0
+
+
+def _implement_next_selected_payload(
+    *,
+    target_root: Path,
+    changed_paths: list[str],
+    task_text: str | None,
+    config: Any,
+) -> dict[str, Any]:
+    implementer_template = _CONTEXT_TEMPLATES["implementer_context"]
+    normalized_paths = _normalize_changed_paths(changed_paths)
+    proof = (
+        _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths,
+            target_root=target_root,
+            include_durable_intent=False,
+            task_text=task_text,
+            acceptance=_task_acceptance_payload(task_text=task_text, requested_outcomes=_extract_requested_outcomes(task_text)),
+            include_assurance_requirements=False,
+            include_routine_work_context=False,
+            include_runtime_diagnostics=False,
+        )
+        if normalized_paths
+        else copy.deepcopy(implementer_template["unknown_scope_proof"])
+    )
+    path_boundaries = [
+        _boundary_warning_for_path(path, agent_instructions_file=config.agent_instructions_file) for path in normalized_paths
+    ]
+    attention_paths = [item["path"] for item in path_boundaries if item["requires_attention"]]
+    execution_posture = _execution_posture_payload(
+        config=config, changed_paths=normalized_paths, task_text=task_text, target_root=target_root
+    )
+    planning_safety_gate = _planning_safety_gate_payload(
+        target_root=target_root,
+        config=config,
+        changed_paths=normalized_paths,
+        task_text=task_text,
+        execution_posture=execution_posture,
+    )
+    next_action = (
+        "Provide --changed paths or use start/preflight before broad implementation."
+        if not normalized_paths
+        else implementer_template["next_allowed_action"]["attention"]
+        if attention_paths
+        else implementer_template["next_allowed_action"]["default"]
+    )
+    strategy_preservation = _as_dict(_as_dict(proof).get("proof_route_strategy_preservation"))
+    if str(strategy_preservation.get("claim_effect", "")) == "claim-blocked":
+        next_action = "Resolve proof-route refinement or structured escalation before closeout."
+    if isinstance(planning_safety_gate, dict) and planning_safety_gate.get("workflow_sufficient") is False:
+        next_action = "Create or promote an active execplan before continuing implementation."
+    elif not normalized_paths:
+        next_action = "Provide --changed paths or use start/preflight before broad implementation."
+    proof_commands = (
+        _tiny_required_proof_commands(proof)
+        if isinstance(proof, dict)
+        else _compact_tiny_required_proof_commands(_as_dict(proof).get("required_commands", []))
+    )
+    primary_command = proof_commands[0] if isinstance(proof_commands, list) and proof_commands else None
+    return _selected_payload_for_values(
+        values={
+            "next": {
+                "action": next_action,
+                "summary": next_action,
+                "command": primary_command,
+                "run": primary_command,
+                "commands": proof_commands if isinstance(proof_commands, list) else [],
+                "status": "changed-path-context" if normalized_paths else "unknown-scope",
+                "ask_human_only_if": "blocked",
+            }
+        },
+        source_command="implement",
+    )
 
 
 def _objective_drift_payload(*, target_root: Path, changed_paths: list[str], task_text: str | None) -> dict[str, Any]:

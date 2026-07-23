@@ -63,6 +63,7 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "context.delegation_decision.required_next_action",
         "context.delegation_decision.delegation_next_step.must_report_if_not_run",
         "context.delegation_decision.effort_guidance.cost_posture",
+        "context.plan_delegation_packet",
         "context.workflow_sufficiency",
         "context.scope",
         "context.guidance",
@@ -115,6 +116,8 @@ _SELECTOR_DESCRIPTORS_BY_COMMAND: dict[str, tuple[str, ...]] = {
         "proof_route_escalation_gate",
         "proof_route_strategy_preservation",
         "proof_route_strategy_claim_gate",
+        "proof_receipt_reconciliation",
+        "proof_receipt_bridge",
         "proof_closeout_summary",
         "proof_narrowness",
         "proof_decision",
@@ -536,6 +539,51 @@ def _selector_validation_error(*, payload: dict[str, Any], selectors: list[str],
     )
 
 
+def _selector_inventory_value(*, source_command: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+    available = _selector_descriptor_for_command(source_command)
+    if not available and payload is not None:
+        available = _bounded_selector_descriptor_for_payload(payload)
+    return {
+        "kind": "agentic-workspace/selector-inventory/v1",
+        "source_command": source_command,
+        "available_count": len(available),
+        "selectors": available,
+        "rule": "Explicit selector inventory is available through --select selector_inventory; validation errors include only a bounded sample.",
+    }
+
+
+def _selected_payload_for_values(*, values: dict[str, Any], source_command: str, missing: list[str] | None = None) -> dict[str, Any]:
+    selected_payload_paths = {
+        selector: f"values.{selector}" if selector.isidentifier() else f"values[{json.dumps(selector)}]" for selector in values
+    }
+    selected: dict[str, Any] = {
+        "kind": "agentic-workspace/selected-output/v1",
+        "source_command": source_command,
+        "values": values,
+        "payload_locations": {
+            "kind": "agentic-workspace/output-wrapper-locations/v1",
+            "primary_payload_field": "values",
+            "selected_payload_paths": selected_payload_paths,
+            "rule": "Selected field output stores payloads under values keyed by the selector string; compact report/proof answers store their payload under answer.",
+        },
+    }
+    if missing:
+        selected["missing"] = missing
+    return selected
+
+
+def _selector_inventory_selected_payload(*, select: str | None, source_command: str) -> dict[str, Any] | None:
+    selectors, request_error = _selector_request(select=select, source_command=source_command)
+    if request_error is not None:
+        return request_error
+    if selectors != ["selector_inventory"]:
+        return None
+    return _selected_payload_for_values(
+        values={"selector_inventory": _selector_inventory_value(source_command=source_command)},
+        source_command=source_command,
+    )
+
+
 def _selector_prevalidation_error(*, select: str | None, source_command: str) -> dict[str, Any] | None:
     selectors, request_error = _selector_request(select=select, source_command=source_command)
     if request_error is not None:
@@ -584,32 +632,9 @@ def _select_payload_fields(payload: dict[str, Any], *, select: str | None, sourc
     values: dict[str, Any] = {}
     for selector in selectors:
         if selector == "selector_inventory":
-            available = _selector_descriptor_for_command(source_command) or _bounded_selector_descriptor_for_payload(payload)
-            values[selector] = {
-                "kind": "agentic-workspace/selector-inventory/v1",
-                "source_command": source_command,
-                "available_count": len(available),
-                "selectors": available,
-                "rule": "Explicit selector inventory is available through --select selector_inventory; validation errors include only a bounded sample.",
-            }
+            values[selector] = _selector_inventory_value(source_command=source_command, payload=payload)
             continue
         found, value = _field_by_path(payload, selector)
         if found:
             values[selector] = value
-    selected_payload_paths = {
-        selector: f"values.{selector}" if selector.isidentifier() else f"values[{json.dumps(selector)}]" for selector in values
-    }
-    selected: dict[str, Any] = {
-        "kind": "agentic-workspace/selected-output/v1",
-        "source_command": source_command,
-        "values": values,
-        "payload_locations": {
-            "kind": "agentic-workspace/output-wrapper-locations/v1",
-            "primary_payload_field": "values",
-            "selected_payload_paths": selected_payload_paths,
-            "rule": "Selected field output stores payloads under values keyed by the selector string; compact report/proof answers store their payload under answer.",
-        },
-    }
-    if missing:
-        selected["missing"] = missing
-    return selected
+    return _selected_payload_for_values(values=values, source_command=source_command, missing=missing)

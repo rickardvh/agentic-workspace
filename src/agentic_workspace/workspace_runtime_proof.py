@@ -4970,6 +4970,7 @@ def _proof_selection_for_changed_paths(
     acceptance: dict[str, Any] | None = None,
     include_assurance_requirements: bool = True,
     include_routine_work_context: bool = True,
+    include_runtime_diagnostics: bool = True,
 ) -> dict[str, Any]:
     defaults = _defaults_payload()
     cli_invoke = DEFAULT_CLI_INVOKE
@@ -6311,12 +6312,13 @@ def _proof_selection_for_changed_paths(
     surface_value_review = _surface_value_review_for_changed_paths(changed_paths=changed_paths, target_root=target_root)
     if surface_value_review["durable_surface_count"]:
         proof_selection["surface_value_review"] = surface_value_review
-    runtime_symbol_working_set = runtime_symbol_working_set_for_changed_paths(changed_paths, target_root=target_root)
-    if runtime_symbol_working_set.get("status") == "present":
-        proof_selection["runtime_symbol_working_set"] = runtime_symbol_working_set
-    runtime_source_review = runtime_source_edit_review_for_changed_paths(changed_paths, target_root=target_root, task_text=task_text)
-    if runtime_source_review["changed_paths"]:
-        proof_selection["runtime_source_edit_review"] = runtime_source_review
+    if include_runtime_diagnostics:
+        runtime_symbol_working_set = runtime_symbol_working_set_for_changed_paths(changed_paths, target_root=target_root)
+        if runtime_symbol_working_set.get("status") == "present":
+            proof_selection["runtime_symbol_working_set"] = runtime_symbol_working_set
+        runtime_source_review = runtime_source_edit_review_for_changed_paths(changed_paths, target_root=target_root, task_text=task_text)
+        if runtime_source_review["changed_paths"]:
+            proof_selection["runtime_source_edit_review"] = runtime_source_review
     direct_cli_review = _direct_cli_edit_review_for_changed_paths(changed_paths)
     if direct_cli_review["changed_paths"]:
         proof_selection["direct_cli_edit_review"] = direct_cli_review
