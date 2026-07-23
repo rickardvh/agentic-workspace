@@ -24801,7 +24801,12 @@ def _is_completion_status_task(task_text: str | None) -> bool:
 
 
 def _completion_closeout_inspection_payload(
-    *, target_root: Path, config: WorkspaceConfig, task_text: str | None, explicit_request: bool = False
+    *,
+    target_root: Path,
+    config: WorkspaceConfig,
+    task_text: str | None,
+    explicit_request: bool = False,
+    changed_paths: list[str] | None = None,
 ) -> dict[str, Any]:
     target_arg = _command_target_arg(target_root)
     command = _command_with_cli_invoke(
@@ -24850,13 +24855,48 @@ def _completion_closeout_inspection_payload(
     trust = str(closeout.get("trust") or closeout.get("status") or "unavailable")
     lower_trust_count = _as_int(closeout.get("lower_trust_closeout_count"))
     gate_blocking = bool(strict_gate.get("blocking"))
-    needs_surface = trust != "normal" or lower_trust_count > 0 or gate_blocking
+    route_gate: dict[str, Any] = {}
+    normalized_paths = _normalize_changed_paths(changed_paths or [])
+    if normalized_paths:
+        from agentic_workspace.workspace_runtime_proof import _proof_selection_for_changed_paths
+
+        proof_payload = _proof_selection_for_changed_paths(
+            changed_paths=normalized_paths,
+            target_root=target_root,
+            include_durable_intent=False,
+            task_text=task_text,
+        )
+        strategy_preservation = _as_dict(proof_payload.get("proof_route_strategy_preservation"))
+        consumer_gate = _as_dict(strategy_preservation.get("consumer_gate"))
+        if strategy_preservation:
+            proof_route_health = _as_dict(strategy_preservation.get("proof_route_health"))
+            route_status = str(proof_route_health.get("status") or "")
+            consumer_blocked = str(consumer_gate.get("status") or "") == "blocked" or route_status == "attention"
+            route_gate = {
+                "kind": "agentic-workspace/closeout-proof-route-consumer-gate/v1",
+                "consumer": "closeout",
+                "status": "blocked" if consumer_blocked else "current",
+                "decision_id": str(strategy_preservation.get("decision_id") or ""),
+                "route_health_id": str(strategy_preservation.get("route_health_id") or ""),
+                "claim_effect": str(strategy_preservation.get("claim_effect") or ""),
+                "consumer_gate": consumer_gate,
+                "proof_route_health": proof_route_health,
+                "changed_paths": normalized_paths,
+                "rule": "Closeout consumes the live proof-route strategy identity for the changed paths before completion claims.",
+            }
+    route_gate_blocking = str(route_gate.get("status") or "") == "blocked"
+    needs_surface = trust != "normal" or lower_trust_count > 0 or gate_blocking or route_gate_blocking
     action_effect = {
         "force": "required_before_claim" if needs_surface else "advisory",
         "allowed_now": "inspect-closeout-trust-before-broad-status-claim" if needs_surface else "continue-closeout-status-answer",
-        "blocked_until_reconciled": ["claim-broad-work-complete", "claim-lane-closeable", "claim-issue-closure-safe"]
-        if needs_surface
-        else [],
+        "blocked_until_reconciled": [
+            *(
+                ["claim-broad-work-complete", "claim-lane-closeable", "claim-issue-closure-safe"]
+                if trust != "normal" or lower_trust_count > 0 or gate_blocking
+                else []
+            ),
+            *(["claim-proof-route-health-resolved", "claim-closeout-ready"] if route_gate_blocking else []),
+        ],
         "claim_boundary": (
             "broad-completion-and-closeout-claims-blocked-until-closeout-trust-is-reconciled"
             if needs_surface
@@ -24879,6 +24919,7 @@ def _completion_closeout_inspection_payload(
             if key in intent_check
         },
         "sample_signals": closeout.get("sample_signals", [])[:2] if isinstance(closeout.get("sample_signals"), list) else [],
+        "proof_route_strategy_consumer_gate": route_gate,
         "closeout_protocol": {
             key: closeout_protocol.get(key)
             for key in (
@@ -28022,7 +28063,12 @@ def _start_tiny_payload_fast(
             "read_first": [config_command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
-    closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
+    closeout_inspection = _completion_closeout_inspection_payload(
+        target_root=target_root,
+        config=config,
+        task_text=task_text,
+        changed_paths=changed_paths,
+    )
     if closeout_inspection["status"] in {"required", "clear"}:
         payload["closeout_trust_inspection"] = closeout_inspection
         payload["closeout_report_route"] = _startup_closeout_report_route(closeout_inspection)
@@ -42929,6 +42975,18 @@ def _record_proof_receipt_payload(
     changed_paths: list[str],
     plan_id: str = "",
     receipt_log: str = "",
+    receipt_route_id: str = "",
+    receipt_command_id: str = "",
+    receipt_duration_seconds: str = "",
+    receipt_timeout: bool = False,
+    receipt_exit_state: str = "",
+    receipt_environment: str = "",
+    receipt_claim_sufficiency: str = "",
+    receipt_route_budget_seconds: str = "",
+    receipt_repair_finding_id: str = "",
+    receipt_repair_authority_revision: str = "",
+    receipt_repair_disposition: str = "",
+    receipt_repair_idempotency_key: str = "",
     dry_run: bool = False,
 ) -> dict[str, Any]:
     command = str(command or "").strip()
@@ -42947,6 +43005,52 @@ def _record_proof_receipt_payload(
         "plan_id": str(plan_id or "").strip(),
         "rule": "This receipt records actual validation evidence supplied by the caller; proof recommendations alone must not create receipts.",
     }
+    execution: dict[str, Any] = {
+        "command_identity": hashlib.sha256(command.encode("utf-8")).hexdigest()[:16],
+        "result": result,
+        "claim_sufficiency": str(receipt_claim_sufficiency or "not-reviewed").strip(),
+    }
+    if receipt_route_id:
+        execution["route_id"] = str(receipt_route_id).strip()
+    if receipt_command_id:
+        execution["command_id"] = str(receipt_command_id).strip()
+    if receipt_duration_seconds != "":
+        try:
+            execution["duration_seconds"] = float(receipt_duration_seconds)
+        except (TypeError, ValueError) as exc:
+            raise WorkspaceUsageError("--receipt-duration-seconds must be numeric.") from exc
+    if receipt_timeout:
+        execution["timeout"] = True
+    if receipt_exit_state:
+        execution["exit_state"] = str(receipt_exit_state).strip()
+    if receipt_environment:
+        try:
+            loaded_environment = json.loads(receipt_environment)
+        except json.JSONDecodeError as exc:
+            raise WorkspaceUsageError("--receipt-environment must be a JSON object.") from exc
+        if not isinstance(loaded_environment, dict):
+            raise WorkspaceUsageError("--receipt-environment must be a JSON object.")
+        execution["environment"] = loaded_environment
+    if receipt_route_budget_seconds != "":
+        try:
+            execution["route_budget_seconds"] = float(receipt_route_budget_seconds)
+        except (TypeError, ValueError) as exc:
+            raise WorkspaceUsageError("--receipt-route-budget-seconds must be numeric.") from exc
+    receipt["execution"] = execution
+    if receipt_repair_finding_id:
+        disposition = str(receipt_repair_disposition or "fixed").strip()
+        if disposition not in {"fixed", "superseded", "dismissed", "non-applicable"}:
+            raise WorkspaceUsageError("--receipt-repair-disposition must be one of fixed, superseded, dismissed, or non-applicable.")
+        receipt["proof_route_repair"] = {
+            "kind": "agentic-workspace/proof-route-repair-receipt/v1",
+            "finding_id": str(receipt_repair_finding_id).strip(),
+            "authority_revision": str(receipt_repair_authority_revision or "").strip(),
+            "disposition": disposition,
+            "idempotency_key": str(receipt_repair_idempotency_key or "").strip(),
+            "validation_command": command,
+            "validation_result": result,
+            "rule": "Route-health retirement requires this receipt to name the same stable finding id after focused validation.",
+        }
     receipt["proof_subject"] = build_proof_subject(
         target_root=target_root,
         changed_paths=receipt["changed_paths"],
@@ -43134,6 +43238,26 @@ def _emit_proof(
     receipt_result: str = "",
     receipt_plan: str = "",
     receipt_log: str = "",
+    receipt_route_id: str = "",
+    receipt_command_id: str = "",
+    receipt_duration_seconds: str = "",
+    receipt_timeout: bool = False,
+    receipt_exit_state: str = "",
+    receipt_environment: str = "",
+    receipt_claim_sufficiency: str = "",
+    receipt_route_budget_seconds: str = "",
+    receipt_repair_finding_id: str = "",
+    receipt_repair_authority_revision: str = "",
+    receipt_repair_disposition: str = "",
+    receipt_repair_idempotency_key: str = "",
+    route_repair_mode: str = "",
+    route_repair_finding_id: str = "",
+    route_repair_authority_path: str = "",
+    route_repair_field_selector: str = "",
+    route_repair_expected_revision: str = "",
+    route_repair_delta_json: str = "",
+    route_repair_disposition: str = "",
+    route_repair_idempotency_key: str = "",
     dry_run: bool = False,
 ) -> None:
     normalized_paths = _normalize_changed_paths(changed_paths or [])
@@ -43147,6 +43271,29 @@ def _emit_proof(
     if inventory_payload := _selector_inventory_selected_payload(select=select, source_command="proof"):
         _emit_payload(payload=inventory_payload, format_name=format_name)
         return
+    if route_repair_mode:
+        from agentic_workspace.workspace_runtime_proof import _proof_route_repair_operation_payload
+
+        payload = _proof_route_repair_operation_payload(
+            target_root=target_root,
+            changed_paths=normalized_paths,
+            mode=route_repair_mode,
+            finding_id=route_repair_finding_id,
+            authority_path=route_repair_authority_path,
+            field_selector=route_repair_field_selector,
+            expected_revision=route_repair_expected_revision,
+            delta_json=route_repair_delta_json,
+            disposition=route_repair_disposition,
+            idempotency_key=route_repair_idempotency_key,
+            dry_run=dry_run,
+        )
+        if select:
+            payload = _select_payload_fields(payload, select=select, source_command="proof")
+        if format_name == "json":
+            print(json.dumps(serialise_value(payload), indent=2))
+        else:
+            _emit_compact_answer_text(payload)
+        return
     if record_receipt:
         payload = _record_proof_receipt_payload(
             target_root=target_root,
@@ -43155,6 +43302,18 @@ def _emit_proof(
             changed_paths=normalized_paths,
             plan_id=receipt_plan,
             receipt_log=receipt_log,
+            receipt_route_id=receipt_route_id,
+            receipt_command_id=receipt_command_id,
+            receipt_duration_seconds=receipt_duration_seconds,
+            receipt_timeout=receipt_timeout,
+            receipt_exit_state=receipt_exit_state,
+            receipt_environment=receipt_environment,
+            receipt_claim_sufficiency=receipt_claim_sufficiency,
+            receipt_route_budget_seconds=receipt_route_budget_seconds,
+            receipt_repair_finding_id=receipt_repair_finding_id,
+            receipt_repair_authority_revision=receipt_repair_authority_revision,
+            receipt_repair_disposition=receipt_repair_disposition,
+            receipt_repair_idempotency_key=receipt_repair_idempotency_key,
             dry_run=dry_run,
         )
         if select:
@@ -43268,6 +43427,7 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             config=config,
             task_text=getattr(args, "task", None),
             explicit_request=_selector_requests(getattr(args, "select", None), "closeout_trust_inspection"),
+            changed_paths=changed_paths,
         )
         payload = _select_summary_payload(
             target_root=target_root,
@@ -43355,7 +43515,10 @@ def _run_summary_report_adapter(args: argparse.Namespace) -> int:
             else:
                 summary["memory_consult"] = _tiny_memory_consult_payload(config=config)
             closeout_inspection = _completion_closeout_inspection_payload(
-                target_root=target_root, config=config, task_text=getattr(args, "task", None)
+                target_root=target_root,
+                config=config,
+                task_text=getattr(args, "task", None),
+                changed_paths=changed_paths,
             )
             if closeout_inspection["status"] in {"required", "clear"}:
                 summary["closeout_trust_inspection"] = closeout_inspection

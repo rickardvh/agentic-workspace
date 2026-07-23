@@ -1264,7 +1264,12 @@ def _start_payload(
             "read_first": [config_command],
             "open_execplan_only_when": startup_template["open_execplan_only_when"],
         }
-    closeout_inspection = _completion_closeout_inspection_payload(target_root=target_root, config=config, task_text=task_text)
+    closeout_inspection = _completion_closeout_inspection_payload(
+        target_root=target_root,
+        config=config,
+        task_text=task_text,
+        changed_paths=changed_paths,
+    )
     if closeout_inspection["status"] in {"required", "clear"}:
         payload["closeout_trust_inspection"] = closeout_inspection
         payload["closeout_report_route"] = _startup_closeout_report_route(closeout_inspection)
@@ -1705,6 +1710,7 @@ def _hydrate_selected_start_advisory_payloads(
                 config=config,
                 task_text=task_text,
                 explicit_request=True,
+                changed_paths=_normalize_changed_paths(payload.get("changed_paths", [])),
             ),
         )
 

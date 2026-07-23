@@ -1,1 +1,111 @@
-{"schema_version":"agentic-workspace/operation/v1","id":"proof.report","command_surface":{"command":"proof","format_option":"format"},"summary":"Show canonical proof routes, current workspace proof summary, changed-path proof recommendations, optional subsystem proof hints, durable-surface value review, explicit proof receipt recording, failed-receipt repair retry ladders, and compact failed-log summaries.","classification":"derived-output","inputs":[{"name":"target","source":"cli-option","required":false},{"name":"route","source":"cli-option","required":false},{"name":"current","source":"cli-option","required":false},{"name":"changed","source":"cli-option","required":false},{"name":"record_receipt","source":"cli-option","required":false},{"name":"receipt_command","source":"cli-option","required":false},{"name":"receipt_result","source":"cli-option","required":false},{"name":"receipt_plan","source":"cli-option","required":false},{"name":"receipt_log","source":"cli-option","required":false},{"name":"dry_run","source":"cli-option","required":false},{"name":"select","source":"cli-option","required":false},{"name":"verbose","source":"cli-option","required":false},{"name":"format","source":"cli-option","required":false}],"output":{"kind":"text-or-json"},"effects":{"read_only":false,"destructive":false,"idempotent":false,"writes_repo_state":true,"requires_preflight_gate":false},"locality":{"requires_repo":false,"network":"forbidden","outside_repo_writes":"forbidden"},"reads":[{"surface":"proof route contracts","required":true},{"surface":"active planning state","required":false},{"surface":"changed path arguments","required":false},{"surface":"field selector for exact proof drill-down","required":false},{"surface":"surface-value guardrail defaults","required":false},{"surface":".agentic-workspace/OWNERSHIP.toml [[subsystems]]","required":false},{"surface":"verbose flag for broad diagnostic output","required":false},{"surface":"optional repo-local proof failure log","required":false}],"writes":[{"surface":".agentic-workspace/local/proof-receipts/last.json","required":false,"when":"--record-receipt and not a dry run"}],"steps":[{"id":"resolve_root","uses":"workspace.target-root.resolve","description":"Resolve the target root."},{"id":"resolve_proof","uses":"proof.routes.resolve","description":"Resolve route, current proof, changed-path proof output, subsystem proof hints, or explicit receipt payload."},{"id":"review_surface_value","uses":"proof.routes.resolve","description":"Attach durable-surface value review when changed paths touch durable surfaces."},{"id":"select_profile","uses":"output.profile.select","description":"Select verbose proof detail or default next-validation action output."},{"id":"select_fields","uses":"output.fields.select","description":"Return only requested JSON fields when --select is provided."},{"id":"emit_output","uses":"output.emit","description":"Emit proof data in the requested format."}],"guards":["Unknown proof routes should be treated as usage errors.","Additive-only durable surfaces should be flagged unless repeated cost, ownership, discovery, and validation answers are explicit.","Subsystem proof hints must not replace selected package proof lanes; they add host-repo validation context for matching paths.","Tiny output must preserve the first validation action, all required commands, and blocking warnings.","Proof recommendations must not record receipts; --record-receipt requires caller-supplied execution command and result.","Failed proof receipts may include repair retry ladders, but those ladders guide iteration only and must not replace the originally selected closeout proof.","Failed proof log summaries must stay compact, keep full-log access as a reference, and avoid semantic correctness claims from log text."],"proof":["operation contract validates against operation.schema.json","proof changed-path tests remain compatible","proof changed-path tests cover accepted existing durable-surface updates and flagged additive-only surfaces","proof changed-path tests cover subsystem proof hints","proof tiny profile omits selected-lane and provenance detail while preserving required commands","proof receipt tests cover explicit execution evidence recording, failed-receipt retry ladders, failed-log summaries, and planning closeout consumption"],"migration_status":"draft-contract-only"}
+{
+  "schema_version": "agentic-workspace/operation/v1",
+  "id": "proof.report",
+  "command_surface": {
+    "command": "proof",
+    "format_option": "format"
+  },
+  "summary": "Show canonical proof routes, current workspace proof summary, changed-path proof recommendations, optional subsystem proof hints, durable-surface value review, explicit proof receipt recording, structured execution evidence, route repair receipts, failed-receipt repair retry ladders, and compact failed-log summaries.",
+  "classification": "derived-output",
+  "inputs": [
+    {"name": "target", "source": "cli-option", "required": false},
+    {"name": "route", "source": "cli-option", "required": false},
+    {"name": "current", "source": "cli-option", "required": false},
+    {"name": "changed", "source": "cli-option", "required": false},
+    {"name": "record_receipt", "source": "cli-option", "required": false},
+    {"name": "receipt_command", "source": "cli-option", "required": false},
+    {"name": "receipt_result", "source": "cli-option", "required": false},
+    {"name": "receipt_plan", "source": "cli-option", "required": false},
+    {"name": "receipt_log", "source": "cli-option", "required": false},
+    {"name": "receipt_route_id", "source": "cli-option", "required": false},
+    {"name": "receipt_command_id", "source": "cli-option", "required": false},
+    {"name": "receipt_duration_seconds", "source": "cli-option", "required": false},
+    {"name": "receipt_timeout", "source": "cli-option", "required": false},
+    {"name": "receipt_exit_state", "source": "cli-option", "required": false},
+    {"name": "receipt_environment", "source": "cli-option", "required": false},
+    {"name": "receipt_claim_sufficiency", "source": "cli-option", "required": false},
+    {"name": "receipt_route_budget_seconds", "source": "cli-option", "required": false},
+    {"name": "receipt_repair_finding_id", "source": "cli-option", "required": false},
+    {"name": "receipt_repair_authority_revision", "source": "cli-option", "required": false},
+    {"name": "receipt_repair_disposition", "source": "cli-option", "required": false},
+    {"name": "receipt_repair_idempotency_key", "source": "cli-option", "required": false},
+    {"name": "route_repair_mode", "source": "cli-option", "required": false},
+    {"name": "route_repair_finding_id", "source": "cli-option", "required": false},
+    {"name": "route_repair_authority_path", "source": "cli-option", "required": false},
+    {"name": "route_repair_field_selector", "source": "cli-option", "required": false},
+    {"name": "route_repair_expected_revision", "source": "cli-option", "required": false},
+    {"name": "route_repair_delta_json", "source": "cli-option", "required": false},
+    {"name": "route_repair_disposition", "source": "cli-option", "required": false},
+    {"name": "route_repair_idempotency_key", "source": "cli-option", "required": false},
+    {"name": "dry_run", "source": "cli-option", "required": false},
+    {"name": "select", "source": "cli-option", "required": false},
+    {"name": "verbose", "source": "cli-option", "required": false},
+    {"name": "format", "source": "cli-option", "required": false}
+  ],
+  "output": {
+    "kind": "text-or-json"
+  },
+  "effects": {
+    "read_only": false,
+    "destructive": false,
+    "idempotent": false,
+    "writes_repo_state": true,
+    "requires_preflight_gate": false
+  },
+  "locality": {
+    "requires_repo": false,
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden"
+  },
+  "reads": [
+    {"surface": "proof route contracts", "required": true},
+    {"surface": "active planning state", "required": false},
+    {"surface": "changed path arguments", "required": false},
+    {"surface": "field selector for exact proof drill-down", "required": false},
+    {"surface": "surface-value guardrail defaults", "required": false},
+    {"surface": ".agentic-workspace/OWNERSHIP.toml [[subsystems]]", "required": false},
+    {"surface": "verbose flag for broad diagnostic output", "required": false},
+    {"surface": "optional repo-local proof failure log", "required": false},
+    {"surface": "structured proof execution metadata supplied by receipt caller", "required": false}
+  ],
+  "writes": [
+    {
+      "surface": ".agentic-workspace/local/proof-receipts/last.json",
+      "required": false,
+      "when": "--record-receipt and not a dry run"
+    },
+    {
+      "surface": ".agentic-workspace/local/proof-receipts/history.jsonl",
+      "required": false,
+      "when": "--record-receipt and not a dry run"
+    }
+  ],
+  "steps": [
+    {"id": "resolve_root", "uses": "workspace.target-root.resolve", "description": "Resolve the target root."},
+    {"id": "resolve_proof", "uses": "proof.routes.resolve", "description": "Resolve route, current proof, changed-path proof output, subsystem proof hints, or explicit receipt payload."},
+    {"id": "review_surface_value", "uses": "proof.routes.resolve", "description": "Attach durable-surface value review when changed paths touch durable surfaces."},
+    {"id": "select_profile", "uses": "output.profile.select", "description": "Select verbose proof detail or default next-validation action output."},
+    {"id": "select_fields", "uses": "output.fields.select", "description": "Return only requested JSON fields when --select is provided."},
+    {"id": "emit_output", "uses": "output.emit", "description": "Emit proof data in the requested format."}
+  ],
+  "guards": [
+    "Unknown proof routes should be treated as usage errors.",
+    "Additive-only durable surfaces should be flagged unless repeated cost, ownership, discovery, and validation answers are explicit.",
+    "Subsystem proof hints must not replace selected package proof lanes; they add host-repo validation context for matching paths.",
+    "Tiny output must preserve the first validation action, all required commands, and blocking warnings.",
+    "Proof recommendations must not record receipts; --record-receipt requires caller-supplied execution command and result.",
+    "Proof receipts use caller-supplied structured duration, timeout, environment, route identity, and claim-sufficiency fields; route-health must not infer authoritative timeout or sufficiency from result/log strings.",
+    "Route repair receipts must name the stable finding id, authority revision, and disposition before route-health retirement is allowed.",
+    "Failed proof receipts may include repair retry ladders, but those ladders guide iteration only and must not replace the originally selected closeout proof.",
+    "Failed proof log summaries must stay compact, keep full-log access as a reference, and avoid semantic correctness claims from log text."
+  ],
+  "proof": [
+    "operation contract validates against operation.schema.json",
+    "proof changed-path tests remain compatible",
+    "proof changed-path tests cover accepted existing durable-surface updates and flagged additive-only surfaces",
+    "proof changed-path tests cover subsystem proof hints",
+    "proof tiny profile omits selected-lane and provenance detail while preserving required commands",
+    "proof receipt tests cover explicit execution evidence recording, failed-receipt retry ladders, route repair receipts, failed-log summaries, and planning closeout consumption"
+  ],
+  "migration_status": "draft-contract-only"
+}

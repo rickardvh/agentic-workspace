@@ -556,7 +556,12 @@ def test_proof_route_maintenance_selector_reports_route_health_repair_packet(tmp
     assert all(packet["disposition"]["status"] == "active" for packet in repair_packets)
     assert all(packet["repair_operation"]["expected_authority_revision"] for packet in repair_packets)
     assert all(packet["repair_operation"]["preview_command"] for packet in repair_packets)
-    assert route_health["duplicate_dispositions"][0]["issue"] == "#2367"
+    assert all(packet["repair_operation"]["field_selector"] for packet in repair_packets)
+    assert all(packet["repair_operation"]["apply_command"] for packet in repair_packets)
+    assert route_health["duplicate_disposition_contract"]["status"] == "external-lifecycle-owned"
+    assert "#2310" not in json.dumps(route_health)
+    assert "#2367" not in json.dumps(route_health)
+    assert "5058804538" not in json.dumps(route_health)
 
 
 def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_route_repair(tmp_path: Path, capsys) -> None:
@@ -578,6 +583,15 @@ def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_rout
                 "failed",
                 "--receipt-log",
                 "make test-workspace timed out after 240s",
+                "--receipt-timeout",
+                "--receipt-duration-seconds",
+                "240",
+                "--receipt-route-id",
+                "workspace-broad-suite",
+                "--receipt-claim-sufficiency",
+                "insufficient",
+                "--receipt-route-budget-seconds",
+                "120",
                 "--format",
                 "json",
             ]
@@ -610,13 +624,61 @@ def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_rout
     assert execution_finding["consequence_record"]["kind"] == "workspace-improvement-pressure-record/v1"
     assert execution_finding["disposition"]["durable_owner_ref"] == execution_finding["consequence_record"]["id"]
     assert execution_finding["repair_operation"]["apply_contract"]["idempotency_key"].startswith("proof-route-health:")
+    assert execution_finding["repair_operation"]["apply_contract"]["authority_path"] == ".agentic-workspace/config.toml"
+    assert execution_finding["repair_operation"]["apply_contract"]["field_selector"] == "assurance.domain_proof_lanes"
     assert before_values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "blocked"
 
-    _replace_workspace_subsystem_proof(
-        tmp_path,
-        "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q",
+    delta = {
+        "append_text": """
+[assurance.domain_proof_lanes.root_workspace_guidance]
+purpose = "Focused root Workspace guidance behavior."
+applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/workspace_runtime*.py"]
+commands = ["uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q"]
+review_aids = ["Confirm the selected proof route and route-health packet match the changed root workspace behavior."]
+evidence_concepts = ["root-workspace-guidance", "focused-serial-proof"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml"]
+escalation = ["the change crosses package, generated-command, lifecycle, or closeout behavior boundaries"]
+claim_boundary = "focused-root-workspace-guidance-required-before-runtime-routing-claim"
+owner = "workspace-cli-runtime"
+""",
+        "required_absent": "[assurance.domain_proof_lanes.root_workspace_guidance]",
+    }
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--route-repair-mode",
+                "apply",
+                "--route-repair-finding-id",
+                execution_finding["id"],
+                "--route-repair-authority-path",
+                ".agentic-workspace/config.toml",
+                "--route-repair-field-selector",
+                "assurance.domain_proof_lanes",
+                "--route-repair-expected-revision",
+                execution_finding["route_authority_revision"],
+                "--route-repair-delta-json",
+                json.dumps(delta),
+                "--route-repair-disposition",
+                "fixed",
+                "--route-repair-idempotency-key",
+                execution_finding["repair_operation"]["apply_contract"]["idempotency_key"],
+                "--format",
+                "json",
+            ]
+        )
+        == 0
     )
-    _append_root_workspace_guidance_lane(tmp_path)
+    apply_payload = json.loads(capsys.readouterr().out)
+    assert apply_payload["status"] == "applied"
+    post_authority_revision = apply_payload["post_authority_revision"]
+
     _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "# fixture\n")
     _write(tmp_path / "tests" / "test_workspace_defaults_cli.py", "# fixture\n")
     _write(tmp_path / "tests" / "test_maintainer_surfaces.py", "# fixture\n")
@@ -643,12 +705,142 @@ def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_rout
     assert values["proof_route_strategy_decision"]["outcome"] == "focused"
     assert values["route_refinement_required"]["status"] == "not-required"
     route_health = values["proof_route_maintenance"]["route_health"]
+    assert route_health["status"] == "attention"
+    assert route_health["retired_finding_count"] == 0
+    assert route_health["retirement_candidate_count"] == 1
+    assert values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "blocked"
+
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--select",
+                "closeout_trust_inspection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    closeout_before = json.loads(capsys.readouterr().out)["values"]["closeout_trust_inspection"]
+    assert closeout_before["status"] == "required"
+    assert closeout_before["proof_route_strategy_consumer_gate"]["status"] == "blocked"
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    handoff_before = json.loads(capsys.readouterr().out)["handoff_proof_route_consumer_gate"]
+    assert handoff_before["status"] == "blocked"
+
+    focused_command = values["proof_route_strategy_preservation"]["required_commands"][0]
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--record-receipt",
+                "--receipt-command",
+                focused_command,
+                "--receipt-result",
+                "passed",
+                "--receipt-repair-finding-id",
+                execution_finding["id"],
+                "--receipt-repair-authority-revision",
+                post_authority_revision,
+                "--receipt-repair-disposition",
+                "fixed",
+                "--receipt-repair-idempotency-key",
+                execution_finding["repair_operation"]["apply_contract"]["idempotency_key"],
+                "--receipt-claim-sufficiency",
+                "sufficient",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    capsys.readouterr()
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--select",
+                "proof_route_strategy_decision,route_refinement_required,proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    route_health = values["proof_route_maintenance"]["route_health"]
     assert route_health["status"] == "quiet"
     assert route_health["findings"] == []
     assert route_health["retired_finding_count"] == 1
-    assert route_health["retired_findings"][0]["previous_command"] == "make test-workspace"
+    assert route_health["retired_findings"][0]["finding_id"] == execution_finding["id"]
     assert route_health["retired_findings"][0]["verified_authority_revision"]
     assert values["proof_route_strategy_claim_gate"]["consumer_gate"]["status"] == "current"
+
+    assert (
+        cli.main(
+            [
+                "summary",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--select",
+                "closeout_trust_inspection",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    closeout_after = json.loads(capsys.readouterr().out)["values"]["closeout_trust_inspection"]
+    assert closeout_after["proof_route_strategy_consumer_gate"]["status"] == "current"
+    assert "claim-proof-route-health-resolved" not in closeout_after["action_effect"]["blocked_until_reconciled"]
+
+    assert (
+        cli.main(
+            [
+                "implement",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+    handoff_after = json.loads(capsys.readouterr().out)["handoff_proof_route_consumer_gate"]
+    assert handoff_after["status"] == "current"
     assert values["proof_route_strategy_preservation"]["proof_route_health"] == {
         "status": "quiet",
         "finding_count": 0,
@@ -656,7 +848,7 @@ def test_proof_route_health_retires_failed_broad_receipt_after_focused_root_rout
         "repair_packet_count": 0,
         "repair_packet_ids": [],
         "retired_finding_count": 1,
-        "execution_observation_status": "retired-evidence",
+        "execution_observation_status": "quiet",
         "surface": "proof_route_maintenance.route_health",
     }
 
@@ -693,6 +885,34 @@ def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys
     assert "make test-workspace" not in answer["required_commands"]
     assert "focused proof does not exercise the changed behavior" in lane["escalate_when"]
     assert answer["focused_route_coverage_audit"]["status"] == "covered"
+
+
+def test_proof_changed_selector_does_not_cover_unrelated_workspace_runtime(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "workspace_runtime_core.py", "VALUE = 1\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/workspace_runtime_core.py",
+                "--select",
+                "required_commands,selected_lanes,proof_route_maintenance",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    answer = json.loads(capsys.readouterr().out)["values"]
+    assert "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q" not in answer["required_commands"]
+    assert "make typecheck" in answer["required_commands"]
+    assert "domain:proof_runtime" not in [lane["id"] for lane in answer["selected_lanes"]]
 
 
 def test_proof_changed_selector_domain_route_covers_multi_path_scope(tmp_path: Path, capsys) -> None:

@@ -17,6 +17,8 @@
     "Subsystem proof hints must not replace selected package proof lanes; they add host-repo validation context for matching paths.",
     "Tiny output must preserve the first validation action, all required commands, and blocking warnings.",
     "Proof recommendations must not record receipts; --record-receipt requires caller-supplied execution command and result.",
+    "Proof receipts use caller-supplied structured duration, timeout, environment, route identity, and claim-sufficiency fields; route-health must not infer authoritative timeout or sufficiency from result/log strings.",
+    "Route repair receipts must name the stable finding id, authority revision, and disposition before route-health retirement is allowed.",
     "Failed proof receipts may include repair retry ladders, but those ladders guide iteration only and must not replace the originally selected closeout proof.",
     "Failed proof log summaries must stay compact, keep full-log access as a reference, and avoid semantic correctness claims from log text."
   ],
@@ -64,6 +66,106 @@
     },
     {
       "name": "receipt_log",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_route_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_command_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_duration_seconds",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_timeout",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_exit_state",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_environment",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_claim_sufficiency",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_route_budget_seconds",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_repair_finding_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_repair_authority_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_repair_disposition",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "receipt_repair_idempotency_key",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route_repair_mode",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route_repair_finding_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route_repair_authority_path",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route_repair_field_selector",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route_repair_expected_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route_repair_delta_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route_repair_disposition",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route_repair_idempotency_key",
       "required": false,
       "source": "cli-option"
     },
@@ -131,7 +233,7 @@
     "proof changed-path tests cover accepted existing durable-surface updates and flagged additive-only surfaces",
     "proof changed-path tests cover subsystem proof hints",
     "proof tiny profile omits selected-lane and provenance detail while preserving required commands",
-    "proof receipt tests cover explicit execution evidence recording, failed-receipt retry ladders, failed-log summaries, and planning closeout consumption"
+    "proof receipt tests cover explicit execution evidence recording, failed-receipt retry ladders, route repair receipts, failed-log summaries, and planning closeout consumption"
   ],
   "reads": [
     {
@@ -165,6 +267,10 @@
     {
       "required": false,
       "surface": "optional repo-local proof failure log"
+    },
+    {
+      "required": false,
+      "surface": "structured proof execution metadata supplied by receipt caller"
     }
   ],
   "schema_version": "agentic-workspace/operation/v1",
@@ -200,11 +306,16 @@
       "uses": "output.emit"
     }
   ],
-  "summary": "Show canonical proof routes, current workspace proof summary, changed-path proof recommendations, optional subsystem proof hints, durable-surface value review, explicit proof receipt recording, failed-receipt repair retry ladders, and compact failed-log summaries.",
+  "summary": "Show canonical proof routes, current workspace proof summary, changed-path proof recommendations, optional subsystem proof hints, durable-surface value review, explicit proof receipt recording, structured execution evidence, route repair receipts, failed-receipt repair retry ladders, and compact failed-log summaries.",
   "writes": [
     {
       "required": false,
       "surface": ".agentic-workspace/local/proof-receipts/last.json",
+      "when": "--record-receipt and not a dry run"
+    },
+    {
+      "required": false,
+      "surface": ".agentic-workspace/local/proof-receipts/history.jsonl",
       "when": "--record-receipt and not a dry run"
     }
   ]

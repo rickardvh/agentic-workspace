@@ -1136,7 +1136,7 @@ def _check_startup_policy(repo_root: Path) -> list[PlanningWarning]:
         "do not bake machine-local aw invocation paths into checked-in generic guidance",
         "module skill trees as required operating surfaces",
         "routed drill-down or recovery surfaces",
-        ".agentic-workspace/workflow.md",
+        "shared startup fallback reached through this adapter",
         "<!-- agentic-workspace:workflow:end -->",
     )
     if not all(fragment in agents_text for fragment in required_agents_fragments):
