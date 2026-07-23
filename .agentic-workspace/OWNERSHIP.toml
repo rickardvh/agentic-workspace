@@ -199,7 +199,7 @@ id = "workspace-cli-runtime"
 paths = ["generated/workspace/python/**", "src/agentic_workspace/workspace_runtime*.py"]
 owns = ["workspace command routing", "compact report assembly", "runtime adapter dispatch", "workspace runtime source boundaries"]
 does_not_own = ["planning package state semantics", "memory note policy", "generated command package source contracts"]
-proof = ["uv run pytest tests/test_workspace_cli.py -q"]
+proof = ["uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q"]
 escalate_when = ["change widens public command contract", "change requires planning or memory package semantics"]
 
 [[subsystems]]

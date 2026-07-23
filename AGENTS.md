@@ -14,7 +14,7 @@ Invocation rule:
 1. Use `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present.
 2. Otherwise use `.agentic-workspace/config.toml` `[workspace].cli_invoke`.
 3. Otherwise use the package default `agentic-workspace`.
-4. If no CLI invocation works, read `.agentic-workspace/WORKFLOW.md` before other workspace files.
+4. If no CLI invocation works, read `.agentic-workspace/skills/workspace-startup/SKILL.md` before other workspace files.
 
 Ordinary route:
 1. Run `<configured AW invocation> start --target . --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions.
@@ -27,6 +27,7 @@ Boundaries:
 - Known dedicated Agentic Workspace commands are allowed only when the request maps directly to that command and no takeover, recovery, active-planning, or ambiguous safety decision is needed first.
 - Do not bake machine-local AW invocation paths into checked-in generic guidance; concrete commands come from the configured invocation or live router output.
 - Treat checked-in `.agentic-workspace/skills` and module skill trees as required operating surfaces, not optional payload mirror content.
+- Treat `.agentic-workspace/WORKFLOW.md` as the shared workflow contract reached through this startup adapter.
 - Treat `preflight`, `config`, `defaults`, `skills`, `modules`, `ownership`, and `report` as routed drill-down or recovery surfaces, not the ordinary startup loop.
 - Report repo-relative paths, not local absolute paths.
 <!-- agentic-workspace:workflow:end -->

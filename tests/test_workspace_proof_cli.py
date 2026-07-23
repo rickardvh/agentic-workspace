@@ -409,6 +409,37 @@ owner = "workspace-cli-runtime"
     )
 
 
+def _replace_workspace_subsystem_proof(target: Path, command: str) -> None:
+    ownership = target / ".agentic-workspace" / "OWNERSHIP.toml"
+    text = ownership.read_text(encoding="utf-8")
+    ownership.write_text(
+        text.replace('proof = ["uv run pytest tests/test_workspace_cli.py -q"]', f'proof = ["{command}"]'), encoding="utf-8"
+    )
+
+
+def _append_root_workspace_guidance_lane(target: Path) -> None:
+    config = target / ".agentic-workspace" / "config.toml"
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        + """
+
+[assurance.domain_proof_lanes.root_workspace_guidance]
+purpose = "Focused root Workspace startup/report/defaults guidance behavior."
+applies_to_paths = ["src/agentic_workspace/config.py", "src/agentic_workspace/reporting_support.py", "src/agentic_workspace/workspace_runtime_core.py", "src/agentic_workspace/workspace_runtime_generated_surface.py", "src/agentic_workspace/workspace_runtime_primitives.py", "src/agentic_workspace/workspace_runtime_startup.py", "src/agentic_workspace/contracts/skill_specs.json", "tests/test_maintainer_surfaces.py", "tests/test_workspace_defaults_cli.py"]
+commands = ["uv run pytest tests/test_workspace_proof_cli.py -k root_workspace_guidance -q", "uv run pytest tests/test_workspace_defaults_cli.py -q", "uv run pytest tests/test_maintainer_surfaces.py -q", "make typecheck"]
+review_aids = ["Confirm root guidance proof stays focused."]
+evidence_concepts = ["root-workspace-guidance"]
+proof_profiles = ["workspace_behavior"]
+authority_refs = [".agentic-workspace/config.toml", "docs/maintainer/testing-strategy.md"]
+escalation = ["focused route cannot prove the changed guidance behavior"]
+claim_boundary = "focused-root-guidance-required"
+owner = "workspace-cli-runtime"
+route_role = "behavior"
+""",
+        encoding="utf-8",
+    )
+
+
 def _append_session_logging_lane(target: Path) -> None:
     config = target / ".agentic-workspace" / "config.toml"
     config.write_text(
@@ -429,6 +460,144 @@ owner = "workspace-cli-runtime"
 """,
         encoding="utf-8",
     )
+
+
+def test_proof_root_workspace_guidance_2383_replay_uses_focused_lane_without_broad_workspace_cli(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _replace_workspace_subsystem_proof(
+        tmp_path,
+        "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q",
+    )
+    _append_root_workspace_guidance_lane(tmp_path)
+    changed_paths = [
+        "src/agentic_workspace/config.py",
+        "src/agentic_workspace/reporting_support.py",
+        "src/agentic_workspace/workspace_runtime_core.py",
+        "src/agentic_workspace/workspace_runtime_generated_surface.py",
+        "src/agentic_workspace/workspace_runtime_primitives.py",
+        "src/agentic_workspace/workspace_runtime_startup.py",
+        "src/agentic_workspace/contracts/skill_specs.json",
+        "tests/test_maintainer_surfaces.py",
+        "tests/test_workspace_defaults_cli.py",
+    ]
+    for changed_path in changed_paths:
+        _write(tmp_path / changed_path, "# fixture\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "# fixture\n")
+    _write(tmp_path / "scripts" / "run_agentic_workspace.py", "# fixture\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                *changed_paths,
+                "--select",
+                "proof_route_strategy_decision,route_refinement_required,required_commands,selected_lanes,proof_route_maintenance,proof_route_strategy_preservation,proof_route_strategy_claim_gate",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert values["route_refinement_required"]["status"] == "not-required"
+    assert "domain:root_workspace_guidance" in [lane["id"] for lane in values["selected_lanes"]]
+    assert "uv run pytest tests/test_workspace_cli.py -q" not in values["required_commands"]
+    assert "make test-workspace" not in values["required_commands"]
+    route_health_classes = {finding["finding_class"] for finding in values["proof_route_maintenance"]["route_health"]["findings"]}
+    assert "missing_coverage" not in route_health_classes
+    assert "excessive_breadth_cost" not in route_health_classes
+    preservation = values["proof_route_strategy_preservation"]
+    claim_gate = values["proof_route_strategy_claim_gate"]
+    assert preservation["route_health_id"]
+    assert claim_gate["route_health_id"] == preservation["route_health_id"]
+    assert claim_gate["proof_route_health"]["surface"] == "proof_route_maintenance.route_health"
+    for consumer in preservation["consumers"].values():
+        assert consumer["route_health_id"] == preservation["route_health_id"]
+
+
+def test_proof_route_maintenance_selector_reports_route_health_repair_packet(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _append_focused_proof_runtime_lane(tmp_path)
+    changed_path = "src/agentic_workspace/workspace_runtime_primitives.py"
+    _write(tmp_path / changed_path, "# fixture\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                changed_path,
+                "--select",
+                "proof_route_maintenance,route_refinement_required",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["route_refinement_required"]["status"] == "required"
+    route_health = values["proof_route_maintenance"]["route_health"]
+    assert route_health["status"] == "attention"
+    finding_classes = {finding["finding_class"] for finding in route_health["findings"]}
+    assert {"missing_coverage", "excessive_breadth_cost"}.issubset(finding_classes)
+    repair_packets = values["proof_route_maintenance"]["route_health"]["repair_packets"]
+    assert any(packet["canonical_edit_surface"].startswith(".agentic-workspace/config.toml") for packet in repair_packets)
+    assert all(packet["finding_id"] for packet in repair_packets)
+
+
+def test_proof_route_health_is_quiet_after_focused_root_route_repair(tmp_path: Path, capsys) -> None:
+    _write_repo_local_proof_target(tmp_path)
+    _replace_workspace_subsystem_proof(
+        tmp_path,
+        "uv run pytest tests/test_workspace_proof_cli.py -k changed_selector -q",
+    )
+    _append_root_workspace_guidance_lane(tmp_path)
+    _write(tmp_path / "src" / "agentic_workspace" / "config.py", "# fixture\n")
+    _write(tmp_path / "tests" / "test_workspace_proof_cli.py", "# fixture\n")
+    _write(tmp_path / "tests" / "test_workspace_defaults_cli.py", "# fixture\n")
+    _write(tmp_path / "tests" / "test_maintainer_surfaces.py", "# fixture\n")
+    _write(tmp_path / "scripts" / "run_agentic_workspace.py", "# fixture\n")
+
+    assert (
+        cli.main(
+            [
+                "proof",
+                "--target",
+                str(tmp_path),
+                "--changed",
+                "src/agentic_workspace/config.py",
+                "--select",
+                "proof_route_strategy_decision,route_refinement_required,proof_route_maintenance,proof_route_strategy_preservation",
+                "--format",
+                "json",
+            ]
+        )
+        == 0
+    )
+
+    values = json.loads(capsys.readouterr().out)["values"]
+    assert values["proof_route_strategy_decision"]["outcome"] == "focused"
+    assert values["route_refinement_required"]["status"] == "not-required"
+    route_health = values["proof_route_maintenance"]["route_health"]
+    assert route_health["status"] == "quiet"
+    assert route_health["findings"] == []
+    assert values["proof_route_strategy_preservation"]["proof_route_health"] == {
+        "status": "quiet",
+        "finding_count": 0,
+        "finding_ids": [],
+        "repair_packet_count": 0,
+        "repair_packet_ids": [],
+        "surface": "proof_route_maintenance.route_health",
+    }
 
 
 def test_proof_changed_selector_uses_focused_domain_route(tmp_path: Path, capsys) -> None:
@@ -2510,6 +2679,11 @@ force = "required-before-closeout"
     ]
     assert answer["manual_verification"]["status"] == "required"
     assert answer["manual_verification"]["unavailable_commands"] == answer["unavailable_commands"]
+    route_health = answer["proof_route_maintenance"]["route_health"]
+    assert "execution_environment_mismatch" in {finding["finding_class"] for finding in route_health["findings"]}
+    repair_packet = next(packet for packet in route_health["repair_packets"] if packet["finding_class"] == "execution_environment_mismatch")
+    assert repair_packet["affected_route"] == "assurance-requirement:model_harness"
+    assert repair_packet["claim_effect"] == "repair-required-before-route-claim"
 
 
 def test_proof_changed_keeps_existing_path_specific_proof_required(tmp_path: Path, capsys) -> None:
