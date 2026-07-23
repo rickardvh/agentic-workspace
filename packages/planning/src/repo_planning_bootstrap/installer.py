@@ -20671,7 +20671,7 @@ def _lifecycle_plan_payload(result: InstallResult) -> dict[str, Any]:
         elif "review" in kind or "warning" in kind:
             grouped["review_required"].append(path)
 
-    return {
+    payload = {
         "schema_version": "planning-lifecycle-plan/v1",
         "target": str(result.target_root),
         "operation": _lifecycle_operation_name(result.message),
@@ -20690,12 +20690,19 @@ def _lifecycle_plan_payload(result: InstallResult) -> dict[str, Any]:
             "status": "not-authoritative",
             "rule": "Lifecycle dry-run plans do not inspect or mutate ignored local-only integration or memory state.",
         },
-        "next_safe_command": _lifecycle_next_safe_command(result),
     }
+    next_safe_command = _lifecycle_next_safe_command(result)
+    if next_safe_command:
+        payload["next_safe_command"] = next_safe_command
+    else:
+        payload["next_safe_guidance"] = _lifecycle_next_safe_guidance(result)
+    return payload
 
 
 def _lifecycle_operation_name(message: str) -> str:
     lowered = message.lower()
+    if "close out execplan" in lowered or "closeout" in lowered:
+        return "closeout"
     if "adoption" in lowered:
         return "adopt"
     if "upgrade" in lowered:
@@ -20715,11 +20722,18 @@ def _lifecycle_operation_name(message: str) -> str:
     return "unknown"
 
 
-def _lifecycle_next_safe_command(result: InstallResult) -> str:
+def _lifecycle_next_safe_command(result: InstallResult) -> str | None:
     operation = _lifecycle_operation_name(result.message)
-    if operation == "unknown":
-        return "Review actions and rerun the same command without --dry-run only if the plan matches intent."
+    if operation in {"closeout", "unknown"}:
+        return None
     return f"agentic-planning {operation} --target {result.target_root}"
+
+
+def _lifecycle_next_safe_guidance(result: InstallResult) -> str:
+    operation = _lifecycle_operation_name(result.message)
+    if operation == "closeout":
+        return "Rerun the same closeout command without --dry-run only if the plan matches intent."
+    return "Review actions and rerun the same command without --dry-run only if the plan matches intent."
 
 
 def format_summary_json(summary: dict[str, Any]) -> str:
