@@ -1,19 +1,19 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:4dbf56fa644e4b53359f23268c9e1cc3e77b23e6ccd0d1eff47c5b87bab40dd8",
+  "profile_fingerprint": "sha256:1f78bcc36425e7648b02baa48c5762bf1a5d962791ec9cde853bd8b1b64af6f9",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
-    "client_package": "0.33.9",
+    "client_package": "0.34.2",
     "runtime_protocol": "1.0.0",
     "python_package": {
       "name": "agentic-workspace",
-      "version": "0.33.9"
+      "version": "0.34.2"
     },
     "typescript_package": {
       "name": "@agentic-workspace/workspace-cli",
-      "version": "0.33.9"
+      "version": "0.34.2"
     }
   },
   "operations": {
@@ -576,8 +576,8 @@
     "delegation-outcome.append": {
       "identity": "delegation-outcome.append",
       "version": "agentic-workspace/operation/v1",
-      "fingerprint": "sha256:3f4b5cb1a61c106cb52d4016a54eabd37a0899661aacea27aee48bfd439e46ff",
-      "compatibility_fingerprint": "sha256:2c5c33e149040ee8fae0fe89550b107cc12d99ecd64cccfb37420b91515db8dc",
+      "fingerprint": "sha256:43ddaa2ab593ca4bb5e3281710ad633c8b259a7b2967472aa00d55ab8afd95ca",
+      "compatibility_fingerprint": "sha256:3826f5082433729bfbb924ae7e7fbb280ef7846391162c7e390831965d51857f",
       "contract": {
         "schema_version": "agentic-workspace/operation/v1",
         "id": "delegation-outcome.append",
@@ -602,6 +602,116 @@
             "name": "task_class",
             "source": "cli-option",
             "required": true
+          },
+          {
+            "name": "scope_class",
+            "source": "cli-option",
+            "required": true
+          },
+          {
+            "name": "operation",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "predecessor_id",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "authority",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "confidence",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "source_type",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "source_ref",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "producer_class",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "route_outcome",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "assignment_route",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "proof_observation",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "review_observation",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "handoff_burden",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "repair_burden",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "retry_burden",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "restart_burden",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "expected_burden",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "observed_burden",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "scope_drift",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "contradiction_state",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "uncertainty_state",
+            "source": "cli-option",
+            "required": false
+          },
+          {
+            "name": "idempotency_key",
+            "source": "cli-option",
+            "required": false
           },
           {
             "name": "outcome",
@@ -676,6 +786,10 @@
         ],
         "guards": [
           "Required outcome fields must be present and enum-valid.",
+          "New admissions must include independent scope context.",
+          "Routable authority is derived from producer provenance; untrusted or agent self-observed signals are stored as non-routing uncertainty.",
+          "Lifecycle transitions must reference an existing predecessor id.",
+          "Append enforces bounded per-context retention before assignment consumes the ledger.",
           "Do not treat local outcome records as checked-in repo policy."
         ],
         "proof": [
@@ -821,6 +935,116 @@
               "required": true
             },
             {
+              "name": "scope_class",
+              "source": "cli-option",
+              "required": true
+            },
+            {
+              "name": "operation",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "predecessor_id",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "authority",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "confidence",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "source_type",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "source_ref",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "producer_class",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "route_outcome",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "assignment_route",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "proof_observation",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "review_observation",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "handoff_burden",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "repair_burden",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "retry_burden",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "restart_burden",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "expected_burden",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "observed_burden",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "scope_drift",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "contradiction_state",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "uncertainty_state",
+              "source": "cli-option",
+              "required": false
+            },
+            {
+              "name": "idempotency_key",
+              "source": "cli-option",
+              "required": false
+            },
+            {
               "name": "outcome",
               "source": "cli-option",
               "required": true
@@ -858,6 +1082,10 @@
           },
           "guards": [
             "Required outcome fields must be present and enum-valid.",
+            "New admissions must include independent scope context.",
+            "Routable authority is derived from producer provenance; untrusted or agent self-observed signals are stored as non-routing uncertainty.",
+            "Lifecycle transitions must reference an existing predecessor id.",
+            "Append enforces bounded per-context retention before assignment consumes the ledger.",
             "Do not treat local outcome records as checked-in repo policy."
           ]
         },
@@ -870,6 +1098,7 @@
               "required": [
                 "delegation_target",
                 "task_class",
+                "scope_class",
                 "outcome"
               ],
               "properties": {
@@ -880,6 +1109,82 @@
                 "task_class": {
                   "type": "string",
                   "minLength": 1
+                },
+                "scope_class": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "operation": {
+                  "enum": [
+                    "submit",
+                    "correct-or-dispute",
+                    "supersede",
+                    "prune-or-compact"
+                  ]
+                },
+                "predecessor_id": {
+                  "type": "string"
+                },
+                "authority": {
+                  "type": "string"
+                },
+                "confidence": {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                },
+                "source_type": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "producer_class": {
+                  "type": "string"
+                },
+                "route_outcome": {
+                  "type": "string"
+                },
+                "assignment_route": {
+                  "type": "string"
+                },
+                "proof_observation": {
+                  "type": "string"
+                },
+                "review_observation": {
+                  "type": "string"
+                },
+                "handoff_burden": {
+                  "type": "string"
+                },
+                "repair_burden": {
+                  "type": "string"
+                },
+                "retry_burden": {
+                  "type": "string"
+                },
+                "restart_burden": {
+                  "type": "string"
+                },
+                "expected_burden": {
+                  "type": "string"
+                },
+                "observed_burden": {
+                  "type": "string"
+                },
+                "scope_drift": {
+                  "type": "string"
+                },
+                "contradiction_state": {
+                  "type": "string"
+                },
+                "uncertainty_state": {
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
                 },
                 "outcome": {
                   "enum": [
@@ -1069,6 +1374,7 @@
         "required": [
           "delegation_target",
           "task_class",
+          "scope_class",
           "outcome"
         ],
         "properties": {
@@ -1081,6 +1387,104 @@
             "type": "string",
             "minLength": 1,
             "description": "Bounded task classification."
+          },
+          "scope_class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Independent bounded scope classification."
+          },
+          "operation": {
+            "enum": [
+              "submit",
+              "correct-or-dispute",
+              "supersede",
+              "prune-or-compact"
+            ],
+            "description": "Evidence lifecycle operation."
+          },
+          "predecessor_id": {
+            "type": "string",
+            "description": "Existing record id for lifecycle transition operations."
+          },
+          "authority": {
+            "type": "string",
+            "description": "Requested authority class for the evidence. Runtime derives routability from producer provenance."
+          },
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Confidence classification for the admitted evidence."
+          },
+          "source_type": {
+            "type": "string",
+            "description": "Source type for provenance, such as proof-receipt, review-comment, telemetry, or local-json-ledger."
+          },
+          "source_ref": {
+            "type": "string",
+            "description": "Exact source reference used for duplicate/idempotency and audit."
+          },
+          "producer_class": {
+            "type": "string",
+            "description": "Producer class resolved by the operation boundary."
+          },
+          "route_outcome": {
+            "type": "string",
+            "description": "Structured route outcome observation."
+          },
+          "assignment_route": {
+            "type": "string",
+            "description": "Assignment route observed for this outcome."
+          },
+          "proof_observation": {
+            "type": "string",
+            "description": "Proof observation associated with the outcome."
+          },
+          "review_observation": {
+            "type": "string",
+            "description": "Review observation associated with the outcome."
+          },
+          "handoff_burden": {
+            "type": "string",
+            "description": "Handoff burden observation."
+          },
+          "repair_burden": {
+            "type": "string",
+            "description": "Repair burden observation."
+          },
+          "retry_burden": {
+            "type": "string",
+            "description": "Retry burden observation."
+          },
+          "restart_burden": {
+            "type": "string",
+            "description": "Restart burden observation."
+          },
+          "expected_burden": {
+            "type": "string",
+            "description": "Expected burden before execution."
+          },
+          "observed_burden": {
+            "type": "string",
+            "description": "Observed burden after execution."
+          },
+          "scope_drift": {
+            "type": "string",
+            "description": "Scope drift state."
+          },
+          "contradiction_state": {
+            "type": "string",
+            "description": "Contradiction or dispute state."
+          },
+          "uncertainty_state": {
+            "type": "string",
+            "description": "Uncertainty state preserved for non-routing evidence."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Stable idempotency key supplied by the producer."
           },
           "outcome": {
             "enum": [

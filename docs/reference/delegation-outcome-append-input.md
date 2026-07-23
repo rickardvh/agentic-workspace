@@ -13,6 +13,28 @@ External client input contract for delegation-outcome.append.
 | (root) | object | yes |  | External client input contract for delegation-outcome.append. |  | x-agentic-workspace-doc-role: "contract-reference" |
 | `delegation_target` | string | yes |  | Delegation target alias. |  |  |
 | `task_class` | string | yes |  | Bounded task classification. |  |  |
+| `scope_class` | string | yes |  | Independent bounded scope classification. |  |  |
+| `operation` | enum `"submit"`, `"correct-or-dispute"`, `"supersede"`, `"prune-or-compact"` | no |  | Evidence lifecycle operation. |  |  |
+| `predecessor_id` | string | no |  | Existing record id for lifecycle transition operations. |  |  |
+| `authority` | string | no |  | Requested authority class for the evidence. Runtime derives routability from producer provenance. |  |  |
+| `confidence` | enum `"low"`, `"medium"`, `"high"` | no |  | Confidence classification for the admitted evidence. |  |  |
+| `source_type` | string | no |  | Source type for provenance, such as proof-receipt, review-comment, telemetry, or local-json-ledger. |  |  |
+| `source_ref` | string | no |  | Exact source reference used for duplicate/idempotency and audit. |  |  |
+| `producer_class` | string | no |  | Producer class resolved by the operation boundary. |  |  |
+| `route_outcome` | string | no |  | Structured route outcome observation. |  |  |
+| `assignment_route` | string | no |  | Assignment route observed for this outcome. |  |  |
+| `proof_observation` | string | no |  | Proof observation associated with the outcome. |  |  |
+| `review_observation` | string | no |  | Review observation associated with the outcome. |  |  |
+| `handoff_burden` | string | no |  | Handoff burden observation. |  |  |
+| `repair_burden` | string | no |  | Repair burden observation. |  |  |
+| `retry_burden` | string | no |  | Retry burden observation. |  |  |
+| `restart_burden` | string | no |  | Restart burden observation. |  |  |
+| `expected_burden` | string | no |  | Expected burden before execution. |  |  |
+| `observed_burden` | string | no |  | Observed burden after execution. |  |  |
+| `scope_drift` | string | no |  | Scope drift state. |  |  |
+| `contradiction_state` | string | no |  | Contradiction or dispute state. |  |  |
+| `uncertainty_state` | string | no |  | Uncertainty state preserved for non-routing evidence. |  |  |
+| `idempotency_key` | string | no |  | Stable idempotency key supplied by the producer. |  |  |
 | `outcome` | enum `"success"`, `"mixed"`, `"failed"` | yes |  | Observed delegation outcome. |  |  |
 | `handoff_sufficiency` | enum `"sufficient"`, `"borderline"`, `"insufficient"` | no |  | Handoff sufficiency classification. |  |  |
 | `review_burden` | enum `"light"`, `"normal"`, `"high"` | no |  | Review burden classification. |  |  |

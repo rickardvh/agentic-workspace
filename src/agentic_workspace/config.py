@@ -592,10 +592,34 @@ class DelegationOutcomeRecord:
     recorded_at: str
     delegation_target: str
     task_class: str
+    scope_class: str
     outcome: str
     handoff_sufficiency: str
     review_burden: str
     escalation_required: bool
+    operation: str = "submit"
+    record_id: str = ""
+    predecessor_id: str = ""
+    authority: str = "local-outcome-ledger"
+    confidence: str = "medium"
+    admission_state: str = "accepted"
+    source_type: str = "local-json-ledger"
+    source_ref: str = ""
+    producer_class: str = "local-operator"
+    route_outcome: str = ""
+    assignment_route: str = ""
+    proof_observation: str = ""
+    review_observation: str = ""
+    handoff_burden: str = ""
+    repair_burden: str = ""
+    retry_burden: str = ""
+    restart_burden: str = ""
+    expected_burden: str = ""
+    observed_burden: str = ""
+    scope_drift: str = "none"
+    contradiction_state: str = "none"
+    uncertainty_state: str = "unknown"
+    idempotency_key: str = ""
 
 
 def discover_workspace_root(start_path: Path | None = None) -> Path | None:
@@ -1617,16 +1641,42 @@ def normalize_delegation_outcome_record(raw: Any, *, surface_name: str) -> Deleg
     recorded_at = raw.get("recorded_at")
     delegation_target = raw.get("delegation_target")
     task_class = raw.get("task_class")
+    scope_class = raw.get("scope_class")
     outcome = raw.get("outcome")
     handoff_sufficiency = raw.get("handoff_sufficiency")
     review_burden = raw.get("review_burden")
     escalation_required = raw.get("escalation_required")
+    operation = raw.get("operation", "submit")
+    record_id = raw.get("record_id", "")
+    predecessor_id = raw.get("predecessor_id", "")
+    authority = raw.get("authority", "local-outcome-ledger")
+    confidence = raw.get("confidence", "medium")
+    admission_state = raw.get("admission_state", "accepted-normalized")
+    source_type = raw.get("source_type", "local-json-ledger")
+    source_ref = raw.get("source_ref", WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix())
+    producer_class = raw.get("producer_class", "local-operator")
+    route_outcome = raw.get("route_outcome", "")
+    assignment_route = raw.get("assignment_route", "")
+    proof_observation = raw.get("proof_observation", "")
+    review_observation = raw.get("review_observation", "")
+    handoff_burden = raw.get("handoff_burden", "")
+    repair_burden = raw.get("repair_burden", "")
+    retry_burden = raw.get("retry_burden", "")
+    restart_burden = raw.get("restart_burden", "")
+    expected_burden = raw.get("expected_burden", "")
+    observed_burden = raw.get("observed_burden", "")
+    scope_drift = raw.get("scope_drift", "none")
+    contradiction_state = raw.get("contradiction_state", "none")
+    uncertainty_state = raw.get("uncertainty_state", "unknown")
+    idempotency_key = raw.get("idempotency_key", "")
     if not isinstance(recorded_at, str) or not recorded_at.strip():
         raise WorkspaceUsageError(f"{surface_name} record recorded_at must be a non-empty string.")
     if not isinstance(delegation_target, str) or not delegation_target.strip():
         raise WorkspaceUsageError(f"{surface_name} record delegation_target must be a non-empty string.")
     if not isinstance(task_class, str) or not task_class.strip():
         raise WorkspaceUsageError(f"{surface_name} record task_class must be a non-empty string.")
+    if scope_class is not None and (not isinstance(scope_class, str) or not scope_class.strip()):
+        raise WorkspaceUsageError(f"{surface_name} record scope_class must be a non-empty string when present.")
     if outcome not in SUPPORTED_DELEGATION_OUTCOMES:
         allowed = ", ".join(SUPPORTED_DELEGATION_OUTCOMES)
         raise WorkspaceUsageError(f"{surface_name} record outcome must be one of: {allowed}.")
@@ -1638,14 +1688,68 @@ def normalize_delegation_outcome_record(raw: Any, *, surface_name: str) -> Deleg
         raise WorkspaceUsageError(f"{surface_name} record review_burden must be one of: {allowed}.")
     if not isinstance(escalation_required, bool):
         raise WorkspaceUsageError(f"{surface_name} record escalation_required must be a boolean.")
+    if operation not in {"submit", "correct-or-dispute", "supersede", "prune-or-compact"}:
+        raise WorkspaceUsageError(
+            f"{surface_name} record operation must be one of: submit, correct-or-dispute, supersede, prune-or-compact."
+        )
+    for field_name, value in {
+        "record_id": record_id,
+        "predecessor_id": predecessor_id,
+        "authority": authority,
+        "confidence": confidence,
+        "admission_state": admission_state,
+        "source_type": source_type,
+        "source_ref": source_ref,
+        "producer_class": producer_class,
+        "route_outcome": route_outcome,
+        "assignment_route": assignment_route,
+        "proof_observation": proof_observation,
+        "review_observation": review_observation,
+        "handoff_burden": handoff_burden,
+        "repair_burden": repair_burden,
+        "retry_burden": retry_burden,
+        "restart_burden": restart_burden,
+        "expected_burden": expected_burden,
+        "observed_burden": observed_burden,
+        "scope_drift": scope_drift,
+        "contradiction_state": contradiction_state,
+        "uncertainty_state": uncertainty_state,
+        "idempotency_key": idempotency_key,
+    }.items():
+        if value is not None and not isinstance(value, str):
+            raise WorkspaceUsageError(f"{surface_name} record {field_name} must be a string when present.")
     return DelegationOutcomeRecord(
         recorded_at=recorded_at.strip(),
         delegation_target=delegation_target.strip(),
         task_class=task_class.strip(),
+        scope_class=(scope_class.strip() if isinstance(scope_class, str) and scope_class.strip() else task_class.strip()),
         outcome=outcome,
         handoff_sufficiency=handoff_sufficiency,
         review_burden=review_burden,
         escalation_required=escalation_required,
+        operation=str(operation).strip(),
+        record_id=str(record_id).strip(),
+        predecessor_id=str(predecessor_id).strip(),
+        authority=str(authority).strip() or "local-outcome-ledger",
+        confidence=str(confidence).strip() or "medium",
+        admission_state=str(admission_state).strip() or "accepted",
+        source_type=str(source_type).strip() or "local-json-ledger",
+        source_ref=str(source_ref).strip() or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+        producer_class=str(producer_class).strip() or "local-operator",
+        route_outcome=str(route_outcome).strip(),
+        assignment_route=str(assignment_route).strip(),
+        proof_observation=str(proof_observation).strip(),
+        review_observation=str(review_observation).strip(),
+        handoff_burden=str(handoff_burden).strip(),
+        repair_burden=str(repair_burden).strip(),
+        retry_burden=str(retry_burden).strip(),
+        restart_burden=str(restart_burden).strip(),
+        expected_burden=str(expected_burden).strip(),
+        observed_burden=str(observed_burden).strip(),
+        scope_drift=str(scope_drift).strip() or "none",
+        contradiction_state=str(contradiction_state).strip() or "none",
+        uncertainty_state=str(uncertainty_state).strip() or "unknown",
+        idempotency_key=str(idempotency_key).strip(),
     )
 
 

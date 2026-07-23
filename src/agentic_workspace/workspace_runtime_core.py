@@ -150,6 +150,7 @@ from agentic_workspace.reporting_support import (
 from agentic_workspace.repository_scanning import repository_scan_files
 from agentic_workspace.result_adapter import adapt_module_result, serialise_value
 from agentic_workspace.review_stack_transitions import command_text, record_review_stack_transition
+from agentic_workspace.target_evidence import assignment_decision_from_policy, target_evidence_posture
 from agentic_workspace.workspace_output import (
     _display_path,
     _emit_init_text,
@@ -44824,6 +44825,37 @@ def _record_proof_receipt_payload(
         history_path = target_root / PROOF_RECEIPT_HISTORY_RELATIVE_PATH
         with history_path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(receipt, sort_keys=True, ensure_ascii=True) + "\n")
+        producer_receipt_id = hashlib.sha256(
+            json.dumps(
+                {
+                    "command": command,
+                    "result": result,
+                    "changed_paths": receipt["changed_paths"],
+                    "proof_subject": receipt.get("proof_subject", {}),
+                    "recorded_at": receipt["recorded_at"],
+                },
+                sort_keys=True,
+                ensure_ascii=True,
+            ).encode("utf-8")
+        ).hexdigest()[:16]
+        producer_receipt_ref = f"proof://receipts/{producer_receipt_id}"
+        _write_trusted_producer_receipt(
+            target_root=target_root,
+            producer_class="aw-proof",
+            receipt_id=producer_receipt_id,
+            source_ref=producer_receipt_ref,
+            receipt={
+                **receipt,
+                "receipt_id": producer_receipt_id,
+                "producer_class": "aw-proof",
+                "authority": "aw-proof",
+                "source_type": "aw-proof-receipt",
+                "result": "passed" if admission.get("proof_sufficient") else "failed",
+                "confidence": "high",
+            },
+        )
+    else:
+        producer_receipt_ref = ""
     review_stack_transition = record_review_stack_transition(
         target_root=target_root,
         phase="review-proof",
@@ -44856,6 +44888,7 @@ def _record_proof_receipt_payload(
         "path": PROOF_RECEIPT_RELATIVE_PATH.as_posix(),
         "history_path": PROOF_RECEIPT_HISTORY_RELATIVE_PATH.as_posix(),
         "receipt": receipt,
+        "trusted_producer_receipt_ref": producer_receipt_ref,
         "proof_reuse_cache": proof_reuse_cache,
         "closeout_command": "agentic-workspace planning closeout --target . --proof-from last --format json",
     }
@@ -46121,10 +46154,32 @@ def _append_workspace_operation_delegation_outcome(values: dict[str, Any], _argu
         target_root=values["target_root"],
         delegation_target=str(values.get("delegation_target") or ""),
         task_class=str(values.get("task_class") or ""),
+        scope_class=str(values.get("scope_class") or ""),
         outcome=str(values.get("outcome") or ""),
         handoff_sufficiency=str(values.get("handoff_sufficiency") or ""),
         review_burden=str(values.get("review_burden") or ""),
         escalation_required=bool(values.get("escalation_required", False)),
+        operation=str(values.get("operation") or "submit"),
+        predecessor_id=str(values.get("predecessor_id") or ""),
+        authority=str(values.get("authority") or "local-outcome-ledger"),
+        confidence=str(values.get("confidence") or "medium"),
+        source_type=str(values.get("source_type") or ""),
+        source_ref=str(values.get("source_ref") or ""),
+        producer_class=str(values.get("producer_class") or ""),
+        route_outcome=str(values.get("route_outcome") or ""),
+        assignment_route=str(values.get("assignment_route") or ""),
+        proof_observation=str(values.get("proof_observation") or ""),
+        review_observation=str(values.get("review_observation") or ""),
+        handoff_burden=str(values.get("handoff_burden") or ""),
+        repair_burden=str(values.get("repair_burden") or ""),
+        retry_burden=str(values.get("retry_burden") or ""),
+        restart_burden=str(values.get("restart_burden") or ""),
+        expected_burden=str(values.get("expected_burden") or ""),
+        observed_burden=str(values.get("observed_burden") or ""),
+        scope_drift=str(values.get("scope_drift") or "none"),
+        contradiction_state=str(values.get("contradiction_state") or "none"),
+        uncertainty_state=str(values.get("uncertainty_state") or ""),
+        idempotency_key=str(values.get("idempotency_key") or ""),
     )
 
 
@@ -50090,46 +50145,277 @@ def _record_delegation_outcome(
     target_root: Path,
     delegation_target: str,
     task_class: str,
+    scope_class: str,
     outcome: str,
     handoff_sufficiency: str,
     review_burden: str,
     escalation_required: bool,
+    operation: str = "submit",
+    predecessor_id: str = "",
+    authority: str = "local-outcome-ledger",
+    confidence: str = "medium",
+    source_type: str = "",
+    source_ref: str = "",
+    producer_class: str = "",
+    route_outcome: str = "",
+    assignment_route: str = "",
+    proof_observation: str = "",
+    review_observation: str = "",
+    handoff_burden: str = "",
+    repair_burden: str = "",
+    retry_burden: str = "",
+    restart_burden: str = "",
+    expected_burden: str = "",
+    observed_burden: str = "",
+    scope_drift: str = "none",
+    contradiction_state: str = "none",
+    uncertainty_state: str = "",
+    idempotency_key: str = "",
+    trusted_producer_receipt: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     path, payload, records = config_lib.load_delegation_outcomes(target_root=target_root)
+    normalized_target = delegation_target.strip()
+    normalized_task = task_class.strip()
+    normalized_scope = scope_class.strip()
+    normalized_operation = operation.strip() or "submit"
+    normalized_predecessor = predecessor_id.strip()
+    normalized_authority = authority.strip() or "local-outcome-ledger"
+    normalized_confidence = confidence.strip() or "medium"
+    normalized_source_type = source_type.strip() or "local-json-ledger"
+    normalized_source_ref = source_ref.strip() or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix()
+    normalized_producer_class = producer_class.strip()
+    normalized_idempotency_key = idempotency_key.strip()
+    normalized_trusted_producer_receipt = _as_dict(trusted_producer_receipt)
+    if not normalized_scope:
+        raise WorkspaceUsageError("note-delegation-outcome requires --scope-class to keep evidence scoped independently from task class.")
+    if not normalized_source_ref:
+        raise WorkspaceUsageError("note-delegation-outcome requires a non-empty source reference.")
+    if normalized_confidence not in {"high", "medium", "low"}:
+        raise WorkspaceUsageError("note-delegation-outcome confidence must be low, medium, or high.")
+    requested_authority = normalized_authority
+    requested_producer_class = normalized_producer_class
+    default_producer_class = {
+        "aw-proof": "aw-proof",
+        "human-review": "human-review",
+        "local-outcome-ledger": "local-operator",
+        "model-self-report": "agent-self-observation",
+    }.get(normalized_authority, "")
+    normalized_producer_class = normalized_producer_class or default_producer_class
+    trusted_authority_for_producer = {
+        "aw-proof": "aw-proof",
+        "human-review": "human-review",
+        "local-operator": "local-outcome-ledger",
+        "agent-self-observation": "model-self-report",
+        "telemetry": "model-self-report",
+    }.get(normalized_producer_class)
+    if trusted_authority_for_producer is None:
+        raise WorkspaceUsageError("note-delegation-outcome producer class is not authorized for evidence admission.")
+    if trusted_producer_receipt is not None and not normalized_trusted_producer_receipt:
+        raise WorkspaceUsageError("note-delegation-outcome trusted producer receipt must be resolved by its owning store before writing.")
+    if normalized_trusted_producer_receipt:
+        normalized_authority = str(normalized_trusted_producer_receipt.get("authority") or "").strip()
+        normalized_confidence = str(normalized_trusted_producer_receipt.get("confidence") or "high").strip()
+        normalized_source_type = str(normalized_trusted_producer_receipt.get("source_type") or "").strip()
+        normalized_source_ref = str(normalized_trusted_producer_receipt.get("source_ref") or "").strip()
+        normalized_producer_class = str(normalized_trusted_producer_receipt.get("producer_class") or "").strip()
+        normalized_idempotency_key = (
+            normalized_idempotency_key
+            or str(
+                normalized_trusted_producer_receipt.get("idempotency_key") or normalized_trusted_producer_receipt.get("receipt_id") or ""
+            ).strip()
+        )
+        proof_observation = proof_observation or str(normalized_trusted_producer_receipt.get("proof_observation") or "")
+        review_observation = review_observation or str(normalized_trusted_producer_receipt.get("review_observation") or "")
+        if not normalized_source_ref:
+            raise WorkspaceUsageError("note-delegation-outcome trusted producer receipt requires a stable source reference.")
+    elif normalized_authority in {"aw-proof", "human-review"} or normalized_producer_class in {"aw-proof", "human-review"}:
+        normalized_authority = "model-self-report"
+        normalized_producer_class = "agent-self-observation"
+        normalized_confidence = "low"
+        proof_observation = "forged-or-unverified-proof-authority"
+        review_observation = "forged-or-unverified-review-authority"
+        uncertainty_state = (
+            uncertainty_state or f"caller-requested-untrusted-authority:{requested_authority}:{requested_producer_class or 'default'}"
+        )
+    elif normalized_authority != trusted_authority_for_producer:
+        normalized_authority = "model-self-report"
+
+    def _identity(existing: DelegationOutcomeRecord, index: int) -> str:
+        return (
+            existing.record_id
+            or f"{existing.delegation_target}:{existing.task_class}:{existing.scope_class}:{existing.recorded_at}:{index}"
+        )
+
+    def _record_payload(existing: DelegationOutcomeRecord) -> dict[str, Any]:
+        return {
+            "recorded_at": existing.recorded_at,
+            "delegation_target": existing.delegation_target,
+            "task_class": existing.task_class,
+            "scope_class": existing.scope_class,
+            "outcome": existing.outcome,
+            "handoff_sufficiency": existing.handoff_sufficiency,
+            "review_burden": existing.review_burden,
+            "escalation_required": existing.escalation_required,
+            "operation": existing.operation,
+            "record_id": existing.record_id,
+            "predecessor_id": existing.predecessor_id,
+            "authority": existing.authority,
+            "confidence": existing.confidence,
+            "admission_state": existing.admission_state,
+            "source_type": existing.source_type,
+            "source_ref": existing.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+            "producer_class": existing.producer_class,
+            "route_outcome": existing.route_outcome,
+            "assignment_route": existing.assignment_route,
+            "proof_observation": existing.proof_observation,
+            "review_observation": existing.review_observation,
+            "handoff_burden": existing.handoff_burden,
+            "repair_burden": existing.repair_burden,
+            "retry_burden": existing.retry_burden,
+            "restart_burden": existing.restart_burden,
+            "expected_burden": existing.expected_burden,
+            "observed_burden": existing.observed_burden,
+            "scope_drift": existing.scope_drift,
+            "contradiction_state": existing.contradiction_state,
+            "uncertainty_state": existing.uncertainty_state,
+            "idempotency_key": existing.idempotency_key,
+        }
+
+    by_id = {_identity(existing, index): (index, existing) for index, existing in enumerate(records)}
+    transitioned_predecessors = {
+        existing.predecessor_id
+        for existing in records
+        if existing.operation in {"correct-or-dispute", "supersede", "prune-or-compact"} and existing.predecessor_id
+    }
+    predecessor: DelegationOutcomeRecord | None = None
+    if normalized_operation != "submit" and normalized_predecessor not in by_id:
+        raise WorkspaceUsageError("note-delegation-outcome transition operations require --predecessor-id for an existing record.")
+    if normalized_operation != "submit":
+        predecessor = by_id[normalized_predecessor][1]
+        if (
+            predecessor.delegation_target,
+            predecessor.task_class,
+            predecessor.scope_class,
+        ) != (normalized_target, normalized_task, normalized_scope):
+            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must match target/task/scope.")
+        if predecessor.admission_state not in {"accepted", "accepted-normalized", "recovered", "compacted-summary"}:
+            raise WorkspaceUsageError("note-delegation-outcome transition predecessor must be current admitted evidence.")
+        if normalized_predecessor in transitioned_predecessors:
+            raise WorkspaceUsageError("note-delegation-outcome transition predecessor is already superseded, disputed, or compacted.")
+    today = date.today().isoformat()
+    generated_idempotency_key = (
+        f"{normalized_operation}:{normalized_target}:{normalized_task}:{normalized_scope}:"
+        f"{normalized_authority}:{normalized_source_type}:{normalized_source_ref}:{outcome}:{handoff_sufficiency}:"
+        f"{review_burden}:{escalation_required}"
+    )
+    record_idempotency_key = normalized_idempotency_key or generated_idempotency_key
+    duplicate_key = (
+        normalized_target,
+        normalized_task,
+        normalized_scope,
+        normalized_authority,
+        normalized_source_ref,
+        record_idempotency_key,
+    )
+    if normalized_operation == "submit":
+        for existing in records:
+            if (
+                existing.delegation_target,
+                existing.task_class,
+                existing.scope_class,
+                existing.authority,
+                existing.source_ref or WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
+                existing.idempotency_key,
+            ) == duplicate_key and existing.admission_state in {"accepted", "accepted-normalized", "recovered"}:
+                raise WorkspaceUsageError(
+                    "note-delegation-outcome duplicate evidence for target/task/scope/provenance must use a lifecycle transition."
+                )
+    record_suffix = re.sub(r"[^A-Za-z0-9_.-]+", "-", record_idempotency_key).strip("-")[:48] or str(len(records))
+    record_id = f"{normalized_target}:{normalized_task}:{normalized_scope}:{today}:{record_suffix}"
     record = DelegationOutcomeRecord(
-        recorded_at=date.today().isoformat(),
-        delegation_target=delegation_target.strip(),
-        task_class=task_class.strip(),
+        recorded_at=today,
+        delegation_target=normalized_target,
+        task_class=normalized_task,
+        scope_class=normalized_scope,
         outcome=outcome,
         handoff_sufficiency=handoff_sufficiency,
         review_burden=review_burden,
         escalation_required=escalation_required,
+        operation=normalized_operation,
+        record_id=record_id,
+        predecessor_id=normalized_predecessor,
+        authority=normalized_authority,
+        confidence=normalized_confidence,
+        admission_state="compacted-summary" if normalized_operation == "prune-or-compact" else "accepted",
+        source_type=normalized_source_type,
+        source_ref=normalized_source_ref,
+        producer_class=normalized_producer_class,
+        route_outcome=route_outcome.strip() or outcome,
+        assignment_route=assignment_route.strip() or ("current-target" if normalized_target else ""),
+        proof_observation=proof_observation.strip() or "not-recorded",
+        review_observation=review_observation.strip() or ("recorded" if normalized_authority == "human-review" else "not-recorded"),
+        handoff_burden=handoff_burden.strip() or handoff_sufficiency,
+        repair_burden=repair_burden.strip() or review_burden,
+        retry_burden=retry_burden.strip() or ("required" if escalation_required else "not-required"),
+        restart_burden=restart_burden.strip() or "not-recorded",
+        expected_burden=expected_burden.strip() or "not-recorded",
+        observed_burden=observed_burden.strip() or review_burden,
+        scope_drift=scope_drift.strip() or "none",
+        contradiction_state=contradiction_state.strip()
+        or ("none" if normalized_operation != "correct-or-dispute" else "disputed-predecessor"),
+        uncertainty_state=uncertainty_state.strip()
+        or ("high" if normalized_confidence == "low" else "medium" if normalized_confidence == "medium" else "low"),
+        idempotency_key=record_idempotency_key,
     )
+    retained_records: list[DelegationOutcomeRecord] = list(records)
+    if normalized_operation == "prune-or-compact" and predecessor is not None:
+        retained_records = [
+            existing
+            for index, existing in enumerate(records)
+            if not (
+                existing.delegation_target == normalized_target
+                and existing.task_class == normalized_task
+                and existing.scope_class == normalized_scope
+                and (
+                    _identity(existing, index) == normalized_predecessor
+                    or existing.admission_state in {"superseded", "disputed", "compacted-raw"}
+                )
+            )
+        ]
+    compaction_cap = 20
+    pending_records = [*retained_records, record]
+    same_context_indexes = [
+        index
+        for index, existing in enumerate(pending_records)
+        if (
+            existing.delegation_target,
+            existing.task_class,
+            existing.scope_class,
+        )
+        == (normalized_target, normalized_task, normalized_scope)
+    ]
+    evicted_lineage = [
+        {
+            "record_id": _identity(pending_records[index], index),
+            "recorded_at": pending_records[index].recorded_at,
+            "operation": pending_records[index].operation,
+            "authority": pending_records[index].authority,
+            "confidence": pending_records[index].confidence,
+        }
+        for index in same_context_indexes[: max(0, len(same_context_indexes) - compaction_cap)]
+    ]
+    evicted_indexes = {index for index in same_context_indexes[: max(0, len(same_context_indexes) - compaction_cap)]}
+    retained_after_cap = [existing for index, existing in enumerate(pending_records) if index not in evicted_indexes]
     updated_payload = {
         "kind": DELEGATION_OUTCOMES_KIND,
-        "records": [
-            *[
-                {
-                    "recorded_at": existing.recorded_at,
-                    "delegation_target": existing.delegation_target,
-                    "task_class": existing.task_class,
-                    "outcome": existing.outcome,
-                    "handoff_sufficiency": existing.handoff_sufficiency,
-                    "review_burden": existing.review_burden,
-                    "escalation_required": existing.escalation_required,
-                }
-                for existing in records
-            ],
-            {
-                "recorded_at": record.recorded_at,
-                "delegation_target": record.delegation_target,
-                "task_class": record.task_class,
-                "outcome": record.outcome,
-                "handoff_sufficiency": record.handoff_sufficiency,
-                "review_burden": record.review_burden,
-                "escalation_required": record.escalation_required,
-            },
-        ],
+        "retention": {
+            "mode": "bounded-current-calibration",
+            "compaction_cap": compaction_cap,
+            "evicted_record_count": len(evicted_lineage),
+            "evicted_lineage": evicted_lineage,
+            "rule": "append and prune-or-compact enforce the same-context cap immediately; evicted raw records are summarized in retention lineage.",
+        },
+        "records": [_record_payload(existing) for existing in retained_after_cap],
     }
     config_lib.write_delegation_outcomes(path=path, payload=updated_payload)
     return {
@@ -50137,7 +50423,530 @@ def _record_delegation_outcome(
         "path": WORKSPACE_DELEGATION_OUTCOMES_PATH.as_posix(),
         "recorded": updated_payload["records"][-1],
         "record_count": len(updated_payload["records"]),
-        "rule": "local-only delegation outcome evidence; advisory input for tuning only",
+        "rule": (
+            "local-only delegation outcome evidence; public input cannot mint aw-proof or human-review authority; "
+            "trusted producer receipts admit routable proof/review evidence"
+        ),
+    }
+
+
+_TRUSTED_PRODUCER_RECEIPT_INDEX_KIND = "agentic-workspace/trusted-producer-receipt-index/v1"
+
+
+TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH = Path(".agentic-workspace") / "local" / "assignment-context.json"
+
+
+def _trusted_producer_assignment_context(*, target_root: Path) -> dict[str, Any]:
+    context_path = target_root / TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH
+    if not context_path.is_file():
+        return {
+            "status": "non-calibrating",
+            "reason": "missing-current-assignment-context",
+            "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "rule": "Trusted producer receipts calibrate target evidence only when a current assignment/run authority supplies target/task/scope.",
+        }
+    try:
+        payload = json.loads(context_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        return {
+            "status": "non-calibrating",
+            "reason": "unreadable-current-assignment-context",
+            "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "rule": "Malformed assignment context cannot feed calibration.",
+        }
+    if not isinstance(payload, dict):
+        return {
+            "status": "non-calibrating",
+            "reason": "invalid-current-assignment-context",
+            "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "rule": "Assignment context must be a JSON object owned by the current assignment/run boundary.",
+        }
+    status = str(payload.get("status") or payload.get("freshness_status") or "current").strip()
+    if status not in {"current", "fresh", "accepted"} or payload.get("superseded_by"):
+        return {
+            "status": "non-calibrating",
+            "reason": "stale-current-assignment-context",
+            "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "revision": str(payload.get("revision") or "").strip(),
+            "rule": "Stale assignment context cannot feed calibration.",
+        }
+    context = _as_dict(payload.get("target_context")) or payload
+    target_context = {
+        "delegation_target": str(context.get("delegation_target") or "").strip(),
+        "task_class": str(context.get("task_class") or "").strip(),
+        "scope_class": str(context.get("scope_class") or "").strip(),
+    }
+    missing = [key for key, value in target_context.items() if not value]
+    if missing:
+        return {
+            "status": "non-calibrating",
+            "reason": "incomplete-current-assignment-context",
+            "missing": missing,
+            "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+            "revision": str(payload.get("revision") or "").strip(),
+            "rule": "Assignment context must provide delegation_target, task_class, and scope_class before trusted producer evidence can calibrate evidence.",
+        }
+    return {
+        "status": "current",
+        "target_context": target_context,
+        "source_ref": TRUSTED_PRODUCER_ASSIGNMENT_CONTEXT_RELATIVE_PATH.as_posix(),
+        "revision": str(payload.get("revision") or payload.get("recorded_at") or "").strip(),
+        "rule": "Target context is resolved from current assignment/run authority, not proof receipt caller input.",
+    }
+
+
+_TRUSTED_PRODUCER_RECEIPT_STORES = {
+    "aw-proof": (
+        Path(".agentic-workspace") / "proof" / "receipts",
+        {"aw-proof-receipt", "proof-receipt"},
+        {"passed", "failed"},
+        {"agentic-workspace/trusted-producer-receipt/v1", "agentic-workspace/proof-receipt/v1"},
+    ),
+    "human-review": (
+        Path(".agentic-workspace") / "reviews" / "receipts",
+        {"human-review", "github-review", "review-thread"},
+        {"approved", "changes-requested", "commented", "failed"},
+        {"agentic-workspace/trusted-producer-receipt/v1", "agentic-workspace/human-review-receipt/v1"},
+    ),
+    "retry-outcome": (
+        Path(".agentic-workspace") / "local" / "retry-receipts",
+        {"retry-outcome", "execution-retry"},
+        {"passed", "failed"},
+        {"agentic-workspace/trusted-producer-receipt/v1", "agentic-workspace/retry-outcome-receipt/v1"},
+    ),
+    "handoff-outcome": (
+        Path(".agentic-workspace") / "local" / "handoff-receipts",
+        {"handoff-outcome", "delegation-handoff"},
+        {"accepted", "failed"},
+        {"agentic-workspace/trusted-producer-receipt/v1", "agentic-workspace/handoff-outcome-receipt/v1"},
+    ),
+    "closeout-outcome": (
+        Path(".agentic-workspace") / "local" / "closeout-receipts",
+        {"closeout-outcome", "closeout-report"},
+        {"accepted", "rejected"},
+        {"agentic-workspace/trusted-producer-receipt/v1", "agentic-workspace/closeout-outcome-receipt/v1"},
+    ),
+}
+
+
+def _trusted_producer_store_root(*, target_root: Path, producer_class: str) -> Path:
+    store = _TRUSTED_PRODUCER_RECEIPT_STORES.get(producer_class)
+    if store is None:
+        raise WorkspaceUsageError("trusted producer receipt producer is not authorized.")
+    return (target_root / store[0]).resolve()
+
+
+def _trusted_producer_receipt_index_path(*, target_root: Path, producer_class: str) -> Path:
+    return _trusted_producer_store_root(target_root=target_root, producer_class=producer_class) / "index.json"
+
+
+def _trusted_producer_receipt_path(*, target_root: Path, producer_class: str, receipt_ref: str) -> Path:
+    receipt_text = receipt_ref.strip()
+    if not receipt_text:
+        raise WorkspaceUsageError("trusted producer receipt reference is required.")
+    store = _TRUSTED_PRODUCER_RECEIPT_STORES.get(producer_class)
+    if store is None:
+        raise WorkspaceUsageError("trusted producer receipt producer is not authorized.")
+    store_root = _trusted_producer_store_root(target_root=target_root, producer_class=producer_class)
+    if "://" in receipt_text:
+        receipt_id = receipt_text.rsplit("/", 1)[-1].strip()
+        safe_receipt_id = re.sub(r"[^A-Za-z0-9_.-]+", "-", receipt_id).strip("-")
+        if not safe_receipt_id:
+            raise WorkspaceUsageError("trusted producer receipt reference does not contain a stable receipt id.")
+        return store_root / f"{safe_receipt_id}.json"
+    candidate = Path(receipt_text)
+    if candidate.is_absolute():
+        raise WorkspaceUsageError("trusted producer receipt reference must be a repo-relative store path or producer URI.")
+    if not candidate.is_absolute():
+        candidate = target_root / candidate
+    resolved_candidate = candidate.resolve()
+    if not resolved_candidate.is_relative_to(store_root):
+        raise WorkspaceUsageError("trusted producer receipt reference must resolve inside the owning producer receipt store.")
+    if resolved_candidate.suffix != ".json":
+        raise WorkspaceUsageError("trusted producer receipt reference must resolve to a JSON receipt.")
+    return resolved_candidate
+
+
+def _trusted_producer_receipt_index_entry(
+    *,
+    target_root: Path,
+    producer_class: str,
+    receipt_id: str,
+    receipt_path: Path,
+    receipt: dict[str, Any],
+) -> dict[str, Any]:
+    index_path = _trusted_producer_receipt_index_path(target_root=target_root, producer_class=producer_class)
+    try:
+        index_payload = json.loads(index_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise WorkspaceUsageError("trusted producer receipt could not be resolved from its owning store index.") from exc
+    if not isinstance(index_payload, dict) or index_payload.get("kind") != _TRUSTED_PRODUCER_RECEIPT_INDEX_KIND:
+        raise WorkspaceUsageError("trusted producer receipt store index has an invalid kind.")
+    entries = _as_dict(index_payload.get("receipts"))
+    entry = _as_dict(entries.get(receipt_id))
+    if not entry:
+        raise WorkspaceUsageError("trusted producer receipt is not registered in its owning store index.")
+    store_root = _trusted_producer_store_root(target_root=target_root, producer_class=producer_class)
+    indexed_path_text = str(entry.get("path") or "").strip()
+    indexed_path = (store_root / indexed_path_text).resolve() if indexed_path_text else receipt_path.resolve()
+    if indexed_path != receipt_path.resolve() or not indexed_path.is_relative_to(store_root):
+        raise WorkspaceUsageError("trusted producer receipt store index path does not match the resolved receipt.")
+    indexed_revision = str(entry.get("revision") or "").strip()
+    receipt_revision = str(receipt.get("revision") or "").strip()
+    if indexed_revision and receipt_revision and indexed_revision != receipt_revision:
+        raise WorkspaceUsageError("trusted producer receipt revision does not match the owning store index.")
+    if str(entry.get("status") or "current").strip() not in {"current", "fresh", "accepted"} or entry.get("superseded_by"):
+        raise WorkspaceUsageError("trusted producer receipt is stale or superseded in its owning store index.")
+    return entry
+
+
+def _write_trusted_producer_receipt(
+    *,
+    target_root: Path,
+    producer_class: str,
+    receipt_id: str,
+    receipt: dict[str, Any],
+    source_ref: str,
+) -> str:
+    safe_receipt_id = re.sub(r"[^A-Za-z0-9_.-]+", "-", receipt_id.strip()).strip("-")
+    if not safe_receipt_id:
+        raise WorkspaceUsageError("trusted producer receipt id is required.")
+    store_root = _trusted_producer_store_root(target_root=target_root, producer_class=producer_class)
+    store_root.mkdir(parents=True, exist_ok=True)
+    receipt_path = store_root / f"{safe_receipt_id}.json"
+    revision = str(
+        receipt.get("revision") or receipt.get("recorded_at") or datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    ).strip()
+    payload = {
+        **receipt,
+        "kind": str(receipt.get("kind") or "agentic-workspace/trusted-producer-receipt/v1"),
+        "receipt_id": str(receipt.get("receipt_id") or safe_receipt_id).strip(),
+        "producer_class": producer_class,
+        "source_ref": source_ref,
+        "status": str(receipt.get("status") or "current").strip(),
+        "revision": revision,
+    }
+    receipt_path.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    index_path = _trusted_producer_receipt_index_path(target_root=target_root, producer_class=producer_class)
+    try:
+        index_payload = json.loads(index_path.read_text(encoding="utf-8")) if index_path.is_file() else {}
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise WorkspaceUsageError("trusted producer receipt store index is not valid JSON.") from exc
+    receipts = _as_dict(index_payload.get("receipts"))
+    receipts[payload["receipt_id"]] = {
+        "path": receipt_path.relative_to(store_root).as_posix(),
+        "revision": revision,
+        "status": payload["status"],
+        "source_ref": source_ref,
+        "producer_class": producer_class,
+    }
+    index_path.write_text(
+        json.dumps({"kind": _TRUSTED_PRODUCER_RECEIPT_INDEX_KIND, "receipts": receipts}, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return source_ref
+
+
+def _load_trusted_producer_receipt(
+    *,
+    target_root: Path,
+    producer_class: str,
+    receipt_ref: str,
+    delegation_target: str,
+    task_class: str,
+    scope_class: str,
+    outcome: str,
+) -> dict[str, Any]:
+    receipt_path = _trusted_producer_receipt_path(target_root=target_root, producer_class=producer_class, receipt_ref=receipt_ref)
+    try:
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise WorkspaceUsageError("trusted producer receipt could not be loaded from its owning store.") from exc
+    if not isinstance(receipt, dict):
+        raise WorkspaceUsageError("trusted producer receipt must be a JSON object.")
+    store = _TRUSTED_PRODUCER_RECEIPT_STORES.get(producer_class)
+    if store is None:
+        raise WorkspaceUsageError("trusted producer receipt producer is not authorized.")
+    expected_source_types, expected_results, expected_kinds = store[1], store[2], store[3]
+    kind = str(receipt.get("kind") or "").strip()
+    if kind not in expected_kinds:
+        raise WorkspaceUsageError("trusted producer receipt kind is not accepted for this producer.")
+    authority = str(receipt.get("authority") or "").strip()
+    receipt_producer = str(receipt.get("producer_class") or receipt.get("producer") or "").strip()
+    source_type = str(receipt.get("source_type") or "").strip()
+    source_ref = str(receipt.get("source_ref") or receipt_ref).strip()
+    status = str(receipt.get("status") or receipt.get("freshness_status") or "current").strip()
+    result = str(receipt.get("result") or "").strip()
+    context = _as_dict(receipt.get("target_context") or receipt.get("context"))
+    if receipt_producer != producer_class:
+        raise WorkspaceUsageError("trusted producer receipt producer does not match the requested producer boundary.")
+    expected_authority = (
+        "aw-proof" if producer_class == "aw-proof" else "human-review" if producer_class == "human-review" else "local-outcome-ledger"
+    )
+    if authority != expected_authority:
+        raise WorkspaceUsageError("trusted producer receipt authority does not match the producer boundary.")
+    if source_type not in expected_source_types:
+        raise WorkspaceUsageError("trusted producer receipt source type is not accepted for this producer.")
+    if status not in {"current", "fresh", "accepted"} or receipt.get("superseded_by"):
+        raise WorkspaceUsageError("trusted producer receipt is stale or superseded.")
+    if result not in expected_results:
+        raise WorkspaceUsageError("trusted producer receipt result is not accepted for this producer.")
+    if result in {"passed", "approved", "accepted"} and outcome != "success":
+        raise WorkspaceUsageError("trusted producer receipt result does not match the recorded outcome.")
+    if result in {"failed", "changes-requested", "rejected"} and outcome == "success":
+        raise WorkspaceUsageError("trusted producer receipt result does not match the recorded outcome.")
+    expected_context = {
+        "delegation_target": delegation_target.strip(),
+        "task_class": task_class.strip(),
+        "scope_class": scope_class.strip(),
+    }
+    observed_context = {key: str(context.get(key) or "").strip() for key in expected_context}
+    if observed_context != expected_context:
+        raise WorkspaceUsageError("trusted producer receipt context does not match target/task/scope.")
+    receipt_id = str(receipt.get("receipt_id") or receipt.get("id") or receipt_ref).strip()
+    _trusted_producer_receipt_index_entry(
+        target_root=target_root,
+        producer_class=producer_class,
+        receipt_id=receipt_id,
+        receipt_path=receipt_path,
+        receipt=receipt,
+    )
+    return {
+        "receipt_id": receipt_id,
+        "authority": authority,
+        "confidence": str(receipt.get("confidence") or "high").strip(),
+        "source_type": source_type,
+        "source_ref": source_ref,
+        "producer_class": producer_class,
+        "idempotency_key": str(receipt.get("idempotency_key") or receipt_id).strip(),
+        "proof_observation": "passed"
+        if producer_class == "aw-proof" and outcome == "success"
+        else "failed"
+        if producer_class == "aw-proof"
+        else "",
+        "review_observation": "verified" if producer_class == "human-review" else "",
+        "receipt_revision": str(receipt.get("revision") or "").strip(),
+    }
+
+
+def _record_aw_proof_delegation_outcome(
+    *,
+    target_root: Path,
+    delegation_target: str,
+    task_class: str,
+    scope_class: str,
+    outcome: str,
+    proof_receipt_ref: str,
+    idempotency_key: str,
+    handoff_sufficiency: str = "sufficient",
+    review_burden: str = "normal",
+    escalation_required: bool = False,
+) -> dict[str, Any]:
+    receipt = _load_trusted_producer_receipt(
+        target_root=target_root,
+        producer_class="aw-proof",
+        receipt_ref=proof_receipt_ref,
+        delegation_target=delegation_target,
+        task_class=task_class,
+        scope_class=scope_class,
+        outcome=outcome,
+    )
+    return _record_delegation_outcome(
+        target_root=target_root,
+        delegation_target=delegation_target,
+        task_class=task_class,
+        scope_class=scope_class,
+        outcome=outcome,
+        handoff_sufficiency=handoff_sufficiency,
+        review_burden=review_burden,
+        escalation_required=escalation_required,
+        authority="model-self-report",
+        confidence="low",
+        idempotency_key=idempotency_key,
+        trusted_producer_receipt=receipt,
+    )
+
+
+def _record_human_review_delegation_outcome(
+    *,
+    target_root: Path,
+    delegation_target: str,
+    task_class: str,
+    scope_class: str,
+    outcome: str,
+    review_ref: str,
+    idempotency_key: str,
+    handoff_sufficiency: str = "sufficient",
+    review_burden: str = "normal",
+    escalation_required: bool = False,
+) -> dict[str, Any]:
+    receipt = _load_trusted_producer_receipt(
+        target_root=target_root,
+        producer_class="human-review",
+        receipt_ref=review_ref,
+        delegation_target=delegation_target,
+        task_class=task_class,
+        scope_class=scope_class,
+        outcome=outcome,
+    )
+    return _record_delegation_outcome(
+        target_root=target_root,
+        delegation_target=delegation_target,
+        task_class=task_class,
+        scope_class=scope_class,
+        outcome=outcome,
+        handoff_sufficiency=handoff_sufficiency,
+        review_burden=review_burden,
+        escalation_required=escalation_required,
+        authority="model-self-report",
+        confidence="low",
+        idempotency_key=idempotency_key,
+        trusted_producer_receipt=receipt,
+    )
+
+
+_TRUSTED_PRODUCER_RECEIPT_KIND_BY_CLASS = {
+    "human-review": "agentic-workspace/human-review-receipt/v1",
+    "retry-outcome": "agentic-workspace/retry-outcome-receipt/v1",
+    "handoff-outcome": "agentic-workspace/handoff-outcome-receipt/v1",
+    "closeout-outcome": "agentic-workspace/closeout-outcome-receipt/v1",
+}
+
+_TRUSTED_PRODUCER_SOURCE_TYPE_BY_CLASS = {
+    "human-review": "human-review",
+    "retry-outcome": "retry-outcome",
+    "handoff-outcome": "handoff-outcome",
+    "closeout-outcome": "closeout-outcome",
+}
+
+
+def _trusted_producer_authority(*, producer_class: str) -> str:
+    return "human-review" if producer_class == "human-review" else "local-outcome-ledger"
+
+
+def _trusted_producer_result(*, producer_class: str, outcome: str) -> str:
+    normalized = outcome.strip() or "success"
+    if producer_class == "human-review":
+        return "approved" if normalized == "success" else "changes-requested"
+    if producer_class == "retry-outcome":
+        return "passed" if normalized == "success" else "failed"
+    if producer_class == "handoff-outcome":
+        return "accepted" if normalized == "success" else "failed"
+    if producer_class == "closeout-outcome":
+        return "accepted" if normalized == "success" else "rejected"
+    raise WorkspaceUsageError("trusted producer receipt producer is not authorized for ordinary assignment calibration.")
+
+
+def _record_trusted_assignment_outcome_from_ordinary_boundary(
+    *,
+    target_root: Path,
+    producer_class: str,
+    outcome: str,
+    source_payload: dict[str, Any],
+    idempotency_key: str,
+    handoff_sufficiency: str = "sufficient",
+    review_burden: str = "normal",
+    escalation_required: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    assignment_context = _trusted_producer_assignment_context(target_root=target_root)
+    target_context = _as_dict(assignment_context.get("target_context"))
+    if not target_context:
+        return assignment_context
+    if producer_class not in _TRUSTED_PRODUCER_RECEIPT_KIND_BY_CLASS:
+        raise WorkspaceUsageError("trusted producer receipt producer is not authorized for ordinary assignment calibration.")
+    stable_key = (
+        idempotency_key.strip()
+        or hashlib.sha256(
+            json.dumps(
+                {
+                    "producer_class": producer_class,
+                    "outcome": outcome,
+                    "source_payload": source_payload,
+                    "target_context": target_context,
+                },
+                sort_keys=True,
+                ensure_ascii=True,
+            ).encode("utf-8")
+        ).hexdigest()[:16]
+    )
+    receipt_id = re.sub(r"[^A-Za-z0-9_.-]+", "-", stable_key).strip("-")[:80] or hashlib.sha256(stable_key.encode("utf-8")).hexdigest()[:16]
+    source_ref = f"{producer_class}://receipts/{receipt_id}"
+    if dry_run:
+        return {
+            "status": "dry-run",
+            "producer_class": producer_class,
+            "source_ref": source_ref,
+            "target_context": target_context,
+            "rule": "Dry runs do not write producer receipts or calibration evidence.",
+        }
+    result = _trusted_producer_result(producer_class=producer_class, outcome=outcome)
+    _write_trusted_producer_receipt(
+        target_root=target_root,
+        producer_class=producer_class,
+        receipt_id=receipt_id,
+        source_ref=source_ref,
+        receipt={
+            "kind": _TRUSTED_PRODUCER_RECEIPT_KIND_BY_CLASS[producer_class],
+            "producer_class": producer_class,
+            "authority": _trusted_producer_authority(producer_class=producer_class),
+            "source_type": _TRUSTED_PRODUCER_SOURCE_TYPE_BY_CLASS[producer_class],
+            "status": "current",
+            "recorded_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+            "result": result,
+            "confidence": "high",
+            "target_context": target_context,
+            "target_context_authority": {
+                "source_ref": assignment_context["source_ref"],
+                "revision": assignment_context.get("revision", ""),
+                "status": assignment_context["status"],
+                "rule": assignment_context["rule"],
+            },
+            "source_payload": source_payload,
+            "idempotency_key": stable_key,
+        },
+    )
+    try:
+        receipt = _load_trusted_producer_receipt(
+            target_root=target_root,
+            producer_class=producer_class,
+            receipt_ref=source_ref,
+            delegation_target=target_context["delegation_target"],
+            task_class=target_context["task_class"],
+            scope_class=target_context["scope_class"],
+            outcome=outcome,
+        )
+        record = _record_delegation_outcome(
+            target_root=target_root,
+            delegation_target=target_context["delegation_target"],
+            task_class=target_context["task_class"],
+            scope_class=target_context["scope_class"],
+            outcome=outcome,
+            handoff_sufficiency=handoff_sufficiency,
+            review_burden=review_burden,
+            escalation_required=escalation_required,
+            authority="model-self-report",
+            confidence="low",
+            idempotency_key=stable_key,
+            trusted_producer_receipt=receipt,
+        )
+    except WorkspaceUsageError as exc:
+        if "duplicate evidence" not in str(exc):
+            raise
+        return {
+            "status": "already-recorded",
+            "producer_class": producer_class,
+            "source_ref": source_ref,
+            "target_context": target_context,
+            "rule": "Duplicate ordinary producer calibration is idempotent for the same target/task/scope/provenance key.",
+        }
+    return {
+        "status": "recorded",
+        "producer_class": producer_class,
+        "source_ref": source_ref,
+        "target_context": target_context,
+        "record": record["recorded"],
+        "rule": "Ordinary owner boundary wrote and resolved an indexed trusted producer receipt before admitting evidence.",
     }
 
 
@@ -50155,6 +50964,9 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
     local_override = config.local_override
     posture = capability_posture or {}
     execution_class = str(posture.get("execution class", "")).strip()
+    scope_class = str(
+        posture.get("scope class") or posture.get("scope_class") or posture.get("scope") or posture.get("slice scope") or ""
+    ).strip()
     recommended_strength = str(posture.get("recommended strength", "")).strip()
     preferred_location = str(posture.get("preferred location", "")).strip() or "either"
     delegation_friendly = str(posture.get("delegation friendly", "")).strip()
@@ -50304,6 +51116,12 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
         "reasons": reasons,
         "alternatives": alternatives,
         "profile_recommendations": profile_recommendations,
+        "capability_context": {
+            "task_class": execution_class or None,
+            "scope_class": scope_class or execution_class or None,
+            "recommended_strength": recommended_strength or None,
+            "preferred_location": preferred_location or None,
+        },
         "guidance": _RUNTIME_RESOLUTION_GUIDANCE[recommendation],
         "posture_source": "provided" if posture else "none",
         "resolution_categories": list(_RUNTIME_RESOLUTION_CATEGORIES),
@@ -50579,6 +51397,13 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
                 "closeout_gate": _delegation_target_closeout_gate(profile=profile, advisory=advisory, outcome_evidence=outcome_evidence),
             }
         )
+    assignment_policy = _assignment_policy_payload(local_override, profile_payloads)
+    target_evidence = target_evidence_posture(
+        target_root=config.target_root,
+        profiles=local_override.delegation_targets,
+        records=outcome_records,
+    )
+    runtime_resolution = _runtime_resolution_payload(config=config)
     return {
         "status": "reporting-only",
         "rule": defaults["rule"],
@@ -50620,7 +51445,8 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "rule": "local-only machine/runtime posture; may override local-advisory invocation and routing fields, not repo-owned product semantics",
         },
         "delegation_control": _delegation_control_payload(local_override),
-        "assignment_policy": _assignment_policy_payload(local_override, profile_payloads),
+        "assignment_policy": assignment_policy,
+        "target_evidence": target_evidence,
         "delegation_targets": {
             "supported": True,
             "status": "configured" if local_override.delegation_targets else "available-not-set",
@@ -50742,7 +51568,12 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "delegated_run_guardrail": _delegated_run_guardrail_payload(
             defaults=defaults, profile_payloads=profile_payloads, local_override=local_override
         ),
-        "runtime_resolution": _runtime_resolution_payload(config=config),
+        "runtime_resolution": runtime_resolution,
+        "assignment_decision": assignment_decision_from_policy(
+            assignment_policy=assignment_policy,
+            runtime_resolution=runtime_resolution,
+            target_evidence=target_evidence,
+        ),
         "strong_handoff_packet": _strong_handoff_packet_template(),
         "success_measures": defaults["success_measures"],
     }
@@ -50905,6 +51736,8 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
     effective_posture = mixed_agent["effective_posture"]
     runtime_resolution = mixed_agent["runtime_resolution"]
     assignment_policy = mixed_agent["assignment_policy"]
+    target_evidence = mixed_agent["target_evidence"]
+    assignment_decision = mixed_agent["assignment_decision"]
     assurance = payload["assurance"]
     local_overlay = mixed_agent.get("local_overlay", {}) if isinstance(mixed_agent, dict) else {}
     local_high_risk_overlay = mixed_agent.get("high_risk_overlay", {}) if isinstance(mixed_agent, dict) else {}
@@ -50995,6 +51828,13 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "binding": assignment_policy["binding"],
                 "separation_rule": assignment_policy["separation_rule"],
             },
+            "target_evidence": {
+                "status": target_evidence["status"],
+                "record_count": target_evidence["record_count"],
+                "storage": target_evidence["storage"],
+                "suitability": target_evidence["suitability"],
+            },
+            "assignment_decision": assignment_decision,
             "clarification_mode": effective_posture["clarification_mode"],
             "safe_to_auto_run_commands": effective_posture["safe_to_auto_run_commands"],
             "prefer_internal_delegation_when_available": effective_posture["prefer_internal_delegation_when_available"],
@@ -51077,6 +51917,8 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "local_runtime.assignment_policy",
             "mixed_agent.runtime_resolution",
             "mixed_agent.assignment_policy",
+            "mixed_agent.target_evidence",
+            "mixed_agent.assignment_decision",
             "cli_compatibility",
         ],
     }

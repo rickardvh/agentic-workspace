@@ -13,6 +13,10 @@
   },
   "guards": [
     "Required outcome fields must be present and enum-valid.",
+    "New admissions must include independent scope context.",
+    "Routable authority is derived from producer provenance; untrusted or agent self-observed signals are stored as non-routing uncertainty.",
+    "Lifecycle transitions must reference an existing predecessor id.",
+    "Append enforces bounded per-context retention before assignment consumes the ledger.",
     "Do not treat local outcome records as checked-in repo policy."
   ],
   "id": "delegation-outcome.append",
@@ -30,6 +34,116 @@
     {
       "name": "task_class",
       "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "scope_class",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "operation",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "predecessor_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "authority",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "confidence",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "source_type",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "source_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "producer_class",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route_outcome",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "assignment_route",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "proof_observation",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "review_observation",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "handoff_burden",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "repair_burden",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "retry_burden",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "restart_burden",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expected_burden",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "observed_burden",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "scope_drift",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "contradiction_state",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "uncertainty_state",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "idempotency_key",
+      "required": false,
       "source": "cli-option"
     },
     {

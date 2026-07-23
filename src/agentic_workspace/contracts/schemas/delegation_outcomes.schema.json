@@ -13,6 +13,26 @@
       "const": "agentic-workspace/delegation-outcomes/v1",
       "description": "Discriminator identifying the payload or record shape."
     },
+    "retention": {
+      "type": "object",
+      "description": "Bounded retention and compaction policy for the local evidence ledger.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "description": "Retention mode applied to this ledger."
+        },
+        "compaction_cap": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum raw same-context record count expected before compaction."
+        },
+        "rule": {
+          "type": "string",
+          "description": "Human-readable retention rule."
+        }
+      },
+      "additionalProperties": true
+    },
     "records": {
       "type": "array",
       "items": {
@@ -21,6 +41,7 @@
           "recorded_at",
           "delegation_target",
           "task_class",
+          "scope_class",
           "outcome",
           "handoff_sufficiency",
           "review_burden",
@@ -41,6 +62,114 @@
             "type": "string",
             "minLength": 1,
             "description": "Task class text value used by this contract."
+          },
+          "scope_class": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Independent scope class text value used by this contract."
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "submit",
+              "correct-or-dispute",
+              "supersede",
+              "prune-or-compact"
+            ],
+            "description": "Evidence lifecycle operation represented by this record."
+          },
+          "record_id": {
+            "type": "string",
+            "description": "Stable local record id used by lifecycle transitions."
+          },
+          "predecessor_id": {
+            "type": "string",
+            "description": "Prior record id corrected, superseded, disputed, or compacted by this record."
+          },
+          "authority": {
+            "type": "string",
+            "description": "Authority class for the admitted local evidence."
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Confidence classification for the admitted local evidence."
+          },
+          "admission_state": {
+            "type": "string",
+            "description": "Admission state controlling whether routing may consume this record."
+          },
+          "source_type": {
+            "type": "string",
+            "description": "Evidence source class resolved by the admitting operation."
+          },
+          "source_ref": {
+            "type": "string",
+            "description": "Stable reference to the source artifact, review, proof, or local ledger."
+          },
+          "producer_class": {
+            "type": "string",
+            "description": "Producer class that owns the observation semantics."
+          },
+          "route_outcome": {
+            "type": "string",
+            "description": "Observed route outcome represented by this evidence."
+          },
+          "assignment_route": {
+            "type": "string",
+            "description": "Assignment route associated with the observation."
+          },
+          "proof_observation": {
+            "type": "string",
+            "description": "Proof-owner observation, or not-recorded when unavailable."
+          },
+          "review_observation": {
+            "type": "string",
+            "description": "Review-owner observation, or not-recorded when unavailable."
+          },
+          "handoff_burden": {
+            "type": "string",
+            "description": "Observed handoff burden classification."
+          },
+          "repair_burden": {
+            "type": "string",
+            "description": "Observed repair burden classification."
+          },
+          "retry_burden": {
+            "type": "string",
+            "description": "Observed retry burden classification."
+          },
+          "restart_burden": {
+            "type": "string",
+            "description": "Observed restart burden classification."
+          },
+          "expected_burden": {
+            "type": "string",
+            "description": "Expected burden recorded before or during handoff."
+          },
+          "observed_burden": {
+            "type": "string",
+            "description": "Observed burden after the delegated route returns."
+          },
+          "scope_drift": {
+            "type": "string",
+            "description": "Scope drift state for this observation."
+          },
+          "contradiction_state": {
+            "type": "string",
+            "description": "Contradiction or dispute state for this observation."
+          },
+          "uncertainty_state": {
+            "type": "string",
+            "description": "Uncertainty state after admission and lifecycle processing."
+          },
+          "idempotency_key": {
+            "type": "string",
+            "description": "Stable delivery/idempotency key used for duplicate rejection."
           },
           "outcome": {
             "type": "string",
