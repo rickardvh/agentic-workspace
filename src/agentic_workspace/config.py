@@ -239,7 +239,7 @@ def workspace_pointer_block(*, cli_invoke: str = DEFAULT_CLI_INVOKE) -> str:
         "1. Use `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present.\n"
         "2. Otherwise use `.agentic-workspace/config.toml` `[workspace].cli_invoke`.\n"
         "3. Otherwise use the package default `agentic-workspace`.\n"
-        "4. If no CLI invocation works, read `.agentic-workspace/WORKFLOW.md` before other workspace files.\n"
+        "4. If no CLI invocation works, read `.agentic-workspace/skills/workspace-startup/SKILL.md` before other workspace files.\n"
         "\n"
         "Ordinary route:\n"
         '1. Run `<configured AW invocation> start --target . --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions.\n'

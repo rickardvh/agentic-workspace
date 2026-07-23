@@ -865,30 +865,47 @@ def _is_command_field(key: str) -> bool:
             "run",
             "selection_path",
             "selector",
+            "selector_hint",
         }
         or key == "command"
+        or key == "command_template"
         or key.endswith("_command")
+        or key.endswith("_commands")
+        or key.endswith("_command_template")
     )
 
 
-def _localize_command_fields(value: Any, *, cli_invoke: str, target_arg: str = "./repo") -> Any:
+def _is_command_container_field(key: str) -> bool:
+    return (
+        key in {"commands", "consult", "next_actions"}
+        or key.endswith("_actions")
+        or key.endswith("_commands")
+        or key.endswith("_destinations")
+        or key.endswith("_routes")
+    )
+
+
+def _localize_command_fields(value: Any, *, cli_invoke: str, target_arg: str = "./repo", command_context: bool = False) -> Any:
+    if isinstance(value, str):
+        return _command_with_cli_invoke(value, cli_invoke=cli_invoke, target_arg=target_arg) if command_context else value
     if isinstance(value, dict):
         localized: dict[str, Any] = {}
         for key, nested in value.items():
-            if isinstance(nested, str) and _is_command_field(key):
+            nested_command_context = command_context or _is_command_container_field(key)
+            if isinstance(nested, str) and (command_context or _is_command_field(key)):
                 localized[key] = _command_with_cli_invoke(nested, cli_invoke=cli_invoke, target_arg=target_arg)
-            elif key in {"commands", "consult"} and isinstance(nested, list):
-                localized[key] = [
-                    _command_with_cli_invoke(item, cli_invoke=cli_invoke, target_arg=target_arg)
-                    if isinstance(item, str)
-                    else _localize_command_fields(item, cli_invoke=cli_invoke, target_arg=target_arg)
-                    for item in nested
-                ]
             else:
-                localized[key] = _localize_command_fields(nested, cli_invoke=cli_invoke, target_arg=target_arg)
+                localized[key] = _localize_command_fields(
+                    nested,
+                    cli_invoke=cli_invoke,
+                    target_arg=target_arg,
+                    command_context=nested_command_context,
+                )
         return localized
     if isinstance(value, list):
-        return [_localize_command_fields(item, cli_invoke=cli_invoke, target_arg=target_arg) for item in value]
+        return [
+            _localize_command_fields(item, cli_invoke=cli_invoke, target_arg=target_arg, command_context=command_context) for item in value
+        ]
     return value
 
 
@@ -995,7 +1012,7 @@ def select_report_payload(
             ],
         )
     if profile == "full":
-        return payload
+        return _localize_command_fields(payload, cli_invoke=cli_invoke, target_arg=target_arg)
     if profile == "router":
         return report_router_payload(payload, context_router=context_router, cli_invoke=cli_invoke)
     raise WorkspaceUsageError("report detail mode must be either router or full")
@@ -1817,7 +1834,7 @@ def _compact_report_section_answer(section: str, answer: Any, *, cli_invoke: str
                 cli_invoke=cli_invoke,
             ),
         }
-    return answer
+    return _localize_command_fields(answer, cli_invoke=cli_invoke, target_arg=target_arg)
 
 
 def _unknown_report_section_message(section: str, payload: dict[str, Any]) -> str:

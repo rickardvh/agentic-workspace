@@ -124,7 +124,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
     assert "planning-intake-upstream-task" not in {route["skill"] for route in skill_routing["preferred_routes"]}
     assert "planning-review-pass" not in {route["skill"] for route in skill_routing["preferred_routes"]}
     assert skill_routing["available_advanced_route_command"] == "agentic-workspace modules --target ./repo --format json"
-    assert any("WORKFLOW.md" in fallback for fallback in skill_routing["fallback_when_skills_unavailable"])
+    assert any("workspace-startup/SKILL.md" in fallback for fallback in skill_routing["fallback_when_skills_unavailable"])
     assert payload["compact_contract_profile"]["canonical_doc"] == ".agentic-workspace/docs/compact-contract-profile.md"
     assert payload["compact_contract_profile"]["rule"] == (
         "When one bounded answer is enough, prefer a narrow selector over a whole-surface dump."
@@ -651,7 +651,7 @@ def test_defaults_command_reports_machine_readable_default_routes_as_json(capsys
             "drill-down before broader prose or repo-local workaround guidance."
         ),
         (
-            "Use `.agentic-workspace/WORKFLOW.md` only after the effective CLI is unavailable or "
+            "Use `.agentic-workspace/skills/workspace-startup/SKILL.md` only after the effective CLI is unavailable or "
             "compact JSON cannot be read; resume compact packets as soon as they work."
         ),
     ]

@@ -154,7 +154,7 @@ Invocation rule:
 1. Use `.agentic-workspace/config.local.toml` `[workspace].cli_invoke` when present.
 2. Otherwise use `.agentic-workspace/config.toml` `[workspace].cli_invoke`.
 3. Otherwise use the package default `agentic-workspace`.
-4. If no CLI invocation works, read `.agentic-workspace/WORKFLOW.md` before other workspace files.
+4. If no CLI invocation works, read `.agentic-workspace/skills/workspace-startup/SKILL.md` before other workspace files.
 
 Ordinary route:
 1. Run `<configured AW invocation> start --target . --task "<task>" --format json` before non-trivial answers, edits, read-only workflow, config, delegation, or action-safety decisions.

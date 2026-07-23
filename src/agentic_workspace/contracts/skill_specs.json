@@ -35,7 +35,7 @@
         "do not claim completion when completion_claim_allowed is false"
       ],
       "fallback_when_cli_unavailable": [
-        "read .agentic-workspace/WORKFLOW.md and preserve forbidden actions"
+        "read .agentic-workspace/skills/workspace-startup/SKILL.md and preserve forbidden actions"
       ],
       "generated_target_requirements": {
         "status": "contract-only",
@@ -277,7 +277,7 @@
         "reconcile proof, intent, residue, and issue closure separately"
       ],
       "fallback_when_cli_unavailable": [
-        "read .agentic-workspace/WORKFLOW.md, .agentic-workspace/docs/module-map.md, then only the named surface"
+        "read .agentic-workspace/skills/workspace-startup/SKILL.md, .agentic-workspace/docs/module-map.md, then only the named surface"
       ],
       "generated_target_requirements": {
         "status": "contract-only",
@@ -516,7 +516,7 @@
         "Treat generated skill or adapter output as the source of product behavior."
       ],
       "fallback_when_cli_unavailable": [
-        "Read `.agentic-workspace/WORKFLOW.md` before other workspace files.",
+        "Read `.agentic-workspace/skills/workspace-startup/SKILL.md` before other workspace files.",
         "Use the smallest safe manual path and preserve no-artifact-by-default behavior.",
         "Escalate to planning only when the work shape, risk, or continuation need requires durable state."
       ],
@@ -585,7 +585,7 @@
       "proof_required": true,
       "completion_claim_allowed": false,
       "must_preserve": [
-        "Read `.agentic-workspace/WORKFLOW.md` before broad raw state.",
+        "Read `.agentic-workspace/skills/workspace-startup/SKILL.md` before broad raw state.",
         "Preserve forbidden actions even without CLI output.",
         "Do not bypass CLI-preferred/no-CLI fallback semantics."
       ]
@@ -655,7 +655,7 @@
           "edit_rule": "Read effective CLI invocation and workflow policy; do not mutate during startup routing."
         },
         {
-          "path": ".agentic-workspace/WORKFLOW.md",
+          "path": ".agentic-workspace/skills/workspace-startup/SKILL.md",
           "authority": "package-payload",
           "edit_rule": "Use only as fallback when the CLI is unavailable."
         }
@@ -672,7 +672,7 @@
         "Treat generated skill or adapter output as the source of product behavior."
       ],
       "fallback_when_cli_unavailable": [
-        "Read `.agentic-workspace/WORKFLOW.md` before other workspace files.",
+        "Read `.agentic-workspace/skills/workspace-startup/SKILL.md` before other workspace files.",
         "Use the smallest safe manual path and preserve no-artifact-by-default behavior.",
         "Escalate to planning only when the work shape, risk, or continuation need requires durable state."
       ],

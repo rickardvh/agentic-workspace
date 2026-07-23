@@ -5811,6 +5811,7 @@ def _improvement_pressure_payload(improvement_intake: dict[str, Any]) -> dict[st
 def _session_improvement_pressure_payload(
     *, target_root: Path, config: WorkspaceConfig, task_text: str | None, cli_invoke: str, active_planning_present: bool = False
 ) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
     session_intake = _session_improvement_intake_payload(target_root=target_root, config=config, cli_invoke=cli_invoke)
     status = str(session_intake.get("status") or "").strip()
     session_signals = [item for item in _list_payload(session_intake.get("session_observed_signals")) if isinstance(item, dict)]
@@ -5844,6 +5845,7 @@ def _session_improvement_pressure_payload(
         pressure["detail_command"] = _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section session_improvement_intake --format json",
             cli_invoke=cli_invoke,
+            target_arg=target_arg,
         )
         return pressure
     reasons: list[str] = []
@@ -5875,6 +5877,7 @@ def _session_improvement_pressure_payload(
         "detail_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section session_improvement_intake --format json",
             cli_invoke=cli_invoke,
+            target_arg=target_arg,
         ),
         "routing_rule": "Ordinary posture compiles cheap session improvement pressure only; broad repo-wide scans stay behind explicit selectors.",
     }
@@ -6119,17 +6122,20 @@ def _dogfooding_signal_status_outcome(cache: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _session_improvement_capture_routes(*, cli_invoke: str) -> dict[str, Any]:
+def _session_improvement_capture_routes(*, cli_invoke: str, target_root: Path | None = None) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
     memory_command = _command_with_cli_invoke(
         command=(
             "agentic-workspace memory capture-note --target ./repo --slug <slug> "
             '--summary "AW dogfooding finding: <evidence-backed lesson>" --files <relevant paths> --format json'
         ),
         cli_invoke=cli_invoke,
+        target_arg=target_arg,
     )
     planning_command = _command_with_cli_invoke(
         command='agentic-workspace planning new-plan --target ./repo --id <id> --title "<title>" --source "session dogfooding signal" --format json',
         cli_invoke=cli_invoke,
+        target_arg=target_arg,
     )
     return {
         "kind": "agentic-workspace/session-improvement-capture-routes/v1",
@@ -8851,11 +8857,15 @@ def _advanced_feature_policy_payload(*, config: WorkspaceConfig | None, include_
     return payload
 
 
-def _context_router_family_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, compact: bool = False) -> dict[str, Any]:
+def _context_router_family_payload(
+    *, cli_invoke: str = DEFAULT_CLI_INVOKE, compact: bool = False, target_arg: str | None = None
+) -> dict[str, Any]:
     views = [
         {
             "view": "start",
-            "command": _command_with_cli_invoke(command="agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke),
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace start --target ./repo --format json", cli_invoke=cli_invoke, target_arg=target_arg
+            ),
             "use_when": "repo entry",
         },
         {
@@ -8865,7 +8875,9 @@ def _context_router_family_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, comp
         },
         {
             "view": "report",
-            "command": _command_with_cli_invoke(command="agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke),
+            "command": _command_with_cli_invoke(
+                command="agentic-workspace report --target ./repo --format json", cli_invoke=cli_invoke, target_arg=target_arg
+            ),
             "use_when": "diagnostics or sections",
         },
         {
@@ -10922,7 +10934,7 @@ def _run_report_command(
         validation_friction_policy=_validation_friction_payload(),
         cli_invoke=config.cli_invoke,
     )
-    repo_friction["capture_shortcut"] = _friction_capture_shortcut_payload()
+    repo_friction["capture_shortcut"] = _friction_capture_shortcut_payload(cli_invoke=config.cli_invoke, target_root=target_root)
     standing_intent = standing_intent_payload(
         target_root=target_root,
         config_policy={
@@ -13070,6 +13082,7 @@ def _cleanup_legacy_local_scratch(*, target_root: Path, dry_run: bool, policy: d
 
 
 def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI_INVOKE) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
     policy = _local_scratch_policy_payload(target_root=target_root)
     aw_root = target_root / ".agentic-workspace"
     local_root = target_root / ".agentic-workspace" / "local"
@@ -13126,10 +13139,12 @@ def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI
     legacy_cleanup_dry_run = _command_with_cli_invoke(
         command="agentic-workspace upgrade --target ./repo --legacy-scratch-cleanup --dry-run --format json",
         cli_invoke=cli_invoke,
+        target_arg=target_arg,
     )
     legacy_cleanup_apply = _command_with_cli_invoke(
         command=("agentic-workspace upgrade --target ./repo --legacy-scratch-cleanup --apply-legacy-scratch-cleanup --format json"),
         cli_invoke=cli_invoke,
+        target_arg=target_arg,
     )
     return {
         "kind": "agentic-workspace/local-footprint/v1",
@@ -13164,8 +13179,11 @@ def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI
             "dry_run": _command_with_cli_invoke(
                 command="agentic-workspace upgrade --target ./repo --dry-run --format json",
                 cli_invoke=cli_invoke,
+                target_arg=target_arg,
             ),
-            "apply": _command_with_cli_invoke(command="agentic-workspace upgrade --target ./repo --format json", cli_invoke=cli_invoke),
+            "apply": _command_with_cli_invoke(
+                command="agentic-workspace upgrade --target ./repo --format json", cli_invoke=cli_invoke, target_arg=target_arg
+            ),
             "legacy_cleanup": {
                 "status": "available" if runs["legacy_entry_count"] else "not-needed",
                 "dry_run": legacy_cleanup_dry_run,
@@ -13177,8 +13195,9 @@ def _local_footprint_payload(*, target_root: Path, cli_invoke: str = DEFAULT_CLI
     }
 
 
-def _compact_start_local_footprint_advisory(value: dict[str, Any], *, cli_invoke: str) -> dict[str, Any]:
+def _compact_start_local_footprint_advisory(value: dict[str, Any], *, cli_invoke: str, target_root: Path | None = None) -> dict[str, Any]:
     scratch = _as_dict(value.get("scratch_retention"))
+    target_arg = _command_target_arg(target_root)
     return {
         "kind": value.get("kind", "agentic-workspace/local-footprint/v1"),
         "status": value.get("status", "unknown"),
@@ -13193,6 +13212,7 @@ def _compact_start_local_footprint_advisory(value: dict[str, Any], *, cli_invoke
         "detail_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section local_footprint --format json",
             cli_invoke=cli_invoke,
+            target_arg=target_arg,
         ),
         "rule": "Startup surfaces local AW footprint pressure as advisory routing; doctor/report own detailed footprint evidence.",
     }
@@ -15541,7 +15561,9 @@ def _run_lazy_report_section_command(
             validation_friction_policy=_validation_friction_payload(),
             cli_invoke=config.cli_invoke,
         )
-        payload["repo_friction"]["capture_shortcut"] = _friction_capture_shortcut_payload()
+        payload["repo_friction"]["capture_shortcut"] = _friction_capture_shortcut_payload(
+            cli_invoke=config.cli_invoke, target_root=target_root
+        )
         return _select_report_payload(payload, profile="router", section=normalized)
 
     if normalized == "local_overlay":
@@ -29742,6 +29764,7 @@ def _dogfooding_signal_status_payload(
     cli_invoke: str,
     active_planning_present: bool = False,
 ) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
     cache_path = ".agentic-workspace/local/cache/dogfooding-signal-status.json"
     cache = _read_local_cache_json(target_root, cache_path)
     source_checkout = _is_agentic_workspace_source_checkout(target_root)
@@ -29757,7 +29780,9 @@ def _dogfooding_signal_status_payload(
             "reason": "No planned lane, stacked PR, release/recovery, or maintainer dogfooding context detected.",
         }
     command = _command_with_cli_invoke(
-        command="agentic-workspace report --target ./repo --section session_improvement_intake --format json", cli_invoke=cli_invoke
+        command="agentic-workspace report --target ./repo --section session_improvement_intake --format json",
+        cli_invoke=cli_invoke,
+        target_arg=target_arg,
     )
     allowed_statuses = {
         "not_checked",
@@ -29809,7 +29834,7 @@ def _dogfooding_signal_status_payload(
         "canonical_repo_history": bool(outcome["canonical_repo_history"]),
         "cache_path": cache_path,
         "detail_command": command,
-        "capture_routes": _session_improvement_capture_routes(cli_invoke=cli_invoke),
+        "capture_routes": _session_improvement_capture_routes(cli_invoke=cli_invoke, target_root=target_root),
         "disposition": {
             "status": status,
             "allowed_states": [
@@ -30119,6 +30144,7 @@ def _active_report_runtime_shadowing_payload(
 
 
 def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke: str) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
     core_path = target_root / "src" / "agentic_workspace" / "workspace_runtime_core.py"
     primitive_path = target_root / "src" / "agentic_workspace" / "workspace_runtime_primitives.py"
     relative_core = "src/agentic_workspace/workspace_runtime_core.py"
@@ -30212,6 +30238,7 @@ def _runtime_mirror_surface_consistency_payload(*, target_root: Path, cli_invoke
         "proof_command": _command_with_cli_invoke(
             command="agentic-workspace report --target ./repo --section runtime_mirror_consistency --format json",
             cli_invoke=cli_invoke,
+            target_arg=target_arg,
         ),
         "rule": "Compare the smallest durable mirrored contract: known helper existence, public packet return-key shape, and active report selector ownership; this is not semantic equivalence proof.",
     }
@@ -30330,6 +30357,7 @@ def _start_tiny_payload_fast(
         cli_compatibility=startup_cli_compatibility,
         compact=True,
     )
+    target_arg = _command_target_arg(target_root)
     payload: dict[str, Any] = {
         "kind": "startup-context/v1",
         "target": target_root.as_posix(),
@@ -30337,7 +30365,7 @@ def _start_tiny_payload_fast(
         "invoked_cli_identity": _invoked_cli_identity_payload(target_root=target_root, compact=True),
         "cli_invocation": _cli_invocation_payload(config=config),
         "startup_sequence": startup_sequence,
-        "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True),
+        "context_router": _context_router_family_payload(cli_invoke=config.cli_invoke, compact=True, target_arg=target_arg),
         "workflow_sufficiency": _workflow_sufficiency_payload(
             surface="start",
             decision="active-planning-summary-needed" if active_planning_present else "enough-for-first-contact-routing",
@@ -30399,23 +30427,28 @@ def _start_tiny_payload_fast(
             "status": "present",
             "activation_rule": "closeout obligations apply after implementation or lane closeout, not ordinary first-contact orientation",
             "detail_command": _command_with_cli_invoke(
-                command="agentic-workspace report --target ./repo --section closeout_trust --format json", cli_invoke=config.cli_invoke
+                command="agentic-workspace report --target ./repo --section closeout_trust --format json",
+                cli_invoke=config.cli_invoke,
+                target_arg=target_arg,
             ),
             "ordinary_closeout_route": {
                 "status": "mandatory-before-completion-claim",
                 "first_inspection": _command_with_cli_invoke(
                     command="agentic-workspace report --target ./repo --section closeout_trust --format json",
                     cli_invoke=config.cli_invoke,
+                    target_arg=target_arg,
                 ),
                 "closeout_report": _command_with_cli_invoke(
                     command="agentic-workspace report --target ./repo --section closeout_report --format json",
                     cli_invoke=config.cli_invoke,
+                    target_arg=target_arg,
                 ),
                 "applies_to": ["implementation closeout", "read-only GitHub status", "repo-maintenance completion"],
                 "top_level_closeout_command": "not-available",
                 "substitute_command": _command_with_cli_invoke(
                     command="agentic-workspace report --target ./repo --section closeout_report --format json",
                     cli_invoke=config.cli_invoke,
+                    target_arg=target_arg,
                 ),
                 "rule": "Use this route before claiming completion; if Planning is active, satisfy planning closeout/archive requirements as well.",
             },
@@ -30440,6 +30473,7 @@ def _start_tiny_payload_fast(
     local_footprint = _compact_start_local_footprint_advisory(
         _local_footprint_payload(target_root=target_root, cli_invoke=config.cli_invoke),
         cli_invoke=config.cli_invoke,
+        target_root=target_root,
     )
     if local_footprint.get("status") == "attention":
         payload["local_footprint"] = local_footprint
@@ -40265,24 +40299,26 @@ def _execution_posture_payload(
 
 
 @overload
-def _command_with_cli_invoke(*, command: str, cli_invoke: str) -> str: ...
+def _command_with_cli_invoke(*, command: str, cli_invoke: str, target_arg: str | None = None) -> str: ...
 
 
 @overload
-def _command_with_cli_invoke(*, command: None, cli_invoke: str) -> None: ...
+def _command_with_cli_invoke(*, command: None, cli_invoke: str, target_arg: str | None = None) -> None: ...
 
 
-def _command_with_cli_invoke(*, command: str | None, cli_invoke: str) -> str | None:
+def _command_with_cli_invoke(*, command: str | None, cli_invoke: str, target_arg: str | None = None) -> str | None:
     if command is None:
         return None
+    if target_arg is not None:
+        command = command.replace("--target ./repo", f"--target {target_arg}")
     if command == "agentic-workspace" or command.startswith("agentic-workspace "):
         return f"{cli_invoke}{command.removeprefix('agentic-workspace')}"
     if command == "agentic-planning" or command.startswith("agentic-planning "):
         mapped = command.replace("agentic-planning ", "agentic-workspace planning ", 1)
-        return _command_with_cli_invoke(command=mapped, cli_invoke=cli_invoke)
+        return _command_with_cli_invoke(command=mapped, cli_invoke=cli_invoke, target_arg=target_arg)
     if command == "agentic-memory" or command.startswith("agentic-memory "):
         mapped = command.replace("agentic-memory ", "agentic-workspace memory ", 1)
-        return _command_with_cli_invoke(command=mapped, cli_invoke=cli_invoke)
+        return _command_with_cli_invoke(command=mapped, cli_invoke=cli_invoke, target_arg=target_arg)
     return command
 
 
@@ -43919,7 +43955,8 @@ def _surface_value_guardrail_payload() -> dict[str, Any]:
     }
 
 
-def _friction_capture_shortcut_payload() -> dict[str, Any]:
+def _friction_capture_shortcut_payload(*, cli_invoke: str = DEFAULT_CLI_INVOKE, target_root: Path | None = None) -> dict[str, Any]:
+    target_arg = _command_target_arg(target_root)
     return {
         "status": "available",
         "owner_surface": "repo_friction",
@@ -43932,7 +43969,13 @@ def _friction_capture_shortcut_payload() -> dict[str, Any]:
             "desired cheaper correction",
         ],
         "cheap_destinations": [
-            "agentic-workspace report --target ./repo --section repo_friction --format json",
+            str(
+                _command_with_cli_invoke(
+                    command="agentic-workspace report --target ./repo --section repo_friction --format json",
+                    cli_invoke=cli_invoke,
+                    target_arg=target_arg,
+                )
+            ),
             ".agentic-workspace/planning/reviews/ for bounded review evidence",
             ".agentic-workspace/planning/state.toml only when promotion is justified",
         ],
@@ -44597,7 +44640,7 @@ def _startup_skill_routing_payload(
         "query": skill_command,
         "advanced_route_rule": "Review and external-intake skills are surfaced only when the repo enables the matching reusable diagnostic feature. Source-checkout-only maintainer skills stay outside shipped core modules.",
         "fallback_when_skills_unavailable": [
-            "follow AGENTS.md, and use .agentic-workspace/WORKFLOW.md only as conservative no-CLI recovery",
+            "follow AGENTS.md, and use .agentic-workspace/skills/workspace-startup/SKILL.md only as conservative no-CLI recovery",
             'use agentic-workspace start --task "<task>" --format json for ordinary first contact',
             "use agentic-workspace summary --format json before raw planning reads",
         ],
@@ -45260,18 +45303,25 @@ def _setup_payload(
     host_orientation = _host_repo_orientation_payload(target_root=target_root)
     assurance_onboarding = _assurance_onboarding_payload(assurance=config.assurance)
     verification_guidance = _verification_enablement_guidance(target_root=target_root, config=config)
+    target_arg = _command_target_arg(target_root)
+
+    def command_with_target(command: str) -> str:
+        return str(_command_with_cli_invoke(command=command, cli_invoke=config.cli_invoke, target_arg=target_arg))
+
     onboarding_routes = {
         "assurance": {
             "status": assurance_onboarding.get("status", "absent"),
             "command": "agentic-workspace defaults --section assurance_onboarding --format json",
-            "report_command": "agentic-workspace report --target ./repo --section assurance_requirements --format json",
+            "report_command": command_with_target(
+                "agentic-workspace report --target ./repo --section assurance_requirements --format json"
+            ),
             "seed_when": "only after inspected host-owned evidence names the requirement, proof route, evidence label, or claim boundary",
             "candidate_seed_surfaces": assurance_onboarding.get("candidate_seed_surfaces", []),
         },
         "verification": {
             "status": verification_guidance["status"],
             "command": "agentic-workspace defaults --section verification_onboarding --format json",
-            "report_command": "agentic-workspace report --target ./repo --section verification --format json",
+            "report_command": command_with_target("agentic-workspace report --target ./repo --section verification --format json"),
             "seed_when": "only for repeatable host proof needs not already expressed by ordinary tests or proof selection",
             "enablement": verification_guidance,
             "candidate_seed_surfaces": [
@@ -45293,7 +45343,7 @@ def _setup_payload(
         next_action = {
             "summary": "No new core seed surfaces needed; inspect onboarding routes before adding assurance or verification seeds",
             "commands": [
-                "agentic-workspace report --target ./repo --format json",
+                command_with_target("agentic-workspace report --target ./repo --format json"),
                 "agentic-workspace defaults --section assurance_onboarding --format json",
                 "agentic-workspace defaults --section verification_onboarding --format json",
             ],
@@ -45312,7 +45362,7 @@ def _setup_payload(
         next_action = {
             "summary": "Review the compact report surfaces",
             "commands": [
-                "agentic-workspace report --target ./repo --format json",
+                command_with_target("agentic-workspace report --target ./repo --format json"),
                 "agentic-workspace defaults --section assurance_onboarding --format json",
                 "agentic-workspace defaults --section verification_onboarding --format json",
             ],
@@ -45323,8 +45373,8 @@ def _setup_payload(
             next_action = {
                 "summary": "Review promotable setup findings before seeding or promoting anything durable",
                 "commands": [
-                    "agentic-workspace setup --target ./repo --format json",
-                    "agentic-workspace report --target ./repo --format json",
+                    command_with_target("agentic-workspace setup --target ./repo --format json"),
+                    command_with_target("agentic-workspace report --target ./repo --format json"),
                 ],
             }
     if installed_state_attention is not None:
