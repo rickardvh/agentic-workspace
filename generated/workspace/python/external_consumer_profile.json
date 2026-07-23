@@ -3,11 +3,1531 @@
   "authority": "command_package_ir.json",
   "compatibility": {
     "protocol": "1.0.0",
-    "fingerprint": "sha256:1f78bcc36425e7648b02baa48c5762bf1a5d962791ec9cde853bd8b1b64af6f9",
+    "fingerprint": "sha256:b3708555a40dfb991e71288943094f2fe0051f5499b8daaa283705d662f7c302",
     "additive_fields": "allowed"
   },
   "support_rule": "Operations fail closed unless generated status, effects, conformance, and Python/TypeScript target accounting are present.",
   "operations": [
+    {
+      "id": "assignment.admit",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.admit.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:b27c677fdaef6306a3a5c5d59f115a95296fbbfa2dfafff444828595163eaa63"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/assignment.admit.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/assignment.admit.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "assignment.cleanup",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.cleanup.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:bf591857b9783bb9a0416b97d7511934d5f201dc368a1c565601696e29f8d906"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/assignment.cleanup.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/assignment.cleanup.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "assignment.close",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.close.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:de91d27a257d54ba68ab1158641a38ec8706f8231f620d73936b7ede6398a6c3"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/assignment.close.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/assignment.close.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "assignment.export",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.export.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:e9809348472a0f86c0c820163523418b7ea9c214c43fe9cf74ca0043e1e65e61"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/assignment.export.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/assignment.export.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "assignment.import",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.import.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:20af56d2b995d5dd6bf426cc9a8b52fba6891bbd20e2517732e679d76b00e7d2"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/assignment.import.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/assignment.import.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "assignment.integrate",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.integrate.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:856c9b22266b1cd52a381e0379f6fe7a250b66d98bff62a5a2b44184c0553338"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/assignment.integrate.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/assignment.integrate.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "assignment.override",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.override.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:1237e1825bad04a7da4a358e5a7078518b530d660328e59bf945fb351ced80e7"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/assignment.override.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/assignment.override.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "assignment.reassign",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.reassign.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:26bd5e76f1307f0e48033c91f724796d02272399f3826436bd0fa79c6a82d125"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/assignment.reassign.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/assignment.reassign.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "assignment.reject",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.reject.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:0f6a6554c213b26771aab3184d0ddb945fd7c17faef9f22d26f022bb93a80c7a"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/assignment.reject.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/assignment.reject.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
+    {
+      "id": "assignment.repair",
+      "owner": "root-workspace",
+      "operation_contract": "src/agentic_workspace/contracts/operations/assignment.repair.json",
+      "operation_compatibility": {
+        "schema_version": "agentic-workspace/operation/v1",
+        "fingerprint": "sha256:518e8776a9fd9f1b606a6e3f64312e614fc986e6a331130cb7794ff74921f2d3"
+      },
+      "operation_resources": {
+        "python": {
+          "package": "agentic-workspace",
+          "path": "operations/assignment.repair.json",
+          "exists": true
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "path": "resources/operations/assignment.repair.json",
+          "exists": true
+        }
+      },
+      "schemas": {
+        "input": [
+          "assignment_lifecycle_input.schema.json"
+        ],
+        "output": [
+          "assignment_lifecycle_result.schema.json"
+        ]
+      },
+      "effects": {
+        "destructive": false,
+        "idempotent": true,
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
+      },
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "conformance": [
+        "assignment.admit.process",
+        "assignment.cleanup.process",
+        "assignment.close.process",
+        "assignment.export.process",
+        "assignment.import.process",
+        "assignment.integrate.process",
+        "assignment.override.process",
+        "assignment.reassign.process",
+        "assignment.reject.process",
+        "assignment.repair.process"
+      ],
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local assignment artifact writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "current authority validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "assignment.admit.process",
+              "assignment.cleanup.process",
+              "assignment.close.process",
+              "assignment.export.process",
+              "assignment.import.process",
+              "assignment.integrate.process",
+              "assignment.override.process",
+              "assignment.reassign.process",
+              "assignment.reject.process",
+              "assignment.repair.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      }
+    },
     {
       "id": "autopilot.run",
       "owner": "root-workspace",
@@ -35,11 +1555,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -149,11 +1669,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -247,11 +1767,11 @@
         ]
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -357,11 +1877,11 @@
         ]
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -467,11 +1987,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -565,11 +2085,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -677,11 +2197,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -779,11 +2299,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -882,11 +2402,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -985,11 +2505,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -1088,11 +2608,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -1191,11 +2711,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -1273,11 +2793,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -1355,11 +2875,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -1437,11 +2957,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -1519,11 +3039,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -1605,11 +3125,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -1689,11 +3209,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -1783,11 +3303,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -1865,11 +3385,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -1947,11 +3467,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2029,11 +3549,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2111,11 +3631,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -2193,11 +3713,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2275,11 +3795,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2348,11 +3868,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2430,11 +3950,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2512,11 +4032,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2594,11 +4114,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2676,11 +4196,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2758,11 +4278,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2840,11 +4360,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -2922,11 +4442,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3004,11 +4524,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3086,11 +4606,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -3168,11 +4688,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -3271,11 +4791,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -3374,11 +4894,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3456,11 +4976,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3538,11 +5058,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3620,11 +5140,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3702,11 +5222,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3784,11 +5304,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3857,11 +5377,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -3939,11 +5459,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -4023,11 +5543,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4117,11 +5637,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -4190,11 +5710,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4272,11 +5792,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4354,11 +5874,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4438,11 +5958,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4522,11 +6042,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4606,11 +6126,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4697,11 +6217,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4770,11 +6290,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4843,11 +6363,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4916,11 +6436,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -4989,11 +6509,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -5062,11 +6582,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5135,11 +6655,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -5219,11 +6739,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -5310,11 +6830,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -5392,11 +6912,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5465,11 +6985,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -5547,11 +7067,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5629,11 +7149,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5711,11 +7231,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -5793,11 +7313,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -5875,11 +7395,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -5957,11 +7477,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6039,11 +7559,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6142,11 +7662,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6244,11 +7764,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6346,11 +7866,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6448,11 +7968,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6560,11 +8080,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -6672,11 +8192,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6793,11 +8313,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": false,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6887,11 +8407,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -6990,11 +8510,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -7095,11 +8615,11 @@
         ]
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -7198,11 +8718,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -7310,11 +8830,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -7413,11 +8933,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7516,11 +9036,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7624,11 +9144,11 @@
         "output": []
       },
       "effects": {
-        "read_only": false,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": true,
-        "requires_preflight_gate": true
+        "read_only": false,
+        "requires_preflight_gate": true,
+        "writes_repo_state": true
       },
       "targets": {
         "python": {
@@ -7732,11 +9252,11 @@
         "output": []
       },
       "effects": {
-        "read_only": true,
         "destructive": false,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": true,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -7801,11 +9321,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -7952,11 +9472,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -8103,11 +9623,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -8254,11 +9774,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {
@@ -8405,11 +9925,11 @@
         ]
       },
       "effects": {
-        "read_only": false,
         "destructive": true,
         "idempotent": true,
-        "writes_repo_state": false,
-        "requires_preflight_gate": false
+        "read_only": false,
+        "requires_preflight_gate": false,
+        "writes_repo_state": false
       },
       "targets": {
         "python": {

@@ -34893,12 +34893,268 @@ def _clarification_control_payload(local_override: MixedAgentLocalOverride) -> d
     }
 
 
+def _manual_transport_admission_payload(
+    *, assignment_policy: dict[str, Any], target_execution_methods: list[str], handoff_required: bool
+) -> dict[str, Any]:
+    policy = str(_as_dict(assignment_policy.get("manual_transport_policy")).get("value") or "allowed")
+    automatic_methods = sorted({method for method in target_execution_methods if method in {"internal", "cli", "api"}})
+    automatic_method_available = bool(automatic_methods)
+    if policy == "disabled":
+        state = "disabled"
+        export_allowed = False
+        required = False
+        status = (
+            "automatic-route-available" if automatic_method_available else "blocked-transport-disabled" if handoff_required else "disabled"
+        )
+    elif policy == "required-when-no-automatic-method":
+        export_allowed = True
+        required = not automatic_method_available
+        state = "required" if required else "available-automatic-method-preferred"
+        status = "required" if handoff_required and required else "available"
+    else:
+        export_allowed = True
+        required = False
+        state = "available"
+        status = "required" if handoff_required else "available"
+    return {
+        "kind": "agentic-workspace/manual-transport-admission/v1",
+        "policy": policy,
+        "state": state,
+        "status": status,
+        "export_allowed": export_allowed,
+        "required": required,
+        "required_when_no_automatic_method": policy == "required-when-no-automatic-method",
+        "automatic_method_available": automatic_method_available,
+        "automatic_methods": automatic_methods,
+        "rule": "Manual transport is admitted before any handoff command is rendered; disabled transport suppresses runnable handoff actions.",
+    }
+
+
+def _assignment_identity_payload(
+    *, assignment_gate: dict[str, Any], assignment_policy: dict[str, Any], delegation_decision: dict[str, Any]
+) -> dict[str, Any]:
+    next_step = _as_dict(delegation_decision.get("delegation_next_step"))
+    scope = _as_dict(assignment_gate.get("scope"))
+    proof_obligation = _as_dict(assignment_gate.get("proof_obligation") or next_step.get("proof_obligation"))
+    allowed_paths = assignment_gate.get("allowed_paths") or scope.get("allowed_paths") or next_step.get("allowed_paths") or []
+    stop_conditions = assignment_gate.get("stop_conditions") or next_step.get("stop_conditions") or []
+    identity = {
+        "target": assignment_gate.get("selected_target"),
+        "target_identity_ref": assignment_gate.get("target_identity_ref") or assignment_gate.get("selected_target"),
+        "target_revision": assignment_gate.get("target_revision"),
+        "task_class": assignment_gate.get("task_class"),
+        "scope_class": assignment_gate.get("scope_class") or scope.get("scope_class"),
+        "plan_ref": assignment_gate.get("plan_ref") or next_step.get("plan_ref"),
+        "plan_revision": assignment_gate.get("plan_revision") or next_step.get("plan_revision"),
+        "slice_id": assignment_gate.get("slice_id") or next_step.get("slice_id"),
+        "slice_revision": assignment_gate.get("slice_revision") or next_step.get("slice_revision"),
+        "required_next_action": assignment_gate.get("required_next_action"),
+        "gate_status": assignment_gate.get("status"),
+        "assignment_policy": assignment_gate.get("assignment_policy"),
+        "assignment_decision_revision": assignment_gate.get("assignment_decision_revision"),
+        "manual_transport_policy": str(_as_dict(assignment_policy.get("manual_transport_policy")).get("value") or "allowed"),
+        "delegation_decision": delegation_decision.get("decision") or delegation_decision.get("recommended_route"),
+        "handoff_run_id": next_step.get("handoff_run_id") or next_step.get("run_id"),
+        "role": next_step.get("role") or assignment_gate.get("role"),
+        "allowed_effects": assignment_gate.get("allowed_effects") or next_step.get("allowed_effects") or [],
+        "allowed_paths": allowed_paths if isinstance(allowed_paths, list) else [],
+        "return_schema": next_step.get("return_schema") or "delegated-return/v1",
+        "proof_obligation_id": proof_obligation.get("id") or next_step.get("proof_obligation_id"),
+        "proof_obligation_revision": proof_obligation.get("revision") or next_step.get("proof_obligation_revision"),
+        "stop_conditions": stop_conditions if isinstance(stop_conditions, list) else [],
+        "mutation_baseline": assignment_gate.get("mutation_baseline") or next_step.get("mutation_baseline"),
+        "return_admission_owner": "delegated-return.admit",
+    }
+    required_fields = [
+        "target",
+        "target_identity_ref",
+        "target_revision",
+        "task_class",
+        "scope_class",
+        "plan_ref",
+        "plan_revision",
+        "slice_id",
+        "slice_revision",
+        "assignment_decision_revision",
+        "handoff_run_id",
+        "role",
+        "allowed_effects",
+        "allowed_paths",
+        "return_schema",
+        "proof_obligation_id",
+        "proof_obligation_revision",
+        "stop_conditions",
+        "mutation_baseline",
+    ]
+    missing_required = [field for field in required_fields if identity.get(field) in (None, "", [])]
+    identity["complete"] = not missing_required
+    identity["missing_required_fields"] = missing_required
+    revision_source = json.dumps(identity, sort_keys=True, separators=(",", ":"), default=str)
+    identity["revision"] = "sha256:" + hashlib.sha256(revision_source.encode("utf-8")).hexdigest()
+    return identity
+
+
+def _resolve_delegated_return_authorities(
+    *,
+    assignment_gate: dict[str, Any],
+    assignment_policy: dict[str, Any],
+    delegation_decision: dict[str, Any],
+    current_authorities: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    live = _as_dict(current_authorities)
+    resolved_assignment_gate = _as_dict(live.get("assignment_gate"))
+    resolved_assignment_policy = _as_dict(live.get("assignment_policy"))
+    resolved_delegation_decision = _as_dict(live.get("delegation_decision"))
+    proof_receipt = _as_dict(live.get("aw_proof_receipt") or live.get("proof_receipt"))
+    mutation_baseline = live.get("live_mutation_baseline") or live.get("mutation_baseline")
+    missing_required_authorities: list[str] = []
+    if not resolved_assignment_gate:
+        missing_required_authorities.append("current_authorities.assignment_gate")
+    if not resolved_assignment_policy:
+        missing_required_authorities.append("current_authorities.assignment_policy")
+    if not resolved_delegation_decision:
+        missing_required_authorities.append("current_authorities.delegation_decision")
+    if not proof_receipt:
+        missing_required_authorities.append("current_authorities.aw_proof_receipt")
+    if mutation_baseline in (None, ""):
+        missing_required_authorities.append("current_authorities.live_mutation_baseline")
+    status = "live-resolved" if not missing_required_authorities else "missing-current-authority"
+    return {
+        "kind": "agentic-workspace/delegated-return-authority-resolution/v1",
+        "status": status,
+        "assignment_gate": resolved_assignment_gate,
+        "assignment_policy": resolved_assignment_policy,
+        "delegation_decision": resolved_delegation_decision,
+        "proof_receipt": proof_receipt,
+        "mutation_baseline": mutation_baseline,
+        "run_state": _as_dict(live.get("run_state")),
+        "competing_assignment": _as_dict(live.get("competing_assignment")),
+        "missing_required_authorities": missing_required_authorities,
+        "sources": {
+            "assignment_gate": "current_authorities.assignment_gate" if resolved_assignment_gate else "missing",
+            "proof_receipt": "current_authorities.proof_receipt"
+            if live.get("aw_proof_receipt") or live.get("proof_receipt")
+            else "missing",
+            "mutation_baseline": "current_authorities.live_mutation_baseline"
+            if live.get("live_mutation_baseline") or live.get("mutation_baseline")
+            else "missing",
+        },
+        "rule": "Admission and integration require current_authorities resolved from Planning, proof, assignment, run, and worktree owners immediately before admission; caller-supplied packets are not a fallback authority.",
+    }
+
+
+def _admit_delegated_return(
+    *,
+    assignment_gate: dict[str, Any],
+    assignment_policy: dict[str, Any],
+    delegation_decision: dict[str, Any],
+    returned_work: dict[str, Any],
+    current_authorities: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    authority_resolution = _resolve_delegated_return_authorities(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+        current_authorities=current_authorities,
+    )
+    resolved_assignment_gate = _as_dict(authority_resolution.get("assignment_gate"))
+    resolved_assignment_policy = _as_dict(authority_resolution.get("assignment_policy"))
+    resolved_delegation_decision = _as_dict(authority_resolution.get("delegation_decision"))
+    identity = _assignment_identity_payload(
+        assignment_gate=resolved_assignment_gate,
+        assignment_policy=resolved_assignment_policy,
+        delegation_decision=resolved_delegation_decision,
+    )
+    next_step = _as_dict(resolved_delegation_decision.get("delegation_next_step"))
+    manual_transport = _manual_transport_admission_payload(
+        assignment_policy=resolved_assignment_policy,
+        target_execution_methods=[str(method) for method in next_step.get("execution_methods", [])]
+        if isinstance(next_step.get("execution_methods"), list)
+        else [],
+        handoff_required=True,
+    )
+    current_proof = _as_dict(authority_resolution.get("proof_receipt"))
+    current_baseline = authority_resolution.get("mutation_baseline")
+    run_state = _as_dict(authority_resolution.get("run_state"))
+    competing_assignment = _as_dict(authority_resolution.get("competing_assignment"))
+    failures: list[dict[str, str]] = []
+
+    def reject(reason: str, field: str, recovery: str) -> None:
+        failures.append({"reason": reason, "field": field, "recovery": recovery})
+
+    if authority_resolution.get("status") != "live-resolved":
+        reject(
+            "live-authority-missing",
+            "current_authorities",
+            "Resolve the current assignment/run/proof/baseline authorities and retry admission.",
+        )
+    if not manual_transport["export_allowed"] and not manual_transport["automatic_method_available"]:
+        reject("manual-transport-disabled", "manual_transport.policy", "Enable an allowed transport or use an automatic method.")
+    if not identity.get("complete"):
+        reject("incomplete-assignment-identity", "assignment_identity", "Regenerate the assignment with all required identity fields.")
+    if returned_work.get("assignment_revision") != identity["revision"]:
+        reject(
+            "stale-assignment-revision", "assignment_revision", "Refresh the handoff and resubmit against the current assignment revision."
+        )
+    if returned_work.get("target") != identity["target"]:
+        reject("target-mismatch", "target", "Return work from the selected assignment target only.")
+    if competing_assignment and competing_assignment.get("assignment_decision_revision") != identity.get("assignment_decision_revision"):
+        reject("competing-assignment-detected", "current_authorities.competing_assignment", "Reassign or supersede the returned run.")
+    if str(run_state.get("status") or "") in {"duplicate", "malformed", "superseded", "closed"}:
+        reject("return-run-not-awaiting-admission", "current_authorities.run_state", "Import a fresh return or route repair/reassignment.")
+    if current_proof.get("result") != "passed" or current_proof.get("verified_by") != "aw":
+        reject(
+            "aw-proof-missing-or-not-passed",
+            "assignment_gate.aw_proof_receipt",
+            "Run AW-owned proof and record the current receipt before admission.",
+        )
+    if returned_work.get("stop_conditions_hit"):
+        reject("stop-condition-hit", "stop_conditions_hit", "Route the stop condition before integration.")
+    allowed_paths = identity.get("allowed_paths")
+    changed_paths = returned_work.get("changed_paths")
+    if isinstance(allowed_paths, list) and isinstance(changed_paths, list):
+        outside_scope = sorted({str(path) for path in changed_paths} - {str(path) for path in allowed_paths})
+        if outside_scope:
+            reject("changed-path-outside-scope", "changed_paths", "Refresh or widen the handoff before admitting returned changes.")
+    elif changed_paths and not allowed_paths:
+        reject("missing-canonical-scope", "assignment_identity.allowed_paths", "Refresh the assignment so AW can compare returned paths.")
+    if identity.get("mutation_baseline") and current_baseline != identity.get("mutation_baseline"):
+        reject(
+            "mutation-baseline-mismatch", "live_mutation_baseline", "Rebase or regenerate the returned work against the current baseline."
+        )
+
+    admitted = not failures
+    return {
+        "kind": "agentic-workspace/delegated-return-admission/v1",
+        "operation_id": "delegated-return.admit",
+        "status": "admitted" if admitted else "rejected",
+        "admitted": admitted,
+        "assignment_identity": identity,
+        "manual_transport": manual_transport,
+        "authority_resolution": authority_resolution,
+        "current_authority": {
+            "proof_receipt": current_proof or None,
+            "mutation_baseline": current_baseline,
+            "proof_source": _as_dict(authority_resolution.get("sources")).get("proof_receipt"),
+            "baseline_source": _as_dict(authority_resolution.get("sources")).get("mutation_baseline"),
+            "worker_reported_proof_trusted": False,
+            "worker_reported_baseline_trusted": False,
+        },
+        "failures": failures,
+        "safe_recovery": "none" if admitted else failures[0]["recovery"],
+        "rule": "Returned delegated work is executable only after AW re-resolves current assignment/run identity, transport authority, canonical scope, AW-owned proof, stop conditions, and baseline immediately before admission.",
+    }
+
+
 def _delegation_next_action_decision(
     *, config: WorkspaceConfig, execution_posture: dict[str, Any], task_text: str | None, changed_paths: list[str]
 ) -> dict[str, Any]:
     capability = execution_posture.get("capability_posture", {})
     runtime_resolution = execution_posture.get("runtime_resolution", {})
     delegation_control = execution_posture.get("delegation_control", _delegation_control_payload(config.local_override))
+    assignment_policy = _as_dict(execution_posture.get("assignment_policy"))
+    assignment_decision = _as_dict(execution_posture.get("assignment_decision"))
+    assignment_gate = _as_dict(execution_posture.get("assignment_gate"))
     clarification_control = _clarification_control_payload(config.local_override)
     recommendation = str(runtime_resolution.get("recommendation", "stay-local"))
     mode = str(delegation_control.get("effective_mode", "suggest"))
@@ -35024,6 +35280,28 @@ def _delegation_next_action_decision(
         mode_effect = "delegation.mode is auto and safety permits execution within target-profile limits."
         if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation"}:
             required_next_action = "execute-when-safe"
+    if assignment_gate.get("status") == "blocked":
+        decision = "blocked-assignment-policy"
+        required_next_action = "resolve-current-target-profile"
+        target_name = str(assignment_gate.get("selected_target") or "") or None
+        reasons = [str(assignment_gate.get("claim_boundary") or "required-best-fit assignment policy is not enforceable")]
+        handoff_command = None
+    elif assignment_gate.get("status") == "blocked-target-mismatch":
+        decision = "blocked-assignment-policy"
+        required_next_action = "select-configured-current-target"
+        target_name = str(assignment_gate.get("selected_target") or "") or None
+        reasons = [str(assignment_gate.get("claim_boundary") or "runtime target does not match the configured current_target")]
+        handoff_command = None
+    elif assignment_gate.get("status") == "handoff-required":
+        decision = "assignment-handoff-required"
+        required_next_action = "prepare-assigned-handoff"
+        target_name = str(assignment_gate.get("selected_target") or "") or target_name
+        reasons = [
+            str(
+                assignment_gate.get("claim_boundary")
+                or "required-best-fit selected an escalation route that must be prepared before implementation"
+            )
+        ]
     decomposition_only_delegation = decision == "suggest-delegation" and decomposition_status == "available-without-active-planning"
     if decomposition_only_delegation:
         required_next_action = "select-or-promote-bounded-lane"
@@ -35033,11 +35311,49 @@ def _delegation_next_action_decision(
         and (manual_external_relay.get("status") == "appropriate")
     ):
         required_next_action = "prepare-manual-handoff"
-    if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation", "manual-handoff", "delegate-bounded-slice"}:
+    if decision in {
+        "suggest-delegation",
+        "suggest-downroute",
+        "suggest-escalation",
+        "manual-handoff",
+        "delegate-bounded-slice",
+        "assignment-handoff-required",
+    }:
         if not decomposition_only_delegation:
             handoff_command = _command_with_cli_invoke(
                 command="agentic-workspace planning handoff --target . --format json", cli_invoke=config.cli_invoke
             )
+    handoff_action_required = (
+        decision
+        in {
+            "suggest-delegation",
+            "suggest-downroute",
+            "suggest-escalation",
+            "manual-handoff",
+            "delegate-bounded-slice",
+            "assignment-handoff-required",
+        }
+        and not decomposition_only_delegation
+    )
+    manual_transport_admission = _manual_transport_admission_payload(
+        assignment_policy=assignment_policy,
+        target_execution_methods=[str(method) for method in target_execution_methods],
+        handoff_required=handoff_action_required,
+    )
+    transport_blocked_action: dict[str, Any] | None = None
+    if handoff_action_required and not manual_transport_admission["export_allowed"]:
+        handoff_command = None
+        required_next_action = "resolve-manual-transport-policy"
+        transport_blocked_action = {
+            "kind": "agentic-workspace/blocked-delegation-action/v1",
+            "status": "blocked-transport-disabled",
+            "action": required_next_action,
+            "target": target_name,
+            "command": None,
+            "manual_transport": manual_transport_admission,
+            "recovery": "Set delegation.manual_transport_policy to allowed, use an automatic execution method, or keep implementation local.",
+            "rule": "Disabled manual transport blocks handoff command rendering before any consumer can receive an executable planning handoff.",
+        }
     if decision in {"manual-handoff", "ask-human"}:
         manual_prompt = {
             "kind": "agentic-workspace/manual-human-prompt/v1",
@@ -35055,10 +35371,21 @@ def _delegation_next_action_decision(
     if manual_external_relay.get("ready_to_forward_prompt") and decision in {"suggest-escalation", "manual-handoff"}:
         manual_prompt = dict(manual_external_relay["ready_to_forward_prompt"])
     delegation_next_step: dict[str, Any] | None = None
-    if decision in {"suggest-delegation", "suggest-downroute", "suggest-escalation", "manual-handoff", "delegate-bounded-slice"}:
+    if decision in {
+        "suggest-delegation",
+        "suggest-downroute",
+        "suggest-escalation",
+        "manual-handoff",
+        "delegate-bounded-slice",
+        "assignment-handoff-required",
+    }:
         delegation_next_step = {
             "kind": "agentic-workspace/delegation-next-step/v1",
-            "status": "executable" if required_next_action == "execute-when-safe" else "prepare-or-report",
+            "status": "blocked-transport-disabled"
+            if transport_blocked_action
+            else "executable"
+            if required_next_action == "execute-when-safe"
+            else "prepare-or-report",
             "action": required_next_action,
             "target": target_name,
             "command": handoff_command,
@@ -35077,6 +35404,21 @@ def _delegation_next_action_decision(
                 "residue to route into planning, memory, docs, or issues",
             ],
         }
+        if assignment_gate:
+            delegation_next_step["assignment_gate"] = {
+                key: assignment_gate.get(key)
+                for key in (
+                    "status",
+                    "implementation_allowed",
+                    "required_next_action",
+                    "assignment_policy",
+                    "selected_target",
+                    "claim_boundary",
+                )
+            }
+        if transport_blocked_action:
+            delegation_next_step["blocked_action"] = transport_blocked_action
+            delegation_next_step["manual_transport"] = manual_transport_admission
         if decomposition_only_delegation:
             delegation_next_step.update(
                 {
@@ -35093,9 +35435,21 @@ def _delegation_next_action_decision(
     elif required_next_action == "prepare-handoff":
         must = "Prepare the handoff packet or prompt before implementation continues on the delegated slice."
         must_not = "Do not treat the suggestion as optional background when the route is capability-driven."
+    elif required_next_action == "prepare-assigned-handoff":
+        must = "Prepare the selected assignment handoff before implementation continues."
+        must_not = "Do not implement locally while required-best-fit has selected an escalation or delegated target."
+    elif required_next_action == "resolve-current-target-profile":
+        must = "Resolve delegation.current_target to a configured profile before implementation continues."
+        must_not = "Do not claim required-best-fit assignment was enforced with an unknown current target."
+    elif required_next_action == "select-configured-current-target":
+        must = "Select or configure the current target so runtime selection and required-best-fit assignment agree."
+        must_not = "Do not silently run a different target from the one required by local assignment policy."
     elif required_next_action == "select-or-promote-bounded-lane":
         must = "Select or promote a bounded lane before preparing a worker handoff packet."
         must_not = "Do not run agentic-workspace planning handoff until an active execplan or handoff contract exists."
+    elif required_next_action == "resolve-manual-transport-policy":
+        must = "Resolve manual transport policy before preparing or running any handoff command."
+        must_not = "Do not render or copy a planning handoff while manual transport is disabled."
     elif required_next_action == "execute-when-safe":
         must = "Execute only when local auto mode, target profile, scope, and proof constraints all remain satisfied."
         must_not = "Do not widen scope, lower proof, or use a target outside its configured execution methods."
@@ -35119,6 +35473,11 @@ def _delegation_next_action_decision(
         "configured_delegation_mode": delegation_control.get("configured_mode", mode),
         "delegation_mode": mode,
         "clarification_mode": clarification_mode,
+        "assignment_policy": str(_as_dict(assignment_policy.get("assignment_policy")).get("value") or ""),
+        "assignment_decision": assignment_decision.get("decision"),
+        "assignment_gate": assignment_gate.get("status"),
+        "assignment_implementation_allowed": assignment_gate.get("implementation_allowed"),
+        "manual_transport_admission": manual_transport_admission,
         "safe_to_auto_run_commands": delegation_control.get("safe_to_auto_run_commands"),
         "disabled_reason": delegation_control.get("disabled_reason"),
         "execution_authority": "manual-relay-only"
@@ -35185,12 +35544,17 @@ def _delegation_next_action_decision(
             if not (mode == "auto" and delegation_control.get("execution_permitted") is True)
             else "",
             "select or promote a bounded lane before handoff" if required_next_action == "select-or-promote-bounded-lane" else "",
+            "resolve required-best-fit assignment before implementation"
+            if required_next_action in {"resolve-current-target-profile", "select-configured-current-target"}
+            else "",
+            "prepare selected assignment handoff before implementation" if required_next_action == "prepare-assigned-handoff" else "",
         ],
         observed_by_aw=[
             f"delegation_mode={mode}",
             f"clarification_mode={clarification_mode}",
             f"scope_signal={work_shape or 'unknown'}",
             f"proof_pressure={proof_burden or 'unknown'}",
+            f"assignment_gate={assignment_gate.get('status', 'not-evaluated')}",
         ],
         recommended_by_aw=[decision, required_next_action],
         candidate_routes=[
@@ -35248,6 +35612,9 @@ def _delegation_next_action_decision(
         ),
         "mode_effect": mode_effect,
         "config_effect": config_effect,
+        "assignment_policy": assignment_policy,
+        "assignment_decision": assignment_decision,
+        "assignment_gate": assignment_gate,
         "decomposition_delegation": decomposition_delegation,
         "delegation_candidates": decomposition_candidates,
         "auto_delegation_audit": auto_delegation_audit,
@@ -35255,6 +35622,7 @@ def _delegation_next_action_decision(
         "handoff_command": handoff_command,
         "handoff_surface": _delegation_handoff_surface(command=handoff_command) if handoff_command else None,
         "delegation_next_step": delegation_next_step,
+        "transport_blocked_action": transport_blocked_action,
         "manual_prompt": manual_prompt,
         "manual_external_relay": manual_external_relay,
         "route_obligation": route_obligation,
@@ -35475,12 +35843,300 @@ def _delegation_handoff_surface(*, command: str | None) -> dict[str, Any]:
     }
 
 
+def _assignment_implementation_gate_payload(
+    *,
+    assignment_policy: dict[str, Any],
+    assignment_decision: dict[str, Any],
+    selected_target: dict[str, Any] | None,
+) -> dict[str, Any]:
+    policy_value = str(_as_dict(assignment_policy.get("assignment_policy")).get("value") or "local-preferred")
+    current_target = str(_as_dict(assignment_policy.get("current_target")).get("value") or "")
+    decision = str(assignment_decision.get("decision") or "")
+    binding = _as_dict(assignment_policy.get("binding"))
+    selected_profile = str(selected_target.get("name") or "") if isinstance(selected_target, dict) else ""
+    target_mismatch = bool(current_target and selected_profile and current_target != selected_profile)
+    if decision == "blocked" or assignment_policy.get("status") == "blocked-unknown-current-target":
+        status = "blocked"
+        implementation_allowed = False
+        required_next_action = "resolve-current-target-profile"
+        enforcement = "hard-block"
+    elif policy_value == "required-best-fit" and target_mismatch:
+        status = "blocked-target-mismatch"
+        implementation_allowed = False
+        required_next_action = "select-configured-current-target"
+        enforcement = "hard-block"
+    elif decision == "assign-or-escalate":
+        status = "handoff-required"
+        implementation_allowed = False
+        required_next_action = "prepare-assigned-handoff"
+        enforcement = "must-route-before-implementation"
+    elif decision == "no-safe-route":
+        status = "blocked-no-safe-route"
+        implementation_allowed = False
+        required_next_action = "resolve-assignment-route"
+        enforcement = "hard-block"
+    elif decision == "assign-best-fit":
+        status = "handoff-required"
+        implementation_allowed = False
+        required_next_action = "prepare-assigned-handoff"
+        enforcement = "must-route-before-implementation"
+    elif decision == "assign-current-target":
+        status = "assigned-current-target"
+        implementation_allowed = True
+        required_next_action = "continue-with-selected-target"
+        enforcement = "selected-target-boundary"
+    else:
+        status = "advisory"
+        implementation_allowed = True
+        required_next_action = "continue-local"
+        enforcement = "advisory-only"
+    return {
+        "kind": "agentic-workspace/assignment-implementation-gate/v1",
+        "status": status,
+        "implementation_allowed": implementation_allowed,
+        "required_next_action": required_next_action,
+        "assignment_policy": policy_value,
+        "assignment_decision": decision,
+        "selected_target": current_target or selected_profile or None,
+        "runtime_selected_target": selected_profile or None,
+        "current_target_status": assignment_policy.get("current_target_status"),
+        "enforceable": binding.get("enforceable"),
+        "enforcement": enforcement,
+        "claim_boundary": assignment_decision.get("claim_boundary") or binding.get("claim_boundary"),
+        "rule": "required-best-fit is an implementation gate: unresolved or mismatched selected assignments block local implementation until routed or explicitly resolved.",
+    }
+
+
+def _delegated_run_lifecycle_payload(
+    *,
+    assignment_gate: dict[str, Any],
+    assignment_policy: dict[str, Any],
+    delegation_decision: dict[str, Any],
+) -> dict[str, Any]:
+    next_step = _as_dict(delegation_decision.get("delegation_next_step"))
+    handoff_required = assignment_gate.get("implementation_allowed") is False or delegation_decision.get("handoff_command")
+    manual_transport = _manual_transport_admission_payload(
+        assignment_policy=assignment_policy,
+        target_execution_methods=[str(method) for method in next_step.get("execution_methods", [])]
+        if isinstance(next_step.get("execution_methods"), list)
+        else [],
+        handoff_required=bool(handoff_required),
+    )
+    manual_export_allowed = bool(manual_transport["export_allowed"])
+    assignment_blocked = str(assignment_gate.get("status", "")).startswith("blocked")
+    execution_state = "blocked" if assignment_blocked else "not-started"
+    if assignment_blocked:
+        execution_state = "blocked"
+    elif handoff_required and not manual_export_allowed:
+        execution_state = "blocked"
+    elif delegation_decision.get("required_next_action") == "execute-when-safe":
+        execution_state = "ready"
+    elif handoff_required:
+        execution_state = "waiting-for-handoff"
+    assignment_identity = _assignment_identity_payload(
+        assignment_gate=assignment_gate,
+        assignment_policy=assignment_policy,
+        delegation_decision=delegation_decision,
+    )
+    admission_operation = {
+        "operation_id": "assignment.admit",
+        "callable": "agentic_workspace.workspace_runtime_core._admit_delegated_return",
+        "public": True,
+        "generated_operation": True,
+        "assignment_identity": assignment_identity,
+        "input_contract": {
+            "required": ["assignment_revision", "target", "return_artifact_ref"],
+            "optional": [
+                "changed_paths",
+                "stop_conditions_hit",
+            ],
+        },
+        "rejects": [
+            "stale-assignment-revision",
+            "incomplete-assignment-identity",
+            "target-mismatch",
+            "manual-transport-disabled",
+            "missing-canonical-scope",
+            "changed-path-outside-scope",
+            "aw-proof-missing-or-not-passed",
+            "stop-condition-hit",
+            "mutation-baseline-mismatch",
+        ],
+        "retry": "Refresh the handoff or returned-work packet, then call the admission operation again; rejected returns are not mutation-admitted.",
+    }
+    return {
+        "kind": "agentic-workspace/delegated-run-lifecycle/v1",
+        "status": execution_state,
+        "assignment": {
+            "state": assignment_gate.get("status"),
+            "target": assignment_gate.get("selected_target"),
+            "required_next_action": assignment_gate.get("required_next_action"),
+            "implementation_allowed": assignment_gate.get("implementation_allowed"),
+            "identity_complete": assignment_identity["complete"],
+            "missing_identity_fields": assignment_identity["missing_required_fields"],
+        },
+        "manual_transport": {
+            "policy": manual_transport["policy"],
+            "state": manual_transport["state"],
+            "status": manual_transport["status"],
+            "export_allowed": manual_export_allowed,
+            "import_requires_review": True,
+            "required": manual_transport["required"],
+            "required_when_no_automatic_method": manual_transport["required_when_no_automatic_method"],
+            "automatic_method_available": manual_transport["automatic_method_available"],
+            "automatic_methods": manual_transport["automatic_methods"],
+            "rule": "Manual strong-agent transport is copy/paste only; disabled transport must fail closed, and returned work must be reviewed before admission or integration.",
+        },
+        "states": [
+            {"id": "assignment-selected", "status": assignment_gate.get("status")},
+            {
+                "id": "handoff-prepared",
+                "status": "automatic-route-available"
+                if handoff_required and (not manual_export_allowed) and manual_transport["automatic_method_available"]
+                else "blocked-transport-disabled"
+                if handoff_required and (not manual_export_allowed)
+                else "required"
+                if handoff_required
+                else "not-required",
+                "command": delegation_decision.get("handoff_command"),
+            },
+            {"id": "delegated-worker-running", "status": execution_state},
+            {
+                "id": "return-imported",
+                "status": "pending-after-worker-return",
+                "required_evidence": ["returned summary", "changed paths or no-change statement", "proof result"],
+            },
+            {
+                "id": "admitted-for-integration",
+                "status": "pending-review",
+                "review_rule": "Admit returned work only after scope, proof, and stop-condition evidence match the handoff contract.",
+                "reject_when": [
+                    "assignment target or context revision differs from the handoff",
+                    "returned changed paths exceed allowed scope",
+                    "proof result is missing, stale, or failed",
+                    "stop conditions were hit but not surfaced",
+                ],
+            },
+        ],
+        "admission_gate": {
+            "status": "closed-until-reviewed",
+            "operation": admission_operation,
+            "public_operations": [
+                {
+                    "operation_id": "assignment.export",
+                    "state_transition": "assignment-selected -> handoff-prepared",
+                    "artifact_state": "local/exported",
+                    "idempotency": "assignment_identity.revision + transport route",
+                },
+                {
+                    "operation_id": "assignment.import",
+                    "state_transition": "worker-returned -> received/awaiting-admission",
+                    "artifact_state": "local/received/awaiting-admission",
+                    "idempotency": "handoff_run_id + return artifact digest",
+                },
+                {
+                    "operation_id": "assignment.admit",
+                    "state_transition": "received/awaiting-admission -> admitted|rejected|repair-requested",
+                    "artifact_state": "local/admission-review",
+                    "idempotency": "assignment_identity.revision + current authority revisions",
+                },
+                {
+                    "operation_id": "assignment.integrate",
+                    "state_transition": "admitted -> integrated",
+                    "artifact_state": "repo mutation boundary",
+                    "idempotency": "admission receipt + live mutation baseline",
+                },
+                {
+                    "operation_id": "assignment.close",
+                    "state_transition": "integrated -> closed",
+                    "artifact_state": "closeout/proof receipt",
+                    "idempotency": "integration receipt + closeout proof",
+                },
+                {
+                    "operation_id": "assignment.repair",
+                    "state_transition": "rejected -> repair-requested",
+                    "artifact_state": "local/admission-review",
+                    "idempotency": "return id + repair reason",
+                },
+                {
+                    "operation_id": "assignment.reassign",
+                    "state_transition": "current-run -> superseded/new-owner",
+                    "artifact_state": "local/reassignment",
+                    "idempotency": "run id + new target + reason",
+                },
+                {
+                    "operation_id": "assignment.cleanup",
+                    "state_transition": "closed -> archived",
+                    "artifact_state": "local/archive-receipt",
+                    "idempotency": "run id + closeout receipt",
+                },
+                {
+                    "operation_id": "assignment.override",
+                    "state_transition": "blocked -> scoped-authorised-override",
+                    "artifact_state": "local/override-receipt",
+                    "idempotency": "assignment id + scope + expiry",
+                },
+            ],
+            "identity_fields": [
+                "assignment.target",
+                "assignment.target_identity_ref",
+                "assignment.target_revision",
+                "assignment.task_class",
+                "assignment.scope_class",
+                "assignment.plan_ref",
+                "assignment.plan_revision",
+                "assignment.slice_id",
+                "assignment.slice_revision",
+                "assignment.required_next_action",
+                "manual_transport.policy",
+                "assignment.allowed_effects",
+                "assignment.allowed_paths",
+                "assignment.role",
+                "assignment.handoff_run_id",
+                "assignment.return_schema",
+                "assignment.proof_obligation_id",
+                "assignment.proof_obligation_revision",
+                "assignment.stop_conditions",
+                "assignment.mutation_baseline",
+                "assignment.revision",
+            ],
+            "required_evidence": [
+                "received/awaiting-admission return artifact",
+                "changed paths or no-change statement",
+                "current AW-owned proof receipt",
+                "live mutation baseline",
+            ],
+            "rule": "Returned work is rejected until assignment.admit re-reads assignment identity, scope, proof, stop-condition, transport, and baseline evidence from current AW authorities immediately before integration.",
+        },
+        "return_contract": [
+            "what changed",
+            "proof run and result",
+            "scope or stop-condition issues",
+            "residue to route into planning, memory, docs, or issues",
+        ],
+    }
+
+
 def _execution_posture_payload(
     *, config: WorkspaceConfig, changed_paths: list[str], task_text: str | None, target_root: Path | None = None
 ) -> dict[str, Any]:
     posture = _capability_posture_for_implementation(changed_paths=changed_paths, task_text=task_text)
     runtime_resolution = _runtime_resolution_payload(config=config, capability_posture=posture["posture"])
     delegation_control = _delegation_control_payload(config.local_override)
+    assignment_policy = _assignment_policy_payload(config.local_override, list(runtime_resolution.get("profile_recommendations", [])))
+    outcome_records: tuple[DelegationOutcomeRecord, ...] = ()
+    if config.target_root is not None:
+        _, _, outcome_records = config_lib.load_delegation_outcomes(target_root=config.target_root)
+    target_evidence = target_evidence_posture(
+        target_root=config.target_root,
+        profiles=config.local_override.delegation_targets,
+        records=outcome_records,
+    )
+    assignment_decision = assignment_decision_from_policy(
+        assignment_policy=assignment_policy,
+        runtime_resolution=runtime_resolution,
+        target_evidence=target_evidence,
+    )
     decomposition_delegation = (
         _active_decomposition_delegation_payload(target_root=target_root)
         if target_root is not None
@@ -35498,6 +36154,17 @@ def _execution_posture_payload(
             if profile["recommendation"] in ("recommended", "acceptable")
         ),
         None,
+    )
+    assignment_target_name = str(assignment_decision.get("selected_target") or "")
+    if assignment_decision.get("decision") in {"assign-current-target", "assign-or-escalate"} and assignment_target_name:
+        target = next(
+            (profile for profile in runtime_resolution["profile_recommendations"] if profile.get("name") == assignment_target_name),
+            target,
+        )
+    assignment_gate = _assignment_implementation_gate_payload(
+        assignment_policy=assignment_policy,
+        assignment_decision=assignment_decision,
+        selected_target=target,
     )
     recommendation = runtime_resolution["recommendation"]
     if recommendation == "stay-local":
@@ -35534,11 +36201,32 @@ def _execution_posture_payload(
             posture=posture,
             runtime_resolution=runtime_resolution,
         )
+    delegation_decision = _delegation_next_action_decision(
+        config=config,
+        execution_posture={
+            "capability_posture": posture,
+            "runtime_resolution": runtime_resolution,
+            "delegation_control": delegation_control,
+            "assignment_policy": assignment_policy,
+            "target_evidence": target_evidence,
+            "assignment_decision": assignment_decision,
+            "assignment_gate": assignment_gate,
+            "selected_target": target,
+            "decomposition_delegation": decomposition_delegation,
+        },
+        task_text=task_text,
+        changed_paths=changed_paths,
+    )
     return {
         "kind": "agentic-workspace/execution-posture/v1",
         "capability_posture": posture,
         "runtime_resolution": runtime_resolution,
         "delegation_control": delegation_control,
+        "assignment_policy": assignment_policy,
+        "target_evidence": target_evidence,
+        "assignment_decision": assignment_decision,
+        "assignment_gate": assignment_gate,
+        "implementation_allowed": assignment_gate["implementation_allowed"],
         "selected_target": target,
         "decomposition_delegation": decomposition_delegation,
         "capability_handoff_packets": _capability_handoff_packet_templates(),
@@ -35546,17 +36234,11 @@ def _execution_posture_payload(
         "quality_tradeoff": quality_tradeoff,
         "token_tradeoff": token_tradeoff,
         "ready_handoff": ready_handoff,
-        "delegation_decision": _delegation_next_action_decision(
-            config=config,
-            execution_posture={
-                "capability_posture": posture,
-                "runtime_resolution": runtime_resolution,
-                "delegation_control": delegation_control,
-                "selected_target": target,
-                "decomposition_delegation": decomposition_delegation,
-            },
-            task_text=task_text,
-            changed_paths=changed_paths,
+        "delegation_decision": delegation_decision,
+        "delegated_run_lifecycle": _delegated_run_lifecycle_payload(
+            assignment_gate=assignment_gate,
+            assignment_policy=assignment_policy,
+            delegation_decision=delegation_decision,
         ),
         "inference_limits": [
             "Task posture is inferred from changed paths and optional --task text; it is not proof of human intent.",

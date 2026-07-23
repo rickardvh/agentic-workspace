@@ -1,0 +1,189 @@
+{
+  "classification": "lifecycle-mutation",
+  "command_surface": {
+    "command": "assignment",
+    "format_option": "format",
+    "subcommand": "cleanup"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Write only under .agentic-workspace/local/assignment-runs/.",
+    "Import places returned work in received/awaiting-admission only; it does not prove, admit, integrate, or close.",
+    "Admit and integrate resolve current Planning, proof, run, and mutation-baseline authorities inside the host boundary; caller-supplied authority JSON is not an ordinary input.",
+    "Human override requires scope, reason, expiry/revalidation evidence, and remains visible as a proof/claim downgrade."
+  ],
+  "id": "assignment.cleanup",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "assignment_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "assignment_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "run_id",
+      "required": true,
+      "source": "cli-option"
+    },
+    {
+      "name": "target_name",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "transport",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "return_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "return_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "artifact_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "admission_status",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "reason",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "scope",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "expires_at",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "intent": "Provide the public adapter-neutral assignment/run lifecycle boundary for delegated execution, return admission, integration, cleanup, and scoped override.",
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "description": "resolve_root",
+        "id": "resolve_root",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "workspace.target-root.resolve"
+      },
+      {
+        "description": "apply_assignment_lifecycle_transition",
+        "id": "apply_assignment_lifecycle_transition",
+        "outputs": [
+          "result"
+        ],
+        "uses": "assignment.lifecycle.apply"
+      },
+      {
+        "description": "emit_output",
+        "id": "emit_output",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ]
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/assignment_lifecycle_result.schema.json"
+  },
+  "proof": [
+    "assignment lifecycle tests prove export/import/admit/integrate/override fail-closed behavior and local artifact placement",
+    "assignment.cleanup.process",
+    "generated external clients expose and negotiate the operation family as runtime-backed",
+    "operation contract validates against operation.schema.json"
+  ],
+  "reads": [
+    {
+      "description": "checked-in Planning assignment authority resolved by assignment id",
+      "required": true,
+      "surface": ".agentic-workspace/planning/assignments/<assignment-id>.assignment.json"
+    },
+    {
+      "description": "AW-owned proof receipt referenced by the Planning assignment",
+      "required": false,
+      "surface": ".agentic-workspace/proof/receipts/<receipt-id>.json"
+    },
+    {
+      "description": "local disposable run state and returned artifacts",
+      "required": false,
+      "surface": ".agentic-workspace/local/assignment-runs/<run-id>/state.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve the target repository root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Apply the idempotent local assignment lifecycle transition.",
+      "id": "apply_assignment_lifecycle_transition",
+      "uses": "assignment.lifecycle.apply"
+    },
+    {
+      "description": "Emit the transition result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Archive disposable local assignment run artifacts after closeout.",
+  "writes": [
+    {
+      "description": "transition records local disposable assignment/run artifacts derived from checked-in Planning authority",
+      "required": true,
+      "surface": ".agentic-workspace/local/assignment-runs/<run-id>/",
+      "when": "transition records local disposable assignment/run state"
+    }
+  ]
+}
