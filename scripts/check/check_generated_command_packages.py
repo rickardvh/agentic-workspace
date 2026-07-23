@@ -1366,6 +1366,7 @@ TYPESCRIPT_SUPPORTED_EXACT_PRIMITIVES = {
     "prompt.render",
     "delegation.outcome.append",
     "assignment.lifecycle.apply",
+    "correction.event.apply",
     "workspace.selection.resolve",
 }
 

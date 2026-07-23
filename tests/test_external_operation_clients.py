@@ -30,6 +30,9 @@ from agentic_workspace.generated_operations import (
     assignment_integrate,
     assignment_override,
     config_report,
+    correction_event_prune_compact,
+    correction_event_query,
+    correction_event_submit,
     delegation_outcome_append,
 )
 
@@ -164,7 +167,9 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
     from agentic_workspace import workspace_runtime_core
 
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
+    )
     invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
     assignment_gate = {
         "status": "handoff-required",
@@ -288,7 +293,9 @@ def test_assignment_lifecycle_generated_wrappers_persist_local_artifacts(tmp_pat
 
 def test_assignment_lifecycle_public_admit_rejects_caller_authority_strings(tmp_path: Path) -> None:
     (tmp_path / ".agentic-workspace").mkdir()
-    (tmp_path / ".agentic-workspace/config.toml").write_text('[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8")
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
+    )
     invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
     with pytest.raises(AWClientError) as excinfo:
         assignment_admit(
@@ -318,6 +325,194 @@ def test_assignment_lifecycle_public_contract_omits_caller_authority_inputs() ->
             continue
         input_names = {entry["name"] for entry in operation["contract"]["inputs"]}
         assert not authority_inputs & input_names
+
+
+def test_correction_event_generated_operations_store_query_and_preserve_low_authority(tmp_path: Path) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
+    )
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'current_target = "user-local:fast-worker"',
+                "",
+                "[local_memory]",
+                "target_guidance_enabled = true",
+                'user_guidance_root = "~/.agentic-workspace/target-guidance"',
+                'correction_events_path = ".agentic-workspace/local/correction-events.json"',
+                "",
+                "[delegation_targets.fast_worker]",
+                'target_id = "user-local:fast-worker"',
+                'target_revision = "rev-1"',
+                'aliases = ["fast"]',
+                'revision_policy = "preserve"',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    invocation = [sys.executable, str(ROOT / "scripts/run_agentic_workspace.py")]
+    event = {
+        "delivery_id": "delivery-1",
+        "target_identity_ref": "fast",
+        "target_revision": "rev-1",
+        "task_class": "mechanical-follow-through",
+        "scope_class": "narrow-code-change",
+        "invariant_id": "narrow-edits",
+        "behavior_class": "edit-scope",
+        "desired_behavior": "Prefer narrow edits.",
+        "replaced_behavior": "Broad edits.",
+        "source_ref": "review-thread-1",
+        "evidence_hash": "sha256:review-thread-1",
+        "route_decisions": ["target-guidance", "target-suitability"],
+    }
+    trusted_receipt = {
+        "authority": "pr-review",
+        "producer_class": "human-reviewer",
+        "producer_id": "reviewer-1",
+        "source": "github-review",
+        "source_ref": "review-thread-1",
+        "status": "current",
+    }
+    receipt_ref = ".agentic-workspace/local/correction-authority-receipts/review-thread-1.json"
+    (tmp_path / receipt_ref).parent.mkdir(parents=True)
+    (tmp_path / receipt_ref).write_text(json.dumps(trusted_receipt), encoding="utf-8")
+
+    submitted = correction_event_submit(
+        {"event_json": json.dumps(event), "trusted_authority_receipt_ref": receipt_ref},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    low_authority = correction_event_submit(
+        {"event_json": json.dumps({**event, "delivery_id": "delivery-2", "source_ref": "agent-note-1"})},
+        target=tmp_path,
+        invocation=invocation,
+    )
+    queried = correction_event_query({}, target=tmp_path, invocation=invocation)
+    compacted = correction_event_prune_compact({}, target=tmp_path, invocation=invocation)
+
+    assert submitted["status"] == "stored"
+    assert submitted["admitted_event_count"] == 1
+    assert low_authority["status"] == "stored"
+    assert low_authority["low_authority_event_count"] == 1
+    assert low_authority["admission"]["derived_routes"]["low_authority"]
+    low_authority_ids = set(low_authority["admission"]["derived_routes"]["low_authority"])
+    assert low_authority_ids.isdisjoint(low_authority["admission"]["derived_routes"]["target_guidance"])
+    assert queried["admitted_event_count"] == 1
+    assert queried["low_authority_event_count"] == 1
+    assert compacted["status"] == "compacted"
+    assert (tmp_path / ".agentic-workspace/local/correction-events.json").is_file()
+    assert submitted["receipt_ref"].startswith(".agentic-workspace/local/correction-event-receipts/")
+
+
+def test_correction_event_public_contract_omits_caller_authority_inputs() -> None:
+    caller_authority_inputs = {"subjects_json", "trusted_authority_receipt_json"}
+    correction_operations = {
+        "correction-event.submit",
+        "correction-event.query",
+        "correction-event.correct-dispute",
+        "correction-event.withdraw-supersede",
+        "correction-event.prune-compact",
+    }
+    for operation in external_contract_bundle()["operations"].values():
+        if operation["identity"] not in correction_operations:
+            continue
+        input_names = {entry["name"] for entry in operation["contract"]["inputs"]}
+        assert not caller_authority_inputs & input_names
+        assert "trusted_authority_receipt_ref" in input_names
+
+
+def test_correction_event_typescript_cli_delegates_to_python_authority_boundary(tmp_path: Path) -> None:
+    (tmp_path / ".agentic-workspace").mkdir()
+    (tmp_path / ".agentic-workspace/config.toml").write_text(
+        'schema_version = 1\n[workspace]\ncli_invoke = "agentic-workspace"\n', encoding="utf-8"
+    )
+    (tmp_path / ".agentic-workspace/config.local.toml").write_text(
+        "\n".join(
+            [
+                "schema_version = 1",
+                "",
+                "[delegation]",
+                'current_target = "user-local:fast-worker"',
+                "",
+                "[local_memory]",
+                "target_guidance_enabled = true",
+                'user_guidance_root = "~/.agentic-workspace/target-guidance"',
+                'correction_events_path = ".agentic-workspace/local/correction-events.json"',
+                "",
+                "[delegation_targets.fast_worker]",
+                'target_id = "user-local:fast-worker"',
+                'target_revision = "rev-1"',
+                'aliases = ["fast"]',
+                'revision_policy = "preserve"',
+                'strength = "strong"',
+                'execution_methods = ["internal"]',
+            ]
+        ),
+        encoding="utf-8",
+    )
+    receipt_ref = ".agentic-workspace/local/correction-authority-receipts/review-thread-1.json"
+    (tmp_path / receipt_ref).parent.mkdir(parents=True)
+    (tmp_path / receipt_ref).write_text(
+        json.dumps(
+            {
+                "authority": "pr-review",
+                "producer_class": "human-reviewer",
+                "producer_id": "reviewer-1",
+                "source": "github-review",
+                "source_ref": "review-thread-1",
+                "status": "current",
+            }
+        ),
+        encoding="utf-8",
+    )
+    event = {
+        "delivery_id": "delivery-ts-1",
+        "target_identity_ref": "fast",
+        "target_revision": "rev-1",
+        "task_class": "mechanical-follow-through",
+        "scope_class": "narrow-code-change",
+        "invariant_id": "narrow-edits",
+        "behavior_class": "edit-scope",
+        "desired_behavior": "Prefer narrow edits.",
+        "replaced_behavior": "Broad edits.",
+        "source_ref": "review-thread-1",
+        "evidence_hash": "sha256:review-thread-1",
+        "route_decisions": ["target-guidance", "target-suitability"],
+    }
+
+    result = subprocess.run(
+        [
+            "node",
+            str(ROOT / "generated/workspace/typescript/src/cli.mjs"),
+            "correction-event",
+            "submit",
+            "--target",
+            str(tmp_path),
+            "--event-json",
+            json.dumps(event),
+            "--trusted-authority-receipt-ref",
+            receipt_ref,
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "stored"
+    assert payload["admitted_event_count"] == 1
+    assert payload["low_authority_event_count"] == 0
+    assert payload["receipt_ref"].startswith(".agentic-workspace/local/correction-event-receipts/")
 
 
 def test_contract_requirement_negotiation_distinguishes_change_classes() -> None:

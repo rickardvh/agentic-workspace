@@ -1633,6 +1633,7 @@ function domainPrimitive(primitive, values, args, operationId) {
   }
   if (primitive === 'workspace.selection.resolve') return { selected_modules: values.modules ?? values.module ?? [], target_root: resolve(String(values.target ?? '.')) };
   if (primitive === 'assignment.lifecycle.apply') return assignmentLifecycleApply(values, operationId);
+  if (primitive === 'correction.event.apply') return correctionEventApply(values, operationId);
   if (primitive === 'toml.table.counts') return tomlTableCounts(values, args);
   throw new RuntimeError(`unsupported native TypeScript primitive: ${primitive}`);
 }
@@ -1935,6 +1936,52 @@ function assignmentLifecycleApply(values, operationId) {
     refs.push(relative(targetRoot, statePath).replaceAll('\\\\', '/'));
   }
   return { kind: 'agentic-workspace/assignment-lifecycle-result/v1', operation_id: operationId, transition, status: failures.length ? 'blocked' : state.current_state, outcome: failures.length ? 'blocked' : Boolean(values.dry_run) ? 'noop' : 'applied', mutation_applied: !failures.length && !Boolean(values.dry_run), target_root: targetRoot, run_id: runId, artifact_refs: refs, state, failures, reason_code: failures[0]?.reason ?? null, recovery_command: failures[0]?.recovery ?? null, message: `assignment ${transition}: ${failures.length ? 'blocked' : state.current_state}`, actions: refs.map((path) => ({ kind: 'write', path })) };
+}
+
+function correctionEventApply(values, operationId) {
+  const targetRoot = resolve(String(values.target_root ?? values.target ?? '.'));
+  const scriptPath = resolve(process.cwd(), 'scripts/run_agentic_workspace.py');
+  const blocked = (reason, recovery) => ({
+    kind: 'agentic-workspace/correction-event-operation-result/v1',
+    operation_id: operationId,
+    status: 'blocked',
+    mutation_applied: false,
+    store_ref: '.agentic-workspace/local/correction-events.json',
+    admission: {
+      kind: 'agentic-workspace/correction-event-admission/v1',
+      status: 'blocked',
+      admitted_events: [],
+      low_authority_events: [],
+      rejected_events: [{ reason, recovery }],
+    },
+    checked_in_repo_effect: 'none',
+    rule: 'TypeScript correction-event operations delegate to the Python AW authority boundary; reduced TypeScript admission is fail-closed.',
+  });
+  if (!existsSync(scriptPath)) return blocked('authoritative-python-boundary-unavailable', 'Run correction-event through the Agentic Workspace Python host boundary.');
+  const operation = String(operationId).replace(/^correction-event\./, '');
+  const args = ['run', 'python', scriptPath, 'correction-event', operation, '--target', targetRoot, '--format', 'json'];
+  for (const [key, value] of Object.entries(values)) {
+    if (
+      ['target', 'target_root', 'format', 'operation_id', 'correction_event_command'].includes(key)
+      || key.endsWith('_command')
+      || value === undefined
+      || value === null
+      || value === ''
+      || value === false
+      || Array.isArray(value)
+    ) continue;
+    args.push(`--${key.replaceAll('_', '-')}`, String(value));
+  }
+  const completed = spawnSync('uv', args, { cwd: targetRoot, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+  const text = completed.stdout || completed.stderr || '';
+  try {
+    const payload = JSON.parse(text);
+    return completed.status === 0
+      ? payload
+      : blocked('authoritative-python-boundary-failed', JSON.stringify(payload).slice(0, 500));
+  } catch {
+    return blocked('authoritative-python-boundary-non-json', text.slice(0, 500) || 'Install uv/python and retry through AW.');
+  }
 }
 
 function reportMemory(values) {

@@ -24,6 +24,11 @@ from . import assignment_repair as _command_assignment_repair
 from . import autopilot_run as _command_autopilot_run
 from . import checkpoint_write as _command_checkpoint_write
 from . import config_report as _command_config_report
+from . import correction_event_correct_dispute as _command_correction_event_correct_dispute
+from . import correction_event_prune_compact as _command_correction_event_prune_compact
+from . import correction_event_query as _command_correction_event_query
+from . import correction_event_submit as _command_correction_event_submit
+from . import correction_event_withdraw_supersede as _command_correction_event_withdraw_supersede
 from . import defaults_report as _command_defaults_report
 from . import delegation_outcome_append as _command_delegation_outcome_append
 from . import doctor_report as _command_doctor_report
@@ -73,6 +78,11 @@ GENERATED_COMMAND_HANDLERS = {
     'autopilot.run': _command_autopilot_run.run,
     'checkpoint.write': _command_checkpoint_write.run,
     'config.report': _command_config_report.run,
+    'correction-event.correct-dispute': _command_correction_event_correct_dispute.run,
+    'correction-event.prune-compact': _command_correction_event_prune_compact.run,
+    'correction-event.query': _command_correction_event_query.run,
+    'correction-event.submit': _command_correction_event_submit.run,
+    'correction-event.withdraw-supersede': _command_correction_event_withdraw_supersede.run,
     'defaults.report': _command_defaults_report.run,
     'delegation-outcome.append': _command_delegation_outcome_append.run,
     'doctor.report': _command_doctor_report.run,

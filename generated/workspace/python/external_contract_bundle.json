@@ -1,7 +1,7 @@
 {
   "schema_version": "agentic-workspace/external-contract-bundle/v1",
   "protocol": "1.0.0",
-  "profile_fingerprint": "sha256:b3708555a40dfb991e71288943094f2fe0051f5499b8daaa283705d662f7c302",
+  "profile_fingerprint": "sha256:4b13ebe4d0656f752364b04a865f95633efabadc7540005777c93e80e64332ac",
   "profile": "external_consumer_profile.json",
   "versions": {
     "command_ir_schema": "command-generation/command-package-ir/v1",
@@ -6593,6 +6593,3276 @@
         }
       }
     },
+    "correction-event.correct-dispute": {
+      "identity": "correction-event.correct-dispute",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:75bff391d0149b273069b87342acdd5b1c0c70686771f2537db5b20230baed6b",
+      "compatibility_fingerprint": "sha256:5216c44492b5378c3760c17e038e3c1d8fec5878df6f62b84b677bd91ae502d5",
+      "contract": {
+        "classification": "local-record-append",
+        "command_surface": {
+          "command": "correction-event",
+          "format_option": "format",
+          "subcommand": "correct-dispute"
+        },
+        "effects": {
+          "destructive": false,
+          "idempotent": true,
+          "read_only": false,
+          "requires_preflight_gate": false,
+          "writes_repo_state": false
+        },
+        "guards": [
+          "Generated operation boundary resolves target subjects from workspace config by default.",
+          "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+          "Agent self-observation is preserved as low-authority non-routing evidence.",
+          "Correction storage is local-only and has no checked-in repo meaning."
+        ],
+        "id": "correction-event.correct-dispute",
+        "inputs": [
+          {
+            "name": "target",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "format",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "event_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "trusted_authority_receipt_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "idempotency_key",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delivery_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_identity_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "source_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "source",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "producer_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "producer_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "authority",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "desired_behavior",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "replaced_behavior",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "invariant_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "behavior_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "task_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "scope_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "route_decisions",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "evidence_hash",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "evidence_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "predecessor_event_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "lifecycle_action",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "dry_run",
+            "required": false,
+            "source": "cli-option"
+          }
+        ],
+        "intent": "Provide the public generated correction-event lifecycle boundary for local target guidance and suitability evidence intake.",
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "description": "resolve_root",
+              "id": "resolve_root",
+              "outputs": [
+                "target_root"
+              ],
+              "uses": "workspace.target-root.resolve"
+            },
+            {
+              "description": "apply_correction_event",
+              "id": "apply_correction_event",
+              "outputs": [
+                "result"
+              ],
+              "uses": "correction.event.apply"
+            },
+            {
+              "description": "emit_output",
+              "id": "emit_output",
+              "outputs": [
+                "emitted"
+              ],
+              "uses": "output.emit"
+            }
+          ]
+        },
+        "locality": {
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden",
+          "requires_repo": true
+        },
+        "migration_status": "runtime-consumed",
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/correction_event_result.schema.json"
+        },
+        "proof": [
+          "correction-event generated operation tests cover trusted submit, low-authority preservation, query, and compact retention",
+          "operation contract validates against operation.schema.json"
+        ],
+        "reads": [
+          {
+            "description": "bounded local correction-event store",
+            "required": false,
+            "surface": ".agentic-workspace/local/correction-events.json"
+          }
+        ],
+        "schema_version": "agentic-workspace/operation/v1",
+        "steps": [
+          {
+            "description": "Resolve target root.",
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve"
+          },
+          {
+            "description": "Apply correction-event lifecycle operation.",
+            "id": "apply_correction_event",
+            "uses": "correction.event.apply"
+          },
+          {
+            "description": "Emit result.",
+            "id": "emit_output",
+            "uses": "output.emit"
+          }
+        ],
+        "summary": "Record a dispute/correction transition for a prior correction event.",
+        "writes": [
+          {
+            "description": "bounded local correction-event store and receipts",
+            "required": true,
+            "surface": ".agentic-workspace/local/correction-events.json",
+            "when": "mutation operation stores or compacts admitted/low-authority events"
+          }
+        ]
+      },
+      "schemas": [
+        "correction_event_input.schema.json",
+        "correction_event_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "correction-event.correct-dispute",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "format",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "event_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "trusted_authority_receipt_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "idempotency_key",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delivery_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_identity_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "source_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "source",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "producer_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "producer_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "authority",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "desired_behavior",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "replaced_behavior",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "invariant_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "behavior_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "task_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "scope_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "route_decisions",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "evidence_hash",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "evidence_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "predecessor_event_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "lifecycle_action",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "dry_run",
+              "required": false,
+              "source": "cli-option"
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/correction_event_result.schema.json"
+          },
+          "effects": {
+            "destructive": false,
+            "idempotent": true,
+            "read_only": false,
+            "requires_preflight_gate": false,
+            "writes_repo_state": false
+          },
+          "guards": [
+            "Generated operation boundary resolves target subjects from workspace config by default.",
+            "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+            "Agent self-observation is preserved as low-authority non-routing evidence.",
+            "Correction storage is local-only and has no checked-in repo meaning."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "correction_event_input.schema.json": {
+              "additionalProperties": true,
+              "properties": {
+                "authority": {
+                  "type": "string"
+                },
+                "behavior_class": {
+                  "type": "string"
+                },
+                "delivery_id": {
+                  "type": "string"
+                },
+                "desired_behavior": {
+                  "type": "string"
+                },
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
+                  "type": "string"
+                },
+                "evidence_hash": {
+                  "type": "string"
+                },
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
+                  "type": "string"
+                },
+                "producer_class": {
+                  "type": "string"
+                },
+                "producer_id": {
+                  "type": "string"
+                },
+                "replaced_behavior": {
+                  "type": "string"
+                },
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
+                  "type": "string"
+                },
+                "task_class": {
+                  "type": "string"
+                },
+                "trusted_authority_receipt_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "output": {
+            "correction_event_result.schema.json": {
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/correction-event-operation-result/v1"
+                },
+                "operation_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "mutation_applied": {
+                  "type": "boolean"
+                },
+                "store_ref": {
+                  "type": "string"
+                },
+                "receipt_ref": {
+                  "type": "string"
+                },
+                "admission": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "operation_id",
+                "status",
+                "mutation_applied"
+              ],
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "correction-event.prune-compact": {
+      "identity": "correction-event.prune-compact",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:4e2d762234c3212fbc05d66d4d07c2f1b5a2183cd179baa7c165788120c93059",
+      "compatibility_fingerprint": "sha256:303c56fa4f01484b3e1ce7ad06ec653282e79ca5a2fedde8ab4e54fa9e6bdc0a",
+      "contract": {
+        "classification": "local-record-append",
+        "command_surface": {
+          "command": "correction-event",
+          "format_option": "format",
+          "subcommand": "prune-compact"
+        },
+        "effects": {
+          "destructive": false,
+          "idempotent": true,
+          "read_only": false,
+          "requires_preflight_gate": false,
+          "writes_repo_state": false
+        },
+        "guards": [
+          "Generated operation boundary resolves target subjects from workspace config by default.",
+          "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+          "Agent self-observation is preserved as low-authority non-routing evidence.",
+          "Correction storage is local-only and has no checked-in repo meaning."
+        ],
+        "id": "correction-event.prune-compact",
+        "inputs": [
+          {
+            "name": "target",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "format",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "event_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "trusted_authority_receipt_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "idempotency_key",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delivery_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_identity_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "source_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "source",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "producer_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "producer_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "authority",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "desired_behavior",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "replaced_behavior",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "invariant_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "behavior_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "task_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "scope_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "route_decisions",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "evidence_hash",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "evidence_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "predecessor_event_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "lifecycle_action",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "dry_run",
+            "required": false,
+            "source": "cli-option"
+          }
+        ],
+        "intent": "Provide the public generated correction-event lifecycle boundary for local target guidance and suitability evidence intake.",
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "description": "resolve_root",
+              "id": "resolve_root",
+              "outputs": [
+                "target_root"
+              ],
+              "uses": "workspace.target-root.resolve"
+            },
+            {
+              "description": "apply_correction_event",
+              "id": "apply_correction_event",
+              "outputs": [
+                "result"
+              ],
+              "uses": "correction.event.apply"
+            },
+            {
+              "description": "emit_output",
+              "id": "emit_output",
+              "outputs": [
+                "emitted"
+              ],
+              "uses": "output.emit"
+            }
+          ]
+        },
+        "locality": {
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden",
+          "requires_repo": true
+        },
+        "migration_status": "runtime-consumed",
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/correction_event_result.schema.json"
+        },
+        "proof": [
+          "correction-event generated operation tests cover trusted submit, low-authority preservation, query, and compact retention",
+          "operation contract validates against operation.schema.json"
+        ],
+        "reads": [
+          {
+            "description": "bounded local correction-event store",
+            "required": false,
+            "surface": ".agentic-workspace/local/correction-events.json"
+          }
+        ],
+        "schema_version": "agentic-workspace/operation/v1",
+        "steps": [
+          {
+            "description": "Resolve target root.",
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve"
+          },
+          {
+            "description": "Apply correction-event lifecycle operation.",
+            "id": "apply_correction_event",
+            "uses": "correction.event.apply"
+          },
+          {
+            "description": "Emit result.",
+            "id": "emit_output",
+            "uses": "output.emit"
+          }
+        ],
+        "summary": "Compact bounded local correction-event storage while preserving lineage.",
+        "writes": [
+          {
+            "description": "bounded local correction-event store and receipts",
+            "required": true,
+            "surface": ".agentic-workspace/local/correction-events.json",
+            "when": "mutation operation stores or compacts admitted/low-authority events"
+          }
+        ]
+      },
+      "schemas": [
+        "correction_event_input.schema.json",
+        "correction_event_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "correction-event.prune-compact",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "format",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "event_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "trusted_authority_receipt_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "idempotency_key",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delivery_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_identity_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "source_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "source",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "producer_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "producer_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "authority",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "desired_behavior",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "replaced_behavior",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "invariant_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "behavior_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "task_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "scope_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "route_decisions",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "evidence_hash",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "evidence_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "predecessor_event_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "lifecycle_action",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "dry_run",
+              "required": false,
+              "source": "cli-option"
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/correction_event_result.schema.json"
+          },
+          "effects": {
+            "destructive": false,
+            "idempotent": true,
+            "read_only": false,
+            "requires_preflight_gate": false,
+            "writes_repo_state": false
+          },
+          "guards": [
+            "Generated operation boundary resolves target subjects from workspace config by default.",
+            "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+            "Agent self-observation is preserved as low-authority non-routing evidence.",
+            "Correction storage is local-only and has no checked-in repo meaning."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "correction_event_input.schema.json": {
+              "additionalProperties": true,
+              "properties": {
+                "authority": {
+                  "type": "string"
+                },
+                "behavior_class": {
+                  "type": "string"
+                },
+                "delivery_id": {
+                  "type": "string"
+                },
+                "desired_behavior": {
+                  "type": "string"
+                },
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
+                  "type": "string"
+                },
+                "evidence_hash": {
+                  "type": "string"
+                },
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
+                  "type": "string"
+                },
+                "producer_class": {
+                  "type": "string"
+                },
+                "producer_id": {
+                  "type": "string"
+                },
+                "replaced_behavior": {
+                  "type": "string"
+                },
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
+                  "type": "string"
+                },
+                "task_class": {
+                  "type": "string"
+                },
+                "trusted_authority_receipt_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "output": {
+            "correction_event_result.schema.json": {
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/correction-event-operation-result/v1"
+                },
+                "operation_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "mutation_applied": {
+                  "type": "boolean"
+                },
+                "store_ref": {
+                  "type": "string"
+                },
+                "receipt_ref": {
+                  "type": "string"
+                },
+                "admission": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "operation_id",
+                "status",
+                "mutation_applied"
+              ],
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "correction-event.query": {
+      "identity": "correction-event.query",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:f7be441144dd68495cb5619f4735c47ecf06864c5503de5d7999721eda2cd1eb",
+      "compatibility_fingerprint": "sha256:3ad1280b6f154db1063e863c33ada38662e22f8dccfc746b85a2ee1a3584eb75",
+      "contract": {
+        "classification": "read-only-report",
+        "command_surface": {
+          "command": "correction-event",
+          "format_option": "format",
+          "subcommand": "query"
+        },
+        "effects": {
+          "destructive": false,
+          "idempotent": true,
+          "read_only": true,
+          "requires_preflight_gate": false,
+          "writes_repo_state": false
+        },
+        "guards": [
+          "Generated operation boundary resolves target subjects from workspace config by default.",
+          "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+          "Agent self-observation is preserved as low-authority non-routing evidence.",
+          "Correction storage is local-only and has no checked-in repo meaning."
+        ],
+        "id": "correction-event.query",
+        "inputs": [
+          {
+            "name": "target",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "format",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "event_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "trusted_authority_receipt_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "idempotency_key",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delivery_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_identity_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "source_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "source",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "producer_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "producer_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "authority",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "desired_behavior",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "replaced_behavior",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "invariant_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "behavior_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "task_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "scope_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "route_decisions",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "evidence_hash",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "evidence_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "predecessor_event_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "lifecycle_action",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "dry_run",
+            "required": false,
+            "source": "cli-option"
+          }
+        ],
+        "intent": "Provide the public generated correction-event lifecycle boundary for local target guidance and suitability evidence intake.",
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "description": "resolve_root",
+              "id": "resolve_root",
+              "outputs": [
+                "target_root"
+              ],
+              "uses": "workspace.target-root.resolve"
+            },
+            {
+              "description": "apply_correction_event",
+              "id": "apply_correction_event",
+              "outputs": [
+                "result"
+              ],
+              "uses": "correction.event.apply"
+            },
+            {
+              "description": "emit_output",
+              "id": "emit_output",
+              "outputs": [
+                "emitted"
+              ],
+              "uses": "output.emit"
+            }
+          ]
+        },
+        "locality": {
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden",
+          "requires_repo": true
+        },
+        "migration_status": "runtime-consumed",
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/correction_event_result.schema.json"
+        },
+        "proof": [
+          "correction-event generated operation tests cover trusted submit, low-authority preservation, query, and compact retention",
+          "operation contract validates against operation.schema.json"
+        ],
+        "reads": [
+          {
+            "description": "bounded local correction-event store",
+            "required": false,
+            "surface": ".agentic-workspace/local/correction-events.json"
+          }
+        ],
+        "schema_version": "agentic-workspace/operation/v1",
+        "steps": [
+          {
+            "description": "Resolve target root.",
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve"
+          },
+          {
+            "description": "Apply correction-event lifecycle operation.",
+            "id": "apply_correction_event",
+            "uses": "correction.event.apply"
+          },
+          {
+            "description": "Emit result.",
+            "id": "emit_output",
+            "uses": "output.emit"
+          }
+        ],
+        "summary": "Query admitted and low-authority correction events from bounded local storage.",
+        "writes": [
+          {
+            "description": "bounded local correction-event store and receipts",
+            "required": false,
+            "surface": ".agentic-workspace/local/correction-events.json",
+            "when": "mutation operation stores or compacts admitted/low-authority events"
+          }
+        ]
+      },
+      "schemas": [
+        "correction_event_input.schema.json",
+        "correction_event_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "correction-event.query",
+          "classification": "read-only-report",
+          "inputs": [
+            {
+              "name": "target",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "format",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "event_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "trusted_authority_receipt_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "idempotency_key",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delivery_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_identity_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "source_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "source",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "producer_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "producer_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "authority",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "desired_behavior",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "replaced_behavior",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "invariant_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "behavior_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "task_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "scope_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "route_decisions",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "evidence_hash",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "evidence_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "predecessor_event_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "lifecycle_action",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "dry_run",
+              "required": false,
+              "source": "cli-option"
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/correction_event_result.schema.json"
+          },
+          "effects": {
+            "destructive": false,
+            "idempotent": true,
+            "read_only": true,
+            "requires_preflight_gate": false,
+            "writes_repo_state": false
+          },
+          "guards": [
+            "Generated operation boundary resolves target subjects from workspace config by default.",
+            "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+            "Agent self-observation is preserved as low-authority non-routing evidence.",
+            "Correction storage is local-only and has no checked-in repo meaning."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "correction_event_input.schema.json": {
+              "additionalProperties": true,
+              "properties": {
+                "authority": {
+                  "type": "string"
+                },
+                "behavior_class": {
+                  "type": "string"
+                },
+                "delivery_id": {
+                  "type": "string"
+                },
+                "desired_behavior": {
+                  "type": "string"
+                },
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
+                  "type": "string"
+                },
+                "evidence_hash": {
+                  "type": "string"
+                },
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
+                  "type": "string"
+                },
+                "producer_class": {
+                  "type": "string"
+                },
+                "producer_id": {
+                  "type": "string"
+                },
+                "replaced_behavior": {
+                  "type": "string"
+                },
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
+                  "type": "string"
+                },
+                "task_class": {
+                  "type": "string"
+                },
+                "trusted_authority_receipt_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "output": {
+            "correction_event_result.schema.json": {
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/correction-event-operation-result/v1"
+                },
+                "operation_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "mutation_applied": {
+                  "type": "boolean"
+                },
+                "store_ref": {
+                  "type": "string"
+                },
+                "receipt_ref": {
+                  "type": "string"
+                },
+                "admission": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "operation_id",
+                "status",
+                "mutation_applied"
+              ],
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "correction-event.submit": {
+      "identity": "correction-event.submit",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:dd41fa14fbe53acb86e3e7e5073cfde7bba6cda82a729d6db6558aabc66b8455",
+      "compatibility_fingerprint": "sha256:b283bc4999a125a9f50d8335dd4ddf81842d3884710f31edfca1f0111bcd2366",
+      "contract": {
+        "classification": "local-record-append",
+        "command_surface": {
+          "command": "correction-event",
+          "format_option": "format",
+          "subcommand": "submit"
+        },
+        "effects": {
+          "destructive": false,
+          "idempotent": true,
+          "read_only": false,
+          "requires_preflight_gate": false,
+          "writes_repo_state": false
+        },
+        "guards": [
+          "Generated operation boundary resolves target subjects from workspace config by default.",
+          "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+          "Agent self-observation is preserved as low-authority non-routing evidence.",
+          "Correction storage is local-only and has no checked-in repo meaning."
+        ],
+        "id": "correction-event.submit",
+        "inputs": [
+          {
+            "name": "target",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "format",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "event_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "trusted_authority_receipt_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "idempotency_key",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delivery_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_identity_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "source_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "source",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "producer_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "producer_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "authority",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "desired_behavior",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "replaced_behavior",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "invariant_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "behavior_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "task_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "scope_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "route_decisions",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "evidence_hash",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "evidence_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "predecessor_event_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "lifecycle_action",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "dry_run",
+            "required": false,
+            "source": "cli-option"
+          }
+        ],
+        "intent": "Provide the public generated correction-event lifecycle boundary for local target guidance and suitability evidence intake.",
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "description": "resolve_root",
+              "id": "resolve_root",
+              "outputs": [
+                "target_root"
+              ],
+              "uses": "workspace.target-root.resolve"
+            },
+            {
+              "description": "apply_correction_event",
+              "id": "apply_correction_event",
+              "outputs": [
+                "result"
+              ],
+              "uses": "correction.event.apply"
+            },
+            {
+              "description": "emit_output",
+              "id": "emit_output",
+              "outputs": [
+                "emitted"
+              ],
+              "uses": "output.emit"
+            }
+          ]
+        },
+        "locality": {
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden",
+          "requires_repo": true
+        },
+        "migration_status": "runtime-consumed",
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/correction_event_result.schema.json"
+        },
+        "proof": [
+          "correction-event generated operation tests cover trusted submit, low-authority preservation, query, and compact retention",
+          "operation contract validates against operation.schema.json"
+        ],
+        "reads": [
+          {
+            "description": "bounded local correction-event store",
+            "required": false,
+            "surface": ".agentic-workspace/local/correction-events.json"
+          }
+        ],
+        "schema_version": "agentic-workspace/operation/v1",
+        "steps": [
+          {
+            "description": "Resolve target root.",
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve"
+          },
+          {
+            "description": "Apply correction-event lifecycle operation.",
+            "id": "apply_correction_event",
+            "uses": "correction.event.apply"
+          },
+          {
+            "description": "Emit result.",
+            "id": "emit_output",
+            "uses": "output.emit"
+          }
+        ],
+        "summary": "Submit a correction event through the public local operation boundary.",
+        "writes": [
+          {
+            "description": "bounded local correction-event store and receipts",
+            "required": true,
+            "surface": ".agentic-workspace/local/correction-events.json",
+            "when": "mutation operation stores or compacts admitted/low-authority events"
+          }
+        ]
+      },
+      "schemas": [
+        "correction_event_input.schema.json",
+        "correction_event_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "correction-event.submit",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "format",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "event_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "trusted_authority_receipt_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "idempotency_key",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delivery_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_identity_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "source_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "source",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "producer_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "producer_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "authority",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "desired_behavior",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "replaced_behavior",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "invariant_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "behavior_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "task_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "scope_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "route_decisions",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "evidence_hash",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "evidence_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "predecessor_event_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "lifecycle_action",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "dry_run",
+              "required": false,
+              "source": "cli-option"
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/correction_event_result.schema.json"
+          },
+          "effects": {
+            "destructive": false,
+            "idempotent": true,
+            "read_only": false,
+            "requires_preflight_gate": false,
+            "writes_repo_state": false
+          },
+          "guards": [
+            "Generated operation boundary resolves target subjects from workspace config by default.",
+            "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+            "Agent self-observation is preserved as low-authority non-routing evidence.",
+            "Correction storage is local-only and has no checked-in repo meaning."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "correction_event_input.schema.json": {
+              "additionalProperties": true,
+              "properties": {
+                "authority": {
+                  "type": "string"
+                },
+                "behavior_class": {
+                  "type": "string"
+                },
+                "delivery_id": {
+                  "type": "string"
+                },
+                "desired_behavior": {
+                  "type": "string"
+                },
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
+                  "type": "string"
+                },
+                "evidence_hash": {
+                  "type": "string"
+                },
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
+                  "type": "string"
+                },
+                "producer_class": {
+                  "type": "string"
+                },
+                "producer_id": {
+                  "type": "string"
+                },
+                "replaced_behavior": {
+                  "type": "string"
+                },
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
+                  "type": "string"
+                },
+                "task_class": {
+                  "type": "string"
+                },
+                "trusted_authority_receipt_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "output": {
+            "correction_event_result.schema.json": {
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/correction-event-operation-result/v1"
+                },
+                "operation_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "mutation_applied": {
+                  "type": "boolean"
+                },
+                "store_ref": {
+                  "type": "string"
+                },
+                "receipt_ref": {
+                  "type": "string"
+                },
+                "admission": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "operation_id",
+                "status",
+                "mutation_applied"
+              ],
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
+    "correction-event.withdraw-supersede": {
+      "identity": "correction-event.withdraw-supersede",
+      "version": "agentic-workspace/operation/v1",
+      "fingerprint": "sha256:7949ecd43266b673db5bd3715ef6fa69cef0a094e80a9a97e7f6b98216fc6306",
+      "compatibility_fingerprint": "sha256:430fa04c46ef95d6f84ed9661883413d088a438e6417fecef7906b0b40217d69",
+      "contract": {
+        "classification": "local-record-append",
+        "command_surface": {
+          "command": "correction-event",
+          "format_option": "format",
+          "subcommand": "withdraw-supersede"
+        },
+        "effects": {
+          "destructive": false,
+          "idempotent": true,
+          "read_only": false,
+          "requires_preflight_gate": false,
+          "writes_repo_state": false
+        },
+        "guards": [
+          "Generated operation boundary resolves target subjects from workspace config by default.",
+          "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+          "Agent self-observation is preserved as low-authority non-routing evidence.",
+          "Correction storage is local-only and has no checked-in repo meaning."
+        ],
+        "id": "correction-event.withdraw-supersede",
+        "inputs": [
+          {
+            "name": "target",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "format",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "event_json",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "trusted_authority_receipt_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "idempotency_key",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "delivery_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_identity_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "target_revision",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "source_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "source",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "producer_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "producer_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "authority",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "desired_behavior",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "replaced_behavior",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "invariant_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "behavior_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "task_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "scope_class",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "route_decisions",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "evidence_hash",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "evidence_ref",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "predecessor_event_id",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "lifecycle_action",
+            "required": false,
+            "source": "cli-option"
+          },
+          {
+            "name": "dry_run",
+            "required": false,
+            "source": "cli-option"
+          }
+        ],
+        "intent": "Provide the public generated correction-event lifecycle boundary for local target guidance and suitability evidence intake.",
+        "ir_plan": {
+          "status": "complete",
+          "steps": [
+            {
+              "description": "resolve_root",
+              "id": "resolve_root",
+              "outputs": [
+                "target_root"
+              ],
+              "uses": "workspace.target-root.resolve"
+            },
+            {
+              "description": "apply_correction_event",
+              "id": "apply_correction_event",
+              "outputs": [
+                "result"
+              ],
+              "uses": "correction.event.apply"
+            },
+            {
+              "description": "emit_output",
+              "id": "emit_output",
+              "outputs": [
+                "emitted"
+              ],
+              "uses": "output.emit"
+            }
+          ]
+        },
+        "locality": {
+          "network": "forbidden",
+          "outside_repo_writes": "forbidden",
+          "requires_repo": true
+        },
+        "migration_status": "runtime-consumed",
+        "output": {
+          "kind": "text-or-json",
+          "schema_ref": "schemas/correction_event_result.schema.json"
+        },
+        "proof": [
+          "correction-event generated operation tests cover trusted submit, low-authority preservation, query, and compact retention",
+          "operation contract validates against operation.schema.json"
+        ],
+        "reads": [
+          {
+            "description": "bounded local correction-event store",
+            "required": false,
+            "surface": ".agentic-workspace/local/correction-events.json"
+          }
+        ],
+        "schema_version": "agentic-workspace/operation/v1",
+        "steps": [
+          {
+            "description": "Resolve target root.",
+            "id": "resolve_root",
+            "uses": "workspace.target-root.resolve"
+          },
+          {
+            "description": "Apply correction-event lifecycle operation.",
+            "id": "apply_correction_event",
+            "uses": "correction.event.apply"
+          },
+          {
+            "description": "Emit result.",
+            "id": "emit_output",
+            "uses": "output.emit"
+          }
+        ],
+        "summary": "Withdraw or supersede a prior correction event.",
+        "writes": [
+          {
+            "description": "bounded local correction-event store and receipts",
+            "required": true,
+            "surface": ".agentic-workspace/local/correction-events.json",
+            "when": "mutation operation stores or compacts admitted/low-authority events"
+          }
+        ]
+      },
+      "schemas": [
+        "correction_event_input.schema.json",
+        "correction_event_result.schema.json",
+        "operation_failure.schema.json"
+      ],
+      "targets": {
+        "python": {
+          "package": "agentic-workspace",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/python"
+        },
+        "typescript": {
+          "package": "@agentic-workspace/workspace-cli",
+          "status": "mutation-capable-adapter",
+          "maturity": "mutation-capable-adapter",
+          "generated_root": "generated/workspace/typescript"
+        },
+        "bash": {
+          "package": "agentic-workspace-shell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/bash"
+        },
+        "powershell": {
+          "package": "AgenticWorkspace.PowerShell",
+          "status": "deferred",
+          "maturity": "deferred",
+          "generated_root": "generated/shell/powershell"
+        }
+      },
+      "external_consumption": {
+        "status": "runtime-backed",
+        "runtime_exceptions": [
+          {
+            "owner": "root-workspace",
+            "scope": "target root resolution",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "local correction-event store writes",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "trusted authority receipt validation",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          },
+          {
+            "owner": "root-workspace",
+            "scope": "output emission",
+            "reason": "Operation behavior still crosses an explicitly declared runtime-owned projection boundary.",
+            "proof": [
+              "correction-event.submit.process",
+              "correction-event.query.process",
+              "correction-event.correct-dispute.process",
+              "correction-event.withdraw-supersede.process",
+              "correction-event.prune-compact.process"
+            ],
+            "migration_dependency": "#2044"
+          }
+        ],
+        "dependency": "#2044"
+      },
+      "schema_roles": {
+        "input": [
+          "correction_event_input.schema.json"
+        ],
+        "output": [
+          "correction_event_result.schema.json"
+        ],
+        "failure": [
+          "operation_failure.schema.json"
+        ]
+      },
+      "compatibility_surface": {
+        "contract": {
+          "schema_version": "agentic-workspace/operation/v1",
+          "id": "correction-event.withdraw-supersede",
+          "classification": "local-record-append",
+          "inputs": [
+            {
+              "name": "target",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "format",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "event_json",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "trusted_authority_receipt_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "idempotency_key",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "delivery_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_identity_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "target_revision",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "source_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "source",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "producer_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "producer_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "authority",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "desired_behavior",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "replaced_behavior",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "invariant_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "behavior_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "task_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "scope_class",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "route_decisions",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "evidence_hash",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "evidence_ref",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "predecessor_event_id",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "lifecycle_action",
+              "required": false,
+              "source": "cli-option"
+            },
+            {
+              "name": "dry_run",
+              "required": false,
+              "source": "cli-option"
+            }
+          ],
+          "output": {
+            "kind": "text-or-json",
+            "schema_ref": "schemas/correction_event_result.schema.json"
+          },
+          "effects": {
+            "destructive": false,
+            "idempotent": true,
+            "read_only": false,
+            "requires_preflight_gate": false,
+            "writes_repo_state": false
+          },
+          "guards": [
+            "Generated operation boundary resolves target subjects from workspace config by default.",
+            "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+            "Agent self-observation is preserved as low-authority non-routing evidence.",
+            "Correction storage is local-only and has no checked-in repo meaning."
+          ]
+        },
+        "schemas": {
+          "input": {
+            "correction_event_input.schema.json": {
+              "additionalProperties": true,
+              "properties": {
+                "authority": {
+                  "type": "string"
+                },
+                "behavior_class": {
+                  "type": "string"
+                },
+                "delivery_id": {
+                  "type": "string"
+                },
+                "desired_behavior": {
+                  "type": "string"
+                },
+                "dry_run": {
+                  "type": "boolean"
+                },
+                "event_json": {
+                  "type": "string"
+                },
+                "evidence_hash": {
+                  "type": "string"
+                },
+                "evidence_ref": {
+                  "type": "string"
+                },
+                "format": {
+                  "enum": [
+                    "text",
+                    "json"
+                  ],
+                  "type": "string"
+                },
+                "idempotency_key": {
+                  "type": "string"
+                },
+                "invariant_id": {
+                  "type": "string"
+                },
+                "lifecycle_action": {
+                  "enum": [
+                    "withdraw",
+                    "supersede"
+                  ],
+                  "type": "string"
+                },
+                "predecessor_event_id": {
+                  "type": "string"
+                },
+                "producer_class": {
+                  "type": "string"
+                },
+                "producer_id": {
+                  "type": "string"
+                },
+                "replaced_behavior": {
+                  "type": "string"
+                },
+                "route_decisions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "scope_class": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "source_ref": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                },
+                "target_identity_ref": {
+                  "type": "string"
+                },
+                "target_revision": {
+                  "type": "string"
+                },
+                "task_class": {
+                  "type": "string"
+                },
+                "trusted_authority_receipt_ref": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "output": {
+            "correction_event_result.schema.json": {
+              "schema_version": "agentic-workspace/schema/v1",
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "kind": {
+                  "const": "agentic-workspace/correction-event-operation-result/v1"
+                },
+                "operation_id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "mutation_applied": {
+                  "type": "boolean"
+                },
+                "store_ref": {
+                  "type": "string"
+                },
+                "receipt_ref": {
+                  "type": "string"
+                },
+                "admission": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "kind",
+                "operation_id",
+                "status",
+                "mutation_applied"
+              ],
+              "x-agentic-workspace-doc-role": "contract-reference"
+            }
+          },
+          "failure": {
+            "operation_failure.schema.json": {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "x-agentic-workspace-doc-role": "contract-reference",
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "rejected",
+                    "failed"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "exit_status": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": true
+            }
+          }
+        }
+      }
+    },
     "delegation-outcome.append": {
       "identity": "delegation-outcome.append",
       "version": "agentic-workspace/operation/v1",
@@ -7567,6 +10837,178 @@
           }
         },
         "additionalProperties": true
+      }
+    },
+    "correction_event_input.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json",
+      "schema": {
+        "additionalProperties": true,
+        "description": "Input accepted by generated correction-event lifecycle operations.",
+        "properties": {
+          "authority": {
+            "description": "Claimed correction authority; not trusted without a trusted authority receipt.",
+            "type": "string"
+          },
+          "behavior_class": {
+            "description": "Stable behavior class for semantic correction identity.",
+            "type": "string"
+          },
+          "delivery_id": {
+            "description": "Stable delivery identifier for this correction event.",
+            "type": "string"
+          },
+          "desired_behavior": {
+            "description": "Behavior the correction says should replace the previous behavior.",
+            "type": "string"
+          },
+          "dry_run": {
+            "description": "When true, report the intended operation without applying a storage mutation.",
+            "type": "boolean"
+          },
+          "event_json": {
+            "description": "Serialized correction event payload.",
+            "type": "string"
+          },
+          "evidence_hash": {
+            "description": "Hash of evidence supporting the correction.",
+            "type": "string"
+          },
+          "evidence_ref": {
+            "description": "Reference to evidence supporting the correction.",
+            "type": "string"
+          },
+          "format": {
+            "description": "Requested output format.",
+            "enum": [
+              "text",
+              "json"
+            ],
+            "type": "string"
+          },
+          "idempotency_key": {
+            "description": "Optional stable key used to identify repeated deliveries.",
+            "type": "string"
+          },
+          "invariant_id": {
+            "description": "Stable semantic invariant identifier for deduplication.",
+            "type": "string"
+          },
+          "lifecycle_action": {
+            "description": "Lifecycle action for withdraw/supersede operations.",
+            "enum": [
+              "withdraw",
+              "supersede"
+            ],
+            "type": "string"
+          },
+          "predecessor_event_id": {
+            "description": "Prior correction event being disputed, withdrawn, or superseded.",
+            "type": "string"
+          },
+          "producer_class": {
+            "description": "Producer class used for authority resolution.",
+            "type": "string"
+          },
+          "producer_id": {
+            "description": "Producer identity used for audit and authority resolution.",
+            "type": "string"
+          },
+          "replaced_behavior": {
+            "description": "Behavior boundary being corrected or superseded.",
+            "type": "string"
+          },
+          "route_decisions": {
+            "description": "Requested routing decisions for trusted correction events.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "scope_class": {
+            "description": "Scope class where the correction applies.",
+            "type": "string"
+          },
+          "source": {
+            "description": "Human-readable correction source label.",
+            "type": "string"
+          },
+          "source_ref": {
+            "description": "Stable source reference for audit and idempotency.",
+            "type": "string"
+          },
+          "target": {
+            "description": "Target repository path.",
+            "type": "string"
+          },
+          "target_identity_ref": {
+            "description": "Target identity, name, or alias to resolve before admission.",
+            "type": "string"
+          },
+          "target_revision": {
+            "description": "Submitted target revision associated with the correction.",
+            "type": "string"
+          },
+          "task_class": {
+            "description": "Task class where the correction applies.",
+            "type": "string"
+          },
+          "trusted_authority_receipt_ref": {
+            "description": "Repo-relative trusted authority receipt ref resolved by AW before an event can gain human/review/evaluator authority. Omit to preserve the event as low-authority self-observation.",
+            "type": "string"
+          }
+        },
+        "required": [],
+        "schema_version": "agentic-workspace/schema/v1",
+        "title": "Correction event operation input",
+        "type": "object",
+        "x-agentic-workspace-doc-role": "contract-reference"
+      }
+    },
+    "correction_event_result.schema.json": {
+      "source": "src/agentic_workspace/contracts/schemas/correction_event_result.schema.json",
+      "schema": {
+        "schema_version": "agentic-workspace/schema/v1",
+        "title": "Correction event operation result",
+        "description": "Result envelope emitted by generated correction-event lifecycle operations.",
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "kind": {
+            "const": "agentic-workspace/correction-event-operation-result/v1",
+            "description": "Stable result envelope discriminator."
+          },
+          "operation_id": {
+            "type": "string",
+            "description": "Correction-event operation identifier that produced the result."
+          },
+          "status": {
+            "type": "string",
+            "description": "Operation outcome status."
+          },
+          "mutation_applied": {
+            "type": "boolean",
+            "description": "Whether local correction-event storage was changed."
+          },
+          "store_ref": {
+            "type": "string",
+            "description": "Repository-relative correction-event store path, when available."
+          },
+          "receipt_ref": {
+            "type": "string",
+            "description": "Repository-relative operation receipt path, when available."
+          },
+          "admission": {
+            "type": "object",
+            "description": "Admission, rejection, low-authority, retention, and routing details."
+          }
+        },
+        "required": [
+          "kind",
+          "operation_id",
+          "status",
+          "mutation_applied"
+        ],
+        "x-agentic-workspace-doc-role": "contract-reference"
       }
     },
     "delegation_outcome_append_input.schema.json": {

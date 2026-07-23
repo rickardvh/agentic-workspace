@@ -198,6 +198,25 @@
           "type": "string",
           "minLength": 1,
           "description": "Repository-relative path for local-only memory; it must stay ignored and non-authoritative."
+        },
+        "target_guidance_enabled": {
+          "type": "boolean",
+          "description": "Whether this machine may resolve user-local target guidance and repo-local target overlays."
+        },
+        "user_guidance_root": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Machine-local root for user-wide target guidance. This may be an absolute or user-home path and must not be checked into repository state."
+        },
+        "target_guidance_overlay_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repository-relative ignored overlay path for target guidance that is specific to this checkout."
+        },
+        "correction_events_path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Repository-relative ignored path for structured local correction-feedback events."
         }
       },
       "additionalProperties": false,
@@ -280,6 +299,47 @@
             "execution_methods"
           ],
           "properties": {
+            "target_id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Stable user-local target identity used by orchestration and target guidance. Display names and aliases alone are not sufficient identity."
+            },
+            "target_revision": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Optional model, runtime, or target generation/revision identifier for continuity decisions."
+            },
+            "aliases": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "Previous or alternate local profile names. Ambiguous aliases fail closed."
+            },
+            "identity_status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "retired",
+                "superseded",
+                "ambiguous",
+                "unavailable"
+              ],
+              "default": "active",
+              "description": "Lifecycle status for this local target identity."
+            },
+            "revision_policy": {
+              "type": "string",
+              "enum": [
+                "preserve",
+                "revalidate",
+                "migrate",
+                "retire"
+              ],
+              "default": "revalidate",
+              "description": "How existing target guidance behaves when the model/runtime revision changes."
+            },
             "strength": {
               "type": "string",
               "enum": [

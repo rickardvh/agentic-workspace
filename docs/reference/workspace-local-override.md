@@ -41,6 +41,10 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | `local_memory` | object | no |  | Machine-local memory opt-in and path configuration. |  |  |
 | `local_memory.enabled` | boolean | no |  | Whether this machine may use local-only repo memory in addition to checked-in shared Memory. |  |  |
 | `local_memory.path` | string | no |  | Repository-relative path for local-only memory; it must stay ignored and non-authoritative. |  |  |
+| `local_memory.target_guidance_enabled` | boolean | no |  | Whether this machine may resolve user-local target guidance and repo-local target overlays. |  |  |
+| `local_memory.user_guidance_root` | string | no |  | Machine-local root for user-wide target guidance. This may be an absolute or user-home path and must not be checked into repository state. |  |  |
+| `local_memory.target_guidance_overlay_path` | string | no |  | Repository-relative ignored overlay path for target guidance that is specific to this checkout. |  |  |
+| `local_memory.correction_events_path` | string | no |  | Repository-relative ignored path for structured local correction-feedback events. |  |  |
 | `session_logging` | object | no |  | Machine-local session logging and path-normalization preferences. |  |  |
 | `session_logging.enabled` | boolean | no |  | Whether this checkout should keep ignored local AW command session logs. |  |  |
 | `session_logging.redact_local_paths` | boolean | no |  | Compatibility alias for path_mode = redacted. |  |  |
@@ -274,6 +278,11 @@ Machine-local override schema for invocation preferences, delegation capabilitie
 | `local_overlay.high_risk.unresolved_questions.<^.+$>.notes` | string | no |  | Optional local notes for reviewers or future agents. |  |  |
 | `delegation_targets` | object | no |  | Named local delegation targets available to this runtime. |  |  |
 | `delegation_targets.<^.+$>` | object | no |  | One local delegation target profile. Availability fields are human-owned controls; confidence, task fit, and capability classes are advisory estimates. |  |  |
+| `delegation_targets.<^.+$>.target_id` | string | no |  | Stable user-local target identity used by orchestration and target guidance. Display names and aliases alone are not sufficient identity. |  |  |
+| `delegation_targets.<^.+$>.target_revision` | string | no |  | Optional model, runtime, or target generation/revision identifier for continuity decisions. |  |  |
+| `delegation_targets.<^.+$>.aliases` | array of string | no |  | Previous or alternate local profile names. Ambiguous aliases fail closed. |  |  |
+| `delegation_targets.<^.+$>.identity_status` | enum `"active"`, `"retired"`, `"superseded"`, `"ambiguous"`, `"unavailable"` | no | `"active"` | Lifecycle status for this local target identity. |  |  |
+| `delegation_targets.<^.+$>.revision_policy` | enum `"preserve"`, `"revalidate"`, `"migrate"`, `"retire"` | no | `"revalidate"` | How existing target guidance behaves when the model/runtime revision changes. |  |  |
 | `delegation_targets.<^.+$>.strength` | enum `"strong"`, `"medium"`, `"weak"` | yes |  | Human- or agent-declared capability strength for this target. Use it as a routing hint, not as proof that the target can close the work. |  |  |
 | `delegation_targets.<^.+$>.location` | enum `"local"`, `"external"`, `"either"` | no |  | Where this target runs from the current machine's perspective: local, external, or either. This is a local availability and boundary hint. |  |  |
 | `delegation_targets.<^.+$>.confidence` | number | no |  | Advisory confidence in this target profile from 0 to 1. Agents may tune it from local outcome evidence, but it does not create execution authority. |  |  |

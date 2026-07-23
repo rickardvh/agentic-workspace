@@ -34,16 +34,23 @@
         "id": "workspace-assignment",
         "operation_id_prefix": "assignment."
       },
-      {
-        "contract_owner": "src/agentic_workspace/contracts",
-        "current_contract_root": "src/agentic_workspace/contracts/operations",
-        "future_contract_root": "modules/workspace/contracts",
-        "id": "workspace-config",
-        "operation_id_prefix": "config."
-      },
-      {
-        "contract_owner": "src/agentic_workspace/contracts",
-        "current_contract_root": "src/agentic_workspace/contracts/operations",
+    {
+      "contract_owner": "src/agentic_workspace/contracts",
+      "current_contract_root": "src/agentic_workspace/contracts/operations",
+      "future_contract_root": "modules/workspace/contracts",
+      "id": "workspace-config",
+      "operation_id_prefix": "config."
+    },
+    {
+      "contract_owner": "src/agentic_workspace/contracts",
+      "current_contract_root": "src/agentic_workspace/contracts/operations",
+      "future_contract_root": "modules/workspace/contracts",
+      "id": "workspace-correction-event",
+      "operation_id_prefix": "correction-event."
+    },
+    {
+      "contract_owner": "src/agentic_workspace/contracts",
+      "current_contract_root": "src/agentic_workspace/contracts/operations",
         "future_contract_root": "modules/workspace/contracts",
         "id": "workspace-defaults",
         "operation_id_prefix": "defaults."
@@ -197,6 +204,16 @@
       "taxonomy_tier": "tier-2-package-domain",
       "tier_owner": "workspace assignment lifecycle operation owner",
       "tier_reason": "The durable Planning/run transition contract is workspace-specific and remains runtime-backed while the public operation family stabilizes."
+    },
+    {
+      "conformance_ref": "correction-event.submit.process, correction-event.query.process, correction-event.correct-dispute.process, correction-event.withdraw-supersede.process, correction-event.prune-compact.process",
+      "generic_behavior_audit": "Not counted as portable codegen completion; generated clients expose the operation family as runtime-backed and require explicit opt-in.",
+      "id": "correction.event.apply",
+      "migration_path": "Split deterministic bounded JSON store reads/writes, receipt emission, and low-authority preservation into Tier 1 primitives after the correction-event lifecycle schema stabilizes.",
+      "summary": "Apply a generated correction-event lifecycle operation to bounded local correction-event storage.",
+      "taxonomy_tier": "tier-2-package-domain",
+      "tier_owner": "workspace correction-event lifecycle operation owner",
+      "tier_reason": "Correction-event admission owns workspace-specific target identity resolution, authority derivation, low-authority retention, and local-only receipt semantics."
     },
     {
       "id": "check.run.allowed",

@@ -33,10 +33,18 @@ ASSIGNMENT_OPERATION_IDS = (
     "assignment.reject",
     "assignment.repair",
 )
+
+CORRECTION_OPERATION_IDS = (
+    "correction-event.correct-dispute",
+    "correction-event.prune-compact",
+    "correction-event.query",
+    "correction-event.submit",
+    "correction-event.withdraw-supersede",
+)
 OPERATION_RESOURCE_OUTPUTS = {
     REPO_ROOT / f"generated/workspace/python/operations/{operation_id}.json": REPO_ROOT
     / f"src/agentic_workspace/contracts/operations/{operation_id}.json"
-    for operation_id in ASSIGNMENT_OPERATION_IDS
+    for operation_id in (*ASSIGNMENT_OPERATION_IDS, *CORRECTION_OPERATION_IDS)
 }
 SCHEMA_RESOURCE_OUTPUTS = {
     REPO_ROOT / "generated/workspace/python/_contracts/operation_failure.schema.json": REPO_ROOT
@@ -51,6 +59,10 @@ SCHEMA_RESOURCE_OUTPUTS = {
     / "src/agentic_workspace/contracts/schemas/assignment_lifecycle_input.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/assignment_lifecycle_result.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/assignment_lifecycle_result.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/correction_event_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json",
+    REPO_ROOT / "generated/workspace/python/_contracts/correction_event_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/correction_event_result.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/config_report_input.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/config_report_input.schema.json",
     REPO_ROOT / "generated/workspace/python/_contracts/workspace_config.schema.json": REPO_ROOT
@@ -71,6 +83,10 @@ SCHEMA_RESOURCE_OUTPUTS = {
     / "src/agentic_workspace/contracts/schemas/assignment_lifecycle_input.schema.json",
     REPO_ROOT / "generated/workspace/typescript/resources/_contracts/assignment_lifecycle_result.schema.json": REPO_ROOT
     / "src/agentic_workspace/contracts/schemas/assignment_lifecycle_result.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/correction_event_input.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/correction_event_input.schema.json",
+    REPO_ROOT / "generated/workspace/typescript/resources/_contracts/correction_event_result.schema.json": REPO_ROOT
+    / "src/agentic_workspace/contracts/schemas/correction_event_result.schema.json",
 }
 
 USABLE_MATURITY_LEVELS = {
@@ -439,10 +455,29 @@ def render_python_typed_operations(profile: dict[str, object]) -> str:
         if entry["external_consumption"]["status"] == "internal":
             continue
         function_name = str(entry["id"]).replace(".", "_").replace("-", "_")
+        signature = (
+            f"def {function_name}(values: Mapping[str, Any], *, target: str | Path, "
+            "invocation: Sequence[str] | None = None) -> dict[str, Any]:"
+        )
+        signature_lines = (
+            [signature]
+            if len(signature) <= 140
+            else [
+                f"def {function_name}(",
+                "    values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None",
+                ") -> dict[str, Any]:",
+            ]
+        )
         lines.extend(
             [
-                f"def {function_name}(values: Mapping[str, Any], *, target: str | Path, invocation: Sequence[str] | None = None) -> dict[str, Any]:",
-                f'    return invoke_operation("{entry["id"]}", values, target=target, invocation=invocation, allow_runtime_backed=True)',
+                *signature_lines,
+                "    return invoke_operation(",
+                f'        "{entry["id"]}",',
+                "        values,",
+                "        target=target,",
+                "        invocation=invocation,",
+                "        allow_runtime_backed=True,",
+                "    )",
                 "",
                 "",
             ]

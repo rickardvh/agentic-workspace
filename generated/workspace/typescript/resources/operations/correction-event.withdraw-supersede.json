@@ -1,0 +1,227 @@
+{
+  "classification": "local-record-append",
+  "command_surface": {
+    "command": "correction-event",
+    "format_option": "format",
+    "subcommand": "withdraw-supersede"
+  },
+  "effects": {
+    "destructive": false,
+    "idempotent": true,
+    "read_only": false,
+    "requires_preflight_gate": false,
+    "writes_repo_state": false
+  },
+  "guards": [
+    "Generated operation boundary resolves target subjects from workspace config by default.",
+    "Caller-supplied producer labels cannot upgrade authority; trusted authority must resolve from trusted_authority_receipt_ref.",
+    "Agent self-observation is preserved as low-authority non-routing evidence.",
+    "Correction storage is local-only and has no checked-in repo meaning."
+  ],
+  "id": "correction-event.withdraw-supersede",
+  "inputs": [
+    {
+      "name": "target",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "format",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "event_json",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "trusted_authority_receipt_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "idempotency_key",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "delivery_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "target_identity_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "target_revision",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "source_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "source",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "producer_class",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "producer_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "authority",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "desired_behavior",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "replaced_behavior",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "invariant_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "behavior_class",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "task_class",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "scope_class",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "route_decisions",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "evidence_hash",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "evidence_ref",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "predecessor_event_id",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "lifecycle_action",
+      "required": false,
+      "source": "cli-option"
+    },
+    {
+      "name": "dry_run",
+      "required": false,
+      "source": "cli-option"
+    }
+  ],
+  "intent": "Provide the public generated correction-event lifecycle boundary for local target guidance and suitability evidence intake.",
+  "ir_plan": {
+    "status": "complete",
+    "steps": [
+      {
+        "description": "resolve_root",
+        "id": "resolve_root",
+        "outputs": [
+          "target_root"
+        ],
+        "uses": "workspace.target-root.resolve"
+      },
+      {
+        "description": "apply_correction_event",
+        "id": "apply_correction_event",
+        "outputs": [
+          "result"
+        ],
+        "uses": "correction.event.apply"
+      },
+      {
+        "description": "emit_output",
+        "id": "emit_output",
+        "outputs": [
+          "emitted"
+        ],
+        "uses": "output.emit"
+      }
+    ]
+  },
+  "locality": {
+    "network": "forbidden",
+    "outside_repo_writes": "forbidden",
+    "requires_repo": true
+  },
+  "migration_status": "runtime-consumed",
+  "output": {
+    "kind": "text-or-json",
+    "schema_ref": "schemas/correction_event_result.schema.json"
+  },
+  "proof": [
+    "correction-event generated operation tests cover trusted submit, low-authority preservation, query, and compact retention",
+    "operation contract validates against operation.schema.json"
+  ],
+  "reads": [
+    {
+      "description": "bounded local correction-event store",
+      "required": false,
+      "surface": ".agentic-workspace/local/correction-events.json"
+    }
+  ],
+  "schema_version": "agentic-workspace/operation/v1",
+  "steps": [
+    {
+      "description": "Resolve target root.",
+      "id": "resolve_root",
+      "uses": "workspace.target-root.resolve"
+    },
+    {
+      "description": "Apply correction-event lifecycle operation.",
+      "id": "apply_correction_event",
+      "uses": "correction.event.apply"
+    },
+    {
+      "description": "Emit result.",
+      "id": "emit_output",
+      "uses": "output.emit"
+    }
+  ],
+  "summary": "Withdraw or supersede a prior correction event.",
+  "writes": [
+    {
+      "description": "bounded local correction-event store and receipts",
+      "required": true,
+      "surface": ".agentic-workspace/local/correction-events.json",
+      "when": "mutation operation stores or compacts admitted/low-authority events"
+    }
+  ]
+}

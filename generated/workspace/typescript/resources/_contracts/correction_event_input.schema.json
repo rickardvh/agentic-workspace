@@ -1,0 +1,122 @@
+{
+  "additionalProperties": true,
+  "description": "Input accepted by generated correction-event lifecycle operations.",
+  "properties": {
+    "authority": {
+      "description": "Claimed correction authority; not trusted without a trusted authority receipt.",
+      "type": "string"
+    },
+    "behavior_class": {
+      "description": "Stable behavior class for semantic correction identity.",
+      "type": "string"
+    },
+    "delivery_id": {
+      "description": "Stable delivery identifier for this correction event.",
+      "type": "string"
+    },
+    "desired_behavior": {
+      "description": "Behavior the correction says should replace the previous behavior.",
+      "type": "string"
+    },
+    "dry_run": {
+      "description": "When true, report the intended operation without applying a storage mutation.",
+      "type": "boolean"
+    },
+    "event_json": {
+      "description": "Serialized correction event payload.",
+      "type": "string"
+    },
+    "evidence_hash": {
+      "description": "Hash of evidence supporting the correction.",
+      "type": "string"
+    },
+    "evidence_ref": {
+      "description": "Reference to evidence supporting the correction.",
+      "type": "string"
+    },
+    "format": {
+      "description": "Requested output format.",
+      "enum": [
+        "text",
+        "json"
+      ],
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "Optional stable key used to identify repeated deliveries.",
+      "type": "string"
+    },
+    "invariant_id": {
+      "description": "Stable semantic invariant identifier for deduplication.",
+      "type": "string"
+    },
+    "lifecycle_action": {
+      "description": "Lifecycle action for withdraw/supersede operations.",
+      "enum": [
+        "withdraw",
+        "supersede"
+      ],
+      "type": "string"
+    },
+    "predecessor_event_id": {
+      "description": "Prior correction event being disputed, withdrawn, or superseded.",
+      "type": "string"
+    },
+    "producer_class": {
+      "description": "Producer class used for authority resolution.",
+      "type": "string"
+    },
+    "producer_id": {
+      "description": "Producer identity used for audit and authority resolution.",
+      "type": "string"
+    },
+    "replaced_behavior": {
+      "description": "Behavior boundary being corrected or superseded.",
+      "type": "string"
+    },
+    "route_decisions": {
+      "description": "Requested routing decisions for trusted correction events.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "scope_class": {
+      "description": "Scope class where the correction applies.",
+      "type": "string"
+    },
+    "source": {
+      "description": "Human-readable correction source label.",
+      "type": "string"
+    },
+    "source_ref": {
+      "description": "Stable source reference for audit and idempotency.",
+      "type": "string"
+    },
+    "target": {
+      "description": "Target repository path.",
+      "type": "string"
+    },
+    "target_identity_ref": {
+      "description": "Target identity, name, or alias to resolve before admission.",
+      "type": "string"
+    },
+    "target_revision": {
+      "description": "Submitted target revision associated with the correction.",
+      "type": "string"
+    },
+    "task_class": {
+      "description": "Task class where the correction applies.",
+      "type": "string"
+    },
+    "trusted_authority_receipt_ref": {
+      "description": "Repo-relative trusted authority receipt ref resolved by AW before an event can gain human/review/evaluator authority. Omit to preserve the event as low-authority self-observation.",
+      "type": "string"
+    }
+  },
+  "required": [],
+  "schema_version": "agentic-workspace/schema/v1",
+  "title": "Correction event operation input",
+  "type": "object",
+  "x-agentic-workspace-doc-role": "contract-reference"
+}

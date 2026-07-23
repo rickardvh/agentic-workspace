@@ -34,6 +34,7 @@ from agentic_workspace import __version__, doctor
 from agentic_workspace import config as config_lib
 from agentic_workspace._schema import ModuleDescriptor, ModuleResultContract, RootAgentsCleanupBlock
 from agentic_workspace.actionability import derive_actionability
+from agentic_workspace.agent_guidance import correction_feedback_contract, target_identity_posture
 from agentic_workspace.config import (
     DEFAULT_AGENT_INSTRUCTIONS_FILE,
     DEFAULT_ASSURANCE_LEVEL,
@@ -85,12 +86,14 @@ from agentic_workspace.config import (
     WORKSPACE_LOCAL_BOOTSTRAP_HANDOFF_PATH,
     WORKSPACE_LOCAL_BOOTSTRAP_HANDOFF_RECORD_PATH,
     WORKSPACE_LOCAL_CONFIG_PATH,
+    WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH,
     WORKSPACE_LOCAL_INTEGRATION_ALLOWED_AID_KINDS,
     WORKSPACE_LOCAL_INTEGRATION_BOUNDARY_RULES,
     WORKSPACE_LOCAL_INTEGRATION_ROOT_PATH,
     WORKSPACE_LOCAL_INTEGRATION_SUBFOLDER_CONVENTION,
     WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH,
     WORKSPACE_LOCAL_SCRATCH_ROOT_PATH,
+    WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH,
     WORKSPACE_SUBSYSTEM_INTENT_PATH,
     WORKSPACE_SYSTEM_INTENT_MIRROR_PATH,
     WORKSPACE_SYSTEM_INTENT_WORKFLOW_PATH,
@@ -4468,6 +4471,9 @@ def _local_memory_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     local_override = config.local_override
     enabled = bool(local_override.local_memory_enabled)
     relative_path = local_override.local_memory_path or WORKSPACE_LOCAL_MEMORY_DEFAULT_PATH
+    target_guidance_enabled = bool(local_override.target_guidance_enabled)
+    overlay_path = local_override.target_guidance_overlay_path or WORKSPACE_LOCAL_TARGET_GUIDANCE_OVERLAY_DEFAULT_PATH
+    correction_path = local_override.correction_events_path or WORKSPACE_LOCAL_CORRECTION_EVENTS_DEFAULT_PATH
     configured_source = local_override.field_sources.get("local_memory.enabled") or local_override.field_sources.get("local_memory.path")
     controlled_by = (
         local_override.shared_config_path.as_posix()
@@ -4479,6 +4485,11 @@ def _local_memory_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
     if config.target_root is not None:
         exists = (config.target_root / relative_path).exists()
         scratch_exists = (config.target_root / WORKSPACE_LOCAL_SCRATCH_ROOT_PATH).exists()
+        overlay_exists = (config.target_root / overlay_path).exists()
+        correction_exists = (config.target_root / correction_path).exists()
+    else:
+        overlay_exists = False
+        correction_exists = False
     return {
         "status": "enabled" if enabled else "disabled",
         "enabled": enabled,
@@ -4492,6 +4503,21 @@ def _local_memory_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         "git_ignored": True,
         "safe_to_delete": True,
         "scratch": _local_scratch_payload(exists=scratch_exists),
+        "target_guidance": {
+            "status": "enabled" if target_guidance_enabled else "disabled",
+            "enabled": target_guidance_enabled,
+            "user_local_root": local_override.user_guidance_root,
+            "user_local_root_source": local_override.field_sources.get("local_memory.user_guidance_root", "unset")
+            if local_override.user_guidance_root
+            else "unset",
+            "repo_overlay_path": overlay_path.as_posix(),
+            "repo_overlay_exists": overlay_exists,
+            "correction_events_path": correction_path.as_posix(),
+            "correction_events_exists": correction_exists,
+            "checked_in": False,
+            "advisory_only": True,
+            "no_secret_store": True,
+        },
         "record_shape": {
             "kind": "agentic-workspace/local-memory/v1",
             "fields": ["id", "summary", "scope", "source", "confidence", "promotion_candidate"],
@@ -4502,6 +4528,7 @@ def _local_memory_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             "not shared repo authority",
             "not a secret store",
             "does not override checked-in Memory, planning, config, or docs",
+            "target-specific guidance routes only through a known stable target identity",
             "safe to disable or delete without changing shared behavior",
         ],
     }
@@ -38506,8 +38533,20 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
     configured_role = local_override.execution_role or "ordinary-executor"
     configured_policy = local_override.assignment_policy or "local-preferred"
     configured_target = local_override.current_target
-    known_targets = {str(profile.get("name") or "") for profile in profile_payloads if isinstance(profile, dict)}
-    current_target_known = configured_target in known_targets if configured_target else False
+    target_matches = [
+        profile
+        for profile in profile_payloads
+        if isinstance(profile, dict)
+        and configured_target
+        and configured_target
+        in {
+            str(profile.get("name") or ""),
+            str(profile.get("target_id") or ""),
+            *(str(alias) for alias in profile.get("aliases", []) if isinstance(profile.get("aliases"), list)),
+        }
+    ]
+    current_target_known = len({str(profile.get("target_id") or profile.get("name") or "") for profile in target_matches}) == 1
+    resolved_current_target = target_matches[0] if current_target_known else {}
     binding_requested = configured_policy == "required-best-fit"
     enforceable = not binding_requested or bool(current_target_known)
     status = "configured" if local_override.assignment_policy is not None or local_override.execution_role is not None else "default-quiet"
@@ -38540,6 +38579,8 @@ def _assignment_policy_payload(local_override: MixedAgentLocalOverride, profile_
             source=local_override.field_sources.get("delegation.current_target", "unset") if configured_target is not None else "unset",
         ),
         "current_target_status": "known-profile" if current_target_known else "unknown" if configured_target else "not-configured",
+        "current_target_profile_name": resolved_current_target.get("name") if isinstance(resolved_current_target, dict) else None,
+        "current_target_identity_ref": resolved_current_target.get("target_id") if isinstance(resolved_current_target, dict) else None,
         "underfit_behavior": _sourced_value(
             local_override.underfit_behavior or "stay-when-safe",
             source=local_override.field_sources.get("delegation.underfit_behavior", "default")
@@ -39571,7 +39612,17 @@ def _assignment_implementation_gate_payload(
     decision = str(assignment_decision.get("decision") or "")
     binding = _as_dict(assignment_policy.get("binding"))
     selected_profile = str(selected_target.get("name") or "") if isinstance(selected_target, dict) else ""
-    target_mismatch = bool(current_target and selected_profile and current_target != selected_profile)
+    selected_profile_id = str(selected_target.get("target_id") or "") if isinstance(selected_target, dict) else ""
+    selected_aliases = (
+        set(selected_target.get("aliases", []))
+        if isinstance(selected_target, dict) and isinstance(selected_target.get("aliases"), list)
+        else set()
+    )
+    target_mismatch = bool(
+        current_target
+        and selected_profile
+        and current_target not in ({selected_profile, selected_profile_id} | {str(alias) for alias in selected_aliases})
+    )
     if decision == "blocked" or assignment_policy.get("status") == "blocked-unknown-current-target":
         status = "blocked"
         implementation_allowed = False
@@ -51661,6 +51712,11 @@ def _runtime_resolution_payload(*, config: WorkspaceConfig, capability_posture: 
         profile_recommendations.append(
             {
                 "name": profile.name,
+                "target_id": profile.target_id,
+                "target_revision": profile.target_revision,
+                "aliases": list(profile.aliases),
+                "identity_status": profile.identity_status,
+                "revision_policy": profile.revision_policy,
                 "strength": profile.strength,
                 "location": profile.location,
                 "execution_methods": list(profile.execution_methods),
@@ -52056,6 +52112,11 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         profile_payloads.append(
             {
                 "name": profile.name,
+                "target_id": profile.target_id,
+                "target_revision": profile.target_revision,
+                "aliases": list(profile.aliases),
+                "identity_status": profile.identity_status,
+                "revision_policy": profile.revision_policy,
                 "strength": profile.strength,
                 "location": profile.location,
                 "confidence": profile.confidence,
@@ -52080,6 +52141,7 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
             }
         )
     assignment_policy = _assignment_policy_payload(local_override, profile_payloads)
+    identity_posture = target_identity_posture(local_override=local_override, target_root=config.target_root)
     target_evidence = target_evidence_posture(
         target_root=config.target_root,
         profiles=local_override.delegation_targets,
@@ -52128,6 +52190,8 @@ def _mixed_agent_payload(*, config: WorkspaceConfig) -> dict[str, Any]:
         },
         "delegation_control": _delegation_control_payload(local_override),
         "assignment_policy": assignment_policy,
+        "target_identity": identity_posture,
+        "correction_feedback": correction_feedback_contract(identity_posture=identity_posture),
         "target_evidence": target_evidence,
         "delegation_targets": {
             "supported": True,
@@ -52418,6 +52482,8 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
     effective_posture = mixed_agent["effective_posture"]
     runtime_resolution = mixed_agent["runtime_resolution"]
     assignment_policy = mixed_agent["assignment_policy"]
+    target_identity = mixed_agent["target_identity"]
+    correction_feedback = mixed_agent["correction_feedback"]
     target_evidence = mixed_agent["target_evidence"]
     assignment_decision = mixed_agent["assignment_decision"]
     assurance = payload["assurance"]
@@ -52478,6 +52544,8 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "delegation_mode": effective_posture["delegation_mode"],
                 "assignment_policy": assignment_policy["assignment_policy"],
                 "execution_role": assignment_policy["execution_role"],
+                "target_identity": target_identity["current_target_identity"]["status"],
+                "correction_feedback": correction_feedback["status"],
                 "safe_to_auto_run_commands": effective_posture["safe_to_auto_run_commands"],
                 "requires_human_verification_on_pr": effective_posture["requires_human_verification_on_pr"],
             },
@@ -52515,6 +52583,19 @@ def _compact_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
                 "record_count": target_evidence["record_count"],
                 "storage": target_evidence["storage"],
                 "suitability": target_evidence["suitability"],
+            },
+            "target_identity": {
+                "status": target_identity["status"],
+                "current_target": target_identity["current_target"],
+                "current_target_identity": target_identity["current_target_identity"],
+                "storage": target_identity["storage"],
+                "precedence": target_identity["precedence"],
+            },
+            "correction_feedback": {
+                "status": correction_feedback["status"],
+                "target_identity_required": correction_feedback["target_identity_required"],
+                "storage": correction_feedback["storage"],
+                "routing": correction_feedback["routing"],
             },
             "assignment_decision": assignment_decision,
             "clarification_mode": effective_posture["clarification_mode"],
@@ -52599,6 +52680,8 @@ def _tiny_config_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "local_runtime.assignment_policy",
             "mixed_agent.runtime_resolution",
             "mixed_agent.assignment_policy",
+            "mixed_agent.target_identity",
+            "mixed_agent.correction_feedback",
             "mixed_agent.target_evidence",
             "mixed_agent.assignment_decision",
             "cli_compatibility",

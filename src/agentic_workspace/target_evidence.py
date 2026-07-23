@@ -27,6 +27,14 @@ ASSIGNMENT_OUTCOME_MATRIX = [
 ]
 
 
+def _profile_identity_keys(profile: DelegationTargetProfile) -> set[str]:
+    return {key for key in (profile.target_id, profile.name, *profile.aliases) if key}
+
+
+def _canonical_target_key(profile: DelegationTargetProfile | None, fallback: str) -> str:
+    return profile.target_id or profile.name if profile is not None else fallback
+
+
 def _delegation_signal_score(record: DelegationOutcomeRecord) -> float:
     outcome_score = {"success": 1.0, "mixed": 0.0, "failed": -1.0}[record.outcome]
     handoff_score = {"sufficient": 0.25, "borderline": 0.0, "insufficient": -0.25}[record.handoff_sufficiency]
@@ -188,6 +196,10 @@ def _target_context(profile: DelegationTargetProfile | None) -> dict[str, Any]:
     if profile is None:
         return {
             "profile_status": "unprofiled",
+            "target_identity_ref": None,
+            "target_revision": None,
+            "revision_policy": None,
+            "identity_status": "unprofiled",
             "capability_classes": [],
             "safe_task_classes": [],
             "forbidden_task_classes": [],
@@ -195,6 +207,10 @@ def _target_context(profile: DelegationTargetProfile | None) -> dict[str, Any]:
         }
     return {
         "profile_status": "configured",
+        "target_identity_ref": profile.target_id,
+        "target_revision": profile.target_revision,
+        "revision_policy": profile.revision_policy,
+        "identity_status": profile.identity_status,
         "capability_classes": list(profile.capability_classes),
         "safe_task_classes": list(profile.safe_task_classes),
         "forbidden_task_classes": list(profile.forbidden_task_classes),
@@ -208,15 +224,33 @@ def target_evidence_posture(
     profiles: Iterable[DelegationTargetProfile],
     records: Iterable[DelegationOutcomeRecord],
 ) -> dict[str, Any]:
-    profile_by_name = {profile.name: profile for profile in profiles}
+    profile_list = list(profiles)
+    profile_by_name = {profile.name: profile for profile in profile_list}
     all_records = list(records)
+    profile_by_identity: dict[str, DelegationTargetProfile | None] = {}
+    ambiguous_identities: set[str] = set()
+    for profile in profile_list:
+        for identity in _profile_identity_keys(profile):
+            if identity in profile_by_identity and profile_by_identity[identity] is not profile:
+                ambiguous_identities.add(identity)
+                profile_by_identity[identity] = None
+            else:
+                profile_by_identity[identity] = profile
     records_by_target: dict[str, list[DelegationOutcomeRecord]] = {}
+    canonical_profile_by_target: dict[str, DelegationTargetProfile | None] = {}
     for record in all_records:
-        records_by_target.setdefault(record.delegation_target, []).append(record)
+        profile = profile_by_identity.get(record.delegation_target)
+        canonical_target = (
+            record.delegation_target
+            if record.delegation_target in ambiguous_identities
+            else _canonical_target_key(profile, record.delegation_target)
+        )
+        records_by_target.setdefault(canonical_target, []).append(record)
+        canonical_profile_by_target[canonical_target] = profile
 
     normalized: list[dict[str, Any]] = []
     for target_name in sorted(records_by_target):
-        profile = profile_by_name.get(target_name)
+        profile = canonical_profile_by_target.get(target_name) or profile_by_name.get(target_name)
         context = _target_context(profile)
         for index, record in enumerate(records_by_target[target_name]):
             scope_class = _record_scope_class(record)
@@ -224,6 +258,9 @@ def target_evidence_posture(
                 {
                     "id": _target_record_id(target_name=target_name, record=record, index=index),
                     "target": target_name,
+                    "target_input_ref": record.delegation_target,
+                    "target_identity_ref": context["target_identity_ref"],
+                    "target_revision": context["target_revision"],
                     "task_class": record.task_class,
                     "scope_class": scope_class,
                     "context_key": _context_key(task_class=record.task_class, scope_class=scope_class),
@@ -301,14 +338,21 @@ def target_evidence_posture(
             )
 
     suitability: list[dict[str, Any]] = []
-    target_names = sorted(set(profile_by_name) | set(records_by_target))
+    target_names = sorted({_canonical_target_key(profile, profile.name) for profile in profile_list} | set(records_by_target))
     for target_name in target_names:
-        profile = profile_by_name.get(target_name)
+        profile = canonical_profile_by_target.get(target_name) or next(
+            (candidate for candidate in profile_list if _canonical_target_key(candidate, candidate.name) == target_name),
+            None,
+        )
+        context = _target_context(profile)
         target_records = records_by_target.get(target_name, [])
         if not target_records:
             suitability.append(
                 {
                     "target": target_name,
+                    "target_identity_ref": context["target_identity_ref"],
+                    "target_revision": context["target_revision"],
+                    "revision_policy": context["revision_policy"],
                     "context_key": None,
                     "task_class": None,
                     "scope_class": None,
@@ -349,6 +393,9 @@ def target_evidence_posture(
             suitability.append(
                 {
                     "target": target_name,
+                    "target_identity_ref": context["target_identity_ref"],
+                    "target_revision": context["target_revision"],
+                    "revision_policy": context["revision_policy"],
                     "context_key": context_key,
                     "task_class": first.task_class,
                     "scope_class": _record_scope_class(first),
@@ -507,6 +554,11 @@ def assignment_decision_from_policy(
         target = str(profile.get("name") or "")
         if not target:
             continue
+        target_identity_ref = str(profile.get("target_id") or target)
+        target_revision = str(profile.get("target_revision") or "")
+        revision_policy = str(profile.get("revision_policy") or "")
+        target_aliases = {str(alias) for alias in profile.get("aliases", [])} if isinstance(profile.get("aliases"), list) else set()
+        current_target_matches_profile = current_target in ({target, target_identity_ref} | target_aliases)
         required_action = str(profile.get("required_action") or "")
         location = str(profile.get("location") or "")
         execution_methods = [str(item) for item in profile.get("execution_methods", []) if str(item).strip()]
@@ -534,17 +586,18 @@ def assignment_decision_from_policy(
         declared_fit_score = int(profile.get("score") or 0)
         recommendation_component = recommendation_score.get(str(profile.get("recommendation") or ""), 0)
         contextual_evidence_component = 0
-        matching_evidence = evidence_by_target.get(target, [])
+        matching_evidence = evidence_by_target.get(target_identity_ref, []) or evidence_by_target.get(target, [])
         for evidence in matching_evidence:
             contextual_evidence_component += evidence_score.get(str(evidence.get("route_effect") or ""), 0)
-        current_target_component = 5 if target == current_target else 0
+        current_target_component = 5 if current_target_matches_profile else 0
         burden_component = 0
         for evidence in matching_evidence:
             if evidence.get("route_effect") == "strong-review-required":
                 burden_component -= 10
             if evidence.get("uncertainty") == "low":
                 burden_component += 2
-        uncertainty_component = -5 * len(uncertainty_by_target.get(target, []))
+        matching_uncertainty = uncertainty_by_target.get(target_identity_ref, []) or uncertainty_by_target.get(target, [])
+        uncertainty_component = -5 * len(matching_uncertainty)
         probe_value_component = 5 if not matching_evidence and eligible else 0
         score = (
             declared_fit_score
@@ -572,6 +625,9 @@ def assignment_decision_from_policy(
         candidate_scores.append(
             {
                 "target": target,
+                "target_identity_ref": target_identity_ref or None,
+                "target_revision": target_revision or None,
+                "revision_policy": revision_policy or None,
                 "eligible": eligible,
                 "hard_rejection_reasons": hard_rejection_reasons,
                 "eligibility": {
@@ -602,6 +658,8 @@ def assignment_decision_from_policy(
                 "evidence_contexts": [
                     {
                         "context_key": evidence.get("context_key"),
+                        "target_identity_ref": evidence.get("target_identity_ref"),
+                        "target_revision": evidence.get("target_revision"),
                         "route_effect": evidence.get("route_effect"),
                         "record_count": evidence.get("record_count"),
                         "supporting_record_ids": evidence.get("supporting_record_ids", []),
@@ -615,7 +673,7 @@ def assignment_decision_from_policy(
                         "uncertainty_reasons": evidence.get("uncertainty_reasons", []),
                         "routing_effect": evidence.get("routing_effect"),
                     }
-                    for evidence in uncertainty_by_target.get(target, [])[:5]
+                    for evidence in matching_uncertainty[:5]
                 ],
             }
         )
@@ -689,8 +747,9 @@ def assignment_decision_from_policy(
         )
         next_action = "prepare manual handoff packet" if decision == "manual-handoff" else f"assign or escalate to {selected_target}"
     else:
-        decision = "assign-best-fit" if selected_target != current_target else "assign-current-target"
-        selected = eligible_candidates[0]
+        selected = eligible_candidates[0] if eligible_candidates else {}
+        selected_target_refs = {str(selected.get("target") or ""), str(selected.get("target_identity_ref") or "")}
+        decision = "assign-current-target" if current_target in selected_target_refs else "assign-best-fit"
         canonical_outcome = selected.get("continuation") or "delegated-implementation"
         next_action = f"execute with {selected_target}" if selected_target else "hold execution until assignment is resolved"
     return {
